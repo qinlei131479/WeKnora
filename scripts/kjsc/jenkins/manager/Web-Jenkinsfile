@@ -11,7 +11,7 @@ pipeline {
         stage('build') {
             steps {
                 timeout(time: 10, unit: 'MINUTES') {
-                    dir("apps/web") {
+                    dir("apps/manager") {
                         // 如果觉得 npm 下载不稳定，只给 install 加 retry
                         retry(2) {
                             sh "npm install"
@@ -28,7 +28,7 @@ pipeline {
             steps {
                 // 给部署阶段设置 5 分钟超时
                 timeout(time: 5, unit: 'MINUTES') {
-                    sh "sh scripts/kjsc/jenkins/web/deploy.sh"
+                    sh "sh scripts/kjsc/jenkins/manager/deploy.sh"
                 }
             }
         }

@@ -3,8 +3,8 @@ set -e
 
 REMOTE_USER="tomcat01"
 REMOTE_IP="192.168.180.238"
-REMOTE_WEB_DIR="/usr/local/spring-boot/Agent-Middle-Platform/apps/web"
-LOCAL_DIST_DIR="./apps/web/dist"
+REMOTE_WEB_DIR="/usr/local/spring-boot/Agent-Middle-Platform/apps/manager"
+LOCAL_DIST_DIR="./apps/manager/dist"
 TIMESTAMP=$(date "+%Y%m%d%H%M%S")
 
 echo ">>> 开始备份远程旧版本前端..."
