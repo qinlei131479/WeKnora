@@ -1,0 +1,5 @@
+# Spring
+spring:
+  application:
+    # 应用名称
+    name: ruoyi-generator

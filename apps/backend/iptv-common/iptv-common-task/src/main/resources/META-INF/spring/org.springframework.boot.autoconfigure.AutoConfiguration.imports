@@ -1,0 +1,2 @@
+com.iptv.common.task.configure.QuartzJobAutowireConfig
+com.iptv.common.task.service.TaskService

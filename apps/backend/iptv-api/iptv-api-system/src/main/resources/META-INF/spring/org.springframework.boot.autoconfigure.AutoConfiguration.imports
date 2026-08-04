@@ -1,0 +1,6 @@
+com.iptv.system.api.factory.RemoteUserFallbackFactory
+com.iptv.system.api.factory.RemoteLogFallbackFactory
+com.iptv.system.api.factory.RemoteFileFallbackFactory
+com.iptv.system.api.factory.RemoteTenantFallbackFactory
+com.iptv.system.api.factory.RemoteDeptFallbackFactory
+com.iptv.system.api.factory.RemotePostFallbackFactory

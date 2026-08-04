@@ -1,0 +1,201 @@
+pipeline {
+    agent any
+    parameters {
+        string(
+            name: 'DEPLOY_SERVICES',
+            defaultValue: 'all',
+            description: '选择微服务(可多选，用逗号分隔，如: gateway,auth,file,system,business,websocket,all)'
+        )
+    }
+    tools {
+        maven 'maven3.9.15'
+        jdk 'jdk17'
+    }
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        disableConcurrentBuilds()
+    }
+    environment {
+        ENVIRONMENT = 'test'
+        SERVICES_IP = '192.168.180.247'
+        SERVICES_USER = 'tomcat01'
+        DEPLOY_BASE = "/usr/local/spring-boot/Agent-Middle-Platform/apps/backend"
+        JAR_PREFIX = "/Agent-Middle-Platform"
+        BACKEND_DIR = "apps/backend"
+    }
+    stages {
+        stage('服务环境检查') {
+            steps {
+                script {
+                    if (env.BRANCH_NAME == 'master') {
+                        env.ENVIRONMENT = 'prod'
+                        env.SERVICES_IP = '192.168.180.238'
+                    } else {
+                        env.ENVIRONMENT = 'test'
+                    }
+
+                    validServices = ['gateway', 'auth', 'file', 'system', 'business', 'websocket']
+                    def selectedServices = params.DEPLOY_SERVICES.split(',').collect { it.trim() }.findAll { it }
+                    if (selectedServices.contains('all')) {
+                        env.SELECTED_SERVICES = validServices.join(',')
+                    } else {
+                        def filteredServices = selectedServices.findAll { validServices.contains(it) }
+                        if (filteredServices.isEmpty()) {
+                            error "没有选择有效的微服务！可选: ${validServices.join(',')}"
+                        }
+                        env.SELECTED_SERVICES = filteredServices.join(',')
+                    }
+                    echo "选择部署的服务: ${env.SELECTED_SERVICES}, 目标服务器: ${env.SERVICES_IP}, 环境: ${env.ENVIRONMENT}"
+                }
+            }
+        }
+        stage('编译构建') {
+            steps {
+                script {
+                    def mvnModuleMap = [
+                        'gateway'   : 'iptv-gateway',
+                        'auth'      : 'iptv-auth',
+                        'file'      : 'iptv-modules/iptv-file',
+                        'system'    : 'iptv-modules/iptv-system',
+                        'business'  : 'iptv-modules/iptv-business',
+                        'websocket' : 'iptv-modules/iptv-websocket',
+                    ]
+
+                    def services = env.SELECTED_SERVICES.split(',')
+                    def modules = services.collect { mvnModuleMap[it] }.findAll { it }
+
+                    echo "本次只编译模块: ${modules.join(',')}"
+
+                    dir("${env.BACKEND_DIR}") {
+                        // -pl 指定模块列表（逗号分隔），-am 同时编译依赖的公共模块
+                        sh "mvn clean package -pl ${modules.join(',')} -am -Dmaven.test.skip=true -P${env.ENVIRONMENT}"
+                    }
+                    echo "编译构建完成！准备部署文件并远程复制到目标服务器：${env.SERVICES_IP}"
+
+                    def jarPathMap = [
+                        'gateway'   : "${env.BACKEND_DIR}/iptv-gateway/target",
+                        'auth'      : "${env.BACKEND_DIR}/iptv-auth/target",
+                        'file'      : "${env.BACKEND_DIR}/iptv-modules/iptv-file/target",
+                        'system'    : "${env.BACKEND_DIR}/iptv-modules/iptv-system/target",
+                        'business'  : "${env.BACKEND_DIR}/iptv-modules/iptv-business/target",
+                        'websocket' : "${env.BACKEND_DIR}/iptv-modules/iptv-websocket/target",
+                        'channel'   : "${env.BACKEND_DIR}/iptv-modules/iptv-channel/target",
+                        'harness'   : "${env.BACKEND_DIR}/iptv-modules/iptv-harness/target"
+                    ]
+
+                    services.each { service ->
+                        def targetDir = jarPathMap[service]
+                        if (!targetDir) {
+                            echo "警告: 未知服务 ${service}, 跳过"
+                            return
+                        }
+
+                        def jarFile = sh(
+                            script: "find ${targetDir} -maxdepth 1 -name '*.jar' ! -name '*-sources.jar' ! -name '*-javadoc.jar' | head -n 1",
+                            returnStdout: true
+                        ).trim()
+
+                        if (!jarFile) {
+                            error "未找到服务 ${service} 的JAR文件 (搜索目录: ${targetDir})"
+                        }
+
+                        def serviceDeployDir = "${env.DEPLOY_BASE}/${service}"
+                        def remoteJarName = "${env.JAR_PREFIX}-${service}.jar"
+
+                        echo "上传 ${service}: ${jarFile} → ${serviceDeployDir}/${remoteJarName}"
+
+                        sh """
+                            ssh ${env.SERVICES_USER}@${env.SERVICES_IP} "mkdir -p ${serviceDeployDir}"
+                            scp ${jarFile} ${env.SERVICES_USER}@${env.SERVICES_IP}:${serviceDeployDir}/${remoteJarName}
+                        """
+                        echo "微服务 ${service} JAR上传完成"
+                    }
+                    echo "所有服务JAR上传完成！目标服务器：${env.SERVICES_IP}"
+                }
+            }
+        }
+        stage('服务部署') {
+            steps {
+                script {
+                    def services = env.SELECTED_SERVICES.split(',')
+                    def timestamp = new Date().format('yyyyMMddHHmmss', TimeZone.getTimeZone('Asia/Shanghai'))
+
+                    // 端口映射表（必须和 deploy.sh 里保持一致）
+                    def portMap = [
+                        'gateway'   : '9206',
+                        'auth'      : '9200',
+                        'file'      : '9201',
+                        'system'    : '9205',
+                        'business'  : '9208',
+                        'websocket' : '9202',
+                    ]
+
+                    echo "本次部署版本号：${timestamp}"
+                    echo "启动服务列表: ${services}"
+                    echo "目标服务器：${env.SERVICES_IP}"
+
+                    services.each { service ->
+                        def serviceDir = "${env.DEPLOY_BASE}/${service}"
+                        def jarName = "${env.JAR_PREFIX}-${service}.jar"
+                        def jarPath = "${serviceDir}/${jarName}"
+                        def backupName = "${jarName}.bak${timestamp}"
+                        def port = portMap[service] ?: '9200'
+
+                        echo "========== 部署服务: ${service} (端口:${port}) =========="
+                        sh """
+                            ssh ${env.SERVICES_USER}@${env.SERVICES_IP} "
+                                if [ -f ${jarPath} ]; then
+                                    echo '备份旧版本: ${jarName} → ${backupName}';
+                                    cp -arf ${jarPath} ${serviceDir}/${backupName};
+                                else
+                                    echo '首次部署，无旧版本需要备份';
+                                fi
+                            "
+                        """
+                        echo "重启服务 ${service} ..."
+                        sh """
+                            ssh ${env.SERVICES_USER}@${env.SERVICES_IP} "
+								export LANG=zh_CN.UTF-8
+                                export LC_ALL=zh_CN.UTF-8
+                                sed -i 's/\\r\$//' ${env.DEPLOY_BASE}/deploy.sh && \\
+                                cd ${env.DEPLOY_BASE} && ./deploy.sh restart ${service}
+                            "
+                        """
+                    }
+
+                    echo "========== 本次部署全部完成 =========="
+                    echo "版本号：${timestamp}"
+                    echo "服务列表: ${services}"
+                    echo "目标服务器：${env.SERVICES_IP}"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo """
+                =========================================
+                微服务部署成功！
+                部署环境: ${env.ENVIRONMENT}
+                部署服务: ${env.SELECTED_SERVICES}
+                目标服务器: ${env.SERVICES_IP}
+                构建编号: ${env.BUILD_NUMBER}
+                部署时间: ${new Date().format('yyyy-MM-dd HH:mm:ss', TimeZone.getTimeZone('Asia/Shanghai'))}
+                =========================================
+            """
+        }
+        failure {
+            echo """
+                =========================================
+                部署失败！请检查日志
+                构建编号: ${env.BUILD_NUMBER}
+                =========================================
+            """
+        }
+        always {
+            echo "清理工作区..."
+            cleanWs()
+        }
+    }
+}

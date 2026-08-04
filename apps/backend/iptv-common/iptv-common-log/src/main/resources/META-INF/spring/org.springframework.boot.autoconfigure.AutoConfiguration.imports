@@ -1,0 +1,2 @@
+com.iptv.common.log.service.AsyncLogService
+com.iptv.common.log.aspect.LogAspect

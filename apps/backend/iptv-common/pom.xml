@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>com.iptv</groupId>
+        <artifactId>agentic-cloud</artifactId>
+        <version>3.6.7</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <modules>
+        <module>iptv-common-log</module>
+        <module>iptv-common-core</module>
+        <module>iptv-common-redis</module>
+        <module>iptv-common-seata</module>
+        <module>iptv-common-swagger</module>
+        <module>iptv-common-security</module>
+        <module>iptv-common-sensitive</module>
+        <module>iptv-common-datascope</module>
+        <module>iptv-common-datasource</module>
+        <module>iptv-common-mybatisplus</module>
+        <module>iptv-common-task</module>
+    </modules>
+
+    <artifactId>iptv-common</artifactId>
+    <packaging>pom</packaging>
+
+    <description>
+        iptv-common通用模块
+    </description>
+
+</project>

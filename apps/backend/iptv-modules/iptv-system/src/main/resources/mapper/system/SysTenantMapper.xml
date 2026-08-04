@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.system.mapper.SysTenantMapper">
+
+    <resultMap id="BaseResultMap" type="com.iptv.system.api.domain.SysTenant">
+        <id column="id" property="id"/>
+        <result column="create_by" property="createBy"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_by" property="updateBy"/>
+        <result column="update_time" property="updateTime"/>
+        <result column="name" property="name"/>
+        <result column="status" property="status"/>
+        <result column="code" property="code"/>
+        <result column="del_flag" property="delFlag"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="ancestors" property="ancestors"/>
+        <result column="province_code" property="provinceCode"/>
+        <result column="city_code" property="cityCode"/>
+        <result column="area_code" property="areaCode"/>
+        <result column="user_max_count" property="userMaxCount"/>
+        <result column="valid_time" property="validTime"/>
+        <result column="third_tenant_type" property="thirdTenantType"/>
+        <result column="third_tenant_id" property="thirdTenantId"/>
+        <result column="qps" property="qps"/>
+        <result column="max_call_times" property="maxCallTimes"/>
+        <result column="audit_service_validity_start" property="auditServiceValidityStart"/>
+        <result column="audit_service_validity_end" property="auditServiceValidityEnd"/>
+
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        create_by, create_time, update_by, update_time,
+        id, name, code, status, del_flag, parent_id, ancestors,
+        province_code, city_code, area_code, user_max_count, valid_time,
+        third_tenant_type, third_tenant_id, qps, max_call_times, audit_service_validity_start, audit_service_validity_end
+    </sql>
+
+    <update id="updateChildAncestors">
+        UPDATE sys_tenant
+        SET ancestors = REPLACE(ancestors, #{oldAncestors}, #{newAncestors})
+        WHERE ancestors LIKE CONCAT(#{childAncestors}, '%')
+    </update>
+
+    <select id="queryByCondition" resultMap="BaseResultMap"
+            parameterType="com.iptv.system.api.domain.dto.SysTenantFilterDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM sys_tenant
+        WHERE del_flag = '0'
+        <if test="keyWord != null and keyWord != ''">
+            AND name LIKE CONCAT('%', #{keyWord}, '%')
+        </if>
+    </select>
+
+    <select id="getTenantList" resultType="com.iptv.system.api.domain.vo.SysTenantVO"
+            parameterType="com.iptv.system.api.domain.dto.SysTenantFilterDTO">
+        SELECT
+            a.create_by "createBy",
+            a.create_time "createTime",
+            a.update_by "updateBy",
+            a.update_time "updateTime",
+            a.id "id",
+            a.NAME "name",
+            a.CODE "code",
+            a.STATUS "status",
+            a.parent_id "parentId",
+            a.valid_time "validTime",
+            a.max_call_times "maxCallTimes",
+            a.qps "qps",
+            CASE WHEN b.NAME IS NULL THEN NULL
+                 ELSE (CASE WHEN c.NAME IS NULL THEN b.NAME
+                            ELSE (CASE WHEN d.NAME IS NULL THEN CONCAT(b.NAME, '/', c.NAME)
+                                       ELSE CONCAT(b.NAME, '/', c.NAME, '/', d.NAME)
+                                  END)
+                       END)
+            END "areaName",
+            (SELECT COUNT(*) FROM sys_user WHERE tenant_id = a.id AND del_flag = '0') "userCount",
+            (SELECT COUNT(*) FROM sys_role WHERE tenant_id = a.id AND del_flag = '0') "userRoleCount",
+            a.audit_service_validity_start,
+            a.audit_service_validity_end,
+            IF(a.id = 1, 0, 1) AS platformTenant
+        FROM sys_tenant a
+            LEFT JOIN sys_province b ON a.province_code = b.id
+            LEFT JOIN sys_city c ON a.city_code = c.id
+            LEFT JOIN sys_area d ON a.area_code = d.id
+        WHERE a.del_flag = '0'
+        <if test="condition.keyWord != null and condition.keyWord != ''">
+            AND (a.name LIKE CONCAT('%', #{condition.keyWord}, '%')
+                 OR a.id LIKE CONCAT('%', #{condition.keyWord}, '%')
+                 OR a.update_by LIKE CONCAT('%', #{condition.keyWord}, '%'))
+        </if>
+        <if test="condition.tenantId != null and condition.tenantId != ''">
+            AND a.id = #{condition.tenantId}
+        </if>
+        <if test="condition.params.beginTime != null and condition.params.beginTime != ''">
+            AND date_format(a.audit_service_validity_start,'%y%m%d') &gt;= date_format(#{condition.params.beginTime},'%y%m%d')
+        </if>
+        <if test="condition.params.endTime != null and condition.params.endTime != ''">
+            AND date_format(a.audit_service_validity_start,'%y%m%d') &lt;= date_format(#{condition.params.endTime},'%y%m%d')
+        </if>
+    </select>
+
+    <select id="getAllTenantIds" resultType="java.lang.String">
+        SELECT DISTINCT id FROM sys_tenant
+    </select>
+
+    <select id="getAllTenantList" resultType="com.iptv.system.api.domain.vo.SysTenantReChangeVO">
+        SELECT
+            a.create_by "createBy",
+            a.create_time "createTime",
+            a.update_by "updateBy",
+            a.update_time "updateTime",
+            a.id "id",
+            a.NAME "label",
+            a.CODE "code",
+            a.STATUS "status",
+            a.parent_id "parentId",
+            a.valid_time "validTime",
+            CASE WHEN b.NAME IS NULL THEN NULL
+                 ELSE (CASE WHEN c.NAME IS NULL THEN b.NAME
+                            ELSE (CASE WHEN d.NAME IS NULL THEN CONCAT(b.NAME, '/', c.NAME)
+                                       ELSE CONCAT(b.NAME, '/', c.NAME, '/', d.NAME)
+                                  END)
+                       END)
+            END "areaName"
+        FROM sys_tenant a
+            LEFT JOIN sys_province b ON a.province_code = b.id
+            LEFT JOIN sys_city c ON a.city_code = c.id
+            LEFT JOIN sys_area d ON a.area_code = d.id
+        WHERE a.del_flag = '0'
+        <if test="tenantId != null">
+            AND a.id = #{tenantId}
+        </if>
+    </select>
+
+    <select id="getTenantData" resultType="com.iptv.system.api.domain.vo.SysTenantEchoVO">
+        SELECT
+            a.NAME                                               "tenantName",
+            a.parent_id                                          "parentTenantId",
+            (SELECT NAME FROM sys_tenant WHERE id = a.parent_id) "parentTenantName",
+            b.id                                                 "provinceCode",
+            a.id                                                 "tenantId",
+            b.NAME                                               "provinceName",
+            c.id                                                 "cityCode",
+            c.NAME                                               "cityName",
+            d.id                                                 "areaCode",
+            d.NAME                                               "areaName",
+            CASE WHEN b.NAME IS NULL THEN NULL
+                 ELSE (CASE WHEN c.NAME IS NULL THEN b.NAME
+                            ELSE (CASE WHEN d.NAME IS NULL THEN CONCAT(b.NAME, '/', c.NAME)
+                                       ELSE CONCAT(b.NAME, '/', c.NAME, '/', d.NAME)
+                                  END)
+                       END)
+            END                                                  "concatName",
+            a.user_max_count                                     "userMaxCount",
+            a.create_time                                        "createTime",
+            a.update_time                                        "updateTime",
+            a.create_by                                          "createBy",
+            a.update_by                                          "updateBy",
+            a.valid_time                                         "validTime",
+            a.third_tenant_id                                    "thirdTenantId",
+            a.max_call_times                                     "maxCallTimes",
+            a.qps                                                "qps"
+        FROM sys_tenant a
+            LEFT JOIN sys_province b ON a.province_code = b.id
+            LEFT JOIN sys_city c ON a.city_code = c.id
+            LEFT JOIN sys_area d ON a.area_code = d.id
+        WHERE a.id = #{tenantId}
+    </select>
+
+    <select id="selectTenantApp" resultType="com.iptv.system.api.domain.vo.SysTenantAppSelectVO">
+        SELECT DISTINCT st.id, st.name, st.parent_id "parentId"
+        FROM sys_tenant st
+        <where>
+            st.del_flag = '0'
+            <if test="(ancestors != null and ancestors != '') or (tenantId != null)">
+                AND (
+                <if test="ancestors != null and ancestors != ''">
+                    st.ancestors LIKE CONCAT(#{ancestors}, ',', #{tenantId}, '%')
+                </if>
+                <if test="tenantId != null">
+                    OR st.id = #{tenantId}
+                </if>
+                )
+            </if>
+        </where>
+    </select>
+
+</mapper>

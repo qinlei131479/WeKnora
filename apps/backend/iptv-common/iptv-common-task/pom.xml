@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <groupId>com.iptv</groupId>
+        <artifactId>iptv-common</artifactId>
+        <version>3.6.7</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    
+    <artifactId>iptv-common-task</artifactId>
+	
+    <description>
+        iptv-common-task定时任务服务
+    </description>
+
+    <dependencies>
+		
+        <!-- SpringBoot Boot quartz -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-quartz</artifactId>
+        </dependency>
+        
+        <!-- iptv Common Core-->
+        <dependency>
+            <groupId>com.iptv</groupId>
+            <artifactId>iptv-common-core</artifactId>
+        </dependency>
+        
+    </dependencies>
+</project>
