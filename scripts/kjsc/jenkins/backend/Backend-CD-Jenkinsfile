@@ -17,7 +17,7 @@ pipeline {
     }
     environment {
         ENVIRONMENT = 'test'
-        SERVICES_IP = '192.168.180.247'
+        SERVICES_IP = '192.168.180.238'
         SERVICES_USER = 'tomcat01'
         DEPLOY_BASE = "/usr/local/spring-boot/Agent-Middle-Platform/apps/backend"
         JAR_PREFIX = "/Agent-Middle-Platform"
