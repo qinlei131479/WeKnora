@@ -3,8 +3,8 @@ import path from 'path'
 import createVitePlugins from './vite/plugins'
 
 const port = Number(process.env.port) || 80 // 端口
-const PROXY_API_TARGET =  process.env.PROXY_API_TARGET || 'http://192.168.180.247:9888/prod-api' // 后端接口
-const STATIC_API_TARGET =  process.env.STATIC_API_TARGET || 'http://192.168.180.247:9888' // 静态资源接口
+const PROXY_API_TARGET =  process.env.PROXY_API_TARGET || 'http://192.168.180.238:9888/prod-api' // 后端接口
+const STATIC_API_TARGET =  process.env.STATIC_API_TARGET || 'http://192.168.180.238:9888' // 静态资源接口
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode, command }) => {
