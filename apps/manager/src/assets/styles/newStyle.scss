@@ -1,0 +1,38 @@
+body {
+  --el-border-color: #e1e6ec;
+  --el-text-color-primary: #77838f;
+  --el-text-color-danger: #f34848;
+  --el-text-color-disabled: #b0bac6;
+  color: var(--el-text-color-primary);
+}
+.el-scrollbar {
+  --el-scrollbar-bg-color: #7ebec4;
+  --el-scrollbar-hover-bg-color: #7ebec4;
+}
+.el-scrollbar__thumb {
+  border-radius: 5px;
+}
+.el-tabs__active-bar {
+  height: 4px;
+  border-radius: 5px;
+}
+.el-tabs__item {
+  font-size: 16px;
+  font-weight: 700;
+  color: #77838f;
+}
+
+.el-button.cancel-btn {
+  color: var(--el-color-primary);
+  background: #ebf3f5;
+  border-radius: 8px;
+}
+
+.el-input {
+  --el-input-height: 36px;
+  --el-input-border-radius: 8px;
+}
+
+.el-input.round {
+  --el-input-border-radius: 30px;
+}

@@ -1,0 +1,240 @@
+<template>
+  <el-card shadow="hover" class="tool-card">
+    <div class="card-header">
+      <div class="tag-line">
+        <el-tag :type="currentTypeMeta.type" effect="light" round>
+          {{ currentTypeMeta.label }}
+        </el-tag>
+        <el-tag type="info" effect="plain" round>
+          {{ categoryLabel }}
+        </el-tag>
+        <el-tag :type="currentStatusMeta.type" effect="light" round>
+          {{ currentStatusMeta.label }}
+        </el-tag>
+      </div>
+
+      <el-dropdown trigger="click" popper-class="tool-card-dropdown" @command="emit('command', $event, tool)">
+        <el-button class="card-menu-button" circle text>
+          <svg-icon icon-class="more-up" />
+        </el-button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="edit" :disabled="tool.status !== 2">编辑</el-dropdown-item>
+            <el-dropdown-item :command="tool.status === 1 ? 'offline' : 'online'">
+              {{ tool.status === 1 ? '下线' : '上线' }}
+            </el-dropdown-item>
+            <el-dropdown-item command="delete" class="delete" :disabled="tool.status !== 2">删除</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </div>
+
+    <div class="tool-main">
+      <div class="tool-name text-ellipsis" :title="tool.name || ''" v-html="getHighlightedText(tool.name)"></div>
+      <p class="description-text" :title="tool.description || ''">{{ tool.description || '' }}</p>
+    </div>
+
+    <div class="tool-meta">
+      <span class="tool-meta-label">版本号：</span>
+      <strong class="tool-meta-value text-ellipsis" :title="tool.version || ''">{{ tool.version || '-' }}</strong>
+    </div>
+  </el-card>
+</template>
+
+<script setup lang="ts">
+import type { ToolVO } from '@/types';
+
+const typeMeta: Record<number, { label: string; type: 'primary' | 'warning' }> = {
+  0: { label: 'API', type: 'warning' },
+  1: { label: 'MCP', type: 'primary' },
+  2: { label: '系统内置', type: 'primary' }
+};
+
+const statusMeta: Record<0 | 1 | 2, { label: string; type: 'success' | 'warning' | 'info' }> = {
+  0: { label: '部署中', type: 'warning' },
+  1: { label: '已上线', type: 'success' },
+  2: { label: '已下线', type: 'info' }
+};
+
+const props = defineProps<{
+  tool: ToolVO;
+  categoryLabel: string;
+  keyword?: string;
+}>();
+
+const emit = defineEmits<{
+  command: [command: string | number | object, tool: ToolVO];
+}>();
+
+const currentTypeMeta = computed(() => typeMeta[props.tool.toolType ?? 1] || { label: '工具', type: 'primary' as const });
+const currentStatusMeta = computed(() => statusMeta[(props.tool.status ?? 0) as 0 | 1 | 2] || statusMeta[0]);
+
+const escapeHtml = (value: string) =>
+  value.replace(/[&<>"']/g, (char) => {
+    const entityMap: Record<string, string> = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    };
+    return entityMap[char];
+  });
+
+const getHighlightedText = (value?: string) => {
+  const text = value || '';
+  const keyword = props.keyword?.trim();
+  if (!keyword) return escapeHtml(text);
+
+  const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const matcher = new RegExp(escapedKeyword, 'gi');
+  let html = '';
+  let lastIndex = 0;
+
+  for (const match of text.matchAll(matcher)) {
+    const index = match.index ?? 0;
+    html += escapeHtml(text.slice(lastIndex, index));
+    html += `<mark class="keyword-highlight">${escapeHtml(match[0])}</mark>`;
+    lastIndex = index + match[0].length;
+  }
+
+  return html + escapeHtml(text.slice(lastIndex));
+};
+</script>
+
+<style lang="scss" scoped>
+.tool-card {
+  border-width: 0;
+  border-radius: 24px;
+
+  :deep(.el-card__body) {
+    display: flex;
+    flex-direction: column;
+    padding: 24px !important;
+  }
+}
+
+.card-header,
+.tag-line,
+.tool-meta {
+  display: flex;
+  align-items: center;
+}
+
+.card-header {
+  min-width: 0;
+  justify-content: space-between;
+}
+
+.tag-line {
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  gap: 12px;
+  overflow: hidden;
+
+  :deep(.el-tag) {
+    min-width: 0;
+    flex: 0 1 auto;
+  }
+
+  :deep(.el-tag__content) {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.card-menu-button {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  padding: 0;
+
+  :deep(.svg-icon) {
+    width: 16px;
+    height: 16px;
+    margin-right: 0;
+  }
+}
+
+.tool-main {
+  min-width: 0;
+  margin-top: 20px;
+
+  .tool-name {
+    margin-bottom: 16px;
+    color: #2b2f33;
+    font-size: 18px;
+    font-weight: bold;
+  }
+}
+
+.description-text {
+  display: -webkit-box;
+  height: 32px;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: #b0bac6;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+}
+
+.tool-meta {
+  min-width: 0;
+  margin-top: 20px;
+  padding: 12px;
+  border: 1px solid #ebf3f5;
+  border-radius: 16px;
+  background: rgba(235, 243, 245, 0.6);
+  font-size: 14px;
+}
+
+.tool-meta-label {
+  flex: none;
+  color: #77838f;
+  font-weight: 400;
+}
+
+.tool-meta-value {
+  color: #2b2f33;
+  font-weight: bold;
+}
+
+.text-ellipsis {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:deep(.keyword-highlight) {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: var(--el-color-danger-light-8);
+  color: var(--el-color-danger);
+  font-weight: inherit;
+}
+
+:global(.tool-card-dropdown .el-dropdown-menu__item) {
+  color: var(--el-color-primary) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+}
+
+:global(.tool-card-dropdown .el-dropdown-menu__item.delete) {
+  color: var(--el-text-color-danger) !important;
+}
+
+:global(.tool-card-dropdown .el-dropdown-menu__item.is-disabled) {
+  color: var(--el-text-color-disabled) !important;
+}
+</style>

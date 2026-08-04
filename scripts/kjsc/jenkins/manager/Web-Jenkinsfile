@@ -1,0 +1,41 @@
+pipeline {
+    agent any
+    tools {
+        nodejs 'node18.20.8'
+    }
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        disableConcurrentBuilds()
+    }
+    stages {
+        stage('build') {
+            steps {
+                timeout(time: 10, unit: 'MINUTES') {
+                    dir("apps/web") {
+                        // 如果觉得 npm 下载不稳定，只给 install 加 retry
+                        retry(2) {
+                            sh "npm install"
+                        }
+                        // sh "npm run build:stage"
+                        withEnv(['NODE_OPTIONS=--max-old-space-size=4096']) {
+                            sh 'npm run build:stage'
+                        }
+                    }
+                }
+            }
+        }
+        stage('deploy') {
+            steps {
+                // 给部署阶段设置 5 分钟超时
+                timeout(time: 5, unit: 'MINUTES') {
+                    sh "sh scripts/kjsc/jenkins/web/deploy.sh"
+                }
+            }
+        }
+    }
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}

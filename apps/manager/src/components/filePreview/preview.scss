@@ -1,0 +1,12 @@
+.file-preview, .file-viewer {
+  height: 100%;
+  width: 100%;
+}
+.file-loading-tip, .file-error-tip {
+  padding: 40px;
+  text-align: center;
+  font-size: 14px;
+}
+.file-error-tip {
+  color: #f53f3f;
+}

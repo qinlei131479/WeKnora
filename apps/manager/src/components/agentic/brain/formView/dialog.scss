@@ -1,0 +1,56 @@
+.list-kb {
+  background: rgba(235, 243, 245, 0.6);
+  border-radius: 12px;
+  // height: 48px;
+  padding: 11px 16px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  border: 1px solid transparent;
+
+  &:hover {
+    border: 1px solid #cfe8ee;
+  }
+
+  &.list-kb-checked {
+    background: #ebf3f5;
+    border: 1px solid #bbdfe8;
+  }
+
+  .type-icon {
+    width: 36px;
+    height: 16px;
+    line-height: 16px;
+    border: 1px solid #adaadf;
+    border-radius: 8px;
+    font-size: 10px;
+  }
+  .list-kb-name {
+    font-size: 14px;
+    color: #2b2f33;
+    line-height: 24px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .list-kb-desc {
+    font-size: 14px;
+    color: #b0bac6;
+    line-height: 24px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .checked-icon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 24px;
+    height: 24px;
+  }
+}

@@ -1,0 +1,159 @@
+.doc-icon-text {
+  --icon-color: #29b276;
+  color: var(--icon-color);
+}
+
+.doc-icon-bg {
+  --icon-bg-color: #ecfbf5;
+  background: var(--icon-bg-color);
+}
+
+.kb-card-icon {
+  width: 64px;
+  // height: 24px;
+  border-radius: 4px 4px 4px 4px;
+  font-weight: 400;
+  font-size: 12px;
+  // color: #29B276;
+  line-height: 18px;
+  text-align: center;
+  padding: 3px 8px;
+}
+
+.top-card {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 24px 24px 24px 24px;
+  padding: 24px 32px 32px;
+
+  .top-card-layout {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 4px;
+
+    .top-card-left {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+
+      .svg-icon {
+        color: var(--el-color-primary);
+        font-size: 24px;
+      }
+    }
+
+    .top-card-middle {
+      flex: 1;
+
+      .top-card-text0 {
+        font-weight: bold;
+        font-size: 18px;
+        color: #2b2f33;
+        line-height: 26px;
+      }
+
+      .top-card-text1 {
+        font-weight: 400;
+        font-size: 14px;
+        color: #b0bac6;
+        line-height: 20px;
+        margin-top: 8px;
+      }
+    }
+
+    .top-card-right {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+
+      .top-card-right-label {
+        font-weight: 400;
+        font-size: 14px;
+        color: #77838f;
+        line-height: 20px;
+        white-space: nowrap;
+      }
+
+      .top-card-right-select {
+        width: 420px;
+      }
+    }
+  }
+  .top-inner-card {
+    background: rgba(235, 243, 245, 0.6);
+    border-radius: 16px 16px 16px 16px;
+    padding: 14px 12px 12px;
+  }
+}
+
+.list-card {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 24px 24px 24px 24px;
+  padding: 24px 32px 32px;
+
+  .list-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .list-header-left {
+      .list-header-left-title {
+        font-weight: bold;
+        font-size: 16px;
+        color: #2b2f33;
+        line-height: 24px;
+      }
+
+      .list-header-left-desc {
+        font-weight: 400;
+        font-size: 14px;
+        color: #b0bac6;
+        line-height: 20px;
+        margin-top: 8px;
+      }
+    }
+  }
+}
+
+.card-table {
+  width: 100%;
+  text-align: left;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 20px;
+  td,
+  th {
+    padding: 14px 20px;
+  }
+  thead {
+    background: rgba(235, 243, 245, 0.6);
+    .large-cell {
+      max-width: 50%;
+      width: 40%;
+    }
+  }
+  .el-checkbox {
+    height: 16px;
+  }
+}
+
+.knowledge-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+
+  .knowledge-name {
+    color: #2b2f33;
+  }
+
+  .knowledge-id {
+    color: #b0bac6;
+  }
+
+  .kb-card-icon {
+    margin: -2px 0;
+  }
+}
