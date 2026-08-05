@@ -1,0 +1,61 @@
+// 后端 App 流水线（agent-middle / kjsc）
+// Jenkins Script Path: scripts/kjsc/jenkins/app/Jenkinsfile
+// 依赖：postgres/redis/docreader 已运行；Jenkins 用户可执行 docker
+// 若无 .env，部署阶段会从 .env.kjsc.example 复制生成
+
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        timeout(time: 30, unit: 'MINUTES')
+    }
+
+    parameters {
+        booleanParam(name: 'SKIP_BUILD', defaultValue: false, description: '跳过构建，仅重启容器')
+    }
+
+    stages {
+        stage('检出') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('构建') {
+            when { expression { !params.SKIP_BUILD } }
+            steps {
+                sh 'sh scripts/build_images_kjsc.sh -p'
+            }
+        }
+
+        stage('部署') {
+            steps {
+                sh '''
+                    set -e
+                    if [ ! -f .env ]; then
+                      test -f .env.kjsc.example
+                      cp .env.kjsc.example .env
+                      echo "已从 .env.kjsc.example 生成 .env"
+                    fi
+                    docker compose -f docker-compose-kjsc.yml up -d --no-deps --force-recreate --pull never app
+                '''
+            }
+        }
+
+        stage('检查') {
+            steps {
+                sh '''
+                    set -e
+                    for i in $(seq 1 30); do
+                      curl -fsS http://127.0.0.1:9988/health && exit 0
+                      sleep 2
+                    done
+                    docker compose -f docker-compose-kjsc.yml logs --tail=50 app
+                    exit 1
+                '''
+            }
+        }
+    }
+}

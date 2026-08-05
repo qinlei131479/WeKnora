@@ -500,7 +500,7 @@ start_frontend() {
         load_env_files >/dev/null 2>&1 || true
     fi
     
-    cd "$PROJECT_ROOT/frontend"
+    cd "$PROJECT_ROOT/apps/frontend"
     
     # 检查 npm 是否安装
     if ! command -v npm &> /dev/null; then
