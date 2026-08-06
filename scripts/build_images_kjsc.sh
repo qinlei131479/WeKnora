@@ -33,6 +33,7 @@ show_help() {
     echo "  -d, --docreader 仅构建文档读取器镜像"
     echo "  -f, --frontend 仅构建前端镜像"
     echo "  -s, --sandbox  仅构建沙箱镜像"
+    echo "      --docs     仅构建文档站镜像 (VitePress → nginx)"
     echo "  -c, --clean    清理所有本地 kjsc/agent-middle 镜像"
     echo "  -v, --version  显示版本信息"
     exit 0
@@ -281,6 +282,32 @@ build_sandbox_image() {
     fi
 }
 
+# 构建文档站镜像（VitePress → nginx；context=docs，独立于业务服务）
+build_docs_image() {
+    log_info "构建文档站镜像 (${IMAGE_PREFIX}-docs)..."
+
+    local docs_root="$PROJECT_ROOT/docs"
+    if [ ! -f "$docs_root/package.json" ] || [ ! -f "$docs_root/Dockerfile" ]; then
+        log_error "docs 站点不完整: $docs_root"
+        return 1
+    fi
+
+    cd "$PROJECT_ROOT"
+    docker build \
+        --platform $PLATFORM \
+        -f "$docs_root/Dockerfile" \
+        -t ${IMAGE_PREFIX}-docs:latest \
+        "$docs_root"
+
+    if [ $? -eq 0 ]; then
+        log_success "文档站镜像构建成功: ${IMAGE_PREFIX}-docs:latest"
+        return 0
+    else
+        log_error "文档站镜像构建失败"
+        return 1
+    fi
+}
+
 # 构建所有镜像
 build_all_images() {
     log_info "开始构建所有 agent-middle 镜像..."
@@ -346,18 +373,21 @@ clean_images() {
     docker stop $(docker ps -q --filter "ancestor=${IMAGE_PREFIX}-docreader:latest" 2>/dev/null) 2>/dev/null || true
     docker stop $(docker ps -q --filter "ancestor=${IMAGE_PREFIX}-ui:latest" 2>/dev/null) 2>/dev/null || true
     docker stop $(docker ps -q --filter "ancestor=${IMAGE_PREFIX}-sandbox:latest" 2>/dev/null) 2>/dev/null || true
+    docker stop $(docker ps -q --filter "ancestor=${IMAGE_PREFIX}-docs:latest" 2>/dev/null) 2>/dev/null || true
 
     log_info "删除相关容器..."
     docker rm $(docker ps -aq --filter "ancestor=${IMAGE_PREFIX}-app:latest" 2>/dev/null) 2>/dev/null || true
     docker rm $(docker ps -aq --filter "ancestor=${IMAGE_PREFIX}-docreader:latest" 2>/dev/null) 2>/dev/null || true
     docker rm $(docker ps -aq --filter "ancestor=${IMAGE_PREFIX}-ui:latest" 2>/dev/null) 2>/dev/null || true
     docker rm $(docker ps -aq --filter "ancestor=${IMAGE_PREFIX}-sandbox:latest" 2>/dev/null) 2>/dev/null || true
+    docker rm $(docker ps -aq --filter "ancestor=${IMAGE_PREFIX}-docs:latest" 2>/dev/null) 2>/dev/null || true
 
     log_info "删除本地镜像..."
     docker rmi ${IMAGE_PREFIX}-app:latest 2>/dev/null || true
     docker rmi ${IMAGE_PREFIX}-docreader:latest 2>/dev/null || true
     docker rmi ${IMAGE_PREFIX}-ui:latest 2>/dev/null || true
     docker rmi ${IMAGE_PREFIX}-sandbox:latest 2>/dev/null || true
+    docker rmi ${IMAGE_PREFIX}-docs:latest 2>/dev/null || true
     docker rmi ${IMAGE_PREFIX}-odl-hybrid:local 2>/dev/null || true
     docker rmi ${IMAGE_PREFIX}-mcp:latest 2>/dev/null || true
 
@@ -373,6 +403,7 @@ BUILD_APP=false
 BUILD_DOCREADER=false
 BUILD_FRONTEND=false
 BUILD_SANDBOX=false
+BUILD_DOCS=false
 CLEAN_IMAGES=false
 
 if [ $# -eq 0 ]; then
@@ -392,6 +423,8 @@ while [ "$1" != "" ]; do
         -f | --frontend )   BUILD_FRONTEND=true
                             ;;
         -s | --sandbox )    BUILD_SANDBOX=true
+                            ;;
+        --docs )            BUILD_DOCS=true
                             ;;
         -c | --clean )      CLEAN_IMAGES=true
                             ;;
@@ -438,6 +471,11 @@ fi
 
 if [ "$BUILD_SANDBOX" = true ]; then
     build_sandbox_image
+    exit $?
+fi
+
+if [ "$BUILD_DOCS" = true ]; then
+    build_docs_image
     exit $?
 fi
 

@@ -5,6 +5,8 @@
 !.env.kjsc.example
 !.gitignore
 !.github/
+!.vitepress/
+!.vitepress/**
 
 # 敏感文件
 *.pem
@@ -21,6 +23,8 @@
 node_modules/
 /dist/
 /build/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
 *.log
 
 # 临时文件

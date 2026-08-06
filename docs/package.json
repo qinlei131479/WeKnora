@@ -1,0 +1,14 @@
+{
+  "name": "agent-middle-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "docs:dev": "vitepress dev --port 9900 --host 0.0.0.0",
+    "docs:build": "vitepress build",
+    "docs:preview": "vitepress preview --port 9900 --host 0.0.0.0"
+  },
+  "devDependencies": {
+    "medium-zoom": "^1.1.0",
+    "vitepress": "^1.6.3"
+  }
+}

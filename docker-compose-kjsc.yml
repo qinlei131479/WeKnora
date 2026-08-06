@@ -24,6 +24,19 @@ services:
       - agent-middle-network
     restart: unless-stopped
 
+  # Independent docs site (VitePress). No dependency on app/frontend.
+  docs:
+    image: kjsc/agent-middle-docs:${WEKNORA_VERSION:-latest}
+    build:
+      context: ./docs
+      dockerfile: Dockerfile
+    container_name: agent-middle-docs
+    ports:
+      - "${DOCS_PORT:-9900}:80"
+    networks:
+      - agent-middle-network
+    restart: unless-stopped
+
   app:
     image: kjsc/agent-middle-app:${WEKNORA_VERSION:-latest}
     build:
