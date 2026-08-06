@@ -6,10 +6,16 @@
 pipeline {
     agent any
 
+    // 与 manager/Web-Jenkinsfile 相同：依赖 Jenkins 全局工具 NodeJS（名称须一致）
+    tools {
+        nodejs 'node20.20.2'
+    }
+
     options {
         timestamps()
         disableConcurrentBuilds()
         timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
     parameters {
@@ -26,7 +32,10 @@ pipeline {
         stage('构建') {
             when { expression { !params.SKIP_BUILD } }
             steps {
-                sh 'sh scripts/build_images_kjsc.sh -f'
+                sh 'node -v && npm -v'
+                withEnv(['NODE_OPTIONS=--max-old-space-size=4096']) {
+                    sh 'sh scripts/build_images_kjsc.sh -f'
+                }
             }
         }
 
