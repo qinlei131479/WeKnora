@@ -56,8 +56,12 @@ pipeline {
             steps {
                 sh '''
                     set -e
+                    # 与 .env 中 APP_PORT 一致；未配置时默认 9980
+                    port=$(grep -E '^APP_PORT=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d ' "\t\r' || true)
+                    port=${port:-9980}
+                    echo "健康检查: http://127.0.0.1:${port}/health"
                     for i in $(seq 1 30); do
-                      curl -fsS http://127.0.0.1:9988/health && exit 0
+                      curl -fsS "http://127.0.0.1:${port}/health" && exit 0
                       sleep 2
                     done
                     docker logs --tail=50 "$CONTAINER_NAME" || true

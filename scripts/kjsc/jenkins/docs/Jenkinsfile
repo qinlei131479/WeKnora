@@ -47,7 +47,7 @@ pipeline {
                     fi
                     docker network inspect "$COMPOSE_NETWORK" >/dev/null 2>&1 || docker network create "$COMPOSE_NETWORK"
                     docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
-                    docker compose -f docker-compose-kjsc.yml up -d --no-deps --force-recreate --pull never "$COMPOSE_SERVICE"
+                    docker compose -f docker-compose-kjsc.yml --profile docs up -d --no-deps --force-recreate --pull never "$COMPOSE_SERVICE"
                 '''
             }
         }

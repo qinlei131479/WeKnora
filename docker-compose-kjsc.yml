@@ -25,6 +25,7 @@ services:
     restart: unless-stopped
 
   # Independent docs site (VitePress). No dependency on app/frontend.
+  # 默认 up 不启动；需要：docker compose -f docker-compose-kjsc.yml --profile docs up -d docs
   docs:
     image: kjsc/agent-middle-docs:${WEKNORA_VERSION:-latest}
     build:
@@ -36,6 +37,8 @@ services:
     networks:
       - agent-middle-network
     restart: unless-stopped
+    profiles:
+      - docs
 
   app:
     image: kjsc/agent-middle-app:${WEKNORA_VERSION:-latest}

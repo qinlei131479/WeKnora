@@ -45,13 +45,15 @@ docker compose -f docker-compose-kjsc.yml up -d --pull never
 
 ```bash
 sh scripts/build_images_kjsc.sh --docs
-docker compose -f docker-compose-kjsc.yml up -d --no-deps --pull never docs
+docker compose -f docker-compose-kjsc.yml --profile docs up -d --no-deps --pull never docs
 ```
+
+> `docs` 挂了 `profiles: [docs]`，普通 `docker compose -f docker-compose-kjsc.yml up -d` **不会**启动文档站，必须加 `--profile docs`。
 
 健康检查端口（与 `.env` 保持一致）：
 
-- App：`APP_PORT=9988` → `http://127.0.0.1:9988/health`
-- UI：`FRONTEND_PORT=9980` → `http://127.0.0.1:9980/`
+- App：`APP_PORT=9980` → `http://127.0.0.1:9980/health`
+- UI：`FRONTEND_PORT=9988` → `http://127.0.0.1:9988/`
 - Docs：`DOCS_PORT=9900` → `http://127.0.0.1:9900/`
 
 ## 参数
