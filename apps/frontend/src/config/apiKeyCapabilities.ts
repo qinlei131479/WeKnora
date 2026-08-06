@@ -1,4 +1,5 @@
 import type { TenantAPIKeyCapability } from '@/api/tenant'
+import { shouldHideDatasource } from '@/utils/weknoraFeatures'
 
 export type ApiKeyCapabilityOption = {
   value: TenantAPIKeyCapability
@@ -12,7 +13,7 @@ export type ApiKeyCapabilityGroup = {
   capabilities: ApiKeyCapabilityOption[]
 }
 
-export const TENANT_API_KEY_CAPABILITIES: TenantAPIKeyCapability[] = [
+const ALL_TENANT_API_KEY_CAPABILITIES: TenantAPIKeyCapability[] = [
   'retrieve', 'chat', 'read_agents', 'ingest', 'manage_kbs',
   'message_history', 'manage_agents', 'manage_mcp_services',
   'manage_datasources', 'manage_models', 'manage_vector_stores',
@@ -20,6 +21,11 @@ export const TENANT_API_KEY_CAPABILITIES: TenantAPIKeyCapability[] = [
   'run_evaluations', 'manage_members', 'manage_spaces',
   'manage_tenant_settings',
 ]
+
+/** 按功能开关过滤后的租户 API Key 能力列表 */
+export const TENANT_API_KEY_CAPABILITIES: TenantAPIKeyCapability[] = ALL_TENANT_API_KEY_CAPABILITIES.filter(
+  (c) => !(c === 'manage_datasources' && shouldHideDatasource())
+)
 
 export const SYSTEM_API_KEY_CAPABILITIES: TenantAPIKeyCapability[] = [
   'system_tenants_read', 'system_tenants_manage',
@@ -35,7 +41,7 @@ export const KB_SCOPED_API_KEY_CAPABILITIES = new Set<TenantAPIKeyCapability>([
   'retrieve', 'chat', 'ingest', 'manage_kbs', 'manage_agents', 'manage_datasources',
 ])
 
-export const TENANT_API_KEY_CAPABILITY_GROUPS: ApiKeyCapabilityGroup[] = [
+const ALL_TENANT_API_KEY_CAPABILITY_GROUPS: ApiKeyCapabilityGroup[] = [
   {
     key: 'knowledge',
     labelKey: 'integrations.api.apiKeyCapabilityGroupKnowledge',
@@ -79,6 +85,19 @@ export const TENANT_API_KEY_CAPABILITY_GROUPS: ApiKeyCapabilityGroup[] = [
     ],
   },
 ]
+
+function filterHiddenCapabilities(groups: ApiKeyCapabilityGroup[]): ApiKeyCapabilityGroup[] {
+  const hideDs = shouldHideDatasource()
+  return groups
+    .map((g) => ({
+      ...g,
+      capabilities: g.capabilities.filter((c) => !(hideDs && c.value === 'manage_datasources')),
+    }))
+    .filter((g) => g.capabilities.length > 0)
+}
+
+export const TENANT_API_KEY_CAPABILITY_GROUPS: ApiKeyCapabilityGroup[] =
+  filterHiddenCapabilities(ALL_TENANT_API_KEY_CAPABILITY_GROUPS)
 
 export const SYSTEM_API_KEY_CAPABILITY_GROUP: ApiKeyCapabilityGroup = {
   key: 'system',

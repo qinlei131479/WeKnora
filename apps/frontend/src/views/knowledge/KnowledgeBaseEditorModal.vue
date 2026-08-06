@@ -414,8 +414,11 @@
                   />
                 </div>
 
-                <!-- 数据源管理（仅编辑模式） -->
-                <div v-if="editorMode === 'edit' && activeKbId && currentSection === 'datasource'" class="section">
+                <!-- 数据源管理（仅编辑模式；功能开关可隐藏） -->
+                <div
+                  v-if="!hideDatasource && editorMode === 'edit' && activeKbId && currentSection === 'datasource'"
+                  class="section"
+                >
                   <DataSourceSettings :kb-id="activeKbId" @count="dsCount = $event" />
                 </div>
 
@@ -482,6 +485,7 @@ import GraphSettings from './settings/GraphSettings.vue'
 import KBShareSettings from './settings/KBShareSettings.vue'
 import DataSourceSettings from './settings/DataSourceSettings.vue'
 import KnowledgeBaseActivitySettings from './settings/KnowledgeBaseActivitySettings.vue'
+import { shouldHideDatasource } from '@/utils/weknoraFeatures'
 import { useI18n } from 'vue-i18n'
 
 const uiStore = useUIStore()
@@ -489,6 +493,7 @@ const authStore = useAuthStore()
 const chatResources = useChatResourcesStore()
 const editorResources = useEditorResourcesStore()
 const { t } = useI18n()
+const hideDatasource = shouldHideDatasource()
 
 // Props
 const props = defineProps<{
@@ -634,7 +639,7 @@ const navItems = computed(() => {
       { key: 'graph', icon: 'chart-bubble', label: t('knowledgeEditor.sidebar.graph') },
       { key: 'advanced', icon: 'setting', label: t('knowledgeEditor.sidebar.advanced') }
     )
-    if (editorMode.value === 'edit' && activeKbId.value) {
+    if (!hideDatasource && editorMode.value === 'edit' && activeKbId.value) {
       items.push({ key: 'datasource', icon: 'cloud-download', label: t('knowledgeEditor.sidebar.datasource'), badge: dsCount.value || undefined })
     }
   }

@@ -33,6 +33,8 @@ export type FeatureFlags = {
   hideVersionInfo: boolean
   /** 隐藏常规设置中的界面字体 / 代码字体选择 */
   hideFontPickers: boolean
+  /** 隐藏知识库「数据源导入」 */
+  hideDatasource: boolean
   /** 限制语言 / IM / 向量库 / 存储 / 搜索等白名单选项 */
   restrictProviderOptions: boolean
 }
@@ -100,8 +102,14 @@ export function getFeatureFlags(): FeatureFlags {
     hideClaw: hide,
     hideVersionInfo: hide,
     hideFontPickers: hide,
+    hideDatasource: hide,
     restrictProviderOptions: hide,
   }
+}
+
+/** 是否隐藏数据源导入模块 */
+export function shouldHideDatasource(): boolean {
+  return readHide()
 }
 
 export function isCloudParserEngine(name: string): boolean {
