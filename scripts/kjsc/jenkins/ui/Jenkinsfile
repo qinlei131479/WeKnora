@@ -9,6 +9,7 @@ pipeline {
     environment {
         CONTAINER_NAME = 'agent-middle-frontend'
         COMPOSE_SERVICE = 'frontend'
+        COMPOSE_NETWORK = 'agent-middle-network'
     }
 
     // 与 manager/Web-Jenkinsfile 相同：依赖 Jenkins 全局工具 NodeJS（名称须一致）
@@ -53,7 +54,8 @@ pipeline {
                       cp .env.kjsc.example .env
                       echo "已从 .env.kjsc.example 生成 .env"
                     fi
-                    # 同名容器已存在时先删掉再 recreate（避免 Conflict）
+                    # 网络不存在则创建（compose 中 name: agent-middle-network）
+                    docker network inspect "$COMPOSE_NETWORK" >/dev/null 2>&1 || docker network create "$COMPOSE_NETWORK"
                     docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
                     docker compose -f docker-compose-kjsc.yml up -d --no-deps --force-recreate --pull never "$COMPOSE_SERVICE"
                 '''
@@ -69,7 +71,7 @@ pipeline {
                       case "$code" in 200|301|302|304) exit 0 ;; esac
                       sleep 2
                     done
-                    docker compose -f docker-compose-kjsc.yml logs --tail=50 "$COMPOSE_SERVICE"
+                    docker logs --tail=50 "$CONTAINER_NAME" || true
                     exit 1
                 '''
             }

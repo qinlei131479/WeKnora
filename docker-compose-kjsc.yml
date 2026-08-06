@@ -1026,7 +1026,10 @@ services:
       - full
 
 networks:
+  # 固定物理网络名，避免被 Compose 项目名（目录名/Jenkins Job 名）加上前缀
+  # 否则会出现 agent-middle-platform_...、agent-middle-web-frontend_... 等多个网络
   agent-middle-network:
+    name: agent-middle-network
     driver: bridge
 
 volumes:

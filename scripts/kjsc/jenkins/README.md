@@ -7,13 +7,15 @@
 | 类型 | 值 |
 |------|-----|
 | Compose | `docker-compose-kjsc.yml` |
-| 网络 | `agent-middle-network` |
+| 网络 | `agent-middle-network`（compose 中 `name:` 固定，不随目录/Jenkins 工作区变化） |
 | 容器 | `agent-middle-<角色>` |
 | 自研镜像 | `kjsc/agent-middle-{ui,app,docs,docreader,sandbox,...}` |
 | 前端源码 | `apps/frontend` |
 | 文档站源码 | `docs/`（VitePress） |
 
 第三方依赖（redis / postgres 等）继续使用公共镜像。
+
+Jenkins：网络不存在则创建 `agent-middle-network`，再删同名容器并 `compose up`。旧的带前缀网络（如 `*_agent-middle-network`）可在容器迁到新网络后手动删掉。
 
 ## 文件
 
@@ -28,7 +30,8 @@
 - 仓库根目录有 `.env.kjsc.example`（已入库）；部署时若无 `.env` 会自动 `cp .env.kjsc.example .env`
 - `postgres` / `redis` / `docreader` 已常驻（Docs 流水线**不依赖**这些服务）
 - Jenkins 用户在 `docker` 组（能执行 `docker info` / `docker compose`）
-- **UI Job**：Jenkins 全局工具需配置 NodeJS，**Name 必须为** `node20.20.2`（版本 20.20.2；与 `manager/Web-Jenkinsfile` 的 `tools { nodejs '...' }` 用法相同）。Docs / App **不依赖**该工具。
+- **App Job**：Jenkins 全局工具需配置 Go，**Name 必须为** `go1.26.0`（与 `tools { go 'go1.26.0' }` 一致）。
+- **UI Job**：Jenkins 全局工具需配置 NodeJS，**Name 必须为** `node20.20.2`（版本 20.20.2；与 `manager/Web-Jenkinsfile` 的 `tools { nodejs '...' }` 用法相同）。Docs **不依赖**上述工具。
 
 首次可手工：
 
