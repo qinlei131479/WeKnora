@@ -16,6 +16,7 @@ pipeline {
         timestamps()
         disableConcurrentBuilds()
         timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
     parameters {
@@ -30,7 +31,10 @@ pipeline {
         }
 
         stage('构建') {
-            when { expression { !params.SKIP_BUILD } }
+            // 与 UI 相同提供 SKIP_BUILD；此处用 toString 判断，避免 Jenkins 传入字符串时 !params.SKIP_BUILD 失效
+            when {
+                expression { return params.SKIP_BUILD?.toString() != 'true' }
+            }
             steps {
                 sh 'sh scripts/build_images_kjsc.sh -p'
             }
