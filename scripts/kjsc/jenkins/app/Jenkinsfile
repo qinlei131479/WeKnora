@@ -6,6 +6,11 @@
 pipeline {
     agent any
 
+    environment {
+        CONTAINER_NAME = 'agent-middle-app'
+        COMPOSE_SERVICE = 'app'
+    }
+
     options {
         timestamps()
         disableConcurrentBuilds()
@@ -39,7 +44,9 @@ pipeline {
                       cp .env.kjsc.example .env
                       echo "已从 .env.kjsc.example 生成 .env"
                     fi
-                    docker compose -f docker-compose-kjsc.yml up -d --no-deps --force-recreate --pull never app
+                    # 同名容器已存在时先删掉再 recreate（避免 Conflict）
+                    docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
+                    docker compose -f docker-compose-kjsc.yml up -d --no-deps --force-recreate --pull never "$COMPOSE_SERVICE"
                 '''
             }
         }
@@ -52,7 +59,7 @@ pipeline {
                       curl -fsS http://127.0.0.1:9988/health && exit 0
                       sleep 2
                     done
-                    docker compose -f docker-compose-kjsc.yml logs --tail=50 app
+                    docker compose -f docker-compose-kjsc.yml logs --tail=50 "$COMPOSE_SERVICE"
                     exit 1
                 '''
             }
