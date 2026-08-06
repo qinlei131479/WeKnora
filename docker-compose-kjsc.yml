@@ -516,7 +516,7 @@ services:
   postgres:
     #image: paradedb/paradedb:v0.22.2-pg17
     # 这个版本是兼容x86架构的，上面的版本不支持x86架构，导致数据库无法启动
-    image: paradedb/paradedb:v0.22.2-pg17
+    image: paradedb/paradedb:v0.22.6-pg17
     container_name: agent-middle-postgres
     environment:
       - POSTGRES_USER=${DB_USER}
