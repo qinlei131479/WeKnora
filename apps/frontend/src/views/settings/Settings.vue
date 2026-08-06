@@ -222,6 +222,7 @@ import {
   SETTINGS_SECTION_MIN_ROLE,
   SYSTEM_ADMIN_SETTINGS_SECTIONS,
 } from '@/config/settingsAccess'
+import { isHiddenSettingsSection } from '@/utils/weknoraFeatures'
 
 const route = useRoute()
 const router = useRouter()
@@ -346,7 +347,7 @@ const navItems = computed(() => {
   if (!authStore.currentTenantRole && !authStore.canAccessAllTenants) {
     return [] as NavItem[]
   }
-  return all.filter((it) => canSeeSection(it.key))
+  return all.filter((it) => canSeeSection(it.key) && !isHiddenSettingsSection(it.key))
 })
 
 const navGroups = computed<NavGroup[]>(() => {

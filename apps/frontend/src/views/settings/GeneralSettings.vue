@@ -19,10 +19,14 @@
             @change="handleLanguageChange"
             style="width: 280px;"
           >
-            <t-option value="zh-CN" :label="$t('language.zhCN')">{{ $t('language.zhCN') }}</t-option>
-            <t-option value="en-US" :label="$t('language.enUS')">{{ $t('language.enUS') }}</t-option>
-            <t-option value="ru-RU" :label="$t('language.ruRU')">{{ $t('language.ruRU') }}</t-option>
-            <t-option value="ko-KR" :label="$t('language.koKR')">{{ $t('language.koKR') }}</t-option>
+            <t-option
+              v-for="opt in languageOptions"
+              :key="opt.value"
+              :value="opt.value"
+              :label="opt.label"
+            >
+              {{ opt.label }}
+            </t-option>
           </t-select>
         </div>
       </div>
@@ -48,7 +52,7 @@
       </div>
 
       <!-- 界面字体 -->
-      <div class="setting-row">
+      <div v-if="!hideFontPickers" class="setting-row">
         <div class="setting-info">
           <label>{{ $t('font.uiFont') }}</label>
           <p class="desc">{{ $t('font.uiFontDescription') }}</p>
@@ -76,7 +80,7 @@
       </div>
 
       <!-- 代码字体 -->
-      <div class="setting-row">
+      <div v-if="!hideFontPickers" class="setting-row">
         <div class="setting-info">
           <label>{{ $t('font.monoFont') }}</label>
           <p class="desc">{{ $t('font.monoFontDescription') }}</p>
@@ -154,6 +158,11 @@ import {
   type MonoFontKey,
   type FontSizeKey,
 } from '@/composables/useFont'
+import {
+  getFeatureFlags,
+  isAllowedLocale,
+  shouldHideFontPickers,
+} from '@/utils/weknoraFeatures'
 
 const { t, locale } = useI18n()
 const settingsStore = useSettingsStore()
@@ -168,6 +177,16 @@ const {
   setFontSize,
 } = useFont()
 
+const hideFontPickers = shouldHideFontPickers()
+const featureFlags = getFeatureFlags()
+
+const ALL_LANGUAGE_OPTIONS = [
+  { value: 'zh-CN', labelKey: 'language.zhCN' },
+  { value: 'en-US', labelKey: 'language.enUS' },
+  { value: 'ru-RU', labelKey: 'language.ruRU' },
+  { value: 'ko-KR', labelKey: 'language.koKR' },
+] as const
+
 // 本地状态
 const localLanguage = ref('zh-CN')
 const localTheme = ref<ThemeMode>(currentTheme.value)
@@ -180,6 +199,12 @@ watch(currentTheme, (val) => { localTheme.value = val })
 watch(currentSans, (val) => { localSansFont.value = val })
 watch(currentMono, (val) => { localMonoFont.value = val })
 watch(currentSize, (val) => { localFontSize.value = val })
+
+const languageOptions = computed(() =>
+  ALL_LANGUAGE_OPTIONS
+    .filter((opt) => isAllowedLocale(opt.value))
+    .map((opt) => ({ value: opt.value, label: t(opt.labelKey) })),
+)
 
 const sansFontOptions = computed<{ value: FontKey; label: string; preview: string }[]>(() =>
   visibleSansKeys().map((key) => ({
@@ -222,12 +247,14 @@ const isAutoCheckUpdateEnabled = computed({
 onMounted(() => {
   // 从 localStorage 加载语言设置
   const savedLocale = localStorage.getItem('locale')
-  if (savedLocale) {
-    localLanguage.value = savedLocale
-    locale.value = savedLocale
-  } else {
-    localLanguage.value = locale.value
+  let next = savedLocale || locale.value || 'zh-CN'
+  // 限制模式下若当前语言不在白名单，回落到中文
+  if (featureFlags.restrictProviderOptions && !isAllowedLocale(next)) {
+    next = 'zh-CN'
+    localStorage.setItem('locale', next)
   }
+  localLanguage.value = next
+  locale.value = next
 })
 
 // 处理语言变化

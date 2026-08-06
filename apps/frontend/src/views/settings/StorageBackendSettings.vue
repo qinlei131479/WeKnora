@@ -121,7 +121,7 @@
             <label class="form-label required">{{ t('settings.storageBackend.providerLabel') }}</label>
             <t-select v-model="form.provider" :disabled="!!editing" @change="resetConfig">
               <t-option
-                v-for="provider in providers"
+                v-for="provider in providerOptions"
                 :key="provider"
                 :value="provider"
                 :label="provider.toUpperCase()"
@@ -257,12 +257,21 @@ import {
   setDefaultStorageBackend, testStorageBackend, testStorageBackendByID, updateStorageBackend,
   type StorageBackend, type StorageBackendConfig,
 } from '@/api/storage-backend'
+import { isAllowedStorageProvider } from '@/utils/weknoraFeatures'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
 const loading = ref(false), saving = ref(false), testing = ref(false), visible = ref(false)
 const backends = ref<StorageBackend[]>([]), providers = ref<string[]>([]), defaultID = ref('')
 const editing = ref<StorageBackend | null>(null)
+
+/** 新建仅白名单；编辑已有非白名单条目时保留全量以便回显 */
+const selectableProviders = computed(() =>
+  providers.value.filter((p) => isAllowedStorageProvider(p)),
+)
+const providerOptions = computed(() =>
+  editing.value ? providers.value : selectableProviders.value,
+)
 const rawTestResult = ref<'ok' | 'error' | null>(null)
 const blankConfig = (): StorageBackendConfig => ({ mode: 'remote', endpoint: '', region: '', access_key_id: '', secret_access_key: '', bucket_name: '', path_prefix: '', use_ssl: true })
 const form = reactive<{ name: string; provider: string; config: StorageBackendConfig }>({ name: '', provider: 'local', config: blankConfig() })
@@ -333,7 +342,14 @@ async function load() {
   } finally { loading.value = false }
 }
 function resetConfig() { form.config = blankConfig(); rawTestResult.value = null }
-function openCreate() { editing.value = null; form.name = ''; form.provider = providers.value[0] || 'local'; form.config = blankConfig(); rawTestResult.value = null; visible.value = true }
+function openCreate() {
+  editing.value = null
+  form.name = ''
+  form.provider = selectableProviders.value[0] || 'local'
+  form.config = blankConfig()
+  rawTestResult.value = null
+  visible.value = true
+}
 function openEdit(backend: StorageBackend) { editing.value = backend; form.name = backend.name; form.provider = backend.provider; form.config = { ...blankConfig(), ...backend.config }; rawTestResult.value = null; visible.value = true }
 async function testRaw() {
   testing.value = true

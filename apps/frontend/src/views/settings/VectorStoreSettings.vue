@@ -222,7 +222,7 @@
               <label class="form-label required">{{ t('vectorStoreSettings.engineTypeLabel') }}</label>
               <t-select v-model="form.engine_type" @change="onEngineTypeChange">
                 <t-option
-                  v-for="st in storeTypes"
+                  v-for="st in selectableStoreTypes"
                   :key="st.type"
                   :value="st.type"
                   :label="st.display_name"
@@ -365,6 +365,7 @@ import {
   type VectorStoreTypeInfo,
 } from '@/api/vector-store'
 import { useAuthStore } from '@/stores/auth'
+import { isAllowedVectorStoreEngine } from '@/utils/weknoraFeatures'
 import { providerLogo } from './providerLogos'
 import SettingDrawer from '@/components/settings/SettingDrawer.vue'
 
@@ -374,6 +375,10 @@ const authStore = useAuthStore()
 // ===== State =====
 const stores = ref<VectorStoreEntity[]>([])
 const storeTypes = ref<VectorStoreTypeInfo[]>([])
+/** 新建时可选引擎（列表中已有非白名单条目仍照常展示） */
+const selectableStoreTypes = computed(() =>
+  storeTypes.value.filter((st) => isAllowedVectorStoreEngine(st.type)),
+)
 const loading = ref(false)
 const showDialog = ref(false)
 const editingStore = ref<VectorStoreEntity | null>(null)
@@ -607,7 +612,7 @@ const openAddDialog = () => {
   showAdvanced.value = false
   form.value = {
     name: '',
-    engine_type: storeTypes.value[0]?.type || '',
+    engine_type: selectableStoreTypes.value[0]?.type || '',
     connection_config: {},
     index_config: {},
   }

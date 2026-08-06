@@ -532,6 +532,7 @@ import {
   type StorageEngineConfig,
 } from '@/api/system'
 import { useAuthStore } from '@/stores/auth'
+import { isAllowedStorageProvider } from '@/utils/weknoraFeatures'
 import { providerLogo } from './providerLogos'
 import SettingDrawer from '@/components/settings/SettingDrawer.vue'
 
@@ -611,7 +612,7 @@ const providerOptions = computed(() => [
   { value: 'oss', label: t('settings.storage.engineOss'), allowed: isProviderAllowed('oss') },
   { value: 'ks3', label: t('settings.storage.engineKs3'), allowed: isProviderAllowed('ks3') },
   { value: 'obs', label: t('settings.storage.engineObs'), allowed: isProviderAllowed('obs') },
-])
+].filter((opt) => opt.allowed))
 
 const hasAllowedProviders = computed(() => (allowedProviders.value?.length ?? 0) > 0)
 
@@ -776,6 +777,7 @@ const providerStatus = (id: StorageProviderId): { kind: 'on' | 'off'; label: str
 }
 
 function isProviderAllowed(provider: string) {
+  if (!isAllowedStorageProvider(provider)) return false
   if (allowedProviders.value === null) return true
   return allowedProviders.value.includes(provider)
 }

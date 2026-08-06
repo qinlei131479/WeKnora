@@ -599,6 +599,7 @@ import mattermostLogo from '@/assets/img/im/mattermost.svg';
 import wechatLogo from '@/assets/img/im/wechat.svg';
 import qqbotLogo from '@/assets/img/im/qqbot.png';
 import yunzhijiaLogo from '@/assets/img/im/yunzhijia.svg';
+import { isAllowedIMPlatform } from '@/utils/weknoraFeatures';
 
 type IMPlatform = IMChannel['platform'];
 
@@ -654,7 +655,7 @@ const drawerConfirmText = computed(() =>
   wizardStep.value < stepTitles.value.length - 1 ? t('common.next') : t('common.save'),
 );
 
-const platformOptions = computed(() => ([
+const allPlatformOptions = computed(() => ([
   { value: 'wecom' as IMPlatform, label: t('agentEditor.im.wecom'), logo: wecomLogo },
   { value: 'feishu' as IMPlatform, label: t('agentEditor.im.feishu'), logo: feishuLogo },
   { value: 'lark' as IMPlatform, label: t('agentEditor.im.lark'), logo: larkLogo },
@@ -666,6 +667,13 @@ const platformOptions = computed(() => ([
   { value: 'qqbot' as IMPlatform, label: t('agentEditor.im.qqbot'), logo: qqbotLogo },
   { value: 'yunzhijia' as IMPlatform, label: t('agentEditor.im.yunzhijia'), logo: yunzhijiaLogo },
 ]));
+
+/** 新建仅白名单；编辑已有非白名单渠道时保留全量以便回显 */
+const platformOptions = computed(() =>
+  editingChannel.value
+    ? allPlatformOptions.value
+    : allPlatformOptions.value.filter((item) => isAllowedIMPlatform(item.value)),
+);
 
 // Feishu and Lark are the same product on separate clouds, so each has its own
 // open platform console. Bots must be created on the one matching the channel.

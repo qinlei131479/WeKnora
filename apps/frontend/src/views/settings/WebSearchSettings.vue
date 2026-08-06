@@ -183,7 +183,7 @@
                 "免费"分类对用户决策没什么帮助（DuckDuckGo / SearXNG 也都
                 需要可用的网络/自托管实例），反而占视觉空间。
               -->
-              <t-option v-for="pt in providerTypes" :key="pt.id" :value="pt.id" :label="pt.name" />
+              <t-option v-for="pt in providerTypeOptions" :key="pt.id" :value="pt.id" :label="pt.name" />
             </t-select>
           </div>
 
@@ -333,6 +333,7 @@ import CredentialResource, {
 } from '@/components/credentials/CredentialResource.vue'
 import { useConfirmDelete } from '@/components/settings/useConfirmDelete'
 import { useAuthStore } from '@/stores/auth'
+import { isAllowedWebSearchProvider } from '@/utils/weknoraFeatures'
 import { providerLogo } from './providerLogos'
 
 const { t } = useI18n()
@@ -527,14 +528,24 @@ const loadProviderTypes = async () => {
   }
 }
 
+/** 新建时用白名单；编辑已有非白名单条目时保留全量以便展示当前类型 */
+const selectableProviderTypes = computed(() =>
+  providerTypes.value.filter((pt) => isAllowedWebSearchProvider(pt.id)),
+)
+
+const providerTypeOptions = computed(() =>
+  editingProvider.value ? providerTypes.value : selectableProviderTypes.value,
+)
+
 const openAddDialog = () => {
   editingProvider.value = null
+  const defaultType = selectableProviderTypes.value[0]?.id || 'duckduckgo'
   providerForm.value = {
     name: '',
-    provider: providerTypes.value[0]?.id || 'duckduckgo',
+    provider: defaultType,
     description: '',
     parameters: {
-      extra_config: providerConfigDefaults(providerTypes.value[0]?.id || 'duckduckgo'),
+      extra_config: providerConfigDefaults(defaultType),
     },
     is_default: providerEntities.value.length === 0
   }
