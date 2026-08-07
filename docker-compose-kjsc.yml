@@ -1036,19 +1036,37 @@ networks:
     driver: bridge
 
 volumes:
+  # 固定物理卷名，避免被 Compose 项目名（目录名/Jenkins Job 名）加上前缀
+  # 否则会出现 agent-middle-go-backend_data-files、agent-middle-web-frontend_data-files 等多套卷
   postgres-data:
+    name: agent-middle-platform_postgres-data
   data-files:
+    name: agent-middle-platform_data-files
   docreader-tmp:
+    name: agent-middle-platform_docreader-tmp
   minio_data:
+    name: agent-middle-platform_minio_data
   neo4j-data:
+    name: agent-middle-platform_neo4j-data
   qdrant_data:
+    name: agent-middle-platform_qdrant_data
   milvus_data:
+    name: agent-middle-platform_milvus_data
   weaviate_data:
+    name: agent-middle-platform_weaviate_data
   doris_fe_meta:
+    name: agent-middle-platform_doris_fe_meta
   doris_fe_log:
+    name: agent-middle-platform_doris_fe_log
   doris_be_storage:
+    name: agent-middle-platform_doris_be_storage
   doris_be_log:
+    name: agent-middle-platform_doris_be_log
   langfuse_clickhouse_data:
+    name: agent-middle-platform_langfuse_clickhouse_data
   langfuse_clickhouse_logs:
+    name: agent-middle-platform_langfuse_clickhouse_logs
   langfuse_minio_data:
+    name: agent-middle-platform_langfuse_minio_data
   searxng_config:
+    name: agent-middle-platform_searxng_config
