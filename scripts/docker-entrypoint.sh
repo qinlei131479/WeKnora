@@ -7,6 +7,9 @@ set -e
 # container's appuser. This entrypoint runs as root, fixes ownership,
 # then drops privileges to appuser via gosu — the same pattern used
 # by official postgres/redis images.
+#
+# Skip when the mount is read-only (:ro) — chown/cp would fail and
+# abort startup under set -e; host-owned 644/755 files remain readable.
 
 # Directories that may be bind-mounted and need appuser access
 MOUNT_DIRS=(
@@ -15,7 +18,7 @@ MOUNT_DIRS=(
 )
 
 for dir in "${MOUNT_DIRS[@]}"; do
-    if [ -d "$dir" ]; then
+    if [ -d "$dir" ] && [ -w "$dir" ]; then
         chown -R appuser:appuser "$dir" 2>/dev/null || true
     fi
 done
@@ -28,15 +31,19 @@ BUILTIN_DIR="/app/skills/_builtin"
 PRELOADED_DIR="/app/skills/preloaded"
 
 if [ -d "$BUILTIN_DIR" ]; then
-    mkdir -p "$PRELOADED_DIR"
-    for skill_dir in "$BUILTIN_DIR"/*/; do
-        [ -d "$skill_dir" ] || continue
-        skill_name="$(basename "$skill_dir")"
-        if [ ! -d "$PRELOADED_DIR/$skill_name" ]; then
-            cp -r "$skill_dir" "$PRELOADED_DIR/$skill_name"
-        fi
-    done
-    chown -R appuser:appuser "$PRELOADED_DIR"
+    mkdir -p "$PRELOADED_DIR" 2>/dev/null || true
+    if [ -d "$PRELOADED_DIR" ] && [ -w "$PRELOADED_DIR" ]; then
+        for skill_dir in "$BUILTIN_DIR"/*/; do
+            [ -d "$skill_dir" ] || continue
+            skill_name="$(basename "$skill_dir")"
+            if [ ! -d "$PRELOADED_DIR/$skill_name" ]; then
+                cp -r "$skill_dir" "$PRELOADED_DIR/$skill_name"
+            fi
+        done
+        chown -R appuser:appuser "$PRELOADED_DIR" 2>/dev/null || true
+    else
+        echo "WARN: $PRELOADED_DIR is not writable (read-only mount?); skip skills merge/chown"
+    fi
 fi
 
 # ─── Drop privileges and exec the main process ───
