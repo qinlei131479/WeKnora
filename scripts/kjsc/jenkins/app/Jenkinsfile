@@ -26,15 +26,6 @@ pipeline {
     stages {
         stage('检出') {
             steps {
-                // app 将 ./skills/preloaded bind-mount 进容器后，文件可能变成 root 属主，
-                // 导致 jenkins 用户 git checkout 无法 unlink。检出前先恢复属主。
-                sh '''
-                    set -e
-                    if [ -d "${WORKSPACE}/skills" ]; then
-                      echo "修复 skills 目录属主: ${WORKSPACE}/skills"
-                      sudo chown -R jenkins:jenkins "${WORKSPACE}/skills"
-                    fi
-                '''
                 checkout scm
             }
         }
