@@ -311,7 +311,7 @@ services:
       # DB host would skip the 5432 port block.)
       # doris-be: Stream Load follows FE→BE redirects that must receive Basic
       # credentials on whitelisted BE hosts.
-      - SSRF_WHITELIST_EXTRA=${SSRF_WHITELIST_EXTRA:-searxng,qdrant,milvus,weaviate,doris-fe,doris-be}
+      - SSRF_WHITELIST_EXTRA=${SSRF_WHITELIST_EXTRA:-searxng,elasticsearch,qdrant,milvus,weaviate,doris-fe,doris-be}
       - CONCURRENCY_POOL_SIZE=${CONCURRENCY_POOL_SIZE:-5}
       - JWT_SECRET=${JWT_SECRET:-}
       # File size limit (in MB)
@@ -648,6 +648,38 @@ services:
     profiles:
       - neo4j
       - full
+
+  # Elasticsearch 8.x 单节点（RETRIEVE_DRIVER=elasticsearch_v8；--profile elasticsearch）
+  # 默认关闭 xpack 安全，与 qdrant/milvus/weaviate 一致便于内网联调；生产请自行开启认证。
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.3
+    container_name: agent-middle-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - cluster.name=agent-middle-es
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - ES_JAVA_OPTS=${ELASTICSEARCH_JAVA_OPTS:--Xms512m -Xmx512m}
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    networks:
+      - agent-middle-network
+    restart: unless-stopped
+    profiles:
+      - elasticsearch
 
   qdrant:
     image: qdrant/qdrant:v1.16.2
@@ -1048,6 +1080,8 @@ volumes:
     name: agent-middle-platform_minio_data
   neo4j-data:
     name: agent-middle-platform_neo4j-data
+  elasticsearch_data:
+    name: agent-middle-platform_elasticsearch_data
   qdrant_data:
     name: agent-middle-platform_qdrant_data
   milvus_data:
