@@ -53,9 +53,10 @@ services:
     volumes:
       - data-files:/data/files
       - docreader-tmp:/tmp/docreader:ro
-      - ./config/config.yaml:/app/config/config.yaml
+      # bind-mount 使用 :ro，避免容器以 root 写回 Jenkins 工作区导致 git checkout Permission denied
+      - ./config/config.yaml:/app/config/config.yaml:ro
       # Optional: mount custom skills directory (allows adding skills without rebuilding image)
-      - ./skills/preloaded:/app/skills/preloaded
+      - ./skills/preloaded:/app/skills/preloaded:ro
       # Optional: declarative built-in models. Copy config/builtin_models.yaml.example
       # to config/builtin_models.yaml, edit it for your deployment, then
       # uncomment the line below. See docs/BUILTIN_MODELS.md.
