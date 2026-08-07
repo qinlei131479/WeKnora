@@ -282,20 +282,21 @@ build_sandbox_image() {
     fi
 }
 
-# 构建文档站镜像（VitePress → nginx；context=docs，独立于业务服务）
+# 构建文档站镜像（VitePress → nginx；context=docs，工程在 docs/site）
 build_docs_image() {
     log_info "构建文档站镜像 (${IMAGE_PREFIX}-docs)..."
 
     local docs_root="$PROJECT_ROOT/docs"
-    if [ ! -f "$docs_root/package.json" ] || [ ! -f "$docs_root/Dockerfile" ]; then
-        log_error "docs 站点不完整: $docs_root"
+    local site_root="$docs_root/site"
+    if [ ! -f "$site_root/package.json" ] || [ ! -f "$site_root/Dockerfile" ]; then
+        log_error "docs 站点不完整: $site_root"
         return 1
     fi
 
     cd "$PROJECT_ROOT"
     docker build \
         --platform $PLATFORM \
-        -f "$docs_root/Dockerfile" \
+        -f "$site_root/Dockerfile" \
         -t ${IMAGE_PREFIX}-docs:latest \
         "$docs_root"
 

@@ -30,7 +30,7 @@ services:
     image: kjsc/agent-middle-docs:${WEKNORA_VERSION:-latest}
     build:
       context: ./docs
-      dockerfile: Dockerfile
+      dockerfile: site/Dockerfile
     container_name: agent-middle-docs
     ports:
       - "${DOCS_PORT:-9900}:80"

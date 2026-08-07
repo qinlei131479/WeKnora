@@ -5,6 +5,7 @@
 !.env.kjsc.example
 !.gitignore
 !.github/
+!.dockerignore
 !.vitepress/
 !.vitepress/**
 
@@ -23,8 +24,8 @@
 node_modules/
 /dist/
 /build/
-docs/.vitepress/dist/
-docs/.vitepress/cache/
+docs/site/.vitepress/dist/
+docs/site/.vitepress/cache/
 *.log
 
 # 临时文件

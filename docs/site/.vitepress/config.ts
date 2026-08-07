@@ -1,25 +1,48 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitepress'
+
+const siteRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const docsRoot = path.resolve(siteRoot, '..')
 
 /**
  * 智能体中台文档
  * - 产品 / 开发 分目录展示（rewrite，不搬迁上游 wiki 文件）
  * - API 侧栏二级分类
- * - 功能迭代内容在 docs/kjsc/
+ * - 功能迭代 / 覆盖内容在 docs/site/kjsc/
+ * - 站点工程在 docs/site，上游正文在上级 docs/
  */
 export default defineConfig({
   title: '智能体中台文档',
   titleTemplate: ':title | 智能体中台文档',
   description: '智能体中台产品文档与开发指南',
   lang: 'zh-CN',
-  srcDir: '.',
+  srcDir: '..',
   cleanUrls: true,
   ignoreDeadLinks: true,
+  // srcDir 在工程根之外时，强制从 site/node_modules 解析 Vue SSR
+  vite: {
+    server: {
+      fs: { allow: [docsRoot, siteRoot] },
+    },
+    resolve: {
+      alias: {
+        vue: path.resolve(siteRoot, 'node_modules/vue'),
+        'vue/server-renderer': path.resolve(
+          siteRoot,
+          'node_modules/vue/server-renderer',
+        ),
+      },
+    },
+  },
   rewrites: {
     // API 概览用 kjsc 覆盖（隐藏数据源导入）
-    'kjsc/api/README.md': 'api/index.md',
+    'site/kjsc/api/README.md': 'api/index.md',
     // 产品
-    'kjsc/wiki/Home.md': 'product/index.md',
-    'kjsc/wiki/项目概述/版本路线图.md': 'product/项目概述/版本路线图.md',
+    'site/kjsc/wiki/Home.md': 'product/index.md',
+    'site/kjsc/wiki/项目概述/版本路线图.md': 'product/项目概述/版本路线图.md',
+    // 功能迭代页保持 /kjsc/* URL
+    'site/kjsc/:path': 'kjsc/:path',
     'wiki/核心功能/:page': 'product/核心功能/:page',
     'wiki/安全认证/:page': 'product/安全认证/:page',
     // 开发（目录名用 develop，避免与上游 docs/dev 测试目录冲突）
@@ -29,6 +52,14 @@ export default defineConfig({
     'wiki/API参考/:page': 'develop/API参考/:page',
   },
   srcExclude: [
+    // 收录 site/kjsc，排除站点工程文件
+    'site/node_modules/**',
+    'site/.vitepress/**',
+    'site/Dockerfile',
+    'site/nginx.conf',
+    'site/package.json',
+    'site/package-lock.json',
+    'site/README.md',
     '**/docs.go',
     '**/swagger.json',
     '**/swagger.yaml',

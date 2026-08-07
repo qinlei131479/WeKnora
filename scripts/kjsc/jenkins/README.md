@@ -11,7 +11,7 @@
 | 容器 | `agent-middle-<角色>` |
 | 自研镜像 | `kjsc/agent-middle-{ui,app,docs,docreader,sandbox,...}` |
 | 前端源码 | `apps/frontend` |
-| 文档站源码 | `docs/`（VitePress） |
+| 文档站源码 | `docs/site/`（VitePress；正文仍在 `docs/`） |
 
 第三方依赖（redis / postgres 等）继续使用公共镜像。
 
