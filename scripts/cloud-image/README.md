@@ -1,7 +1,7 @@
 # WeKnora 云镜像打包脚本（Cloud-Agnostic）
 
 > **本文档面向「想把 WeKnora 打包成云镜像（AMI / 自定义镜像 / Snapshot）分发给其他人」的用户。**
-> **如果你只是想自己用 WeKnora，请直接看主仓 [README](../../README_EN.md)，`docker compose up -d` 即可。**
+> **如果你只是想自己用 WeKnora，请直接看主仓 [README](../../README.md)，`docker compose up -d` 即可。**
 
 ## 这套脚本能做什么
 
