@@ -59,6 +59,7 @@ docker compose -f docker-compose-kjsc.yml --profile docs up -d --no-deps --pull 
 ## 参数
 
 - `SKIP_BUILD`：跳过构建，只重启容器
+- `OVERWRITE_ENV`（App / UI）：勾选后强制 `cp .env.kjsc.example .env`；覆盖前自动备份为 `.env.bak.<时间戳>`。适用于仓库更新了 example（如 SSRF 白名单）但 Jenkins 工作区仍保留旧 `.env` 的场景。**会覆盖**工作区内手工修改的密码、端口等，请谨慎勾选
 
 建议有 API 变更时：先 App，后 UI。Docs 与业务服务解耦，可单独构建部署。
 
