@@ -23,6 +23,8 @@ export type FeatureFlags = {
   hideGithub: boolean
   /** 隐藏官方网站跳转入口 */
   hideWebsite: boolean
+  /** 隐藏用户菜单「帮助与文档」 */
+  hideHelpAndDocs: boolean
   /** 隐藏设置「消息管理」chathistory */
   hideChatHistory: boolean
   /** 隐藏 Chrome 插件集成页 */
@@ -35,6 +37,8 @@ export type FeatureFlags = {
   hideFontPickers: boolean
   /** 隐藏知识库「数据源导入」 */
   hideDatasource: boolean
+  /** 隐藏智能体 / 知识库编辑页「共享管理」 */
+  hideShareManagement: boolean
   /** 限制语言 / IM / 向量库 / 存储 / 搜索等白名单选项 */
   restrictProviderOptions: boolean
 }
@@ -66,6 +70,22 @@ const ALLOWED_VECTOR_STORE_ENGINES = new Set([
 ])
 const ALLOWED_STORAGE_PROVIDERS = new Set(['local', 'minio', 'oss', 'cos'])
 const ALLOWED_WEB_SEARCH_PROVIDERS = new Set(['duckduckgo', 'baidu', 'tavily', 'bing'])
+/** 新增模型时「远程服务商」白名单（不含 Ollama：Ollama 走 source=local，不受此限制） */
+const ALLOWED_MODEL_PROVIDERS = new Set([
+  'aliyun', // 通义千问 / DashScope
+  'deepseek',
+  'hunyuan', // 腾讯混元
+  'openai',
+  'anthropic',
+  'gemini',
+  'mimo', // 小米
+  'moonshot', // 月之暗面
+  'zhipu', // 智谱
+  'qianfan', // 百度千帆
+  'minimax',
+  'volcengine', // 火山引擎
+  'generic', // 自定义 OpenAI 兼容
+])
 
 /**
  * 启动时调用：localStorage 无该 key 则写入默认值；已有则不动。
@@ -97,12 +117,14 @@ export function getFeatureFlags(): FeatureFlags {
     hideOrganizations: hide,
     hideGithub: hide,
     hideWebsite: hide,
+    hideHelpAndDocs: hide,
     hideChatHistory: hide,
     hideChrome: hide,
     hideClaw: hide,
     hideVersionInfo: hide,
     hideFontPickers: hide,
     hideDatasource: hide,
+    hideShareManagement: hide,
     restrictProviderOptions: hide,
   }
 }
@@ -110,6 +132,16 @@ export function getFeatureFlags(): FeatureFlags {
 /** 是否隐藏数据源导入模块 */
 export function shouldHideDatasource(): boolean {
   return readHide()
+}
+
+/** 是否隐藏智能体 / 知识库编辑页「共享管理」 */
+export function shouldHideShareManagement(): boolean {
+  return readHide()
+}
+
+/** @deprecated 使用 shouldHideShareManagement */
+export function shouldHideAgentShare(): boolean {
+  return shouldHideShareManagement()
 }
 
 export function isCloudParserEngine(name: string): boolean {
@@ -153,4 +185,9 @@ export function isAllowedStorageProvider(provider: string): boolean {
 
 export function isAllowedWebSearchProvider(provider: string): boolean {
   return allowOrPass(provider, ALLOWED_WEB_SEARCH_PROVIDERS)
+}
+
+/** 模型管理「远程服务商」是否允许展示（hide 模式下走白名单） */
+export function isAllowedModelProvider(provider: string): boolean {
+  return allowOrPass(provider, ALLOWED_MODEL_PROVIDERS)
 }

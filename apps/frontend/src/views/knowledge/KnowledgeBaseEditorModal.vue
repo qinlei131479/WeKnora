@@ -424,8 +424,11 @@
                   <DataSourceSettings :kb-id="activeKbId" @count="dsCount = $event" />
                 </div>
 
-                <!-- 共享设置（仅编辑模式） -->
-                <div v-if="editorMode === 'edit' && activeKbId && currentSection === 'share'" class="section">
+                <!-- 共享设置（仅编辑模式；功能开关可隐藏） -->
+                <div
+                  v-if="!hideShareManagement && editorMode === 'edit' && activeKbId && currentSection === 'share'"
+                  class="section"
+                >
                   <KBShareSettings :kb-id="activeKbId" :can-share="canShareKB" />
                 </div>
 
@@ -487,7 +490,7 @@ import GraphSettings from './settings/GraphSettings.vue'
 import KBShareSettings from './settings/KBShareSettings.vue'
 import DataSourceSettings from './settings/DataSourceSettings.vue'
 import KnowledgeBaseActivitySettings from './settings/KnowledgeBaseActivitySettings.vue'
-import { shouldHideDatasource } from '@/utils/weknoraFeatures'
+import { shouldHideDatasource, shouldHideShareManagement } from '@/utils/weknoraFeatures'
 import { useI18n } from 'vue-i18n'
 
 const uiStore = useUIStore()
@@ -496,6 +499,7 @@ const chatResources = useChatResourcesStore()
 const editorResources = useEditorResourcesStore()
 const { t } = useI18n()
 const hideDatasource = shouldHideDatasource()
+const hideShareManagement = shouldHideShareManagement()
 
 // Props
 const props = defineProps<{
@@ -645,7 +649,7 @@ const navItems = computed(() => {
       items.push({ key: 'datasource', icon: 'cloud-download', label: t('knowledgeEditor.sidebar.datasource'), badge: dsCount.value || undefined })
     }
   }
-  if (editorMode.value === 'edit' && activeKbId.value && !authStore.isLiteMode) {
+  if (!hideShareManagement && editorMode.value === 'edit' && activeKbId.value && !authStore.isLiteMode) {
     items.push({ key: 'share', icon: 'share', label: t('knowledgeEditor.sidebar.share') })
   }
   if (canViewActivity.value) {
@@ -1570,7 +1574,8 @@ watch(() => props.visible, async (newVal) => {
     
     // 检查是否有初始 section，如果有则跳转
     if (uiStore.kbEditorInitialSection) {
-      currentSection.value = uiStore.kbEditorInitialSection
+      const initial = uiStore.kbEditorInitialSection
+      currentSection.value = (hideShareManagement && initial === 'share') ? 'basic' : initial
     }
     
     // 加载模型列表与空间默认存储引擎（创建 KB 时即使用，不依赖是否打开「存储引擎」Tab）

@@ -1603,8 +1603,9 @@
                   </div>
                 </div>
 
-                <!-- 共享管理（仅编辑模式且非内置智能体） -->
-                <div v-if="editorMode === 'edit' && editorAgent?.id && !editorAgent?.is_builtin"
+                <!-- 共享管理（仅编辑模式且非内置智能体；功能开关可隐藏） -->
+                <div
+                  v-if="!hideShareManagement && editorMode === 'edit' && editorAgent?.id && !editorAgent?.is_builtin"
                   v-show="currentSection === 'share'" class="section">
                   <AgentShareSettings :agent-id="editorAgent.id" :agent="editorAgent" />
                 </div>
@@ -1675,6 +1676,7 @@ import PromptTemplateSelector from '@/components/PromptTemplateSelector.vue';
 import ModelSelector from '@/components/ModelSelector.vue';
 import KBParserSettings, { type ParserEngineRule } from '@/views/knowledge/settings/KBParserSettings.vue';
 import AgentShareSettings from '@/components/AgentShareSettings.vue';
+import { shouldHideShareManagement } from '@/utils/weknoraFeatures';
 import { listEmbedChannels } from '@/api/embed';
 import { getRootZoom, rectToCssPx } from '@/utils/zoom';
 import {
@@ -1697,6 +1699,7 @@ const router = useRouter();
 const orgStore = useOrganizationStore();
 const chatResources = useChatResourcesStore();
 const editorResources = useEditorResourcesStore();
+const hideShareManagement = shouldHideShareManagement();
 
 const { t, locale: i18nLocale } = useI18n();
 
@@ -1754,7 +1757,9 @@ const copyAgentId = async () => {
   }
 };
 
-const currentSection = ref(props.initialSection || 'basic');
+const currentSection = ref(
+  (hideShareManagement && props.initialSection === 'share') ? 'basic' : (props.initialSection || 'basic'),
+);
 const suggestionTab = ref<'starters' | 'followUps'>('starters');
 const contentWrapperRef = ref<HTMLElement | null>(null);
 const highlightedField = ref<AgentNotReadyReasonKey | null>(null);
@@ -2248,8 +2253,14 @@ const navItems = computed(() => {
   if (isAgentMode.value && skillsAvailable.value) {
     items.push({ key: 'skills', icon: 'lightbulb', label: t('agent.editor.skillsConfig') });
   }
-  // 发布（仅编辑模式）
-  if (editorMode.value === 'edit' && editorAgent.value?.id && !editorAgent.value?.is_builtin && !authStore.isLiteMode) {
+  // 发布（仅编辑模式；功能开关可隐藏）
+  if (
+    !hideShareManagement
+    && editorMode.value === 'edit'
+    && editorAgent.value?.id
+    && !editorAgent.value?.is_builtin
+    && !authStore.isLiteMode
+  ) {
     items.push({ key: 'share', icon: 'share', label: t('knowledgeEditor.sidebar.share') });
   }
   return items;
@@ -2911,7 +2922,8 @@ const needsRerankModel = computed(() => {
 watch(() => props.visible, async (val) => {
   if (val) {
     savedAgent.value = null;
-    currentSection.value = props.initialSection || 'basic';
+    const initial = props.initialSection || 'basic';
+    currentSection.value = (hideShareManagement && initial === 'share') ? 'basic' : initial;
     // 先加载依赖数据（包括默认配置）
     await loadDependencies();
 
