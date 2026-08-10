@@ -22,7 +22,8 @@
 
 # 构建和依赖文件
 node_modules/
-/dist/
+dist/
+target/
 /build/
 docs/site/.vitepress/dist/
 docs/site/.vitepress/cache/
