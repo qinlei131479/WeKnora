@@ -1,5 +1,6 @@
 package com.iptv.business.service;
 
+import com.iptv.business.domain.dto.McpToolApprovalsDTO;
 import jakarta.annotation.Nonnull;
 import com.iptv.business.domain.McpServices;
 import com.iptv.business.domain.vo.McpServicesVO;
@@ -76,4 +77,20 @@ public interface McpServicesService extends IService<McpServices> {
      * @return 影响行数
      */
     int updateDisabledBatch(@Nonnull List<String> ids);
+
+    /**
+     * 批量启用工具
+     *
+     * @param dto 工具审批记录DTO列表
+     * @return 影响行数
+     */
+    void updateToolEnabledBatch(@Nonnull List<McpToolApprovalsDTO> dto);
+
+    /**
+     * 批量停用工具
+     *
+     * @param dto 工具审批记录DTO列表
+     * @return 影响行数
+     */
+    void updateToolDisabledBatch(@Nonnull List<McpToolApprovalsDTO> dto);
 }

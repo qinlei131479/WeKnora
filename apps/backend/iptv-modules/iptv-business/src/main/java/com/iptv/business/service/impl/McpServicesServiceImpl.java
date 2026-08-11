@@ -1,26 +1,28 @@
 package com.iptv.business.service.impl;
 
-import cn.hutool.core.date.DateUtil;
-import com.iptv.business.pgmapper.McpServicesMapper;
-import com.iptv.common.security.service.TokenService;
-import com.iptv.system.api.model.LoginUser;
-import jakarta.annotation.Nonnull;
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.iptv.common.core.enums.EnableEnum;
+import com.iptv.business.domain.McpServices;
+import com.iptv.business.domain.McpToolApprovals;
+import com.iptv.business.domain.dto.McpServicesDTO;
+import com.iptv.business.domain.dto.McpToolApprovalsDTO;
+import com.iptv.business.domain.dto.page.McpServicesPageDTO;
+import com.iptv.business.domain.vo.McpServicesVO;
+import com.iptv.business.pgmapper.McpServicesMapper;
+import com.iptv.business.pgmapper.McpToolApprovalsMapper;
+import com.iptv.business.service.McpServicesService;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
 import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
-import com.iptv.business.domain.McpServices;
-import com.iptv.business.domain.vo.McpServicesVO;
-import com.iptv.business.domain.dto.McpServicesDTO;
-import com.iptv.business.domain.dto.page.McpServicesPageDTO;
-
-
-import com.iptv.business.service.McpServicesService;
+import com.iptv.common.security.service.TokenService;
+import com.iptv.system.api.model.LoginUser;
+import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +44,8 @@ public class McpServicesServiceImpl extends ServiceImpl<McpServicesMapper, McpSe
 
     private final TokenService tokenService;
 
+    private final McpToolApprovalsMapper mcpToolApprovalsMapper;
+
     @Override
     public TableDataInfo<McpServicesVO> queryPage(McpServicesPageDTO dto, PageDTO pg) {
         Page<McpServicesVO> page = PageUtils.toPage(pg);
@@ -60,10 +64,10 @@ public class McpServicesServiceImpl extends ServiceImpl<McpServicesMapper, McpSe
     @Transactional(rollbackFor = Exception.class)
     public McpServicesVO insert(@Nonnull McpServicesDTO dto) {
         Long tenantId = 1L;
-        try{
+        try {
             LoginUser loginUser = tokenService.getLoginUser();
             tenantId = loginUser.getSysUser().getTenantId();
-        }catch (Exception e){
+        } catch (Exception e) {
             throw new ServiceException("获取租户ID失败");
         }
         dto.setTenantId(tenantId.intValue());
@@ -110,5 +114,61 @@ public class McpServicesServiceImpl extends ServiceImpl<McpServicesMapper, McpSe
         return this.baseMapper.update(new LambdaUpdateWrapper<McpServices>()
                 .in(McpServices::getId, ids)
                 .set(McpServices::getEnabled, false));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateToolEnabledBatch(@Nonnull List<McpToolApprovalsDTO> dto) {
+        if (CollUtil.isEmpty(dto)) {
+            return;
+        }
+        Long tenantId = 1L;
+        try {
+            LoginUser loginUser = tokenService.getLoginUser();
+            tenantId = loginUser.getSysUser().getTenantId();
+        } catch (Exception e) {
+            throw new ServiceException("获取租户ID失败");
+        }
+        String serviceId = dto.get(0).getServiceId();
+        List<String> toolNames = dto.stream().map(McpToolApprovalsDTO::getToolName).toList();
+        List<McpToolApprovals> list = mcpToolApprovalsMapper
+                .selectList(new LambdaQueryWrapper<McpToolApprovals>()
+                        .eq(McpToolApprovals::getServiceId, serviceId)
+                        .in(McpToolApprovals::getToolName, toolNames));
+        if (CollUtil.isNotEmpty(list)) {
+            mcpToolApprovalsMapper.update(null, new LambdaUpdateWrapper<McpToolApprovals>()
+                    .in(McpToolApprovals::getToolName, toolNames)
+                    .eq(McpToolApprovals::getServiceId, serviceId)
+                    .set(McpToolApprovals::getRequireApproval, true));
+        }
+        List<McpToolApprovalsDTO> other = dto
+                .stream()
+                .filter(item -> list
+                        .stream()
+                        .noneMatch(appro -> StrUtil.equals(item.getToolName(), appro.getToolName())))
+                .toList();
+        if (CollUtil.isNotEmpty(other)) {
+            final Integer finalTenantId = tenantId.intValue();
+            other.forEach(item -> {
+                McpToolApprovals entity = new McpToolApprovals();
+                entity.setServiceId(item.getServiceId());
+                entity.setToolName(item.getToolName());
+                entity.setRequireApproval(true);
+                entity.setTenantId(finalTenantId);
+                mcpToolApprovalsMapper.insert(entity);
+            });
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateToolDisabledBatch(@Nonnull List<McpToolApprovalsDTO> dto) {
+        if (CollUtil.isEmpty(dto)) {
+            return;
+        }
+        mcpToolApprovalsMapper.update(null, new LambdaUpdateWrapper<McpToolApprovals>()
+                .in(McpToolApprovals::getToolName, dto.stream().map(McpToolApprovalsDTO::getToolName).toList())
+                .eq(McpToolApprovals::getServiceId, dto.get(0).getServiceId())
+                .set(McpToolApprovals::getRequireApproval, false));
     }
 }
