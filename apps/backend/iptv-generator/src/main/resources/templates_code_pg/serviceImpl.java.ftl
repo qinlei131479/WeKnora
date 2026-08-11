@@ -43,7 +43,7 @@ public class ${table.serviceImplName} extends ServiceImpl<${table.mapperName}, $
     }
 
     @Override
-    public ${entity}VO queryById(@Nonnull Long id) {
+    public ${entity}VO queryById(@Nonnull String id) {
         ${entity} entity = this.baseMapper.selectById(id);
         return BeanUtil.copyProperties(entity, ${entity}VO.class);
     }
@@ -70,7 +70,7 @@ public class ${table.serviceImplName} extends ServiceImpl<${table.mapperName}, $
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void deleteById(@Nonnull Long id) {
+    public void deleteById(@Nonnull String id) {
         ${entity} entity = this.baseMapper.selectById(id);
         if (BeanUtil.isNotEmpty(entity)) {
             this.baseMapper.deleteById(id);
@@ -86,7 +86,7 @@ public class ${table.serviceImplName} extends ServiceImpl<${table.mapperName}, $
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int updateEnabledBatch(@Nonnull List<Long> ids) {
+    public int updateEnabledBatch(@Nonnull List<String> ids) {
         if (ids.isEmpty()) return 0;
         return this.baseMapper.update(new LambdaUpdateWrapper<${entity}>()
                 .in(${entity}::getId, ids)
@@ -95,7 +95,7 @@ public class ${table.serviceImplName} extends ServiceImpl<${table.mapperName}, $
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int updateDisabledBatch(@Nonnull List<Long> ids) {
+    public int updateDisabledBatch(@Nonnull List<String> ids) {
         if (ids.isEmpty()) return 0;
         return this.baseMapper.update(new LambdaUpdateWrapper<${entity}>()
                 .in(${entity}::getId, ids)

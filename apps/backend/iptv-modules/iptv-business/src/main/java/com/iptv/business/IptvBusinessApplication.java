@@ -5,6 +5,7 @@ import com.iptv.common.security.annotation.EnableCustomConfig;
 import com.iptv.common.security.annotation.EnableRyFeignClients;
 import lombok.Getter;
 import org.dromara.easyes.spring.annotation.EsMapperScan;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
@@ -18,6 +19,8 @@ import java.util.concurrent.ScheduledExecutorService;
 @SpringBootApplication
 @Import(MybatisPlusConfig.class)
 @EnableScheduling
+@MapperScan(basePackages = "com.iptv.business.pgmapper",
+        sqlSessionFactoryRef = "postgresSqlSessionFactory")
 public class IptvBusinessApplication {
 
     @Getter

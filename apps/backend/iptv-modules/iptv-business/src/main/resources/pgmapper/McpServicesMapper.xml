@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.McpServicesMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.McpServices">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="enabled" property="enabled"/>
+        <result column="transport_type" property="transportType"/>
+        <result column="url" property="url"/>
+        <result column="headers" property="headers"/>
+        <result column="auth_config" property="authConfig"/>
+        <result column="advanced_config" property="advancedConfig"/>
+        <result column="stdio_config" property="stdioConfig"/>
+        <result column="env_vars" property="envVars"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted_at" property="deletedAt"/>
+        <result column="is_builtin" property="isBuiltin"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, tenant_id, name, description, enabled, transport_type, url, headers, auth_config, advanced_config, stdio_config, env_vars, created_at, updated_at, deleted_at, is_builtin
+    </sql>
+
+    <!-- 分页查询（PostgreSQL：字符串使用 ILIKE 大小写不敏感模糊查询） -->
+    <select id="queryPage" resultMap="BaseResultMap" parameterType="com.iptv.business.domain.dto.page.McpServicesPageDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM mcp_services
+        <where>
+            deleted_at IS NULL
+            <if test="param.id != null and param.id != ''">
+                AND id ILIKE CONCAT('%', #{param.id}, '%')
+            </if>
+            <if test="param.tenantId != null">
+                AND tenant_id = #{param.tenantId}
+            </if>
+            <if test="param.name != null and param.name != ''">
+                AND name ILIKE CONCAT('%', #{param.name}, '%')
+            </if>
+            <if test="param.description != null and param.description != ''">
+                AND description ILIKE CONCAT('%', #{param.description}, '%')
+            </if>
+            <if test="param.enabled != null">
+                AND enabled = #{param.enabled}
+            </if>
+            <if test="param.transportType != null and param.transportType != ''">
+                AND transport_type ILIKE CONCAT('%', #{param.transportType}, '%')
+            </if>
+            <if test="param.url != null and param.url != ''">
+                AND url ILIKE CONCAT('%', #{param.url}, '%')
+            </if>
+            <if test="param.headers != null and param.headers != ''">
+                AND headers ILIKE CONCAT('%', #{param.headers}, '%')
+            </if>
+            <if test="param.authConfig != null and param.authConfig != ''">
+                AND auth_config ILIKE CONCAT('%', #{param.authConfig}, '%')
+            </if>
+            <if test="param.advancedConfig != null and param.advancedConfig != ''">
+                AND advanced_config ILIKE CONCAT('%', #{param.advancedConfig}, '%')
+            </if>
+            <if test="param.stdioConfig != null and param.stdioConfig != ''">
+                AND stdio_config ILIKE CONCAT('%', #{param.stdioConfig}, '%')
+            </if>
+            <if test="param.envVars != null and param.envVars != ''">
+                AND env_vars ILIKE CONCAT('%', #{param.envVars}, '%')
+            </if>
+            <if test="param.createdAt != null">
+                AND created_at = #{param.createdAt}
+            </if>
+            <if test="param.updatedAt != null">
+                AND updated_at = #{param.updatedAt}
+            </if>
+            <if test="param.deletedAt != null">
+                AND deleted_at = #{param.deletedAt}
+            </if>
+            <if test="param.isBuiltin != null">
+                AND is_builtin = #{param.isBuiltin}
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+</mapper>

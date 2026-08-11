@@ -17,7 +17,7 @@ import java.util.Map;
 
 /**
  * PostgreSQL 业务逻辑代码生成
- * 生成的代码位于 mapper.postgres / domain.postgres / service.postgres 包下
+ * 生成的代码位于 pgmapper / domain / service 包下
  * ServiceImpl 使用 postgresTransactionManager 事务管理器
  *
  * @author kjsc
@@ -35,8 +35,8 @@ public class PgCodeGenerator {
 
     // entity 生成到 domain 子包
     static final String ENTITY_MODULE_PATH = BASE_PATH + "/iptv-api/iptv-api-business" + CODE_PREFIX + "/domain";
-    // mapper XML 生成到 mapper/postgres 目录（供 PostgresDataSourceAutoConfiguration 扫描）
-    static final String MAPPER_XML_PATH = PROJECT_MODULE + "/src/main/resources/mapper/postgres";
+    // mapper XML 生成到 pgmapper 目录（供 PostgresDataSourceAutoConfiguration 扫描）
+    static final String MAPPER_XML_PATH = PROJECT_MODULE + "/src/main/resources/pgmapper";
 
     // ===== 代码配置 =====
     static final Class<?> BASE_ENTITY     = null;
@@ -49,7 +49,15 @@ public class PgCodeGenerator {
     static final String[] SUPER_ENTITY_COLS = {};
 
     // ===== 待生成的 PostgreSQL 表 =====
-    static final String[] DATA_TABLES = {"mcp_services"};
+    static final String[] DATA_TABLES = {"mcp_tool_approvals"};
+
+    // ===== PostgreSQL jsonb 列配置 =====
+    // Key: 表名（小写），Value: jsonb 列名数组（下划线命名）
+    static final Map<String, String[]> JSONB_COLUMNS = Map.of(
+        "mcp_tool_approvals", new String[]{}
+    );
+    // jsonb 列名后缀（自动匹配以这些后缀结尾的列）
+    static final String[] JSONB_COLUMN_SUFFIXES = {"_config", "_headers", "_vars", "_data", "_json"};
 
     // ===== PostgreSQL 数据源配置 =====
     private interface DataBaseConfig {
@@ -82,6 +90,17 @@ public class PgCodeGenerator {
                 map.put("packageParent", PARENT_PKG);
                 map.put("moduleName", MODULE_NAME);
                 map.put("dbType", "pg");
+
+                // 构建 jsonb 列索引：columnName -> "true"
+                Map<String, String> jsonbColMap = new HashMap<>();
+                for (Map.Entry<String, String[]> entry : JSONB_COLUMNS.entrySet()) {
+                    for (String col : entry.getValue()) {
+                        jsonbColMap.put(col.toLowerCase(), "true");
+                    }
+                }
+                map.put("pgJsonbColumns", jsonbColMap);
+                map.put("pgJsonbSuffixes", JSONB_COLUMN_SUFFIXES);
+
                 this.setMap(map);
             }
         };
@@ -118,11 +137,11 @@ public class PgCodeGenerator {
         // vo → domain/vo/
         configs.add(new PgCodeFileOutConfig("/vo.java.ftl", ENTITY_MODULE_PATH + "/vo", "VO.java"));
 
-        // mapper XML → resources/mapper/postgres/
+        // mapper XML → resources/pgmapper/
         configs.add(new PgCodeFileOutConfig("/mapper.xml.ftl", MAPPER_XML_PATH, "Mapper" + StringPool.DOT_XML));
 
-        // mapper 接口 → mapper/postgres/
-        configs.add(new PgCodeFileOutConfig("/mapper.java.ftl", PROJECT_MODULE_PATH + "mapper/postgres", "Mapper.java"));
+        // mapper 接口 → pgmapper/
+        configs.add(new PgCodeFileOutConfig("/mapper.java.ftl", PROJECT_MODULE_PATH + "pgmapper", "Mapper.java"));
 
         // service 接口 → service/
         configs.add(new PgCodeFileOutConfig("/service.java.ftl", PROJECT_MODULE_PATH + "service", "Service.java"));
@@ -153,7 +172,7 @@ public class PgCodeGenerator {
         PackageConfig pkg = new PackageConfig();
         pkg.setParent(PARENT_PKG);
         pkg.setEntity("domain");
-        pkg.setMapper("mapper.postgres");
+        pkg.setMapper("pgmapper");
         pkg.setService("service");
         pkg.setServiceImpl("service.impl");
         pkg.setController("controller");

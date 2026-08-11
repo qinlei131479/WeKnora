@@ -34,7 +34,7 @@ import java.util.List;
  */
 @Tag(name = "${table.comment!}管理", description = "${table.comment!}前端控制器（PostgreSQL）")
 @RestController
-@RequestMapping("<#if package.ModuleName?? && package.ModuleName != "">/${package.ModuleName}</#if>/pg/<#if controllerMappingHyphenStyle??>${controllerMappingHyphen}<#else>${table.entityPath}</#if>")
+@RequestMapping("<#if package.ModuleName?? && package.ModuleName != "">/${package.ModuleName}</#if>/<#if controllerMappingHyphenStyle??>${controllerMappingHyphen}<#else>${table.entityPath}</#if>")
 <#if superControllerClass??>
 public class ${table.controllerName} extends ${superControllerClass} {
 <#else>
@@ -47,7 +47,7 @@ public class ${table.controllerName} {
     @Operation(summary = "按 id 查询", description = "按 id 查询")
     @GetMapping("/single")
     @RequiresPermissions("${cfg.moduleName}:${table.entityPath}:query")
-    public R<${entity}VO> queryById(Long id) {
+    public R<${entity}VO> queryById(String id) {
         return R.ok(${table.entityPath}Service.queryById(id));
     }
 
@@ -78,7 +78,7 @@ public class ${table.controllerName} {
     @Operation(summary = "按 id 删除", description = "按 id 删除")
     @PostMapping("/delete/single")
     @RequiresPermissions("${cfg.moduleName}:${table.entityPath}:remove")
-    public R<Void> deleteById(Long id) {
+    public R<Void> deleteById(String id) {
         ${table.entityPath}Service.deleteById(id);
         return R.ok();
     }
@@ -104,7 +104,7 @@ public class ${table.controllerName} {
     @Operation(summary = "批量启用", description = "批量启用")
     @PostMapping("/enabled/batch")
     @RequiresPermissions("${cfg.moduleName}:${table.entityPath}:edit")
-    public R<Void> updateEnabledBatch(@RequestParam List<Long> ids) {
+    public R<Void> updateEnabledBatch(@RequestParam List<String> ids) {
         ${table.entityPath}Service.updateEnabledBatch(ids);
         return R.ok();
     }
@@ -113,7 +113,7 @@ public class ${table.controllerName} {
     @Operation(summary = "批量停用", description = "批量停用")
     @PostMapping("/disabled/batch")
     @RequiresPermissions("${cfg.moduleName}:${table.entityPath}:edit")
-    public R<Void> updateDisabledBatch(@RequestParam List<Long> ids) {
+    public R<Void> updateDisabledBatch(@RequestParam List<String> ids) {
         ${table.entityPath}Service.updateDisabledBatch(ids);
         return R.ok();
     }

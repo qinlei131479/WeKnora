@@ -42,7 +42,7 @@ import javax.sql.DataSource;
  *
  * <p>{@code @MapperScan} 不在此处声明，由各业务模块自行指定扫描包：
  * <pre>{@code
- * @MapperScan(basePackages = "com.iptv.xxx.mapper.postgres",
+ * @MapperScan(basePackages = "com.iptv.xxx.pgmapper",
  *             sqlSessionFactoryRef = "postgresSqlSessionFactory")
  * }</pre>
  */
@@ -51,7 +51,9 @@ import javax.sql.DataSource;
 @ConditionalOnProperty(prefix = "spring.datasource.postgres", name = "url")
 public class PostgresDataSourceAutoConfiguration {
 
-    @Bean(name = "postgresDataSource")
+    // defaultCandidate = false: 不参与按类型自动注入，避免与 dynamic-datasource 的
+    // dataSource Bean 冲突（"2 DataSource beans found"）。仅通过 @Qualifier 供本类内部使用。
+    @Bean(name = "postgresDataSource", defaultCandidate = false)
     @ConfigurationProperties(prefix = "spring.datasource.postgres")
     public DataSource postgresDataSource() {
         return DataSourceBuilder.create().type(HikariDataSource.class).build();
@@ -69,7 +71,7 @@ public class PostgresDataSourceAutoConfiguration {
         factory.setDataSource(dataSource);
         factory.setMapperLocations(
                 new PathMatchingResourcePatternResolver()
-                        .getResources("classpath*:mapper/postgres/**/*.xml"));
+                        .getResources("classpath*:pgmapper/**/*.xml"));
         GlobalConfig globalConfig = GlobalConfigUtils.defaults();
         globalConfig.setMetaObjectHandler(new MybatisUpdateHandler());
         factory.setGlobalConfig(globalConfig);

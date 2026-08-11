@@ -36,7 +36,7 @@ public interface ${table.serviceName} extends IService<${entity}> {
      * @param id 主键
      * @return 实体
      */
-    ${entity}VO queryById(@Nonnull Long id);
+    ${entity}VO queryById(@Nonnull String id);
 
     /**
      * 新增
@@ -59,7 +59,7 @@ public interface ${table.serviceName} extends IService<${entity}> {
      *
      * @param id 主键
      */
-    void deleteById(@Nonnull Long id);
+    void deleteById(@Nonnull String id);
 <#assign hasEnabled = false>
 <#list table.fields as field>
     <#if field.name == "enabled">
@@ -74,7 +74,7 @@ public interface ${table.serviceName} extends IService<${entity}> {
      * @param ids 主键列表
      * @return 影响行数
      */
-    int updateEnabledBatch(@Nonnull List<Long> ids);
+    int updateEnabledBatch(@Nonnull List<String> ids);
 
     /**
      * 批量停用
@@ -82,6 +82,6 @@ public interface ${table.serviceName} extends IService<${entity}> {
      * @param ids 主键列表
      * @return 影响行数
      */
-    int updateDisabledBatch(@Nonnull List<Long> ids);
+    int updateDisabledBatch(@Nonnull List<String> ids);
 </#if>
 }

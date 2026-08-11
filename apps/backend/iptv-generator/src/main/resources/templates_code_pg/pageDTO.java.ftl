@@ -1,4 +1,4 @@
-package ${package.Entity};
+package ${package.Entity}.dto.page;
 
 <#list table.importPackages as pkg>
 <#if pkg == 'java.time.LocalDateTime'>
