@@ -737,6 +737,7 @@ services:
       - CLUSTER_GOSSIP_BIND_PORT=7000
       - CLUSTER_DATA_BIND_PORT=7001
       - RAFT_BOOTSTRAP_EXPECT=1
+      - ENABLE_TOKENIZER_GSE=true
     ports:
       - "9035:8080"
       - "50052:50051"
