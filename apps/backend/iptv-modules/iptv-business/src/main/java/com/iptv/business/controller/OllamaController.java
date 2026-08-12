@@ -10,6 +10,9 @@ import com.iptv.business.domain.vo.OllamaModelVO;
 import com.iptv.business.domain.vo.OllamaStatusVO;
 import com.iptv.business.service.OllamaService;
 import com.iptv.common.core.domain.R;
+import com.iptv.common.log.annotation.Log;
+import com.iptv.common.log.enums.BusinessType;
+import com.iptv.common.security.annotation.RequiresPermissions;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -33,30 +36,36 @@ public class OllamaController {
 
     @Operation(summary = "检查 Ollama 服务状态", description = "检查 Ollama 服务是否可用")
     @GetMapping("/status")
+    @RequiresPermissions("business:ollama:query")
     public R<OllamaStatusVO> checkStatus() {
         return R.ok(ollamaService.checkStatus());
     }
 
     @Operation(summary = "获取模型列表", description = "获取已安装的 Ollama 模型列表")
     @GetMapping("/models")
+    @RequiresPermissions("business:ollama:query")
     public R<List<OllamaModelVO>> listModels() {
         return R.ok(ollamaService.listModels());
     }
 
     @Operation(summary = "检查模型是否已安装", description = "批量检查指定模型是否已安装")
     @PostMapping("/models/check")
+    @RequiresPermissions("business:ollama:query")
     public R<OllamaCheckModelsVO> checkModels(@RequestBody OllamaCheckModelsDTO dto) {
         return R.ok(ollamaService.checkModels(dto));
     }
 
+    @Log(title = "下载 Ollama 模型", businessType = BusinessType.INSERT)
     @Operation(summary = "下载模型", description = "异步下载指定的 Ollama 模型")
     @PostMapping("/models/download")
+    @RequiresPermissions("business:ollama:edit")
     public R<OllamaDownloadTaskVO> downloadModel(@RequestBody OllamaDownloadModelDTO dto) {
         return R.ok(ollamaService.downloadModel(dto.getModel()));
     }
 
     @Operation(summary = "查询下载进度", description = "获取指定下载任务的进度")
     @GetMapping("/download/progress/{taskId}")
+    @RequiresPermissions("business:ollama:query")
     public R<OllamaDownloadTaskVO> getDownloadProgress(@PathVariable String taskId) {
         return R.ok(ollamaService.getDownloadProgress(taskId));
     }
