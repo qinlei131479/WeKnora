@@ -117,6 +117,13 @@ public class McpServicesServiceImpl extends ServiceImpl<McpServicesMapper, McpSe
     }
 
     @Override
+    public List<McpToolApprovals> listToolByMcpId(String mcpId) {
+        return mcpToolApprovalsMapper.selectList(new LambdaQueryWrapper<McpToolApprovals>()
+                .eq(McpToolApprovals::getServiceId, mcpId)
+                .eq(McpToolApprovals::getRequireApproval, true));
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateToolEnabledBatch(@Nonnull List<McpToolApprovalsDTO> dto) {
         if (CollUtil.isEmpty(dto)) {

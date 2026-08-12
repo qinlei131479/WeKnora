@@ -1,5 +1,6 @@
 package com.iptv.business.controller;
 
+import com.iptv.business.domain.McpToolApprovals;
 import com.iptv.business.domain.dto.McpToolApprovalsDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -103,6 +104,13 @@ public class McpServicesController {
     public R<Void> updateDisabledBatch(@RequestBody List<String> ids) {
         mcpServicesService.updateDisabledBatch(ids);
         return R.ok();
+    }
+
+    @Operation(summary = "获取MCP已启用工具列表", description = "获取MCP service configurations已启用工具列表")
+    @PostMapping("/tool/list")
+    @RequiresPermissions("business:mcpToolApprovals:list")
+    public R<List<McpToolApprovals>> listToolByMcpId(String mcpId) {
+        return R.ok(mcpServicesService.listToolByMcpId(mcpId));
     }
 
     @Log(title = "批量启用工具", businessType = BusinessType.UPDATE)
