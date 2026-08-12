@@ -163,10 +163,12 @@ import {
   isAllowedLocale,
   shouldHideFontPickers,
 } from '@/utils/weknoraFeatures'
+import { useEditorResourcesStore } from '@/stores/editorResources'
 
 const { t, locale } = useI18n()
 const settingsStore = useSettingsStore()
 const authStore = useAuthStore()
+const editorResources = useEditorResourcesStore()
 const { currentTheme, setTheme } = useTheme()
 const {
   currentSans,
@@ -261,8 +263,11 @@ onMounted(() => {
 const handleLanguageChange = () => {
   locale.value = localLanguage.value
   localStorage.setItem('locale', localLanguage.value)
+  // Prompt template bodies are localized via Accept-Language; drop cache so
+  // agent editor / template picker re-fetch for the new locale.
+  editorResources.invalidate('promptTemplates')
   MessagePlugin.success(t('language.languageSaved'))
-    }
+}
 
 // 处理主题变化
 const handleThemeChange = (val: ThemeMode) => {

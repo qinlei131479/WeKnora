@@ -207,6 +207,9 @@ export const useEditorResourcesStore = defineStore('editorResources', () => {
     keys.forEach((k) => {
       delete loadedAt.value[k]
       inflight.delete(k)
+      // Drop cached payload so the next ensure* fetches locale-aware content
+      // (e.g. prompt template bodies after Accept-Language changes).
+      if (k === 'promptTemplates') promptTemplates.value = null
     })
   }
 

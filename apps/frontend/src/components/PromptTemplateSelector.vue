@@ -72,11 +72,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { getPromptTemplates, type PromptTemplate, type PromptTemplatesConfig } from '@/api/system';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const props = withDefaults(defineProps<{
   type: 'systemPrompt' | 'contextTemplate' | 'rewrite' | 'fallback' | 'agentSystemPrompt' | 'intentPrompt';
@@ -200,6 +200,11 @@ const handleResetToDefault = async () => {
     emit('reset-default', defaultTpl);
   }
 };
+
+// Locale change → drop local cache so next open / reset uses localized bodies
+watch(locale, () => {
+  templatesConfig.value = null;
+});
 
 // 预加载模板（可选）
 onMounted(() => {

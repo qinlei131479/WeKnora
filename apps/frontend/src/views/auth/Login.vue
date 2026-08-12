@@ -355,6 +355,7 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 import { getFeatureFlags, isAllowedLocale } from '@/utils/weknoraFeatures'
+import { useEditorResourcesStore } from '@/stores/editorResources'
 
 const featureFlags = getFeatureFlags()
 
@@ -367,6 +368,7 @@ import screenshot4 from '@/assets/img/screenshot-4.svg'
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const editorResources = useEditorResourcesStore()
 const { t, tm, locale } = useI18n()
 const { formatRole, roleIcon } = useRoleLabel()
 
@@ -528,6 +530,7 @@ const toggleLanguageMenu = () => {
 const selectLanguage = (lang: string) => {
   locale.value = lang
   localStorage.setItem('locale', lang)
+  editorResources.invalidate('promptTemplates')
   showLanguageMenu.value = false
   MessagePlugin.success(t('language.languageSaved'))
 }

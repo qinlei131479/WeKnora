@@ -11,6 +11,18 @@ templates:
       zh-CN:
         name: "标准兜底"
         description: "友好告知无法回答并提供建议"
+        content: |
+          抱歉，我在知识库中没有找到与您问题直接相关的内容。
+
+          您可以尝试：
+          1. 换一种方式重新表述问题
+          2. 提供更具体的信息
+          3. 咨询相关领域的专业人士
+
+          如果您还有其他问题，我很乐意继续为您提供帮助。
+
+          ## 关键：语言规则
+          - 始终使用 {{language}} 回答
       en-US:
         name: "Standard Fallback"
         description: "Friendly message with suggestions when unable to answer"
@@ -38,6 +50,20 @@ templates:
       zh-CN:
         name: "礼貌兜底"
         description: "更加礼貌详细的无法回答提示"
+        content: |
+          很抱歉，我目前无法为您提供准确的回答。这可能是因为：
+          - 问题超出了我的知识范围
+          - 知识库中尚未包含相关内容
+
+          建议：
+          1. 尝试使用不同的关键词重新表述
+          2. 将问题拆分为更具体的子问题
+          3. 联系客服获取帮助
+
+          感谢您的理解，期待在其他问题上继续为您提供帮助！
+
+          ## 关键：语言规则
+          - 始终使用 {{language}} 回答
       en-US:
         name: "Polite Fallback"
         description: "More polite and detailed unable-to-answer message"
@@ -66,6 +92,7 @@ templates:
       zh-CN:
         name: "简洁兜底"
         description: "简短的无法回答提示"
+        content: "抱歉，我暂时无法回答这个问题。请尝试重新表述您的问题，或联系客服获取帮助。"
       en-US:
         name: "Brief Fallback"
         description: "Short unable-to-answer message"
@@ -82,6 +109,21 @@ templates:
       zh-CN:
         name: "模型兜底提示"
         description: "引导模型基于通用知识回答的提示词"
+        content: |
+          搜索未找到与用户查询直接匹配的内容。不过，知识库中包含以下文档：
+
+          {{kb_documents}}
+
+          重要说明：
+          1. 若上述文档列表可用，请据此帮助回答用户问题（如列出相关文档、建议哪些文档可能包含所需信息）
+          2. 若文档列表为空，请基于通用知识回答，并明确告知用户该回答并非来自知识库
+          3. 若问题涉及特定领域或需要最新信息，建议用户查阅官方资源
+          4. 回答应保持准确、客观
+
+          ## 关键：语言规则
+          - 始终使用 {{language}} 回答
+
+          用户问题：{{query}}
       en-US:
         name: "Model Fallback Prompt"
         description: "Prompt to guide model to answer with general knowledge"
@@ -112,6 +154,23 @@ templates:
       zh-CN:
         name: "标准兜底 Prompt"
         description: "知识库无相关结果时引导模型回答的默认提示词"
+        content: |
+          你是小创，一名专业且友善的 AI 助手。
+
+          搜索未找到与用户查询直接匹配的内容。不过，知识库中包含以下文档：
+
+          {{kb_documents}}
+
+          ## 回答要求
+          - 若上述文档列表可用，请据此帮助回答用户问题（如列出相关文档、建议哪些文档可能包含所需信息，或总结知识库中现有内容）
+          - 若文档列表为空或不相关，请基于通用知识回答，并明确告知用户该回答并非来自知识库
+          - 回答应简洁、清晰、有实质内容
+          - 若涉及实时数据或个人隐私信息，请如实说明无法获取
+          - 语气礼貌、专业
+          - 重要：始终使用 {{language}} 回答
+
+          ## 用户问题：
+          {{query}}
       en-US:
         name: "Standard Fallback Prompt"
         description: "Default prompt that delegates to the model when KB has no relevant results"
@@ -120,7 +179,7 @@ templates:
         description: "KB에 관련 결과가 없을 때 모델에 위임하는 기본 프롬프트"
     mode: "model"
     content: |
-      You are WeKnora, a professional and friendly AI assistant developed by Tencent.
+      You are 小创, a professional and friendly AI assistant.
 
       No content directly matched the user's query via search. However, the knowledge base contains the following documents:
 

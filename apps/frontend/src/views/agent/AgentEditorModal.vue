@@ -3281,13 +3281,14 @@ watch(isAgentMode, (isAgent) => {
   }
 });
 
-// 监听设置弹窗关闭，刷新模型列表
+// 监听设置弹窗关闭，刷新模型列表 / 提示词模板（语言可能已切换）
 watch(() => uiStore.showSettingsModal, async (visible, prevVisible) => {
   if (prevVisible && !visible && props.visible) {
     try {
       await Promise.all([
         chatResources.ensureModels(true),
         editorResources.ensureStorageEngine(true),
+        editorResources.ensurePromptTemplates(true),
       ]);
       if (chatResources.allModels.length > 0) {
         allModels.value = chatResources.allModels;
@@ -3295,6 +3296,8 @@ watch(() => uiStore.showSettingsModal, async (visible, prevVisible) => {
       if (editorResources.storageStatus.length > 0) {
         storageEngineStatus.value = editorResources.storageStatus;
       }
+      // Refresh default prompt refs only; do not overwrite customized system_prompt.
+      applyPromptTemplateDefaults(editorResources.promptTemplates);
     } catch (e) {
       console.warn('Failed to refresh data after settings closed', e);
     }
