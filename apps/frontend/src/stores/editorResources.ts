@@ -15,6 +15,7 @@ import { listMCPServices, type MCPService } from '@/api/mcp-service'
 import { listSkills, type SkillInfo } from '@/api/skill'
 import { getAgentTypePresets, getPlaceholders, type AgentTypePreset, type PlaceholdersResponse } from '@/api/agent'
 import { getTenantRetrievalConfig } from '@/api/retrieval'
+import { filterParserEngines } from '@/utils/weknoraFeatures'
 
 const CACHE_TTL_MS = 60_000
 
@@ -159,7 +160,8 @@ export const useEditorResourcesStore = defineStore('editorResources', () => {
   async function ensureParserEngines(force = false): Promise<void> {
     return runOnce('parserEngines', force, async () => {
       const resp = await getParserEngines()
-      parserEngines.value = resp?.data && Array.isArray(resp.data) ? resp.data : []
+      const list = resp?.data && Array.isArray(resp.data) ? resp.data : []
+      parserEngines.value = filterParserEngines(list)
       loadedAt.value.parserEngines = Date.now()
     })
   }

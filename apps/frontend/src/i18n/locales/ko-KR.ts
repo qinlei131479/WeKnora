@@ -897,6 +897,7 @@ export default {
     im: {
       title: 'IM 통합',
       description: '에이전트를 Feishu, Slack, Telegram, DingTalk, Mattermost, QQBot, Yunzhijia 등 인스턴트 메시징 플랫폼에 연결',
+      descriptionRestricted: '에이전트를 기업 WeChat(WeCom), Feishu, DingTalk에 연결',
       feishu: 'Feishu',
       lark: 'Lark',
       slack: 'Slack',

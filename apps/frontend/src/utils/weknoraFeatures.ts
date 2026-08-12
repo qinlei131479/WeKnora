@@ -84,7 +84,35 @@ const ALLOWED_MODEL_PROVIDERS = new Set([
   'qianfan', // 百度千帆
   'minimax',
   'volcengine', // 火山引擎
+  'siliconflow', // 硅基流动
   'generic', // 自定义 OpenAI 兼容
+])
+
+/**
+ * 知识库文档「来源」筛选项里，随 hideDatasource 隐藏的数据源 channel。
+ * feishu 同时可能是 IM 入库，不放这里，走 IM 白名单。
+ */
+const DATASOURCE_KNOWLEDGE_SOURCES = new Set([
+  'feishu_drive',
+  'lark_drive',
+  'notion',
+  'yuque',
+  'rss',
+])
+
+/** 来源筛选项里的 IM 相关 channel（含泛化 im） */
+const IM_KNOWLEDGE_SOURCES = new Set([
+  'wechat',
+  'wecom',
+  'feishu',
+  'dingtalk',
+  'slack',
+  'telegram',
+  'qqbot',
+  'mattermost',
+  'yunzhijia',
+  'lark',
+  'im',
 ])
 
 /**
@@ -190,4 +218,38 @@ export function isAllowedWebSearchProvider(provider: string): boolean {
 /** 模型管理「远程服务商」是否允许展示（hide 模式下走白名单） */
 export function isAllowedModelProvider(provider: string): boolean {
   return allowOrPass(provider, ALLOWED_MODEL_PROVIDERS)
+}
+
+/**
+ * 知识库文档列表「来源」筛选项是否允许展示。
+ * 与 hideDatasource / hideChrome / IM 白名单对齐；空字符串（全部来源）始终允许。
+ */
+export function isAllowedKnowledgeSource(source: string): boolean {
+  if (!source) return true
+  if (!readHide()) return true
+
+  // 数据源同步渠道
+  if (DATASOURCE_KNOWLEDGE_SOURCES.has(source)) {
+    return false
+  }
+  // Chrome 插件
+  if (source === 'browser_extension') {
+    return false
+  }
+  // IM：仅白名单平台 + 泛化 im 桶；web/url/manual/api 等非 IM 直接放行
+  if (IM_KNOWLEDGE_SOURCES.has(source)) {
+    return source === 'im' || ALLOWED_IM_PLATFORMS.has(source)
+  }
+  return true
+}
+
+/** hideCloud 时过滤云解析引擎列表（KB 设置 / 上传确认等共用） */
+export function filterParserEngines<T extends { Name?: string; name?: string }>(
+  engines: T[],
+): T[] {
+  if (!getFeatureFlags().hideCloud) return engines
+  return engines.filter((e) => {
+    const name = e.Name || e.name || ''
+    return !isCloudParserEngine(name)
+  })
 }

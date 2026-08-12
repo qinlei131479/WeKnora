@@ -5,7 +5,7 @@
         <div class="section-header">
           <h2>{{ $t('agentEditor.im.title') }}</h2>
           <p class="section-description">
-            {{ $t('agentEditor.im.description') }}
+            {{ imDescription }}
             <a
               href="https://github.com/Tencent/WeKnora/blob/main/docs/IM%E9%9B%86%E6%88%90%E5%BC%80%E5%8F%91%E6%96%87%E6%A1%A3.md"
               target="_blank"
@@ -44,6 +44,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import IMChannelPanel from '@/components/IMChannelPanel.vue'
 import AgentEmbedChannelPanel from '@/components/AgentEmbedChannelPanel.vue'
@@ -51,7 +52,9 @@ import ApiIntegrationSettings from '@/views/integrations/ApiIntegrationSettings.
 import ChromeExtensionLanding from '@/views/integrations/ChromeExtensionLanding.vue'
 import ClawSkillLanding from '@/views/integrations/ClawSkillLanding.vue'
 import type { IntegrationTab } from '@/config/integrations'
+import { getFeatureFlags } from '@/utils/weknoraFeatures'
 
+const { t } = useI18n()
 const filterAgentId = ref('')
 
 const props = defineProps<{
@@ -62,6 +65,13 @@ const route = useRoute()
 
 const isLandingSection = computed(
   () => props.tab === 'chrome' || props.tab === 'claw',
+)
+
+/** hide 模式下平台白名单为企微/飞书/钉钉，描述与可选平台保持一致 */
+const imDescription = computed(() =>
+  getFeatureFlags().restrictProviderOptions
+    ? t('agentEditor.im.descriptionRestricted')
+    : t('agentEditor.im.description'),
 )
 
 function applyAgentFilterFromRoute() {

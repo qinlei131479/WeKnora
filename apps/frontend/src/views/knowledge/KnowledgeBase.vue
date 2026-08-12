@@ -15,6 +15,7 @@ import { useOrganizationStore } from '@/stores/organization';
 import { useAuthStore } from '@/stores/auth';
 import { useChatResourcesStore } from '@/stores/chatResources';
 import { useEditorResourcesStore } from '@/stores/editorResources';
+import { isAllowedKnowledgeSource } from '@/utils/weknoraFeatures';
 import KnowledgeBaseEditorModal from './KnowledgeBaseEditorModal.vue';
 const usemenuStore = useMenuStore();
 const uiStore = useUIStore();
@@ -585,24 +586,34 @@ const parseStatusOptions = computed(() => [
 ]);
 const selectedSource = ref('');
 // Source filter combines ingestion channels and the "manual"/"url" virtual
-// sources that the backend routes onto the `type` column.
-const sourceOptions = computed(() => [
-  { label: t('knowledgeBase.allSources'), value: '' },
-  { label: t('knowledgeBase.sourceUpload'), value: 'web' },
-  { label: t('knowledgeBase.sourceUrl'), value: 'url' },
-  { label: t('knowledgeBase.sourceManual'), value: 'manual' },
-  { label: t('knowledgeBase.sourceApi'), value: 'api' },
-  { label: t('knowledgeBase.sourceBrowserExtension'), value: 'browser_extension' },
-  { label: t('knowledgeBase.channelFeishu'), value: 'feishu' },
-  { label: t('knowledgeBase.channelFeishuDrive'), value: 'feishu_drive' },
-  { label: t('knowledgeBase.channelNotion'), value: 'notion' },
-  { label: t('knowledgeBase.channelYuque'), value: 'yuque' },
-  { label: t('knowledgeBase.channelWechat'), value: 'wechat' },
-  { label: t('knowledgeBase.channelWecom'), value: 'wecom' },
-  { label: t('knowledgeBase.channelDingtalk'), value: 'dingtalk' },
-  { label: t('knowledgeBase.channelSlack'), value: 'slack' },
-  { label: t('knowledgeBase.channelIm'), value: 'im' },
-]);
+// sources that the backend routes onto the `type` column. Options are filtered
+// by weknoraFeatures so hidden modules (datasource / chrome / non-allowlisted IM)
+// do not linger as filter choices after their entry points are removed.
+const sourceOptions = computed(() =>
+  [
+    { label: t('knowledgeBase.allSources'), value: '' },
+    { label: t('knowledgeBase.sourceUpload'), value: 'web' },
+    { label: t('knowledgeBase.sourceUrl'), value: 'url' },
+    { label: t('knowledgeBase.sourceManual'), value: 'manual' },
+    { label: t('knowledgeBase.sourceApi'), value: 'api' },
+    { label: t('knowledgeBase.sourceBrowserExtension'), value: 'browser_extension' },
+    { label: t('knowledgeBase.channelFeishu'), value: 'feishu' },
+    { label: t('knowledgeBase.channelFeishuDrive'), value: 'feishu_drive' },
+    { label: t('knowledgeBase.channelNotion'), value: 'notion' },
+    { label: t('knowledgeBase.channelYuque'), value: 'yuque' },
+    { label: t('knowledgeBase.channelWechat'), value: 'wechat' },
+    { label: t('knowledgeBase.channelWecom'), value: 'wecom' },
+    { label: t('knowledgeBase.channelDingtalk'), value: 'dingtalk' },
+    { label: t('knowledgeBase.channelSlack'), value: 'slack' },
+    { label: t('knowledgeBase.channelIm'), value: 'im' },
+  ].filter((opt) => isAllowedKnowledgeSource(opt.value)),
+);
+// If a previously selected source is no longer allowed (e.g. after feature
+// flags default to hide), drop it so the request does not keep filtering by
+// a channel that no longer appears in the UI.
+if (selectedSource.value && !isAllowedKnowledgeSource(selectedSource.value)) {
+  selectedSource.value = ''
+}
 // Date range as [start, end] in "YYYY-MM-DD" form (t-date-range-picker default).
 const updatedTimeRange = ref<string[]>([]);
 // Disable any date after today so users cannot filter into the future.

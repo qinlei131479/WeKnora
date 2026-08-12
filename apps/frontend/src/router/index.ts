@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { autoSetup, getCurrentUser, userInfoFromApi } from '@/api/auth'
+import { getFeatureFlags } from '@/utils/weknoraFeatures'
 
 /** Lite /桌面 WebView 硬刷新时可能只打开 `/`，用 session 记住上次页面以便恢复 */
 const LITE_LAST_PATH_KEY = 'weknora_lite_last_path'
@@ -389,6 +390,19 @@ router.beforeEach(async (to, from, next) => {
   // the bounce. This is UI-only; the server enforces the real check.
   if (to.meta.requiresSystemAdmin === true) {
     if (!authStore.isSystemAdmin) {
+      next('/platform/knowledge-bases')
+      return
+    }
+  }
+
+  // 二开隐藏「共享空间」时，拦截侧栏外的深链 / 邀请落地 / 命令面板残留。
+  if (getFeatureFlags().hideOrganizations) {
+    const path = to.path
+    if (
+      path === '/platform/organizations' ||
+      path.startsWith('/platform/organizations/') ||
+      path === '/join'
+    ) {
       next('/platform/knowledge-bases')
       return
     }

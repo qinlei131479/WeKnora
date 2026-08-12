@@ -4930,6 +4930,7 @@ export default {
     im: {
       title: 'IM Integration',
       description: 'Connect agent to instant messaging platforms like WeCom, Feishu, Lark, Slack, Telegram, DingTalk, Mattermost, WeChat, QQBot and Yunzhijia',
+      descriptionRestricted: 'Connect agent to instant messaging platforms: WeCom, Feishu and DingTalk',
       feishu: 'Feishu',
       lark: 'Lark',
       slack: 'Slack',

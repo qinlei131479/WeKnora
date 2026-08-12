@@ -897,6 +897,7 @@ export default {
     im: {
       title: 'Интеграция IM',
       description: 'Подключите агента к платформам мгновенных сообщений, таким как Feishu, Slack, Telegram, DingTalk, Mattermost, QQBot и Yunzhijia',
+      descriptionRestricted: 'Подключите агента к WeCom, Feishu и DingTalk',
       feishu: 'Feishu',
       lark: 'Lark',
       slack: 'Slack',

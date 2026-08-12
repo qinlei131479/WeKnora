@@ -173,6 +173,7 @@ import ResultGroup from './GlobalCommandPalette/ResultGroup.vue'
 import ResultItem from './GlobalCommandPalette/ResultItem.vue'
 import RetrievalSettings from '@/views/settings/RetrievalSettings.vue'
 import type { MessageSearchGroupItem } from '@/api/chat-history'
+import { getFeatureFlags } from '@/utils/weknoraFeatures'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -256,8 +257,9 @@ const allCommands = computed(() => {
     t,
     close: () => commandPaletteStore.closePalette(),
   })
-  // 共享空间入口与侧栏菜单保持一致：viewer / contributor 看不到。
-  if (!authStore.hasRole('admin')) {
+  // 共享空间入口与侧栏菜单保持一致：二开隐藏、或非 admin 看不到。
+  const hideOrgs = getFeatureFlags().hideOrganizations || !authStore.hasRole('admin')
+  if (hideOrgs) {
     return cmds.filter((c) => c.id !== 'open-organizations')
   }
   return cmds

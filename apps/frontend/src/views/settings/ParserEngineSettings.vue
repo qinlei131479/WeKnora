@@ -395,7 +395,7 @@ import {
   type ParserEngineConfig,
 } from '@/api/system'
 import { getWeKnoraCloudStatus } from '@/api/model'
-import { getFeatureFlags, isCloudParserEngine } from '@/utils/weknoraFeatures'
+import { filterParserEngines } from '@/utils/weknoraFeatures'
 
 const { t } = useI18n()
 const uiStore = useUIStore()
@@ -487,10 +487,7 @@ const ENGINE_ORDER: Record<string, number> = {
 }
 
 const sortedEngines = computed(() => {
-  const { hideCloud } = getFeatureFlags()
-  const list = hideCloud
-    ? engines.value.filter((e) => !isCloudParserEngine(e.Name))
-    : engines.value
+  const list = filterParserEngines(engines.value)
   return [...list].sort((a, b) => {
     const oa = ENGINE_ORDER[a.Name] ?? 100
     const ob = ENGINE_ORDER[b.Name] ?? 100
