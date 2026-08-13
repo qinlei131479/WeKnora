@@ -70,7 +70,7 @@ export default withMermaid(
 
     head: [
       ['link', { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' }],
-      ['meta', { name: 'theme-color', content: '#101f38' }],
+      ['meta', { name: 'theme-color', content: '#ffffff' }],
       ['meta', { property: 'og:type', content: 'website' }],
       ['meta', { property: 'og:title', content: '智能体中台2.0' }],
       [
@@ -163,14 +163,14 @@ export default withMermaid(
     mermaid: {
       theme: 'base',
       fontFamily:
-        '"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", ui-sans-serif, sans-serif',
+        '-apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
       themeVariables: {
-        primaryColor: '#eef1f6',
-        primaryTextColor: '#101f38',
-        primaryBorderColor: '#9aa8bd',
-        lineColor: '#7d8ba1',
-        secondaryColor: '#faf7ef',
-        tertiaryColor: '#f6f7f9',
+        primaryColor: '#f5f5f7',
+        primaryTextColor: '#1d1d1f',
+        primaryBorderColor: '#d2d2d7',
+        lineColor: '#86868b',
+        secondaryColor: '#ffffff',
+        tertiaryColor: '#e8e8ed',
         fontSize: '14px',
       },
     },

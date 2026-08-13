@@ -560,22 +560,17 @@ open http://localhost
 
 .marker {
   display: inline-block;
-  font-family: var(--wk-font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--wk-gold);
-  margin-bottom: 22px;
+  font-family: var(--wk-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--wk-accent);
+  margin-bottom: 16px;
 }
 
 .marker::before {
-  content: "";
-  display: inline-block;
-  width: 22px;
-  height: 1px;
-  background: var(--wk-gold);
-  vertical-align: middle;
-  margin-right: 12px;
+  display: none;
 }
 
 /* ------------------------------- Hero ------------------------------- */
@@ -591,9 +586,15 @@ open http://localhost
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(120% 80% at 78% -10%, rgba(184, 134, 59, 0.09), transparent 62%),
-    radial-gradient(90% 70% at 8% 0%, rgba(16, 31, 56, 0.06), transparent 60%);
+    radial-gradient(80% 60% at 70% -10%, rgba(196, 122, 26, 0.08), transparent 55%),
+    linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%);
   pointer-events: none;
+}
+
+.dark .hero::before {
+  background:
+    radial-gradient(80% 60% at 70% -10%, rgba(224, 160, 58, 0.12), transparent 55%),
+    linear-gradient(180deg, #000000 0%, #1d1d1f 100%);
 }
 
 .hero-grid {
@@ -605,28 +606,32 @@ open http://localhost
 }
 
 .eyebrow {
-  font-family: var(--wk-font-mono);
-  font-size: 11px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--wk-ink-mute);
-  margin: 0 0 34px;
+  font-family: var(--wk-font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: var(--wk-accent);
+  margin: 0 0 20px;
 }
 
 .display {
-  font-family: var(--wk-font-serif);
-  font-weight: 500;
-  font-size: clamp(34px, 4.1vw, 58px);
-  line-height: 1.2;
-  letter-spacing: -0.025em;
+  font-family: var(--wk-font-sans);
+  font-weight: 700;
+  font-size: clamp(40px, 5vw, 72px);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
   margin: 0;
+  color: var(--wk-ink);
 }
 
 .lede {
-  margin: 34px 0 0;
-  max-width: 60ch;
-  font-size: 16.5px;
-  line-height: 1.85;
+  margin: 28px 0 0;
+  max-width: 52ch;
+  font-size: 19px;
+  line-height: 1.47;
+  font-weight: 400;
+  letter-spacing: -0.011em;
   color: var(--wk-ink-soft);
 }
 
@@ -648,35 +653,40 @@ open http://localhost
 .btn {
   display: inline-flex;
   align-items: center;
-  height: 46px;
-  padding: 0 26px;
-  border-radius: 2px;
-  font-size: 14px;
-  font-weight: 550;
-  letter-spacing: 0.02em;
+  height: 44px;
+  padding: 0 22px;
+  border-radius: 980px;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.022em;
   text-decoration: none;
-  transition: all 0.22s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
 }
 
 .btn-solid {
-  background: var(--wk-ink);
-  color: var(--wk-paper);
-  border: 1px solid var(--wk-ink);
+  background: var(--wk-accent);
+  color: #fff;
+  border: 1px solid transparent;
 }
 
 .btn-solid:hover {
-  background: transparent;
-  color: var(--wk-ink);
+  background: var(--wk-accent-hover, #a86512);
+  color: #fff;
+  opacity: 0.92;
 }
 
 .btn-ghost {
-  border: 1px solid var(--wk-rule);
-  color: var(--wk-ink);
+  border: none;
+  color: var(--wk-accent);
+  background: transparent;
+  padding-left: 8px;
 }
 
 .btn-ghost:hover {
-  border-color: var(--wk-gold);
-  color: var(--wk-gold);
+  border-color: transparent;
+  color: var(--wk-accent-hover, #a86512);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .btn-text {
@@ -862,11 +872,11 @@ open http://localhost
 
 .stat-value {
   display: block;
-  font-family: var(--wk-font-serif);
-  font-size: 34px;
+  font-family: var(--wk-font-sans);
+  font-size: 40px;
   line-height: 1;
-  font-weight: 500;
-  letter-spacing: -0.02em;
+  font-weight: 650;
+  letter-spacing: -0.03em;
 }
 
 .stat-value i {
@@ -909,20 +919,21 @@ open http://localhost
 }
 
 .chapter-title {
-  font-family: var(--wk-font-serif);
-  font-weight: 500;
-  font-size: clamp(27px, 3.2vw, 40px);
-  line-height: 1.3;
-  letter-spacing: -0.02em;
+  font-family: var(--wk-font-sans);
+  font-weight: 700;
+  font-size: clamp(32px, 4vw, 48px);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
   margin: 0;
   border: none;
   padding: 0;
 }
 
 .chapter-sub {
-  margin: 20px 0 0;
-  font-size: 15.5px;
-  line-height: 1.85;
+  margin: 16px 0 0;
+  font-size: 19px;
+  line-height: 1.47;
+  letter-spacing: -0.011em;
   color: var(--wk-ink-soft);
 }
 
@@ -983,7 +994,7 @@ open http://localhost
 }
 
 .chain-title {
-  font-family: var(--wk-font-serif);
+  font-family: var(--wk-font-sans);
   font-size: 21px;
   font-weight: 500;
   margin: 16px 0 14px;
@@ -1052,7 +1063,7 @@ open http://localhost
 }
 
 .feature-title {
-  font-family: var(--wk-font-serif);
+  font-family: var(--wk-font-sans);
   font-size: 20px;
   font-weight: 500;
   margin: 14px 0 12px;
@@ -1142,7 +1153,7 @@ open http://localhost
   display: flex;
   align-items: center;
   gap: 12px;
-  font-family: var(--wk-font-serif);
+  font-family: var(--wk-font-sans);
   font-size: 24px;
   font-weight: 500;
   margin: 0;
@@ -1248,13 +1259,13 @@ open http://localhost
 .deploy-note {
   display: inline-block;
   margin-left: 6px;
-  padding: 1px 7px;
+  padding: 2px 10px;
   border: 1px solid var(--wk-rule);
-  border-radius: 2px;
-  font-family: var(--wk-font-mono);
-  font-size: 10.5px;
+  border-radius: 980px;
+  font-family: var(--wk-font-sans);
+  font-size: 11px;
   line-height: 1.7;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   color: var(--wk-ink-mute);
 }
@@ -1267,19 +1278,19 @@ open http://localhost
 
 .deploy-code {
   border: 1px solid var(--wk-rule);
-  border-radius: 4px;
+  border-radius: 14px;
   overflow: hidden;
-  background: #0d1626;
+  background: #1d1d1f;
 }
 
 .code-bar {
   padding: 12px 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  font-family: var(--wk-font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.18em;
+  font-family: var(--wk-font-sans);
+  font-size: 11px;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: rgba(230, 236, 245, 0.45);
+  color: rgba(245, 245, 247, 0.45);
 }
 
 .deploy-code pre {
@@ -1292,11 +1303,11 @@ open http://localhost
   font-family: var(--wk-font-mono);
   font-size: 13px;
   line-height: 2;
-  color: #dfe7f2;
+  color: #f5f5f7;
 }
 
 .deploy-code .c {
-  color: rgba(217, 169, 79, 0.75);
+  color: rgba(224, 160, 58, 0.9);
 }
 
 /* 代码块本身只到「服务起来了」，后续动作与延伸阅读放在下面这行，

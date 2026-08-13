@@ -25,14 +25,20 @@ function close() {
   document.documentElement.style.removeProperty('overflow')
 }
 
-async function show(source: SVGElement) {
+async function prepareStage() {
   reset()
   open.value = true
   document.documentElement.style.overflow = 'hidden'
   await nextTick()
   const host = stage.value
-  if (!host) return
+  if (!host) return null
   host.replaceChildren()
+  return host
+}
+
+async function showSvg(source: SVGElement) {
+  const host = await prepareStage()
+  if (!host) return
 
   // mermaid 的 svg 内联样式以 #id 作用域，且插件会对同 id 元素重新渲染，
   // 因此副本必须换一个 id 并同步改写内部样式表
@@ -53,17 +59,62 @@ async function show(source: SVGElement) {
   host.appendChild(clone)
 }
 
+async function showImage(src: string, alt = '') {
+  const host = await prepareStage()
+  if (!host) return
+  const img = document.createElement('img')
+  img.src = src
+  img.alt = alt
+  img.draggable = false
+  img.className = 'zoom-img'
+  host.appendChild(img)
+}
+
+function isZoomableImage(el: Element | null): el is HTMLImageElement {
+  if (!(el instanceof HTMLImageElement)) return false
+  if (!el.src || el.closest('a')) return false
+  if (el.classList.contains('wk-shot-img')) return true
+  if (el.closest('.vp-doc') && !el.closest('.VPNav, .VPSidebar, button, .copy')) return true
+  return false
+}
+
 function onDocClick(e: MouseEvent) {
-  const block = (e.target as HTMLElement | null)?.closest?.('.vp-doc .mermaid')
-  if (!block) return
-  const svg = block.querySelector('svg')
-  if (svg) show(svg as SVGElement)
+  const target = e.target as HTMLElement | null
+  if (!target || open.value) return
+
+  const mermaid = target.closest?.('.vp-doc .mermaid')
+  if (mermaid) {
+    const svg = mermaid.querySelector('svg')
+    if (svg) {
+      e.preventDefault()
+      showSvg(svg as SVGElement)
+    }
+    return
+  }
+
+  const shot = target.closest?.('.wk-shot-frame')
+  if (shot) {
+    const img = shot.querySelector('img.wk-shot-img') as HTMLImageElement | null
+    if (img?.src) {
+      e.preventDefault()
+      showImage(img.currentSrc || img.src, img.alt)
+    }
+    return
+  }
+
+  const img = target.closest?.('img')
+  if (isZoomableImage(img)) {
+    e.preventDefault()
+    showImage(img.currentSrc || img.src, img.alt)
+  }
 }
 
 function onKey(e: KeyboardEvent) {
   if (!open.value) return
   if (e.key === 'Escape') close()
   if (e.key === '0') reset()
+  if (e.key === '+' || e.key === '=') zoomBy(1.35)
+  if (e.key === '-' || e.key === '_') zoomBy(1 / 1.35)
 }
 
 function zoomBy(factor: number) {
@@ -119,12 +170,12 @@ onUnmounted(() => {
         />
 
         <div class="zoom-bar" @mousedown.stop>
-          <button title="缩小" @click="zoomBy(1 / 1.35)">−</button>
+          <button type="button" title="缩小" @click="zoomBy(1 / 1.35)">−</button>
           <span class="zoom-level">{{ Math.round(scale * 100) }}%</span>
-          <button title="放大" @click="zoomBy(1.35)">+</button>
+          <button type="button" title="放大" @click="zoomBy(1.35)">+</button>
           <span class="zoom-sep" />
-          <button class="zoom-word" @click="reset">重置</button>
-          <button class="zoom-word" @click="close">关闭</button>
+          <button type="button" class="zoom-word" @click="reset">重置</button>
+          <button type="button" class="zoom-word" @click="close">关闭</button>
         </div>
 
         <p class="zoom-hint">滚轮缩放 · 拖拽平移 · Esc 关闭</p>
@@ -141,20 +192,38 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--wk-paper);
+  background: rgba(29, 29, 31, 0.88);
+  backdrop-filter: saturate(140%) blur(20px);
+  -webkit-backdrop-filter: saturate(140%) blur(20px);
   cursor: zoom-out;
   overscroll-behavior: contain;
 }
 
 .zoom-stage {
-  width: min(1400px, 88vw);
-  height: 82vh;
+  width: min(1400px, 92vw);
+  height: 84vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: grab;
   transform-origin: center center;
 }
 
 .zoom-stage:active {
   cursor: grabbing;
+}
+
+.zoom-stage :deep(.zoom-img),
+.zoom-stage :deep(svg) {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  border-radius: 8px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
 }
 
 .zoom-bar {
@@ -165,28 +234,30 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 8px;
-  border: 1px solid var(--wk-rule);
-  border-radius: 3px;
-  background: var(--wk-paper);
-  box-shadow: 0 6px 22px rgba(16, 31, 56, 0.08);
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 980px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
   cursor: default;
 }
 
 .zoom-bar button {
-  min-width: 30px;
-  height: 28px;
-  padding: 0 8px;
-  border-radius: 2px;
+  min-width: 32px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 980px;
   font-size: 15px;
   line-height: 1;
-  color: var(--wk-ink-soft);
+  color: rgba(255, 255, 255, 0.88);
   transition: background-color 0.18s ease, color 0.18s ease;
 }
 
 .zoom-bar button:hover {
-  background: var(--wk-paper-2);
-  color: var(--wk-ink);
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
 }
 
 .zoom-word {
@@ -194,35 +265,34 @@ onUnmounted(() => {
 }
 
 .zoom-level {
-  min-width: 46px;
+  min-width: 48px;
   text-align: center;
   font-family: var(--wk-font-mono);
   font-size: 11px;
-  color: var(--wk-ink-mute);
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .zoom-sep {
   width: 1px;
   height: 16px;
   margin: 0 4px;
-  background: var(--wk-rule);
+  background: rgba(255, 255, 255, 0.18);
 }
 
 .zoom-hint {
   position: fixed;
-  top: 26px;
+  top: 28px;
   left: 50%;
   transform: translateX(-50%);
   margin: 0;
-  font-family: var(--wk-font-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.14em;
-  color: var(--wk-ink-mute);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .zoom-fade-enter-active,
 .zoom-fade-leave-active {
-  transition: opacity 0.18s ease;
+  transition: opacity 0.2s ease;
 }
 
 .zoom-fade-enter-from,
