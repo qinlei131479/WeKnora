@@ -155,18 +155,16 @@ pipeline {
                         if (service == 'business') {
                             echo "同步 .env 配置到远程服务器（仅 business 模块）..."
                             sh """
+                                set -e
+                                test -f .env.kjsc.example
                                 ssh ${env.SERVICES_USER}@${env.SERVICES_IP} "
                                     cd ${env.DEPLOY_BASE}
-                                    if [ -f .env.kjsc.example ]; then
-                                        if [ -f .env ]; then
-                                            cp .env .env.bak.\$(date +%Y%m%d%H%M%S)
-                                            echo '已备份旧 .env'
-                                        fi
-                                        cp .env.kjsc.example .env
-                                        echo '已从 .env.kjsc.example 更新 .env'
-                                    else
-                                        echo '.env.kjsc.example 不存在，跳过'
+                                    if [ -f .env ]; then
+                                        cp .env .env.bak.\$(date +%Y%m%d%H%M%S)
+                                        echo '已备份旧 .env'
                                     fi
+                                    cp /usr/local/spring-boot/Agent-Middle-Platform/.env.kjsc.example .env
+                                    echo '已从 .env.kjsc.example 更新 .env'
                                 "
                             """
                         }
