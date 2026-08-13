@@ -1,6 +1,6 @@
-# WeKnora 产品介绍
+# 产品介绍
 
-WeKnora（维娜拉）是腾讯开源的知识库问答系统，做的事情是：把 PDF、Word、网页，以及飞书、Notion、语雀里的资料收进知识库，然后你可以直接对着这批资料提问，答案带出处。技术上属于 RAG（Retrieval-Augmented Generation，检索增强生成）——先检索相关片段，再让大模型据此作答，而不是让模型凭记忆回答。
+智能体中台2.0 是知识库问答系统，做的事情是：把 PDF、Word、网页，以及飞书、Notion、语雀里的资料收进知识库，然后你可以直接对着这批资料提问，答案带出处。技术上属于 RAG（Retrieval-Augmented Generation，检索增强生成）——先检索相关片段，再让大模型据此作答，而不是让模型凭记忆回答。
 
 整套流程分四步：**文档理解 → 建索引 → 混合检索 → 生成回答**，本文后面逐个展开。
 
@@ -8,12 +8,12 @@ WeKnora（维娜拉）是腾讯开源的知识库问答系统，做的事情是�
 
 <Screenshot
   src="/screenshots/introduction-overview.png"
-  caption="WeKnora 主界面：左侧知识库与会话，右侧问答区"
+  caption="智能体中台2.0 主界面：左侧知识库与会话，右侧问答区"
   hint="展示登录后的主界面全貌：侧边栏（知识库、智能体、设置入口）与一轮带引用的问答。" />
 
-## WeKnora 解决什么问题
+## 解决什么问题
 
-| 痛点 | WeKnora 的做法 |
+| 痛点 | 智能体中台2.0 的做法 |
 | --- | --- |
 | 文档格式繁杂，PDF/扫描件/表格难以结构化 | 独立的 docreader 解析服务：PDF 版式分析、扫描件 OCR、LibreOffice 转换、Playwright 网页抓取、多模态图片描述（VLM），可选 OpenDataLoader/Docling 混合解析 |
 | 单一向量检索召回不稳 | 向量 + 关键词（BM25）混合检索，RRF 融合，Rerank 重排，可选知识图谱（GraphRAG）与 Wiki 导航 |
@@ -24,7 +24,7 @@ WeKnora（维娜拉）是腾讯开源的知识库问答系统，做的事情是�
 
 ## 核心概念
 
-下面这些概念构成 WeKnora 的数据模型，理解它们就能看懂界面上的大部分选项。想对照源码的话，它们都定义在 `internal/types/` 目录下。
+下面这些概念构成 智能体中台2.0 的数据模型，理解它们就能看懂界面上的大部分选项。想对照源码的话，它们都定义在 `internal/types/` 目录下。
 
 ### 租户与身份
 
@@ -112,7 +112,7 @@ flowchart TB
 - **问答与 Agent**：流式 SSE 问答、多轮上下文压缩、引用溯源；ReAct Agent（工具：`knowledge_search`、`grep_chunks`、`wiki_search`、`data_analysis` 等）、MCP 外部工具、Agent Skills（Docker 沙箱执行脚本）、Web 搜索。
 - **多租户与安全**：RBAC 角色鉴权（默认开启，`WEKNORA_TENANT_ENABLE_RBAC`）、审计日志（默认保留 90 天）、邀请制注册（`auth.registration_mode=invite_only`，也可用旧变量 `DISABLE_REGISTRATION=true`）、OIDC 单点登录、SSRF 防护、敏感字段 AES-256 加密。
 - **可观测性**：Langfuse 全链路追踪（LLM/Embedding/Rerank/VLM/ASR 调用与 token 统计）、健康检查、Swagger API 文档（`GIN_MODE=debug` 时）。
-- **生态**：REST API（`/api/v1`）+ API Key、独立 MCP Server（把 WeKnora 作为工具暴露给其他 Agent）、CLI（`cli/`）、微信小程序（`miniprogram/`）、浏览器插件渠道。
+- **生态**：REST API（`/api/v1`）+ API Key、独立 MCP Server（把智能体中台2.0 作为工具暴露给其他 Agent）、CLI（`cli/`）、微信小程序（`miniprogram/`）、浏览器插件渠道。
 
 ## 系统组件一览
 
@@ -131,7 +131,7 @@ flowchart TB
 | 可选：minio | MinIO | profile `minio` | 9000 / 9001 | S3 兼容对象存储（`STORAGE_TYPE=minio`） |
 | 可选：searxng | SearXNG | profile `searxng` | 8888 | 自建 Web 搜索引擎 |
 | 可选：langfuse 栈 | Langfuse 3 + ClickHouse + MinIO | profile `langfuse` | 3000 | LLM 可观测性 |
-| 可选：mcp | Python | `mcp-server/`，profile `full` | 8082 | 将 WeKnora API 封装为 MCP Server |
+| 可选：mcp | Python | `mcp-server/`，profile `full` | 8082 | 将智能体中台2.0 API 封装为 MCP Server |
 | 可选：odl-hybrid | Docling | profile `odl-hybrid` | 5002 | OpenDataLoader PDF 混合解析后端 |
 
 ```mermaid

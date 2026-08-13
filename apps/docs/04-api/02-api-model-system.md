@@ -115,13 +115,13 @@ curl -X PUT $BASE/api/v1/models/m-1/credentials -H "Authorization: Bearer $TOKEN
 curl -X DELETE $BASE/api/v1/models/m-1/credentials/api_key -H "Authorization: Bearer $TOKEN"
 ```
 
-## WeKnoraCloud
+## 云服务（WeKnoraCloud）
 
 Handler: `internal/handler/weknoracloud.go`。API key：`manage_models`/full。
 
 ### POST /api/v1/weknoracloud/credentials
 
-用途：保存 WeKnoraCloud SaaS 凭证。权限：Admin+。请求体：`{"app_id":"...","app_secret":"..."}`（均 `binding:"required"`）。
+用途：保存云服务（WeKnoraCloud）SaaS 凭证。权限：Admin+。请求体：`{"app_id":"...","app_secret":"..."}`（均 `binding:"required"`）。
 
 响应：200 `{"success":true,"message":"凭证保存成功"}`
 
@@ -132,7 +132,7 @@ curl -X POST $BASE/api/v1/weknoracloud/credentials -H "Authorization: Bearer $TO
 
 ### GET /api/v1/models/weknoracloud/status
 
-用途：WeKnoraCloud 就绪状态探测。权限：Viewer+。
+用途：云服务（WeKnoraCloud）就绪状态探测。权限：Viewer+。
 
 响应：200 服务状态对象。
 

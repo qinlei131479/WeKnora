@@ -37,7 +37,7 @@
 
 ## 3. 创建知识库并配置模型
 
-登录后新建一个知识库。WeKnora 的模型配置是**按知识库**走的：新建之后前端会引导你为这个库选模型，没有全局的一次性初始化。
+登录后新建一个知识库。智能体中台2.0 的模型配置是**按知识库**走的：新建之后前端会引导你为这个库选模型，没有全局的一次性初始化。
 
 1. 在「知识库」页点新建，填名称，选类型：`document`（普通文档库）或 `faq`（问答对库）；
 2. 在弹出的初始化向导里选模型：
@@ -210,7 +210,7 @@ sequenceDiagram
 
 | 现象 | 检查点 |
 | --- | --- |
-| 上传后一直 `processing` | `docker logs WeKnora-docreader`；大文件受 `MAX_FILE_SIZE_MB`（默认 50）与 `WEKNORA_DOCUMENT_PROCESS_TIMEOUT`（默认 2h）约束 |
+| 上传后一直 `processing` | `docker logs 智能体中台2.0-docreader`；大文件受 `MAX_FILE_SIZE_MB`（默认 50）与 `WEKNORA_DOCUMENT_PROCESS_TIMEOUT`（默认 2h）约束 |
 | 初始化时 Ollama 检测失败 | 容器内默认地址 `http://host.docker.internal:11434`（`OLLAMA_BASE_URL`）；Linux 需确认 `extra_hosts: host.docker.internal:host-gateway` 生效 |
 | 问答无引用 / 召回为空 | 确认知识解析 `completed`；调低 `vector_threshold`；检查 embedding 模型与建库时一致 |
 | 注册页签消失 | 查 `GET /auth/config` 的 `registration_mode`。值可能来自「设置 → 系统」里的数据库设置，不只是 `DISABLE_REGISTRATION`；邀请链接与 OIDC 首次登录是另外两条通路，不受它影响 |

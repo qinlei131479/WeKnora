@@ -1,6 +1,6 @@
 # 检索问答全流程（RAG Pipeline）
 
-本文完整描述 WeKnora 中一次"知识问答"请求从 HTTP 入口到流式回答落盘的全链路：SSE 会话装配 → 事件驱动 Pipeline（意图识别 / 查询改写 / 并行检索 / 重排 / 融合合并 / 过滤 / 数据分析 / 上下文组装 / 流式生成）→ 引用（citation）展开 → 流式输出与断线续传。
+本文完整描述 智能体中台2.0 中一次"知识问答"请求从 HTTP 入口到流式回答落盘的全链路：SSE 会话装配 → 事件驱动 Pipeline（意图识别 / 查询改写 / 并行检索 / 重排 / 融合合并 / 过滤 / 数据分析 / 上下文组装 / 流式生成）→ 引用（citation）展开 → 流式输出与断线续传。
 
 各环节对应的源码位置：
 
@@ -21,7 +21,7 @@
 
 ## 1. 总体架构
 
-WeKnora 的问答链路是一条**事件驱动的插件管线（Event-Driven Plugin Pipeline）**：每个阶段是一个实现了 `Plugin` 接口的插件，注册到 `EventManager` 上；编排器（`KnowledgeQAByEvent`）按动态组装的 `EventType` 列表逐个触发事件，插件通过责任链（`next()`）串联。生成结果不直接写 HTTP 响应，而是通过每请求独立的 `EventBus` 发布事件，由 `AgentStreamHandler` 落入共享 `StreamManager`（内存或 Redis），HTTP 层以 100ms 轮询将事件推给 SSE 客户端——这一设计天然支持**断线重连续传**与**分布式多副本部署**。
+智能体中台2.0 的问答链路是一条**事件驱动的插件管线（Event-Driven Plugin Pipeline）**：每个阶段是一个实现了 `Plugin` 接口的插件，注册到 `EventManager` 上；编排器（`KnowledgeQAByEvent`）按动态组装的 `EventType` 列表逐个触发事件，插件通过责任链（`next()`）串联。生成结果不直接写 HTTP 响应，而是通过每请求独立的 `EventBus` 发布事件，由 `AgentStreamHandler` 落入共享 `StreamManager`（内存或 Redis），HTTP 层以 100ms 轮询将事件推给 SSE 客户端——这一设计天然支持**断线重连续传**与**分布式多副本部署**。
 
 ```mermaid
 flowchart TD

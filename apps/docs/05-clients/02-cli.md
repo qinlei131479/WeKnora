@@ -1,6 +1,6 @@
-# WeKnora CLI（weknora 命令行工具）
+# CLI（weknora 命令行工具）
 
-WeKnora CLI（二进制名 `weknora`）是 WeKnora RAG 服务的官方命令行客户端，源码位于仓库的 `cli/` 目录（独立 Go module：`github.com/Tencent/WeKnora/cli`，要求 Go 1.26+）。它面向两类使用者：
+CLI（二进制名 `weknora`）是智能体中台2.0 的命令行客户端，源码位于仓库的 `cli/` 目录（独立 Go module：`github.com/Tencent/WeKnora/cli`，要求 Go 1.26+）。它面向两类使用者：
 
 - **人类用户**：管理知识库（Knowledge Base）与文档、执行混合检索（hybrid search）、进行有引用溯源（grounded）的流式问答；
 - **AI Agent / 脚本**：默认输出 JSON envelope、提供类型化错误码与退出码矩阵、`--dry-run` 预演、`weknora schema` 机器可读契约，以及 `weknora mcp serve` MCP 服务器模式。
@@ -32,7 +32,7 @@ flowchart TB
         O["output + format<br/>JSON envelope / NDJSON / jq"]
     end
 
-    SRV["WeKnora Server<br/>(REST API + SSE)"]
+    SRV["智能体中台2.0 Server<br/>(REST API + SSE)"]
 
     R --> groups
     groups --> F
@@ -52,8 +52,8 @@ flowchart TB
 `cli/README.md` 明确说明：**从源码构建是目前受支持的安装方式**；预编译二进制、`go install`、CLI 的 Homebrew formula 计划随正式 tag 发布一同提供。
 
 ```bash
-git clone https://github.com/Tencent/WeKnora.git
-cd WeKnora/cli
+# 使用内部发布的源码包，或已有的项目仓库目录
+cd Agent-Middle-Platform/cli
 go build -o weknora .
 sudo mv weknora /usr/local/bin/   # 或放到任意 $PATH 目录
 ```
@@ -75,9 +75,9 @@ sudo mv weknora /usr/local/bin/   # 或放到任意 $PATH 目录
 
 ### Homebrew（服务端 Lite 版，非 CLI）
 
-仓库 `Formula/` 目录下目前只有一个 formula：`Formula/weknora-lite.rb`，它安装的是 **WeKnora 服务端的单二进制 Lite 版**（`weknora-lite`），而不是本文档的 `weknora` CLI。该 formula：
+仓库 `Formula/` 目录下目前只有一个 formula：`Formula/weknora-lite.rb`，它安装的是 **智能体中台2.0 服务端的单二进制 Lite 版**（`weknora-lite`），而不是本文档的 `weknora` CLI。该 formula：
 
-- 按 macOS/Linux × arm64/amd64 四个平台从 GitHub Releases 下载 `WeKnora-lite_v<version>_<os>_<arch>.tar.gz`；
+- 按 macOS/Linux × arm64/amd64 四个平台从 GitHub Releases 下载 `智能体中台2.0-lite_v<version>_<os>_<arch>.tar.gz`；
 - 生成 `weknora-lite` 启动脚本：首次运行自动生成 `~/.config/weknora/.env.lite` 配置、数据存到 `~/.local/share/weknora/`；
 - 支持 `brew services start weknora-lite` 作为后台服务运行，日志在 `$(brew --prefix)/var/log/weknora-lite.log`。
 

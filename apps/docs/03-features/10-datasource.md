@@ -57,7 +57,7 @@ type StreamingConnector interface {
 }
 ```
 
-价值（见源码注释，对应 issue Tencent/WeKnora#2136）：同步任务超时（Asynq 任务超时为 2 小时）后可以从最后一个 checkpoint **续传**，而不是从头重来；同时内存占用被限制在"单个条目"级别。目前只有 **Feishu/Lark 连接器**实现了 `StreamingConnector`。
+价值（见源码注释，对应 issue Tencent/智能体中台2.0#2136）：同步任务超时（Asynq 任务超时为 2 小时）后可以从最后一个 checkpoint **续传**，而不是从头重来；同时内存占用被限制在"单个条目"级别。目前只有 **Feishu/Lark 连接器**实现了 `StreamingConnector`。
 
 ### ConnectorRegistry：注册与查找
 
@@ -172,7 +172,7 @@ flowchart LR
 - **流式路径的游标策略**（`streamStartCursor`）：用户触发的全量同步在**首次尝试**时丢弃游标全量抓取；Asynq **重试**（attempt > 0）以及所有增量同步都从最后一个 checkpoint 续传。
 - **入库核心 `applyFetchedItem` → `ingestItem`**：
   - `IsDeleted=true` 的条目只累加 `result.Deleted` 计数——**刻意不真正删除知识库条目**（防止连接器误判或重新配置导致意外数据丢失，用户需在 KB UI 中显式删除）；
-  - 有 `Content` 字节 → 包装成 `multipart.FileHeader` 走 `KnowledgeService.CreateKnowledgeFromFile`（完整文档解析流水线）；只有 `URL` → 走 `CreateKnowledgeFromURL` 由 WeKnora 下载解析；
+  - 有 `Content` 字节 → 包装成 `multipart.FileHeader` 走 `KnowledgeService.CreateKnowledgeFromFile`（完整文档解析流水线）；只有 `URL` → 走 `CreateKnowledgeFromURL` 由 智能体中台2.0 下载解析；
   - **更新 = 先删后建**：按 metadata `external_id` 查到既有知识条目就先 `DeleteKnowledge` 再重建，计为 Updated；
   - 重复文件（`DuplicateKnowledgeError`）计为 Skipped，不算失败；
   - 每个条目自动带上 metadata：`external_id`、`source_resource_id`、`datasource_id` 以及连接器附加的 metadata。
@@ -297,7 +297,7 @@ func NewConnectorHTTPClient(timeout time.Duration) *http.Client {
 }
 ```
 
-底层 `internal/utils/security.go` 会拒绝私网地址、回环地址、link-local 等目标，并且在**每次重定向和实际拨号时**重新校验（而非只校验初始 URL），防止恶意 feed 或自定义 base_url 把 WeKnora 引向内网服务。各连接器的 `parseXXXConfig` 都会对 base_url 调用 `ValidateConnectorBaseURL`。
+底层 `internal/utils/security.go` 会拒绝私网地址、回环地址、link-local 等目标，并且在**每次重定向和实际拨号时**重新校验（而非只校验初始 URL），防止恶意 feed 或自定义 base_url 把智能体中台2.0 引向内网服务。各连接器的 `parseXXXConfig` 都会对 base_url 调用 `ValidateConnectorBaseURL`。
 
 `errors.go` 定义了模块级哨兵错误（`ErrConnectorNotFound`、`ErrDataSourceInvalid`、`ErrInvalidCredentials`、`ErrSyncFailed` 等）与 `PartialFetchError`（部分资源成功、部分失败；调用方应处理已得条目、持久化游标、把 `Details` 以 partial 状态呈现给用户）。
 

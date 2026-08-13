@@ -80,7 +80,7 @@ const surfaces = [
   { icon: 'mobile', name: '微信小程序', desc: '移动端入口，支持网页收藏入库与提问。' },
   { icon: 'cli', name: '命令行 weknora', desc: '文档管理、检索与带引用的流式问答，默认 JSON 输出，便于脚本化。' },
   { icon: 'api', name: 'REST API 与 Go SDK', desc: '完整 /api/v1 接口；API Key 支持按能力与知识库范围授权。' },
-  { icon: 'mcp', name: 'MCP Server', desc: '将 WeKnora 暴露为 MCP 工具，供 Claude、Cursor 等客户端检索。' },
+  { icon: 'mcp', name: 'MCP Server', desc: '将智能体中台2.0 暴露为 MCP 工具，供 Claude、Cursor 等客户端检索。' },
 ]
 
 const features = [
@@ -271,31 +271,15 @@ const deployments = [
     <section class="hero">
       <div class="shell hero-grid">
         <div class="hero-copy">
-          <p class="eyebrow">Tencent 开源 · WeKnora {{ versionLabel }} · 官方文档</p>
+          <p class="eyebrow">智能体中台2.0 · {{ versionLabel }} · 内部文档</p>
           <h1 class="display">
-            开源的知识库问答系统
+           知识库问答系统
           </h1>
-          <p class="lede">WeKnora（维娜拉）将 PDF、Word、网页与飞书 / Notion / 语雀等来源的资料汇入知识库，提供检索增强的问答能力，回答标注可追溯的出处。除基础问答外，还提供 <strong>Wiki 自动成书</strong>、<strong>ReAct Agent 与 MCP 双向集成</strong>、<strong>知识图谱增强检索</strong>，以及面向团队的<strong>多空间隔离、四级 RBAC、作用域 API Key 与审计日志</strong>。支持完整私有部署，模型可全部替换为本地推理。</p>
+          <p class="lede">智能体中台2.0 将 PDF、Word、网页与飞书 / Notion / 语雀等来源的资料汇入知识库，提供检索增强的问答能力，回答标注可追溯的出处。除基础问答外，还提供 <strong>Wiki 自动成书</strong>、<strong>ReAct Agent 与 MCP 双向集成</strong>、<strong>知识图谱增强检索</strong>，以及面向团队的<strong>多空间隔离、四级 RBAC、作用域 API Key 与审计日志</strong>。支持完整私有部署，模型可全部替换为本地推理。</p>
           <p class="lede lede-sub">本文档覆盖部署与配置、功能说明、约 360 个 API 端点的接口参考，以及二次开发的扩展点。</p>
           <div class="actions">
             <a class="btn btn-solid" :href="withBase('/01-getting-started/01-introduction')">开始阅读</a>
             <a class="btn btn-ghost" :href="withBase('/02-architecture/01-overview')">系统架构</a>
-            <a
-              class="btn btn-text"
-              href="https://weknora.weixin.qq.com"
-              target="_blank"
-              rel="noreferrer"
-            >
-              官方网站 ↗
-            </a>
-            <a
-              class="btn btn-text"
-              href="https://github.com/Tencent/WeKnora"
-              target="_blank"
-              rel="noreferrer"
-            >
-              GitHub 仓库 ↗
-            </a>
           </div>
         </div>
 
@@ -397,7 +381,7 @@ const deployments = [
         <header class="chapter-head">
           <span class="marker">核心能力</span>
           <h2 class="chapter-title">超出基础检索问答的部分</h2>
-          <p class="chapter-sub">以下能力为 WeKnora 的主要投入方向，可作为技术选型时的对比维度。</p>
+          <p class="chapter-sub">以下能力为智能体中台2.0 的主要投入方向，可作为技术选型时的对比维度。</p>
         </header>
 
         <div class="features">
@@ -500,9 +484,8 @@ const deployments = [
           <div class="code-bar">
             <span>标准部署 · Docker Compose</span>
           </div>
-          <pre><code><span class="c"># 1 获取代码</span>
-git clone https://github.com/Tencent/WeKnora.git
-cd WeKnora
+          <pre><code><span class="c"># 1 进入项目目录（使用内部发布的源码包或已克隆的仓库）</span>
+cd Agent-Middle-Platform
 
 <span class="c"># 2 准备配置：至少修改 JWT_SECRET 与 SYSTEM_AES_KEY</span>
 cp .env.example .env
@@ -548,16 +531,15 @@ open http://localhost
               stroke-linecap="round"
             />
           </svg>
-          <span>WeKnora</span>
+          <span>智能体中台2.0</span>
         </div>
         <p class="closing-note">文档基于仓库 {{ versionLabel }} 源码整理。源码路径均相对仓库根目录，API 路径默认带 <code>/api/v1</code> 前缀，配置示例中的密钥均为占位符。</p>
         <div class="closing-links">
           <a :href="withBase('/01-getting-started/01-introduction')">快速开始</a>
           <a :href="withBase('/04-api/01-api-overview')">API 总览</a>
           <a :href="withBase('/06-development/03-extension-points')">扩展点</a>
-          <a href="https://github.com/Tencent/WeKnora" target="_blank" rel="noreferrer">GitHub</a>
         </div>
-        <p class="closing-copy">© Tencent WeKnora · MIT License</p>
+        <p class="closing-copy">智能体中台2.0 · 内部文档</p>
       </div>
     </footer>
   </div>

@@ -1,6 +1,6 @@
 # 检索引擎与向量存储（Retrieval Engines）
 
-向量存到哪、关键词怎么搜，由「检索引擎」决定。WeKnora 支持 10 种后端，但**绝大多数部署不需要选**：默认的 PostgreSQL（ParadeDB 镜像自带 pgvector + BM25）既能做向量也能做关键词，和业务数据同库，运维成本最低。
+向量存到哪、关键词怎么搜，由「检索引擎」决定。智能体中台2.0 支持 10 种后端，但**绝大多数部署不需要选**：默认的 PostgreSQL（ParadeDB 镜像自带 pgvector + BM25）既能做向量也能做关键词，和业务数据同库，运维成本最低。
 
 需要换的典型理由：
 
@@ -108,7 +108,7 @@ flowchart TD
 
 ### 2.3 Elasticsearch v8
 
-`internal/application/repository/retriever/elasticsearch/v8/repository.go`。typed client，单索引（`ELASTICSEARCH_INDEX`，默认 `WeKnora`），文档含 `dense_vector` embedding 字段。
+`internal/application/repository/retriever/elasticsearch/v8/repository.go`。typed client，单索引（`ELASTICSEARCH_INDEX`，默认 `智能体中台2.0`），文档含 `dense_vector` embedding 字段。
 
 - **向量检索**：`script_score` 查询，脚本 `cosineSimilarity(params.query_vector, 'embedding')`（Lucene 禁止负最终分，实际值域 [0,1]），threshold 过滤在应用侧。
 - **关键词检索**：`match` 查询 content 字段（BM25）。
@@ -117,7 +117,7 @@ flowchart TD
 
 ### 2.4 Elasticsearch v7 — 仅关键词
 
-`internal/application/repository/retriever/elasticsearch/v7/repository.go`。注意：**`Support()` 只返回 `[keywords]`**——v7 驱动在 WeKnora 中仅作为 BM25 关键词引擎注册（代码中保留了 `script_score cosineSimilarity` 的向量查询构造，但能力声明不含 vector，Composite 不会把向量请求路由给它）。需向量检索时应搭配其他驱动（如 `RETRIEVE_DRIVER=postgres,elasticsearch_v7`）或升级 v8。
+`internal/application/repository/retriever/elasticsearch/v7/repository.go`。注意：**`Support()` 只返回 `[keywords]`**——v7 驱动在智能体中台2.0 中仅作为 BM25 关键词引擎注册（代码中保留了 `script_score cosineSimilarity` 的向量查询构造，但能力声明不含 vector，Composite 不会把向量请求路由给它）。需向量检索时应搭配其他驱动（如 `RETRIEVE_DRIVER=postgres,elasticsearch_v7`）或升级 v8。
 
 ### 2.5 OpenSearch
 
@@ -199,11 +199,11 @@ flowchart TD
 | Doris | `doris` | ANN HNSW inner_product/cosine | 倒排索引 MATCH_ANY | 倒排命中 | 建表声明 chinese parser | 每维一张表 | SQL 内 | 高 | 已有 Doris 数仓，检索与分析一体 |
 | 腾讯云 VectorDB | `tencent_vectordb` | HNSW COSINE | 稀疏向量 BM25（SPARSE_INVERTED） | BM25 | SDK SparseEncoder | 每维一个 collection | 应用侧 | 低（云托管） | 腾讯云托管、免运维 |
 
-> 说明：无论引擎自身是否提供"混合检索"，WeKnora 的混合始终是**上层统一的 RRF 融合**（`knowledgebase_search_fusion.go`）——向量与关键词各自独立检索，按 rank 加权合并（见 §5），因此各引擎只需分别提供两类单模检索。
+> 说明：无论引擎自身是否提供"混合检索"，智能体中台2.0 的混合始终是**上层统一的 RRF 融合**（`knowledgebase_search_fusion.go`）——向量与关键词各自独立检索，按 rank 加权合并（见 §5），因此各引擎只需分别提供两类单模检索。
 
 ## 4. Embedding 维度管理
 
-WeKnora 允许不同 KB 使用不同 embedding 模型（维度各异），各引擎的维度隔离策略：
+智能体中台2.0 允许不同 KB 使用不同 embedding 模型（维度各异），各引擎的维度隔离策略：
 
 | 引擎 | 策略 |
 |------|------|
@@ -255,7 +255,7 @@ rrfScore = vectorWeight/(rrfK + vectorRank) + keywordWeight/(rrfK + keywordRank)
 |----------|------|------|
 | `RETRIEVE_DRIVER` | `postgres` | 逗号分隔多驱动：`postgres` / `sqlite` / `elasticsearch_v7` / `elasticsearch_v8` / `opensearch` / `qdrant` / `milvus` / `weaviate` / `doris` / `tencent_vectordb`。多驱动时写操作广播到全部，检索按类型路由 |
 | `MULTI_STORE_RETRIEVE_TIMEOUT_SEC` | 30 | 多 store 并行检索每组超时 |
-| `ELASTICSEARCH_ADDR` / `_USERNAME` / `_PASSWORD` / `_INDEX` | — / `WeKnora` | ES v7/v8 共用 |
+| `ELASTICSEARCH_ADDR` / `_USERNAME` / `_PASSWORD` / `_INDEX` | — / `智能体中台2.0` | ES v7/v8 共用 |
 | `OPENSEARCH_ADDR` / `_USERNAME` / `_PASSWORD` / `_INDEX` / `_INSECURE_SKIP_VERIFY` | — | OpenSearch |
 | `QDRANT_HOST` / `_PORT` / `_COLLECTION` / `_API_KEY` / `_USE_TLS` | `localhost` / 6334 / `weknora_embeddings` | Qdrant（gRPC 端口） |
 | `MILVUS_ADDRESS` / `_COLLECTION` / `_METRIC_TYPE` / `_USERNAME` / `_PASSWORD` / `_DB_NAME` | `localhost:19530` / `weknora_embeddings` / `IP` | metric 改后需重建 collection |

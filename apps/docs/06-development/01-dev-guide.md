@@ -1,10 +1,10 @@
 # 开发指南
 
-本章面向准备对 WeKnora 做二次开发的工程师，介绍本地开发环境搭建、Makefile 命令、开发模式（`docker-compose.dev.yml`）、测试体系、代码规范与调试技巧。
+本章面向准备对智能体中台2.0 做二次开发的工程师，介绍本地开发环境搭建、Makefile 命令、开发模式（`docker-compose.dev.yml`）、测试体系、代码规范与调试技巧。
 
 ## 1. 技术栈与环境要求
 
-WeKnora 由三个可独立开发的进程组成：
+智能体中台2.0 由三个可独立开发的进程组成：
 
 | 组件 | 目录 | 语言 / 运行时 | 版本要求（来源） |
 | --- | --- | --- | --- |
@@ -99,7 +99,7 @@ Lite 模式把 SQLite（+sqlite-vec）与内存队列编译进单个二进制，
 
 ```bash
 make build-lite     # 先构建前端到 web/，再 CGO 构建 Go（tags: sqlite_fts5）；SKIP_FRONTEND=1 跳过前端
-make run-lite       # 依赖 .env.lite，构建并启动 WeKnora-lite
+make run-lite       # 依赖 .env.lite，构建并启动 智能体中台2.0-lite
 make package-lite   # 打 tarball 发行包（scripts/package-lite.sh）
 make package-mac-app  # 打 macOS .app（scripts/package-mac-app.sh）
 ```
@@ -112,8 +112,8 @@ make package-mac-app  # 打 macOS .app（scripts/package-mac-app.sh）
 
 | 目标 | 作用 |
 | --- | --- |
-| `build` | `go build -o WeKnora ./cmd/server` |
-| `run` | 先 `build` 再运行 `./WeKnora` |
+| `build` | `go build -o 智能体中台2.0 ./cmd/server` |
+| `run` | 先 `build` 再运行 `./智能体中台2.0` |
 | `test` | `go test -v ./...` |
 | `clean` | `go clean` 并删除二进制 |
 | `build-prod` | 生产构建：CGO_ENABLED=1，`-ldflags "-w -s"` 注入 Version/CommitID/BuildTime/GoVersion（`internal/handler` 包变量），并设置 protobuf `conflictPolicy=warn`（规避 qdrant/milvus proto 冲突） |
@@ -198,7 +198,7 @@ make lint            # go vet
 跨切面的契约/集成测试集中在 `cli/acceptance/`（见 `cli/acceptance/doc.go`）：
 
 - `cli/acceptance/contract/` — envelope JSON 输出形状 golden 测试 + error.code 注册表一致性；
-- `cli/acceptance/e2e/` — 对真实 WeKnora server 的黑盒测试（testscript 风格），需要环境变量指向测试服务器；CI 侧由 `.github/workflows/cli-e2e.yml` 承载，**按需触发**（`workflow_dispatch` 手动，或给 PR 打 `acceptance-e2e` 标签），使用 secrets `WEKNORA_E2E_HOST` / `WEKNORA_E2E_TOKEN`。
+- `cli/acceptance/e2e/` — 对真实 智能体中台2.0 server 的黑盒测试（testscript 风格），需要环境变量指向测试服务器；CI 侧由 `.github/workflows/cli-e2e.yml` 承载，**按需触发**（`workflow_dispatch` 手动，或给 PR 打 `acceptance-e2e` 标签），使用 secrets `WEKNORA_E2E_HOST` / `WEKNORA_E2E_TOKEN`。
 
 ### 4.4 tests/ 目录与前端测试
 

@@ -1,10 +1,10 @@
 # 总体架构
 
-本章从部署视角与代码视角两个维度介绍 WeKnora 的整体架构：系统由哪些进程/容器组成、各组件之间如何通信、使用了哪些技术栈，以及代码仓库的顶层目录布局。
+本章从部署视角与代码视角两个维度介绍 智能体中台2.0 的整体架构：系统由哪些进程/容器组成、各组件之间如何通信、使用了哪些技术栈，以及代码仓库的顶层目录布局。
 
 ## 1. 系统组成
 
-WeKnora 采用"主服务 + 前端 + 文档解析微服务"的三进程核心架构，外加 PostgreSQL 与 Redis 两个基础设施依赖；其余组件（向量库、知识图谱、联网搜索等）均为可选，通过 Docker Compose profile 按需启用。
+智能体中台2.0 采用"主服务 + 前端 + 文档解析微服务"的三进程核心架构，外加 PostgreSQL 与 Redis 两个基础设施依赖；其余组件（向量库、知识图谱、联网搜索等）均为可选，通过 Docker Compose profile 按需启用。
 
 ### 1.1 核心服务（默认启动）
 
@@ -30,7 +30,7 @@ WeKnora 采用"主服务 + 前端 + 文档解析微服务"的三进程核心架�
 | `doris-fe` + `doris-be` | `doris` | Apache Doris 4.1 检索引擎（FE MySQL 9030 / FE HTTP 8030 Stream Load / BE 8040） |
 | `odl-hybrid` | `odl-hybrid` | OpenDataLoader PDF 混合解析后端（docreader 通过 HTTP `:5002` 调用） |
 | `dex` | `dex` / `full` | OIDC 测试用 IdP（配合 `OIDC_AUTH_ENABLE`） |
-| `langfuse-*`（web/worker/clickhouse/minio/db-init） | `langfuse` | 自建 LLM 可观测栈，复用 WeKnora 的 postgres（新建 `langfuse` 库）与 redis（DB 1） |
+| `langfuse-*`（web/worker/clickhouse/minio/db-init） | `langfuse` | 自建 LLM 可观测栈，复用智能体中台2.0 的 postgres（新建 `langfuse` 库）与 redis（DB 1） |
 
 此外，Go 后端还可直连未在 compose 内的外部引擎：Elasticsearch v7/v8、OpenSearch、腾讯云 VectorDB、火山 VikingDB，以及 8 种对象存储（local/MinIO/COS/TOS/S3/OSS/KS3/OBS）。
 
@@ -96,7 +96,7 @@ graph LR
         IM["IM 平台 (微信/飞书/钉钉/Slack...)"]
     end
 
-    subgraph Compose["Docker Compose: WeKnora-network"]
+    subgraph Compose["Docker Compose: 智能体中台2.0-network"]
         FE["frontend: NGINX + 静态资源 (:80)"]
         APP["app: Go 主服务 (:8080)<br/>Gin REST + SSE / Agent 引擎 / Asynq worker"]
         DR["docreader: Python gRPC (:50051)<br/>PDF / DOCX / Excel / Web 解析"]
@@ -182,8 +182,8 @@ sequenceDiagram
 | `frontend/` | Vue3 + Vite + TDesign 的 Web 前端，构建产物由 NGINX 或 Lite 模式内嵌托管 |
 | `docreader/` | Python gRPC 文档解析微服务：`main.py` 服务端入口、`parser/` 25+ 解析器、`splitter/` 分割器、`proto/` 协议定义、独立 `Dockerfile.docreader` 构建 |
 | `cli/` | `weknora` 命令行工具（约 30 个子命令：部署、日志、备份、诊断等） |
-| `client/` | Go SDK：以 HTTP 客户端形式封装 WeKnora API，供二次开发集成 |
-| `mcp-server/` | Python 实现的 MCP Server（`weknora_mcp_server.py`），把 WeKnora API 暴露为 MCP 工具给 Claude 等 MCP 客户端 |
+| `client/` | Go SDK：以 HTTP 客户端形式封装智能体中台2.0 API，供二次开发集成 |
+| `mcp-server/` | Python 实现的 MCP Server（`weknora_mcp_server.py`），把智能体中台2.0 API 暴露为 MCP 工具给 Claude 等 MCP 客户端 |
 | `miniprogram/` | 微信小程序客户端（WXML/WXSS/JS） |
 | `migrations/` | golang-migrate 数据库迁移：`versioned/`（Postgres 主线 `NNNNNN_*.up/down.sql`）、`sqlite/`（Lite 模式）、`paradedb/`、`mysql/` |
 | `config/` | 运行配置：`config.yaml` 主配置、`builtin_agents.yaml` 内置 Agent、`agent_type_presets.yaml` Agent 预设、`builtin_models.yaml.example` 声明式内置模型、`prompt_templates/` 提示词模板 |

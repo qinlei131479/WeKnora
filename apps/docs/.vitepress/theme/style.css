@@ -1,5 +1,5 @@
 /* ==========================================================================
-   WeKnora 文档站主题
+   智能体中台2.0 文档站主题
    墨蓝（logo 主色）· 纸白 · 鎏金（帆浪点缀）
    ========================================================================== */
 
@@ -136,9 +136,9 @@ body {
 .VPNavBarTitle .title {
   font-family: var(--wk-font-sans);
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.02em;
   font-size: 15px;
-  text-transform: uppercase;
+  text-transform: none;
   border-bottom: none !important;
 }
 

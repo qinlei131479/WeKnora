@@ -2,7 +2,7 @@
 
 普通问答是「检索一次、回答一次」，遇到需要多步骤的问题就不够用了——比如「对比这三份合同的付款条款，并查一下最新的行业惯例」。Agent 解决的是这类问题：它会自己决定检索几轮、要不要联网、要不要调外部工具，边想边做，直到攒够依据再回答。
 
-WeKnora 提供两种模式，在对话框顶部切换：
+智能体中台2.0 提供两种模式，在对话框顶部切换：
 
 | 模式 | 适合 | 代价 |
 | --- | --- | --- |
@@ -394,7 +394,7 @@ description: Extract text and tables from PDF files, fill forms, merge documents
 | --- | --- | --- |
 | `skills/preloaded/` | `citation-generator`（引用生成器）、`data-processor`（数据处理器，含 analyze.py 等脚本）、`doc-coauthoring`（文档协作）、`document-analyzer`（文档分析器）、`openmaic-classroom`（互动课程生成） | 服务端预置技能，Agent 可勾选 |
 | `examples/skills/pdf-processing/` | SKILL.md + `scripts/analyze_form.py`、`scripts/extract_text.py` | 自定义技能示例 |
-| `cli/skills/` | `weknora-shared`、`weknora-rag-search`（经 `//go:embed` 打进 CLI 二进制，`weknora skills install` 释放） | 面向外部 Agent 使用 WeKnora CLI 的技能 |
+| `cli/skills/` | `weknora-shared`、`weknora-rag-search`（经 `//go:embed` 打进 CLI 二进制，`weknora skills install` 释放） | 面向外部 Agent 使用智能体中台2.0 CLI 的技能 |
 
 预置目录解析顺序（`getPreloadedSkillsDir`，`internal/application/service/skill_service.go`）：`WEKNORA_SKILLS_DIR` 环境变量 → 可执行文件旁的默认目录 → 当前工作目录 → 相对默认路径。
 

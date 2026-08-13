@@ -1,8 +1,8 @@
 # Claw Skill
 
-Claw Skill 是把 WeKnora 挂给 AI Agent 用的一种方式：安装之后，OpenClaw 生态里的 Agent 就能通过 WeKnora 的 REST API 往知识库里写内容、跨库检索。
+Claw Skill 是把智能体中台2.0 挂给 AI Agent 用的一种方式：安装之后，OpenClaw 生态里的 Agent 就能通过 智能体中台2.0 的 REST API 往知识库里写内容、跨库检索。
 
-Skill 托管在 ClawHub，包名 [`@lyingbug/weknora`](https://clawhub.ai/lyingbug/weknora)（MIT-0）。它是一层薄封装，实际能力就是 WeKnora 的 REST 接口。
+Skill 托管在 ClawHub，包名 [`@lyingbug/weknora`](https://clawhub.ai/lyingbug/weknora)（MIT-0）。它是一层薄封装，实际能力就是智能体中台2.0 的 REST 接口。
 
 ## 能做什么
 
@@ -16,7 +16,7 @@ Skill 托管在 ClawHub，包名 [`@lyingbug/weknora`](https://clawhub.ai/lyingb
 
 ## 怎么配
 
-WeKnora 界面里有引导页：「设置 → 集成 → Claw Skill」，会带上当前实例的 API 地址与可复制的环境变量示例、安装命令。步骤：
+智能体中台2.0 界面里有引导页：「设置 → 集成 → Claw Skill」，会带上当前实例的 API 地址与可复制的环境变量示例、安装命令。步骤：
 
 1. **拿 API 凭证**：「设置 → API 信息」里复制 API Key 与 API 地址；
 2. **配环境变量**：在终端或 `~/.zshrc` / `~/.bashrc` 里设置
@@ -31,7 +31,7 @@ WeKnora 界面里有引导页：「设置 → 集成 → Claw Skill」，会带�
 
 ## 和 MCP 的关系
 
-两者都是「把 WeKnora 给外部 Agent 用」，选哪个取决于对方生态：
+两者都是「把智能体中台2.0 给外部 Agent 用」，选哪个取决于对方生态：
 
 | | Claw Skill | MCP Server |
 | --- | --- | --- |

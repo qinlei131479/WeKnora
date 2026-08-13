@@ -1,6 +1,6 @@
 # 可观测性与审计
 
-线上跑起来之后，你会关心三类问题：某次回答为什么慢、为什么答错；谁在什么时候改了什么；后台任务有没有堆积。WeKnora 分别提供了追踪、审计日志和队列面板来回答它们。
+线上跑起来之后，你会关心三类问题：某次回答为什么慢、为什么答错；谁在什么时候改了什么；后台任务有没有堆积。智能体中台2.0 分别提供了追踪、审计日志和队列面板来回答它们。
 
 | 想知道什么 | 去哪看 |
 | --- | --- |
@@ -116,7 +116,7 @@ return &lumberjack.Logger{
 
 ## 3. Langfuse 追踪（`internal/tracing/langfuse`）
 
-WeKnora 的分布式追踪不是通用 OTel 接入，而是**基于 OpenTelemetry Go SDK 实现的 Langfuse v3+ / LiteFuse 客户端**：span 携带 Langfuse 语义约定属性（`langfuse.observation.*`，镜像 langfuse-python v4 的 `_client/attributes.py`），经 OTLP/HTTP 导出到 `POST <host>/api/public/otel/v1/traces`。完全 opt-in：未启用时所有入口都是零成本 no-op。
+智能体中台2.0 的分布式追踪不是通用 OTel 接入，而是**基于 OpenTelemetry Go SDK 实现的 Langfuse v3+ / LiteFuse 客户端**：span 携带 Langfuse 语义约定属性（`langfuse.observation.*`，镜像 langfuse-python v4 的 `_client/attributes.py`），经 OTLP/HTTP 导出到 `POST <host>/api/public/otel/v1/traces`。完全 opt-in：未启用时所有入口都是零成本 no-op。
 
 ### 3.1 配置（环境变量，`config.go`）
 

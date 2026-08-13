@@ -1,6 +1,6 @@
 # Go SDK
 
-WeKnora 官方 Go SDK 位于仓库的 `client/` 目录，是一个独立的 Go module，封装了 WeKnora 服务端 `/api/v1/*` 全部主要资源的 CRUD 操作与 SSE 流式对话能力。服务端自身、官方 CLI（`weknora`）均基于此 SDK 构建。
+Go SDK 位于仓库的 `client/` 目录，是一个独立的 Go module，封装了智能体中台2.0 服务端 `/api/v1/*` 全部主要资源的 CRUD 操作与 SSE 流式对话能力。服务端自身、CLI（`weknora`）均基于此 SDK 构建。
 
 ## 安装
 
@@ -354,7 +354,7 @@ func (c *Client) AgentQAStreamWithRequest(ctx context.Context,
 
 ```go
 as := apiClient.NewAgentSession(session.ID)
-err := as.Ask(ctx, "介绍一下 WeKnora", func(ev *client.AgentStreamResponse) error {
+err := as.Ask(ctx, "介绍一下智能体中台2.0", func(ev *client.AgentStreamResponse) error {
     if ev.ResponseType == client.AgentResponseTypeAnswer {
         fmt.Print(ev.Content)
     }

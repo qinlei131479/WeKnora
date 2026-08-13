@@ -1,6 +1,6 @@
 # Go 后端设计
 
-本章深入 WeKnora Go 后端（`internal/` 与 `cmd/server`）的内部设计：分层架构、基于 uber/dig 的依赖注入、启动与优雅退出流程、路由组织与 RBAC 装配、全部 HTTP 中间件、领域模型、错误处理与日志规范，以及公共工具库。
+本章深入 智能体中台2.0 Go 后端（`internal/` 与 `cmd/server`）的内部设计：分层架构、基于 uber/dig 的依赖注入、启动与优雅退出流程、路由组织与 RBAC 装配、全部 HTTP 中间件、领域模型、错误处理与日志规范，以及公共工具库。
 
 ## 1. 分层架构
 
@@ -38,7 +38,7 @@ graph TD
 
 ## 2. 依赖注入：internal/container（uber/dig）
 
-WeKnora 使用 **`go.uber.org/dig` v1.19.0**（构造函数注入容器，非代码生成的 wire）。入口是 `internal/container/container.go` 的 `BuildContainer`：
+智能体中台2.0 使用 **`go.uber.org/dig` v1.19.0**（构造函数注入容器，非代码生成的 wire）。入口是 `internal/container/container.go` 的 `BuildContainer`：
 
 ```go
 // cmd/server/main.go

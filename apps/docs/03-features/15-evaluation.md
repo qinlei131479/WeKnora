@@ -1,6 +1,6 @@
 # 评估能力（Evaluation）
 
-换个向量模型、开不开重排、分块调大一点——这些改动到底有没有让效果变好？评估能力就是用来回答这个问题的：准备一份带标准答案的 QA 数据集，WeKnora 会自动建一个临时知识库灌进语料，逐题跑完整的检索 + 生成流程，最后给出一组可比较的分数（检索侧 Precision / Recall / NDCG / MRR / MAP，生成侧 BLEU / ROUGE）。
+换个向量模型、开不开重排、分块调大一点——这些改动到底有没有让效果变好？评估能力就是用来回答这个问题的：准备一份带标准答案的 QA 数据集，智能体中台2.0 会自动建一个临时知识库灌进语料，逐题跑完整的检索 + 生成流程，最后给出一组可比较的分数（检索侧 Precision / Recall / NDCG / MRR / MAP，生成侧 BLEU / ROUGE）。
 
 ::: tip 目前只有 API
 评估暂时没有独立的界面入口，通过 `POST /api/v1/evaluation` 发起、`GET /api/v1/evaluation?task_id=...` 轮询结果，需要 Admin 权限。数据集是 Parquet 格式，格式要求见下文。

@@ -7,11 +7,11 @@
 
 ---
 
-# WeKnora 文档
+# 智能体中台2.0 文档
 
-WeKnora（维娜拉）是腾讯开源的企业级知识库与 RAG（Retrieval-Augmented Generation）系统：Go 单体后端 + Vue 3 前端 + Python 文档解析微服务（docreader），支持多租户、多知识库、混合检索、Agent 智能体、知识图谱、Wiki 生成、MCP 集成、多平台 IM 接入与网页嵌入等能力。
+智能体中台2.0 是企业级知识库与 RAG（Retrieval-Augmented Generation）系统：Go 单体后端 + Vue 3 前端 + Python 文档解析微服务（docreader），支持多租户、多知识库、混合检索、Agent 智能体、知识图谱、Wiki 生成、MCP 集成、多平台 IM 接入与网页嵌入等能力。
 
-本目录是 WeKnora 的官方文档，按「入门 → 架构 → 功能 → API → 客户端 → 开发」六个部分组织。
+本目录是智能体中台2.0 的内部文档，按「入门 → 架构 → 功能 → API → 客户端 → 开发」六个部分组织。
 
 ## 文档站点
 
@@ -97,7 +97,7 @@ npm run preview  # 预览构建产物
 
 | 文档 | 内容 |
 | --- | --- |
-| [产品介绍](01-getting-started/01-introduction.md) | WeKnora 是什么、核心概念（租户/知识库/知识/分块/会话/Agent 等）、功能总览与系统组件图 |
+| [产品介绍](01-getting-started/01-introduction.md) | 智能体中台2.0 是什么、核心概念（租户/知识库/知识/分块/会话/Agent 等）、功能总览与系统组件图 |
 | [安装部署](01-getting-started/02-installation.md) | docker-compose（含 12 个可选 profile）、开发模式、Helm、Lite 单二进制与桌面应用、Homebrew |
 | [快速上手](01-getting-started/03-quickstart.md) | 注册 → 初始化向导 → 配置模型 → 建库 → 上传 → 问答的完整路径，含可直接执行的 curl 链路 |
 | [配置详解](01-getting-started/04-configuration.md) | config.yaml 全字段、约 150 个环境变量、prompt 模板、内置模型与内置 Agent 配置 |
@@ -123,7 +123,7 @@ npm run preview  # 预览构建产物
 | [检索引擎与向量存储](03-features/05-retrieval-engines.md) | 各检索引擎（向量/BM25/全文/混合）能力对比、驱动选择、维度管理、打分归一化 |
 | [模型管理](03-features/06-models.md) | 5 类模型、26 个厂商 Provider、内置模型机制、Ollama 本地模型、限流与用量 |
 | [Agent 引擎](03-features/07-agent.md) | ReAct 循环、24 个内置工具、上下文与记忆管理、技能系统与沙箱、自定义 Agent、建议问题 |
-| [MCP 集成](03-features/08-mcp.md) | MCP 客户端管理、OAuth 2.0 + PKCE 全流程、工具审批、WeKnora MCP Server（`tencent-weknora-mcp`，29 个工具） |
+| [MCP 集成](03-features/08-mcp.md) | MCP 客户端管理、OAuth 2.0 + PKCE 全流程、工具审批、智能体中台2.0 MCP Server（`tencent-weknora-mcp`，29 个工具） |
 | [知识图谱](03-features/09-knowledge-graph.md) | 两级开关、LLM 实体关系抽取、Neo4j 存储、图谱增强检索 |
 | [数据源导入](03-features/10-datasource.md) | 连接器体系（飞书/Lark/Notion/语雀/RSS）、凭据加密、同步调度与增量更新 |
 | [网络搜索与网页抓取](03-features/11-web-search.md) | 9 个搜索引擎、SSRF 防护、web_fetch 双实现、SearXNG 自托管 |
@@ -152,7 +152,7 @@ npm run preview  # 预览构建产物
 | [分块与标签](04-api/02-api-chunks.md) | 分块读写与版本、生成问题、标签、分块预览 |
 | [FAQ 与 Wiki](04-api/02-api-faq-wiki.md) | FAQ 管理与导入、Wiki 读写 |
 | [会话与聊天](04-api/02-api-chat.md) | 会话、消息、知识问答与 Agent 对话（SSE） |
-| [模型与初始化](04-api/02-api-model-system.md) | 模型、初始化向导、WeKnoraCloud、评估 |
+| [模型与初始化](04-api/02-api-model-system.md) | 模型、初始化向导、云服务凭证、评估 |
 | [系统与平台管理](04-api/02-api-system.md) | 系统信息、全局设置、运行时队列、平台 API Key、系统审计 |
 | [基础设施与数据源](04-api/02-api-infra.md) | 向量存储、存储后端、Web 搜索、数据源 |
 | [Agent 与 MCP](04-api/02-api-agent-mcp.md) | Agent、MCP 服务、OAuth、技能、收藏 |
@@ -168,7 +168,7 @@ npm run preview  # 预览构建产物
 | [微信小程序](05-clients/04-miniprogram.md) | 页面结构、后端地址与 API Key 配置、构建发布 |
 | [桌面端](05-clients/05-desktop.md) | 单机桌面应用（未正式发布）、数据目录与端口设置、偏好设置与自动更新 |
 | [Chrome 插件](05-clients/06-chrome-extension.md) | 网页侧边栏问答、剪藏与速记，凭证配置与排查 |
-| [Claw Skill](05-clients/07-claw-skill.md) | ClawHub 上的 WeKnora Skill、环境变量配置、与 MCP 的取舍 |
+| [Claw Skill](05-clients/07-claw-skill.md) | ClawHub 上的智能体中台2.0 Skill、环境变量配置、与 MCP 的取舍 |
 
 ### 06 开发指南
 

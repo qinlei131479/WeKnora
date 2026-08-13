@@ -1,8 +1,8 @@
 # 微信小程序客户端
 
-WeKnora 在仓库的 `miniprogram/` 目录下提供了一个轻量级的微信小程序客户端，作为移动端的快捷入口。它不试图复刻 Web 前端的完整功能，而是聚焦三件事：
+智能体中台2.0 在仓库的 `miniprogram/` 目录下提供了一个轻量级的微信小程序客户端，作为移动端的快捷入口。它不试图复刻 Web 前端的完整功能，而是聚焦三件事：
 
-- 配置 WeKnora API 地址与租户 API Key；
+- 配置 智能体中台2.0 API 地址与租户 API Key；
 - 列出并选择知识库（Knowledge Base），把网页 URL 导入到选中的知识库；
 - 面向选中的知识库发起知识问答（Knowledge Chat）。
 
@@ -13,10 +13,10 @@ WeKnora 在仓库的 `miniprogram/` 目录下提供了一个轻量级的微信�
 - `miniprogram/app.js` — 标准的 `App({...})` 入口，`onLaunch` 时向本地存储写入默认设置；
 - `miniprogram/app.json` — 标准小程序全局配置（`pages`、`window`、`tabBar`）；
 - `miniprogram/app.wxss` — 全局样式；页面均为 `js / wxml / wxss / json` 四件套；
-- `miniprogram/package.json` — 包名 `weknora-miniprogram`（version `0.1.0`），`description` 为 "WeChat Mini Program plugin for WeKnora"，**没有 `dependencies`**，仅有一个测试脚本（见下文「测试」）；
+- `miniprogram/package.json` — 包名 `weknora-miniprogram`（version `0.1.0`），`description` 为 "WeChat Mini Program plugin for 智能体中台2.0"，**没有 `dependencies`**，仅有一个测试脚本（见下文「测试」）；
 - `miniprogram/project.config.json` — `compileType: "miniprogram"`，`libVersion: "latest"`（基础库使用最新版），编译选项开启 `es6`、`enhance`、`postcss`、`minified`，并开启 `urlCheck: true`（合法域名校验）。**注意：该文件刻意不包含 `appid` 字段**，AppID 通过私有配置文件提供（见「构建与发布」）。
 
-全局窗口样式：导航栏标题 `WeKnora`，背景色 `#0d3b2a`（深绿），文字白色。
+全局窗口样式：导航栏标题 `智能体中台2.0`，背景色 `#0d3b2a`（深绿），文字白色。
 
 ## 页面清单
 
@@ -43,10 +43,10 @@ WeKnora 在仓库的 `miniprogram/` 目录下提供了一个轻量级的微信�
 - **默认值**：`miniprogram/app.js` 在 `onLaunch` 中若发现本地无设置，会写入默认 `baseUrl: "http://localhost:8080"`、空 `apiKey`。默认值仅便于本地开发，实际使用必须在 Settings 页改为真实地址。
 - **读写与规范化**：`miniprogram/utils/config.js` 提供 `getSettings()` / `saveSettings()`，并通过 `normalizeBaseUrl()` 去除首尾空白与末尾 `/`。
 - **认证方式为 API Key**：`miniprogram/utils/request.js` 中所有请求统一携带请求头：
-  - `X-API-Key: <用户填写的 API Key>`（来自 WeKnora 租户设置页，形如 `sk-...`）；
+  - `X-API-Key: <用户填写的 API Key>`（来自 智能体中台2.0 租户设置页，形如 `sk-...`）；
   - `X-Request-ID: mp-<时间戳>-<随机串>`（便于服务端追踪）；
   - `Content-Type: application/json`。
-- **前置校验**：`baseUrl` 或 `apiKey` 任一缺失时，请求会直接以错误 Promise 拒绝（"Please configure the WeKnora API base URL / API key first."）；`pages/index/index.js` 的 `onShow` 也会据此显示引导用户去 Settings 页的提示。
+- **前置校验**：`baseUrl` 或 `apiKey` 任一缺失时，请求会直接以错误 Promise 拒绝（"Please configure the 智能体中台2.0 API base URL / API key first."）；`pages/index/index.js` 的 `onShow` 也会据此显示引导用户去 Settings 页的提示。
 - **AppID 配置**：微信小程序 AppID 不放在共享的 `project.config.json` 中，而是复制 `miniprogram/project.private.config.json.example` 为 `project.private.config.json` 并填入真实 AppID（示例文件内容为 `{"appid": "your-wechat-mini-program-appid"}`）。
 
 调用到的后端接口（均定义在 `miniprogram/utils/request.js`）：
@@ -73,7 +73,7 @@ flowchart LR
     S["Settings 页<br/>(baseUrl + API Key)"] -->|"wx.setStorageSync(weknora_settings)"| C["utils/config.js"]
     K["Knowledge 页<br/>(pages/index)"] -->|"listKnowledgeBases / createKnowledgeFromURL"| R["utils/request.js<br/>(X-API-Key 头)"]
     Q["Chat 页<br/>(pages/chat)"] -->|"createSession / knowledgeChat"| R
-    R -->|"wx.request"| B["WeKnora 后端<br/>/api/v1/*"]
+    R -->|"wx.request"| B["智能体中台2.0 后端<br/>/api/v1/*"]
     B -->|"SSE 文本"| P["utils/sse.js<br/>collectAnswerFromSSE"]
     P --> Q
     C --> R
@@ -83,11 +83,11 @@ flowchart LR
 
 小程序无需编译步骤（原生开发、无构建工具链），直接用微信开发者工具（WeChat DevTools）打开即可：
 
-1. **导入项目**：在微信开发者工具中选择「导入项目」，目录指向仓库的 `miniprogram/`。工具会读取 `project.config.json`（项目名 "WeKnora Mini Program"）。
+1. **导入项目**：在微信开发者工具中选择「导入项目」，目录指向仓库的 `miniprogram/`。工具会读取 `project.config.json`（项目名 "智能体中台2.0 Mini Program"）。
 2. **配置 AppID**：复制 `miniprogram/project.private.config.json.example` 为 `project.private.config.json`，将 `appid` 替换为你自己的小程序 AppID。共享的 `project.config.json` 刻意不含 AppID，避免维护者被迫使用占位项目；`project.private.config.json` 属于个人私有配置，不应提交。
-3. **配置后端连接**：运行后进入 **Settings** tab，填写 API Base URL（如 `https://weknora.example.com`）与从 WeKnora 租户设置页获取的 API Key，保存。
-4. **本地调试注意**：`project.config.json` 开启了 `urlCheck: true`，开发者工具默认会拦截 `localhost` 等非合法域名请求。本地测试可在 DevTools 中勾选「不校验合法域名」，或通过 HTTPS 开发域名暴露 WeKnora 服务。
-5. **发布**：正式发布前，需在微信公众平台的小程序管理后台，把 WeKnora API 域名（必须为 HTTPS）加入 request 合法域名（request 域名白名单）；随后在开发者工具中点击「上传」提交代码，再在管理后台提交审核并发布。
+3. **配置后端连接**：运行后进入 **Settings** tab，填写 API Base URL（如 `https://weknora.example.com`）与从智能体中台2.0 租户设置页获取的 API Key，保存。
+4. **本地调试注意**：`project.config.json` 开启了 `urlCheck: true`，开发者工具默认会拦截 `localhost` 等非合法域名请求。本地测试可在 DevTools 中勾选「不校验合法域名」，或通过 HTTPS 开发域名暴露 智能体中台2.0 服务。
+5. **发布**：正式发布前，需在微信公众平台的小程序管理后台，把智能体中台2.0 API 域名（必须为 HTTPS）加入 request 合法域名（request 域名白名单）；随后在开发者工具中点击「上传」提交代码，再在管理后台提交审核并发布。
 
 ### 测试
 

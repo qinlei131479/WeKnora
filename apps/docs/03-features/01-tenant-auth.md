@@ -1,6 +1,6 @@
 # 租户、用户与认证授权
 
-在 WeKnora 里，一个人（**用户**）可以属于多个**空间**（后端叫租户 Tenant，界面上叫工作空间）。空间是隔离边界：知识库、模型、Agent、会话都归属某个空间，配额也按空间算。想让两个空间之间共享知识库或 Agent，就把它们放进同一个**组织**（共享空间）。
+在智能体中台2.0 里，一个人（**用户**）可以属于多个**空间**（后端叫租户 Tenant，界面上叫工作空间）。空间是隔离边界：知识库、模型、Agent、会话都归属某个空间，配额也按空间算。想让两个空间之间共享知识库或 Agent，就把它们放进同一个**组织**（共享空间）。
 
 日常最常问的三件事：
 
@@ -424,7 +424,7 @@ r.GET("/auth/oidc/callback", handler.OIDCRedirectCallback)    // 授权码回调
 ```mermaid
 sequenceDiagram
     participant B as "浏览器 (SPA)"
-    participant W as "WeKnora 后端"
+    participant W as "智能体中台2.0 后端"
     participant IdP as "OIDC Provider"
     B->>W: GET /auth/oidc/url?redirect_uri=...
     W->>W: 生成 nonce(24B), 签名 state={nonce, redirect_uri}

@@ -1,10 +1,10 @@
-# 桌面客户端（WeKnora Lite Desktop）
+# 桌面客户端（Lite Desktop）
 
 ::: warning 尚未正式发布
 桌面应用目前没有随 Release 提供安装包，需按[安装部署](../01-getting-started/02-installation.md)自行构建。
 :::
 
-WeKnora 提供基于 [Wails v2](https://wails.io) 的跨平台桌面应用「WeKnora Lite」，源码位于 `cmd/desktop/`。它在桌面进程内运行完整的 WeKnora 后端（Gin 服务），配合 SQLite（`sqlite_fts5`）与本地文件存储，双击启动即可使用，无需 Docker、无需外部数据库。检索、问答、知识库管理等能力与[单二进制 Lite](../01-getting-started/02-installation.md) 一致，本篇聚焦桌面形态特有的部分：窗口与生命周期、数据目录、端口与局域网绑定、更新检查。
+智能体中台2.0 提供基于 [Wails v2](https://wails.io) 的跨平台桌面应用「智能体中台 Lite」，源码位于 `cmd/desktop/`。它在桌面进程内运行完整的智能体中台2.0 后端（Gin 服务），配合 SQLite（`sqlite_fts5`）与本地文件存储，双击启动即可使用，无需 Docker、无需外部数据库。检索、问答、知识库管理等能力与[单二进制 Lite](../01-getting-started/02-installation.md) 一致，本篇聚焦桌面形态特有的部分：窗口与生命周期、数据目录、端口与局域网绑定、更新检查。
 
 ## 1. 总体架构
 
@@ -16,7 +16,7 @@ WeKnora 提供基于 [Wails v2](https://wails.io) 的跨平台桌面应用「WeK
 
 ```mermaid
 flowchart LR
-    subgraph D["WeKnora Lite 桌面进程"]
+    subgraph D["智能体中台 Lite 桌面进程"]
         W["Wails WebView (前端 SPA)"]
         P["Reverse Proxy (assetserver)"]
         B["内嵌 Gin 后端 (127.0.0.1:随机或固定端口)"]
@@ -39,7 +39,7 @@ flowchart LR
 
 `main.go` 的 `configureDesktopStorage()` 在检测到从 `.app/Contents/MacOS` 运行时：
 
-- 数据目录定为 `~/Library/Application Support/WeKnora Lite/`（名称取自 .app bundle 名）。
+- 数据目录定为 `~/Library/Application Support/智能体中台 Lite/`（名称取自 .app bundle 名）。
 - SQLite 数据库：`.../data/weknora.db`（通过设置 `DB_PATH` 环境变量注入）。
 - 本地文件存储：`.../data/files`（`LOCAL_STORAGE_BASE_DIR`）。
 - `migrateLegacyDesktopData()` 会把旧版存放在 `.app/Contents/Resources/data` 里的数据一次性迁移到 Application Support。
@@ -61,10 +61,10 @@ flowchart LR
 
 `wails.Run(&options.App{...})` 的关键配置（见 `cmd/desktop/main.go`）：
 
-- 标题 `WeKnora Lite`，初始尺寸 **1280 × 800**，可调整大小，启动即显示。
+- 标题 `智能体中台 Lite`，初始尺寸 **1280 × 800**，可调整大小，启动即显示。
 - `AssetServer.Handler` 使用反向代理指向内嵌后端 —— **前端资源并非 Go embed，而是后端 `./web` 目录（打包在 `.app/Contents/Resources/web`）提供的 SPA**。
 - macOS 专属：`mac.TitleBarHiddenInset()` 隐藏式标题栏，WebView 不透明。
-- 应用菜单：`About WeKnora`（含 "Open GitHub" 按钮，指向 `https://github.com/Tencent/WeKnora`）、`Check for Updates...`、`Quit`（Cmd+Q）、标准 Edit 菜单、`View > Reload`（Cmd+R，向前端发送 `app:reload` 事件）。
+- 应用菜单：`About`、`Check for Updates...`、`Quit`（Cmd+Q）、标准 Edit 菜单、`View > Reload`（Cmd+R，向前端发送 `app:reload` 事件）。
 
 `OnDomReady` 时向 WebView 注入三段 JS：
 
@@ -90,11 +90,11 @@ flowchart LR
 
 ## 5. 偏好设置存储（cmd/desktop/prefs.go）
 
-偏好保存为 JSON 文件 `desktop-prefs.json`，路径为 `os.UserConfigDir()/WeKnora Lite/desktop-prefs.json`：
+偏好保存为 JSON 文件 `desktop-prefs.json`，路径为 `os.UserConfigDir()/智能体中台 Lite/desktop-prefs.json`：
 
-- macOS：`~/Library/Application Support/WeKnora Lite/desktop-prefs.json`
-- Windows：`%AppData%\WeKnora Lite\desktop-prefs.json`
-- Linux：`~/.config/WeKnora Lite/desktop-prefs.json`
+- macOS：`~/Library/Application Support/智能体中台 Lite/desktop-prefs.json`
+- Windows：`%AppData%\智能体中台 Lite\desktop-prefs.json`
+- Linux：`~/.config/智能体中台 Lite/desktop-prefs.json`
 
 文件权限 `0600`，字段如下：
 
@@ -124,11 +124,11 @@ flowchart LR
 
 ```json
 {
-  "name": "WeKnora Lite",
-  "outputfilename": "WeKnora Lite",
+  "name": "智能体中台 Lite",
+  "outputfilename": "智能体中台 Lite",
   "frontend:dir": "../../frontend",
   "wailsjsdir": "../../frontend/src",
-  "info": { "companyName": "Tencent", "productName": "WeKnora Lite", "productVersion": "1.0.0" },
+  "info": { "companyName": "Tencent", "productName": "智能体中台 Lite", "productVersion": "1.0.0" },
   "mac": { "category": "public.app-category.productivity", "titlebar": "hiddenInset" }
 }
 ```
@@ -163,10 +163,10 @@ SKIP_FRONTEND=1 ./scripts/package-mac-app.sh
 2. **Wails 构建**：需先安装 Wails CLI（`go install github.com/wailsapp/wails/v2/cmd/wails@latest`），设置 `EDITION=lite`、`GOLANG_PROTOBUF_REGISTRATION_CONFLICT=warn`（规避 Milvus 与 Qdrant gRPC 生成代码的 `common.proto` 描述符注册冲突）等环境变量，从 `scripts/get_version.sh` 取版本号注入 ldflags，然后执行真实构建命令：
 
    ```bash
-   cd cmd/desktop && wails build -clean -tags "sqlite_fts5" -ldflags="$LDFLAGS" -o "WeKnora Lite"
+   cd cmd/desktop && wails build -clean -tags "sqlite_fts5" -ldflags="$LDFLAGS" -o "智能体中台 Lite"
    ```
 
    该命令的"生成绑定"阶段使用 `-tags bindings` 单独编译 `main_bindings.go`（不连接数据库），并刷新 `frontend/src/wailsjs/` 下的绑定文件。
-3. **组装产物**：将 `cmd/desktop/build/bin/WeKnora Lite.app` 复制到 `dist/`，并向 `.app/Contents/Resources/` 内塞入 `.env`（来自 `.env.lite.example`）、`config/`、`migrations/sqlite/` 与 `web/` 前端资源。
+3. **组装产物**：将 `cmd/desktop/build/bin/智能体中台 Lite.app` 复制到 `dist/`，并向 `.app/Contents/Resources/` 内塞入 `.env`（来自 `.env.lite.example`）、`config/`、`migrations/sqlite/` 与 `web/` 前端资源。
 
-最终产物为 `dist/WeKnora Lite.app`，双击即可运行。Windows/Linux 亦可在 `cmd/desktop` 下用 `wails build` 自行构建（更新机制已按 `.exe` / `xdg-open` 做了平台适配），但仓库当前仅提供 macOS 打包脚本与 `build/darwin` 资源。
+最终产物为 `dist/智能体中台 Lite.app`，双击即可运行。Windows/Linux 亦可在 `cmd/desktop` 下用 `wails build` 自行构建（更新机制已按 `.exe` / `xdg-open` 做了平台适配），但仓库当前仅提供 macOS 打包脚本与 `build/darwin` 资源。

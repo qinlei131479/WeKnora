@@ -2,7 +2,7 @@
 
 浏览器插件解决的是「看到有用的东西，但懒得复制粘贴进知识库」这件事。装上之后可以在任意网页的侧边栏直接向知识库提问，也可以把当前页面剪藏进去。
 
-插件本身在 [Chrome 应用商店](https://chromewebstore.google.com/detail/jpemjbopikggjlmikmclgbmkhhopjdgd)（名为「知识管理助手」），配合你自建的 WeKnora 服务使用——它不自带后端，所有数据都写进你自己的实例。
+插件本身在 [Chrome 应用商店](https://chromewebstore.google.com/detail/jpemjbopikggjlmikmclgbmkhhopjdgd)（名为「知识管理助手」），配合你自建的智能体中台2.0 服务使用——它不自带后端，所有数据都写进你自己的实例。
 
 <Screenshot
   src="/screenshots/chrome-extension.png"
@@ -20,10 +20,10 @@
 
 ## 怎么配
 
-WeKnora 界面里有一个引导页：「设置 → 集成 → Chrome 扩展」，会直接显示当前实例的 API 地址与复制按钮。步骤：
+智能体中台2.0 界面里有一个引导页：「设置 → 集成 → Chrome 扩展」，会直接显示当前实例的 API 地址与复制按钮。步骤：
 
 1. **拿 API 凭证**：在「设置 → API 信息」复制 API Key 与 API 地址。建议单独建一个 Key 并按需收窄能力（至少需要检索与入库相关能力，见[租户、用户与认证授权](../03-features/01-tenant-auth.md)的 API Key 章节）；
-2. **桌面版建议先固定端口**：用 WeKnora 桌面版时，在 API 信息里设一个固定端口（例如 37841）。否则每次启动端口变化，插件会连不上；
+2. **桌面版建议先固定端口**：用智能体中台2.0 桌面版时，在 API 信息里设一个固定端口（例如 37841）。否则每次启动端口变化，插件会连不上；
 3. **安装插件**：从 Chrome 应用商店安装；
 4. **在插件里连接**：打开插件设置，选「企业/开发者」模式，填入 API 地址与 API Key。
 

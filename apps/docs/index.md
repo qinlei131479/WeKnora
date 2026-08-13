@@ -1,7 +1,7 @@
 ---
 layout: page
-title: 开源的知识库问答系统
-titleTemplate: WeKnora 文档
+title: 智能体中台2.0
+titleTemplate: 智能体中台2.0 文档
 pageClass: landing-page
 sidebar: false
 aside: false

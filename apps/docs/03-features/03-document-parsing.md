@@ -21,7 +21,7 @@
 
 以下是 docreader 的完整实现说明，供二次开发与排障参考。
 
-`docreader/` 是 WeKnora 中独立的 Python 文档解析微服务（gRPC sidecar）。它的唯一职责是：**把各种格式的文件 / URL 转换为 Markdown 文本 + 原始图片引用**，供 Go 主服务（App）完成后续的分块（chunking）、图片持久化、OCR、VLM caption、向量化等流程。
+`docreader/` 是智能体中台2.0 中独立的 Python 文档解析微服务（gRPC sidecar）。它的唯一职责是：**把各种格式的文件 / URL 转换为 Markdown 文本 + 原始图片引用**，供 Go 主服务（App）完成后续的分块（chunking）、图片持久化、OCR、VLM caption、向量化等流程。
 
 经过"轻量化重构"后，docreader 本身**不做 OCR、不做 VLM caption、不做分块、不做对象存储上传**——这些全部在 Go 侧完成。`docreader/parser/base_parser.py` 里的接口说明：
 

@@ -12,7 +12,7 @@
 | --- | --- | --- | --- |
 | **内部引用** | `resource://<handle>` | 谁都不能直接访问，这是给服务端用的稳定句柄 | — |
 | **鉴权代理** | `/files`、`/api/v1/knowledge-bases/:id/files`、`/api/v1/embed/:channel_id/files` | 带对应凭证的客户端（登录态 / KB 访问权 / Embed token） | 随凭证 |
-| **能力短链** | `/r/<token>` | 任何拿到链接的人（**匿名可读**） | WeKnora 签发的 grant，2 小时 |
+| **能力短链** | `/r/<token>` | 任何拿到链接的人（**匿名可读**） | 智能体中台2.0 签发的 grant，2 小时 |
 | **存储预签名** | 存储后端直接给的 http(s) 链接 | 任何拿到链接的人（**匿名可读**） | 由存储决定，MinIO 默认 24 小时 |
 
 后两种是「拿到即可加载」的外链，代价是在有效期内**任何人**都能读到那个文件——不要写进日志或转给不该看的人。
@@ -44,7 +44,7 @@ flowchart TD
 
 ### IM 机器人（最常出问题的一条）
 
-IM 平台不可能带 WeKnora 的凭证，所以必须给它一个**公网可访问的 http(s) URL**。发送前 `rewriteStorageURLs()` 会尝试改写，二选一：
+IM 平台不可能带 智能体中台2.0 的凭证，所以必须给它一个**公网可访问的 http(s) URL**。发送前 `rewriteStorageURLs()` 会尝试改写，二选一：
 
 1. **存储后端本身公网可达**——对象存储用公网 endpoint，或把 `MINIO_ENDPOINT` 设成公网 host。此时回退到存储预签名 URL，不需要额外配置；
 2. **配 `APP_EXTERNAL_URL`**——引用被改写成 `<APP_EXTERNAL_URL>/r/<token>`，请求经 nginx 的 `location ^~ /r/` 反代回 app。官方前端镜像已内置该 location，自建反代必须补上，否则请求落进 SPA fallback 返回空白页。

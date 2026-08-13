@@ -43,8 +43,7 @@ const sidebar: DefaultTheme.SidebarItem[] = sections.map((s) => ({
   items: itemsOf(s.dir),
 }))
 
-/** 本地搜索默认按空白分词，中文整段会被当作一个词，这里退化为字粒度切分 */
-function tokenize(text: string): string[] {
+const tokenize = (text: string): string[] => {
   const tokens: string[] = []
   for (const part of text.split(/[\s\n\r#%*,=/:;?[\]{}()&+\-!'"$·、，。：；？！（）【】《》…—]+/)) {
     if (!part) continue
@@ -57,14 +56,11 @@ function tokenize(text: string): string[] {
   return tokens
 }
 
-const repo = 'https://github.com/Tencent/WeKnora'
-const site = 'https://weknora.weixin.qq.com'
-
 export default withMermaid(
   defineConfig({
-    title: 'WeKnora',
-    titleTemplate: ':title · WeKnora 文档',
-    description: 'WeKnora（维娜拉）官方文档：部署、配置、功能说明、API 参考与二次开发',
+    title: '智能体中台2.0',
+    titleTemplate: ':title · 智能体中台2.0 文档',
+    description: '智能体中台2.0 文档：部署、配置、功能说明、API 参考与二次开发',
     lang: 'zh-CN',
     base: '/docs/',
     cleanUrls: true,
@@ -76,7 +72,7 @@ export default withMermaid(
       ['link', { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' }],
       ['meta', { name: 'theme-color', content: '#101f38' }],
       ['meta', { property: 'og:type', content: 'website' }],
-      ['meta', { property: 'og:title', content: 'WeKnora 文档' }],
+      ['meta', { property: 'og:title', content: '智能体中台2.0' }],
       [
         'meta',
         {
@@ -100,8 +96,8 @@ export default withMermaid(
     },
 
     themeConfig: {
-      logo: { light: '/logo-mark.svg', dark: '/logo-mark-dark.svg', alt: 'WeKnora' },
-      siteTitle: 'WeKnora',
+      logo: { light: '/logo-mark.svg', dark: '/logo-mark-dark.svg', alt: '智能体中台2.0' },
+      siteTitle: '智能体中台2.0',
 
       nav: [
         { text: '快速开始', link: '/01-getting-started/01-introduction', activeMatch: '/01-getting-started/' },
@@ -110,14 +106,11 @@ export default withMermaid(
         { text: 'API', link: '/04-api/01-api-overview', activeMatch: '/04-api/' },
         { text: '客户端', link: '/05-clients/01-frontend', activeMatch: '/05-clients/' },
         { text: '开发', link: '/06-development/01-dev-guide', activeMatch: '/06-development/' },
-        { text: '官网', link: site },
       ],
 
       weknoraVersion: repoVersionLabel,
 
       sidebar,
-
-      socialLinks: [{ icon: 'github', link: repo }],
 
       outline: { level: [2, 3], label: '本页目录' },
 
@@ -131,11 +124,6 @@ export default withMermaid(
       lastUpdated: {
         text: '最后更新',
         formatOptions: { dateStyle: 'medium', timeStyle: undefined },
-      },
-
-      editLink: {
-        pattern: `${repo}/edit/main/website-docs/:path`,
-        text: '在 GitHub 上编辑此页',
       },
 
       search: {
@@ -167,8 +155,8 @@ export default withMermaid(
       },
 
       footer: {
-        message: `基于 WeKnora ${repoVersionLabel} 源码整理 · MIT License`,
-        copyright: '© Tencent WeKnora',
+        message: `基于智能体中台 ${repoVersionLabel} 整理`,
+        copyright: '内部文档',
       },
     },
 

@@ -1,6 +1,6 @@
 # 数据库与迁移
 
-本章梳理 WeKnora 的数据库支持矩阵、`migrations/` 目录全部迁移叠加后的最终表结构、表间关系（ER 图）、golang-migrate 迁移机制，以及新增迁移与常见问题排查。
+本章梳理 智能体中台2.0 的数据库支持矩阵、`migrations/` 目录全部迁移叠加后的最终表结构、表间关系（ER 图）、golang-migrate 迁移机制，以及新增迁移与常见问题排查。
 
 ## 1. 支持的数据库
 
@@ -253,7 +253,7 @@ if strings.HasPrefix(dsn, "sqlite3://") {
 `scripts/migrate.sh` 是 `migrate` CLI 的包装（Makefile 的 `migrate-*` 目标调用它）：
 
 - 自动加载根目录 `.env`；
-- DSN 优先取 `DB_URL`（并把 `sslmode=require/prefer` 强制替换为 `disable`），否则由 `DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME` 拼装（默认 `localhost:5432/postgres/WeKnora`），密码用 Python `urllib.parse.quote` URL 编码以兼容特殊字符；
+- DSN 优先取 `DB_URL`（并把 `sslmode=require/prefer` 强制替换为 `disable`），否则由 `DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME` 拼装（默认 `localhost:5432/postgres/智能体中台2.0`），密码用 Python `urllib.parse.quote` URL 编码以兼容特殊字符；
 - 迁移目录默认 `MIGRATIONS_DIR=migrations/versioned`；
 - 未安装 `migrate` 时提示：`go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest`。
 

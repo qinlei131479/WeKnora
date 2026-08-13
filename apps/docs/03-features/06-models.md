@@ -1,6 +1,6 @@
 # 模型管理
 
-WeKnora 不绑定任何一家模型厂商：对话、向量化、重排、图片理解、语音转写这五类能力都抽象成统一的「模型」，你在「设置 → 模型」里添加，然后在知识库和 Agent 上按需选用。本地 Ollama 和 20 多家远程厂商（OpenAI、DeepSeek、通义、智谱、混元、Gemini、硅基流动等）都可以混着用，比如用本地小模型做向量化、用远程大模型做回答。
+智能体中台2.0 不绑定任何一家模型厂商：对话、向量化、重排、图片理解、语音转写这五类能力都抽象成统一的「模型」，你在「设置 → 模型」里添加，然后在知识库和 Agent 上按需选用。本地 Ollama 和 20 多家远程厂商（OpenAI、DeepSeek、通义、智谱、混元、Gemini、硅基流动等）都可以混着用，比如用本地小模型做向量化、用远程大模型做回答。
 
 <Screenshot
   src="/screenshots/settings-models.png"
@@ -62,7 +62,7 @@ type Provider interface {
 | Provider 标识 | 名称 | 说明 |
 |---------------|------|------|
 | `generic` | Generic | 任意 OpenAI 兼容 / 自定义部署（默认兜底） |
-| `weknoracloud` | WeKnoraCloud | WeKnora 云服务（硬编码 `https://weknora.weixin.qq.com`，使用 AppID/AppSecret 凭证） |
+| `weknoracloud` | WeKnoraCloud | 云服务（使用 AppID/AppSecret 凭证） |
 | `aliyun` | 阿里云 DashScope | |
 | `zhipu` | 智谱 AI（GLM 系列） | |
 | `volcengine` | 火山引擎 Ark | |
@@ -250,7 +250,7 @@ builtin_models:
 
 仓库根目录的 `rerank_server_demo.py` 是一个**自托管 Rerank 服务的最小参考实现**：FastAPI + HuggingFace `AutoModelForSequenceClassification`，暴露 `POST /rerank`，请求体 `{query, documents}`，返回 `{"results": [{index, document: {text}, score}]}`。
 
-它故意把打分字段命名为 `score` 而非 `relevance_score`，用于验证 Go 客户端的兼容性——`internal/models/rerank/reranker.go` 中 `RankResult.UnmarshalJSON` 会优先读取 `relevance_score`，缺失时回退到 `score`；`DocumentInfo.UnmarshalJSON` 同时兼容字符串与 `{text}` 对象两种格式。因此任何按此协议实现的私有 rerank 服务都可以以 `generic` provider 接入 WeKnora。
+它故意把打分字段命名为 `score` 而非 `relevance_score`，用于验证 Go 客户端的兼容性——`internal/models/rerank/reranker.go` 中 `RankResult.UnmarshalJSON` 会优先读取 `relevance_score`，缺失时回退到 `score`；`DocumentInfo.UnmarshalJSON` 同时兼容字符串与 `{text}` 对象两种格式。因此任何按此协议实现的私有 rerank 服务都可以以 `generic` provider 接入 智能体中台2.0。
 
 ## 模型用量统计
 
