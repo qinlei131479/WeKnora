@@ -1,10 +1,10 @@
 # 产品介绍
 
-智能体中台2.0 是知识库问答系统，做的事情是：把 PDF、Word、网页，以及飞书、Notion、语雀里的资料收进知识库，然后你可以直接对着这批资料提问，答案带出处。技术上属于 RAG（Retrieval-Augmented Generation，检索增强生成）——先检索相关片段，再让大模型据此作答，而不是让模型凭记忆回答。
+智能体中台2.0 是知识库问答系统，做的事情是：把 PDF、Word、网页等资料收进知识库，然后你可以直接对着这批资料提问，答案带出处。技术上属于 RAG（Retrieval-Augmented Generation，检索增强生成）——先检索相关片段，再让大模型据此作答，而不是让模型凭记忆回答。
 
 整套流程分四步：**文档理解 → 建索引 → 混合检索 → 生成回答**，本文后面逐个展开。
 
-代码上是三个进程：Go（Gin）写的后端、Vue 3 的前端、Python（gRPC）的文档解析服务 docreader。部署方式有 Docker Compose、Helm、单二进制 Lite 模式和 macOS 桌面应用，按环境挑一种。
+代码上是三个进程：Go（Gin）写的后端、Vue 3 的前端、Python（gRPC）的文档解析服务 docreader。部署方式有 Docker Compose 与 Helm，按环境挑一种。
 
 <Screenshot
   src="/screenshots/introduction-overview.png"
@@ -20,7 +20,7 @@
 | 模型绑定单一厂商 | 模型抽象层：Ollama 本地模型与 OpenAI 兼容远程接口均可，LLM / Embedding / Rerank / VLM / ASR 分类管理（见 `internal/types/model.go`） |
 | 数据安全与私有化 | 全栈可私有部署；敏感凭证（API Key 等）以 AES-256 落盘加密（`SYSTEM_AES_KEY`）；多租户隔离 + RBAC 角色鉴权 |
 | 只有问答不够用 | 内置 Agent（ReAct 多步推理）、MCP 工具接入、Agent Skills 沙箱执行、Web 搜索（SearXNG 等）、数据分析（对 CSV/Excel 执行 SQL） |
-| 团队协作 | 租户（工作空间）+ 成员角色 + 组织（Organization）跨租户知识库共享 + 邀请机制 |
+| 团队协作 | 租户（工作空间）+ 成员角色 + 邀请机制 |
 
 ## 核心概念
 
@@ -35,7 +35,7 @@
 | 成员 TenantMember | 用户与租户的多对多关系，携带角色 `Role` 与状态（`active` / `invited` / `suspended`） |
 | 角色 TenantRole | 四级：`owner`（40，完全控制）> `admin`（30，管理成员/模型/集成）> `contributor`（20，创建知识库与 Agent）> `viewer`（10，只读） |
 | API Key（TenantAPIKey） | 机器访问凭证，请求头 `X-API-Key` 携带。分 `tenant` / `platform` 两种作用域；支持 `FullAccess` 或细粒度能力（`retrieve`、`chat`、`ingest`、`manage_kbs`、`manage_models` 等），并可用 `KnowledgeBaseIDs` 限定可访问的知识库 |
-| 组织 Organization | 跨租户协作单元：邀请码加入、`admin`/`editor`/`viewer` 三级组织角色，实现知识库跨租户共享 |
+<!-- | 组织 Organization | 跨租户协作单元：邀请码加入、`admin`/`editor`/`viewer` 三级组织角色，实现知识库跨租户共享 | -->
 
 ### 知识域
 
@@ -47,7 +47,7 @@
 | FAQ | FAQ 型知识库中的问答对，存于 Chunk 的 Metadata：标准问 `StandardQuestion`、相似问、反例问、多答案与答案策略 |
 | Wiki 页面 WikiPage | Wiki 型索引产物：由 LLM 从文档生成的结构化百科页面，最多三级分类路径，可被 Agent 以 `wiki_search` / `wiki_read_page` 工具导航 |
 | 知识图谱 Entity / Relationship | 从分块中抽取的实体与关系（强度 1-10），存储在 Neo4j（`NEO4J_ENABLE=true` 时），用于 GraphRAG 增强检索 |
-| 数据源 DataSource | 外部内容连接器。**当前可用 5 个**：`feishu`、`lark`（与飞书同一适配器，域名不同）、`notion`、`yuque`、`rss`，支持 Cron 定时同步（增量/全量）与冲突策略。`internal/types/datasource.go` 里还声明了 `confluence`、`github`、`imap` 等类型常量，但对应实现尚未接入（`initConnectorRegistry()` 中相关注册被注释），选不到 |
+<!-- | 数据源 DataSource | 外部内容连接器（业务默认未开放）… | -->
 | 检索配置 RetrievalConfig | 租户级检索参数：`EmbeddingTopK`（默认 50）、`VectorThreshold`（0.15）、`KeywordThreshold`（0.3）、`RerankTopK`（10）、`RerankThreshold`（0.2）、RRF 融合参数（`RRFK`=60，向量权重 0.7 / 关键词权重 0.3） |
 
 ### 对话与智能体
@@ -70,7 +70,7 @@ flowchart TB
         T["Tenant (租户 / 工作空间)"]
         TM["TenantMember (角色: owner/admin/contributor/viewer)"]
         AK["TenantAPIKey (X-API-Key)"]
-        ORG["Organization (跨租户组织)"]
+        %% ORG["Organization (跨租户组织)"]
     end
     subgraph knowledge["知识域"]
         KB["KnowledgeBase (document/faq/wiki)"]
@@ -78,7 +78,7 @@ flowchart TB
         C["Chunk (text/faq/image/table/entity...)"]
         W["WikiPage"]
         G["Entity / Relationship (知识图谱)"]
-        DS["DataSource (飞书/Notion/RSS...)"]
+        %% DS["DataSource (飞书/Notion/RSS...)"]
     end
     subgraph chat["对话与智能体"]
         S["Session (会话)"]
@@ -105,14 +105,14 @@ flowchart TB
 
 ## 功能清单
 
-- **文档接入**：文件上传（PDF/Word/PPT/Excel/Markdown/HTML/图片/音频等）、URL 抓取、手写 Markdown、整目录上传、飞书 / Lark / Notion / 语雀 / RSS 定时同步。
+- **文档接入**：文件上传（PDF/Word/PPT/Excel/Markdown/HTML/图片/音频等）、URL 抓取、手写 Markdown、整目录上传；也可经企微 / 飞书 / 钉钉 IM 机器人入库。
 - **文档理解**：版式分析、扫描件 OCR、表格抽取、图片多模态描述（VLM）、音频转写（ASR）、按文件类型选择解析引擎（`ParserEngineRules`，可接 MinerU / OpenDataLoader）。
 - **索引管道**：可配置分块（含父子分块与自适应策略）、向量索引、关键词全文索引、FAQ 索引、Wiki 生成、知识图谱抽取、预生成问题（question generation）。
 - **检索**：向量 + BM25 混合检索、RRF 融合、Rerank 重排、查询改写与扩展、意图识别（greeting/chitchat/web_search 等，见 `config/prompt_templates/intent_prompts.yaml`）。
 - **问答与 Agent**：流式 SSE 问答、多轮上下文压缩、引用溯源；ReAct Agent（工具：`knowledge_search`、`grep_chunks`、`wiki_search`、`data_analysis` 等）、MCP 外部工具、Agent Skills（Docker 沙箱执行脚本）、Web 搜索。
 - **多租户与安全**：RBAC 角色鉴权（默认开启，`WEKNORA_TENANT_ENABLE_RBAC`）、审计日志（默认保留 90 天）、邀请制注册（`auth.registration_mode=invite_only`，也可用旧变量 `DISABLE_REGISTRATION=true`）、OIDC 单点登录、SSRF 防护、敏感字段 AES-256 加密。
 - **可观测性**：Langfuse 全链路追踪（LLM/Embedding/Rerank/VLM/ASR 调用与 token 统计）、健康检查、Swagger API 文档（`GIN_MODE=debug` 时）。
-- **生态**：REST API（`/api/v1`）+ API Key、独立 MCP Server（把智能体中台2.0 作为工具暴露给其他 Agent）、CLI（`cli/`）、微信小程序（`miniprogram/`）、浏览器插件渠道。
+- **生态**：REST API（`/api/v1`）+ API Key、独立 MCP Server（把智能体中台2.0 作为工具暴露给其他 Agent）、网页嵌入挂件。
 
 ## 系统组件一览
 
@@ -136,7 +136,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    Browser["浏览器 / SDK / CLI"] --> FE["frontend (Nginx :80)"]
+    Browser["浏览器 / API 客户端"] --> FE["frontend (Nginx :80)"]
     FE -- "/api 反向代理" --> APP["app 后端 (Go :8080)"]
     Browser -. "直连 API + X-API-Key" .-> APP
     APP -- "gRPC :50051" --> DR["docreader (Python 文档解析)"]

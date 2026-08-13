@@ -47,4 +47,4 @@ Skill 托管在 ClawHub，包名 [`@lyingbug/weknora`](https://clawhub.ai/lyingb
 
 - 凭证与能力收窄：[租户、用户与认证授权](../03-features/01-tenant-auth.md)
 - 底层接口：[API 总览](../04-api/01-api-overview.md)
-- 其它集成方式：[Chrome 插件](06-chrome-extension.md)、[MCP 集成](../03-features/08-mcp.md)
+- 其它集成方式：[Chrome 插件](hidden:06-chrome-extension.md)、[MCP 集成](../03-features/08-mcp.md)

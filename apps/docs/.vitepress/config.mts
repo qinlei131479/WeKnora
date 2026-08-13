@@ -16,6 +16,21 @@ const sections: { dir: string; label: string }[] = [
   { dir: '06-development', label: '开发指南' },
 ]
 
+/**
+ * 业务默认未开放的文档（与 apps/frontend weknoraFeatures 对齐）。
+ * 文件保留便于日后放开；从构建与侧栏排除即可。
+ */
+const HIDDEN_DOC_FILES = new Set([
+  '03-features/10-datasource.md',
+  '04-api/02-api-org.md',
+  '05-clients/02-cli.md',
+  '05-clients/03-go-sdk.md',
+  '05-clients/04-miniprogram.md',
+  '05-clients/05-desktop.md',
+  '05-clients/06-chrome-extension.md',
+  '05-clients/07-claw-skill.md',
+])
+
 /** 侧边栏条目文字：取正文一级标题，去掉冗余前后缀 */
 function itemText(dir: string, file: string): string {
   const raw = readFileSync(resolve(root, dir, file), 'utf-8')
@@ -30,6 +45,7 @@ function itemText(dir: string, file: string): string {
 function itemsOf(dir: string): DefaultTheme.SidebarItem[] {
   return readdirSync(resolve(root, dir))
     .filter((f) => f.endsWith('.md'))
+    .filter((f) => !HIDDEN_DOC_FILES.has(`${dir}/${f}`))
     .sort()
     .map((f) => ({
       text: itemText(dir, f),
@@ -60,12 +76,12 @@ export default withMermaid(
   defineConfig({
     title: '智能体中台2.0',
     titleTemplate: ':title · 智能体中台2.0 文档',
-    description: '智能体中台2.0 文档：部署、配置、功能说明、API 参考与二次开发',
+    description: '智能体中台2.0 文档：部署、配置、功能说明、API 参考与开发指南',
     lang: 'zh-CN',
     base: '/docs/',
     cleanUrls: true,
     lastUpdated: true,
-    srcExclude: ['README.md'],
+    srcExclude: ['README.md', ...[...HIDDEN_DOC_FILES]],
     metaChunk: true,
 
     head: [

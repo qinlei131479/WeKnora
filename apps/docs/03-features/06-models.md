@@ -62,7 +62,7 @@ type Provider interface {
 | Provider 标识 | 名称 | 说明 |
 |---------------|------|------|
 | `generic` | Generic | 任意 OpenAI 兼容 / 自定义部署（默认兜底） |
-| `weknoracloud` | WeKnoraCloud | 云服务（使用 AppID/AppSecret 凭证） |
+<!-- | `weknoracloud` | WeKnoraCloud | 云服务（使用 AppID/AppSecret 凭证） | -->
 | `aliyun` | 阿里云 DashScope | |
 | `zhipu` | 智谱 AI（GLM 系列） | |
 | `volcengine` | 火山引擎 Ark | |

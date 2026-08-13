@@ -2,6 +2,8 @@
 
 当知识库检索不足以回答问题时，智能体中台2.0 的 Agent 可以借助 `web_search`（联网搜索）与 `web_fetch`（网页抓取 + LLM 分析）两个工具获取实时信息。底层实现分布在 `internal/infrastructure/web_search`（搜索引擎适配层）、`internal/infrastructure/web_fetch`（轻量抓取器）与 `internal/agent/tools`（Agent 工具层），并通过 `docker/searxng` 提供可选的自托管元搜索引擎。
 
+> 当前业务控制台默认可选搜索提供商：**DuckDuckGo、百度、Tavily、Bing**。
+
 ## 接口抽象
 
 搜索能力由两层接口定义（`internal/types/interfaces/web_search.go`）：

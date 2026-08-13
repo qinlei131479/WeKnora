@@ -115,6 +115,7 @@ curl -X PUT $BASE/api/v1/models/m-1/credentials -H "Authorization: Bearer $TOKEN
 curl -X DELETE $BASE/api/v1/models/m-1/credentials/api_key -H "Authorization: Bearer $TOKEN"
 ```
 
+<!-- 业务文档默认隐藏：WeKnoraCloud
 ## 云服务（WeKnoraCloud）
 
 Handler: `internal/handler/weknoracloud.go`。API key：`manage_models`/full。
@@ -139,6 +140,8 @@ curl -X POST $BASE/api/v1/weknoracloud/credentials -H "Authorization: Bearer $TO
 ```bash
 curl $BASE/api/v1/models/weknoracloud/status -H "Authorization: Bearer $TOKEN"
 ```
+
+-->
 
 ## 初始化（/api/v1/initialization）
 

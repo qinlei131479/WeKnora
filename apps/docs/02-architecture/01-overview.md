@@ -91,7 +91,7 @@ graph LR
     subgraph Clients["客户端"]
         Browser["浏览器 (Vue3 SPA)"]
         Mini["微信小程序 (miniprogram/)"]
-        CLI["CLI / Go SDK (cli/, client/)"]
+        %% CLI["CLI / Go SDK (cli/, client/)"]
         MCPC["MCP 客户端 (mcp-server/)"]
         IM["IM 平台 (微信/飞书/钉钉/Slack...)"]
     end
@@ -181,10 +181,10 @@ sequenceDiagram
 | `internal/` | Go 后端全部业务代码（分层结构见后端设计篇）：`handler`、`application/service`、`application/repository`、`container`（DI）、`router`、`middleware`、`types`、`agent`、`im`、`mcp`、`stream`、`sandbox` 等 |
 | `frontend/` | Vue3 + Vite + TDesign 的 Web 前端，构建产物由 NGINX 或 Lite 模式内嵌托管 |
 | `docreader/` | Python gRPC 文档解析微服务：`main.py` 服务端入口、`parser/` 25+ 解析器、`splitter/` 分割器、`proto/` 协议定义、独立 `Dockerfile.docreader` 构建 |
-| `cli/` | `weknora` 命令行工具（约 30 个子命令：部署、日志、备份、诊断等） |
-| `client/` | Go SDK：以 HTTP 客户端形式封装智能体中台2.0 API，供二次开发集成 |
+<!-- | `cli/` | `weknora` 命令行工具（约 30 个子命令：部署、日志、备份、诊断等） | -->
+<!-- | `client/` | Go SDK：以 HTTP 客户端形式封装智能体中台2.0 API，供开发集成 | -->
 | `mcp-server/` | Python 实现的 MCP Server（`weknora_mcp_server.py`），把智能体中台2.0 API 暴露为 MCP 工具给 Claude 等 MCP 客户端 |
-| `miniprogram/` | 微信小程序客户端（WXML/WXSS/JS） |
+<!-- | `miniprogram/` | 微信小程序客户端（WXML/WXSS/JS） | -->
 | `migrations/` | golang-migrate 数据库迁移：`versioned/`（Postgres 主线 `NNNNNN_*.up/down.sql`）、`sqlite/`（Lite 模式）、`paradedb/`、`mysql/` |
 | `config/` | 运行配置：`config.yaml` 主配置、`builtin_agents.yaml` 内置 Agent、`agent_type_presets.yaml` Agent 预设、`builtin_models.yaml.example` 声明式内置模型、`prompt_templates/` 提示词模板 |
 | `docker/` | 各镜像 Dockerfile（app/docreader/sandbox/odl-hybrid）与 searxng 配置 |

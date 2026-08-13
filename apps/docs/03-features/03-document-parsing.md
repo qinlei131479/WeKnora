@@ -19,7 +19,7 @@
 - **Excel 首行是列名却被当成数据**：为 `xlsx`/`xls` 打开「首行作为表头」；
 - **个别段落切错**：不必重传整个文档，直接在分块列表里改，见[知识库与知识管理](02-knowledge-base.md)的分块编辑一节。
 
-以下是 docreader 的完整实现说明，供二次开发与排障参考。
+以下是 docreader 的完整实现说明，供开发与排障参考。
 
 `docreader/` 是智能体中台2.0 中独立的 Python 文档解析微服务（gRPC sidecar）。它的唯一职责是：**把各种格式的文件 / URL 转换为 Markdown 文本 + 原始图片引用**，供 Go 主服务（App）完成后续的分块（chunking）、图片持久化、OCR、VLM caption、向量化等流程。
 

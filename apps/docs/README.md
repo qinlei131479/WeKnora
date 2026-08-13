@@ -3,7 +3,7 @@
 > 本目录是产品文档站的**部署副本**，自仓库根目录 `website-docs/` 复制而来。  
 > - **对外构建 / Jenkins**：只使用本目录（镜像 `kjsc/agent-middle-docs`，访问 `http://<host>:9900/docs/`）。  
 > - **跟踪开源上游**：继续保留并更新根目录 `website-docs/`；需要时再人工同步有用章节到本目录。  
-> - 二开请直接改正文与 `.vitepress` 配置，勿再维护单独覆盖目录。
+> - 开发时请直接改正文与 `.vitepress` 配置，勿再维护单独覆盖目录。
 
 ---
 
@@ -88,8 +88,8 @@ npm run preview  # 预览构建产物
 - **初次使用**：01 快速开始 四篇按顺序读完即可完成部署与首次问答。
 - **评估选型 / 了解原理**：02 架构 五篇给出系统全貌与两条核心流水线（文档入库、检索问答）。
 - **使用某项具体功能**：直接查 03 功能模块 对应章节。
-- **对接 API / 写集成**：04 API 参考 + 05 客户端（CLI / Go SDK）。
-- **二次开发 / 贡献代码**：06 开发指南，尤其是扩展点指南。
+- **对接 API / 写集成**：04 API 参考 + 05 客户端（Web 前端）。
+- **开发 / 贡献代码**：06 开发指南，尤其是扩展点指南。
 
 ## 目录
 
@@ -98,7 +98,7 @@ npm run preview  # 预览构建产物
 | 文档 | 内容 |
 | --- | --- |
 | [产品介绍](01-getting-started/01-introduction.md) | 智能体中台2.0 是什么、核心概念（租户/知识库/知识/分块/会话/Agent 等）、功能总览与系统组件图 |
-| [安装部署](01-getting-started/02-installation.md) | docker-compose（含 12 个可选 profile）、开发模式、Helm、Lite 单二进制与桌面应用、Homebrew |
+| [安装部署](01-getting-started/02-installation.md) | docker-compose（含可选 profile）、开发模式、Helm |
 | [快速上手](01-getting-started/03-quickstart.md) | 注册 → 初始化向导 → 配置模型 → 建库 → 上传 → 问答的完整路径，含可直接执行的 curl 链路 |
 | [配置详解](01-getting-started/04-configuration.md) | config.yaml 全字段、约 150 个环境变量、prompt 模板、内置模型与内置 Agent 配置 |
 
@@ -110,13 +110,13 @@ npm run preview  # 预览构建产物
 | [Go 后端设计](02-architecture/02-backend-design.md) | 四层架构、uber/dig 依赖注入、启动与优雅退出、路由与中间件、领域模型 ER 图 |
 | [文档入库流程](02-architecture/03-document-pipeline.md) | 上传/URL/手动创建 → 存储 → 解析 → 分块 → 向量化 → 索引 → 后处理的全链路与状态机 |
 | [检索问答流程](02-architecture/04-rag-pipeline.md) | chat_pipeline 插件流水线、跨库检索与融合、重排、流式输出（SSE）与引用生成 |
-| [异步任务系统](02-architecture/05-async-tasks.md) | asynq 队列拓扑、6 个 worker pool、Lite 同步模式、死信与任务巡检、事件总线 |
+| [异步任务系统](02-architecture/05-async-tasks.md) | asynq 队列拓扑、worker pool、死信与任务巡检、事件总线 |
 
 ### 03 功能模块
 
 | 文档 | 内容 |
 | --- | --- |
-| [租户、用户与认证授权](03-features/01-tenant-auth.md) | 多租户模型、JWT / API Key / OIDC、RBAC 角色矩阵、组织与共享空间 |
+| [租户、用户与认证授权](03-features/01-tenant-auth.md) | 多租户模型、JWT / API Key / OIDC、RBAC 角色矩阵 |
 | [知识库与知识管理](03-features/02-knowledge-base.md) | 知识库类型与全部可配置项、树形文件夹、多标签与批量打标、分块编辑与版本历史、自定义元数据、预览安全、复制与移动、活动流、配额 |
 | [文档解析服务 docreader](03-features/03-document-parsing.md) | gRPC 接口、三引擎注册表、解析器矩阵（含 HTML / MHTML / Excel 表头模式）、并发模型、部署与扩容 |
 | [分块机制](03-features/04-chunking.md) | 自适应分块架构（heading/heuristic/recursive）、父子分块、语义边界重叠、ContextHeader、调试端点 |
@@ -125,7 +125,7 @@ npm run preview  # 预览构建产物
 | [Agent 引擎](03-features/07-agent.md) | ReAct 循环、24 个内置工具、上下文与记忆管理、技能系统与沙箱、自定义 Agent、建议问题 |
 | [MCP 集成](03-features/08-mcp.md) | MCP 客户端管理、OAuth 2.0 + PKCE 全流程、工具审批、智能体中台2.0 MCP Server（`tencent-weknora-mcp`，29 个工具） |
 | [知识图谱](03-features/09-knowledge-graph.md) | 两级开关、LLM 实体关系抽取、Neo4j 存储、图谱增强检索 |
-| [数据源导入](03-features/10-datasource.md) | 连接器体系（飞书/Lark/Notion/语雀/RSS）、凭据加密、同步调度与增量更新 |
+<!-- | [数据源导入](hidden:03-features/10-datasource.md) | 连接器体系（飞书/Lark/Notion/语雀/RSS）、凭据加密、同步调度与增量更新 | -->
 | [网络搜索与网页抓取](03-features/11-web-search.md) | 9 个搜索引擎、SSRF 防护、web_fetch 双实现、SearXNG 自托管 |
 | [IM 集成](03-features/12-im-integration.md) | 10 个 IM 平台适配、消息处理流水线、内置命令、流式渲染、多实例协同 |
 | [网页嵌入 Embed Channel](03-features/13-embed-channel.md) | 嵌入渠道配置、匿名会话与 token 交换、安全模式、webhook、接入示例 |
@@ -147,7 +147,7 @@ npm run preview  # 预览构建产物
 | [API 总览](04-api/01-api-overview.md) | Base URL、三种认证方式、通用响应包与错误码、分页规范、SSE 协议、限流 |
 | [认证与用户](04-api/02-api-auth.md) | /auth 注册登录、token 刷新、邀请 |
 | [租户与成员](04-api/02-api-tenant.md) | 租户、成员、邀请、API Key、审计 |
-| [组织与共享](04-api/02-api-org.md) | 组织、知识库共享、Agent 共享 |
+<!-- | [组织与共享](hidden:04-api/02-api-org.md) | 组织、知识库共享、Agent 共享 | -->
 | [知识库与知识](04-api/02-api-knowledge.md) | 知识库、知识、文件夹 |
 | [分块与标签](04-api/02-api-chunks.md) | 分块读写与版本、生成问题、标签、分块预览 |
 | [FAQ 与 Wiki](04-api/02-api-faq-wiki.md) | FAQ 管理与导入、Wiki 读写 |
@@ -163,12 +163,12 @@ npm run preview  # 预览构建产物
 | 文档 | 内容 |
 | --- | --- |
 | [Web 前端](05-clients/01-frontend.md) | Vue 3 + TDesign 技术栈、页面路由、状态管理、i18n、部署 |
-| [命令行工具 CLI](05-clients/02-cli.md) | 17 个命令组、多 profile 配置、输出格式与退出码、脚本化用法 |
-| [Go SDK](05-clients/03-go-sdk.md) | 约 170 个方法的资源覆盖、流式对话、错误处理、完整示例 |
-| [微信小程序](05-clients/04-miniprogram.md) | 页面结构、后端地址与 API Key 配置、构建发布 |
-| [桌面端](05-clients/05-desktop.md) | 单机桌面应用（未正式发布）、数据目录与端口设置、偏好设置与自动更新 |
-| [Chrome 插件](05-clients/06-chrome-extension.md) | 网页侧边栏问答、剪藏与速记，凭证配置与排查 |
-| [Claw Skill](05-clients/07-claw-skill.md) | ClawHub 上的智能体中台2.0 Skill、环境变量配置、与 MCP 的取舍 |
+<!-- | [命令行工具 CLI](hidden:hidden:05-clients/02-cli.md) | 17 个命令组、多 profile 配置、输出格式与退出码、脚本化用法 | -->
+<!-- | [Go SDK](hidden:hidden:05-clients/03-go-sdk.md) | 约 170 个方法的资源覆盖、流式对话、错误处理、完整示例 | -->
+<!-- | [微信小程序](hidden:05-clients/04-miniprogram.md) | 页面结构、后端地址与 API Key 配置、构建发布 | -->
+<!-- | [桌面端](hidden:05-clients/05-desktop.md) | 单机桌面应用（未正式发布）、数据目录与端口设置、偏好设置与自动更新 | -->
+<!-- | [Chrome 插件](hidden:05-clients/06-chrome-extension.md) | 网页侧边栏问答、剪藏与速记，凭证配置与排查 | -->
+<!-- | [Claw Skill](hidden:05-clients/07-claw-skill.md) | ClawHub 上的智能体中台2.0 Skill、环境变量配置、与 MCP 的取舍 | -->
 
 ### 06 开发指南
 
@@ -184,9 +184,9 @@ npm run preview  # 预览构建产物
 flowchart LR
     subgraph Clients["客户端"]
         FE["Web 前端 Vue 3"]
-        CLI["CLI weknora"]
-        SDK["Go SDK"]
-        MINI["微信小程序"]
+        %% CLI["CLI weknora"]
+        %% SDK["Go SDK"]
+        %% MINI["微信小程序"]
         EMBED["网页嵌入挂件"]
         IM["IM 平台 x10"]
     end
@@ -203,8 +203,8 @@ flowchart LR
     end
     LLM["LLM / Embedding / Rerank / VLM 多厂商"]
     FE --> APP
-    CLI --> APP
-    SDK --> APP
+    %% CLI --> APP
+    %% SDK --> APP
     MINI --> APP
     EMBED --> APP
     IM --> APP

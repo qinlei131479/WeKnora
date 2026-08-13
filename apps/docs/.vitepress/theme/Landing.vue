@@ -8,8 +8,8 @@ const versionLabel = theme.value.weknoraVersion ?? 'unknown'
 
 const stats = [
   { value: '25', unit: '种', label: '文件格式：文档、网页、扫描件、图片、音频' },
-  { value: '26', unit: '家+', label: '模型厂商，也可全部换成本地推理' },
-  { value: '9', unit: '个', label: '使用入口：Web、IM、插件、命令行、MCP' },
+  { value: '14', unit: '家+', label: '模型厂商，也可全部换成本地推理' },
+  { value: '5', unit: '个', label: '使用入口：Web、IM、嵌入、API、MCP' },
   { value: '4', unit: '路', label: '索引同时生效：向量、关键词、Wiki、图谱' },
 ]
 
@@ -18,9 +18,9 @@ const schema = [
     step: '01',
     name: '接入',
     hint: '资料从哪里来',
-    items: ['文件上传', 'URL 抓取', '飞书', 'Notion', '语雀', 'RSS'],
-  },
-  {
+    // 业务默认未开放数据源同步（Notion / 语雀 / RSS）；飞书此处指 IM 渠道入库
+    items: ['文件上传', 'URL 抓取', '飞书 IM', '企微 IM', '钉钉 IM'],
+  },  {
     step: '02',
     name: '理解',
     hint: '转成结构化文本',
@@ -73,13 +73,13 @@ const chain = [
 
 const surfaces = [
   { icon: 'console', name: 'Web 控制台', desc: '知识库管理、对话、Wiki 浏览与系统配置的完整界面。' },
-  { icon: 'extension', name: 'Chrome 插件', desc: '网页侧边栏问答，支持正文剪藏与 Markdown 速记入库。' },
+  // { icon: 'extension', name: 'Chrome 插件', desc: '网页侧边栏问答，支持正文剪藏与 Markdown 速记入库。' },
   { icon: 'embed', name: '网页嵌入挂件', desc: '一段 script 即可在自有站点提供悬浮问答，访客无需登录。' },
-  { icon: 'desktop', name: '桌面客户端', desc: '单机运行的桌面应用，自带后端与本地存储；尚未正式发布，需自行构建。' },
-  { icon: 'bot', name: 'IM 机器人', desc: '企业微信、飞书、钉钉、Slack 等 10 个平台的官方适配器。' },
-  { icon: 'mobile', name: '微信小程序', desc: '移动端入口，支持网页收藏入库与提问。' },
-  { icon: 'cli', name: '命令行 weknora', desc: '文档管理、检索与带引用的流式问答，默认 JSON 输出，便于脚本化。' },
-  { icon: 'api', name: 'REST API 与 Go SDK', desc: '完整 /api/v1 接口；API Key 支持按能力与知识库范围授权。' },
+  // { icon: 'desktop', name: '桌面客户端', desc: '单机运行的桌面应用，自带后端与本地存储；尚未正式发布，需自行构建。' },
+  { icon: 'bot', name: 'IM 机器人', desc: '企业微信、飞书、钉钉官方适配器。' },
+  // { icon: 'mobile', name: '微信小程序', desc: '移动端入口，支持网页收藏入库与提问。' },
+  // { icon: 'cli', name: '命令行 weknora', desc: '文档管理、检索与带引用的流式问答，默认 JSON 输出，便于脚本化。' },
+  { icon: 'api', name: 'REST API', desc: '完整 /api/v1 接口；API Key 支持按能力与知识库范围授权。' },
   { icon: 'mcp', name: 'MCP Server', desc: '将智能体中台2.0 暴露为 MCP 工具，供 Claude、Cursor 等客户端检索。' },
 ]
 
@@ -101,7 +101,7 @@ const features = [
   {
     icon: 'channels',
     title: '多渠道统一接入',
-    desc: '同一个 Agent 可同时发布到 10 个 IM 平台、自有站点的嵌入挂件与浏览器插件，会话、权限与知识范围沿用同一套配置。',
+    desc: '同一个 Agent 可同时发布到企业微信、飞书、钉钉与自有站点的嵌入挂件，会话、权限与知识范围沿用同一套配置。',
     href: '/03-features/12-im-integration',
     tag: '接入',
   },
@@ -133,13 +133,14 @@ const features = [
     href: '/03-features/09-knowledge-graph',
     tag: '检索',
   },
-  {
-    icon: 'sync',
-    title: '数据源持续同步',
-    desc: '飞书、Notion、语雀与 RSS 绑定一次凭据后按计划自动同步：首次全量，之后按修改时间增量拉取，源端删除的文档同步下架，避免知识库随时间过期。',
-    href: '/03-features/10-datasource',
-    tag: '数据接入',
-  },
+  // 业务默认未开放：数据源持续同步（飞书云文档 / Notion / 语雀 / RSS）
+  // {
+  //   icon: 'sync',
+  //   title: '数据源持续同步',
+  //   desc: '飞书、Notion、语雀与 RSS 绑定一次凭据后按计划自动同步：首次全量，之后按修改时间增量拉取，源端删除的文档同步下架，避免知识库随时间过期。',
+  //   href: '/03-features/10-datasource',
+  //   tag: '数据接入',
+  // },
   {
     icon: 'faq',
     title: 'FAQ 精确问答',
@@ -179,7 +180,7 @@ const map = [
     index: '03',
     icon: 'modules',
     title: '功能模块',
-    brief: '二十一项能力的配置项、行为约定与实现路径。',
+    brief: '当前业务开放能力的配置项、行为约定与实现路径。',
     items: [
       { text: '租户、用户与认证授权', link: '/03-features/01-tenant-auth' },
       { text: '知识库与知识管理', link: '/03-features/02-knowledge-base' },
@@ -190,7 +191,7 @@ const map = [
       { text: 'Agent 引擎', link: '/03-features/07-agent' },
       { text: 'MCP 集成', link: '/03-features/08-mcp' },
       { text: '知识图谱', link: '/03-features/09-knowledge-graph' },
-      { text: '数据源导入', link: '/03-features/10-datasource' },
+      // { text: '数据源导入', link: '/03-features/10-datasource' },
       { text: '网络搜索与网页抓取', link: '/03-features/11-web-search' },
       { text: 'IM 集成', link: '/03-features/12-im-integration' },
       { text: '网页嵌入 Embed', link: '/03-features/13-embed-channel' },
@@ -208,7 +209,7 @@ const map = [
     index: '04',
     icon: 'api',
     title: 'API 参考',
-    brief: '约 360 个端点，含权限要求、参数表与 curl 示例。',
+    brief: '开放接口说明，含权限要求、参数表与 curl 示例。',
     items: [
       { text: 'API 总览', link: '/04-api/01-api-overview' },
       { text: 'Agent、MCP 与技能', link: '/04-api/02-api-agent-mcp' },
@@ -216,12 +217,12 @@ const map = [
       { text: 'IM、Embed 与文件', link: '/04-api/02-api-channels' },
       { text: '会话、消息与聊天', link: '/04-api/02-api-chat' },
       { text: 'FAQ 与 Wiki', link: '/04-api/02-api-faq-wiki' },
-      { text: '基础设施与数据源', link: '/04-api/02-api-infra' },
+      { text: '基础设施', link: '/04-api/02-api-infra' },
       { text: '知识库与知识', link: '/04-api/02-api-knowledge' },
       { text: '分块与标签', link: '/04-api/02-api-chunks' },
       { text: '模型与初始化', link: '/04-api/02-api-model-system' },
       { text: '系统与平台管理', link: '/04-api/02-api-system' },
-      { text: '组织与共享', link: '/04-api/02-api-org' },
+      // { text: '组织与共享', link: '/04-api/02-api-org' },
       { text: '租户与成员', link: '/04-api/02-api-tenant' },
     ],
   },
@@ -229,15 +230,15 @@ const map = [
     index: '05',
     icon: 'clients',
     title: '客户端',
-    brief: '七种客户端：Web、CLI、SDK、小程序、桌面端、浏览器插件与 Skill。',
+    brief: 'Web 控制台等当前开放入口。',
     items: [
       { text: 'Web 前端', link: '/05-clients/01-frontend' },
-      { text: '命令行工具 CLI', link: '/05-clients/02-cli' },
-      { text: 'Go SDK', link: '/05-clients/03-go-sdk' },
-      { text: '微信小程序', link: '/05-clients/04-miniprogram' },
-      { text: '桌面客户端', link: '/05-clients/05-desktop' },
-      { text: 'Chrome 插件', link: '/05-clients/06-chrome-extension' },
-      { text: 'Claw Skill', link: '/05-clients/07-claw-skill' },
+      // { text: '命令行工具 CLI', link: '/05-clients/02-cli' },
+      // { text: 'Go SDK', link: '/05-clients/03-go-sdk' },
+      // { text: '微信小程序', link: '/05-clients/04-miniprogram' },
+      // { text: '桌面客户端', link: '/05-clients/05-desktop' },
+      // { text: 'Chrome 插件', link: '/05-clients/06-chrome-extension' },
+      // { text: 'Claw Skill', link: '/05-clients/07-claw-skill' },
     ],
   },
   {
@@ -256,12 +257,13 @@ const map = [
 const deployments = [
   { icon: 'compose', name: 'Docker Compose', desc: '标准部署，12 个可选 profile 组合基础设施', note: '' },
   { icon: 'helm', name: 'Helm', desc: 'Kubernetes 集群编排，适用于生产多副本', note: '' },
-  {
-    icon: 'lite',
-    name: 'Lite（单二进制 / 桌面应用）',
-    desc: 'SQLite + 进程内队列，无需 Docker 与外部数据库；提供命令行与图形界面两种形式',
-    note: '桌面应用尚未正式发布，需自行构建',
-  },
+  // Lite / 桌面端：业务文档默认不展示
+  // {
+  //   icon: 'lite',
+  //   name: 'Lite（单二进制 / 桌面应用）',
+  //   desc: 'SQLite + 进程内队列，无需 Docker 与外部数据库；提供命令行与图形界面两种形式',
+  //   note: '桌面应用尚未正式发布，需自行构建',
+  // },
 ]
 </script>
 
@@ -275,8 +277,8 @@ const deployments = [
           <h1 class="display">
            知识库问答系统
           </h1>
-          <p class="lede">智能体中台2.0 将 PDF、Word、网页与飞书 / Notion / 语雀等来源的资料汇入知识库，提供检索增强的问答能力，回答标注可追溯的出处。除基础问答外，还提供 <strong>Wiki 自动成书</strong>、<strong>ReAct Agent 与 MCP 双向集成</strong>、<strong>知识图谱增强检索</strong>，以及面向团队的<strong>多空间隔离、四级 RBAC、作用域 API Key 与审计日志</strong>。支持完整私有部署，模型可全部替换为本地推理。</p>
-          <p class="lede lede-sub">本文档覆盖部署与配置、功能说明、约 360 个 API 端点的接口参考，以及二次开发的扩展点。</p>
+          <p class="lede">智能体中台2.0 将 PDF、Word、网页等资料汇入知识库，提供检索增强的问答能力，回答标注可追溯的出处。除基础问答外，还提供 <strong>Wiki 自动成书</strong>、<strong>ReAct Agent 与 MCP 双向集成</strong>、<strong>知识图谱增强检索</strong>，以及面向团队的<strong>多空间隔离、四级 RBAC、作用域 API Key 与审计日志</strong>。支持完整私有部署，模型可全部替换为本地推理。</p>
+          <p class="lede lede-sub">本文档覆盖部署与配置、功能说明、约 360 个 API 端点的接口参考，以及开发扩展点。</p>
           <div class="actions">
             <a class="btn btn-solid" :href="withBase('/01-getting-started/01-introduction')">开始阅读</a>
             <a class="btn btn-ghost" :href="withBase('/02-architecture/01-overview')">系统架构</a>
@@ -336,7 +338,7 @@ const deployments = [
         <Illus name="flow" class="panorama-illus" />
         <p class="panorama-note">
           资料从文件、网页、音频与图片进来，统一解析后并行写入向量、关键词、Wiki 与知识图谱四路索引；
-          同一套知识库与 Agent 再展开成九种客户端，换入口不用换一套系统。
+          同一套知识库与 Agent 再展开成 Web、IM、嵌入、API 与 MCP 等入口，换入口不用换一套系统。
         </p>
       </div>
     </section>
@@ -381,7 +383,7 @@ const deployments = [
         <header class="chapter-head">
           <span class="marker">核心能力</span>
           <h2 class="chapter-title">超出基础检索问答的部分</h2>
-          <p class="chapter-sub">以下能力为智能体中台2.0 的主要投入方向，可作为技术选型时的对比维度。</p>
+          <p class="chapter-sub">以下能力为智能体中台2.0 的主要投入方向，可作为技术底座。</p>
         </header>
 
         <div class="features">
@@ -402,7 +404,7 @@ const deployments = [
       <div class="shell">
         <header class="chapter-head">
           <span class="marker">接入方式</span>
-          <h2 class="chapter-title">九种客户端与集成入口</h2>
+          <h2 class="chapter-title">客户端与集成入口</h2>
           <p class="chapter-sub">同一套知识库与 Agent 配置，可从浏览器、IM、自有站点、终端与外部智能体访问，无需为各入口重复搭建。</p>
         </header>
 
@@ -429,8 +431,8 @@ const deployments = [
       <div class="shell">
         <header class="chapter-head">
           <span class="marker">文档地图</span>
-          <h2 class="chapter-title">六个部分，五十三篇</h2>
-          <p class="chapter-sub">覆盖部署上手、系统架构、功能说明、接口参考、客户端与二次开发。</p>
+          <h2 class="chapter-title">六个部分，按需查阅</h2>
+          <p class="chapter-sub">覆盖部署上手、系统架构、功能说明、接口参考、客户端与开发指南。</p>
         </header>
 
         <div class="map">
@@ -464,7 +466,7 @@ const deployments = [
         <div class="deploy-copy">
           <span class="marker">部署</span>
           <h2 class="chapter-title">部署形态</h2>
-          <p class="chapter-sub">标准部署克隆代码、改两个密钥、一条命令拉起全套服务；本机试用可选 Lite 模式，不依赖 PostgreSQL 与 Redis。</p>
+          <p class="chapter-sub">标准部署准备源码与环境变量、改两个密钥、一条命令拉起全套服务。</p>
           <ul class="deploy-list">
             <li v-for="d in deployments" :key="d.name">
               <span class="deploy-name">

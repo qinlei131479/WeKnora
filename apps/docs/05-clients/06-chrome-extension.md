@@ -41,4 +41,4 @@
 
 - 凭证与能力：[租户、用户与认证授权](../03-features/01-tenant-auth.md)
 - 剪藏内容的入库流程：[文档入库流程](../02-architecture/03-document-pipeline.md)
-- 其它集成方式：[Claw Skill](07-claw-skill.md)、[命令行工具](02-cli.md)、[Go SDK](03-go-sdk.md)
+- 其它集成方式：[Claw Skill](hidden:07-claw-skill.md)、[命令行工具](hidden:02-cli.md)、[Go SDK](hidden:03-go-sdk.md)

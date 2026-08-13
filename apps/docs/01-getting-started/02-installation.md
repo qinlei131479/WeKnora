@@ -1,6 +1,6 @@
 # 安装部署
 
-智能体中台2.0 支持从「一台笔记本」到「Kubernetes 集群」的多种部署形态。本文逐一介绍 Docker Compose（生产/开发两套编排）、镜像构建、Makefile 与脚本、Helm，以及桌面端（Lite 单二进制、桌面应用与 Homebrew）。
+智能体中台2.0 支持从单机 Docker 到 Kubernetes 集群的多种部署形态。本文介绍 Docker Compose（生产/开发两套编排）、镜像构建、Makefile 与脚本、以及 Helm。
 
 ## 部署形态总览
 
@@ -9,9 +9,11 @@
 | Docker Compose（标准） | `docker-compose.yml` | ParadeDB（PostgreSQL） | Redis + Asynq | 生产 / 团队自托管，推荐 |
 | Docker Compose（开发） | `docker-compose.dev.yml` | 同上（仅基础设施进容器） | 同上 | 本地开发：app / frontend 在宿主机运行 |
 | Helm | `helm/` | ParadeDB（chart 内置） | Redis（chart 内置） | Kubernetes >= 1.25 |
+<!-- 业务文档默认隐藏 Lite / 桌面 / Homebrew
 | Lite 单二进制 | `make build-lite` / `scripts/package-lite.sh` | SQLite（FTS5 + sqlite-vec） | 内存（无 Redis） | 个人 / 离线 / 低资源环境 |
 | 桌面应用（**未正式发布**） | `cmd/desktop`（Wails v2）+ `scripts/package-mac-app.sh` | SQLite | 内存 | 桌面单机使用，带图形界面与本地数据目录 |
 | Homebrew | `Formula/weknora-lite.rb` | SQLite | 内存 | macOS / Linux 命令行安装 Lite |
+-->
 
 ```mermaid
 flowchart TB
@@ -27,13 +29,6 @@ flowchart TB
         LOCALAPP --> RD2[("redis 容器")]
         LOCALAPP --> DR2["docreader 容器 :50051"]
         LOCALFE["宿主机 npm run dev 前端"] --> LOCALAPP
-    end
-    subgraph lite["Lite / 桌面 (单进程)"]
-        BIN["智能体中台2.0-lite 二进制 (内嵌 web/ 前端)"]
-        BIN --> SQLITE[("SQLite: FTS5 + sqlite-vec")]
-        BIN --> MEMQ[("内存流管理")]
-        BIN -. "可选" .-> DR3["docreader 127.0.0.1:50051"]
-        BIN --> OLLAMA["Ollama :11434"]
     end
 ```
 
@@ -156,8 +151,8 @@ make docker-build-frontend
 | `make migrate-up` / `migrate-down` / `migrate-version` / `migrate-create name=x` / `migrate-force version=n` / `migrate-goto version=n` | 数据库迁移（`scripts/migrate.sh`；容器内默认 `AUTO_MIGRATE=true` 启动时自动迁移） |
 | `make dev-*` | 开发模式（见上文） |
 | `make build` / `run` / `build-prod` | 本地编译运行 `cmd/server`（`build-prod` 需 CGO，注入版本号与 `Edition=standard`） |
-| `make build-lite` / `run-lite` / `package-lite` | Lite 模式构建 / 运行（读 `.env.lite`）/ 打发行包 |
-| `make package-mac-app` | 打包 macOS 桌面应用 |
+<!-- | `make build-lite` / `run-lite` / `package-lite` | Lite 模式构建 / 运行（读 `.env.lite`）/ 打发行包 |
+| `make package-mac-app` | 打包 macOS 桌面应用 | -->
 | `make docs` / `install-swagger` | 生成 Swagger 文档（`http://localhost:8080/swagger/index.html`，release 模式禁用） |
 | `make clean-db` | 删除 postgres/minio/redis 数据卷（危险操作） |
 
@@ -172,7 +167,7 @@ make docker-build-frontend
 | `scripts/build_frontend_dist.sh` | 构建前端静态产物 `frontend/dist`（frontend 镜像的前置步骤） |
 | `scripts/migrate.sh` | golang-migrate 封装 |
 | `scripts/docker-entrypoint.sh` | app 容器入口（属主修复 + 内置 Skills 合并 + gosu 降权） |
-| `scripts/package-lite.sh` / `package-mac-app.sh` | Lite tarball / macOS .app 打包 |
+<!-- | `scripts/package-lite.sh` / `package-mac-app.sh` | Lite tarball / macOS .app 打包 | -->
 
 ## 六、Helm 部署（helm/）
 
@@ -211,6 +206,7 @@ helm install weknora ./helm -n weknora --create-namespace \
   --set secrets.jwtSecret=xxx --set secrets.systemAesKey=$(openssl rand -hex 16)
 ```
 
+<!-- 业务文档默认隐藏：Lite / 桌面 / Homebrew
 ## 七、桌面端（Lite 模式 / 桌面应用 / Homebrew）
 
 桌面端面向本机与低资源环境，底层都是同一套 Lite 运行时（单进程 + SQLite + 内存队列），只是分发与启动方式不同：**单二进制**（命令行启动，也可作为后台服务）、**桌面应用**（图形界面，双击启动）、**Homebrew**（macOS/Linux 命令行安装 Lite）。三者能力范围一致。
@@ -258,6 +254,8 @@ brew services start weknora-lite     # 作为后台服务运行（keep_alive，�
 
 Formula 描述为 "Knowledge base management system — single-binary Lite edition"，支持 macOS/Linux 的 arm64 与 amd64。包装脚本首次运行会把 `.env.lite.example` 复制为 `~/.config/weknora/.env.lite`（可用 `WEKNORA_CONFIG_DIR` / `WEKNORA_DATA_DIR` 覆盖配置与数据目录，数据默认在 `~/.local/share/weknora`）。
 
+-->
+
 ## 八、源码编译运行
 
 ```bash
@@ -291,11 +289,6 @@ flowchart TB
         ING["Ingress"] --> FE2["frontend Deployment"] --> A2["app Deployment"]
         A2 --> PVC1[("PVC: postgres 10Gi / redis 1Gi / data-files 10Gi")]
         A2 --> D2["docreader Deployment"]
-    end
-    subgraph laptop["个人：Lite / 桌面 / Homebrew"]
-        direction LR
-        U3["用户"] --> L1["智能体中台2.0-lite 单进程 (内嵌前端 + SQLite + 内存队列)"]
-        L1 --> O3["Ollama / 远程 OpenAI 兼容 API"]
     end
 ```
 
