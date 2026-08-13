@@ -24,16 +24,17 @@ services:
       - agent-middle-network
     restart: unless-stopped
 
-  # Independent docs site (VitePress). No dependency on app/frontend.
+  # Independent docs site (VitePress fork under apps/docs). No dependency on app/frontend.
   # 默认 up 不启动；需要：docker compose -f docker-compose-kjsc.yml --profile docs up -d docs
+  # 访问：http://<host>:${DOCS_PORT:-9900}/docs/  （与官方 website-docs 路径一致）
   docs:
     image: kjsc/agent-middle-docs:${WEKNORA_VERSION:-latest}
     build:
-      context: ./docs
-      dockerfile: site/Dockerfile
+      context: .
+      dockerfile: apps/docs/Dockerfile
     container_name: agent-middle-docs
     ports:
-      - "${DOCS_PORT:-9900}:80"
+      - "${DOCS_PORT:-9900}:8081"
     networks:
       - agent-middle-network
     restart: unless-stopped

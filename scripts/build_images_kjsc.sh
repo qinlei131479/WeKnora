@@ -282,14 +282,17 @@ build_sandbox_image() {
     fi
 }
 
-# 构建文档站镜像（VitePress → nginx；context=docs，工程在 docs/site）
+# 构建文档站镜像（VitePress → nginx；源码 apps/docs，context=仓库根以读取 VERSION）
 build_docs_image() {
     log_info "构建文档站镜像 (${IMAGE_PREFIX}-docs)..."
 
-    local docs_root="$PROJECT_ROOT/docs"
-    local site_root="$docs_root/site"
+    local site_root="$PROJECT_ROOT/apps/docs"
     if [ ! -f "$site_root/package.json" ] || [ ! -f "$site_root/Dockerfile" ]; then
         log_error "docs 站点不完整: $site_root"
+        return 1
+    fi
+    if [ ! -f "$PROJECT_ROOT/VERSION" ]; then
+        log_error "缺少仓库根 VERSION 文件（文档站构建依赖）"
         return 1
     fi
 
@@ -298,7 +301,7 @@ build_docs_image() {
         --platform $PLATFORM \
         -f "$site_root/Dockerfile" \
         -t ${IMAGE_PREFIX}-docs:latest \
-        "$docs_root"
+        "$PROJECT_ROOT"
 
     if [ $? -eq 0 ]; then
         log_success "文档站镜像构建成功: ${IMAGE_PREFIX}-docs:latest"

@@ -57,7 +57,7 @@ pipeline {
                 sh '''
                     set -e
                     for i in $(seq 1 30); do
-                      code=$(curl -sS -o /dev/null -w "%{http_code}" http://127.0.0.1:9900/ || echo 000)
+                      code=$(curl -sS -o /dev/null -w "%{http_code}" http://127.0.0.1:9900/docs/ || echo 000)
                       case "$code" in 200|301|302|304) exit 0 ;; esac
                       sleep 2
                     done
