@@ -9,9 +9,7 @@ import com.iptv.business.domain.dto.OllamaCheckRemoteModelDTO;
 import com.iptv.business.domain.vo.*;
 import com.iptv.business.service.OllamaService;
 import com.iptv.common.core.exception.ServiceException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.OutputStream;
@@ -30,11 +28,17 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class OllamaServiceImpl implements OllamaService {
 
-    @Value("${ollama.endpoint:http://192.168.170.71:11434}")
     private String ollamaEndpoint;
+
+    public OllamaServiceImpl() {
+        String envUrl = System.getenv("OLLAMA_BASE_URL");
+        log.info("OLLAMA_BASE_URL from env: [{}]", envUrl);
+        this.ollamaEndpoint = (envUrl != null && !envUrl.isEmpty()) 
+                ? envUrl 
+                : "http://192.168.170.71:11434";
+    }
 
     // 存储下载任务
     private final Map<String, OllamaDownloadTaskVO> downloadTasks = new ConcurrentHashMap<>();

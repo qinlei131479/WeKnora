@@ -34,6 +34,18 @@ start_service() {
     # 确保日志目录存在
     mkdir -p $LOGS_DIR
 
+    # 仅 business 模块加载 OLLAMA_BASE_URL 环境变量
+    if [ "$SERVICE" = "business" ]; then
+        ENV_FILE="${BASE_DIR}/.env"
+        if [ -f "$ENV_FILE" ]; then
+            OLLAMA_BASE_URL=$(grep -E '^OLLAMA_BASE_URL=' "$ENV_FILE" | head -n1 | cut -d= -f2- | tr -d ' "\t\r')
+            if [ -n "$OLLAMA_BASE_URL" ]; then
+                export OLLAMA_BASE_URL
+                echo "加载环境变量: OLLAMA_BASE_URL=$OLLAMA_BASE_URL"
+            fi
+        fi
+    fi
+
     # 启动服务 -Dfile.encoding=utf-8
     nohup $JAVA_PATH $JAVA_OPTS -jar $JAR_FILE > $LOG_FILE 2>&1 &
     echo $! > $PID_FILE
