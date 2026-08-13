@@ -40,7 +40,7 @@ start_service() {
         if [ -f "$ENV_FILE" ]; then
             OLLAMA_BASE_URL=$(grep -E '^OLLAMA_BASE_URL=' "$ENV_FILE" | head -n1 | cut -d= -f2- | tr -d ' "\t\r')
             if [ -n "$OLLAMA_BASE_URL" ]; then
-                export OLLAMA_BASE_URL
+                export OLLAMA_BASE_URL=$OLLAMA_BASE_URL
                 echo "加载环境变量: OLLAMA_BASE_URL=$OLLAMA_BASE_URL"
             fi
         fi
