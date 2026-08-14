@@ -65,5 +65,6 @@ export function notifyLoginSuccess(
     }),
     duration: 6000,
     closeBtn: true,
+    className: 'wk-notify-top-center',
   })
 }

@@ -34,6 +34,35 @@ const tdLocaleMap: Record<string, object> = {
 
 const tdGlobalConfig = computed(() => tdLocaleMap[locale.value] || enUSConfig)
 
+// TDesign NotifyPlugin 只有四角 placement，进出场用 translateX 滑向右侧。
+// 卡片已 CSS 居中，这里把 WAAPI 改成向上滑入/滑出，避免仍往右消失。
+const patchNotificationSlideUp = () => {
+  const proto = Element.prototype as Element & { animate: typeof Element.prototype.animate; __wkNotifySlideUp?: boolean }
+  if (proto.__wkNotifySlideUp || typeof proto.animate !== 'function') return
+  proto.__wkNotifySlideUp = true
+  const original = proto.animate
+  proto.animate = function (this: Element, keyframes, options) {
+    if (this.classList?.contains('t-notification') && Array.isArray(keyframes) && keyframes.length >= 2) {
+      const from = keyframes[0] as Keyframe
+      const to = keyframes[keyframes.length - 1] as Keyframe
+      const h = (this as HTMLElement).offsetHeight || 80
+      if (from.opacity === 0 && to.opacity === 1) {
+        keyframes = [
+          { opacity: 0, transform: `translateY(-${h}px)` },
+          { opacity: 1, transform: 'translateY(0px)' },
+        ]
+      } else if (from.opacity === 1 && to.opacity === 0) {
+        keyframes = [
+          { opacity: 1, transform: 'translateY(0px)' },
+          { opacity: 0, transform: `translateY(-${h}px)` },
+        ]
+      }
+    }
+    return original.call(this, keyframes as Keyframe[] | PropertyIndexedKeyframes | null, options)
+  }
+}
+patchNotificationSlideUp()
+
 const decodeOIDCResult = (encoded: string) => {
   const normalized = encoded.replace(/-/g, '+').replace(/_/g, '/')
   const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4)
@@ -219,6 +248,7 @@ const showPendingTenantSwitchToast = () => {
     }),
     duration: 6000,
     closeBtn: true,
+    className: 'wk-notify-top-center',
   })
 }
 
@@ -292,5 +322,13 @@ html,
   isolation: isolate;
   transform: translateZ(0);
   backface-visibility: hidden;
+}
+
+/* NotifyPlugin 挂到 body，定位写在 inline style（right: 16px）上。
+   实际列表 class 是 .t-notification-list__show，必须 !important 才能盖过 inline。 */
+.t-notification-list__show {
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%);
 }
 </style>

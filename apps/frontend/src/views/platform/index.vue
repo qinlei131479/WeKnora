@@ -1,8 +1,36 @@
 <template>
     <div class="main" ref="dropzone">
         <Menu></Menu>
-        <div v-if="isRouterAlive" class="platform-route-outlet">
-            <RouterView />
+        <div class="platform-main">
+            <div class="platform-topbar" style="--wails-draggable: drag">
+                <div class="platform-topbar-left" style="--wails-draggable: no-drag">
+                    <t-tooltip placement="bottom">
+                        <template #content>
+                            <span class="cmdk-tip">
+                                <span class="cmdk-tip-label">{{ t('menu.search') }}</span>
+                                <span class="cmdk-tip-keys">{{ cmdModKeyLabel }}K</span>
+                            </span>
+                        </template>
+                        <div class="platform-topbar-icon" @click="commandPaletteStore.openPalette('')"
+                            :aria-label="t('menu.search')">
+                            <t-icon name="search" size="18px" />
+                        </div>
+                    </t-tooltip>
+                </div>
+                <div class="platform-topbar-right" style="--wails-draggable: no-drag">
+                    <GlobalInvitationBell />
+                    <t-tooltip :content="t('general.settings')" placement="bottom">
+                        <div class="platform-topbar-icon" data-guide="settings-btn"
+                            :aria-label="t('general.settings')" @click="openSettings">
+                            <t-icon name="setting" size="18px" />
+                        </div>
+                    </t-tooltip>
+                    <UserMenu />
+                </div>
+            </div>
+            <div v-if="isRouterAlive" class="platform-route-outlet">
+                <RouterView />
+            </div>
         </div>
         <div class="upload-mask" v-show="ismask">
             <UploadMask></UploadMask>
@@ -11,9 +39,6 @@
         <Settings />
         <!-- 全局命令面板 (⌘K)，随 platform 路由存活 -->
         <GlobalCommandPalette />
-        <!-- 全局右上角"待处理邀请"铃铛。固定定位，z-index 低于抽屉，业务页面
-             右侧抽屉弹出时会自然覆盖；仅在有待处理邀请时渲染。 -->
-        <GlobalInvitationBell />
         <!-- 带遮罩层的新手引导：首次进入自动开启，可从用户菜单顶部昵称旁帮助按钮重新打开 -->
         <NewUserGuide />
     </div>
@@ -27,7 +52,9 @@ import Settings from '@/views/settings/Settings.vue'
 import GlobalCommandPalette from '@/components/GlobalCommandPalette.vue'
 import GlobalInvitationBell from '@/components/GlobalInvitationBell.vue'
 import NewUserGuide from '@/components/NewUserGuide.vue'
+import UserMenu from '@/components/UserMenu.vue'
 import { useCommandPaletteStore } from '@/stores/commandPalette'
+import { useUIStore } from '@/stores/ui'
 import { useChatResourcesStore } from '@/stores/chatResources'
 import { getKnowledgeBaseById } from '@/api/knowledge-base/index'
 import { MessagePlugin } from 'tdesign-vue-next'
@@ -36,8 +63,16 @@ import { useI18n } from 'vue-i18n'
 const route = useRoute();
 const router = useRouter();
 const commandPaletteStore = useCommandPaletteStore();
+const uiStore = useUIStore();
 let ismask = ref(false)
 const { t } = useI18n();
+const isMacLike = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform || '');
+const cmdModKeyLabel = isMacLike ? '⌘' : 'Ctrl';
+
+const openSettings = () => {
+    uiStore.openSettings()
+    router.push('/platform/settings')
+}
 
 const isRouterAlive = ref(true)
 const reloadApp = () => {
@@ -261,6 +296,77 @@ onUnmounted(() => {
     min-height: 0;
     /* 统一整页背景，让左侧菜单与右侧内容区视觉连贯 */
     background: var(--td-bg-color-container);
+}
+
+/* 右侧：顶栏 + 路由区 */
+.platform-main {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.platform-topbar {
+    flex-shrink: 0;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 12px 0 16px;
+    border-bottom: 1px solid var(--td-component-stroke);
+    background: var(--td-bg-color-container);
+    position: relative;
+    z-index: 20;
+}
+
+.platform-topbar-left,
+.platform-topbar-right {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.platform-topbar-right {
+    gap: 4px;
+    justify-content: flex-end;
+}
+
+.platform-topbar-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    cursor: pointer;
+    border-radius: 8px;
+    color: var(--td-text-color-secondary);
+    transition: background-color 0.2s ease, color 0.2s ease;
+
+    &:hover {
+        background: var(--td-bg-color-container-hover);
+        color: var(--td-text-color-primary);
+    }
+}
+
+.cmdk-tip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+
+    .cmdk-tip-label {
+        font-size: 13px;
+    }
+
+    .cmdk-tip-keys {
+        font-size: 13px;
+        opacity: 0.6;
+        letter-spacing: 0.5px;
+    }
 }
 
 /* 右侧路由区：占满剩余宽度与整列高度，并把 min-height:0 传给子页面以便内部 flex 滚动 */

@@ -235,9 +235,12 @@ const cardStyle = computed(() => {
     top: { left: h0.x + h0.width / 2 - w / 2, top: holeBox.top - h - GAP },
   }
 
+  const ox = step.value.offsetX ?? 0
   for (const place of order) {
     const c = candidates[place]
-    const left = Math.min(Math.max(EDGE, c.left), vw.value - w - EDGE)
+    // 先按视口钳位得到默认落点，再叠加 offset，避免贴右边时 offset 被钳位吃掉。
+    let left = Math.min(Math.max(EDGE, c.left), vw.value - w - EDGE) + ox
+    left = Math.min(Math.max(EDGE, left), vw.value - w - EDGE)
     const top = Math.min(Math.max(EDGE, c.top), vh.value - h - EDGE)
     const cardBox = { left, top, right: left + w, bottom: top + h }
     if (!overlaps(cardBox, holeBox)) {
@@ -245,7 +248,8 @@ const cardStyle = computed(() => {
     }
   }
 
-  const left = Math.min(Math.max(EDGE, (vw.value - w) / 2), vw.value - w - EDGE)
+  let left = Math.min(Math.max(EDGE, (vw.value - w) / 2), vw.value - w - EDGE) + ox
+  left = Math.min(Math.max(EDGE, left), vw.value - w - EDGE)
   const top = Math.min(Math.max(EDGE, holeBox.bottom + GAP), vh.value - h - EDGE)
   return { width: `${w}px`, left: `${left}px`, top: `${top}px` }
 })

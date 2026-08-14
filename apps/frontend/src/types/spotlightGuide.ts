@@ -10,4 +10,6 @@ export interface SpotlightGuideStep {
   optional?: boolean
   /** 为 true 时引导用户直接点击高亮区域，不展示「下一步」 */
   interact?: boolean
+  /** 卡片相对默认定位的水平偏移（px），正值向右 */
+  offsetX?: number
 }

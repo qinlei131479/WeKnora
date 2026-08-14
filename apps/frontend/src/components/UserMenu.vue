@@ -1,40 +1,21 @@
 <template>
-  <div class="user-menu" :class="{ 'user-menu--collapsed': uiStore.sidebarCollapsed }" ref="menuRef">
+  <div class="user-menu" ref="menuRef">
     <!-- 用户按钮 -->
     <div class="user-button" data-guide="user-menu" @click="toggleMenu">
       <div class="user-avatar">
         <img v-if="userAvatar" :src="userAvatar" :alt="$t('common.avatar')" />
         <span v-else class="avatar-placeholder">{{ userInitial }}</span>
       </div>
-      <template v-if="!uiStore.sidebarCollapsed">
-        <div class="user-info">
-          <!-- 多空间 / superuser：首行空间名，次行 username · 角色。单空间：昵称 + 邮箱。 -->
-          <template v-if="showTenantIdentityLine">
-            <div class="user-tenant-name" :title="activeTenantName">{{ activeTenantName }}</div>
-            <div class="user-tenant-meta">
-              <span v-if="userName && userName !== activeTenantName" class="user-tenant-meta-name">{{ userName }}</span>
-              <span v-if="(userName && userName !== activeTenantName) && currentRoleLabel"
-                class="user-tenant-meta-sep">·</span>
-              <t-icon v-if="currentRoleIcon" :name="currentRoleIcon" size="12px" class="user-tenant-meta-icon" />
-              <span v-if="currentRoleLabel" class="user-tenant-meta-role">{{ currentRoleLabel }}</span>
-            </div>
-          </template>
-          <template v-else>
-            <div class="user-name">{{ userName }}</div>
-            <div class="user-email">{{ userEmail }}</div>
-          </template>
-        </div>
-        <t-icon :name="menuVisible ? 'chevron-up' : 'chevron-down'" class="dropdown-icon" />
-      </template>
+      <div class="user-info">
+        <div class="user-name" :title="userName">{{ userName }}</div>
+      </div>
+      <t-icon :name="menuVisible ? 'chevron-up' : 'chevron-down'" class="dropdown-icon" />
     </div>
 
     <!-- 下拉菜单 -->
     <Transition name="dropdown">
       <div v-if="menuVisible" class="user-dropdown" @click.stop>
-        <!-- 弹出菜单：账号（头像+昵称）／当前空间（名称+权限）；底部侧栏样式不改。 -->
-        <div v-if="userName" class="dropdown-user-header is-clickable" role="button" tabindex="0"
-          @click="handleQuickNav('userprofile')" @keydown.enter.prevent="handleQuickNav('userprofile')"
-          @keydown.space.prevent="handleQuickNav('userprofile')">
+        <div v-if="userName" class="dropdown-user-header">
           <div class="dropdown-user-avatar">
             <img v-if="userAvatar" :src="userAvatar" :alt="$t('common.avatar')" />
             <span v-else class="dropdown-user-avatar-placeholder">{{ userInitial }}</span>
@@ -71,41 +52,6 @@
           </div>
           <t-icon v-if="showTenantSwitcher" name="swap" class="dropdown-tenant-panel-trail"
             :title="$t('tenant.switcher.menuLabel')" />
-        </div>
-        <div class="menu-divider"></div>
-        <!-- 账号与空间是头像菜单的核心上下文；基础设施类配置统一收进「全部设置」。 -->
-        <div class="menu-item" @click="handleQuickNav('general')">
-          <t-icon name="user" class="menu-icon" />
-          <span>{{ $t('general.personalSettings') }}</span>
-        </div>
-        <div v-if="!authStore.isLiteMode" class="menu-item" @click="handleQuickNav('tenant')">
-          <t-icon name="user-circle" class="menu-icon" />
-          <span>{{ $t('settings.workspaceSettings') }}</span>
-        </div>
-        <!-- “管理”类快捷入口只对真正具备写权限的人展示。只读名册和模型列表
-             仍可从「全部设置」进入，避免 viewer 看到名不副实的管理入口。 -->
-        <div v-if="canManageMembers" class="menu-item" @click="handleQuickNav('members')">
-          <t-icon name="usergroup" class="menu-icon" />
-          <span>{{ $t('tenantMember.title') }}</span>
-        </div>
-        <div v-if="canManageModels" class="menu-item" @click="handleQuickNav('models')">
-          <t-icon name="control-platform" class="menu-icon" />
-          <span>{{ $t('settings.modelManagement') }}</span>
-        </div>
-        <div class="menu-divider"></div>
-        <div class="menu-item" @click="handleSettings">
-          <t-icon name="setting" class="menu-icon" />
-          <span>{{ $t('general.allSettings') }}</span>
-        </div>
-        <!--
-          System administration entry — visible only to users with the
-          platform-wide is_system_admin flag. Hidden for everyone else,
-          including tenant Owners. Real authorisation lives server-side
-          (RequireSystemAdmin middleware); this is UI gating only.
-        -->
-        <div v-if="authStore.isSystemAdmin" class="menu-item" @click="handleSystemAdmin">
-          <t-icon name="server" class="menu-icon" />
-          <span>{{ $t('settings.navGroups.systemAdministration') }}</span>
         </div>
         <template v-if="!featureFlags.hideHelpAndDocs || !featureFlags.hideGithub">
           <div class="menu-divider"></div>
@@ -201,7 +147,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useUIStore } from '@/stores/ui'
 import { useAuthStore } from '@/stores/auth'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { getCurrentUser, logout as logoutApi, userInfoFromApi } from '@/api/auth'
@@ -216,7 +161,6 @@ import type { TenantInfo } from '@/api/tenant'
 import { useRoleLabel, useHomeTenant } from '@/composables/useRoleLabel'
 import { getRootZoom, rectToCssPx, cssViewportSize } from '@/utils/zoom'
 import { openNewUserGuide } from '@/config/contextualGuides'
-import { SETTINGS_MANAGEMENT_SHORTCUT_MIN_ROLE } from '@/config/settingsAccess'
 import { getFeatureFlags } from '@/utils/weknoraFeatures'
 
 const featureFlags = getFeatureFlags()
@@ -224,10 +168,9 @@ const featureFlags = getFeatureFlags()
 const { t } = useI18n()
 
 const router = useRouter()
-const uiStore = useUIStore()
 const authStore = useAuthStore()
 const { formatRole, roleIcon } = useRoleLabel()
-const { homeTenantId, isHomeTenantActive, isHomeTenant } = useHomeTenant()
+const { homeTenantId, isHomeTenant } = useHomeTenant()
 
 // 顶部用户卡片展示的空间名 / 当前角色：跟着 tenant 切换器实时变。
 // activeTenantName 优先用切换器选中的名字（含 fallback 到 home tenant 名字），
@@ -241,26 +184,6 @@ const activeTenantName = computed(() => {
 })
 const currentRoleLabel = computed(() => formatRole(authStore.currentTenantRole))
 const currentRoleIcon = computed(() => roleIcon(authStore.currentTenantRole))
-
-// 单空间用户（memberships <= 1 且非 superuser）= 永远 home + owner，第三
-// 行就是 user-email 信息的重复，没必要占视觉空间；只对多空间 / superuser
-// 渲染。Lite 模式下没有 RBAC 概念，统一隐藏。
-const showTenantIdentityLine = computed(() => {
-  if (authStore.isLiteMode) return false
-  if (authStore.canAccessAllTenants) return true
-  return (authStore.memberships ?? []).length > 1
-})
-
-// 快捷入口使用“管理能力”而不是页面最低可见角色：成员名册和模型列表允许
-// viewer 浏览，但头像菜单里的“管理”入口只服务实际能执行管理操作的角色。
-const canManageMembers = computed(() =>
-  authStore.canAccessAllTenants || authStore.hasRole(SETTINGS_MANAGEMENT_SHORTCUT_MIN_ROLE.members),
-)
-const canManageModels = computed(() =>
-  authStore.canAccessAllTenants ||
-  authStore.isSystemAdmin ||
-  authStore.hasRole(SETTINGS_MANAGEMENT_SHORTCUT_MIN_ROLE.models),
-)
 
 const menuRef = ref<HTMLElement>()
 const tenantMenuItemRef = ref<HTMLElement>()
@@ -288,29 +211,6 @@ const userInitial = computed(() => {
 // 切换菜单显示
 const toggleMenu = () => {
   menuVisible.value = !menuVisible.value
-}
-
-// 快捷导航到设置的特定部分
-const handleQuickNav = (section: string) => {
-  menuVisible.value = false
-  uiStore.openSettings()
-  router.push({ path: '/platform/settings', query: { section } })
-}
-
-// 打开设置
-const handleSettings = () => {
-  menuVisible.value = false
-  uiStore.openSettings()
-  router.push('/platform/settings')
-}
-
-// Open the platform administration group inside the standard Settings
-// modal. Global settings is the group's landing page; task queues, platform
-// API keys and the audit log remain available beside it in the settings nav.
-const handleSystemAdmin = () => {
-  menuVisible.value = false
-  uiStore.openSettings('system-global')
-  router.push({ path: '/platform/settings', query: { section: 'system-global' } })
 }
 
 // Hover-driven submenu controls. A small hide delay tolerates the pointer
@@ -460,9 +360,9 @@ const positionTenantSubmenu = () => {
   const GAP = 8
   const MARGIN = 8
 
-  let left = rect.right + GAP
-  if (left + PANEL_WIDTH + MARGIN > vw) {
-    left = Math.max(MARGIN, rect.left - PANEL_WIDTH - GAP)
+  let left = rect.left - PANEL_WIDTH - GAP
+  if (left < MARGIN) {
+    left = Math.max(MARGIN, Math.min(rect.right + GAP, vw - PANEL_WIDTH - MARGIN))
   }
 
   const top = Math.max(MARGIN, rect.top)
@@ -600,23 +500,9 @@ onUnmounted(() => {
 <style lang="less" scoped>
 .user-menu {
   position: relative;
-  width: 100%;
-
-  &--collapsed {
-    .user-button {
-      justify-content: center;
-      padding: 6px 3px;
-      gap: 0;
-    }
-
-    .user-dropdown {
-      left: calc(100% + 8px);
-      bottom: 0;
-      right: auto;
-      /* 与展开侧栏时下拉可视宽度对齐（aside 宽 260px） */
-      min-width: 260px;
-    }
-  }
+  width: auto;
+  max-width: 200px;
+  flex-shrink: 0;
 }
 
 .user-button {
@@ -744,11 +630,11 @@ onUnmounted(() => {
 
 .user-dropdown {
   position: absolute;
-  bottom: 100%;
-  /* 相对 .user-menu：左右由 left/right 拉宽；右缘用正值内缩，避免与侧栏内容区右边界完全重合 */
-  left: -4px;
-  right: -5px;
-  margin-bottom: 6px;
+  top: 100%;
+  right: 0;
+  left: auto;
+  margin-top: 6px;
+  min-width: 260px;
   background: var(--td-bg-color-container);
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
@@ -1081,7 +967,7 @@ onUnmounted(() => {
 .dropdown-enter-from,
 .dropdown-leave-to {
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateY(-8px);
 }
 
 .dropdown-enter-to,
@@ -1109,7 +995,7 @@ onUnmounted(() => {
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
   // Pointer bridge so the user can slide off the menu item onto the panel
   // without hitting the gap and triggering mouseleave-hide.
-  padding-left: 2px;
+  padding-right: 2px;
   overflow: hidden;
 
   .tenant-submenu-header {

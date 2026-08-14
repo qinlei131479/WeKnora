@@ -36,9 +36,9 @@ const steps = computed<SpotlightGuideStep[]>(() => [
   },
   {
     key: 'settings',
-    target: '[data-guide="user-menu"]',
-    placement: 'right',
-    before: () => uiStore.expandSidebar(),
+    target: '[data-guide="settings-btn"]',
+    placement: 'bottom',
+    offsetX: -96,
   },
   {
     key: 'models',

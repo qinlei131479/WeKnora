@@ -1,24 +1,12 @@
 <template>
     <div class="aside_box" :class="{ 'aside_box--collapsed': uiStore.sidebarCollapsed }">
-        <!-- 展开时：Logo + 搜索/折叠按钮同行 -->
+        <!-- 展开时：Logo + 折叠按钮同行 -->
         <div class="logo_row" v-if="!uiStore.sidebarCollapsed">
             <div class="logo_box" @click="router.push('/platform/knowledge-bases')" style="cursor: pointer;">
                 <img class="logo" src="@/assets/img/weknora.png" alt="">
                 <sup v-if="isLiteEdition" class="lite-badge">Lite</sup>
             </div>
             <div class="logo_actions">
-                <t-tooltip placement="bottom">
-                    <template #content>
-                        <span class="cmdk-tip">
-                            <span class="cmdk-tip-label">{{ t('menu.search') }}</span>
-                            <span class="cmdk-tip-keys">{{ cmdModKeyLabel }}K</span>
-                        </span>
-                    </template>
-                    <div class="header-icon-btn" @click="commandPaletteStore.openPalette('')"
-                        :aria-label="t('menu.search')">
-                        <img class="header-icon-img" :src="getImgSrc('search.svg')" alt="">
-                    </div>
-                </t-tooltip>
                 <div class="sidebar-toggle" @click="uiStore.toggleSidebar" :title="t('menu.collapseSidebar')">
                     <svg viewBox="0 0 20 20" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <rect x="1.5" y="1.5" width="17" height="17" rx="3" stroke="currentColor" stroke-width="1.2" />
@@ -57,25 +45,6 @@
 
         <!-- 上半部分：新对话吸顶 + 知识库/智能体/共享空间/历史会话随滚动一起滚走 -->
         <div class="menu_top" ref="scrollContainer" @scroll="handleScroll">
-            <!-- 全局搜索入口：点击打开命令面板（⌘K）。展开态移至顶部 logo_row 的图标按钮；
-                 折叠态在此处保留为图标项 + 深色 tooltip。 -->
-            <div class="menu_box menu_box--cmdk" v-if="uiStore.sidebarCollapsed">
-                <t-tooltip placement="right">
-                    <template #content>
-                        <span class="cmdk-tip">
-                            <span class="cmdk-tip-label">{{ t('menu.search') }}</span>
-                            <span class="cmdk-tip-keys">{{ cmdModKeyLabel }}K</span>
-                        </span>
-                    </template>
-                    <div class="menu_item menu_item--cmdk" @click="commandPaletteStore.openPalette('')">
-                        <div class="menu_item-box">
-                            <div class="menu_icon">
-                                <img class="icon" :src="getImgSrc('search.svg')" alt="">
-                            </div>
-                        </div>
-                    </div>
-                </t-tooltip>
-            </div>
             <div class="menu_box" :class="{ 'menu_box--sticky': item.children && !uiStore.sidebarCollapsed }"
                 v-for="(item, index) in topMenuItems" :key="index">
                 <t-tooltip :content="item.title" placement="right" :disabled="!uiStore.sidebarCollapsed">
@@ -169,7 +138,7 @@
             </div>
         </div>
 
-        <!-- 批量管理底部操作条：固定在侧栏底部、用户头像上方 -->
+        <!-- 批量管理底部操作条：固定在侧栏底部 -->
         <div v-if="batchMode && !uiStore.sidebarCollapsed" class="batch-inline-footer">
             <div class="batch-footer-left">
                 <t-checkbox :checked="isAllBatchSelected" :indeterminate="isBatchIndeterminate"
@@ -186,11 +155,6 @@
                     {{ t('batchManage.delete') }}{{ batchSelectedIds.length > 0 ? `(${batchDisplayCount})` : '' }}
                 </t-button>
             </div>
-        </div>
-
-        <!-- 下半部分：用户菜单 -->
-        <div class="menu_bottom">
-            <UserMenu />
         </div>
 
     </div>
@@ -249,9 +213,7 @@ import { useMenuStore } from '@/stores/menu';
 import { useAuthStore } from '@/stores/auth';
 import { useOrganizationStore } from '@/stores/organization';
 import { useUIStore } from '@/stores/ui';
-import { useCommandPaletteStore } from '@/stores/commandPalette';
 import { MessagePlugin, DialogPlugin, Icon as TIcon } from "tdesign-vue-next";
-import UserMenu from '@/components/UserMenu.vue';
 import TenantSelector from '@/components/TenantSelector.vue';
 import { useI18n } from 'vue-i18n';
 import { getSystemInfo } from '@/api/system';
@@ -288,13 +250,6 @@ const usemenuStore = useMenuStore();
 const authStore = useAuthStore();
 const orgStore = useOrganizationStore();
 const uiStore = useUIStore();
-const commandPaletteStore = useCommandPaletteStore();
-
-// Platform-aware label for the ⌘K hint. navigator.platform is deprecated but
-// the alternatives (userAgentData.platform) aren't universally available yet;
-// this check is good enough for Mac vs. non-Mac.
-const isMacLike = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform || '');
-const cmdModKeyLabel = isMacLike ? '⌘' : 'Ctrl';
 const route = useRoute();
 const router = useRouter();
 const currentpath = ref('');
