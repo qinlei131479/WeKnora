@@ -447,8 +447,8 @@ const deployments = [
       <div class="shell">
         <header class="chapter-head">
           <span class="marker">文档地图</span>
-          <h2 class="chapter-title">六个部分，按需查阅</h2>
-          <p class="chapter-sub">覆盖部署上手、系统架构、功能说明、接口参考、客户端与开发指南。</p>
+          <h2 class="chapter-title">四个部分，按需查阅</h2>
+          <p class="chapter-sub">覆盖产品手册、研发手册、功能说明、快速开始等。</p>
         </header>
 
         <div class="map">
