@@ -145,7 +145,6 @@ npm run preview  # 预览构建产物
 | [Agent 引擎](03-features/07-agent.md) | ReAct 循环、24 个内置工具、上下文与记忆管理、技能系统与沙箱、自定义 Agent、建议问题 |
 | [MCP 集成](03-features/08-mcp.md) | MCP 客户端管理、OAuth 2.0 + PKCE 全流程、工具审批、智能体中台2.0 MCP Server（`tencent-weknora-mcp`，29 个工具） |
 | [知识图谱](03-features/09-knowledge-graph.md) | 两级开关、LLM 实体关系抽取、Neo4j 存储、图谱增强检索 |
-<!-- | [数据源导入](hidden:03-features/10-datasource.md) | 连接器体系（飞书/Lark/Notion/语雀/RSS）、凭据加密、同步调度与增量更新 | -->
 | [网络搜索与网页抓取](03-features/11-web-search.md) | 9 个搜索引擎、SSRF 防护、web_fetch 双实现、SearXNG 自托管 |
 | [IM 集成](03-features/12-im-integration.md) | 10 个 IM 平台适配、消息处理流水线、内置命令、流式渲染、多实例协同 |
 | [网页嵌入 Embed Channel](03-features/13-embed-channel.md) | 嵌入渠道配置、匿名会话与 token 交换、安全模式、webhook、接入示例 |
@@ -157,6 +156,7 @@ npm run preview  # 预览构建产物
 | [存储后端](03-features/19-storage-backends.md) | 多实例注册、空间默认与按库绑定、连通性测试、legacy 别名迁移 |
 | [平台管理与系统管理员](03-features/20-platform-admin.md) | 平台级身份与空间 Owner 的边界、首个管理员引导、控制台四分区、运行时系统设置 |
 | [图片与文件的对外访问](03-features/21-file-access.md) | 四种 URL 形式、各渠道怎么取、IM/API 图片不显示的排查表 |
+<!-- | [数据源导入](hidden:03-features/10-datasource.md) | 连接器体系（飞书/Lark/Notion/语雀/RSS）、凭据加密、同步调度与增量更新 | -->
 
 ### 04 API 参考
 
@@ -167,7 +167,6 @@ npm run preview  # 预览构建产物
 | [API 总览](04-api/01-api-overview.md) | Base URL、三种认证方式、通用响应包与错误码、分页规范、SSE 协议、限流 |
 | [认证与用户](04-api/02-api-auth.md) | /auth 注册登录、token 刷新、邀请 |
 | [租户与成员](04-api/02-api-tenant.md) | 租户、成员、邀请、API Key、审计 |
-<!-- | [组织与共享](hidden:04-api/02-api-org.md) | 组织、知识库共享、Agent 共享 | -->
 | [知识库与知识](04-api/02-api-knowledge.md) | 知识库、知识、文件夹 |
 | [分块与标签](04-api/02-api-chunks.md) | 分块读写与版本、生成问题、标签、分块预览 |
 | [FAQ 与 Wiki](04-api/02-api-faq-wiki.md) | FAQ 管理与导入、Wiki 读写 |
@@ -177,6 +176,7 @@ npm run preview  # 预览构建产物
 | [基础设施与数据源](04-api/02-api-infra.md) | 向量存储、存储后端、Web 搜索、数据源 |
 | [Agent 与 MCP](04-api/02-api-agent-mcp.md) | Agent、MCP 服务、OAuth、技能、收藏 |
 | [IM、Embed 与文件](04-api/02-api-channels.md) | IM 回调与渠道、微信扫码、Embed、文件服务 |
+<!-- | [组织与共享](hidden:04-api/02-api-org.md) | 组织、知识库共享、Agent 共享 | -->
 
 ### 05 客户端
 

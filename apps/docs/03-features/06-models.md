@@ -62,7 +62,6 @@ type Provider interface {
 | Provider 标识 | 名称 | 说明 |
 |---------------|------|------|
 | `generic` | Generic | 任意 OpenAI 兼容 / 自定义部署（默认兜底） |
-<!-- | `weknoracloud` | WeKnoraCloud | 云服务（使用 AppID/AppSecret 凭证） | -->
 | `aliyun` | 阿里云 DashScope | |
 | `zhipu` | 智谱 AI（GLM 系列） | |
 | `volcengine` | 火山引擎 Ark | |
@@ -88,6 +87,7 @@ type Provider interface {
 | `novita` | Novita AI | |
 | `azure_openai` | Azure OpenAI | 额外字段 `api_version` |
 | `ollama`（source=`local`） | Ollama 本地模型 | 非 Provider 注册表成员，由 `ModelSourceLocal` 路由 |
+<!-- | `weknoracloud` | WeKnoraCloud | 云服务（使用 AppID/AppSecret 凭证） | -->
 
 当模型未显式指定 provider 时，`DetectProvider(baseURL)` 会按 BaseURL 域名特征自动识别（如 `dashscope.aliyuncs.com -> aliyun`、`api.anthropic.com -> anthropic`），识别失败回落为 `generic`。
 

@@ -108,10 +108,10 @@ flowchart TB
 | `/login` | `login` | `src/views/auth/Login.vue` | 登录页（含 OIDC、语言切换、动画背景） |
 | `/register` | `registerByInvite` | `src/views/auth/Login.vue` | 邀请注册落地页——复用 Login 组件，挂载时检测 `?token=xxx` 切换到邀请注册模式 |
 | `/onboarding/workspace` | `workspaceOnboarding` | `src/views/auth/WorkspaceOnboarding.vue` | 无租户用户的工作空间引导页（创建或等待被邀请），需要登录但不要求已有租户 |
-<!-- | `/join` | `joinOrganization` | 重定向 | 加入组织邀请链接，把 `?code=` 转成 `invite_code` 参数并跳到 `/platform/organizations` | -->
 | `/knowledgeBase` | `home` | `src/views/knowledge/KnowledgeBase.vue` | 知识库详情（历史遗留顶层路径） |
 | `/platform` | `Platform` | `src/views/platform/index.vue` | 平台主布局（左侧菜单 + 路由出口 + 全局设置模态 + 拖拽上传遮罩），默认重定向到知识库列表 |
 | `/platform/dev/markdown` | `markdownTest` | `src/views/dev/MarkdownTestPage.vue` | 仅开发模式（`import.meta.env.DEV`）注册的 Markdown 渲染视觉回归测试页 |
+<!-- | `/join` | `joinOrganization` | 重定向 | 加入组织邀请链接，把 `?code=` 转成 `invite_code` 参数并跳到 `/platform/organizations` | -->
 
 ### `/platform` 子路由
 
@@ -123,13 +123,13 @@ flowchart TB
 | `/platform/creatChat` | `globalCreatChat` | `src/views/creatChat/creatChat.vue` | 新建对话页：推荐问题、选择知识库/Agent/模型后发起会话 |
 | `/platform/knowledge-bases/:kbId/creatChat` | `kbCreatChat` | `src/views/creatChat/creatChat.vue` | 从某个知识库上下文发起新对话（同一组件） |
 | `/platform/chat/:chatid` | `chat` | `src/views/chat/index.vue` | 会话页：消息流（SSE 流式渲染、骨架屏、虚拟滚动）、引用面板、附件预览 |
-<!-- | `/platform/organizations` | `organizationList` | `src/views/organization/OrganizationList.vue` | 组织列表：创建/加入组织、成员与共享资源管理（配合 `OrganizationSettingsModal.vue`） | -->
 | `/platform/settings` | `settings` | `src/views/settings/Settings.vue` | 设置中心（全屏模态形态），分区见下方「设置中心的分区与可见性」 |
 | `/platform/tenant` | — | 重定向 | 兼容旧路径 → `/platform/settings` |
 | `/platform/knowledge-search` | — | 重定向 | 旧全局搜索路径 → 知识库列表并通过 `?cmdk=` 打开全局命令面板（⌘K） |
 | `/platform/integrations` | — | 重定向 | → `/platform/settings?section=integrations`（API / Chrome 扩展 / Claw Skill 集成，视图在 `src/views/integrations/`） |
 | `/platform/system`、`/platform/system/settings`、`/platform/system/admins` | `systemSettings` / `systemAdmins` | 重定向 | 系统管理旧路径 → `/platform/settings?section=system-global`，要求 `requiresSystemAdmin`（视图在 `src/views/system/`：`SystemSettings.vue`、`SystemAuditLog.vue`、`PlatformAPIKeys.vue` 等） |
 | `/platform/system/queues` | `systemQueues` | 重定向 | → `/platform/settings?section=runtime-queues`（运行时任务队列 `src/views/system/RuntimeQueues.vue`） |
+<!-- | `/platform/organizations` | `organizationList` | `src/views/organization/OrganizationList.vue` | 组织列表：创建/加入组织、成员与共享资源管理（配合 `OrganizationSettingsModal.vue`） | -->
 
 ### 独立入口：嵌入页
 
@@ -195,8 +195,6 @@ flowchart TB
 | `stores/chatResources.ts` | `useChatResourcesStore` | 空间级资源缓存（TTL 60s）：知识库、Agent、模型、Web 搜索 provider 列表，供聊天/新建对话选择器复用 |
 | `stores/editorResources.ts` | `useEditorResourcesStore` | 编辑器/设置相关资源缓存（TTL 60s）：存储引擎配置与状态、Prompt 模板、解析引擎、系统信息、MCP 服务、Skill、Agent 类型预设、检索配置 |
 | `stores/commandPalette.ts` | `useCommandPaletteStore` | 全局命令面板（⌘K / Ctrl+K）开关与查询；最近搜索按 (user, tenant) 作用域存储避免跨账号泄漏 |
-<!-- | `stores/organization.ts` | `useOrganizationStore` | … | -->
-<!-- | `stores/organizationState.ts` | 纯函数模块 | … | -->
 | `stores/settings.ts` | 设置 store | 会话与 Agent 配置：选中的知识库/文件/标签/MCP/Skill/工具、模型配置、Ollama 配置、Web 搜索开关等 |
 | `stores/settingsStorage.ts` | 纯函数模块 | 设置持久化（`智能体中台2.0_settings` key）的读取、克隆与内建 Agent 模式修复（配套 `settingsStorage.test.mjs`） |
 | `stores/menu.ts` | `useMenuStore` | 左侧导航菜单结构（新建对话、知识库、Agent 等条目）与 i18n 标题 |
@@ -204,6 +202,8 @@ flowchart TB
 | `stores/ui.ts` | `useUIStore` | 全局 UI 状态：设置模态、知识库编辑模态、手工文档编辑器、侧栏折叠等开关与参数 |
 | `stores/uploadConfirm.ts` | 上传确认 store | 上传/URL 导入/手工录入/重新解析前的处理参数确认对话框状态 |
 | `stores/versionedRequest.ts` | 纯函数模块 | `createVersionedRequestCoordinator`：带版本号的缓存请求协调器，防止旧响应覆盖新写入（配套 `versionedRequest.test.ts`） |
+<!-- | `stores/organization.ts` | `useOrganizationStore` | … | -->
+<!-- | `stores/organizationState.ts` | 纯函数模块 | … | -->
 
 ## API 封装（frontend/src/api/）
 
@@ -220,7 +220,6 @@ flowchart TB
 | --- | --- |
 | `api/auth/` | 登录、注册、OIDC、`autoSetup`（Lite 免登录）、`getCurrentUser` 会话恢复 |
 | `api/tenant/`（`index` / `members` / `invitations` / `audit-log`） | 租户（工作空间）信息、成员管理、邀请、审计日志 |
-<!-- | `api/organization/` | 组织 CRUD、成员、共享知识库/Agent、加入申请 | -->
 | `api/knowledge-base/` | 知识库 CRUD 与文件/知识条目管理 |
 | `api/chat/`（`index` / `streame` / `temporary-attachments`) | 会话 CRUD、标题生成、SSE 流式问答、临时附件 |
 | `api/chat-history.ts` | 聊天历史记录 |
@@ -228,7 +227,6 @@ flowchart TB
 | `api/model/` | 模型配置管理 |
 | `api/retrieval.ts` | 租户检索配置 |
 | `api/vector-store.ts` / `api/storage-backend.ts` / `api/chunker/` | 向量库、存储后端、分块器配置 |
-<!-- | `api/datasource/` | 数据源接入 | -->
 | `api/embed/` | 网页嵌入渠道管理（创建渠道、限流等） |
 | `api/initialization/` | 系统初始化流程 |
 | `api/system/` | 系统信息、存储引擎状态、Prompt 模板、解析引擎等系统级接口 |
@@ -237,6 +235,8 @@ flowchart TB
 | `api/wiki/` | 知识库 Wiki 生成相关接口 |
 | `api/message-suggestion.ts` | 推荐问题 |
 | `api/user-favorites.ts` | 用户收藏（知识库/Agent 收藏列表） |
+<!-- | `api/organization/` | 组织 CRUD、成员、共享知识库/Agent、加入申请 | -->
+<!-- | `api/datasource/` | 数据源接入 | -->
 
 ## 对话时间线的等待态
 

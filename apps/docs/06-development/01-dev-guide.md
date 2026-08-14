@@ -249,13 +249,13 @@ make fmt && make lint && make test
 | `workflows/frontend.yml` | `frontend/`、`scripts/build_frontend_dist.sh` | Node 24：`npm test` + `npm run type-check` + `npm run build` |
 | `workflows/docreader.yml` | `docreader/`、`testdata/`、`packages/`、相关 Dockerfile | uv 装依赖 → `compileall` → `unittest discover docreader/tests`；再拉起 docreader gRPC 服务跑 `go test ./docreader/client ./docreader/proto` |
 | `workflows/mcp-server.yml` | `mcp-server/` | Python 3.10-3.13 矩阵测试；合入 main 后按 `pyproject.toml` 里的版本号用 PyPI Trusted Publishing 自动发布（版本已存在则跳过上传，不依赖打 tag） |
-<!-- | `workflows/cli.yml` | `cli/` | … | -->
-<!-- | `workflows/cli-e2e.yml` | 手动 / label | CLI 端到端验收 | -->
 | `workflows/docker-image.yml` | — | Docker 镜像构建发布 |
-<!-- | `workflows/release-lite.yml` | — | Lite 版本发布 | -->
 | `pull_request_template.md` | — | PR 模板 |
 | `ISSUE_TEMPLATE/` | — | Issue 模板 |
 | `dependabot.yml` | — | 依赖升级机器人 |
+<!-- | `workflows/cli.yml` | `cli/` | … | -->
+<!-- | `workflows/cli-e2e.yml` | 手动 / label | CLI 端到端验收 | -->
+<!-- | `workflows/release-lite.yml` | — | Lite 版本发布 | -->
 
 四条按路径触发的检查（app / frontend / docreader / mcp-server）覆盖了主要模块，但本地先跑一遍仍然更省时间。前端可以直接用 `scripts/verify_frontend_pr.sh`，它按 CI 同样的顺序执行 `npm test` → `npm run type-check` → `npm run build`。
 
