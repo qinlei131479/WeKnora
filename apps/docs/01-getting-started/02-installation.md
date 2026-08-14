@@ -151,10 +151,10 @@ make docker-build-frontend
 | `make migrate-up` / `migrate-down` / `migrate-version` / `migrate-create name=x` / `migrate-force version=n` / `migrate-goto version=n` | 数据库迁移（`scripts/migrate.sh`；容器内默认 `AUTO_MIGRATE=true` 启动时自动迁移） |
 | `make dev-*` | 开发模式（见上文） |
 | `make build` / `run` / `build-prod` | 本地编译运行 `cmd/server`（`build-prod` 需 CGO，注入版本号与 `Edition=standard`） |
-<!-- | `make build-lite` / `run-lite` / `package-lite` | Lite 模式构建 / 运行（读 `.env.lite`）/ 打发行包 |
-| `make package-mac-app` | 打包 macOS 桌面应用 | -->
 | `make docs` / `install-swagger` | 生成 Swagger 文档（`http://localhost:8080/swagger/index.html`，release 模式禁用） |
 | `make clean-db` | 删除 postgres/minio/redis 数据卷（危险操作） |
+
+<!-- 业务文档默认隐藏：make build-lite / run-lite / package-lite / package-mac-app -->
 
 ## 五、scripts/ 启动脚本
 

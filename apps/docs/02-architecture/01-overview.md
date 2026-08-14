@@ -1,5 +1,7 @@
 # 总体架构
 
+> 本组属于 **研发手册**（快速开始 → 架构 → 功能 → API → 客户端 → 开发）。产品使用见 [产品手册](/00-product/01-overview)。
+
 本章从部署视角与代码视角两个维度介绍 智能体中台2.0 的整体架构：系统由哪些进程/容器组成、各组件之间如何通信、使用了哪些技术栈，以及代码仓库的顶层目录布局。
 
 ## 1. 系统组成
@@ -181,10 +183,7 @@ sequenceDiagram
 | `internal/` | Go 后端全部业务代码（分层结构见后端设计篇）：`handler`、`application/service`、`application/repository`、`container`（DI）、`router`、`middleware`、`types`、`agent`、`im`、`mcp`、`stream`、`sandbox` 等 |
 | `frontend/` | Vue3 + Vite + TDesign 的 Web 前端，构建产物由 NGINX 或 Lite 模式内嵌托管 |
 | `docreader/` | Python gRPC 文档解析微服务：`main.py` 服务端入口、`parser/` 25+ 解析器、`splitter/` 分割器、`proto/` 协议定义、独立 `Dockerfile.docreader` 构建 |
-<!-- | `cli/` | `weknora` 命令行工具（约 30 个子命令：部署、日志、备份、诊断等） | -->
-<!-- | `client/` | Go SDK：以 HTTP 客户端形式封装智能体中台2.0 API，供开发集成 | -->
 | `mcp-server/` | Python 实现的 MCP Server（`weknora_mcp_server.py`），把智能体中台2.0 API 暴露为 MCP 工具给 Claude 等 MCP 客户端 |
-<!-- | `miniprogram/` | 微信小程序客户端（WXML/WXSS/JS） | -->
 | `migrations/` | golang-migrate 数据库迁移：`versioned/`（Postgres 主线 `NNNNNN_*.up/down.sql`）、`sqlite/`（Lite 模式）、`paradedb/`、`mysql/` |
 | `config/` | 运行配置：`config.yaml` 主配置、`builtin_agents.yaml` 内置 Agent、`agent_type_presets.yaml` Agent 预设、`builtin_models.yaml.example` 声明式内置模型、`prompt_templates/` 提示词模板 |
 | `docker/` | 各镜像 Dockerfile（app/docreader/sandbox/odl-hybrid）与 searxng 配置 |
@@ -199,6 +198,8 @@ sequenceDiagram
 | `misc/` | 杂项（如 `dex-config.yaml` OIDC 测试配置） |
 | `packages/` | 预留的本地包目录 |
 | `docs/` | 早期文档，部分内容已过时 |
+
+<!-- 业务默认未开放，不列入上表：cli/、client/、miniprogram/ -->
 
 > 说明：Go 模块路径为 `github.com/Tencent/WeKnora`；根目录还包含 `docker-compose.yml`（生产编排）与 `docker-compose.dev.yml`（开发编排）、`Makefile`、`VERSION` 等。
 

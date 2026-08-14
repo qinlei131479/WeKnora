@@ -20,7 +20,8 @@ const schema = [
     hint: '资料从哪里来',
     // 业务默认未开放数据源同步（Notion / 语雀 / RSS）；飞书此处指 IM 渠道入库
     items: ['文件上传', 'URL 抓取', '飞书 IM', '企微 IM', '钉钉 IM'],
-  },  {
+  },
+  {
     step: '02',
     name: '理解',
     hint: '转成结构化文本',
@@ -105,13 +106,13 @@ const features = [
     href: '/03-features/12-im-integration',
     tag: '接入',
   },
-  {
-    icon: 'mcp',
-    title: 'MCP 双向集成',
-    desc: '作为客户端接入外部 MCP 服务，支持 OAuth 授权与工具级人工审批；同时可作为 MCP Server 对外提供检索能力。',
-    href: '/03-features/08-mcp',
-    tag: '工具生态',
-  },
+  // {
+  //   icon: 'mcp',
+  //   title: 'MCP 双向集成',
+  //   desc: '作为客户端接入外部 MCP 服务，支持 OAuth 授权与工具级人工审批；同时可作为 MCP Server 对外提供检索能力。',
+  //   href: '/03-features/08-mcp',
+  //   tag: '工具生态',
+  // },
   {
     icon: 'govern',
     title: '多空间隔离与审计',
@@ -152,32 +153,22 @@ const features = [
 
 const map = [
   {
-    index: '01',
+    index: '00',
     icon: 'start',
-    title: '快速开始',
-    brief: '按顺序读完四篇，可完成部署并跑通首次问答。',
+    title: '产品手册',
+    brief: '产品概述、功能说明、应用场景与操作指南。',
     items: [
-      { text: '产品介绍', link: '/01-getting-started/01-introduction' },
-      { text: '安装部署', link: '/01-getting-started/02-installation' },
-      { text: '快速上手', link: '/01-getting-started/03-quickstart' },
-      { text: '配置详解', link: '/01-getting-started/04-configuration' },
+      { text: '产品概述', link: '/00-product/01-overview' },
+      { text: '功能说明', link: '/00-product/02-capability-map' },
+      { text: '应用场景', link: '/00-product/03-scenarios' },
+      { text: '操作指南', link: '/00-product/04-user-guide' },
+      { text: '角色与权限', link: '/00-product/05-roles-delivery' },
+      { text: '常见问题', link: '/00-product/06-faq' },
     ],
   },
+
   {
-    index: '02',
-    icon: 'arch',
-    title: '架构',
-    brief: '系统全貌，以及文档入库与检索问答两条主干流水线。',
-    items: [
-      { text: '总体架构', link: '/02-architecture/01-overview' },
-      { text: 'Go 后端设计', link: '/02-architecture/02-backend-design' },
-      { text: '文档入库流程', link: '/02-architecture/03-document-pipeline' },
-      { text: '检索问答流程', link: '/02-architecture/04-rag-pipeline' },
-      { text: '异步任务系统', link: '/02-architecture/05-async-tasks' },
-    ],
-  },
-  {
-    index: '03',
+    index: '01',
     icon: 'modules',
     title: '功能模块',
     brief: '当前业务开放能力的配置项、行为约定与实现路径。',
@@ -206,52 +197,77 @@ const map = [
     ],
   },
   {
-    index: '04',
-    icon: 'api',
-    title: 'API 参考',
-    brief: '开放接口说明，含权限要求、参数表与 curl 示例。',
+    index: '02',
+    icon: 'start',
+    title: '快速开始',
+    brief: '安装、配置与首次问答验证（按需查阅）。',
     items: [
-      { text: 'API 总览', link: '/04-api/01-api-overview' },
-      { text: 'Agent、MCP 与技能', link: '/04-api/02-api-agent-mcp' },
-      { text: '认证与用户', link: '/04-api/02-api-auth' },
-      { text: 'IM、Embed 与文件', link: '/04-api/02-api-channels' },
-      { text: '会话、消息与聊天', link: '/04-api/02-api-chat' },
-      { text: 'FAQ 与 Wiki', link: '/04-api/02-api-faq-wiki' },
-      { text: '基础设施', link: '/04-api/02-api-infra' },
-      { text: '知识库与知识', link: '/04-api/02-api-knowledge' },
-      { text: '分块与标签', link: '/04-api/02-api-chunks' },
-      { text: '模型与初始化', link: '/04-api/02-api-model-system' },
-      { text: '系统与平台管理', link: '/04-api/02-api-system' },
-      // { text: '组织与共享', link: '/04-api/02-api-org' },
-      { text: '租户与成员', link: '/04-api/02-api-tenant' },
+      { text: '产品介绍', link: '/01-getting-started/01-introduction' },
+      { text: '安装部署', link: '/01-getting-started/02-installation' },
+      { text: '快速上手', link: '/01-getting-started/03-quickstart' },
+      { text: '配置详解', link: '/01-getting-started/04-configuration' },
     ],
   },
   {
-    index: '05',
-    icon: 'clients',
-    title: '客户端',
-    brief: 'Web 控制台等当前开放入口。',
+    index: '03',
+    icon: 'arch',
+    title: '研发手册 · 架构',
+    brief: '系统全貌，以及文档入库与检索问答两条主干流水线。',
     items: [
-      { text: 'Web 前端', link: '/05-clients/01-frontend' },
+      { text: '总体架构', link: '/02-architecture/01-overview' },
+      { text: 'Go 后端设计', link: '/02-architecture/02-backend-design' },
+      { text: '文档入库流程', link: '/02-architecture/03-document-pipeline' },
+      { text: '检索问答流程', link: '/02-architecture/04-rag-pipeline' },
+      { text: '异步任务系统', link: '/02-architecture/05-async-tasks' },
+    ],
+  },
+  //{
+  //  index: '04',
+  //  icon: 'api',
+  //  title: 'API 参考',
+   // brief: '开放接口说明，含权限要求、参数表与 curl 示例。',
+  //  items: [
+   //   { text: 'API 总览', link: '/04-api/01-api-overview' },
+   //   { text: 'Agent、MCP 与技能', link: '/04-api/02-api-agent-mcp' },
+    //  { text: '认证与用户', link: '/04-api/02-api-auth' },
+   //   { text: 'IM、Embed 与文件', link: '/04-api/02-api-channels' },
+   //   { text: '会话、消息与聊天', link: '/04-api/02-api-chat' },
+    //  { text: 'FAQ 与 Wiki', link: '/04-api/02-api-faq-wiki' },
+    //  { text: '基础设施', link: '/04-api/02-api-infra' },
+    //  { text: '知识库与知识', link: '/04-api/02-api-knowledge' },
+    //  { text: '分块与标签', link: '/04-api/02-api-chunks' },
+    //  { text: '模型与初始化', link: '/04-api/02-api-model-system' },
+    //  { text: '系统与平台管理', link: '/04-api/02-api-system' },
+      // { text: '组织与共享', link: '/04-api/02-api-org' },
+    //  { text: '租户与成员', link: '/04-api/02-api-tenant' },
+    //],
+  //},
+  //{
+  //  index: '05',
+  //  icon: 'clients',
+  //  title: '客户端',
+  //  brief: 'Web 控制台等当前开放入口。',
+  //  items: [
+   //   { text: 'Web 前端', link: '/05-clients/01-frontend' },
       // { text: '命令行工具 CLI', link: '/05-clients/02-cli' },
       // { text: 'Go SDK', link: '/05-clients/03-go-sdk' },
       // { text: '微信小程序', link: '/05-clients/04-miniprogram' },
       // { text: '桌面客户端', link: '/05-clients/05-desktop' },
       // { text: 'Chrome 插件', link: '/05-clients/06-chrome-extension' },
       // { text: 'Claw Skill', link: '/05-clients/07-claw-skill' },
-    ],
-  },
-  {
-    index: '06',
-    icon: 'dev',
-    title: '开发指南',
-    brief: '本地开发环境、数据库迁移，以及九类可插拔扩展点。',
-    items: [
-      { text: '开发指南', link: '/06-development/01-dev-guide' },
-      { text: '数据库与迁移', link: '/06-development/02-database-schema' },
-      { text: '扩展点指南', link: '/06-development/03-extension-points' },
-    ],
-  },
+  //  ],
+  //},
+  //{
+  //  index: '06',
+  //  icon: 'dev',
+  //  title: '开发指南',
+  //  brief: '本地开发环境、数据库迁移，以及九类可插拔扩展点。',
+  //  items: [
+  //    { text: '开发指南', link: '/06-development/01-dev-guide' },
+  //    { text: '数据库与迁移', link: '/06-development/02-database-schema' },
+   //   { text: '扩展点指南', link: '/06-development/03-extension-points' },
+  //  ],
+  //},
 ]
 
 const deployments = [
@@ -278,10 +294,10 @@ const deployments = [
            知识库问答系统
           </h1>
           <p class="lede">智能体中台2.0 将 PDF、Word、网页等资料汇入知识库，提供检索增强的问答能力，回答标注可追溯的出处。除基础问答外，还提供 <strong>Wiki 自动成书</strong>、<strong>ReAct Agent 与 MCP 双向集成</strong>、<strong>知识图谱增强检索</strong>，以及面向团队的<strong>多空间隔离、四级 RBAC、作用域 API Key 与审计日志</strong>。支持完整私有部署，模型可全部替换为本地推理。</p>
-          <p class="lede lede-sub">本文档覆盖部署与配置、功能说明、约 360 个 API 端点的接口参考，以及开发扩展点。</p>
+          <p class="lede lede-sub">文档以两本手册为主：产品（概述与操作）、研发（架构与扩展）。</p>
           <div class="actions">
-            <a class="btn btn-solid" :href="withBase('/01-getting-started/01-introduction')">开始阅读</a>
-            <a class="btn btn-ghost" :href="withBase('/02-architecture/01-overview')">系统架构</a>
+            <a class="btn btn-solid" :href="withBase('/00-product/01-overview')">产品</a>
+            <a class="btn btn-ghost" :href="withBase('/01-getting-started/01-introduction')">研发</a>
           </div>
         </div>
 
@@ -460,7 +476,7 @@ const deployments = [
       </div>
     </section>
 
-    <!-- ============================ 部署 ============================ -->
+    <!-- ============================ 部署 ============================
     <section class="chapter">
       <div class="shell deploy">
         <div class="deploy-copy">
@@ -510,7 +526,7 @@ open http://localhost
         </div>
       </div>
     </section>
-
+-->
     <!-- ============================ 结尾 ============================ -->
     <footer class="closing">
       <div class="shell closing-inner">
@@ -535,9 +551,10 @@ open http://localhost
           </svg>
           <span>智能体中台2.0</span>
         </div>
-        <p class="closing-note">文档基于仓库 {{ versionLabel }} 源码整理。源码路径均相对仓库根目录，API 路径默认带 <code>/api/v1</code> 前缀，配置示例中的密钥均为占位符。</p>
+        <p class="closing-note">文档基于仓库 {{ versionLabel }} 源码整理。</p>
         <div class="closing-links">
-          <a :href="withBase('/01-getting-started/01-introduction')">快速开始</a>
+          <a :href="withBase('/00-product/01-overview')">产品手册</a>
+          <a :href="withBase('/01-getting-started/01-introduction')">研发手册</a>
           <a :href="withBase('/04-api/01-api-overview')">API 总览</a>
           <a :href="withBase('/06-development/03-extension-points')">扩展点</a>
         </div>
@@ -692,12 +709,18 @@ open http://localhost
 }
 
 .btn-text {
-  padding: 0 6px;
-  color: var(--wk-ink-mute);
+  border: none;
+  background: transparent;
+  padding-left: 6px;
+  padding-right: 6px;
+  font-size: 15px;
+  color: var(--wk-ink-mute, #6e6e73);
 }
 
 .btn-text:hover {
-  color: var(--wk-ink);
+  color: var(--wk-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 /* 系统组件概览 */
