@@ -84,11 +84,6 @@
                   <div class="role-denied-desc">{{ $t('settings.roleDenied.desc') }}</div>
                 </div>
                 <template v-else>
-                  <!-- 常规设置 -->
-                  <div v-if="currentSection === 'general'" class="section">
-                    <GeneralSettings />
-                  </div>
-
                   <!-- Ollama 设置 -->
                   <div v-if="currentSection === 'ollama'" class="section">
                     <OllamaSettings />
@@ -196,7 +191,6 @@ import { useI18n } from 'vue-i18n'
 import SystemInfo from './SystemInfo.vue'
 import TenantInfo from './TenantInfo.vue'
 import UserProfile from './UserProfile.vue'
-import GeneralSettings from './GeneralSettings.vue'
 import ModelSettings from './ModelSettings.vue'
 import OllamaSettings from './OllamaSettings.vue'
 import McpSettings from './McpSettings.vue'
@@ -230,7 +224,7 @@ const uiStore = useUIStore()
 const authStore = useAuthStore()
 const { t } = useI18n()
 
-const currentSection = ref<string>('general')
+const currentSection = ref<string>('userprofile')
 const currentSubSection = ref<string>('')
 const expandedMenus = ref<string[]>([])
 
@@ -252,7 +246,7 @@ type NavGroup = {
 // internal/router/router.go 的守卫矩阵对齐。
 // 以「页面里至少有 1 个有意义的写操作所要求的最低角色」为基准，把基础设
 // 施配置（models 写、ollama 下载、websearch 写、parser/storage/vector/mcp
-// CRUD、chat-history 配置）统一收到 admin；只读类（general / system info /
+// CRUD、chat-history 配置）统一收到 admin；只读类（system info /
 // tenant-info / members 名册）保留 viewer 可见；最高敏感的 reset api
 // key 是 owner-only。改这张表前请在 router.go 里复核对应路由组。
 //
@@ -284,6 +278,9 @@ const isIntegrationSection = (section: string) => {
 }
 
 const normalizeSettingsSection = (section: string) => {
+  if (section === 'general') {
+    return 'userprofile'
+  }
   if (section === 'api') {
     return integrationSectionKey('api')
   }
@@ -321,7 +318,6 @@ const navItems = computed(() => {
     label: t(`integrations.tabs.${item.key}`),
   }))
   const all: NavItem[] = [
-    { key: 'general', icon: 'setting', label: t('general.title') },
     { key: 'ollama', icon: 'server', label: 'Ollama' },
     { key: 'weknoracloud', icon: '', label: 'WeKnora Cloud' },
     { key: 'models', icon: 'control-platform', label: t('settings.modelManagement') },
@@ -354,14 +350,14 @@ const navGroups = computed<NavGroup[]>(() => {
   const itemMap = new Map(navItems.value.map((item) => [item.key, item]))
   const pickItems = (keys: string[]) => keys.map((key) => itemMap.get(key)).filter(Boolean) as NavItem[]
   // 分组：账户 → 空间 → 模型 → 发布集成 → 数据与扩展 → 系统管理 → 平台
-  // 关键调整：把个人偏好(general)和用户信息收进「账户」；
+  // 关键调整：把用户信息收进「账户」；
   // 把空间内功能开关(chathistory)从「平台」挪到「空间」；
   // 把检索引擎和外部集成合并为「数据与扩展」，避免两个 2~3 项的窄分组。
   return [
     {
       key: 'account',
       label: t('settings.navGroups.account'),
-      items: pickItems(['general', 'userprofile']),
+      items: pickItems(['userprofile']),
     },
     {
       key: 'workspace',
@@ -520,7 +516,7 @@ watch(
 // 如果 currentSection 落到了不再显示的 key 上，就回退到第一个可见项。
 watch(navItems, (items) => {
   if (!items.some((item) => item.key === currentSection.value)) {
-    currentSection.value = items[0]?.key || 'general'
+    currentSection.value = items[0]?.key || 'userprofile'
     currentSubSection.value = ''
   }
 })

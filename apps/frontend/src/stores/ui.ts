@@ -25,7 +25,7 @@ export const useUIStore = defineStore('ui', {
 
   actions: {
     openSettings(section?: string, subSection?: string) {
-      this.settingsInitialSection = section || null
+      this.settingsInitialSection = section || 'userprofile'
       this.settingsInitialSubSection = subSection || null
       this.showSettingsModal = true
     },

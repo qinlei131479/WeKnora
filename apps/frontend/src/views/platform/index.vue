@@ -18,6 +18,11 @@
                     </t-tooltip>
                 </div>
                 <div class="platform-topbar-right" style="--wails-draggable: no-drag">
+                    <div class="platform-topbar-prefs">
+                        <LanguageSwitch variant="topbar" />
+                        <ThemeToggle />
+                        <FontSizeSelect />
+                    </div>
                     <GlobalInvitationBell />
                     <t-tooltip :content="t('general.settings')" placement="bottom">
                         <div class="platform-topbar-icon" data-guide="settings-btn"
@@ -53,6 +58,9 @@ import GlobalCommandPalette from '@/components/GlobalCommandPalette.vue'
 import GlobalInvitationBell from '@/components/GlobalInvitationBell.vue'
 import NewUserGuide from '@/components/NewUserGuide.vue'
 import UserMenu from '@/components/UserMenu.vue'
+import LanguageSwitch from '@/components/LanguageSwitch.vue'
+import ThemeToggle from '@/components/ThemeToggle.vue'
+import FontSizeSelect from '@/components/FontSizeSelect.vue'
 import { useCommandPaletteStore } from '@/stores/commandPalette'
 import { useUIStore } from '@/stores/ui'
 import { useChatResourcesStore } from '@/stores/chatResources'
@@ -332,6 +340,15 @@ onUnmounted(() => {
 .platform-topbar-right {
     gap: 4px;
     justify-content: flex-end;
+}
+
+.platform-topbar-prefs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-right: 8px;
+    margin-right: 4px;
+    border-right: 1px solid var(--td-component-stroke);
 }
 
 .platform-topbar-icon {
