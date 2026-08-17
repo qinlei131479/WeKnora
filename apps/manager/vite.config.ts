@@ -1,31 +1,32 @@
-import { defineConfig, loadEnv } from 'vite'
-import path from 'path'
-import createVitePlugins from './vite/plugins'
+import { defineConfig, loadEnv } from 'vite';
+import path from 'path';
+import createVitePlugins from './vite/plugins';
 
-const port = Number(process.env.port) || 80 // 端口
-const PROXY_API_TARGET =  process.env.PROXY_API_TARGET || 'http://192.168.180.238:9888/prod-api' // 后端接口
-const STATIC_API_TARGET =  process.env.STATIC_API_TARGET || 'http://192.168.180.238:9888' // 静态资源接口
+const port = Number(process.env.port) || 80; // 端口
+const PROXY_API_TARGET = process.env.PROXY_API_TARGET || 'http://192.168.180.238:9888/prod-api'; // 后端接口
+const STATIC_API_TARGET = process.env.STATIC_API_TARGET || 'http://192.168.180.238:9888'; // 静态资源接口
 
+const preview_port = Number(process.env.preview_port) || 80; // 预览端口
 // https://vitejs.dev/config/
 export default defineConfig(({ mode, command }) => {
-  const env = loadEnv(mode, process.cwd())
-  const { VITE_APP_ENV, VITE_APP_BASE_API, VITE_APP_STATIC_API } = env
+  const env = loadEnv(mode, process.cwd());
+  const { VITE_APP_ENV, VITE_APP_BASE_API, VITE_APP_STATIC_API } = env;
   const isHttp = (url: string) => {
-    return url.startsWith('http://') || url.startsWith('https://')
-  }
+    return url.startsWith('http://') || url.startsWith('https://');
+  };
   const proxy: any = {};
-  if (VITE_APP_BASE_API &&!isHttp(VITE_APP_BASE_API)) {
+  if (VITE_APP_BASE_API && !isHttp(VITE_APP_BASE_API)) {
     proxy[VITE_APP_BASE_API] = {
       target: PROXY_API_TARGET,
       changeOrigin: true,
       rewrite: (p: string) => p.replace(new RegExp(VITE_APP_BASE_API), '')
-    }
+    };
   }
   if (VITE_APP_STATIC_API && !isHttp(VITE_APP_STATIC_API)) {
     proxy[VITE_APP_STATIC_API] = {
       target: STATIC_API_TARGET,
       changeOrigin: true
-    }
+    };
   }
   return {
     // 部署生产环境和开发环境下的URL。
@@ -66,6 +67,14 @@ export default defineConfig(({ mode, command }) => {
       open: true,
       proxy: proxy
     },
+    // `vite preview` 用生产构建产物(dist)本地起服务，是最接近 release 镜像的环境：
+    // 同样的压缩 / 拆包 / CSS 加载顺序，可提前暴露只在生产构建出现的问题
+    // （如主题变量被打包顺序覆盖）。用法：npm run build && npm run preview
+    preview: {
+      port: preview_port,
+      host: true,
+      proxy: proxy
+    },
     css: {
       postcss: {
         plugins: [
@@ -74,7 +83,7 @@ export default defineConfig(({ mode, command }) => {
             AtRule: {
               charset: (atRule: any) => {
                 if (atRule.name === 'charset') {
-                  atRule.remove()
+                  atRule.remove();
                 }
               }
             }
@@ -82,5 +91,5 @@ export default defineConfig(({ mode, command }) => {
         ]
       }
     }
-  }
-})
+  };
+});

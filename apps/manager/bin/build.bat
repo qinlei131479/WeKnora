@@ -1,12 +1,21 @@
 @echo off
-echo.
-echo [ĞÅÏ¢] ´ò°üWeb¹¤³Ì£¬Éú³ÉdistÎÄ¼ş¡£
-echo.
-
+chcp 65001
 %~d0
 cd %~dp0
 
 cd ..
-yarn build:prod
 
-pause
+echo nvm_version: %nvm_version%
+@REM åˆ¤æ–­nvm_versionçš„å¤§ç‰ˆæœ¬æ˜¯ä¸æ˜¯v23
+if not "%nvm_version:~0,3%"=="v23" (
+    nvm use 23
+    @REM ç­‰1ç§’ï¼Œç¡®ä¿nvmåˆ‡æ¢å®Œæˆ
+    timeout /t 1 /nobreak
+)
+
+npm run build
+
+if not "%nvm_version:~0,3%"=="v23" (
+    nvm use %nvm_version%
+)
+
