@@ -9,26 +9,8 @@ import locale from 'element-plus/es/locale/lang/zh-cn';
 
 import '@/assets/styles/index.scss'; // global css
 import './index.css';
-import '@work-zhanguo/pptx-preview/style.css';
-import PptxPreviewPlugin from '@work-zhanguo/pptx-preview';
-
-import VMdEditor from '@kangc/v-md-editor';
-import '@kangc/v-md-editor/lib/style/base-editor.css';
-import VMdPreview from '@kangc/v-md-editor/lib/preview';
-import '@kangc/v-md-editor/lib/style/preview.css';
-import githubTheme from '@kangc/v-md-editor/lib/theme/github.js';
-import '@kangc/v-md-editor/lib/theme/style/github.css';
 import '@/assets/styles/newStyle.scss';
 import '@/assets/styles/newStyle2.scss';
-
-import hljs from 'highlight.js';
-
-VMdEditor.use(githubTheme, {
-  Hljs: hljs
-});
-VMdPreview.use(githubTheme, {
-  Hljs: hljs
-});
 
 import App from './App.vue';
 import store from './store';
@@ -81,7 +63,6 @@ import InputNumberRadius from '@/components/controls/InputNumberRadius.vue';
 import InputRadius from '@/components/controls/InputRadius.vue';
 import InputRound from '@/components/controls/InputRound.vue';
 import RadioGroup from '@/components/controls/RadioGroup.vue';
-import TreeCategory from '@/components/controls/TreeCategory.vue';
 
 const app = createApp(App);
 
@@ -121,7 +102,6 @@ app.component('input-number-radius', InputNumberRadius);
 app.component('input-radius', InputRadius);
 app.component('input-round', InputRound);
 app.component('radio-group', RadioGroup);
-app.component('tree-category', TreeCategory);
 app.component('g-text', OverflowTooltip);
 
 app.use(router);
@@ -130,9 +110,6 @@ app.use(plugins);
 app.use(elementIcons);
 app.use(KjscUi);
 app.component('svg-icon', SvgIcon);
-app.use(PptxPreviewPlugin);
-app.use(VMdPreview);
-app.use(VMdEditor);
 
 directive(app);
 

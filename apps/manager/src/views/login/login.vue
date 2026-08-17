@@ -59,9 +59,6 @@
                 <div v-else>登 录 中...</div>
               </btn>
             </el-form-item>
-            <div class="login-text2sql-entry">
-              <router-link to="/text2sql">智能对话（免登录）</router-link>
-            </div>
           </el-form>
         </div>
         <!-- <el-divider direction="vertical" style="height: 100%" />
@@ -520,23 +517,6 @@ getCookie();
 .login-submit {
   margin-bottom: 0px;
   width: 100%;
-}
-
-.login-text2sql-entry {
-  margin-top: 12px;
-  text-align: center;
-  font-size: 16px;
-  font-weight: 400;
-
-  a {
-    color: var(--el-color-primary);
-    text-decoration: none;
-
-    &:hover {
-      color: var(--el-color-primary-light-3);
-      text-decoration: underline;
-    }
-  }
 }
 
 .login-main-logo {

@@ -131,7 +131,7 @@
 </template>
 
 <script setup lang="ts">
-import type { SysOperLog } from '@/types/api/monitor/operlog'
+import type { SysOperLog } from '@/types/api/system/operlog'
 
 const { proxy } = getCurrentInstance()
 

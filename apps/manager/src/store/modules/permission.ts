@@ -34,11 +34,12 @@ const usePermissionStore = defineStore(
       },
       generateRoutes(roles?: any[]): Promise<any[]> {
         return new Promise(resolve => {
-          // 向后端请求路由数据
+          // 向后端请求路由数据，仅保留系统管理与租户管理页面
           getRouters().then(res => {
-            const sdata = JSON.parse(JSON.stringify(res.data))
-            const rdata = JSON.parse(JSON.stringify(res.data))
-            const defaultData = JSON.parse(JSON.stringify(res.data))
+            const keptMenus = filterKeptAdminMenus((res.data || []) as any[])
+            const sdata = JSON.parse(JSON.stringify(keptMenus))
+            const rdata = JSON.parse(JSON.stringify(keptMenus))
+            const defaultData = JSON.parse(JSON.stringify(keptMenus))
             const sidebarRoutes = filterAsyncRouter(sdata)
             const rewriteRoutes = filterAsyncRouter(rdata, false, true)
             const defaultRoutes = filterAsyncRouter(defaultData)
@@ -54,6 +55,53 @@ const usePermissionStore = defineStore(
       }
     }
   })
+
+const KEPT_VIEW_PREFIXES = ['system/', 'platformManager/tenantManager']
+
+function isDirectoryComponent(component: unknown): boolean {
+  return component === 'Layout' || component === 'ParentView' || component === 'InnerLink'
+}
+
+function isKeptAdminView(route: any): boolean {
+  const component = typeof route?.component === 'string' ? route.component : ''
+  if (!component || isDirectoryComponent(component)) {
+    return false
+  }
+  return KEPT_VIEW_PREFIXES.some(prefix => component.startsWith(prefix))
+}
+
+function joinRoutePath(parentPath = '', childPath = ''): string {
+  if (!childPath) {
+    return parentPath
+  }
+  if (childPath.startsWith('/')) {
+    return childPath
+  }
+  const normalizedParent = parentPath.endsWith('/') ? parentPath.slice(0, -1) : parentPath
+  return `${normalizedParent}/${childPath}`
+}
+
+// 后端菜单仍可能返回已下线业务模块，前端只放行系统管理与租户管理
+function filterKeptAdminMenus(routes: any[] = []): any[] {
+  const result: any[] = []
+  routes.forEach(route => {
+    const children = filterKeptAdminMenus(route.children || [])
+    if (!isKeptAdminView(route) && children.length === 0) {
+      return
+    }
+    const next = { ...route }
+    if (children.length > 0) {
+      next.children = children
+      if (typeof next.redirect === 'string' && next.redirect.toLowerCase() !== 'noredirect') {
+        next.redirect = joinRoutePath(next.path, children[0].path)
+      }
+    } else {
+      delete next.children
+    }
+    result.push(next)
+  })
+  return result
+}
 
 // 遍历后台传来的路由字符串，转换为组件对象
 function filterAsyncRouter(asyncRouterMap: any[], lastRouter = false, type = false) {

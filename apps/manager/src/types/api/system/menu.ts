@@ -57,3 +57,11 @@ export interface RoleMenuTreeselectResult extends AjaxResult<RoleMenuTreeselectR
   // /** 菜单树形结构 */
   // menus: TreeSelect[]
 }
+
+/** 菜单排序参数 */
+export interface MenuSortParams {
+  /** 菜单ID列表，逗号分隔 */
+  menuIds: string
+  /** 排序值列表，逗号分隔 */
+  orderNums: string
+}
