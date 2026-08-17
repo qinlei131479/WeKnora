@@ -3,6 +3,8 @@
 # 但不忽略特定隐藏文件和目录
 !.env.example
 !.env.kjsc.example
+!.python-version
+!**/.python-version
 !**/.env.local.example
 !**/.env.development.local.example
 !**/.env.development
@@ -37,6 +39,9 @@ tmp/
 temp/
 logs/
 *.pid
+
+# Agent-Harness 运行时数据（docker-compose-mac-gen.yml 挂载 docker/volumes/agent-harness）
+/docker/volumes/
 
 WeKnora
 WeKnora-lite
