@@ -1,69 +1,87 @@
 package com.iptv.common.security.utils;
 
-import com.iptv.common.core.exception.ServiceException;
-import com.iptv.common.core.utils.CryptoUtils;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import cn.hutool.core.util.ObjectUtil;
 import com.iptv.common.core.constant.SecurityConstants;
+import com.iptv.common.core.constant.TenantConstant;
 import com.iptv.common.core.constant.TokenConstants;
 import com.iptv.common.core.constant.UserConstants;
 import com.iptv.common.core.context.SecurityContextHolder;
+import com.iptv.common.core.exception.ServiceException;
+import com.iptv.common.core.utils.CryptoUtils;
 import com.iptv.common.core.utils.ServletUtils;
 import com.iptv.common.core.utils.StringUtils;
+import com.iptv.system.api.domain.SysUser;
 import com.iptv.system.api.model.LoginUser;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 /**
  * 权限获取工具类
- * 
+ *
  * @author ruoyi
  */
-public class SecurityUtils
-{
+public class SecurityUtils {
     /**
      * 获取用户ID
      */
-    public static Long getUserId()
-    {
+    public static Long getUserId() {
         return SecurityContextHolder.getUserId();
+    }
+
+    /**
+     * 获取租户ID
+     */
+    public static Long getTenantId() {
+        LoginUser loginUser = SecurityContextHolder.get(SecurityConstants.LOGIN_USER, LoginUser.class);
+        if (ObjectUtil.isNotNull(loginUser)) {
+            SysUser sysUser = loginUser.getSysUser();
+            if (ObjectUtil.isNotNull(sysUser)) {
+                return ObjectUtil.isNotNull(sysUser.getTenantId()) ? sysUser.getTenantId() : TenantConstant.ADMIN_TENANT_ID;
+            }
+        }
+        return TenantConstant.ADMIN_TENANT_ID;
+    }
+    /**
+     * 获取租户ID
+     */
+    public static Integer getTenantIdInt() {
+        Long tenantId = getTenantId();
+        return tenantId.intValue();
+//        return 10004;
     }
 
     /**
      * 获取用户名称
      */
-    public static String getUsername()
-    {
+    public static String getUsername() {
         return SecurityContextHolder.getUserName();
     }
 
     /**
      * 获取用户key
      */
-    public static String getUserKey()
-    {
+    public static String getUserKey() {
         return SecurityContextHolder.getUserKey();
     }
 
     /**
      * 获取登录用户信息
      */
-    public static LoginUser getLoginUser()
-    {
+    public static LoginUser getLoginUser() {
         return SecurityContextHolder.get(SecurityConstants.LOGIN_USER, LoginUser.class);
     }
 
     /**
      * 获取请求token
      */
-    public static String getToken()
-    {
+    public static String getToken() {
         return getToken(ServletUtils.getRequest());
     }
 
     /**
      * 根据request获取请求token
      */
-    public static String getToken(HttpServletRequest request)
-    {
+    public static String getToken(HttpServletRequest request) {
         // 从header获取token标识
         String token = request.getHeader(SecurityConstants.AUTHORIZATION_HEADER);
         return replaceTokenPrefix(token);
@@ -72,11 +90,9 @@ public class SecurityUtils
     /**
      * 裁剪token前缀
      */
-    public static String replaceTokenPrefix(String token)
-    {
+    public static String replaceTokenPrefix(String token) {
         // 如果前端设置了令牌前缀，则裁剪掉前缀
-        if (StringUtils.isNotEmpty(token) && token.startsWith(TokenConstants.PREFIX))
-        {
+        if (StringUtils.isNotEmpty(token) && token.startsWith(TokenConstants.PREFIX)) {
             token = token.replaceFirst(TokenConstants.PREFIX, "");
         }
         return token;
@@ -84,22 +100,20 @@ public class SecurityUtils
 
     /**
      * 是否为管理员
-     * 
+     *
      * @return 结果
      */
-    public static boolean isAdmin()
-    {
+    public static boolean isAdmin() {
         return isAdmin(getUserId());
     }
 
     /**
      * 是否为管理员
-     * 
+     *
      * @param userId 用户ID
      * @return 结果
      */
-    public static boolean isAdmin(Long userId)
-    {
+    public static boolean isAdmin(Long userId) {
         return UserConstants.isAdmin(userId);
     }
 
@@ -109,8 +123,7 @@ public class SecurityUtils
      * @param password 密码
      * @return 加密字符串
      */
-    public static String encryptPassword(String password)
-    {
+    public static String encryptPassword(String password) {
         password = deParamPassword(password);
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         return passwordEncoder.encode(password);
@@ -119,21 +132,20 @@ public class SecurityUtils
     /**
      * 判断密码是否相同
      *
-     * @param rawPassword 真实密码
+     * @param rawPassword     真实密码
      * @param encodedPassword 加密后字符
      * @return 结果
      */
-    public static boolean matchesPassword(String rawPassword, String encodedPassword)
-    {
+    public static boolean matchesPassword(String rawPassword, String encodedPassword) {
         rawPassword = deParamPassword(rawPassword);
         BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         return passwordEncoder.matches(rawPassword, encodedPassword);
     }
+
     /**
      * 前端传的密码都是公钥加密后的密码，统一使用此方法解密再使用
      *
-     * @param paramPassword
-     *            参数中的密码
+     * @param paramPassword 参数中的密码
      * @return 解密后的密码
      */
     private static String deParamPassword(String paramPassword) {
