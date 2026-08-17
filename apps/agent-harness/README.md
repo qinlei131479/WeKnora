@@ -1,0 +1,42 @@
+# Agent-Harness：从 Bubble-Weave/Yuxi 迁入的 Python LangGraph 运行时。
+
+源码来自独立仓库 Bubble-Weave，第一阶段保持接口独立：
+
+- 后端：本目录（FastAPI + LangGraph + ARQ）
+- 临时前端：`apps/agent-web`
+- 部署：`docker-compose-kjsc.yml` 的 `--profile agent-harness`
+
+## 启动
+
+```bash
+# 1. 补齐 JWT / Sandbox Token（可复用已有 .env）
+./scripts/init_agent_harness.sh
+
+# 2. 启动（会顺带拉起 minio / milvus / neo4j）
+make harness-up
+
+# 3. 首次写入演示用户
+make harness-seed
+```
+
+访问 `http://localhost:5173`。
+
+默认账号：
+
+- 超管 `zwj` / `zwj12138`
+- 其他用户密码 `yuxi123456`
+
+## 数据隔离
+
+| 资源 | WeKnora | Agent-Harness |
+|------|---------|---------------|
+| PostgreSQL | `DB_NAME`（默认 `agent-middle`） | `AGENT_HARNESS_DB_NAME`（默认 `agent_harness`） |
+| Redis | DB 0 | DB 2 |
+| MinIO | 同一实例，Yuxi 使用自己的 bucket | 同一 `minio` 服务 |
+| 认证 | `JWT_SECRET` | `JWT_SECRET_KEY` |
+
+## Make 目标
+
+- `make harness-up` / `harness-down` / `harness-logs`
+- `make harness-seed`
+- `make harness-up-lite`（`LITE_MODE=true`，跳过知识库/图谱重依赖）
