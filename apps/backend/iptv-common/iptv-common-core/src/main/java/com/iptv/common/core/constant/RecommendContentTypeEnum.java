@@ -2,6 +2,7 @@ package com.iptv.common.core.constant;
 
 import lombok.Data;
 import lombok.Getter;
+import com.iptv.common.core.utils.MessageUtils;
 
 @Getter
 public enum RecommendContentTypeEnum {
@@ -20,6 +21,10 @@ public enum RecommendContentTypeEnum {
     RecommendContentTypeEnum(Integer code, String desc) {
         this.code = code;
         this.desc = desc;
+    }
+
+    public String getDesc() {
+        return MessageUtils.desc(this, desc);
     }
 
     public static String getDescByCode(Integer code) {

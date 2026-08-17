@@ -2,6 +2,7 @@ package com.iptv.system.controller;
 
 import com.iptv.common.core.constant.TenantConstant;
 import com.iptv.common.core.domain.R;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.web.domain.vo.SelectVO;
 import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
@@ -77,7 +78,7 @@ public class SysTenantController {
 
     @Operation(description = "新增租户")
     @RequiresPermissions("system:tenant:add")
-    @Log(title = "租户管理", businessType = BusinessType.INSERT)
+    @Log(title = "log.title.tenant", businessType = BusinessType.INSERT)
     @PostMapping("/insert/single")
     public R<SysTenantVO> insert(@RequestBody SysTenantReqDTO reqVO) {
         SysTenantVO vo = sysTenantService.insert(reqVO);
@@ -86,7 +87,7 @@ public class SysTenantController {
 
     @Operation(description = "更新租户")
     @RequiresPermissions("system:tenant:edit")
-    @Log(title = "租户管理", businessType = BusinessType.UPDATE)
+    @Log(title = "log.title.tenant", businessType = BusinessType.UPDATE)
     @PostMapping("/update/single")
     public R<SysTenantVO> update(@RequestBody SysTenantSaveDTO saveVO) {
         return sysTenantService.update(saveVO);
@@ -94,7 +95,7 @@ public class SysTenantController {
 
     @Operation(description = "删除租户")
     @RequiresPermissions("system:tenant:remove")
-    @Log(title = "租户管理", businessType = BusinessType.DELETE)
+    @Log(title = "log.title.tenant", businessType = BusinessType.DELETE)
     @DeleteMapping("/single")
     public R<Void> deleteById(Long id) {
         sysTenantService.deleteUpdateById(id);
@@ -103,7 +104,7 @@ public class SysTenantController {
 
     @Operation(description = "启用租户")
     @RequiresPermissions("system:tenant:edit")
-    @Log(title = "租户管理", businessType = BusinessType.UPDATE)
+    @Log(title = "log.title.tenant", businessType = BusinessType.UPDATE)
     @PostMapping("/open")
     public R<Void> open(Long id) {
         sysTenantService.changeStatus(id, "0");
@@ -112,7 +113,7 @@ public class SysTenantController {
 
     @Operation(description = "禁用租户")
     @RequiresPermissions("system:tenant:edit")
-    @Log(title = "租户管理", businessType = BusinessType.UPDATE)
+    @Log(title = "log.title.tenant", businessType = BusinessType.UPDATE)
     @PostMapping("/cancel")
     public R<Void> cancel(Long id) {
         sysTenantService.changeStatus(id, "1");
@@ -141,7 +142,7 @@ public class SysTenantController {
                              String name) {
         boolean exists = sysTenantService.checkName(tenantId, name);
         if (exists) {
-            return R.ok(null, "租户名称重复，请重新输入");
+            return R.ok(null, MessageUtils.message("system.tenant.name.exists"));
         }
         return R.ok();
     }
@@ -154,7 +155,7 @@ public class SysTenantController {
                 TenantConstant.TenantType.THIRD_2_0.getCode(),
                 thirdTenantId);
         if (exists) {
-            return R.ok(null, "租户CODE重复，请重新输入");
+            return R.ok(null, MessageUtils.message("system.tenant.code.exists"));
         }
         return R.ok();
     }

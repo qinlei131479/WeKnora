@@ -9,6 +9,7 @@ import com.iptv.common.core.constant.UserConstants;
 import com.iptv.common.core.domain.R;
 import com.iptv.common.core.text.Convert;
 import com.iptv.common.core.utils.DateUtils;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.StringUtils;
 import com.iptv.common.core.utils.poi.ExcelUtil;
 import com.iptv.common.core.web.controller.BaseController;
@@ -92,16 +93,16 @@ public class SysUserController extends BaseController {
         return success(all);
     }
 
-    @Log(title = "用户管理", businessType = BusinessType.EXPORT)
+    @Log(title = "log.title.user", businessType = BusinessType.EXPORT)
     @RequiresPermissions("system:user:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, SysUser user) {
         List<SysUser> list = userService.list(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUserId, user.getUserId()));
         ExcelUtil<SysUser> util = new ExcelUtil<SysUser>(SysUser.class);
-        util.exportExcel(response, list, "用户数据");
+        util.exportExcel(response, list, MessageUtils.message("excel.sheet.user"));
     }
 
-    @Log(title = "用户管理", businessType = BusinessType.IMPORT)
+    @Log(title = "log.title.user", businessType = BusinessType.IMPORT)
     @RequiresPermissions("system:user:import")
     @PostMapping("/importData")
     public AjaxResult importData(MultipartFile file, boolean updateSupport) throws Exception {
@@ -126,7 +127,7 @@ public class SysUserController extends BaseController {
     public R<LoginUser> info(@PathVariable("username") String username) {
         SysUser sysUser = userService.selectUserByUserName(username);
         if (StringUtils.isNull(sysUser)) {
-            return R.fail("用户名或密码错误");
+            return R.fail(MessageUtils.message("auth.login.bad.credentials.short"));
         }
         // 角色集合
         Set<String> roles = permissionService.getRolePermission(sysUser);
@@ -147,10 +148,10 @@ public class SysUserController extends BaseController {
     public R<Boolean> register(@RequestBody SysUser sysUser) {
         String username = sysUser.getUserName();
         if (!("true".equals(configService.selectConfigByKey("sys.account.registerUser")))) {
-            return R.fail("当前系统没有开启注册功能！");
+            return R.fail(MessageUtils.message("system.register.disabled"));
         }
         if (!userService.checkUserNameUnique(sysUser)) {
-            return R.fail("保存用户'" + username + "'失败，注册账号已存在");
+            return R.fail(MessageUtils.message("system.user.register.exists", username));
         }
         return R.ok(userService.registerUser(sysUser));
     }
@@ -244,7 +245,7 @@ public class SysUserController extends BaseController {
             List<String> postNames = new ArrayList<>();
             if (CollectionUtil.isNotEmpty(posts)) {
                 postNames = allPosts.stream()
-                        .filter(post -> CollectionUtil.contains(posts, post.getPostId()))
+                        .filter(post->CollectionUtil.contains(posts,post.getPostId()))
                         .map(SysPost::getPostName).toList();
             }
             result.put("postNames", postNames);
@@ -267,29 +268,29 @@ public class SysUserController extends BaseController {
      * 新增用户
      */
     @RequiresPermissions("system:user:add")
-    @Log(title = "用户管理", businessType = BusinessType.INSERT)
+    @Log(title = "log.title.user", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@Validated @RequestBody SysUser user) {
         deptService.checkDeptDataScope(user.getDeptId());
         roleService.checkRoleDataScope(user.getRoleIds());
         if (!userService.checkUserNameUnique(user)) {
-            return error("新增用户'" + user.getUserName() + "'失败，登录账号已存在");
+            return error(MessageUtils.message("system.user.add.name.exists", user.getUserName()));
         } else if (StringUtils.isNotEmpty(user.getPhonenumber()) && !userService.checkPhoneUnique(user)) {
-            return error("新增用户'" + user.getUserName() + "'失败，手机号码已存在");
+            return error(MessageUtils.message("system.user.add.phone.exists", user.getUserName()));
         } else if (StringUtils.isNotEmpty(user.getEmail()) && !userService.checkEmailUnique(user)) {
-            return error("新增用户'" + user.getUserName() + "'失败，邮箱账号已存在");
+            return error(MessageUtils.message("system.user.add.email.exists", user.getUserName()));
         }
         user.setCreateBy(SecurityUtils.getUsername());
         user.setPassword(SecurityUtils.encryptPassword(user.getPassword()));
         int i = userService.insertUser(user);
-        return toAjax(i, user);
+        return toAjax(i,user);
     }
 
     /**
      * 修改用户
      */
     @RequiresPermissions("system:user:edit")
-    @Log(title = "用户管理", businessType = BusinessType.UPDATE)
+    @Log(title = "log.title.user", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@Validated @RequestBody SysUser user) {
         userService.checkUserAllowed(user);
@@ -297,11 +298,11 @@ public class SysUserController extends BaseController {
         deptService.checkDeptDataScope(user.getDeptId());
         roleService.checkRoleDataScope(user.getRoleIds());
         if (!userService.checkUserNameUnique(user)) {
-            return error("修改用户'" + user.getUserName() + "'失败，登录账号已存在");
+            return error(MessageUtils.message("system.user.edit.name.exists", user.getUserName()));
         } else if (StringUtils.isNotEmpty(user.getPhonenumber()) && !userService.checkPhoneUnique(user)) {
-            return error("修改用户'" + user.getUserName() + "'失败，手机号码已存在");
+            return error(MessageUtils.message("system.user.edit.phone.exists", user.getUserName()));
         } else if (StringUtils.isNotEmpty(user.getEmail()) && !userService.checkEmailUnique(user)) {
-            return error("修改用户'" + user.getUserName() + "'失败，邮箱账号已存在");
+            return error(MessageUtils.message("system.user.edit.email.exists", user.getUserName()));
         }
         user.setUpdateBy(SecurityUtils.getUsername());
         return toAjax(userService.updateUser(user));
@@ -311,25 +312,25 @@ public class SysUserController extends BaseController {
      * 删除用户
      */
     @RequiresPermissions("system:user:remove")
-    @Log(title = "用户管理", businessType = BusinessType.DELETE)
+    @Log(title = "log.title.user", businessType = BusinessType.DELETE)
     @DeleteMapping("/{userIds}")
     public AjaxResult remove(@PathVariable Long[] userIds) {
         if (ArrayUtils.contains(userIds, SecurityUtils.getUserId())) {
-            return error("当前用户不能删除");
+            return error(MessageUtils.message("system.user.delete.self"));
         }
         List<SysUser> users = new ArrayList<>();
         for (Long userId : userIds) {
             users.add(userService.getById(userId));
         }
         int i = userService.deleteUserByIds(userIds);
-        return toAjax(i, users);
+        return toAjax(i,users);
     }
 
     /**
      * 重置密码
      */
     @RequiresPermissions("system:user:edit")
-    @Log(title = "用户管理", businessType = BusinessType.UPDATE)
+    @Log(title = "log.title.user", businessType = BusinessType.UPDATE)
     @PutMapping("/resetPwd")
     public AjaxResult resetPwd(@RequestBody SysUser user) {
         userService.checkUserAllowed(user);
@@ -338,14 +339,14 @@ public class SysUserController extends BaseController {
         user.setUpdateBy(SecurityUtils.getUsername());
         int i = userService.resetPwd(user);
         SysUser sysUser = userService.getById(user.getUserId());
-        return toAjax(i, sysUser);
+        return toAjax(i,sysUser);
     }
 
     /**
      * 状态修改
      */
     @RequiresPermissions("system:user:edit")
-    @Log(title = "用户管理", businessType = BusinessType.UPDATE)
+    @Log(title = "log.title.user", businessType = BusinessType.UPDATE)
     @PutMapping("/changeStatus")
     public AjaxResult changeStatus(@RequestBody SysUser user) {
         userService.checkUserAllowed(user);
@@ -353,8 +354,7 @@ public class SysUserController extends BaseController {
         user.setUpdateBy(SecurityUtils.getUsername());
         int i = userService.updateUserStatus(user);
         SysUser sysUser = userService.getById(user.getUserId());
-        sysUser.setAction(StrUtil.equals(user.getStatus(), UserConstants.USER_DISABLE) ? "禁用" : "启用");
-        return toAjax(i, sysUser);
+        return toAjax(i,sysUser);
     }
 
     /**
@@ -375,7 +375,7 @@ public class SysUserController extends BaseController {
      * 用户授权角色
      */
     @RequiresPermissions("system:user:edit")
-    @Log(title = "用户管理", businessType = BusinessType.GRANT)
+    @Log(title = "log.title.user", businessType = BusinessType.GRANT)
     @PutMapping("/authRole")
     public AjaxResult insertAuthRole(Long userId, Long[] roleIds) {
         userService.checkUserDataScope(userId);

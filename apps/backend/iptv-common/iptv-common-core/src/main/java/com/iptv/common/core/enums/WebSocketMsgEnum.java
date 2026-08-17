@@ -2,6 +2,7 @@ package com.iptv.common.core.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import com.iptv.common.core.utils.MessageUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,6 +36,10 @@ public class WebSocketMsgEnum {
 
         private final String code;
         private final String name;
+
+        public String getName() {
+            return MessageUtils.desc(this, name);
+        }
     }
 
     @Getter
@@ -54,10 +59,14 @@ public class WebSocketMsgEnum {
         private final String code;
         private final String msg;
 
+        public String getMsg() {
+            return MessageUtils.desc(this, msg);
+        }
+
         public Map<String, Object> toRes() {
             HashMap<String, Object> map = new HashMap<>(2);
             map.put("code", code);
-            map.put("msg", msg);
+            map.put("msg", getMsg());
             return map;
         }
     }

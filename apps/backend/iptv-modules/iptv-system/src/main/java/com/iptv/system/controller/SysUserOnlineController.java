@@ -1,18 +1,7 @@
 package com.iptv.system.controller;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-
-import com.iptv.common.core.utils.PageUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import com.iptv.common.core.constant.CacheConstants;
+import com.iptv.common.core.utils.PageUtils;
 import com.iptv.common.core.utils.StringUtils;
 import com.iptv.common.core.web.controller.BaseController;
 import com.iptv.common.core.web.domain.AjaxResult;
@@ -24,6 +13,13 @@ import com.iptv.common.security.annotation.RequiresPermissions;
 import com.iptv.system.api.model.LoginUser;
 import com.iptv.system.domain.SysUserOnline;
 import com.iptv.system.service.ISysUserOnlineService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * 在线用户监控
@@ -75,7 +71,7 @@ public class SysUserOnlineController extends BaseController
      * 强退用户
      */
     @RequiresPermissions("monitor:online:forceLogout")
-    @Log(title = "在线用户", businessType = BusinessType.FORCE)
+    @Log(title = "log.title.online_user", businessType = BusinessType.FORCE)
     @DeleteMapping("/{tokenId}")
     public AjaxResult forceLogout(@PathVariable String tokenId)
     {

@@ -3,6 +3,7 @@ package com.iptv.system.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.iptv.common.core.constant.Constants;
 import com.iptv.common.core.constant.UserConstants;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.StringUtils;
 import com.iptv.common.security.utils.SecurityUtils;
 import com.iptv.system.api.domain.SysRole;
@@ -147,12 +148,13 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         List<RouterVo> routers = new LinkedList<RouterVo>();
         for (SysMenu menu : menus) {
             RouterVo router = new RouterVo();
+            String title = MessageUtils.message(menu.getMenuName());
             router.setHidden("1".equals(menu.getVisible()));
             router.setName(getRouteName(menu));
             router.setPath(getRouterPath(menu));
             router.setComponent(getComponent(menu));
             router.setQuery(menu.getQuery());
-            router.setMeta(new MetaVo(menu.getMenuName(), menu.getIcon(), StringUtils.equals("1", menu.getIsCache()), menu.getPath()));
+            router.setMeta(new MetaVo(title, menu.getIcon(), StringUtils.equals("1", menu.getIsCache()), menu.getPath()));
             List<SysMenu> cMenus = menu.getChildren();
             if (StringUtils.isNotEmpty(cMenus) && UserConstants.TYPE_DIR.equals(menu.getMenuType())) {
                 router.setAlwaysShow(true);
@@ -165,12 +167,12 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
                 children.setPath(menu.getPath());
                 children.setComponent(menu.getComponent());
                 children.setName(getRouteName(menu.getRouteName(), menu.getPath()));
-                children.setMeta(new MetaVo(menu.getMenuName(), menu.getIcon(), StringUtils.equals("1", menu.getIsCache()), menu.getPath()));
+                children.setMeta(new MetaVo(title, menu.getIcon(), StringUtils.equals("1", menu.getIsCache()), menu.getPath()));
                 children.setQuery(menu.getQuery());
                 childrenList.add(children);
                 router.setChildren(childrenList);
             } else if (menu.getParentId().intValue() == MENU_ROOT_ID && isInnerLink(menu)) {
-                router.setMeta(new MetaVo(menu.getMenuName(), menu.getIcon()));
+                router.setMeta(new MetaVo(title, menu.getIcon()));
                 router.setPath("/");
                 List<RouterVo> childrenList = new ArrayList<RouterVo>();
                 RouterVo children = new RouterVo();
@@ -178,7 +180,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
                 children.setPath(routerPath);
                 children.setComponent(UserConstants.INNER_LINK);
                 children.setName(getRouteName(menu.getRouteName(), routerPath));
-                children.setMeta(new MetaVo(menu.getMenuName(), menu.getIcon(), menu.getPath()));
+                children.setMeta(new MetaVo(title, menu.getIcon(), menu.getPath()));
                 childrenList.add(children);
                 router.setChildren(childrenList);
             }

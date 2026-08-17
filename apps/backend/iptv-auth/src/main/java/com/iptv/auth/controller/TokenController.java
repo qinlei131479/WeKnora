@@ -29,7 +29,7 @@ import java.util.Set;
 
 /**
  * token 控制
- * 
+ *
  * @author ruoyi
  */
 @RestController
@@ -148,20 +148,20 @@ public class TokenController
             keyPrefix = CacheConstants.CAPTCHA_CODE_KEY;
         }
         if (StrUtil.isEmpty(code)) {
-            throw new CaptchaException("验证码不能为空");
+            throw new CaptchaException("auth.captcha.empty");
         }
         if (StrUtil.isEmpty(uuid)) {
-            throw new CaptchaException("验证码已失效");
+            throw new CaptchaException("auth.captcha.expired");
         }
         String verifyKey = keyPrefix + uuid;
         String captcha = redisService.getCacheObject(verifyKey);
         if (StrUtil.isEmpty(captcha)) {
-            throw new CaptchaException("验证码已失效");
+            throw new CaptchaException("auth.captcha.expired");
         }
         redisService.deleteObject(verifyKey);
 
         if (!code.equalsIgnoreCase(captcha)) {
-            throw new CaptchaException("当前登录账号、密码、验证码不匹配，请核对后重新输入！");
+            throw new CaptchaException("auth.captcha.mismatch");
         }
     }
 }

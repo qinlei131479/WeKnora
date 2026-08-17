@@ -10,6 +10,7 @@ import com.iptv.common.core.domain.vo.msg.WebSocketMsg;
 import com.iptv.common.core.enums.WebSocketMsgEnum;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.JwtUtils;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.ServletUtils;
 import com.iptv.common.core.utils.StringUtils;
 import com.iptv.common.core.utils.ip.IpUtils;
@@ -193,7 +194,7 @@ public class TokenService {
     public Long getUserTenantId() {
         LoginUser loginUser = getLoginUser();
         if (loginUser == null || loginUser.getSysUser() == null) {
-            throw new ServiceException("获取用户信息失败！");
+            throw new ServiceException("security.user.info.failed");
         }
         return loginUser.getSysUser().getTenantId();
     }
@@ -206,14 +207,14 @@ public class TokenService {
     public void checkDataScope(Long tenantId) {
         LoginUser loginUser = getLoginUser();
         if (loginUser == null || loginUser.getSysUser() == null) {
-            throw new ServiceException("获取用户信息失败！");
+            throw new ServiceException("security.user.info.failed");
         }
         if (loginUser.getSysUser().isTenantAdmin()) {
             return;
         }
         Long userTenantId = loginUser.getSysUser().getTenantId();
         if (userTenantId == null || !userTenantId.equals(tenantId)) {
-            throw new ServiceException("没有数据访问权限！");
+            throw new ServiceException("security.data.scope.denied");
         }
     }
 
@@ -299,7 +300,7 @@ public class TokenService {
             logininfor.setUserName(loginUser.getUsername());
             logininfor.setIpaddr(IpUtils.getIpAddr());
             logininfor.setStatus(Constants.LOGIN_SUCCESS_STATUS);
-            logininfor.setMsg("退出成功");
+            logininfor.setMsg(MessageUtils.message("login.logout"));
             remoteLogService.saveLogininfor(logininfor, SecurityConstants.INNER);
         }
     }

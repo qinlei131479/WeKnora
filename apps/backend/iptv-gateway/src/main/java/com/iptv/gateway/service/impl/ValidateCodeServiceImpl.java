@@ -81,14 +81,7 @@ public class ValidateCodeServiceImpl implements ValidateCodeService
         redisService.setCacheObject(validVerifyKey, code, Constants.CAPTCHA_EXPIRATION, TimeUnit.MINUTES);
         // 转换流信息写出
         FastByteArrayOutputStream os = new FastByteArrayOutputStream();
-        try
-        {
-            ImageIO.write(image, "jpg", os);
-        }
-        catch (IOException e)
-        {
-            return AjaxResult.error(e.getMessage());
-        }
+        ImageIO.write(image, "jpg", os);
 
         ajax.put("uuid", uuid);
         ajax.put("img", Base64.encode(os.toByteArray()));
@@ -103,18 +96,18 @@ public class ValidateCodeServiceImpl implements ValidateCodeService
     {
         if (StringUtils.isEmpty(code))
         {
-            throw new CaptchaException("验证码不能为空");
+            throw new CaptchaException("auth.captcha.empty");
         }
         String verifyKey = CacheConstants.CAPTCHA_CODE_KEY + StringUtils.nvl(uuid, "");
         String captcha = redisService.getCacheObject(verifyKey);
         if (captcha == null)
         {
-            throw new CaptchaException("验证码已失效");
+            throw new CaptchaException("auth.captcha.expired");
         }
         redisService.deleteObject(verifyKey);
         if (!code.equalsIgnoreCase(captcha))
         {
-            throw new CaptchaException("验证码错误");
+            throw new CaptchaException("auth.captcha.invalid");
         }
     }
 }

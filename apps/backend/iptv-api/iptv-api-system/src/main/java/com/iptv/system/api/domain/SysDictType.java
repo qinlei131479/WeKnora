@@ -1,15 +1,14 @@
 package com.iptv.system.api.domain;
 
+import com.iptv.common.core.annotation.Excel;
+import com.iptv.common.core.annotation.Excel.ColumnType;
+import com.iptv.common.core.web.domain.BaseEntity;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import com.iptv.common.core.annotation.Excel;
-import com.iptv.common.core.annotation.Excel.ColumnType;
-import com.iptv.common.core.web.domain.BaseEntity;
-import org.apache.ibatis.type.Alias;
 
 /**
  * 字典类型表 sys_dict_type
@@ -52,8 +51,8 @@ public class SysDictType extends BaseEntity
         this.dictId = dictId;
     }
 
-    @NotBlank(message = "字典名称不能为空")
-    @Size(min = 0, max = 100, message = "字典类型名称长度不能超过100个字符")
+    @NotBlank(message = "{system.validation.dict.name.required}")
+    @Size(min = 0, max = 100, message = "{system.validation.dict.name.size}")
     public String getDictName()
     {
         return dictName;
@@ -64,9 +63,9 @@ public class SysDictType extends BaseEntity
         this.dictName = dictName;
     }
 
-    @NotBlank(message = "字典类型不能为空")
-    @Size(min = 0, max = 100, message = "字典类型类型长度不能超过100个字符")
-    @Pattern(regexp = "^[a-z][a-z0-9_]*$", message = "字典类型必须以字母开头，且只能为（小写字母，数字，下滑线）")
+    @NotBlank(message = "{system.validation.dict.type.required}")
+    @Size(min = 0, max = 100, message = "{system.validation.dict.type.size}")
+    @Pattern(regexp = "^[a-z][a-z0-9_]*$", message = "{system.validation.dict.type.pattern}")
     public String getDictType()
     {
         return dictType;

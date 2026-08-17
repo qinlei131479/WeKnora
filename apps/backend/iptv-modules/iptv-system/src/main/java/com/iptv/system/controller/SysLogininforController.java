@@ -1,10 +1,11 @@
 package com.iptv.system.controller;
 
 import com.iptv.common.core.constant.CacheConstants;
-import com.iptv.common.core.web.page.PageDTO;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.poi.ExcelUtil;
 import com.iptv.common.core.web.controller.BaseController;
 import com.iptv.common.core.web.domain.AjaxResult;
+import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
 import com.iptv.common.log.annotation.Log;
 import com.iptv.common.log.enums.BusinessType;
@@ -39,25 +40,25 @@ public class SysLogininforController extends BaseController {
         return logininforService.selectLogininforList(logininfor, dto);
     }
 
-    @Log(title = "登录日志", businessType = BusinessType.EXPORT)
+    @Log(title = "log.title.logininfor", businessType = BusinessType.EXPORT)
     @RequiresPermissions("system:logininfor:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, SysLogininfor logininfor, PageDTO dto) {
         TableDataInfo<SysLogininfor> sysLogininforTableDataInfo = logininforService.selectLogininforList(logininfor, dto);
         List<SysLogininfor> list = sysLogininforTableDataInfo.getRows();
         ExcelUtil<SysLogininfor> util = new ExcelUtil<SysLogininfor>(SysLogininfor.class);
-        util.exportExcel(response, list, "登录日志");
+        util.exportExcel(response, list, MessageUtils.message("excel.sheet.logininfor"));
     }
 
     @RequiresPermissions("system:logininfor:remove")
-    @Log(title = "登录日志", businessType = BusinessType.DELETE)
+    @Log(title = "log.title.logininfor", businessType = BusinessType.DELETE)
     @DeleteMapping("/{infoIds}")
     public AjaxResult remove(@PathVariable Long[] infoIds) {
         return toAjax(logininforService.deleteLogininforByIds(infoIds));
     }
 
     @RequiresPermissions("system:logininfor:remove")
-    @Log(title = "登录日志", businessType = BusinessType.DELETE)
+    @Log(title = "log.title.logininfor", businessType = BusinessType.DELETE)
     @DeleteMapping("/clean")
     public AjaxResult clean() {
         logininforService.cleanLogininfor();
@@ -65,7 +66,7 @@ public class SysLogininforController extends BaseController {
     }
 
     @RequiresPermissions("system:logininfor:unlock")
-    @Log(title = "账户解锁", businessType = BusinessType.OTHER)
+    @Log(title = "log.title.unlock", businessType = BusinessType.OTHER)
     @GetMapping("/unlock/{userName}")
     public AjaxResult unlock(@PathVariable("userName") String userName) {
         redisService.deleteObject(CacheConstants.PWD_ERR_CNT_KEY + userName);

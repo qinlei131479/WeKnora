@@ -7,7 +7,6 @@ import com.iptv.common.core.annotation.Excel;
 import com.iptv.common.core.annotation.Excel.ColumnType;
 import com.iptv.common.core.annotation.Excel.Type;
 import com.iptv.common.core.annotation.Excels;
-import com.iptv.common.core.constant.UserConstants;
 import com.iptv.common.core.web.domain.BaseEntity;
 import com.iptv.common.core.xss.Xss;
 import jakarta.validation.constraints.Email;
@@ -233,9 +232,6 @@ public class SysUser extends BaseEntity {
      */
     private Integer ddUserType;
 
-    @TableField(exist = false)
-    private String action;
-
     /**
      * 部门ID列表
      */
@@ -270,8 +266,8 @@ public class SysUser extends BaseEntity {
         this.deptId = deptId;
     }
 
-    @Xss(message = "用户昵称不能包含脚本字符")
-    @Size(min = 0, max = 30, message = "用户昵称长度不能超过30个字符")
+    @Xss(message = "{system.validation.user.nickname.xss}")
+    @Size(min = 0, max = 30, message = "{system.validation.user.nickname.size}")
     public String getNickName() {
         return nickName;
     }
@@ -280,9 +276,9 @@ public class SysUser extends BaseEntity {
         this.nickName = nickName;
     }
 
-    @Xss(message = "用户账号不能包含脚本字符")
-    @NotBlank(message = "用户账号不能为空")
-    @Size(min = 0, max = 30, message = "用户账号长度不能超过30个字符")
+    @Xss(message = "{system.validation.user.username.xss}")
+    @NotBlank(message = "{system.validation.user.username.required}")
+    @Size(min = 0, max = 30, message = "{system.validation.user.username.size}")
     public String getUserName() {
         return userName;
     }
@@ -291,8 +287,8 @@ public class SysUser extends BaseEntity {
         this.userName = userName;
     }
 
-    @Email(message = "邮箱格式不正确")
-    @Size(min = 0, max = 50, message = "邮箱长度不能超过50个字符")
+    @Email(message = "{system.validation.email.invalid}")
+    @Size(min = 0, max = 50, message = "{system.validation.email.size}")
     public String getEmail() {
         return email;
     }
@@ -301,7 +297,7 @@ public class SysUser extends BaseEntity {
         this.email = email;
     }
 
-    @Size(min = 0, max = 11, message = "手机号码长度不能超过11个字符")
+    @Size(min = 0, max = 11, message = "{system.validation.phone.size}")
     public String getPhonenumber() {
         return phonenumber;
     }

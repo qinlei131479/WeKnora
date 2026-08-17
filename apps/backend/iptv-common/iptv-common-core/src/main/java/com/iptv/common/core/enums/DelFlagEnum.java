@@ -1,6 +1,7 @@
 package com.iptv.common.core.enums;
 
 import lombok.Getter;
+import com.iptv.common.core.utils.MessageUtils;
 
 /**
  * 删除标志枚举
@@ -23,6 +24,10 @@ public enum DelFlagEnum {
         this.code = code;
         this.codeStr = codeStr;
         this.desc = desc;
+    }
+
+    public String getDesc() {
+        return MessageUtils.desc(this, desc);
     }
 
     /**

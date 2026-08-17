@@ -1,20 +1,10 @@
 package com.iptv.system.controller;
 
-import java.util.List;
-
-import com.iptv.common.core.web.page.PageDTO;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.poi.ExcelUtil;
 import com.iptv.common.core.web.controller.BaseController;
 import com.iptv.common.core.web.domain.AjaxResult;
+import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
 import com.iptv.common.log.annotation.Log;
 import com.iptv.common.log.enums.BusinessType;
@@ -22,6 +12,11 @@ import com.iptv.common.security.annotation.InnerAuth;
 import com.iptv.common.security.annotation.RequiresPermissions;
 import com.iptv.system.api.domain.SysOperLog;
 import com.iptv.system.service.ISysOperLogService;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 操作日志记录
@@ -42,7 +37,7 @@ public class SysOperlogController extends BaseController
         return operLogService.selectOperLogList(operLog, pageDTO);
     }
 
-    @Log(title = "操作日志", businessType = BusinessType.EXPORT)
+    @Log(title = "log.title.operlog", businessType = BusinessType.EXPORT)
     @RequiresPermissions("system:operlog:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, SysOperLog operLog, PageDTO pageDTO)
@@ -50,10 +45,10 @@ public class SysOperlogController extends BaseController
         TableDataInfo<SysOperLog> list = operLogService.selectOperLogList(operLog, pageDTO);
         List<SysOperLog> records = list.getRows();
         ExcelUtil<SysOperLog> util = new ExcelUtil<SysOperLog>(SysOperLog.class);
-        util.exportExcel(response, records, "操作日志");
+        util.exportExcel(response, records, MessageUtils.message("excel.sheet.operlog"));
     }
 
-    @Log(title = "操作日志", businessType = BusinessType.DELETE)
+    @Log(title = "log.title.operlog", businessType = BusinessType.DELETE)
     @RequiresPermissions("system:operlog:remove")
     @DeleteMapping("/{operIds}")
     public AjaxResult remove(@PathVariable Long[] operIds)
@@ -62,7 +57,7 @@ public class SysOperlogController extends BaseController
     }
 
     @RequiresPermissions("system:operlog:remove")
-    @Log(title = "操作日志", businessType = BusinessType.CLEAN)
+    @Log(title = "log.title.operlog", businessType = BusinessType.CLEAN)
     @DeleteMapping("/clean")
     public AjaxResult clean()
     {

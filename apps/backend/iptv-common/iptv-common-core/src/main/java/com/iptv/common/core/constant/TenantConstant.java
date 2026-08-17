@@ -2,6 +2,7 @@ package com.iptv.common.core.constant;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import com.iptv.common.core.utils.MessageUtils;
 
 /**
  * 租户相关常量
@@ -27,6 +28,10 @@ public class TenantConstant {
 
         private final String code;
         private final String name;
+
+        public String getName() {
+            return MessageUtils.desc(this, name);
+        }
 
         public static String getNameByCode(String code) {
             for (TenantType ele : TenantType.values()) {

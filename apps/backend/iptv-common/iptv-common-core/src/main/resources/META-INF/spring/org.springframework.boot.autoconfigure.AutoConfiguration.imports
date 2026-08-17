@@ -1,1 +1,2 @@
 com.iptv.common.core.utils.SpringUtils
+com.iptv.common.core.config.I18nConfig

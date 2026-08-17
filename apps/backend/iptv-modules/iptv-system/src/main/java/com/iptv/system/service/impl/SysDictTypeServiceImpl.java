@@ -119,7 +119,7 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
         for (Long dictId : dictIds) {
             SysDictType dictType = selectDictTypeById(dictId);
             if (dictDataMapper.countDictDataByType(dictType.getDictType()) > 0) {
-                throw new ServiceException(String.format("%1$s已分配,不能删除", dictType.getDictName()));
+                throw new ServiceException("system.assigned.cannot.delete", dictType.getDictName());
             }
             this.baseMapper.deleteDictTypeById(dictId);
             DictUtils.removeDictCache(dictType.getDictType());

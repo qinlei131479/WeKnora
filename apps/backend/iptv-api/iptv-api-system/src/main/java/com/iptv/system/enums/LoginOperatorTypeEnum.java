@@ -1,5 +1,6 @@
 package com.iptv.system.enums;
 
+import com.iptv.common.core.utils.MessageUtils;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
@@ -13,6 +14,10 @@ public enum LoginOperatorTypeEnum {
     private final String code;
 
     private final String name;
+
+    public String getName() {
+        return MessageUtils.desc(this, name);
+    }
 
     public static LoginOperatorTypeEnum getLoginOperatorTypeEnumByCode(String code) {
         for (LoginOperatorTypeEnum loginOperatorTypeEnum : LoginOperatorTypeEnum.values()) {

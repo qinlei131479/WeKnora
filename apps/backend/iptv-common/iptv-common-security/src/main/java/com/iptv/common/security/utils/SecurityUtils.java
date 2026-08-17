@@ -153,7 +153,7 @@ public class SecurityUtils {
             // 对前端传的密码解密
             return CryptoUtils.decryptByRSA(CryptoUtils.PRIVATEKEY, paramPassword);
         } catch (Exception e) {
-            throw new ServiceException("密码错误");
+            throw new ServiceException("security.password.incorrect");
         }
     }
 }

@@ -19,6 +19,7 @@ import com.iptv.auth.util.SseUtil;
 import com.iptv.auth.vo.QrCodeResultVO;
 import com.iptv.common.core.constant.SecurityConstants;
 import com.iptv.common.core.domain.R;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.security.service.TokenService;
 import com.iptv.system.api.RemoteUserService;
 import com.iptv.system.api.domain.SysUser;
@@ -26,9 +27,11 @@ import com.iptv.system.api.model.LoginUser;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -54,13 +57,13 @@ public class ScgcService {
 
         if (!response.isOk()) {
             log.info("获取二维码失败：{}", JSONUtil.toJsonStr(response));
-            throw new RuntimeException("获取二维码失败, 请稍后重试！");
+            throw new RuntimeException("auth.qr.fetch.failed");
         }
 
         Map<String, Object> body = JSONUtil.toBean(response.body(), Map.class);
         if (HttpStatus.HTTP_OK != (int) body.get("rs")) {
             log.info("获取二维码失败：{}", JSONUtil.toJsonStr(body));
-            throw new RuntimeException("获取二维码失败, 请稍后重试！");
+            throw new RuntimeException("auth.qr.fetch.failed");
         }
 
         return BeanUtil.copyProperties(body.get("data"), QrBody.class);
@@ -89,6 +92,7 @@ public class ScgcService {
         TimeInterval timer = DateUtil.timer();
         AtomicBoolean isCompleted = new AtomicBoolean(false);
         AtomicReference<QrCodeResultVO> qrCodeResult = new AtomicReference<>(new QrCodeResultVO());
+        Locale locale = LocaleContextHolder.getLocale();
 
         // 首发一条
         SseUtil.send(emitter, type, qrCodeResult.get());
@@ -101,7 +105,7 @@ public class ScgcService {
             }
             try {
                 // 获取二维码状态
-                qrCodeResult.set(getQrCodeStatus(qrCodeKey, type));
+                qrCodeResult.set(getQrCodeStatus(qrCodeKey, type, locale));
 
                 // 错误完成
                 QrCodeResultVO resultVO = qrCodeResult.get();
@@ -130,7 +134,7 @@ public class ScgcService {
                 log.error("Error sending SSE event: ", e);
                 // 发送失败时完成该Emitter
                 emitter.completeWithError(e);
-                qrCodeResult.get().toError("获取登录状态失败，请稍后重试！");
+                qrCodeResult.get().toError(MessageUtils.message(locale, "auth.qr.status.failed"));
                 try {
                     emitter.send(SseEmitter.event().name(type).data(qrCodeResult));
                 } catch (Exception ex) {
@@ -162,7 +166,7 @@ public class ScgcService {
         }
     }
 
-    private QrCodeResultVO getQrCodeStatus(String qrCodeKey, String type) {
+    private QrCodeResultVO getQrCodeStatus(String qrCodeKey, String type, Locale locale) {
         QrCodeResultVO resultVO = new QrCodeResultVO();
         HashMap<String, Object> body = new HashMap<>();
         body.put("key", qrCodeKey);
@@ -177,12 +181,12 @@ public class ScgcService {
             map = JSONUtil.toBean(response.body(), Map.class);
         } catch (Exception e) {
             log.info("获取二维码状态失败：{}", JSONUtil.toJsonStr(response.body()));
-            resultVO.toError("获取二维码状态失败, 请稍后重试！");
+            resultVO.toError(MessageUtils.message(locale, "auth.qr.status.fetch.failed"));
             return resultVO;
         }
         if (map.containsKey("status")) {
             if (response.body().contains("失效")) {
-                resultVO.toError("二维码已失效！");
+                resultVO.toError(MessageUtils.message(locale, "auth.qr.expired"));
                 return resultVO;
             }
             // 未扫码
@@ -191,7 +195,7 @@ public class ScgcService {
 
         if (GetQrCodeStatusTypeEnum.LOGIN.getType().equals(type)) {
             // 登录 检查用户 生成token
-            resultVO = createToken(map);
+            resultVO = createToken(map, locale);
         } else if (GetQrCodeStatusTypeEnum.BIND.getType().equals(type)) {
             // 绑定
             resultVO.setUserId(map.get("user_id").toString());
@@ -205,13 +209,13 @@ public class ScgcService {
      * @param map
      * @return
      */
-    private QrCodeResultVO createToken(Map<String, Object> map) {
+    private QrCodeResultVO createToken(Map<String, Object> map, Locale locale) {
         QrCodeResultVO resultVO = new QrCodeResultVO();
         Long scgcUserId = NumberUtil.toBigInteger((String) map.get("user_id")).longValue();
         R<SysUser> userR = remoteUserService.selectByScgcUserId(scgcUserId, SecurityConstants.INNER);
         log.info("获取用户信息：{}", JSONUtil.toJsonStr(userR));
         if (userR.getCode() != R.ok().getCode() || ObjectUtil.isNull(userR.getData())) {
-            resultVO.toError("该开放平台用户暂未绑定平台账号，请先绑定账号！");
+            resultVO.toError(MessageUtils.message(locale, "auth.qr.not.bound"));
             return resultVO;
         }
         SysUser user = userR.getData();
@@ -226,7 +230,7 @@ public class ScgcService {
             resultVO.setToken(token.get("access_token").toString());
         } catch (Exception e) {
             log.error("用户登录失败：{}", e.getMessage());
-            resultVO.toError(e.getMessage());
+            resultVO.toError(MessageUtils.message(locale, e.getMessage()));
         }
 
         return resultVO;
@@ -242,7 +246,7 @@ public class ScgcService {
             LoginUser loginUser = tokenService.getLoginUser();
             return R.ok(loginUser.getSysUser().getUserId());
         } catch (Exception ex) {
-            return R.fail("获取用户信息失败，请重试！");
+            return R.fail(MessageUtils.message("auth.user.info.failed.retry"));
         }
     }
 
@@ -288,11 +292,11 @@ public class ScgcService {
                 isBind = ObjectUtil.isNotNull(sysUser.getScgcUserId());
             } else {
                 log.error("获取用户信息失败：{}", JSONUtil.toJsonStr(userInfoR));
-                return R.fail("获取用户信息失败，请重试！");
+                return R.fail(MessageUtils.message("auth.user.info.failed.retry"));
             }
         } catch (Exception e) {
             log.error("获取用户信息失败,原因：{}", e.getMessage());
-            return R.fail("获取用户信息失败，请重试！");
+            return R.fail(MessageUtils.message("auth.user.info.failed.retry"));
         }
         return R.ok(isBind);
     }

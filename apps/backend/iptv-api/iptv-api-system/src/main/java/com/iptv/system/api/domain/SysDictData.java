@@ -9,7 +9,6 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.apache.ibatis.type.Alias;
 
 /**
  * 字典数据表 sys_dict_data
@@ -93,8 +92,8 @@ public class SysDictData extends BaseEntity {
         this.dictSort = dictSort;
     }
 
-    @NotBlank(message = "字典标签不能为空")
-    @Size(min = 0, max = 100, message = "字典标签长度不能超过100个字符")
+    @NotBlank(message = "{system.validation.dict.label.required}")
+    @Size(min = 0, max = 100, message = "{system.validation.dict.label.size}")
     public String getDictLabel() {
         return dictLabel;
     }
@@ -103,8 +102,8 @@ public class SysDictData extends BaseEntity {
         this.dictLabel = dictLabel;
     }
 
-    @NotBlank(message = "字典键值不能为空")
-    @Size(min = 0, max = 100, message = "字典键值长度不能超过100个字符")
+    @NotBlank(message = "{system.validation.dict.value.required}")
+    @Size(min = 0, max = 100, message = "{system.validation.dict.value.size}")
     public String getDictValue() {
         return dictValue;
     }
@@ -113,8 +112,8 @@ public class SysDictData extends BaseEntity {
         this.dictValue = dictValue;
     }
 
-    @NotBlank(message = "字典类型不能为空")
-    @Size(min = 0, max = 100, message = "字典类型长度不能超过100个字符")
+    @NotBlank(message = "{system.validation.dict.type.required}")
+    @Size(min = 0, max = 100, message = "{system.validation.dict.type.size}")
     public String getDictType() {
         return dictType;
     }
@@ -123,7 +122,7 @@ public class SysDictData extends BaseEntity {
         this.dictType = dictType;
     }
 
-    @Size(min = 0, max = 100, message = "样式属性长度不能超过100个字符")
+    @Size(min = 0, max = 100, message = "{system.validation.dict.css.size}")
     public String getCssClass() {
         return cssClass;
     }

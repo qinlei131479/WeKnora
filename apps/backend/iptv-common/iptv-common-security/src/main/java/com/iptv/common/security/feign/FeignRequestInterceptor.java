@@ -2,6 +2,7 @@ package com.iptv.common.security.feign;
 
 import java.util.Map;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import com.iptv.common.core.constant.SecurityConstants;
 import com.iptv.common.core.utils.ServletUtils;
@@ -12,12 +13,18 @@ import feign.RequestTemplate;
 
 /**
  * feign 请求拦截器
- * 
- * @author ruoyi
+ *
+ * @author tanjx
+ * @date 2026-08-05
  */
 @Component
 public class FeignRequestInterceptor implements RequestInterceptor
 {
+    /**
+     * 透传用户身份、请求语言与客户端 IP 请求头。
+     *
+     * @param requestTemplate Feign 请求模板
+     */
     @Override
     public void apply(RequestTemplate requestTemplate)
     {
@@ -45,6 +52,11 @@ public class FeignRequestInterceptor implements RequestInterceptor
             if (StringUtils.isNotEmpty(authentication))
             {
                 requestTemplate.header(SecurityConstants.AUTHORIZATION_HEADER, authentication);
+            }
+            String acceptLanguage = httpServletRequest.getHeader(HttpHeaders.ACCEPT_LANGUAGE);
+            if (StringUtils.isNotEmpty(acceptLanguage))
+            {
+                requestTemplate.header(HttpHeaders.ACCEPT_LANGUAGE, acceptLanguage);
             }
 
             // 配置客户端IP

@@ -6,6 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson.JSON;
 import com.iptv.common.core.domain.vo.msg.UserWebSocketMsg;
 import com.iptv.common.core.domain.vo.msg.WebSocketMsg;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.security.service.TokenService;
 import com.iptv.v4.webscoket.config.WebSocketServer;
 import jakarta.annotation.Resource;
@@ -50,7 +51,7 @@ public class BaseListener {
             return JSON.parseObject(msg, UserWebSocketMsg.class);
         } catch (Exception e) {
             log.error("解析消息失败！-> {}", msg);
-            throw new RuntimeException("消息格式错误！");
+            throw new RuntimeException(MessageUtils.message("websocket.msg.format.invalid"));
         }
     }
 
@@ -81,7 +82,7 @@ public class BaseListener {
     private void sendMsg(Collection<String> token, WebSocketMsg webSocketMsg) {
         if (CollUtil.isEmpty(token) || ObjectUtil.isNull(webSocketMsg)) {
             log.error("消息发送失败，请检查消息参数：{}-{}", token, webSocketMsg);
-            throw new RuntimeException("消息发送失败，请检查消息参数！");
+            throw new RuntimeException(MessageUtils.message("websocket.msg.send.failed"));
         }
         webSocketServer.sendOneMessage(token, webSocketMsg);
     }

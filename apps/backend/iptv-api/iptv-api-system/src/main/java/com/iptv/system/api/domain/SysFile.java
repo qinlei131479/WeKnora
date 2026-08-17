@@ -3,7 +3,6 @@ package com.iptv.system.api.domain;
 import lombok.Data;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.apache.ibatis.type.Alias;
 
 /**
  * 文件信息

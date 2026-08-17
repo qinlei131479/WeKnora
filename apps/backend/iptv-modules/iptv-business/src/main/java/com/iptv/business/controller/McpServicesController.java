@@ -1,25 +1,23 @@
 package com.iptv.business.controller;
 
 import com.iptv.business.domain.McpToolApprovals;
-import com.iptv.business.domain.dto.McpToolApprovalsDTO;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-import com.iptv.common.core.domain.R;
-import com.iptv.business.domain.vo.McpServicesVO;
 import com.iptv.business.domain.dto.McpServicesDTO;
+import com.iptv.business.domain.dto.McpToolApprovalsDTO;
 import com.iptv.business.domain.dto.page.McpServicesPageDTO;
+import com.iptv.business.domain.vo.McpServicesVO;
 import com.iptv.business.service.McpServicesService;
+import com.iptv.common.core.domain.R;
 import com.iptv.common.core.web.domain.dto.BaseDTO;
 import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
-import com.iptv.common.core.utils.poi.ExcelUtil;
 import com.iptv.common.log.annotation.Log;
 import com.iptv.common.log.enums.BusinessType;
 import com.iptv.common.security.annotation.RequiresPermissions;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -48,7 +46,6 @@ public class McpServicesController {
 
     @Operation(summary = "分页查询", description = "按条件分页查询")
     @GetMapping("/list")
-    @RequiresPermissions("business:mcpServices:list")
     public TableDataInfo<McpServicesVO> list(McpServicesPageDTO dto, PageDTO pg) {
         return mcpServicesService.queryPage(dto, pg);
     }
@@ -76,16 +73,6 @@ public class McpServicesController {
     public R<Void> deleteById(String id) {
         mcpServicesService.deleteById(id);
         return R.ok();
-    }
-
-    @Log(title = "导出MCP service configurations", businessType = BusinessType.EXPORT)
-    @Operation(summary = "导出", description = "导出数据到 Excel")
-    @GetMapping("/excel")
-    @RequiresPermissions("business:mcpServices:export")
-    public void export(McpServicesPageDTO dto, PageDTO pg, HttpServletResponse response) {
-        List<McpServicesVO> list = mcpServicesService.queryPage(dto, pg).getRows();
-        ExcelUtil<McpServicesVO> util = new ExcelUtil<>(McpServicesVO.class);
-        util.exportExcel(response, list, "MCP service configurations数据.xlsx");
     }
 
     @Log(title = "批量启用MCP service configurations", businessType = BusinessType.UPDATE)

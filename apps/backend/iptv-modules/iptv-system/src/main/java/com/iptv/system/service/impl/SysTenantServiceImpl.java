@@ -113,7 +113,7 @@ public class SysTenantServiceImpl extends ServiceImpl<SysTenantMapper, SysTenant
     public R<SysTenantVO> update(SysTenantSaveDTO saveVO) {
         SysTenant oldTenant = sysTenantMapper.selectById(saveVO.getId());
         if (oldTenant == null) {
-            throw new ServiceException("该租户不存在");
+            throw new ServiceException("system.tenant.not.exists");
         }
 
         validName(saveVO.getId(), saveVO.getName());
@@ -142,7 +142,7 @@ public class SysTenantServiceImpl extends ServiceImpl<SysTenantMapper, SysTenant
         this.updateById(oldTenant);
 
         kickOutUserByTenantId(oldTenant.getId());
-        return R.ok(null, "更新成功");
+        return R.ok(null, "common.success");
     }
 
     @Override
@@ -260,11 +260,11 @@ public class SysTenantServiceImpl extends ServiceImpl<SysTenantMapper, SysTenant
     @Transactional(rollbackFor = Exception.class)
     public void changeStatus(Long id, String key) {
         if (TenantConstant.ADMIN_TENANT_ID.equals(id)) {
-            throw new ServiceException("不可停用(该租户为平台租户)");
+            throw new ServiceException("system.tenant.disable.platform");
         }
         SysTenant entity = sysTenantMapper.selectById(id);
         if (entity == null) {
-            throw new ServiceException("该ID信息不存在");
+            throw new ServiceException("system.tenant.id.not.exists");
         }
         LambdaUpdateWrapper<SysTenant> wrapper = new LambdaUpdateWrapper<>();
         wrapper.set(SysTenant::getStatus, key).eq(SysTenant::getId, id);
@@ -278,18 +278,18 @@ public class SysTenantServiceImpl extends ServiceImpl<SysTenantMapper, SysTenant
         userWrapper.eq(SysUser::getTenantId, id).eq(SysUser::getDelFlag, "0");
         Long userCount = sysUserMapper.selectCount(userWrapper);
         if (userCount > 0) {
-            throw new ServiceException("不可删除(该租户已有用户绑定)");
+            throw new ServiceException("system.tenant.delete.has.user");
         }
 
         LambdaQueryWrapper<SysRole> roleWrapper = new LambdaQueryWrapper<>();
         roleWrapper.eq(SysRole::getTenantId, id).eq(SysRole::getDelFlag, "0");
         Long roleCount = sysRoleMapper.selectCount(roleWrapper);
         if (roleCount > 0) {
-            throw new ServiceException("不可删除(该租户已绑定角色)");
+            throw new ServiceException("system.tenant.delete.has.role");
         }
 
         if (TenantConstant.ADMIN_TENANT_ID.equals(id)) {
-            throw new ServiceException("不可删除(该租户为平台租户)");
+            throw new ServiceException("system.tenant.delete.platform");
         }
 
         LambdaUpdateWrapper<SysTenant> wrapper = new LambdaUpdateWrapper<>();
@@ -302,7 +302,7 @@ public class SysTenantServiceImpl extends ServiceImpl<SysTenantMapper, SysTenant
     @Override
     public SysTenantEchoVO getTenantData(Long tenantId) {
         if (tenantId == null) {
-            throw new ServiceException("租户id不能为空");
+            throw new ServiceException("system.tenant.id.required");
         }
         return sysTenantMapper.getTenantData(tenantId);
     }
@@ -404,7 +404,7 @@ public class SysTenantServiceImpl extends ServiceImpl<SysTenantMapper, SysTenant
     @Override
     public boolean checkName(Long tenantId, String name) {
         if (StrUtil.isEmpty(name)) {
-            throw new ServiceException("租户名称不能为空");
+            throw new ServiceException("system.tenant.name.required");
         }
         Long count = sysTenantMapper.selectCount(
                 new LambdaQueryWrapper<SysTenant>()
@@ -453,13 +453,13 @@ public class SysTenantServiceImpl extends ServiceImpl<SysTenantMapper, SysTenant
 
     private void validName(Long tenantId, String tenantName) {
         if (checkName(tenantId, tenantName)) {
-            throw new ServiceException("该租户名称已存在");
+            throw new ServiceException("system.tenant.name.exists");
         }
     }
 
     private void validThirdId(Long tenantId, String thirdTenantType, String thirdTenantId) {
         if (checkThirdTenantId(tenantId, thirdTenantType, thirdTenantId)) {
-            throw new ServiceException("租户CODE重复，请重新输入");
+            throw new ServiceException("system.tenant.code.exists");
         }
     }
 

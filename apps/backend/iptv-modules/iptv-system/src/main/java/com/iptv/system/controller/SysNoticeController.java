@@ -54,7 +54,7 @@ public class SysNoticeController extends BaseController {
      * 新增通知公告
      */
     @RequiresPermissions("system:notice:add")
-    @Log(title = "通知公告", businessType = BusinessType.INSERT)
+    @Log(title = "log.title.notice", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@Validated @RequestBody SysNotice notice) {
         notice.setCreateBy(SecurityUtils.getUsername());
@@ -65,7 +65,7 @@ public class SysNoticeController extends BaseController {
      * 修改通知公告
      */
     @RequiresPermissions("system:notice:edit")
-    @Log(title = "通知公告", businessType = BusinessType.UPDATE)
+    @Log(title = "log.title.notice", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@Validated @RequestBody SysNotice notice) {
         notice.setUpdateBy(SecurityUtils.getUsername());
@@ -113,7 +113,7 @@ public class SysNoticeController extends BaseController {
      * 删除通知公告
      */
     @RequiresPermissions("system:notice:remove")
-    @Log(title = "通知公告", businessType = BusinessType.DELETE)
+    @Log(title = "log.title.notice", businessType = BusinessType.DELETE)
     @DeleteMapping("/{noticeIds}")
     public AjaxResult remove(@PathVariable Long[] noticeIds) {
         noticeReadService.deleteByNoticeIds(noticeIds);

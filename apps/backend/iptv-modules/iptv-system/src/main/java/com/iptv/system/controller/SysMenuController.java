@@ -1,17 +1,7 @@
 package com.iptv.system.controller;
 
-import java.util.List;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import com.iptv.common.core.constant.UserConstants;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.StringUtils;
 import com.iptv.common.core.web.controller.BaseController;
 import com.iptv.common.core.web.domain.AjaxResult;
@@ -21,6 +11,11 @@ import com.iptv.common.security.annotation.RequiresPermissions;
 import com.iptv.common.security.utils.SecurityUtils;
 import com.iptv.system.domain.SysMenu;
 import com.iptv.system.service.ISysMenuService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 菜单信息
@@ -85,21 +80,21 @@ public class SysMenuController extends BaseController
      * 新增菜单
      */
     @RequiresPermissions("system:menu:add")
-    @Log(title = "菜单管理", businessType = BusinessType.INSERT)
+    @Log(title = "log.title.menu", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@Validated @RequestBody SysMenu menu)
     {
         if (!menuService.checkMenuNameUnique(menu))
         {
-            return error("新增菜单'" + menu.getMenuName() + "'失败，菜单名称已存在");
+            return error(MessageUtils.message("system.menu.add.name.exists", menu.getMenuName()));
         }
         else if (UserConstants.YES_FRAME.equals(menu.getIsFrame()) && !StringUtils.ishttp(menu.getPath()))
         {
-            return error("新增菜单'" + menu.getMenuName() + "'失败，地址必须以http(s)://开头");
+            return error(MessageUtils.message("system.menu.add.url.invalid", menu.getMenuName()));
         }
         else if (!menuService.checkRouteConfigUnique(menu))
         {
-            return error("新增菜单'" + menu.getMenuName() + "'失败，路由名称或地址已存在");
+            return error(MessageUtils.message("system.menu.add.route.exists", menu.getMenuName()));
         }
         menu.setCreateBy(SecurityUtils.getUsername());
         return toAjax(menuService.insertMenu(menu));
@@ -109,25 +104,25 @@ public class SysMenuController extends BaseController
      * 修改菜单
      */
     @RequiresPermissions("system:menu:edit")
-    @Log(title = "菜单管理", businessType = BusinessType.UPDATE)
+    @Log(title = "log.title.menu", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@Validated @RequestBody SysMenu menu)
     {
         if (!menuService.checkMenuNameUnique(menu))
         {
-            return error("修改菜单'" + menu.getMenuName() + "'失败，菜单名称已存在");
+            return error(MessageUtils.message("system.menu.edit.name.exists", menu.getMenuName()));
         }
         else if (UserConstants.YES_FRAME.equals(menu.getIsFrame()) && !StringUtils.ishttp(menu.getPath()))
         {
-            return error("修改菜单'" + menu.getMenuName() + "'失败，地址必须以http(s)://开头");
+            return error(MessageUtils.message("system.menu.edit.url.invalid", menu.getMenuName()));
         }
         else if (menu.getMenuId().equals(menu.getParentId()))
         {
-            return error("修改菜单'" + menu.getMenuName() + "'失败，上级菜单不能选择自己");
+            return error(MessageUtils.message("system.menu.edit.parent.self", menu.getMenuName()));
         }
         else if (!menuService.checkRouteConfigUnique(menu))
         {
-            return error("修改菜单'" + menu.getMenuName() + "'失败，路由名称或地址已存在");
+            return error(MessageUtils.message("system.menu.edit.route.exists", menu.getMenuName()));
         }
         menu.setUpdateBy(SecurityUtils.getUsername());
         return toAjax(menuService.updateMenu(menu));
@@ -137,17 +132,17 @@ public class SysMenuController extends BaseController
      * 删除菜单
      */
     @RequiresPermissions("system:menu:remove")
-    @Log(title = "菜单管理", businessType = BusinessType.DELETE)
+    @Log(title = "log.title.menu", businessType = BusinessType.DELETE)
     @DeleteMapping("/{menuId}")
     public AjaxResult remove(@PathVariable("menuId") Long menuId)
     {
         if (menuService.hasChildByMenuId(menuId))
         {
-            return warn("存在子菜单,不允许删除");
+            return warn(MessageUtils.message("system.menu.has.children"));
         }
         if (menuService.checkMenuExistRole(menuId))
         {
-            return warn("菜单已分配,不允许删除");
+            return warn(MessageUtils.message("system.menu.assigned"));
         }
         return toAjax(menuService.deleteMenuById(menuId));
     }

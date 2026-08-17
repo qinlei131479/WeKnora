@@ -1,7 +1,9 @@
 package com.iptv.common.core.domain;
 
 import java.io.Serializable;
+import cn.hutool.core.util.ObjectUtil;
 import com.iptv.common.core.constant.Constants;
+import com.iptv.common.core.utils.MessageUtils;
 
 /**
  * 响应信息主体
@@ -26,12 +28,12 @@ public class R<T> implements Serializable
 
     public static <T> R<T> ok()
     {
-        return restResult(null, SUCCESS, null);
+        return restResult(null, SUCCESS, "common.success");
     }
 
     public static <T> R<T> ok(T data)
     {
-        return restResult(data, SUCCESS, null);
+        return restResult(data, SUCCESS, "common.success");
     }
 
     public static <T> R<T> ok(T data, String msg)
@@ -41,7 +43,7 @@ public class R<T> implements Serializable
 
     public static <T> R<T> fail()
     {
-        return restResult(null, FAIL, null);
+        return restResult(null, FAIL, "common.fail");
     }
 
     public static <T> R<T> fail(String msg)
@@ -51,7 +53,7 @@ public class R<T> implements Serializable
 
     public static <T> R<T> fail(T data)
     {
-        return restResult(data, FAIL, null);
+        return restResult(data, FAIL, "common.fail");
     }
 
     public static <T> R<T> fail(T data, String msg)
@@ -69,7 +71,7 @@ public class R<T> implements Serializable
         R<T> apiResult = new R<>();
         apiResult.setCode(code);
         apiResult.setData(data);
-        apiResult.setMsg(msg);
+        apiResult.setMsg(ObjectUtil.isNull(msg) ? null : MessageUtils.message(msg));
         return apiResult;
     }
 

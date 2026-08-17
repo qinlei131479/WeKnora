@@ -8,10 +8,12 @@ import org.springframework.cloud.gateway.filter.GatewayFilter;
 import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.ServletUtils;
 import com.iptv.common.core.utils.StringUtils;
 import com.iptv.gateway.config.properties.CaptchaProperties;
@@ -58,7 +60,9 @@ public class ValidateCodeFilter extends AbstractGatewayFilterFactory<Object>
             }
             catch (Exception e)
             {
-                return ServletUtils.webFluxResponseWriter(exchange.getResponse(), e.getMessage());
+                return ServletUtils.webFluxResponseWriter(exchange.getResponse(), MessageUtils.message(
+                        MessageUtils.resolveLocale(request.getHeaders().getFirst(HttpHeaders.ACCEPT_LANGUAGE)),
+                        e.getMessage()));
             }
             return chain.filter(exchange);
         };

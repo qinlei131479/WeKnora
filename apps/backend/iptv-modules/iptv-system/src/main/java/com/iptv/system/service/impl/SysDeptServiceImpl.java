@@ -193,7 +193,7 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
             dept.setDeptId(deptId);
             List<SysDept> depts = SpringUtils.getAopProxy(this).selectDeptList(dept);
             if (StringUtils.isEmpty(depts)) {
-                throw new ServiceException("没有权限访问部门数据！");
+                throw new ServiceException("system.dept.scope.denied");
             }
         }
     }
@@ -209,7 +209,7 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
         SysDept info = this.baseMapper.selectDeptById(dept.getParentId());
         // 如果父节点不为正常状态,则不允许新增子节点
         if (!UserConstants.DEPT_NORMAL.equals(info.getStatus())) {
-            throw new ServiceException("部门停用，不允许新增");
+            throw new ServiceException("system.dept.disabled");
         }
         dept.setAncestors(info.getAncestors() + "," + dept.getParentId());
         return this.baseMapper.insertDept(dept);
@@ -391,7 +391,7 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
     @Override
     public List<Long> selectDeptListByUserId(Long userId) {
         return sysUserDeptMapper.selectList(new LambdaQueryWrapper<SysUserDept>()
-                .eq(SysUserDept::getUserId, userId))
+                        .eq(SysUserDept::getUserId, userId))
                 .stream()
                 .map(SysUserDept::getDeptId)
                 .toList();

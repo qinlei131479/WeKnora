@@ -13,7 +13,7 @@ import com.iptv.common.security.annotation.InnerAuth;
 
 /**
  * 内部服务调用验证处理
- * 
+ *
  * @author ruoyi
  */
 @Aspect
@@ -27,7 +27,7 @@ public class InnerAuthAspect implements Ordered
         // 内部请求验证
         if (!StringUtils.equals(SecurityConstants.INNER, source))
         {
-            throw new InnerAuthException("没有内部访问权限，不允许访问");
+            throw new InnerAuthException("error.inner.auth.denied");
         }
 
         String userid = ServletUtils.getRequest().getHeader(SecurityConstants.DETAILS_USER_ID);
@@ -35,7 +35,7 @@ public class InnerAuthAspect implements Ordered
         // 用户信息验证
         if (innerAuth.isUser() && (StringUtils.isEmpty(userid) || StringUtils.isEmpty(username)))
         {
-            throw new InnerAuthException("没有设置用户信息，不允许访问 ");
+            throw new InnerAuthException("error.inner.auth.user.missing");
         }
         return point.proceed();
     }

@@ -43,7 +43,6 @@ public class OllamaController {
 
     @Operation(summary = "获取模型列表", description = "获取已安装的 Ollama 模型列表")
     @GetMapping("/models")
-    @RequiresPermissions("business:ollama:query")
     public R<List<OllamaModelVO>> listModels() {
         return R.ok(ollamaService.listModels());
     }

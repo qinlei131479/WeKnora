@@ -1,18 +1,8 @@
 package com.iptv.system.controller;
 
-import java.util.Arrays;
-import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 import com.iptv.common.core.domain.R;
 import com.iptv.common.core.utils.DateUtils;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.StringUtils;
 import com.iptv.common.core.utils.file.FileTypeUtils;
 import com.iptv.common.core.utils.file.MimeTypeUtils;
@@ -27,6 +17,12 @@ import com.iptv.system.api.domain.SysFile;
 import com.iptv.system.api.domain.SysUser;
 import com.iptv.system.api.model.LoginUser;
 import com.iptv.system.service.ISysUserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.Arrays;
+import java.util.Map;
 
 /**
  * 个人信息 业务处理
@@ -63,7 +59,7 @@ public class SysProfileController extends BaseController
     /**
      * 修改用户
      */
-    @Log(title = "个人信息", businessType = BusinessType.UPDATE)
+    @Log(title = "log.title.profile", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult updateProfile(@RequestBody SysUser user)
     {
@@ -75,11 +71,11 @@ public class SysProfileController extends BaseController
         currentUser.setSex(user.getSex());
         if (StringUtils.isNotEmpty(user.getPhonenumber()) && !userService.checkPhoneUnique(currentUser))
         {
-            return error("修改用户'" + loginUser.getUsername() + "'失败，手机号码已存在");
+            return error(MessageUtils.message("system.user.edit.phone.exists", loginUser.getUsername()));
         }
         if (StringUtils.isNotEmpty(user.getEmail()) && !userService.checkEmailUnique(currentUser))
         {
-            return error("修改用户'" + loginUser.getUsername() + "'失败，邮箱账号已存在");
+            return error(MessageUtils.message("system.user.edit.email.exists", loginUser.getUsername()));
         }
         if (userService.updateUserProfile(currentUser))
         {
@@ -87,13 +83,13 @@ public class SysProfileController extends BaseController
             tokenService.setLoginUser(loginUser);
             return success();
         }
-        return error("修改个人信息异常，请联系管理员");
+        return error(MessageUtils.message("system.profile.update.failed"));
     }
 
     /**
      * 重置密码
      */
-    @Log(title = "个人信息", businessType = BusinessType.UPDATE)
+    @Log(title = "log.title.profile", businessType = BusinessType.UPDATE)
     @PutMapping("/updatePwd")
     public AjaxResult updatePwd(@RequestBody Map<String, String> params)
     {
@@ -104,11 +100,11 @@ public class SysProfileController extends BaseController
         String password = loginUser.getSysUser().getPassword();
         if (!SecurityUtils.matchesPassword(oldPassword, password))
         {
-            return error("修改密码失败，旧密码错误");
+            return error(MessageUtils.message("system.profile.pwd.old.incorrect"));
         }
         if (SecurityUtils.matchesPassword(newPassword, password))
         {
-            return error("新密码不能与旧密码相同");
+            return error(MessageUtils.message("system.profile.pwd.same"));
         }
         newPassword = SecurityUtils.encryptPassword(newPassword);
         if (userService.resetUserPwd(userId, newPassword) > 0)
@@ -119,13 +115,13 @@ public class SysProfileController extends BaseController
             tokenService.setLoginUser(loginUser);
             return success();
         }
-        return error("修改密码异常，请联系管理员");
+        return error(MessageUtils.message("system.profile.pwd.failed"));
     }
     
     /**
      * 头像上传
      */
-    @Log(title = "用户头像", businessType = BusinessType.UPDATE)
+    @Log(title = "log.title.avatar", businessType = BusinessType.UPDATE)
     @PostMapping("/avatar")
     public AjaxResult avatar(@RequestParam("file") MultipartFile file)
     {
@@ -135,12 +131,13 @@ public class SysProfileController extends BaseController
             String extension = FileTypeUtils.getExtension(file);
             if (!StringUtils.equalsAnyIgnoreCase(extension, MimeTypeUtils.IMAGE_EXTENSION))
             {
-                return error("文件格式不正确，请上传" + Arrays.toString(MimeTypeUtils.IMAGE_EXTENSION) + "格式");
+                return error(MessageUtils.message("system.profile.avatar.format",
+                        Arrays.toString(MimeTypeUtils.IMAGE_EXTENSION)));
             }
             R<SysFile> fileResult = remoteFileService.upload(file);
             if (StringUtils.isNull(fileResult) || StringUtils.isNull(fileResult.getData()))
             {
-                return error("文件服务异常，请联系管理员");
+                return error(MessageUtils.message("system.profile.avatar.file.service"));
             }
             String url = fileResult.getData().getUrl();
             if (userService.updateUserAvatar(loginUser.getUserid(), url))
@@ -158,6 +155,6 @@ public class SysProfileController extends BaseController
                 return ajax;
             }
         }
-        return error("上传图片异常，请联系管理员");
+        return error(MessageUtils.message("system.profile.avatar.upload.failed"));
     }
 }

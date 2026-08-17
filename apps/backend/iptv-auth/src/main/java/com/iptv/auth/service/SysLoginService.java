@@ -14,6 +14,7 @@ import com.iptv.common.core.constant.UserConstants;
 import com.iptv.common.core.domain.R;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.DateUtils;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.StringUtils;
 import com.iptv.common.core.utils.ip.IpUtils;
 import com.iptv.common.redis.service.RedisService;
@@ -28,7 +29,7 @@ import java.util.Date;
 
 /**
  * 登录校验方法
- * 
+ *
  * @author ruoyi
  */
 @Component
@@ -55,7 +56,7 @@ public class SysLoginService
     public LoginUser login(String username, String password)
     {
         LoginUser userInfo = checkUserInfo(username, password);
-        recordLogService.recordLogininfor(username, Constants.LOGIN_SUCCESS, "登录成功", LoginOperatorTypeEnum.LOGIN.getCode(), userInfo.getSysUser().getUserId());
+        recordLogService.recordLogininfor(username, Constants.LOGIN_SUCCESS, MessageUtils.message("login.success"), LoginOperatorTypeEnum.LOGIN.getCode(), userInfo.getSysUser().getUserId());
         return userInfo;
     }
 
@@ -66,7 +67,7 @@ public class SysLoginService
     {
         if (ObjectUtil.isNull(user.getTenantId()))
         {
-            throw new ServiceException("对不起，您的账号没有关联租户");
+            throw new ServiceException("auth.tenant.not.linked");
         }
 
         R<SysTenantVO> tenantResult = remoteTenantService.queryById(user.getTenantId(), SecurityConstants.INNER);
@@ -75,11 +76,11 @@ public class SysLoginService
             SysTenantVO tenantVO = tenantResult.getData();
             if (ObjectUtil.isNull(tenantVO))
             {
-                throw new ServiceException("对不起，您的账号没有关联租户");
+                throw new ServiceException("auth.tenant.not.linked");
             }
             if (StrUtil.isNotBlank(tenantVO.getStatus()) && UserStatus.DISABLE.getCode().equals(tenantVO.getStatus()))
             {
-                throw new ServiceException("对不起，您的租户：" + tenantVO.getName() + " 已停用");
+                throw new ServiceException("auth.tenant.disabled", tenantVO.getName());
             }
             Date startTime = tenantVO.getAuditServiceValidityStart();
             Date endTime = tenantVO.getAuditServiceValidityEnd();
@@ -89,7 +90,7 @@ public class SysLoginService
                     && ObjectUtil.isNotNull(endTime)
                     && (now.before(startTime) || now.after(endTime)))
             {
-                throw new ServiceException("对不起，您的租户：" + tenantVO.getName() + " 已过期");
+                throw new ServiceException("auth.tenant.expired", tenantVO.getName());
             }
         }
     }
@@ -119,7 +120,7 @@ public class SysLoginService
             userId = userInfo.getSysUser().getUserId();
         }
 
-        recordLogService.recordLogininfor(loginName, Constants.LOGOUT, "退出成功", LoginOperatorTypeEnum.LOGOUT.getCode(), userId);
+        recordLogService.recordLogininfor(loginName, Constants.LOGOUT, MessageUtils.message("login.logout"), LoginOperatorTypeEnum.LOGOUT.getCode(), userId);
     }
 
     /**
@@ -130,17 +131,17 @@ public class SysLoginService
         // 用户名或密码为空 错误
         if (StringUtils.isAnyBlank(username, password))
         {
-            throw new ServiceException("用户/密码必须填写");
+            throw new ServiceException("login.fail.credentials.required");
         }
         if (username.length() < UserConstants.USERNAME_MIN_LENGTH
                 || username.length() > UserConstants.USERNAME_MAX_LENGTH)
         {
-            throw new ServiceException("账户长度必须在2到20个字符之间");
+            throw new ServiceException("auth.register.username.length");
         }
         if (password.length() < UserConstants.PASSWORD_MIN_LENGTH
                 || password.length() > UserConstants.PASSWORD_MAX_LENGTH)
         {
-            throw new ServiceException("密码长度必须在5到20个字符之间");
+            throw new ServiceException("auth.register.password.length");
         }
 
         // 注册用户信息
@@ -160,7 +161,7 @@ public class SysLoginService
             LoginUser userInfo = BeanUtil.toBean(registerResult.getData(), LoginUser.class);
             userId = userInfo.getUserid();
         }
-        recordLogService.recordLogininfor(username, Constants.REGISTER, "注册成功", LoginOperatorTypeEnum.REGISTER.getCode(), userId);
+        recordLogService.recordLogininfor(username, Constants.REGISTER, MessageUtils.message("login.register"), LoginOperatorTypeEnum.REGISTER.getCode(), userId);
     }
 
     /**
@@ -174,8 +175,8 @@ public class SysLoginService
     public LoginUser checkUserInfo(String username, String password) {
         // 用户名或密码为空 错误
         if (StrUtil.isBlank(username) || StrUtil.isBlank(password)) {
-            recordLogService.recordLogininfor(username, Constants.LOGIN_FAIL, "用户/密码必须填写", LoginOperatorTypeEnum.LOGIN.getCode(), null);
-            throw new ServiceException("用户/密码必须填写");
+            recordLogService.recordLogininfor(username, Constants.LOGIN_FAIL, MessageUtils.message("login.fail.credentials.required"), LoginOperatorTypeEnum.LOGIN.getCode(), null);
+            throw new ServiceException("login.fail.credentials.required");
         }
         /*
          * // 密码如果不在指定范围内 错误 if (password.length() <
@@ -204,15 +205,15 @@ public class SysLoginService
         LoginUser userInfo = BeanUtil.toBean(userResult.getData(), LoginUser.class);
         SysUser user = userInfo.getSysUser();
         if (DelFlagEnum.DELETE.getCodeStr().equals(user.getDelFlag())) {
-            recordLogService.recordLogininfor(username, Constants.LOGIN_FAIL, "对不起，您的账号已被删除", LoginOperatorTypeEnum.LOGIN.getCode(), null);
+            recordLogService.recordLogininfor(username, Constants.LOGIN_FAIL, MessageUtils.message("login.fail.account.deleted"), LoginOperatorTypeEnum.LOGIN.getCode(), null);
 //			throw new ServiceException("对不起，您的账号：" + username + " 已被删除");
 //			和产品沟通, 删除用以下提示语
-            throw new ServiceException("用户名或密码错误，请重新输入");
+            throw new ServiceException("auth.login.bad.credentials.retry");
         }
         if (UserStatus.DISABLE.getCode().equals(user.getStatus())) {
-            recordLogService.recordLogininfor(username, Constants.LOGIN_FAIL, "用户已停用，请联系管理员", LoginOperatorTypeEnum.LOGIN.getCode(), null);
+            recordLogService.recordLogininfor(username, Constants.LOGIN_FAIL, MessageUtils.message("login.fail.account.disabled"), LoginOperatorTypeEnum.LOGIN.getCode(), null);
 //			throw new ServiceException("对不起，您的账号：" + username + " 已停用");
-            throw new ServiceException("用户名或密码错误，请重新输入");
+            throw new ServiceException("auth.login.bad.credentials.retry");
         }
         passwordService.validate(user, password);// 验证密码
         // 验证租户

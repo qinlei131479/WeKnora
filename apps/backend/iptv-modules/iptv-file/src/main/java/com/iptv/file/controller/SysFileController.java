@@ -1,6 +1,7 @@
 package com.iptv.file.controller;
 
 import com.iptv.common.core.domain.R;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.StringUtils;
 import com.iptv.common.core.utils.file.FileUtils;
 import com.iptv.file.service.ISysFileService;
@@ -75,7 +76,7 @@ public class SysFileController {
     public R<Boolean> delete(String fileUrl) {
         try {
             if (!FileUtils.validateFilePath(fileUrl)) {
-                throw new Exception(StringUtils.format("资源文件({})非法，不允许删除。 ", fileUrl));
+                throw new Exception(MessageUtils.message("file.delete.path.invalid", fileUrl));
             }
             sysFileService.deleteFile(fileUrl);
             return R.ok();

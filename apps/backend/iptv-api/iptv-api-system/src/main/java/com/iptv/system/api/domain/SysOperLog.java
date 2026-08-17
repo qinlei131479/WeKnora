@@ -1,15 +1,14 @@
 package com.iptv.system.api.domain;
 
-import java.util.Date;
-import java.util.List;
-
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.iptv.common.core.annotation.Excel;
 import com.iptv.common.core.annotation.Excel.ColumnType;
 import com.iptv.common.core.web.domain.BaseEntity;
 import lombok.Data;
-import org.apache.ibatis.type.Alias;
+
+import java.util.Date;
+import java.util.List;
 
 /**
  * 操作日志记录表 oper_log

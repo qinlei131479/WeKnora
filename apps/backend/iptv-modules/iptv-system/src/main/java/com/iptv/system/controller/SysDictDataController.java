@@ -1,10 +1,11 @@
 package com.iptv.system.controller;
 
-import com.iptv.common.core.web.page.PageDTO;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.StringUtils;
 import com.iptv.common.core.utils.poi.ExcelUtil;
 import com.iptv.common.core.web.controller.BaseController;
 import com.iptv.common.core.web.domain.AjaxResult;
+import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
 import com.iptv.common.log.annotation.Log;
 import com.iptv.common.log.enums.BusinessType;
@@ -14,6 +15,7 @@ import com.iptv.system.api.domain.SysDictData;
 import com.iptv.system.service.ISysDictDataService;
 import com.iptv.system.service.ISysDictTypeService;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -42,14 +44,14 @@ public class SysDictDataController extends BaseController {
         return list;
     }
 
-    @Log(title = "字典数据", businessType = BusinessType.EXPORT)
+    @Log(title = "log.title.dict_data", businessType = BusinessType.EXPORT)
     @RequiresPermissions("system:dict:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, SysDictData dictData, PageDTO dto) {
         TableDataInfo<SysDictData> sysDictDataTableDataInfo = dictDataService.selectDictDataList(dictData, dto);
         List<SysDictData> list = sysDictDataTableDataInfo.getRows();
         ExcelUtil<SysDictData> util = new ExcelUtil<SysDictData>(SysDictData.class);
-        util.exportExcel(response, list, "字典数据");
+        util.exportExcel(response, list, MessageUtils.message("excel.sheet.dict.data"));
     }
 
     /**
@@ -70,14 +72,20 @@ public class SysDictDataController extends BaseController {
         if (StringUtils.isNull(data)) {
             data = new ArrayList<SysDictData>();
         }
-        return success(data);
+        List<SysDictData> localizedData = data.stream().map(item -> {
+            SysDictData copy = new SysDictData();
+            BeanUtils.copyProperties(item, copy);
+            copy.setDictLabel(MessageUtils.message(item.getDictLabel()));
+            return copy;
+        }).toList();
+        return success(localizedData);
     }
 
     /**
      * 新增字典类型
      */
     @RequiresPermissions("system:dict:add")
-    @Log(title = "字典数据", businessType = BusinessType.INSERT)
+    @Log(title = "log.title.dict_data", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@Validated @RequestBody SysDictData dict) {
         dict.setCreateBy(SecurityUtils.getUsername());
@@ -88,7 +96,7 @@ public class SysDictDataController extends BaseController {
      * 修改保存字典类型
      */
     @RequiresPermissions("system:dict:edit")
-    @Log(title = "字典数据", businessType = BusinessType.UPDATE)
+    @Log(title = "log.title.dict_data", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@Validated @RequestBody SysDictData dict) {
         dict.setUpdateBy(SecurityUtils.getUsername());
@@ -99,7 +107,7 @@ public class SysDictDataController extends BaseController {
      * 删除字典类型
      */
     @RequiresPermissions("system:dict:remove")
-    @Log(title = "字典类型", businessType = BusinessType.DELETE)
+    @Log(title = "log.title.dict_type", businessType = BusinessType.DELETE)
     @DeleteMapping("/{dictCodes}")
     public AjaxResult remove(@PathVariable Long[] dictCodes) {
         dictDataService.deleteDictDataByIds(dictCodes);

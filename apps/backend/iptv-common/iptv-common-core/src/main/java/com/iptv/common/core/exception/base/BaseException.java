@@ -1,8 +1,11 @@
 package com.iptv.common.core.exception.base;
 
+import com.iptv.common.core.utils.MessageUtils;
+import com.iptv.common.core.utils.StringUtils;
+
 /**
  * 基础异常
- * 
+ *
  * @author ruoyi
  */
 public class BaseException extends RuntimeException
@@ -74,6 +77,16 @@ public class BaseException extends RuntimeException
 
     public String getDefaultMessage()
     {
+        return defaultMessage;
+    }
+
+    @Override
+    public String getMessage()
+    {
+        if (StringUtils.isNotEmpty(code))
+        {
+            return MessageUtils.messageOrDefault(code, defaultMessage, args);
+        }
         return defaultMessage;
     }
 }

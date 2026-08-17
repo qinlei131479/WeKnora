@@ -3,6 +3,7 @@ package com.iptv.business.controller;
 import com.iptv.business.domain.vo.SkillVO;
 import com.iptv.business.service.SkillService;
 import com.iptv.common.core.domain.R;
+import com.iptv.common.security.annotation.RequiresPermissions;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class SkillController {
 
     @Operation(summary = "获取预装技能列表", description = "获取系统中所有预装技能的列表")
     @GetMapping("/list")
+    @RequiresPermissions("business:skills:list")
     public R<Map<String, Object>> listSkills() {
         List<SkillVO> skills = skillService.listPreloadedSkills();
         Boolean sandboxMode = skillService.isSandboxMode();

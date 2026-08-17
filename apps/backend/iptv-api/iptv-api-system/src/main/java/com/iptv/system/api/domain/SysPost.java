@@ -53,17 +53,10 @@ public class SysPost extends BaseEntity
     @TableField(exist = false)
     private boolean flag = false;
 
-    /** 用户是否存在此岗位标识 默认不存在 */
-    @TableField(exist = false)
-    private Integer isUpdatePostName;
-
     /**
      * 备注
      */
     private String remark;
-
-    @TableField(exist = false)
-    private String action;
 
     public Long getPostId()
     {
@@ -75,8 +68,8 @@ public class SysPost extends BaseEntity
         this.postId = postId;
     }
 
-    @NotBlank(message = "岗位编码不能为空")
-    @Size(min = 0, max = 64, message = "岗位编码长度不能超过64个字符")
+    @NotBlank(message = "{system.validation.post.code.required}")
+    @Size(min = 0, max = 64, message = "{system.validation.post.code.size}")
     public String getPostCode()
     {
         return postCode;
@@ -87,8 +80,8 @@ public class SysPost extends BaseEntity
         this.postCode = postCode;
     }
 
-    @NotBlank(message = "岗位名称不能为空")
-    @Size(min = 0, max = 50, message = "岗位名称长度不能超过50个字符")
+    @NotBlank(message = "{system.validation.post.name.required}")
+    @Size(min = 0, max = 50, message = "{system.validation.post.name.size}")
     public String getPostName()
     {
         return postName;
@@ -99,7 +92,7 @@ public class SysPost extends BaseEntity
         this.postName = postName;
     }
 
-    @NotNull(message = "显示顺序不能为空")
+    @NotNull(message = "{system.validation.order.required}")
     public Integer getPostSort()
     {
         return postSort;

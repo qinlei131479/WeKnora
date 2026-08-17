@@ -1,8 +1,10 @@
 package com.iptv.common.core.enums;
 
+import com.iptv.common.core.utils.MessageUtils;
+
 /**
  * 用户状态
- * 
+ *
  * @author ruoyi
  */
 public enum UserStatus
@@ -25,6 +27,6 @@ public enum UserStatus
 
     public String getInfo()
     {
-        return info;
+        return MessageUtils.desc(this, info);
     }
 }

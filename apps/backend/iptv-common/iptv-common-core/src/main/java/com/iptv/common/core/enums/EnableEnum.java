@@ -1,6 +1,7 @@
 package com.iptv.common.core.enums;
 
 import lombok.Getter;
+import com.iptv.common.core.utils.MessageUtils;
 
 /**
  * 启用禁用枚举
@@ -25,6 +26,10 @@ public enum EnableEnum {
         this.code = code;
         this.codeStr = codeStr;
         this.desc = desc;
+    }
+
+    public String getDesc() {
+        return MessageUtils.desc(this, desc);
     }
 
     public static String getDescByCode(Integer enabled) {

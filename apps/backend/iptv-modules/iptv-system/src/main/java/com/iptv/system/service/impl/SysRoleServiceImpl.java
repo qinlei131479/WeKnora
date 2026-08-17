@@ -189,7 +189,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     public void checkRoleAllowed(SysRole role) {
         if (StringUtils.isNotNull(role.getRoleId()) && role.isAdmin()) {
-            throw new ServiceException("不允许操作超级管理员角色");
+            throw new ServiceException("system.role.admin.forbidden");
         }
     }
 
@@ -204,7 +204,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
             for (Long roleId : roleIds) {
                 List<SysRole> roles = this.baseMapper.selectList(new LambdaQueryWrapper<SysRole>().eq(SysRole::getRoleId, roleId));
                 if (StringUtils.isEmpty(roles)) {
-                    throw new ServiceException("没有权限访问角色数据！");
+                    throw new ServiceException("system.role.scope.denied");
                 }
             }
         }
@@ -351,7 +351,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
             checkRoleDataScope(roleId);
             SysRole role = selectRoleById(roleId);
             if (countUserRoleByRoleId(roleId) > 0) {
-                throw new ServiceException(String.format("%1$s已分配,不能删除", role.getRoleName()));
+                throw new ServiceException("system.assigned.cannot.delete", role.getRoleName());
             }
         }
         // 删除角色与菜单关联

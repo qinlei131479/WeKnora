@@ -9,13 +9,14 @@ import java.util.stream.Collectors;
 import cn.hutool.core.util.ObjectUtil;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.iptv.common.core.constant.UserConstants;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.StringUtils;
 import com.iptv.system.api.domain.SysDept;
 import com.iptv.system.domain.SysMenu;
 
 /**
  * Treeselect树结构实体类
- * 
+ *
  * @author ruoyi
  */
 public class TreeSelect implements Serializable
@@ -61,7 +62,7 @@ public class TreeSelect implements Serializable
     public TreeSelect(SysMenu menu)
     {
         this.id = menu.getMenuId();
-        this.label = menu.getMenuName();
+        this.label = MessageUtils.message(menu.getMenuName());
         this.children = menu.getChildren().stream().map(TreeSelect::new).collect(Collectors.toList());
     }
 

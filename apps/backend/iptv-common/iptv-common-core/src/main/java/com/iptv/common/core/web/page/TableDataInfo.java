@@ -2,10 +2,12 @@ package com.iptv.common.core.web.page;
 
 import java.io.Serializable;
 import java.util.List;
+import cn.hutool.core.util.ObjectUtil;
+import com.iptv.common.core.utils.MessageUtils;
 
 /**
  * 表格分页数据对象
- * 
+ *
  * @author ruoyi
  */
 public class TableDataInfo<T> implements Serializable
@@ -33,7 +35,7 @@ public class TableDataInfo<T> implements Serializable
 
     /**
      * 分页
-     * 
+     *
      * @param list 列表数据
      * @param total 总记录数
      */
@@ -80,6 +82,6 @@ public class TableDataInfo<T> implements Serializable
 
     public void setMsg(String msg)
     {
-        this.msg = msg;
+        this.msg = ObjectUtil.isNull(msg) ? null : MessageUtils.message(msg);
     }
 }

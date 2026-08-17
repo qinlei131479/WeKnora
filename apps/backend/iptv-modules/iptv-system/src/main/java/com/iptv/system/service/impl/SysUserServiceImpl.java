@@ -10,6 +10,7 @@ import com.iptv.common.core.constant.UserConstants;
 import com.iptv.common.core.domain.R;
 import com.iptv.common.core.enums.FlagEnum;
 import com.iptv.common.core.exception.ServiceException;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.PageUtils;
 import com.iptv.common.core.utils.StringUtils;
 import com.iptv.common.core.utils.bean.BeanValidators;
@@ -279,7 +280,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Override
     public void checkUserAllowed(SysUser user) {
         if (StringUtils.isNotNull(user.getUserId()) && UserConstants.isAdmin(user.getUserId())) {
-            throw new ServiceException("不允许操作超级管理员用户");
+            throw new ServiceException("system.user.admin.forbidden");
         }
     }
 
@@ -293,7 +294,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (!SecurityUtils.isAdmin()) {
             List<SysUser> users = this.baseMapper.selectList(new LambdaQueryWrapper<SysUser>().eq(SysUser::getUserId, userId));
             if (StringUtils.isEmpty(users)) {
-                throw new ServiceException("没有权限访问用户数据！");
+                throw new ServiceException("system.user.scope.denied");
             }
         }
     }
@@ -554,7 +555,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Override
     public String importUser(List<SysUser> userList, Boolean isUpdateSupport, String operName) {
         if (StringUtils.isNull(userList) || userList.size() == 0) {
-            throw new ServiceException("导入用户数据不能为空！");
+            throw new ServiceException("system.user.import.empty");
         }
         int successNum = 0;
         int failureNum = 0;
@@ -572,7 +573,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
                     user.setCreateBy(operName);
                     this.baseMapper.insertUser(user);
                     successNum++;
-                    successMsg.append("<br/>" + successNum + "、账号 " + user.getUserName() + " 导入成功");
+                    successMsg.append(MessageUtils.message("system.user.import.item.success", successNum, user.getUserName()));
                 } else if (isUpdateSupport) {
                     BeanValidators.validateWithException(validator, user);
                     checkUserAllowed(u);
@@ -583,23 +584,23 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
                     user.setUpdateBy(operName);
                     this.baseMapper.updateUser(user);
                     successNum++;
-                    successMsg.append("<br/>" + successNum + "、账号 " + user.getUserName() + " 更新成功");
+                    successMsg.append(MessageUtils.message("system.user.import.item.updated", successNum, user.getUserName()));
                 } else {
                     failureNum++;
-                    failureMsg.append("<br/>" + failureNum + "、账号 " + user.getUserName() + " 已存在");
+                    failureMsg.append(MessageUtils.message("system.user.import.item.exists", failureNum, user.getUserName()));
                 }
             } catch (Exception e) {
                 failureNum++;
-                String msg = "<br/>" + failureNum + "、账号 " + user.getUserName() + " 导入失败：";
-                failureMsg.append(msg + e.getMessage());
+                String msg = MessageUtils.message("system.user.import.item.failed", failureNum, user.getUserName(), e.getMessage());
+                failureMsg.append(msg);
                 log.error(msg, e);
             }
         }
         if (failureNum > 0) {
-            failureMsg.insert(0, "很抱歉，导入失败！共 " + failureNum + " 条数据格式不正确，错误如下：");
+            failureMsg.insert(0, MessageUtils.message("system.user.import.failed.summary", failureNum));
             throw new ServiceException(failureMsg.toString());
         } else {
-            successMsg.insert(0, "恭喜您，数据已全部导入成功！共 " + successNum + " 条，数据如下：");
+            successMsg.insert(0, MessageUtils.message("system.user.import.success.summary", successNum));
         }
         return successMsg.toString();
     }
@@ -625,7 +626,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     public boolean checkPassword(Long userId, String password) {
         SysUser user = getById(userId);
         if (ObjectUtil.isNull(user)) {
-            throw new ServiceException("用户不存在");
+            throw new ServiceException("system.user.not.exists");
         }
         checkUserDataScope(user.getUserId());
 
@@ -641,15 +642,15 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     public R bindScgcUser(Long userId, Long otherUserId) {
         SysUser sysUser = this.baseMapper.selectUserById(userId);
         if (ObjectUtil.isNull(sysUser)) {
-            return R.fail("用户不存在");
+            return R.fail(MessageUtils.message("system.user.not.exists"));
         }
         if (ObjectUtil.isNotNull(otherUserId)) {
             if (ObjectUtil.isNotNull(sysUser.getScgcUserId())) {
-                return R.fail("该用户已绑定");
+                return R.fail(MessageUtils.message("system.user.already.bound"));
             }
             SysUser scgcUser = this.baseMapper.selectByScgcUserId(otherUserId);
             if (ObjectUtil.isNotNull(scgcUser) && !scgcUser.getUserId().equals(userId)) {
-                return R.fail("该用户已绑定");
+                return R.fail(MessageUtils.message("system.user.already.bound"));
             }
         }
 

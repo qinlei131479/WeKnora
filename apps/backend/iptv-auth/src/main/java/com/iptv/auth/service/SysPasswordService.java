@@ -8,13 +8,14 @@ import org.springframework.stereotype.Component;
 import com.iptv.common.core.constant.CacheConstants;
 import com.iptv.common.core.constant.Constants;
 import com.iptv.common.core.exception.ServiceException;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.redis.service.RedisService;
 import com.iptv.common.security.utils.SecurityUtils;
 import com.iptv.system.api.domain.SysUser;
 
 /**
  * 登录密码方法
- * 
+ *
  * @author ruoyi
  */
 @Component
@@ -32,7 +33,7 @@ public class SysPasswordService
 
     /**
      * 登录账户密码错误次数缓存键名
-     * 
+     *
      * @param username 用户名
      * @return 缓存键key
      */
@@ -54,17 +55,17 @@ public class SysPasswordService
 
         if (retryCount >= Integer.valueOf(maxRetryCount).intValue())
         {
-            String errMsg = String.format("密码输入错误%s次，帐户锁定%s分钟", maxRetryCount, lockTime);
+            String errMsg = MessageUtils.message("login.fail.password.lock", maxRetryCount, lockTime);
             recordLogService.recordLogininfor(username, Constants.LOGIN_FAIL, errMsg, LoginOperatorTypeEnum.LOGIN.getCode(), user.getUserId());
-            throw new ServiceException(errMsg);
+            throw new ServiceException("login.fail.password.lock", maxRetryCount, lockTime);
         }
 
         if (!matches(user, password))
         {
             retryCount = retryCount + 1;
-            recordLogService.recordLogininfor(username, Constants.LOGIN_FAIL, String.format("密码输入错误%s次", retryCount), LoginOperatorTypeEnum.LOGIN.getCode(), user.getUserId());
+            recordLogService.recordLogininfor(username, Constants.LOGIN_FAIL, MessageUtils.message("login.fail.password.retry", retryCount), LoginOperatorTypeEnum.LOGIN.getCode(), user.getUserId());
             redisService.setCacheObject(getCacheKey(username), retryCount, lockTime, TimeUnit.MINUTES);
-            throw new ServiceException("用户不存在/密码错误");
+            throw new ServiceException("auth.login.bad.credentials");
         }
         else
         {

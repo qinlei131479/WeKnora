@@ -1,7 +1,9 @@
 package com.iptv.system.service.impl;
 
+import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.utils.PageUtils;
 import com.iptv.common.core.web.page.TableDataInfo;
@@ -43,7 +45,8 @@ public class SysDictDataServiceImpl extends ServiceImpl<SysDictDataMapper, SysDi
      */
     @Override
     public String selectDictLabel(String dictType, String dictValue) {
-        return this.baseMapper.selectDictLabel(dictType, dictValue);
+        String dictLabel = this.baseMapper.selectDictLabel(dictType, dictValue);
+        return ObjectUtil.isNull(dictLabel) ? null : MessageUtils.message(dictLabel);
     }
 
     /**

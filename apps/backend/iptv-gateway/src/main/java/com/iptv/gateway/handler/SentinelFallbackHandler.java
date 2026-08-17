@@ -2,7 +2,9 @@ package com.iptv.gateway.handler;
 
 import com.alibaba.csp.sentinel.adapter.gateway.sc.callback.GatewayCallbackManager;
 import com.alibaba.csp.sentinel.slots.block.BlockException;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.ServletUtils;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebExceptionHandler;
@@ -17,7 +19,10 @@ public class SentinelFallbackHandler implements WebExceptionHandler
 {
     private Mono<Void> writeResponse(ServerResponse response, ServerWebExchange exchange)
     {
-        return ServletUtils.webFluxResponseWriter(exchange.getResponse(), "请求超过最大数，请稍候再试");
+        return ServletUtils.webFluxResponseWriter(exchange.getResponse(), MessageUtils.message(
+                MessageUtils.resolveLocale(exchange.getRequest().getHeaders()
+                        .getFirst(HttpHeaders.ACCEPT_LANGUAGE)),
+                "gateway.error.blocked"));
     }
 
     @Override

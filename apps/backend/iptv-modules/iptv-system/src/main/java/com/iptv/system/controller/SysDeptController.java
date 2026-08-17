@@ -1,22 +1,10 @@
 package com.iptv.system.controller;
 
-import java.util.List;
-
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
-import com.iptv.common.core.enums.FlagEnum;
-import org.apache.commons.lang3.ArrayUtils;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
 import com.iptv.common.core.constant.UserConstants;
+import com.iptv.common.core.enums.FlagEnum;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.StringUtils;
 import com.iptv.common.core.web.controller.BaseController;
 import com.iptv.common.core.web.domain.AjaxResult;
@@ -26,6 +14,12 @@ import com.iptv.common.security.annotation.RequiresPermissions;
 import com.iptv.common.security.utils.SecurityUtils;
 import com.iptv.system.api.domain.SysDept;
 import com.iptv.system.service.ISysDeptService;
+import org.apache.commons.lang3.ArrayUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 部门信息
@@ -77,13 +71,13 @@ public class SysDeptController extends BaseController
      * 新增部门
      */
     @RequiresPermissions("system:dept:add")
-    @Log(title = "部门管理", businessType = BusinessType.INSERT)
+    @Log(title = "log.title.dept", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@Validated @RequestBody SysDept dept)
     {
         if (!deptService.checkDeptNameUnique(dept))
         {
-            return error("新增部门'" + dept.getDeptName() + "'失败，部门名称已存在");
+            return error(MessageUtils.message("system.dept.add.name.exists", dept.getDeptName()));
         }
         dept.setCreateBy(SecurityUtils.getUsername());
         return toAjax(deptService.insertDept(dept));
@@ -93,7 +87,7 @@ public class SysDeptController extends BaseController
      * 修改部门
      */
     @RequiresPermissions("system:dept:edit")
-    @Log(title = "部门管理", businessType = BusinessType.UPDATE)
+    @Log(title = "log.title.dept", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@Validated @RequestBody SysDept dept)
     {
@@ -101,23 +95,18 @@ public class SysDeptController extends BaseController
         deptService.checkDeptDataScope(deptId);
         if (!deptService.checkDeptNameUnique(dept))
         {
-            return error("修改部门'" + dept.getDeptName() + "'失败，部门名称已存在");
+            return error(MessageUtils.message("system.dept.edit.name.exists", dept.getDeptName()));
         }
         else if (dept.getParentId().equals(deptId))
         {
-            return error("修改部门'" + dept.getDeptName() + "'失败，上级部门不能是自己");
+            return error(MessageUtils.message("system.dept.edit.parent.self", dept.getDeptName()));
         }
         else if (StringUtils.equals(UserConstants.DEPT_DISABLE, dept.getStatus()) && deptService.selectNormalChildrenDeptById(deptId) > 0)
         {
-            return error("该部门包含未停用的子部门！");
+            return error(MessageUtils.message("system.dept.has.active.children"));
         }
         dept.setUpdateBy(SecurityUtils.getUsername());
-        SysDept oldDept = deptService.selectDeptById(deptId);
         int i = deptService.updateDept(dept);
-        if(!ObjectUtil.equals(dept.getParentId(),oldDept.getParentId())){
-            dept.setIsUpdateDeptParent(FlagEnum.YES.getCode());
-        }
-        dept.setAction(StrUtil.equals(dept.getStatus(),FlagEnum.NO.getCodeStr()) ? "启用" : "禁用");
         return toAjax(i,dept);
     }
 
@@ -125,17 +114,17 @@ public class SysDeptController extends BaseController
      * 删除部门
      */
     @RequiresPermissions("system:dept:remove")
-    @Log(title = "部门管理", businessType = BusinessType.DELETE)
+    @Log(title = "log.title.dept", businessType = BusinessType.DELETE)
     @DeleteMapping("/{deptId}")
     public AjaxResult remove(@PathVariable Long deptId)
     {
         if (deptService.hasChildByDeptId(deptId))
         {
-            return warn("存在下级部门,不允许删除");
+            return warn(MessageUtils.message("system.dept.has.children"));
         }
         if (deptService.checkDeptExistUser(deptId))
         {
-            return warn("部门存在用户,不允许删除");
+            return warn(MessageUtils.message("system.dept.has.users"));
         }
         deptService.checkDeptDataScope(deptId);
         SysDept dept = deptService.selectDeptById(deptId);

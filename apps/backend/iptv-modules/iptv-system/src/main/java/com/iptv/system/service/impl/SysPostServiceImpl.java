@@ -144,7 +144,7 @@ public class SysPostServiceImpl extends ServiceImpl<SysPostMapper, SysPost> impl
         for (Long postId : postIds) {
             SysPost post = selectPostById(postId);
             if (countUserPostById(postId) > 0) {
-                throw new ServiceException(String.format("%1$s已分配,不能删除", post.getPostName()));
+                throw new ServiceException("system.assigned.cannot.delete", post.getPostName());
             }
         }
         return this.baseMapper.deletePostByIds(postIds);

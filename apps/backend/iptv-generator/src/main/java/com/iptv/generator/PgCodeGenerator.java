@@ -49,12 +49,12 @@ public class PgCodeGenerator {
     static final String[] SUPER_ENTITY_COLS = {};
 
     // ===== 待生成的 PostgreSQL 表 =====
-    static final String[] DATA_TABLES = {"mcp_tool_approvals"};
+    static final String[] DATA_TABLES = {"web_search_providers"};
 
     // ===== PostgreSQL jsonb 列配置 =====
     // Key: 表名（小写），Value: jsonb 列名数组（下划线命名）
     static final Map<String, String[]> JSONB_COLUMNS = Map.of(
-        "mcp_tool_approvals", new String[]{}
+        "web_search_providers", new String[]{"parameters"}
     );
     // jsonb 列名后缀（自动匹配以这些后缀结尾的列）
     static final String[] JSONB_COLUMN_SUFFIXES = {"_config", "_headers", "_vars", "_data", "_json"};

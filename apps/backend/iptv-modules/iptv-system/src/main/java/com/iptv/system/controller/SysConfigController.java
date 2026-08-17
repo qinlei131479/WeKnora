@@ -1,9 +1,10 @@
 package com.iptv.system.controller;
 
-import com.iptv.common.core.web.page.PageDTO;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.poi.ExcelUtil;
 import com.iptv.common.core.web.controller.BaseController;
 import com.iptv.common.core.web.domain.AjaxResult;
+import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
 import com.iptv.common.log.annotation.Log;
 import com.iptv.common.log.enums.BusinessType;
@@ -39,14 +40,14 @@ public class SysConfigController extends BaseController {
         return rspData;
     }
 
-    @Log(title = "参数管理", businessType = BusinessType.EXPORT)
+    @Log(title = "log.title.config", businessType = BusinessType.EXPORT)
     @RequiresPermissions("system:config:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, SysConfig config, PageDTO dto) {
         TableDataInfo<SysConfig> sysConfigTableDataInfo1 = configService.selectConfigList(config, dto);
         List<SysConfig> list = sysConfigTableDataInfo1.getRows();
         ExcelUtil<SysConfig> util = new ExcelUtil<SysConfig>(SysConfig.class);
-        util.exportExcel(response, list, "参数数据");
+        util.exportExcel(response, list, MessageUtils.message("excel.sheet.config"));
     }
 
     /**
@@ -69,11 +70,11 @@ public class SysConfigController extends BaseController {
      * 新增参数配置
      */
     @RequiresPermissions("system:config:add")
-    @Log(title = "参数管理", businessType = BusinessType.INSERT)
+    @Log(title = "log.title.config", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@Validated @RequestBody SysConfig config) {
         if (!configService.checkConfigKeyUnique(config)) {
-            return error("新增参数'" + config.getConfigName() + "'失败，参数键名已存在");
+            return error(MessageUtils.message("system.config.add.key.exists", config.getConfigName()));
         }
         config.setCreateBy(SecurityUtils.getUsername());
         return toAjax(configService.insertConfig(config));
@@ -83,11 +84,11 @@ public class SysConfigController extends BaseController {
      * 修改参数配置
      */
     @RequiresPermissions("system:config:edit")
-    @Log(title = "参数管理", businessType = BusinessType.UPDATE)
+    @Log(title = "log.title.config", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@Validated @RequestBody SysConfig config) {
         if (!configService.checkConfigKeyUnique(config)) {
-            return error("修改参数'" + config.getConfigName() + "'失败，参数键名已存在");
+            return error(MessageUtils.message("system.config.edit.key.exists", config.getConfigName()));
         }
         config.setUpdateBy(SecurityUtils.getUsername());
         return toAjax(configService.updateConfig(config));
@@ -97,7 +98,7 @@ public class SysConfigController extends BaseController {
      * 删除参数配置
      */
     @RequiresPermissions("system:config:remove")
-    @Log(title = "参数管理", businessType = BusinessType.DELETE)
+    @Log(title = "log.title.config", businessType = BusinessType.DELETE)
     @DeleteMapping("/{configIds}")
     public AjaxResult remove(@PathVariable Long[] configIds) {
         configService.deleteConfigByIds(configIds);
@@ -108,7 +109,7 @@ public class SysConfigController extends BaseController {
      * 刷新参数缓存
      */
     @RequiresPermissions("system:config:remove")
-    @Log(title = "参数管理", businessType = BusinessType.CLEAN)
+    @Log(title = "log.title.config", businessType = BusinessType.CLEAN)
     @DeleteMapping("/refreshCache")
     public AjaxResult refreshCache() {
         configService.resetConfigCache();

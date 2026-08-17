@@ -1,8 +1,10 @@
 package com.iptv.system.controller;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.iptv.common.core.domain.R;
 import com.iptv.common.core.enums.FlagEnum;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.utils.poi.ExcelUtil;
 import com.iptv.common.core.web.controller.BaseController;
 import com.iptv.common.core.web.domain.AjaxResult;
@@ -44,14 +46,15 @@ public class SysPostController extends BaseController {
     }
 
 
-    @Log(title = "岗位管理", businessType = BusinessType.EXPORT)
+    @Log(title = "log.title.post", businessType = BusinessType.EXPORT)
     @RequiresPermissions("system:post:export")
+
     @PostMapping("/export")
     public void export(HttpServletResponse response, SysPost post, PageDTO pageDTO) {
         TableDataInfo<SysPost> sysPostTableDataInfo = postService.selectPostList(post, pageDTO);
         List<SysPost> list = sysPostTableDataInfo.getRows();
         ExcelUtil<SysPost> util = new ExcelUtil<SysPost>(SysPost.class);
-        util.exportExcel(response, list, "岗位数据");
+        util.exportExcel(response, list, MessageUtils.message("excel.sheet.post"));
     }
 
     /**
@@ -67,13 +70,13 @@ public class SysPostController extends BaseController {
      * 新增岗位
      */
     @RequiresPermissions("system:post:add")
-    @Log(title = "岗位管理", businessType = BusinessType.INSERT)
+    @Log(title = "log.title.post", businessType = BusinessType.INSERT)
     @PostMapping
     public AjaxResult add(@Validated @RequestBody SysPost post) {
         if (!postService.checkPostNameUnique(post)) {
-            return error("新增岗位'" + post.getPostName() + "'失败，岗位名称已存在");
+            return error(MessageUtils.message("system.post.add.name.exists", post.getPostName()));
         } else if (!postService.checkPostCodeUnique(post)) {
-            return error("新增岗位'" + post.getPostName() + "'失败，岗位编码已存在");
+            return error(MessageUtils.message("system.post.add.code.exists", post.getPostName()));
         }
         post.setCreateBy(SecurityUtils.getUsername());
         return toAjax(postService.insertPost(post));
@@ -83,21 +86,16 @@ public class SysPostController extends BaseController {
      * 修改岗位
      */
     @RequiresPermissions("system:post:edit")
-    @Log(title = "岗位管理", businessType = BusinessType.UPDATE)
+    @Log(title = "log.title.post", businessType = BusinessType.UPDATE)
     @PutMapping
     public AjaxResult edit(@Validated @RequestBody SysPost post) {
         if (!postService.checkPostNameUnique(post)) {
-            return error("修改岗位'" + post.getPostName() + "'失败，岗位名称已存在");
+            return error(MessageUtils.message("system.post.edit.name.exists", post.getPostName()));
         } else if (!postService.checkPostCodeUnique(post)) {
-            return error("修改岗位'" + post.getPostName() + "'失败，岗位编码已存在");
+            return error(MessageUtils.message("system.post.edit.code.exists", post.getPostName()));
         }
         post.setUpdateBy(SecurityUtils.getUsername());
-        SysPost old = postService.getById(post.getPostId());
         int rows = postService.updatePost(post);
-        if (StrUtil.equals(post.getPostName(), old.getPostName())) {
-            post.setIsUpdatePostName(FlagEnum.YES.getCode());
-        }
-        post.setAction(StrUtil.equals(post.getStatus(), FlagEnum.NO.getCodeStr()) ? "启用" : "禁用");
         return toAjax(rows, post);
     }
 
@@ -105,7 +103,7 @@ public class SysPostController extends BaseController {
      * 删除岗位
      */
     @RequiresPermissions("system:post:remove")
-    @Log(title = "岗位管理", businessType = BusinessType.DELETE)
+    @Log(title = "log.title.post", businessType = BusinessType.DELETE)
     @DeleteMapping("/{postIds}")
     public AjaxResult remove(@PathVariable Long[] postIds) {
         List<SysPost> posts = new ArrayList<>();

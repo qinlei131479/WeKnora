@@ -2,7 +2,7 @@ package com.iptv.common.core.exception;
 
 /**
  * 业务异常
- * 
+ *
  * @author ruoyi
  */
 public final class ServiceException extends RuntimeException
@@ -18,6 +18,11 @@ public final class ServiceException extends RuntimeException
      * 错误提示
      */
     private String message;
+
+    /**
+     * 错误提示参数
+     */
+    private Object[] args;
 
     /**
      * 错误明细，内部调试错误
@@ -36,6 +41,12 @@ public final class ServiceException extends RuntimeException
     public ServiceException(String message)
     {
         this.message = message;
+    }
+
+    public ServiceException(String message, Object... args)
+    {
+        this.message = message;
+        this.args = args;
     }
 
     public ServiceException(String message, Integer code)
@@ -60,9 +71,20 @@ public final class ServiceException extends RuntimeException
         return code;
     }
 
+    public Object[] getArgs()
+    {
+        return args;
+    }
+
     public ServiceException setMessage(String message)
     {
         this.message = message;
+        return this;
+    }
+
+    public ServiceException setArgs(Object[] args)
+    {
+        this.args = args;
         return this;
     }
 
