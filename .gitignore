@@ -3,6 +3,8 @@
 # 但不忽略特定隐藏文件和目录
 !.env.example
 !.env.kjsc.example
+!**/.env.local.example
+!**/.env.development
 !.gitignore
 !.github/
 !.dockerignore
