@@ -4,6 +4,7 @@
 !.env.example
 !.env.kjsc.example
 !**/.env.local.example
+!**/.env.development.local.example
 !**/.env.development
 !.gitignore
 !.github/
