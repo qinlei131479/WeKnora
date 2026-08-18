@@ -2,15 +2,17 @@ import { defineConfig, loadEnv } from 'vite';
 import path from 'path';
 import createVitePlugins from './vite/plugins';
 
-const port = Number(process.env.port) || 80; // 端口
-const PROXY_API_TARGET = process.env.PROXY_API_TARGET || 'http://192.168.180.238:9888/prod-api'; // 后端接口
-const STATIC_API_TARGET = process.env.STATIC_API_TARGET || 'http://192.168.180.238:9888'; // 静态资源接口
-
-const preview_port = Number(process.env.preview_port) || 80; // 预览端口
 // https://vitejs.dev/config/
 export default defineConfig(({ mode, command }) => {
-  const env = loadEnv(mode, process.cwd());
+  // .env.local 优先级高于 .env.development，且已被 git 忽略
+  const env = loadEnv(mode, process.cwd(), '');
   const { VITE_APP_ENV, VITE_APP_BASE_API, VITE_APP_STATIC_API } = env;
+  const port = Number(env.port || process.env.port) || 80;
+  const preview_port = Number(env.preview_port || process.env.preview_port) || 80;
+  const PROXY_API_TARGET =
+    env.PROXY_API_TARGET || process.env.PROXY_API_TARGET || 'http://192.168.180.238:9888/prod-api';
+  const STATIC_API_TARGET =
+    env.STATIC_API_TARGET || process.env.STATIC_API_TARGET || 'http://192.168.180.238:9888';
   const isHttp = (url: string) => {
     return url.startsWith('http://') || url.startsWith('https://');
   };

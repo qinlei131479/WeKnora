@@ -233,9 +233,11 @@ export function downloadDataStream(url, fileName) {
   a.target = "_blank";
   // a.href = window.location.origin + url;
   console.log("process.env.VITE_APP_ENV=>", import.meta.env.VITE_APP_ENV);
+  const devDownloadBase =
+    import.meta.env.VITE_APP_DOWNLOAD_BASE || "http://192.168.180.249:8899";
   a.href =
     (import.meta.env.VITE_APP_ENV === "development"
-      ? "http://192.168.180.249:8899"
+      ? devDownloadBase
       : window.location.protocol +
         "//" +
         window.location.hostname +
