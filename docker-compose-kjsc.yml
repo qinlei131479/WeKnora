@@ -590,6 +590,8 @@ services:
     restart: always
     ports:
       - "0.0.0.0:${DB_HOST_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
     networks:
       - agent-middle-network
 
@@ -673,6 +675,7 @@ services:
     container_name: agent-middle-neo4j
     volumes:
       - neo4j-data:/data
+      - neo4j-logs:/logs
     environment:
       - NEO4J_AUTH=${NEO4J_USERNAME:-neo4j}/${NEO4J_PASSWORD:-password}
       - NEO4J_apoc_export_file_enabled=true
@@ -1380,6 +1383,8 @@ volumes:
   # 否则会出现 agent-middle-go-backend_data-files、agent-middle-web-frontend_data-files 等多套卷
   postgres-data:
     name: agent-middle-platform_postgres-data
+  redis-data:
+    name: agent-middle-platform_redis-data
   nltk_data:
     name: agent-middle-platform_nltk_data
   data-files:
@@ -1390,6 +1395,8 @@ volumes:
     name: agent-middle-platform_minio_data
   neo4j-data:
     name: agent-middle-platform_neo4j-data
+  neo4j-logs:
+    name: agent-middle-platform_neo4j-logs
   elasticsearch_data:
     name: agent-middle-platform_elasticsearch_data
   qdrant_data:
