@@ -2,20 +2,25 @@
 
 set -euo pipefail
 
-echo "Yuxi 测试运行器"
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_ROOT/docker-compose-mac.yml}"
+API_PORT="${AGENT_HARNESS_PORT:-5050}"
+COMPOSE_CMD=("docker" "compose" "-f" "$COMPOSE_FILE" "--profile" "harness" "--profile" "minio" "--profile" "neo4j" "--profile" "milvus")
+
+echo "Agent-Harness 测试运行器"
 echo "========================"
 
-PYTEST_CMD=("docker" "compose" "exec" "api" "uv" "run" "--group" "test" "pytest")
+PYTEST_CMD=("${COMPOSE_CMD[@]}" "exec" "-T" "api" "python3" "/app/scripts/docker-env.py" "uv" "run" "--group" "test" "pytest")
 
 check_server() {
     echo "检查测试服务器状态..."
-    if curl -s http://localhost:5050/api/system/health > /dev/null 2>&1; then
+    if curl -fsS "http://127.0.0.1:${API_PORT}/api/system/health" > /dev/null 2>&1; then
         echo "✓ 测试服务器运行正常"
         return 0
     fi
 
     echo "✗ 警告: 测试服务器未运行或无法访问"
-    echo "  请先执行 docker compose up -d 并确认 api-dev 健康"
+    echo "  请先在仓库根目录执行 make harness-api 并确认 agent-middle-harness-api 健康"
     return 1
 }
 

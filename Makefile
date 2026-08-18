@@ -1,4 +1,4 @@
-.PHONY: help build run test clean docker-build-app docker-build-docreader docker-build-frontend docker-build-all docker-run migrate-up migrate-down docker-restart docker-stop start-all stop-all start-ollama stop-ollama build-images build-images-app build-images-docreader build-images-frontend clean-images check-env list-containers pull-images show-platform dev-start dev-stop dev-restart dev-logs dev-status dev-app dev-frontend docs install-swagger build-lite run-lite package-lite
+.PHONY: help build run test clean docker-build-app docker-build-docreader docker-build-frontend docker-build-all docker-run migrate-up migrate-down docker-restart docker-stop start-all stop-all start-ollama stop-ollama build-images build-images-app build-images-docreader build-images-frontend clean-images check-env list-containers pull-images show-platform dev-start dev-stop dev-restart dev-logs dev-status dev-app dev-frontend docs install-swagger build-lite run-lite package-lite harness-up harness-down harness-api harness-worker harness-web harness-init harness-seed harness-logs harness-up-lite
 
 # Show help
 help:
@@ -58,6 +58,18 @@ help:
 	@echo "  dev-app           启动后端应用（本地运行，需先运行 dev-start）"
 	@echo "  dev-frontend      启动前端（本地运行，需先运行 dev-start）"
 	@echo ""
+	@echo "Agent-Harness:"
+	@echo "  harness-init      补齐 .env 中 JWT/Sandbox Token，并拉取 harness 构建镜像"
+	@echo "  harness-api       启动 harness api 及完整共享基础设施"
+	@echo "  harness-worker    启动 harness worker 及完整共享基础设施"
+	@echo "  harness-web       启动 harness web；依赖的 api 会自动启动"
+	@echo "  harness-up        启动 api + worker + web + sandbox-provisioner"
+	@echo "  harness-up-lite   同上，LITE_MODE=true（跳过知识库/图谱重依赖）"
+	@echo "  harness-down      仅停止上述 harness 容器，不动 postgres/app/frontend"
+	@echo "  harness-logs      跟踪 api/worker/web/sandbox-provisioner 日志"
+	@echo "  harness-seed      在已启动的 api 中写入演示用户"
+	@echo "                    COMPOSE_FILE=docker-compose-kjsc.yml 可换 kjsc 编排"
+	@echo ""
 	@echo "Lite 模式（零外部依赖）:"
 	@echo "  build-lite        构建 Lite 版本（先构建前端到 web/，再构建 Go；SKIP_FRONTEND=1 跳过前端）"
 	@echo "  run-lite          构建并启动 Lite 版本"
@@ -71,6 +83,12 @@ MAIN_PATH=./cmd/server
 # Docker related variables
 DOCKER_IMAGE=wechatopenai/weknora-app
 DOCKER_TAG=latest
+
+# Agent-Harness（不要对整份 compose 做 down / --remove-orphans）
+COMPOSE_FILE ?= docker-compose-mac.yml
+HARNESS_PROFILES := --profile harness --profile minio --profile neo4j --profile milvus
+HARNESS_SERVICES := api worker web sandbox-provisioner
+HARNESS_INFRA := postgres redis minio neo4j milvus
 
 # Platform detection
 ifeq ($(shell uname -m),x86_64)
@@ -331,5 +349,58 @@ dev-app:
 
 dev-frontend:
 	./scripts/dev.sh frontend
+
+# Agent-Harness：只 up/stop 点名服务，不 down 整栈、不加 --remove-orphans
+define harness-up-one
+	@test -f .env || { echo "缺少 .env，请先 make harness-init"; exit 1; }
+	@grep -Eq '^SANDBOX_PROVISIONER_TOKEN=.+' .env || { echo "SANDBOX_PROVISIONER_TOKEN 为空，请先 make harness-init"; exit 1; }
+	@VERSION=$$(tr -d '\n\r' < VERSION); \
+	if ! docker image inspect "kjsc/agent-middle-harness:$$VERSION" >/dev/null 2>&1; then \
+		AGENT_HARNESS_VERSION="$$VERSION" docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) build api; \
+	fi; \
+	AGENT_HARNESS_VERSION="$$VERSION" docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) up -d $(HARNESS_INFRA) $(1)
+endef
+
+harness-init:
+	./scripts/init_agent_harness.sh
+
+harness-api:
+	$(call harness-up-one,api)
+
+harness-worker:
+	$(call harness-up-one,worker)
+
+harness-web:
+	$(call harness-up-one,web)
+
+harness-up:
+	$(call harness-up-one,$(HARNESS_SERVICES))
+
+harness-up-lite:
+	@test -f .env || { echo "缺少 .env，请先 make harness-init"; exit 1; }
+	@grep -Eq '^SANDBOX_PROVISIONER_TOKEN=.+' .env || { echo "SANDBOX_PROVISIONER_TOKEN 为空，请先 make harness-init"; exit 1; }
+	@VERSION=$$(tr -d '\n\r' < VERSION); \
+	if ! docker image inspect "kjsc/agent-middle-harness:$$VERSION" >/dev/null 2>&1; then \
+		AGENT_HARNESS_VERSION="$$VERSION" docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) build api; \
+	fi; \
+	AGENT_HARNESS_VERSION="$$VERSION" LITE_MODE=true VITE_USE_RUNS_API=false \
+	  docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) up -d postgres redis minio $(HARNESS_SERVICES)
+
+harness-down:
+	docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) stop $(HARNESS_SERVICES)
+
+harness-logs:
+	docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) logs --tail=50 -f harness-db-init api worker web sandbox-provisioner
+
+harness-seed:
+	@for i in $$(seq 1 36); do \
+		if docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) exec -T api curl -sf http://localhost:5050/api/system/health >/dev/null; then \
+			break; \
+		fi; \
+		if [ "$$i" -eq 36 ]; then echo "Agent-Harness API 未在 180 秒内就绪"; exit 1; fi; \
+		sleep 5; \
+	done
+	docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) exec -T api \
+		python3 /app/scripts/docker-env.py uv run python scripts/seed_initial_users.py
 
 
