@@ -16,11 +16,13 @@ import com.iptv.business.domain.vo.McpServicesVO;
 import com.iptv.business.pgmapper.McpServicesMapper;
 import com.iptv.business.pgmapper.McpToolApprovalsMapper;
 import com.iptv.business.service.McpServicesService;
+import com.iptv.common.core.constant.TenantConstant;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
 import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
 import com.iptv.common.security.service.TokenService;
+import com.iptv.common.security.utils.SecurityUtils;
 import com.iptv.system.api.model.LoginUser;
 import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
@@ -63,15 +65,9 @@ public class McpServicesServiceImpl extends ServiceImpl<McpServicesMapper, McpSe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public McpServicesVO insert(@Nonnull McpServicesDTO dto) {
-        Long tenantId = 1L;
-        try {
-            LoginUser loginUser = tokenService.getLoginUser();
-            tenantId = loginUser.getSysUser().getTenantId();
-        } catch (Exception e) {
-            throw new ServiceException("获取租户ID失败");
-        }
-        dto.setTenantId(tenantId.intValue());
         McpServices entity = BeanUtil.copyProperties(dto, McpServices.class);
+        entity.setIsBuiltin(true);
+        entity.setTenantId(TenantConstant.BUSINESS_BUILTIN_TENANT_ID);
         this.baseMapper.insert(entity);
         return BeanUtil.copyProperties(entity, McpServicesVO.class);
     }

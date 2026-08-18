@@ -1,6 +1,7 @@
 package com.iptv.system.api.factory;
 
 import com.iptv.common.core.domain.R;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.system.api.RemoteUserService;
 import com.iptv.system.api.domain.SysUser;
 import com.iptv.system.api.domain.dto.RefreshLoginInfoDTO;
@@ -25,32 +26,32 @@ public class RemoteUserFallbackFactory implements FallbackFactory<RemoteUserServ
         return new RemoteUserService() {
             @Override
             public R<LoginUser> getUserInfo(String username, String source) {
-                return R.fail("获取用户失败:" + throwable.getMessage());
+                return R.fail(MessageUtils.message("system.remote.user.get.failed", throwable.getMessage()));
             }
 
             @Override
             public R<Boolean> registerUserInfo(SysUser sysUser, String source) {
-                return R.fail("注册用户失败:" + throwable.getMessage());
+                return R.fail(MessageUtils.message("system.remote.user.register.failed", throwable.getMessage()));
             }
 
             @Override
             public R<Boolean> recordUserLogin(SysUser sysUser, String source) {
-                return R.fail("记录用户登录信息失败:" + throwable.getMessage());
+                return R.fail(MessageUtils.message("system.remote.user.login.record.failed", throwable.getMessage()));
             }
 
             @Override
             public R refreshLoginInfo(RefreshLoginInfoDTO dto, String source) {
-                return R.fail("刷新用户登录信息失败:" + throwable.getMessage());
+                return R.fail(MessageUtils.message("system.remote.user.login.refresh.failed", throwable.getMessage()));
             }
 
             @Override
             public R<SysUser> selectByScgcUserId(Long userId, String source) {
-                return R.fail("获取用户信息失败:" + throwable.getMessage());
+                return R.fail(MessageUtils.message("system.remote.user.info.failed", throwable.getMessage()));
             }
 
             @Override
             public R bindScgcUser(Long userId, Long otherUserId, String source) {
-                return R.fail("操作失败:" + throwable.getMessage());
+                return R.fail(MessageUtils.message("system.remote.user.operation.failed", throwable.getMessage()));
             }
         };
     }

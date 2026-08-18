@@ -1,6 +1,7 @@
 package com.iptv.system.api.factory;
 
 import com.iptv.common.core.domain.R;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.common.core.web.domain.vo.SelectVO;
 import com.iptv.system.api.RemoteTenantService;
 import com.iptv.system.api.domain.vo.SysTenantVO;
@@ -25,12 +26,12 @@ public class RemoteTenantFallbackFactory implements FallbackFactory<RemoteTenant
         return new RemoteTenantService() {
             @Override
             public R<SysTenantVO> queryById(Long id, String source) {
-                return R.fail("获取租户失败:" + throwable.getMessage());
+                return R.fail(MessageUtils.message("system.remote.tenant.get.failed", throwable.getMessage()));
             }
 
             @Override
             public R<List<SelectVO<Long>>> queryTenantList(Long userId, String source) {
-                return R.fail("获取租户列表失败:" + throwable.getMessage());
+                return R.fail(MessageUtils.message("system.remote.tenant.list.failed", throwable.getMessage()));
             }
         };
     }

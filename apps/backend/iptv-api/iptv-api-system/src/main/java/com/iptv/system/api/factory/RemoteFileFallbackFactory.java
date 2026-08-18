@@ -1,13 +1,14 @@
 package com.iptv.system.api.factory;
 
+import com.iptv.common.core.domain.R;
+import com.iptv.common.core.utils.MessageUtils;
+import com.iptv.system.api.RemoteFileService;
+import com.iptv.system.api.domain.SysFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
-import com.iptv.common.core.domain.R;
-import com.iptv.system.api.RemoteFileService;
-import com.iptv.system.api.domain.SysFile;
 
 /**
  * 文件服务降级处理
@@ -28,13 +29,13 @@ public class RemoteFileFallbackFactory implements FallbackFactory<RemoteFileServ
             @Override
             public R<SysFile> upload(MultipartFile file)
             {
-                return R.fail("上传文件失败:" + throwable.getMessage());
+                return R.fail(MessageUtils.message("system.remote.file.upload.failed", throwable.getMessage()));
             }
 
             @Override
             public R<Boolean> delete(String fileUrl)
             {
-                return R.fail("删除文件失败:" + throwable.getMessage());
+                return R.fail(MessageUtils.message("system.remote.file.delete.failed", throwable.getMessage()));
             }
         };
     }

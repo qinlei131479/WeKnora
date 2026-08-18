@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.WebSearchProviderTypeMapper">
+
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.WebSearchProviderType">
+        <id column="id" property="id"/>
+        <result column="provider_type" property="providerType"/>
+        <result column="name" property="name"/>
+        <result column="requires_api_key" property="requiresApiKey"/>
+        <result column="supports_optional_api_key" property="supportsOptionalApiKey"/>
+        <result column="requires_engine_id" property="requiresEngineId"/>
+        <result column="requires_base_url" property="requiresBaseUrl"/>
+        <result column="supports_proxy" property="supportsProxy"/>
+        <result column="description" property="description"/>
+        <result column="docs_url" property="docsUrl"/>
+        <result column="config_fields" property="configFields" typeHandler="com.iptv.common.core.typehandler.JsonbTypeHandler"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="enabled" property="enabled"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, provider_type, name, requires_api_key, supports_optional_api_key,
+        requires_engine_id, requires_base_url, supports_proxy,
+        description, docs_url, config_fields, sort_order, enabled,
+        created_at, updated_at
+    </sql>
+
+    <!-- 查询所有启用的提供商类型 -->
+    <select id="selectAllEnabled" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM amp_web_search_provider_types
+        WHERE enabled = true
+        ORDER BY sort_order ASC, provider_type ASC
+    </select>
+
+</mapper>

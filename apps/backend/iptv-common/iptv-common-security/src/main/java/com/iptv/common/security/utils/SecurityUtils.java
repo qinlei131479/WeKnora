@@ -41,14 +41,6 @@ public class SecurityUtils {
         }
         return TenantConstant.ADMIN_TENANT_ID;
     }
-    /**
-     * 获取租户ID
-     */
-    public static Integer getTenantIdInt() {
-        Long tenantId = getTenantId();
-        return tenantId.intValue();
-//        return 10004;
-    }
 
     /**
      * 获取用户名称

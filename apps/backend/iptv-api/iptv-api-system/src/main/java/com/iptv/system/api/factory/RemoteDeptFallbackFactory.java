@@ -1,6 +1,7 @@
 package com.iptv.system.api.factory;
 
 import com.iptv.common.core.domain.R;
+import com.iptv.common.core.utils.MessageUtils;
 import com.iptv.system.api.RemoteDeptService;
 import com.iptv.system.api.domain.SysDept;
 import org.slf4j.Logger;
@@ -26,12 +27,12 @@ public class RemoteDeptFallbackFactory implements FallbackFactory<RemoteDeptServ
 
             @Override
             public R<List<SysDept>> list(SysDept queryDTO) {
-                return R.fail("获取部门失败:" + throwable.getMessage());
+                return R.fail(MessageUtils.message("system.remote.dept.get.failed", throwable.getMessage()));
             }
 
             @Override
             public R<List<SysDept>> excludeChild(Long deptId) {
-                return R.fail("查询部门列表（排除节点）:" + throwable.getMessage());
+                return R.fail(MessageUtils.message("system.remote.dept.exclude.failed", throwable.getMessage()));
             }
         };
     }
