@@ -44,8 +44,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class McpServicesServiceImpl extends ServiceImpl<McpServicesMapper, McpServices> implements McpServicesService {
 
-    private final TokenService tokenService;
-
     private final McpToolApprovalsMapper mcpToolApprovalsMapper;
 
     @Override
@@ -125,13 +123,6 @@ public class McpServicesServiceImpl extends ServiceImpl<McpServicesMapper, McpSe
         if (CollUtil.isEmpty(dto)) {
             return;
         }
-        Long tenantId = 1L;
-        try {
-            LoginUser loginUser = tokenService.getLoginUser();
-            tenantId = loginUser.getSysUser().getTenantId();
-        } catch (Exception e) {
-            throw new ServiceException("获取租户ID失败");
-        }
         String serviceId = dto.get(0).getServiceId();
         List<String> toolNames = dto.stream().map(McpToolApprovalsDTO::getToolName).toList();
         List<McpToolApprovals> list = mcpToolApprovalsMapper
@@ -151,13 +142,12 @@ public class McpServicesServiceImpl extends ServiceImpl<McpServicesMapper, McpSe
                         .noneMatch(appro -> StrUtil.equals(item.getToolName(), appro.getToolName())))
                 .toList();
         if (CollUtil.isNotEmpty(other)) {
-            final Integer finalTenantId = tenantId.intValue();
             other.forEach(item -> {
                 McpToolApprovals entity = new McpToolApprovals();
                 entity.setServiceId(item.getServiceId());
                 entity.setToolName(item.getToolName());
                 entity.setRequireApproval(true);
-                entity.setTenantId(finalTenantId);
+                entity.setTenantId(TenantConstant.BUSINESS_BUILTIN_TENANT_ID);
                 mcpToolApprovalsMapper.insert(entity);
             });
         }
