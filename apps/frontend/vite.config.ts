@@ -3,7 +3,7 @@ import { resolve, dirname } from "node:path";
 import { existsSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { createRequire } from "node:module";
-import { defineConfig, loadEnv, type Plugin } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import vue from "@vitejs/plugin-vue";
 import vueJsx from "@vitejs/plugin-vue-jsx";
 
@@ -70,17 +70,10 @@ function resolveVueOfficePptxEntry(): string {
   }
 }
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "");
-  const DEV_PROXY_TARGET =
-    env.VITE_DEV_PROXY_TARGET ||
-    process.env.VITE_DEV_PROXY_TARGET ||
-    process.env.FRONTEND_BACKEND_URL ||
-    "http://localhost:8080";
-  const DEV_PORT = (env.VITE_DEV_PORT && Number(env.VITE_DEV_PORT)) || 5173;
-  const PREVIEW_PORT = (env.VITE_PREVIEW_PORT && Number(env.VITE_PREVIEW_PORT)) || 4173;
+const DEV_PORT = (process.env.VITE_DEV_PORT && Number(process.env.VITE_DEV_PORT)) || 5173;
+const PREVIEW_PORT = (process.env.VITE_PREVIEW_PORT && Number(process.env.VITE_PREVIEW_PORT)) || 4173;
 
-  return {
+export default defineConfig({
   define: {
     __FRONTEND_VERSION__: JSON.stringify(FRONTEND_VERSION),
     __FRONTEND_COMMIT__: JSON.stringify(FRONTEND_COMMIT)
@@ -178,5 +171,4 @@ export default defineConfig(({ mode }) => {
       ...harnessProxy
     }
   }
-  };
 });

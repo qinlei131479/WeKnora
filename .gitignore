@@ -5,9 +5,6 @@
 !.env.kjsc.example
 !.python-version
 !**/.python-version
-!**/.env.local.example
-!**/.env.development.local.example
-!**/.env.development
 !.gitignore
 !.github/
 !.dockerignore
