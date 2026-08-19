@@ -34,7 +34,7 @@ start_service() {
     # 确保日志目录存在
     mkdir -p $LOGS_DIR
 
-    # 仅 business 模块加载 OLLAMA_BASE_URL 环境变量
+    # 仅 business 模块加载 OLLAMA_BASE_URL 和 SYSTEM_AES_KEY 环境变量
     if [ "$SERVICE" = "business" ]; then
         ENV_FILE="${BASE_DIR}/.env"
         if [ -f "$ENV_FILE" ]; then
@@ -42,6 +42,11 @@ start_service() {
             if [ -n "$OLLAMA_BASE_URL" ]; then
                 export OLLAMA_BASE_URL=$OLLAMA_BASE_URL
                 echo "加载环境变量: OLLAMA_BASE_URL=$OLLAMA_BASE_URL"
+            fi 
+            SYSTEM_AES_KEY=$(grep -E '^SYSTEM_AES_KEY=' "$ENV_FILE" | head -n1 | cut -d= -f2- | tr -d ' "\t\r')
+            if [ -n "$SYSTEM_AES_KEY" ]; then
+                export SYSTEM_AES_KEY=$SYSTEM_AES_KEY
+                echo "加载环境变量: SYSTEM_AES_KEY=$SYSTEM_AES_KEY"
             fi
         fi
     fi

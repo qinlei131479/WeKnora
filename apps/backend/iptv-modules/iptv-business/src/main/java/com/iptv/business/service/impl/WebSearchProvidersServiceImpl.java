@@ -17,6 +17,7 @@ import com.iptv.business.pgmapper.WebSearchProviderTypeMapper;
 import com.iptv.business.pgmapper.WebSearchProvidersMapper;
 import com.iptv.business.service.WebSearchProvidersService;
 import com.iptv.business.service.impl.websearch.*;
+import com.iptv.business.util.CryptoUtils;
 import com.iptv.common.core.constant.TenantConstant;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
@@ -75,6 +76,15 @@ public class WebSearchProvidersServiceImpl extends ServiceImpl<WebSearchProvider
         entity.setTenantId(Long.valueOf(TenantConstant.BUSINESS_BUILTIN_TENANT_ID));
         entity.setCreatedAt(new Date());
         entity.setUpdatedAt(new Date());
+        String parameters = entity.getParameters();
+        if (StrUtil.isNotBlank(parameters)) {
+            JSONObject params = JSONUtil.parseObj(parameters);
+            String apiKey = params.getStr("api_key");
+            if (StrUtil.isNotBlank(apiKey)) {
+                params.set("api_key", CryptoUtils.encrypt(apiKey));
+            }
+            entity.setParameters(JSONUtil.toJsonStr(params));
+        }
         this.baseMapper.insert(entity);
         return convertToVO(entity);
     }
@@ -245,7 +255,7 @@ public class WebSearchProvidersServiceImpl extends ServiceImpl<WebSearchProvider
      * 根据提供商类型创建对应的 WebSearchProvider 实例
      */
     private WebSearchProvider createWebSearchProvider(String providerType, JSONObject params) {
-        String apiKey = params.getStr("api_key");
+        String apiKey = CryptoUtils.decryptAesGcm(params.getStr("api_key"),CryptoUtils.getAesKey());
         
         switch (providerType.toLowerCase()) {
             case "bing":
@@ -303,7 +313,7 @@ public class WebSearchProvidersServiceImpl extends ServiceImpl<WebSearchProvider
         }
 
         // 更新 api_key
-        params.set("api_key", dto.getApiKey());
+        params.set("api_key", CryptoUtils.encrypt(dto.getApiKey()));
         WebSearchProviders updateEntity = new WebSearchProviders();
         updateEntity.setId(dto.getId());
         updateEntity.setParameters(JSONUtil.toJsonStr(params));
