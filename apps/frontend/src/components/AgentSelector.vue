@@ -185,6 +185,7 @@ import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { Icon as TIcon, Tooltip as TTooltip } from 'tdesign-vue-next';
 import { type CustomAgent, BUILTIN_QUICK_ANSWER_ID, BUILTIN_SMART_REASONING_ID } from '@/api/agent';
+import { localizedBuiltinAgentName } from '@/utils/agent-mode';
 import AgentAvatar from '@/components/AgentAvatar.vue';
 import { useOrganizationStore } from '@/stores/organization';
 import { useSettingsStore } from '@/stores/settings';
@@ -252,11 +253,12 @@ const webSearchProviders = computed(() => chatResources.webSearchProviders);
 const builtinAgents = computed(() => {
   const apiBuiltins = agentsList.value.filter(a => a.is_builtin);
   return apiBuiltins.map(agent => {
+    const name = localizedBuiltinAgentName(agent.id, t, agent.name);
     if (agent.id === BUILTIN_QUICK_ANSWER_ID) {
-      return { ...agent, name: t('input.normalMode'), description: t('input.normalModeDesc') };
+      return { ...agent, name, description: t('input.normalModeDesc') };
     }
     if (agent.id === BUILTIN_SMART_REASONING_ID) {
-      return { ...agent, name: t('input.agentMode'), description: t('input.agentModeDesc') };
+      return { ...agent, name, description: t('input.agentModeDesc') };
     }
     return agent;
   });

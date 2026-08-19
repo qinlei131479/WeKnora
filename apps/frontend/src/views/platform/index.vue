@@ -3,7 +3,7 @@
         <Menu></Menu>
         <div class="platform-main">
             <div class="platform-topbar" style="--wails-draggable: drag">
-                <div class="platform-topbar-left" style="--wails-draggable: no-drag">
+                <div class="platform-topbar-right" style="--wails-draggable: no-drag">
                     <t-tooltip placement="bottom">
                         <template #content>
                             <span class="cmdk-tip">
@@ -16,18 +16,16 @@
                             <t-icon name="search" size="18px" />
                         </div>
                     </t-tooltip>
-                </div>
-                <div class="platform-topbar-right" style="--wails-draggable: no-drag">
                     <div class="platform-topbar-prefs">
                         <LanguageSwitch variant="topbar" />
-                        <ThemeToggle />
                         <FontSizeSelect />
                     </div>
                     <GlobalInvitationBell />
+                    <ThemeToggle />
                     <t-tooltip :content="t('general.settings')" placement="bottom">
                         <div class="platform-topbar-icon" data-guide="settings-btn"
                             :aria-label="t('general.settings')" @click="openSettings">
-                            <t-icon name="setting" size="18px" />
+                            <SettingsIcon :size="18" />
                         </div>
                     </t-tooltip>
                     <UserMenu />
@@ -66,6 +64,7 @@ import { useUIStore } from '@/stores/ui'
 import { useChatResourcesStore } from '@/stores/chatResources'
 import { getKnowledgeBaseById } from '@/api/knowledge-base/index'
 import { MessagePlugin } from 'tdesign-vue-next'
+import { Settings as SettingsIcon } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 
 const route = useRoute();
@@ -321,8 +320,6 @@ onUnmounted(() => {
     height: 48px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
     padding: 0 12px 0 16px;
     border-bottom: 1px solid var(--td-component-stroke);
     background: var(--td-bg-color-container);
@@ -330,16 +327,12 @@ onUnmounted(() => {
     z-index: 20;
 }
 
-.platform-topbar-left,
 .platform-topbar-right {
     display: flex;
     align-items: center;
+    margin-left: auto;
     min-width: 0;
-}
-
-.platform-topbar-right {
     gap: 4px;
-    justify-content: flex-end;
 }
 
 .platform-topbar-prefs {

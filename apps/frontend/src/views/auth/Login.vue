@@ -97,11 +97,11 @@
 
     <!-- Logo - Top Left（hideGithub 时不跳转 GitHub） -->
     <a v-if="!featureFlags.hideGithub" href="https://github.com/Tencent/WeKnora" target="_blank" class="header-logo"
-      :title="$t('common.github')">
-      <img src="@/assets/img/weknora.png" alt="WeKnora" class="logo-image" />
+      :title="$t('brand.name')">
+      <span class="logo-text">{{ $t('brand.name') }}</span>
     </a>
     <div v-else class="header-logo">
-      <img src="@/assets/img/weknora.png" alt="WeKnora" class="logo-image" />
+      <span class="logo-text">{{ $t('brand.name') }}</span>
     </div>
 
     <!-- Header Links - Top Right -->
@@ -1099,9 +1099,13 @@ onMounted(async () => {
   z-index: 100;
   cursor: pointer;
 
-  .logo-image {
-    width: 120px;
-    height: auto;
+  .logo-text {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+    color: var(--td-text-color-primary, #1a365d);
+    white-space: nowrap;
   }
 }
 
@@ -1476,8 +1480,8 @@ onMounted(async () => {
     top: 26px;
     left: 40px;
 
-    .logo-image {
-      width: 100px;
+    .logo-text {
+      font-size: 20px;
     }
   }
 
@@ -1524,8 +1528,8 @@ onMounted(async () => {
     top: 22px;
     left: 30px;
 
-    .logo-image {
-      width: 80px;
+    .logo-text {
+      font-size: 18px;
     }
   }
 
@@ -1584,8 +1588,8 @@ onMounted(async () => {
     top: 18px;
     left: 20px;
 
-    .logo-image {
-      width: 70px;
+    .logo-text {
+      font-size: 16px;
     }
   }
 
@@ -1653,8 +1657,8 @@ html[theme-mode="dark"] {
     stroke: rgba(255, 255, 255, 0.25);
   }
 
-  .header-logo .logo-image {
-    filter: invert(1) hue-rotate(180deg) brightness(1.1);
+  .header-logo .logo-text {
+    color: #f5f7fa;
   }
 
   .header-link {

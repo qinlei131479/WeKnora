@@ -111,6 +111,12 @@
             </div>
         </transition>
         <div class="input-container" :class="{ 'is-embedded': embeddedMode }">
+            <ChatEngineSegmented
+                v-if="!embeddedMode && !historyLoading && messagesList.length === 0"
+                class="chat-engine-switch"
+                :model-value="chatEngine"
+                @update:model-value="goToEngine"
+            />
             <InputField ref="inputFieldRef"
                 @send-msg="(query, modelId, mentionedItems, imageFiles, attachmentFiles) => sendMsg(query, modelId, mentionedItems, imageFiles, attachmentFiles)"
                 @stop-generation="handleStopGeneration" :isReplying="isReplying" :sessionId="session_id"
@@ -128,6 +134,8 @@ import { storeToRefs } from 'pinia';
 import { ref, onMounted, onBeforeMount, onUnmounted, nextTick, watch, reactive, computed } from 'vue';
 import { useRoute, onBeforeRouteLeave, onBeforeRouteUpdate } from 'vue-router';
 import InputField from '../../components/Input-field.vue';
+import ChatEngineSegmented from '@/components/ChatEngineSegmented.vue';
+import { useChatEngineNav } from '@/composables/useChatEngineNav';
 import botmsg from './components/botmsg.vue';
 import usermsg from './components/usermsg.vue';
 import { getMessageList, getSession } from "@/api/chat/index";
@@ -185,6 +193,7 @@ const isAgentStreamSession = () => {
 const uiStore = useUIStore();
 const { navigateToKnowledgeBaseList } = useKnowledgeBaseCreationNavigation();
 const { t } = useI18n();
+const { engine: chatEngine, goToEngine } = useChatEngineNav();
 const { firstQuery, firstMentionedItems, firstModelId, firstImageFiles, firstAttachmentFiles } = storeToRefs(usemenuStore);
 const { onChunk, error, startStream, stopStream, lastStreamRequest } = useStream();
 /** Snapshot of the in-flight HTTP request for attaching to the next assistant message. */
@@ -1212,6 +1221,17 @@ onBeforeRouteUpdate((to, from, next) => {
     max-width: 960px;
     box-sizing: border-box;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    .chat-engine-switch {
+        margin-bottom: 10px;
+    }
+
+    :deep(.answers-input) {
+        width: 100%;
+    }
 
     &.is-embedded {
         max-width: 100%;

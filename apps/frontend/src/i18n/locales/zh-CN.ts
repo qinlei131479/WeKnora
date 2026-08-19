@@ -1,4 +1,7 @@
 export default {
+  brand: {
+    name: '智问智办'
+  },
   platformApiKeys: {
     title: '平台 API Key',
     description: '为跨空间自动化创建平台级凭据；调用空间接口时通过 X-Tenant-ID 指定目标空间。',
@@ -270,7 +273,7 @@ export default {
     filterAllAgents: '全部智能体',
     claw: {
       title: 'WeKnora Skill',
-      subtitle: '通过 WeKnora REST API 导入文档并执行混合检索（向量 + 关键词）。适用于上传文件/URL/Markdown 到知识库、跨库检索与浏览知识内容。',
+      subtitle: '通过 @:{\'brand.name\'} REST API 导入文档并执行混合检索（向量 + 关键词）。适用于上传文件/URL/Markdown 到知识库、跨库检索与浏览知识内容。',
       capabilitiesTitle: 'Skill 能力',
       stepsTitle: '配置步骤',
       openApiSettings: '打开 API 信息',
@@ -324,7 +327,7 @@ export default {
     },
     chrome: {
       title: '知识管理助手',
-      subtitle: '配合 WeKnora 自建服务使用：在任意网页侧边栏提问、剪藏内容、Markdown 速记，将浏览中的知识沉淀到你的知识库。',
+      subtitle: '配合 @:{\'brand.name\'} 自建服务使用：在任意网页侧边栏提问、剪藏内容、Markdown 速记，将浏览中的知识沉淀到你的知识库。',
       capabilitiesTitle: '核心能力',
       stepsTitle: '配置步骤',
       openApiSettings: '打开 API 信息',
@@ -344,7 +347,7 @@ export default {
         },
         port: {
           title: '桌面版配置固定端口（推荐）',
-          desc: '使用 WeKnora 桌面版时，在 API 信息中设置固定端口（如 37841），避免每次启动后地址变化导致插件断连。'
+          desc: '使用 @:{\'brand.name\'} 桌面版时，在 API 信息中设置固定端口（如 37841），避免每次启动后地址变化导致插件断连。'
         },
         api: {
           title: '获取 API 凭证',
@@ -474,14 +477,14 @@ export default {
       directWarning: '直接传用户 ID 会信任调用方请求头，仅适用于可信服务端到服务端调用。',
       directWarningDetail: '任何持有 API Key 的调用方都可以通过修改用户 ID 请求头冒充其他外部用户，从而共用或劫持其 MCP OAuth 授权。请勿用于浏览器或不可信客户端；面向终端用户请使用「签名 Token」。',
       signedRecommended: '推荐给面向用户的应用：由你的业务后端为外部用户签发短期 HS256 JWT。',
-      signedFlowDetail: 'HMAC 密钥仅保存在 WeKnora 与你的可信后端，切勿放入请求或下发给浏览器。请求头里传的是用该密钥签出的 JWT 字符串（每次签发或过期后会变），不是密钥本身。JWT 须包含 sub（外部用户 ID）、tenant_id、aud=weknora、exp（有效期不超过 24 小时）。',
+      signedFlowDetail: 'HMAC 密钥仅保存在 @:{\'brand.name\'} 与你的可信后端，切勿放入请求或下发给浏览器。请求头里传的是用该密钥签出的 JWT 字符串（每次签发或过期后会变），不是密钥本身。JWT 须包含 sub（外部用户 ID）、tenant_id、aud=weknora、exp（有效期不超过 24 小时）。',
       directHeader: '用户 ID 请求头',
       requireDirectHeader: '必须携带用户 ID',
       requireDirectHeaderDesc: '开启后，缺少用户 ID 请求头的 API Key 请求将被拒绝；关闭则按整个空间统一处理，不区分具体终端用户。',
       tokenHeader: 'Token 请求头',
       tokenHeaderDesc: '客户端在该固定请求头中携带后端签发的 JWT。',
       hmacSecret: 'HMAC 密钥',
-      hmacSecretDesc: '与 WeKnora 保存的同一份密钥；仅用于后端签发 JWT，不要作为请求头发送。',
+      hmacSecretDesc: '与 @:{\'brand.name\'} 保存的同一份密钥；仅用于后端签发 JWT，不要作为请求头发送。',
       secretConfigured: '已配置密钥（不可回看）；输入新值可轮换',
       secretSavedCopyHint: '密钥已保存，请立即复制到后端配置。离开本页后将无法再次查看。',
       generateSecret: '生成密钥',
@@ -2206,7 +2209,9 @@ export default {
     light: '浅色',
     dark: '深色',
     system: '跟随系统',
-    selectTheme: '选择主题'
+    selectTheme: '选择主题',
+    switchToLight: '切换到浅色模式',
+    switchToDark: '切换到深色模式'
   },
   general: {
     title: '常规设置',
@@ -4062,7 +4067,7 @@ export default {
     allowFileUploadDesc: '开启后，访客可上传图片与文档附件。仅当绑定的智能体已启用图片上传时才会生效。',
     webhookUrl: 'Webhook 地址',
     webhookUrlPlaceholder: 'https://your-server.example.com/weknora/embed-events',
-    webhookUrlDesc: '可选。访客发消息与助手回复完成时，WeKnora 会向该 HTTPS 地址 POST 事件（message_sent / message_received）。',
+    webhookUrlDesc: '可选。访客发消息与助手回复完成时，@:{\'brand.name\'} 会向该 HTTPS 地址 POST 事件（message_sent / message_received）。',
     webhookSecret: 'Webhook 签名密钥',
     webhookSecretPlaceholder: '用于 HMAC-SHA256 签名（X-WeKnora-Signature）',
     webhookSecretKeep: '留空表示不修改已保存的密钥',
@@ -4099,6 +4104,15 @@ export default {
   knowledgeList: {
     create: '新建知识库',
     subtitle: '管理和组织您的知识库，支持文档型和问答型知识库',
+    extensionsSubtitle: '管理运行时技能、工具与 MCP',
+    runtimeSubtitle: '管理运行时知识库，包含文档解析、图谱、脑图与评测能力',
+    tabs: {
+      platform: '知识库',
+      runtime: '运行时',
+      skills: '技能',
+      tools: '工具',
+      mcp: 'MCP'
+    },
     sharedToOrgs: '已共享给 {count} 个空间',
     uninitializedBanner: '部分知识库尚未初始化，需要先在设置中配置模型信息才能添加知识文档',
     uploadProgress: {
@@ -4175,7 +4189,7 @@ export default {
     }
   },
   createChat: {
-    title: 'Hi，我是 WeKnora，让你的知识触手可及',
+    title: 'Hi，我是 @:{\'brand.name\'}，让你的知识触手可及',
     newSessionTitle: '新会话',
     messages: {
       createFailed: '创建会话失败',
@@ -4419,11 +4433,11 @@ export default {
     haveAccount: '已有账户？',
     backToLogin: '返回登录',
     loginHint: '登录以继续使用；首次使用请在下方创建账户。',
-    firstTime: '首次使用 WeKnora？',
+    firstTime: '首次使用 @:{\'brand.name\'}？',
     registerSuccess: '注册成功，请登录',
     registerFailed: '注册失败',
     subtitle: 'RAG 问答、ReAct 智能体与 Wiki 知识库，大模型驱动的企业级知识框架',
-    registerSubtitle: '创建账户并开始使用 WeKnora',
+    registerSubtitle: '创建账户并开始使用 @:{\'brand.name\'}',
     emailPlaceholder: '输入邮箱地址',
     passwordPlaceholder: '输入密码（8-32个字符，包含字母和数字）',
     confirmPasswordPlaceholder: '再次输入密码',
@@ -4905,6 +4919,7 @@ export default {
     stepSummarySeparator: ' · ',
     title: '智能体',
     subtitle: '配置和管理您的智能体，自定义对话行为和能力',
+    runtimeSubtitle: '管理工作智能体。它们会在过程中产生中间文件与交付件。',
     createAgent: '创建智能体',
     builtin: '内置',
     disabled: '已停用',
@@ -5100,6 +5115,9 @@ export default {
       sharedReadonly: '共享给我 · 仅查看'
     },
     tabs: {
+      platform: '对话',
+      runtime: '工作',
+      providers: '模型供应商',
       sharedToMe: '共享给我'
     },
     features: {
@@ -5857,10 +5875,10 @@ export default {
       },
       knowledge: {
         title: '创建你的知识库',
-        desc: '知识库是一切的起点：上传文档、网页或 FAQ，WeKnora 会自动解析并建立索引。点击这里进入知识库。'
+        desc: '知识库是一切的起点：上传文档、网页或 FAQ，@:{\'brand.name\'} 会自动解析并建立索引。点击这里进入知识库。'
       },
       welcome: {
-        title: '欢迎使用 WeKnora',
+        title: '欢迎使用 @:{\'brand.name\'}',
         desc: '只需几步，带你快速了解知识库、对话与智能体的核心用法。点击「下一步」开始。'
       }
     }
@@ -5896,8 +5914,10 @@ export default {
   menu: {
     knowledgeBase: '知识库',
     agents: '智能体',
+    workspace: '工作区',
+    dashboard: '数据总览',
     organizations: '共享空间',
-    newChat: '新对话',
+    newChat: '新建对话',
     settings: '系统设置',
     logout: '退出登录',
     clearMessages: '清空消息',
@@ -5919,5 +5939,22 @@ export default {
     myChats: '我的对话',
     apiChats: 'API 会话',
     noSessions: '暂无对话'
+  },
+  harness: {
+    backToPlatformChat: '返回对话',
+    tokenGate: {
+      title: '接入工作',
+      description: '登录沿用当前 @:{\'brand.name\'} 账号。工作智能体 API 需要单独的 Token：打开正在运行的 agent-web，把 localStorage.user_token 复制到这里。',
+      placeholder: '粘贴 agent-web 的 user_token',
+      save: '保存并加载',
+      sidebarHint: '接入 Token 后即可查看工作对话。',
+      sidebarAction: '去接入'
+    }
+  },
+  chatEngine: {
+    switchLabel: '选择类型',
+    platform: '对话',
+    runtime: '工作',
+    lockedHint: '已有对话内容，无法更改类型'
   }
 }

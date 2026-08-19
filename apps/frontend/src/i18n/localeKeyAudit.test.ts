@@ -3,12 +3,15 @@ import { before, test } from 'node:test'
 
 import { findAuditActionDefaultRegistryMismatches } from './auditActionLocaleDefaults.ts'
 import { REGISTERED_AUDIT_ACTION_ENTRIES, KB_ACTIVITY_DETAIL_VALUES, KB_ACTIVITY_I18N_ROOTS, KB_ACTIVITY_OUTCOMES } from './auditActionRegistry.ts'
+import { createI18n } from 'vue-i18n'
+
 import {
   CRITICAL_LOCALE_KEYS,
   LOCALE_BUNDLES,
   alignLocaleBundleToReferenceKeys,
   collectI18nUsageFromSources,
   collectLocaleKeys,
+  collectLocaleMessages,
   collectReferencedLocaleKeys,
   diffLocaleKeys,
   findAllLocaleMessageCompileErrors,
@@ -280,4 +283,33 @@ test('locale messages compile with vue-i18n syntax rules', () => {
     (failure) => `${failure.path}: ${failure.message}\n  ${failure.value}`,
   )
   assert.deepEqual(summary, [], summary.slice(0, 20).join('\n'))
+})
+
+test('linked brand.name messages resolve in every locale', () => {
+  const i18n = createI18n({
+    legacy: false,
+    locale: 'zh-CN',
+    fallbackLocale: 'zh-CN',
+    messages: LOCALE_BUNDLES,
+  })
+
+  const unquoted: string[] = []
+  const leaks: string[] = []
+
+  for (const [localeName, bundle] of Object.entries(LOCALE_BUNDLES)) {
+    i18n.global.locale.value = localeName as LocaleName
+    for (const { path, value } of collectLocaleMessages(bundle)) {
+      if (/@:brand\./.test(value)) {
+        unquoted.push(`${localeName}:${path}`)
+      }
+      if (!value.includes('@:')) continue
+      const translated = String(i18n.global.t(path))
+      if (translated.includes('brand.name') || /@:\{\s*'brand\.name'\s*\}/.test(translated)) {
+        leaks.push(`${localeName}:${path} => ${translated}`)
+      }
+    }
+  }
+
+  assert.deepEqual(unquoted, [], unquoted.join('\n'))
+  assert.deepEqual(leaks, [], leaks.slice(0, 20).join('\n'))
 })

@@ -47,6 +47,18 @@ function embedHtmlDevFallback(): Plugin {
     }
   };
 }
+const DEV_PROXY_TARGET = process.env.VITE_DEV_PROXY_TARGET || process.env.FRONTEND_BACKEND_URL || "http://localhost:8080";
+const HARNESS_PROXY_TARGET = process.env.VITE_HARNESS_PROXY_TARGET || "http://127.0.0.1:5050";
+
+const harnessProxy = {
+  "/harness-api": {
+    target: HARNESS_PROXY_TARGET,
+    changeOrigin: true,
+    secure: false,
+    rewrite: (path: string) => path.replace(/^\/harness-api/, "")
+  }
+};
+
 function resolveVueOfficePptxEntry(): string {
   try {
     const pkgDir = dirname(require.resolve("@vue-office/pptx/package.json"));
@@ -124,6 +136,7 @@ export default defineConfig(({ mode }) => {
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
+      "@harness": fileURLToPath(new URL("./src/harness", import.meta.url)),
       "@vue-office/pptx": resolveVueOfficePptxEntry()
     }
   },
@@ -141,7 +154,8 @@ export default defineConfig(({ mode }) => {
         target: DEV_PROXY_TARGET,
         changeOrigin: true,
         secure: false
-      }
+      },
+      ...harnessProxy
     }
   },
   // `vite preview` 用生产构建产物(dist)本地起服务，是最接近 release 镜像的环境：
@@ -160,7 +174,8 @@ export default defineConfig(({ mode }) => {
         target: DEV_PROXY_TARGET,
         changeOrigin: true,
         secure: false
-      }
+      },
+      ...harnessProxy
     }
   }
   };

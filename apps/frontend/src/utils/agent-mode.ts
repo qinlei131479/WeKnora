@@ -19,6 +19,21 @@ export function isAgentStreamAgentId(
   return isAgentEnabled
 }
 
+/**
+ * Localized label for the two chat-mode builtins. Other agents keep their stored name.
+ * The closed input dropdown must use this — API `agent.name` is seeded in one language
+ * and will not follow UI locale changes.
+ */
+export function localizedBuiltinAgentName(
+  agentId: string | null | undefined,
+  t: (key: string) => string,
+  fallbackName?: string,
+): string {
+  if (agentId === BUILTIN_QUICK_ANSWER_ID) return t('input.normalMode')
+  if (agentId === BUILTIN_SMART_REASONING_ID) return t('input.agentMode')
+  return fallbackName || t('input.normalMode')
+}
+
 /** Reconcile builtin agent id with isAgentEnabled after localStorage reload. */
 export function reconcileBuiltinAgentMode(settings: {
   selectedAgentId?: string

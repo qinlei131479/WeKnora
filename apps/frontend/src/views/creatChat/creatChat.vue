@@ -43,6 +43,11 @@
                     </div>
                 </transition>
             </div>
+            <ChatEngineSegmented
+                class="chat-engine-switch"
+                :model-value="chatEngine"
+                @update:model-value="goToEngine"
+            />
             <InputField ref="inputFieldRef" @send-msg="sendMsg"></InputField>
         </div>
     </div>
@@ -58,6 +63,8 @@
 import { ref, watch, onMounted, nextTick, computed } from 'vue';
 import ContextualGuide from '@/components/ContextualGuide.vue';
 import InputField from '@/components/Input-field.vue';
+import ChatEngineSegmented from '@/components/ChatEngineSegmented.vue';
+import { useChatEngineNav } from '@/composables/useChatEngineNav';
 import { createSessions } from "@/api/chat/index";
 import { getSuggestedQuestions } from "@/api/agent/index";
 import type { SuggestedQuestion } from "@/api/agent/index";
@@ -77,6 +84,7 @@ const settingsStore = useSettingsStore();
 const uiStore = useUIStore();
 const { t } = useI18n();
 const { navigateToKnowledgeBaseList } = useKnowledgeBaseCreationNavigation();
+const { engine: chatEngine, goToEngine } = useChatEngineNav();
 
 const showChatContextualGuide = computed(() => {
     return route.name === 'globalCreatChat' || route.name === 'kbCreatChat';
@@ -248,7 +256,6 @@ const handleKBEditorSuccess = (kbId: string) => {
     display: flex;
     justify-content: center;
     align-items: center;
-    // position: relative;
 }
 
 .dialogue-answers {
@@ -263,6 +270,10 @@ const handleKBEditorSuccess = (kbId: string) => {
         position: static;
         transform: translateX(0);
     }
+}
+
+.chat-engine-switch {
+    align-self: center;
 }
 
 .dialogue-title {

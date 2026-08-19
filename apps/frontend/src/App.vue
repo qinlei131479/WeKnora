@@ -34,6 +34,14 @@ const tdLocaleMap: Record<string, object> = {
 
 const tdGlobalConfig = computed(() => tdLocaleMap[locale.value] || enUSConfig)
 
+watch(
+  () => [locale.value, t('brand.name')],
+  () => {
+    document.title = t('brand.name')
+  },
+  { immediate: true },
+)
+
 // TDesign NotifyPlugin 只有四角 placement，进出场用 translateX 滑向右侧。
 // 卡片已 CSS 居中，这里把 WAAPI 改成向上滑入/滑出，避免仍往右消失。
 const patchNotificationSlideUp = () => {

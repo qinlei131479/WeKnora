@@ -1,6 +1,6 @@
 <template>
   <div class="kb-list-container">
-    <ListSpaceSidebar v-if="!authStore.isLiteMode" v-model="spaceSelection" :count-all="allKnowledgeBases"
+    <ListSpaceSidebar v-if="!authStore.isLiteMode && surface === 'platform'" v-model="spaceSelection" :count-all="allKnowledgeBases"
       :count-mine="kbs.length" :count-by-org="effectiveSharedCountByOrg" :count-favorites="kbFavoritesCount"
       :count-recents="kbRecentsCount" />
     <div class="kb-list-content">
@@ -8,17 +8,34 @@
         <div class="header-title" style="--wails-draggable: drag">
           <div class="title-row" style="--wails-draggable: drag">
             <h2 style="--wails-draggable: drag">{{ $t('knowledgeBase.title') }}</h2>
-            <t-tooltip v-if="authStore.hasRole('contributor')" :content="$t('knowledgeList.create')" placement="bottom">
+            <t-tooltip v-if="authStore.hasRole('contributor') && surface === 'platform'" :content="$t('knowledgeList.create')" placement="bottom">
               <t-button variant="text" theme="default" size="small" class="header-action-btn"
                 data-guide="kb-list-create" style="--wails-draggable: no-drag" @click="handleCreateKnowledgeBase">
                 <template #icon><t-icon name="folder-add" size="16px" /></template>
               </t-button>
             </t-tooltip>
           </div>
-          <p class="header-subtitle" style="--wails-draggable: drag">{{ $t('knowledgeList.subtitle') }}</p>
+          <p class="header-subtitle" style="--wails-draggable: drag">{{
+            surface === 'platform'
+              ? $t('knowledgeList.subtitle')
+              : surface === 'runtime'
+                ? $t('knowledgeList.runtimeSubtitle')
+                : $t('knowledgeList.extensionsSubtitle')
+          }}</p>
         </div>
       </div>
-      <div class="kb-list-main">
+      <ListSurfaceTabs
+        v-model="surface"
+        :items="surfaceTabs"
+        :aria-label="$t('knowledgeBase.title')"
+      />
+      <HarnessIsland v-if="surface !== 'platform'" class="surface-embed">
+        <DataBaseView v-if="surface === 'runtime'" embedded />
+        <SkillCardList v-else-if="surface === 'skills'" />
+        <ToolsCardList v-else-if="surface === 'tools'" />
+        <McpCardList v-else-if="surface === 'mcp'" />
+      </HarnessIsland>
+      <div v-else class="kb-list-main">
         <!-- creator filter intentionally removed from chrome: every card
              already shows its creator via ResourceOriginBadge / avatar, so
              a dedicated horizontal switch added more noise than signal.
@@ -795,13 +812,20 @@ import KnowledgeBaseEditorModal from './KnowledgeBaseEditorModal.vue'
 import KbWikiBadge from './components/KbWikiBadge.vue'
 import ShareKnowledgeBaseDialog from '@/components/ShareKnowledgeBaseDialog.vue'
 import ListSpaceSidebar from '@/components/ListSpaceSidebar.vue'
+import ListSurfaceTabs from '@/components/ListSurfaceTabs.vue'
 import ResourceOriginBadge from '@/components/ResourceOriginBadge.vue'
 import { shouldShowResourceOriginBadge } from '@/utils/card-list-badge'
+import { useListUrlState } from '@/composables/useListUrlState'
+import { useListSurface } from '@/composables/useListSurface'
+import HarnessIsland from '@harness/HarnessIsland.vue'
+import DataBaseView from '@harness/views/DataBaseView.vue'
+import SkillCardList from '@harness/components/extensions/SkillCardList.vue'
+import ToolsCardList from '@harness/components/extensions/ToolsCardList.vue'
+import McpCardList from '@harness/components/extensions/McpCardList.vue'
 import ContextualGuide from '@/components/ContextualGuide.vue'
 import { isContextualGuideDone, markContextualGuideDone } from '@/config/contextualGuides'
 import { useTenantModelReadiness } from '@/composables/useTenantModelReadiness'
 import { useI18n } from 'vue-i18n'
-import { useListUrlState } from '@/composables/useListUrlState'
 import { useResourcePins } from '@/composables/useResourcePins'
 
 const router = useRouter()
@@ -827,6 +851,27 @@ const defaultScope: 'all' | 'mine' = authStore.hasRole('contributor') ? 'mine' :
 const { scope: spaceSelection, creator: creatorFilter } = useListUrlState({
   defaultScope,
   defaultCreator: 'all',
+})
+type KbSurface = 'platform' | 'runtime' | 'skills' | 'tools' | 'mcp'
+const { surface } = useListSurface<KbSurface>(
+  () => (authStore.hasRole('admin') ? ['platform', 'runtime', 'skills', 'tools', 'mcp'] : ['platform', 'skills']),
+  'platform',
+)
+const surfaceTabs = computed(() => {
+  const tabs = [
+    { value: 'platform', label: t('knowledgeList.tabs.platform') },
+  ]
+  if (authStore.hasRole('admin')) {
+    tabs.push({ value: 'runtime', label: t('knowledgeList.tabs.runtime') })
+  }
+  tabs.push({ value: 'skills', label: t('knowledgeList.tabs.skills') })
+  if (authStore.hasRole('admin')) {
+    tabs.push(
+      { value: 'tools', label: t('knowledgeList.tabs.tools') },
+      { value: 'mcp', label: t('knowledgeList.tabs.mcp') },
+    )
+  }
+  return tabs
 })
 
 // Per-user favorites + recents (localStorage-backed). isFavorite & touchRecent
@@ -1864,6 +1909,12 @@ const handleUploadFinishedEvent = (event: Event) => {
   min-height: 200px;
   padding: 12px;
   background: var(--td-bg-color-container);
+}
+
+.surface-embed {
+  flex: 1;
+  min-height: 0;
+  margin-right: 0;
 }
 
 .shared-by-me-badge {

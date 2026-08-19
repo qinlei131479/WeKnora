@@ -1,4 +1,7 @@
 export default {
+  brand: {
+    name: 'ZhiWen'
+  },
   platformApiKeys: {
     title: 'Платформенные API-ключи',
     description: 'Учетные данные для автоматизации между рабочими пространствами. Для API пространства используйте X-Tenant-ID.',
@@ -270,7 +273,7 @@ export default {
     filterAllAgents: 'Все агенты',
     claw: {
       title: 'WeKnora Skill',
-      subtitle: 'Импорт документов и гибридный поиск (вектор + ключевые слова) через REST API WeKnora — загрузки, URL, Markdown и поиск.',
+      subtitle: 'Импорт документов и гибридный поиск (вектор + ключевые слова) через REST API @:{\'brand.name\'} — загрузки, URL, Markdown и поиск.',
       capabilitiesTitle: 'Возможности Skill',
       stepsTitle: 'Шаги настройки',
       openApiSettings: 'Открыть API-информацию',
@@ -324,7 +327,7 @@ export default {
     },
     chrome: {
       title: 'Помощник по знаниям',
-      subtitle: 'Для self-hosted WeKnora: вопросы в боковой панели, клиппинг страниц и Markdown-заметки в базы знаний прямо при просмотре.',
+      subtitle: 'Для self-hosted @:{\'brand.name\'}: вопросы в боковой панели, клиппинг страниц и Markdown-заметки в базы знаний прямо при просмотре.',
       capabilitiesTitle: 'Возможности',
       stepsTitle: 'Шаги настройки',
       openApiSettings: 'Открыть API-информацию',
@@ -344,7 +347,7 @@ export default {
         },
         port: {
           title: 'Десктоп: фиксированный порт',
-          desc: 'В WeKnora Desktop задайте фиксированный порт API (например 37841) в API-информации.'
+          desc: 'В @:{\'brand.name\'} Desktop задайте фиксированный порт API (например 37841) в API-информации.'
         },
         api: {
           title: 'Получите API-учётные данные',
@@ -474,14 +477,14 @@ export default {
       directWarning: 'Прямой ID доверяет заголовку вызывающей стороны. Используйте только для доверенных server-to-server вызовов.',
       directWarningDetail: 'Любой, у кого есть API key, может подменить заголовок ID пользователя, выдать себя за другого внешнего пользователя и переиспользовать или перехватить его авторизацию MCP OAuth. Не используйте в браузере или ненадёжных клиентах; для пользовательских приложений выбирайте подписанный token.',
       signedRecommended: 'Рекомендуется для пользовательских приложений: ваш backend подписывает краткоживущий HS256 JWT для внешнего пользователя.',
-      signedFlowDetail: 'HMAC secret храните только в WeKnora и на доверенном backend — не передавайте в запросах и не отдавайте браузеру. В заголовке запроса передаётся JWT, подписанный этим secret (меняется при каждой выдаче или после истечения), а не сам secret. JWT должен содержать sub (ID внешнего пользователя), tenant_id, aud=weknora и exp (не более 24 ч).',
+      signedFlowDetail: 'HMAC secret храните только в @:{\'brand.name\'} и на доверенном backend — не передавайте в запросах и не отдавайте браузеру. В заголовке запроса передаётся JWT, подписанный этим secret (меняется при каждой выдаче или после истечения), а не сам secret. JWT должен содержать sub (ID внешнего пользователя), tenant_id, aud=weknora и exp (не более 24 ч).',
       directHeader: 'Заголовок ID пользователя',
       requireDirectHeader: 'Требовать заголовок ID пользователя',
       requireDirectHeaderDesc: 'Если включено, запросы без заголовка ID пользователя отклоняются; иначе все запросы обрабатываются как единое пространство без различия конечных пользователей.',
       tokenHeader: 'Заголовок token',
       tokenHeaderDesc: 'Клиент передаёт JWT, подписанный backend, в этом фиксированном заголовке.',
       hmacSecret: 'HMAC secret',
-      hmacSecretDesc: 'Тот же secret, что в WeKnora; только для подписи JWT на backend — не отправляйте его в заголовке запроса.',
+      hmacSecretDesc: 'Тот же secret, что в @:{\'brand.name\'}; только для подписи JWT на backend — не отправляйте его в заголовке запроса.',
       secretConfigured: 'Secret настроен (повторно не показывается); введите новое значение для ротации',
       secretSavedCopyHint: 'Secret сохранён. Скопируйте его в backend сейчас — после ухода со страницы просмотреть его будет нельзя.',
       generateSecret: 'Сгенерировать secret',
@@ -2206,7 +2209,9 @@ export default {
     light: 'Светлая',
     dark: 'Тёмная',
     system: 'Системная',
-    selectTheme: 'Выбрать тему'
+    selectTheme: 'Выбрать тему',
+    switchToLight: 'Переключить на светлую тему',
+    switchToDark: 'Переключить на тёмную тему'
   },
   general: {
     title: 'Общие настройки',
@@ -4062,7 +4067,7 @@ export default {
     allowFileUploadDesc: 'При включении посетители видят кнопку загрузки изображений в поле ввода. Кнопка появляется только если у привязанного агента включена загрузка изображений.',
     webhookUrl: 'Webhook URL',
     webhookUrlPlaceholder: 'https://your-server.example.com/weknora/embed-events',
-    webhookUrlDesc: 'Optional. WeKnora POSTs message_sent / message_received events to this HTTPS endpoint.',
+    webhookUrlDesc: 'Optional. @:{\'brand.name\'} POSTs message_sent / message_received events to this HTTPS endpoint.',
     webhookSecret: 'Webhook secret',
     webhookSecretPlaceholder: 'HMAC-SHA256 secret (X-WeKnora-Signature header)',
     webhookSecretKeep: 'Leave blank to keep the saved secret',
@@ -4099,6 +4104,15 @@ export default {
   knowledgeList: {
     create: 'Создать базу знаний',
     subtitle: 'Управляйте и организуйте свои базы знаний, поддерживаются документные и FAQ-базы знаний',
+    extensionsSubtitle: 'Управляйте навыками, инструментами и MCP среды выполнения',
+    runtimeSubtitle: 'Управляйте базами знаний среды выполнения: разбор, граф, интеллект-карта и оценка',
+    tabs: {
+      platform: 'Базы знаний',
+      runtime: 'Runtime',
+      skills: 'Навыки',
+      tools: 'Инструменты',
+      mcp: 'MCP'
+    },
     sharedToOrgs: 'Shared to {count} space(s)',
     uninitializedBanner: 'Некоторые базы знаний не инициализированы. Сначала настройте модели в разделе настроек, чтобы добавлять документы.',
     uploadProgress: {
@@ -4175,7 +4189,7 @@ export default {
     }
   },
   createChat: {
-    title: 'Привет, я WeKnora — ваши знания всегда под рукой',
+    title: 'Привет, я @:{\'brand.name\'} — ваши знания всегда под рукой',
     newSessionTitle: 'Новая сессия',
     messages: {
       createFailed: 'Не удалось создать сессию',
@@ -4419,11 +4433,11 @@ export default {
     haveAccount: 'Уже есть аккаунт?',
     backToLogin: 'Вернуться ко входу',
     loginHint: 'Войдите, чтобы продолжить, или создайте аккаунт ниже, если вы впервые здесь.',
-    firstTime: 'Впервые в WeKnora?',
+    firstTime: 'Впервые в @:{\'brand.name\'}?',
     registerSuccess: 'Регистрация завершена. Войдите в систему',
     registerFailed: 'Ошибка регистрации',
     subtitle: 'RAG, ReAct-агент и Wiki — корпоративный фреймворк знаний на основе больших моделей',
-    registerSubtitle: 'Создайте аккаунт и начните работу с WeKnora',
+    registerSubtitle: 'Создайте аккаунт и начните работу с @:{\'brand.name\'}',
     emailPlaceholder: 'Введите адрес электронной почты',
     passwordPlaceholder: 'Введите пароль (8-32 символа, включая буквы и цифры)',
     confirmPasswordPlaceholder: 'Введите пароль ещё раз',
@@ -4905,6 +4919,7 @@ export default {
     stepSummarySeparator: ' · ',
     title: 'Agents',
     subtitle: 'Configure and manage your agents to customize conversation behavior and capabilities',
+    runtimeSubtitle: 'Управление рабочими агентами. Они создают промежуточные файлы и результаты.',
     createAgent: 'Create Agent',
     builtin: 'Built-in',
     disabled: 'Disabled',
@@ -5100,6 +5115,9 @@ export default {
       sharedReadonly: 'Доступно мне · Только просмотр'
     },
     tabs: {
+      platform: 'Диалог',
+      runtime: 'Работа',
+      providers: 'Поставщики моделей',
       sharedToMe: 'Shared to Me'
     },
     features: {
@@ -5857,10 +5875,10 @@ export default {
       },
       knowledge: {
         title: 'Создайте базу знаний',
-        desc: 'С этого всё начинается: загружайте документы, веб-страницы или FAQ, и WeKnora автоматически разберёт и проиндексирует их. Нажмите здесь, чтобы открыть базы знаний.'
+        desc: 'С этого всё начинается: загружайте документы, веб-страницы или FAQ, и @:{\'brand.name\'} автоматически разберёт и проиндексирует их. Нажмите здесь, чтобы открыть базы знаний.'
       },
       welcome: {
-        title: 'Добро пожаловать в WeKnora',
+        title: 'Добро пожаловать в @:{\'brand.name\'}',
         desc: 'Несколько простых шагов познакомят вас с базами знаний, чатом и агентами. Нажмите «Далее», чтобы начать.'
       }
     }
@@ -5896,6 +5914,8 @@ export default {
   menu: {
     knowledgeBase: 'База знаний',
     agents: 'Агенты',
+    workspace: 'Рабочая область',
+    dashboard: 'Обзор данных',
     organizations: 'Общие пространства',
     newChat: 'Новый диалог',
     settings: 'Настройки системы',
@@ -5919,5 +5939,22 @@ export default {
     myChats: 'Мои чаты',
     apiChats: 'Сессии API',
     noSessions: 'Пока нет диалогов'
+  },
+  harness: {
+    backToPlatformChat: 'Вернуться к диалогу',
+    tokenGate: {
+      title: 'Подключить работу',
+      description: 'Вход выполняется через текущую учётную запись @:{\'brand.name\'}. Рабочим агентам нужен отдельный токен: скопируйте localStorage.user_token из запущенного agent-web и вставьте его сюда.',
+      placeholder: 'Вставьте user_token из agent-web',
+      save: 'Сохранить и загрузить',
+      sidebarHint: 'Подключите токен, чтобы увидеть рабочие диалоги.',
+      sidebarAction: 'Подключить'
+    }
+  },
+  chatEngine: {
+    switchLabel: 'Выбор типа',
+    platform: 'Диалог',
+    runtime: 'Работа',
+    lockedHint: 'В этом диалоге уже есть сообщения, тип изменить нельзя'
   }
 }

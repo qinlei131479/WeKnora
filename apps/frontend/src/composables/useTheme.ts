@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import {
   loadPreference,
   savePreference,
@@ -15,14 +15,21 @@ function loadTheme(): ThemeMode {
   return 'light'
 }
 
-// Shared reactive state across all consumers
-const currentTheme = ref<ThemeMode>(loadTheme())
-
-let lastEffective: 'light' | 'dark' | null = null
-
 function getSystemTheme(): 'light' | 'dark' {
+  if (typeof window === 'undefined' || !window.matchMedia) return 'light'
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
+
+function getEffectiveTheme(mode: ThemeMode): 'light' | 'dark' {
+  return mode === 'system' ? systemTheme.value : mode
+}
+
+// Shared reactive state across all consumers
+const currentTheme = ref<ThemeMode>(loadTheme())
+const systemTheme = ref<'light' | 'dark'>(getSystemTheme())
+const isDark = computed(() => getEffectiveTheme(currentTheme.value) === 'dark')
+
+let lastEffective: 'light' | 'dark' | null = null
 
 /** Wails：与原生窗口底色 / 系统深浅色一致，减轻 Ctrl+R 整窗白闪（浅色与 --td-bg-color-page #eee 对齐） */
 function syncWailsNativeChrome(effective: 'light' | 'dark') {
@@ -61,7 +68,7 @@ function syncWailsNativeChrome(effective: 'light' | 'dark') {
 }
 
 function applyTheme(mode: ThemeMode) {
-  const effective = mode === 'system' ? getSystemTheme() : mode
+  const effective = getEffectiveTheme(mode)
   if (lastEffective === effective) return
   lastEffective = effective
   document.documentElement.setAttribute('theme-mode', effective)
@@ -77,17 +84,24 @@ export function useTheme() {
     return true
   }
 
-  return { currentTheme, setTheme }
+  function toggleTheme(): boolean {
+    return setTheme(isDark.value ? 'light' : 'dark')
+  }
+
+  return { currentTheme, setTheme, toggleTheme, isDark }
 }
 
 /** Call once in main.ts to initialise theme and listen for OS changes. */
 export function initTheme() {
   currentTheme.value = loadTheme()
+  systemTheme.value = getSystemTheme()
   applyTheme(currentTheme.value)
 
   // React to OS theme changes when user chose "system"
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    systemTheme.value = getSystemTheme()
     if (currentTheme.value === 'system') {
+      lastEffective = null
       applyTheme('system')
     }
   })
