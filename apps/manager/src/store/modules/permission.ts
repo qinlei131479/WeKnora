@@ -56,7 +56,7 @@ const usePermissionStore = defineStore(
     }
   })
 
-const KEPT_VIEW_PREFIXES = ['system/', 'platformManager/tenantManager', 'model/', 'agent/']
+const KEPT_VIEW_PREFIXES = ['system/', 'platformManager/tenantManager', 'model/', 'agent/', 'data/']
 
 function isDirectoryComponent(component: unknown): boolean {
   return component === 'Layout' || component === 'ParentView' || component === 'InnerLink'
