@@ -17,10 +17,6 @@ import store from './store';
 import router from './router';
 import directive from './directive'; // directive
 
-import "./assets/fonts.css";
-import TDesign from "tdesign-vue-next";
-import "tdesign-vue-next/dist/tdesign.css";
-
 // 注册指令
 import plugins from './plugins'; // plugins
 import { download, getDownload, postDownload, postDownload2, uploadFile } from '@/utils/request';
@@ -68,16 +64,6 @@ import InputRadius from '@/components/controls/InputRadius.vue';
 import InputRound from '@/components/controls/InputRound.vue';
 import RadioGroup from '@/components/controls/RadioGroup.vue';
 
-import { installTDesignIconOfflineGuard } from "@/utils2/tdesign-icon-offline";
-import { installAutofillGuard } from "@/utils2/disable-autofill";
-import { ensureFeatureFlags } from "@/utils2/weknoraFeatures";
-
-// 必须在 Vue 组件挂载之前执行，避免 tdesign-icons 运行时请求 tdesign.gtimg.com
-installTDesignIconOfflineGuard();
-
-// 功能开关：无缓存则写入默认值，已有则不动
-ensureFeatureFlags();
-
 const app = createApp(App);
 
 // 全局方法挂载
@@ -118,7 +104,6 @@ app.component('input-round', InputRound);
 app.component('radio-group', RadioGroup);
 app.component('g-text', OverflowTooltip);
 
-app.use(TDesign);
 app.use(router);
 app.use(store);
 app.use(plugins);
@@ -136,8 +121,4 @@ app.use(ElementPlus, {
   size: Cookies.get('size') || 'default'
 });
 
-// 等首屏路由（含导航守卫、Lite 自动登录）完成后再挂载，避免先闪默认页再跳转
-router.isReady().finally(() => {
-  app.mount("#app");
-  installAutofillGuard();
-});
+app.mount('#app');
