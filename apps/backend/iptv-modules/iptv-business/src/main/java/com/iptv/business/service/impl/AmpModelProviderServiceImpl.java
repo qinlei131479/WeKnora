@@ -1,6 +1,7 @@
 package com.iptv.business.service.impl;
 
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -27,8 +28,6 @@ import java.util.stream.Collectors;
 public class AmpModelProviderServiceImpl extends ServiceImpl<AmpModelProviderMapper, AmpModelProvider>
         implements AmpModelProviderService {
 
-    private final ObjectMapper objectMapper;
-
     @Override
     public List<ModelProviderVO> listAllProviders() {
         LambdaQueryWrapper<AmpModelProvider> queryWrapper = new LambdaQueryWrapper<>();
@@ -47,11 +46,10 @@ public class AmpModelProviderServiceImpl extends ServiceImpl<AmpModelProviderMap
             return listAllProviders();
         }
 
-        LambdaQueryWrapper<AmpModelProvider> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(AmpModelProvider::getEnabled, true);
-        queryWrapper.like(AmpModelProvider::getModelTypes, "\"" + modelType + "\"");
-        queryWrapper.orderByAsc(AmpModelProvider::getSortOrder);
-        List<AmpModelProvider> providers = this.list(queryWrapper);
+        List<AmpModelProvider> providers = this.baseMapper.selectList(new LambdaQueryWrapper<AmpModelProvider>()
+                .eq(AmpModelProvider::getEnabled, true)
+                .apply("model_types::text LIKE {0}", "%" + modelType + "%")
+                .orderByAsc(AmpModelProvider::getSortOrder));
 
         return providers.stream()
                 .map(this::convertToVO)
@@ -70,9 +68,9 @@ public class AmpModelProviderServiceImpl extends ServiceImpl<AmpModelProviderMap
         // 解析 defaultUrls JSON
         if (StrUtil.isNotBlank(provider.getDefaultUrls())) {
             try {
-                Map<String, String> defaultUrls = objectMapper.readValue(
+                Map<String, String> defaultUrls = JSONUtil.toBean(
                         provider.getDefaultUrls(),
-                        new TypeReference<Map<String, String>>() {}
+                        Map.class
                 );
                 vo.setDefaultUrls(defaultUrls);
             } catch (Exception e) {
@@ -86,9 +84,9 @@ public class AmpModelProviderServiceImpl extends ServiceImpl<AmpModelProviderMap
         // 解析 modelTypes JSON
         if (StrUtil.isNotBlank(provider.getModelTypes())) {
             try {
-                List<String> modelTypes = objectMapper.readValue(
+                List<String> modelTypes = JSONUtil.toList(
                         provider.getModelTypes(),
-                        new TypeReference<List<String>>() {}
+                        String.class
                 );
                 vo.setModelTypes(modelTypes);
             } catch (Exception e) {
