@@ -245,6 +245,7 @@ const submitDownloadForm = () => {
 const showDownloadForm = () => {
   downloadOpen.value = true
   downloadForm.value.name = ''
+  downloadRef.value.resetFields()
 }
 const onDownloadClose = () => {
   downloadOpen.value = false

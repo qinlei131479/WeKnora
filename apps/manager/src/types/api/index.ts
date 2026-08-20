@@ -21,3 +21,5 @@ export * from './system/operlog';
 
 // 模型模块
 export * from './model';
+// 数据 模块
+export * from './data';

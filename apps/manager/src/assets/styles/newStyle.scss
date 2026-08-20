@@ -212,6 +212,53 @@ body {
       }
     }
   }
+  .action-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    min-height: 50px;
+    gap: 12px;
+
+    .action-toolbar__left {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .action-toolbar__right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    .toolbar-btn {
+      @include manage-btn;
+      transition: border-color 0.2s, color 0.2s, opacity 0.2s;
+
+      &:hover:not(:disabled) {
+        border-color: #3297a0;
+        color: #3297a0;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+    .selected-text {
+      font-size: 14px;
+      color: #999999;
+      line-height: 36px;
+
+      span {
+        padding: 0 5px;
+        color: #6397ff;
+      }
+    }
+  }
 
   .table-pager-area {
     display: flex;
