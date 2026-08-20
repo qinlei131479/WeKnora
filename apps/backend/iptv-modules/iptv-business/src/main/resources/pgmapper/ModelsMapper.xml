@@ -27,6 +27,54 @@
         is_default, is_builtin, managed_by, status, created_at, updated_at, deleted_at
     </sql>
 
+    <!-- 分页查询（PostgreSQL：字符串使用 ILIKE 大小写不敏感模糊查询） -->
+    <select id="queryPage" resultMap="BaseResultMap" parameterType="com.iptv.business.domain.dto.page.ModelsPageDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM models
+        <where>
+            deleted_at IS NULL
+            <if test="param.id != null and param.id != ''">
+                AND id ILIKE CONCAT('%', #{param.id}, '%')
+            </if>
+            <if test="param.tenantId != null">
+                AND tenant_id = #{param.tenantId}
+            </if>
+            <if test="param.name != null and param.name != ''">
+                AND name ILIKE CONCAT('%', #{param.name}, '%')
+            </if>
+            <if test="param.displayName != null and param.displayName != ''">
+                AND display_name ILIKE CONCAT('%', #{param.displayName}, '%')
+            </if>
+            <if test="param.type != null and param.type != ''">
+                AND type = #{param.type}
+            </if>
+            <if test="param.source != null and param.source != ''">
+                AND source = #{param.source}
+            </if>
+            <if test="param.description != null and param.description != ''">
+                AND description ILIKE CONCAT('%', #{param.description}, '%')
+            </if>
+            <if test="param.isDefault != null">
+                AND is_default = #{param.isDefault}
+            </if>
+            <if test="param.isBuiltin != null">
+                AND is_builtin = #{param.isBuiltin}
+            </if>
+            <if test="param.status != null and param.status != ''">
+                AND status = #{param.status}
+            </if>
+            <if test="param.createdAt != null">
+                AND created_at = #{param.createdAt}
+            </if>
+            <if test="param.updatedAt != null">
+                AND updated_at = #{param.updatedAt}
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+
     <!-- 查询租户模型列表 -->
     <select id="selectListByTenantId" resultMap="BaseResultMap">
         SELECT

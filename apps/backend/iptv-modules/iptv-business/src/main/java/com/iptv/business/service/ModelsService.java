@@ -5,11 +5,14 @@ import com.iptv.business.domain.dto.ModelCredentialsDTO;
 import com.iptv.business.domain.dto.ModelDebugDTO;
 import com.iptv.business.domain.dto.ModelTestRequestDTO;
 import com.iptv.business.domain.dto.ModelsDTO;
+import com.iptv.business.domain.dto.page.ModelsPageDTO;
 import com.iptv.business.domain.vo.CredentialsResponseVO;
 import com.iptv.business.domain.vo.ModelProviderVO;
 import com.iptv.business.domain.vo.ModelTestResultVO;
 import com.iptv.business.domain.vo.ModelsVO;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.iptv.common.core.web.page.PageDTO;
+import com.iptv.common.core.web.page.TableDataInfo;
 import jakarta.annotation.Nonnull;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -46,7 +49,7 @@ public interface ModelsService extends IService<Models> {
      *
      * @return 模型列表
      */
-    List<ModelsVO> listModels();
+    TableDataInfo<ModelsVO> listModels(@Nonnull ModelsPageDTO pageDTO, PageDTO pg);
 
     /**
      * 获取模型详情

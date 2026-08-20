@@ -4,6 +4,7 @@ import com.iptv.business.domain.dto.ModelCredentialsDTO;
 import com.iptv.business.domain.dto.ModelDebugDTO;
 import com.iptv.business.domain.dto.ModelTestRequestDTO;
 import com.iptv.business.domain.dto.ModelsDTO;
+import com.iptv.business.domain.dto.page.ModelsPageDTO;
 import com.iptv.business.domain.vo.CredentialsResponseVO;
 import com.iptv.business.domain.vo.ModelProviderVO;
 import com.iptv.business.domain.vo.ModelTestResultVO;
@@ -11,6 +12,8 @@ import com.iptv.business.domain.vo.ModelsVO;
 import com.iptv.business.service.ModelsService;
 import com.iptv.common.core.domain.R;
 import com.iptv.common.core.web.domain.dto.BaseDTO;
+import com.iptv.common.core.web.page.PageDTO;
+import com.iptv.common.core.web.page.TableDataInfo;
 import com.iptv.common.log.annotation.Log;
 import com.iptv.common.log.enums.BusinessType;
 import com.iptv.common.security.annotation.RequiresPermissions;
@@ -45,10 +48,10 @@ public class ModelsController {
         return R.ok(modelsService.listProviders(modelType));
     }
 
-    @Operation(summary = "获取模型列表", description = "获取当前空间的所有模型")
+    @Operation(summary = "分页查询", description = "分页查询模型列表")
     @GetMapping("/list")
-    public R<List<ModelsVO>> listModels() {
-        return R.ok(modelsService.listModels());
+    public TableDataInfo<ModelsVO> listModels(ModelsPageDTO dto, PageDTO pg) {
+        return modelsService.listModels(dto, pg);
     }
 
     @Operation(summary = "获取模型详情", description = "根据ID获取模型详情")

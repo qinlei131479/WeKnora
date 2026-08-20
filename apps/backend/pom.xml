@@ -362,7 +362,7 @@
             <!-- 以下属性用于 bootstrap.yml 文件中 可通过 @activatedProperties@ 获取配置的变量-->
             <properties>
                 <profiles.active>dev</profiles.active>
-                <nacos.namespace>agent-middle-platform-dev</nacos.namespace>
+                <nacos.namespace>agent-middle-platform-test</nacos.namespace>
                 <nacos.serverAddr>192.168.170.250:8848</nacos.serverAddr>
                 <nacos.username>nacos</nacos.username>
                 <nacos.password>g9jKqa75Ew</nacos.password>

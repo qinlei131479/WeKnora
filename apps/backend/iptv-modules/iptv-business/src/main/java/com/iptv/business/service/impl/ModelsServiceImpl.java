@@ -4,30 +4,21 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.json.JSONUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iptv.business.domain.Models;
-import com.iptv.business.domain.dto.EmbeddingParametersDTO;
-import com.iptv.business.domain.dto.ModelCredentialsDTO;
-import com.iptv.business.domain.dto.ModelDebugDTO;
-import com.iptv.business.domain.dto.ModelParametersDTO;
-import com.iptv.business.domain.dto.ModelTestRequestDTO;
-import com.iptv.business.domain.dto.ModelsDTO;
-import com.iptv.business.domain.vo.CredentialFieldMetadataVO;
-import com.iptv.business.domain.vo.CredentialsResponseVO;
-import com.iptv.business.domain.vo.EmbeddingParametersVO;
-import com.iptv.business.domain.vo.ModelDebugVO;
-import com.iptv.business.domain.vo.ModelParametersVO;
-import com.iptv.business.domain.vo.ModelProviderVO;
-import com.iptv.business.domain.vo.ModelTestResultVO;
-import com.iptv.business.domain.vo.ModelsVO;
+import com.iptv.business.domain.dto.*;
+import com.iptv.business.domain.dto.page.ModelsPageDTO;
+import com.iptv.business.domain.vo.*;
 import com.iptv.business.pgmapper.ModelsMapper;
 import com.iptv.business.service.AmpModelProviderService;
 import com.iptv.business.service.ModelsService;
-import com.iptv.common.core.constant.TenantConstant;
 import com.iptv.business.util.CryptoUtils;
+import com.iptv.common.core.constant.TenantConstant;
 import com.iptv.common.core.exception.ServiceException;
+import com.iptv.common.core.utils.PageUtils;
+import com.iptv.common.core.web.page.PageDTO;
+import com.iptv.common.core.web.page.TableDataInfo;
 import com.iptv.common.security.utils.SecurityUtils;
 import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
@@ -68,7 +59,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
         //     SSRFValidator.validate(dto.getParameters().getBaseUrl());
         // }
 
-        Models entity = BeanUtil.copyProperties(dto, Models.class,"parameters");
+        Models entity = BeanUtil.copyProperties(dto, Models.class, "parameters");
         entity.setTenantId(TenantConstant.BUSINESS_BUILTIN_TENANT_ID);
         entity.setStatus("active");
         entity.setIsBuiltin(true);
@@ -96,11 +87,15 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
     }
 
     @Override
-    public List<ModelsVO> listModels() {
-        List<Models> models = this.baseMapper.selectAllModels();
-        return models.stream()
+    public TableDataInfo<ModelsVO> listModels(@Nonnull ModelsPageDTO dto, PageDTO pg) {
+
+        Page<McpServicesVO> page = PageUtils.toPage(pg);
+
+        List<Models> models = this.baseMapper.queryPage(dto, page);
+        List<ModelsVO> voList = models.stream()
                 .map(this::convertToVO)
                 .collect(Collectors.toList());
+        return PageUtils.getDataTable(voList, page);
     }
 
     @Override
@@ -323,7 +318,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
             ModelParametersDTO params = JSONUtil.toBean(entity.getParameters(), ModelParametersDTO.class);
             String apiKey = null;
             String appSecret = null;
-            
+
             if (StrUtil.isNotBlank(params.getApiKey())) {
                 CryptoUtils.DecryptResult decryptResult = CryptoUtils.decryptLenient(params.getApiKey());
                 if (decryptResult.isSuccess()) {
@@ -395,10 +390,10 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
         }
 
         String url = baseUrl.endsWith("/") ? baseUrl + "chat/completions" : baseUrl + "/chat/completions";
-        
+
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", dto.getModelId());
-        
+
         // 构建消息
         List<Map<String, String>> messages = new ArrayList<>();
         if (StrUtil.isNotBlank(dto.getSystemPrompt())) {
@@ -411,9 +406,9 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
         userMsg.put("role", "user");
         userMsg.put("content", dto.getInput());
         messages.add(userMsg);
-        
+
         requestBody.put("messages", messages);
-        
+
         // 添加可选参数
         if (dto.getTemperature() != null) {
             requestBody.put("temperature", dto.getTemperature());
@@ -440,15 +435,15 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
                 .body();
 
         Map<String, Object> result = JSONUtil.toBean(response, Map.class);
-        
+
         // 提取响应内容
         if (result.containsKey("choices") && !((List<?>) result.get("choices")).isEmpty()) {
             Map<String, Object> choice = (Map<String, Object>) ((List<?>) result.get("choices")).get(0);
             Map<String, Object> message = (Map<String, Object>) choice.get("message");
             String content = (String) message.get("content");
-            
+
             observations.put("answer_characters", content != null ? content.length() : 0);
-            
+
             Map<String, Object> responseMap = new HashMap<>();
             responseMap.put("content", content);
             return responseMap;
@@ -466,7 +461,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
         }
 
         String url = baseUrl.endsWith("/") ? baseUrl + "embeddings" : baseUrl + "/embeddings";
-        
+
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", dto.getModelId());
         requestBody.put("input", dto.getInput());
@@ -481,7 +476,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
                 .body();
 
         Map<String, Object> result = JSONUtil.toBean(response, Map.class);
-        
+
         // 提取向量维度
         if (result.containsKey("data") && !((List<?>) result.get("data")).isEmpty()) {
             Map<String, Object> data = (Map<String, Object>) ((List<?>) result.get("data")).get(0);
@@ -506,7 +501,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
         }
 
         String url = baseUrl.endsWith("/") ? baseUrl + "rerank" : baseUrl + "/rerank";
-        
+
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", dto.getModelId());
         requestBody.put("query", dto.getInput());
@@ -522,7 +517,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
                 .body();
 
         Map<String, Object> result = JSONUtil.toBean(response, Map.class);
-        
+
         // 统计结果数量
         if (result.containsKey("results")) {
             List<?> results = (List<?>) result.get("results");
@@ -541,7 +536,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
         }
 
         String url = baseUrl.endsWith("/") ? baseUrl + "chat/completions" : baseUrl + "/chat/completions";
-        
+
         try {
             // 将图片转为 base64
             String base64Image = Base64.getEncoder().encodeToString(file.getBytes());
@@ -549,28 +544,28 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
 
             Map<String, Object> requestBody = new HashMap<>();
             requestBody.put("model", dto.getModelId());
-            
+
             // 构建包含图片的消息
             List<Map<String, Object>> messages = new ArrayList<>();
             Map<String, Object> userMsg = new HashMap<>();
             userMsg.put("role", "user");
-            
+
             List<Map<String, Object>> content = new ArrayList<>();
             Map<String, Object> textContent = new HashMap<>();
             textContent.put("type", "text");
             textContent.put("text", dto.getInput());
             content.add(textContent);
-            
+
             Map<String, Object> imageContent = new HashMap<>();
             imageContent.put("type", "image_url");
             Map<String, String> imageUrl = new HashMap<>();
             imageUrl.put("url", imageDataUrl);
             imageContent.put("image_url", imageUrl);
             content.add(imageContent);
-            
+
             userMsg.put("content", content);
             messages.add(userMsg);
-            
+
             requestBody.put("messages", messages);
 
             // 调用 API
@@ -583,15 +578,15 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
                     .body();
 
             Map<String, Object> result = JSONUtil.toBean(response, Map.class);
-            
+
             // 提取响应内容
             if (result.containsKey("choices") && !((List<?>) result.get("choices")).isEmpty()) {
                 Map<String, Object> choice = (Map<String, Object>) ((List<?>) result.get("choices")).get(0);
                 Map<String, Object> message = (Map<String, Object>) choice.get("message");
                 String contentStr = (String) message.get("content");
-                
+
                 observations.put("answer_characters", contentStr != null ? contentStr.length() : 0);
-                
+
                 Map<String, Object> responseMap = new HashMap<>();
                 responseMap.put("content", contentStr);
                 return responseMap;
@@ -623,7 +618,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
 
             String response = request.execute().body();
             Map<String, Object> result = JSONUtil.toBean(response, Map.class);
-            
+
             // 统计字符数和片段数
             if (result.containsKey("text")) {
                 String text = (String) result.get("text");
@@ -907,7 +902,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
 
             // 根据 provider 解析不同的响应格式
             List<?> results = null;
-            
+
             if (StrUtil.equalsIgnoreCase(provider, "aliyun") || StrUtil.equalsIgnoreCase(provider, "dashscope")) {
                 // 阿里云格式: { "output": { "results": [...] } }
                 if (result.containsKey("output")) {
@@ -927,7 +922,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
             if (results != null && !results.isEmpty()) {
                 return new ModelTestResultVO(true, "重排功能正常，返回" + results.size() + "个结果");
             }
-            
+
             return new ModelTestResultVO(false, "重排接口连接成功，但未返回重排结果");
         } catch (Exception e) {
             log.error("Rerank model test failed", e);
@@ -1177,7 +1172,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
      */
     private String buildEmbeddingUrl(String baseUrl, String provider) {
         String url = trimTrailingSlash(baseUrl);
-        
+
         // 阿里云 DashScope 使用特殊的 embedding 端点
         if (StrUtil.equalsIgnoreCase(provider, "aliyun") || StrUtil.equalsIgnoreCase(provider, "dashscope")) {
             // 如果 baseUrl 包含 /compatible-mode/v1，需要移除
@@ -1186,7 +1181,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
             }
             return url + "/api/v1/services/embeddings/multimodal-embedding/multimodal-embedding";
         }
-        
+
         // 其他 provider 使用 OpenAI 兼容的 /embeddings 端点
         return url + "/embeddings";
     }
@@ -1198,13 +1193,13 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
      */
     private String buildRerankUrl(String baseUrl, String provider) {
         String url = trimTrailingSlash(baseUrl);
-        
+
         // 阿里云 DashScope 和 NVIDIA 的 baseUrl 已经是完整的 rerank 端点
         if (StrUtil.equalsIgnoreCase(provider, "aliyun") || StrUtil.equalsIgnoreCase(provider, "dashscope")
                 || StrUtil.equalsIgnoreCase(provider, "nvidia")) {
             return url;
         }
-        
+
         // OpenAI、Jina 等 provider 需要追加 /rerank
         return url + "/rerank";
     }
