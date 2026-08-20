@@ -18,3 +18,6 @@ export * from './system/config';
 export * from './system/notice';
 export * from './system/logininfor';
 export * from './system/operlog';
+
+// 模型模块
+export * from './model';

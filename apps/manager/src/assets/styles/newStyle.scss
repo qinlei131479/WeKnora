@@ -37,6 +37,44 @@ body {
   --el-input-border-radius: 30px;
 }
 
+@mixin manage-big-btn {
+  height: 40px;
+  padding: 0 20px;
+  border: none;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+@mixin manage-btn {
+  min-width: 76px;
+  height: 36px;
+  padding: 0 20px;
+  border: 1px solid #e1e6ec;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #77838f;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.manage-big-btn {
+  @include manage-big-btn;
+  &:hover {
+    opacity: 0.92;
+  }
+}
+.manage-btn {
+  @include manage-btn;
+  
+  &:hover {
+    border-color: #3297a0;
+    color: #3297a0;
+  }
+}
 .manage-page {
   display: flex;
   flex-direction: column;
@@ -52,18 +90,10 @@ body {
     margin-bottom: 40px;
   }
   .add-btn {
+    @include manage-big-btn;
     min-width: 130px;
-    height: 40px;
-    padding: 0 20px;
-    border: none;
-    border-radius: 20px;
     background: #29b276;
     color: #ffffff;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: opacity 0.2s;
-
     &:hover {
       opacity: 0.92;
     }
@@ -162,19 +192,7 @@ body {
     }
 
     .search-bar__reset {
-      min-width: 76px;
-      height: 36px;
-      padding: 0 20px;
-      border: 1px solid #e1e6ec;
-      border-radius: 12px;
-      background: #ffffff;
-      color: #77838f;
-      font-size: 14px;
-      cursor: pointer;
-      transition:
-        border-color 0.2s,
-        color 0.2s;
-
+      @include manage-btn;
       &:hover {
         border-color: #3297a0;
         color: #3297a0;
@@ -182,15 +200,10 @@ body {
     }
 
     .search-bar__submit {
-      min-width: 72px;
-      height: 36px;
+      @include manage-btn;
       padding: 0 24px;
-      border: none;
-      border-radius: 12px;
       background: linear-gradient(180deg, #31aba0 0%, #2897be 100%);
       color: #ffffff;
-      font-size: 14px;
-      cursor: pointer;
       margin-left: 8px;
       transition: opacity 0.2s;
 

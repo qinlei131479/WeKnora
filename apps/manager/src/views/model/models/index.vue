@@ -1,7 +1,7 @@
 <template>
   <section class="manage-page models-manage-page">
     <page-name class="page-name">
-      <button type="button" class="add-btn" v-hasPermi="['model:models:add']" @click="handleAdd">+ {{
+      <button type="button" class="add-btn" v-hasPermi="['buz:model:add']" @click="handleAdd">+ {{
         $t('page.models.addModel')
       }}</button>
     </page-name>
@@ -62,11 +62,11 @@
             <template #default="scope">
               <template v-if="scope.row.userId !== 1">
                 <el-button link class="action-link action-link--primary" @click="handleUpdate(scope.row)"
-                  v-hasPermi="['model:models:edit']">
+                  v-hasPermi="['buz:model:edit']">
                   {{ $t('form.button.edit') }}
                 </el-button>
                 <el-button link class="action-link action-link--danger" @click="handleDelete(scope.row)"
-                  v-hasPermi="['model:models:remove']">
+                  v-hasPermi="['buz:model:remove']">
                   {{ $t('form.button.delete') }}
                 </el-button>
                 <el-button link class="action-link action-link--primary" @click="handleResetPwd(scope.row)"
