@@ -65,7 +65,7 @@ public class CryptoUtils {
         String envKey = System.getenv("SYSTEM_AES_KEY");
         log.info("SYSTEM_AES_KEY: {}", envKey);
         if (StrUtil.isBlank(envKey)) {
-            return null;
+            envKey = "weknora-system-aes-key-32bytes!!";
         }
 
         byte[] key = envKey.getBytes(StandardCharsets.UTF_8);

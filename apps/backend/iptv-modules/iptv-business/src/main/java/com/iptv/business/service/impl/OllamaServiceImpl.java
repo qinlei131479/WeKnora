@@ -119,7 +119,7 @@ public class OllamaServiceImpl implements OllamaService {
                             OllamaModelVO modelVO = new OllamaModelVO();
                             modelVO.setName(modelJson.getString("name"));
                             modelVO.setSize(modelJson.getLong("size"));
-                            modelVO.setModifiedAt(modelJson.getString("modified_at"));
+                            modelVO.setModifiedAt(LocalDateTime.parse(modelJson.getString("modified_at")));
                             modelVO.setDigest(modelJson.getString("digest"));
                             models.add(modelVO);
                         }

@@ -12,6 +12,7 @@ import com.iptv.business.domain.dto.EmbeddingParametersDTO;
 import com.iptv.business.domain.dto.ModelCredentialsDTO;
 import com.iptv.business.domain.dto.ModelDebugDTO;
 import com.iptv.business.domain.dto.ModelParametersDTO;
+import com.iptv.business.domain.dto.ModelTestRequestDTO;
 import com.iptv.business.domain.dto.ModelsDTO;
 import com.iptv.business.domain.vo.CredentialFieldMetadataVO;
 import com.iptv.business.domain.vo.CredentialsResponseVO;
@@ -19,6 +20,7 @@ import com.iptv.business.domain.vo.EmbeddingParametersVO;
 import com.iptv.business.domain.vo.ModelDebugVO;
 import com.iptv.business.domain.vo.ModelParametersVO;
 import com.iptv.business.domain.vo.ModelProviderVO;
+import com.iptv.business.domain.vo.ModelTestResultVO;
 import com.iptv.business.domain.vo.ModelsVO;
 import com.iptv.business.pgmapper.ModelsMapper;
 import com.iptv.business.service.AmpModelProviderService;
@@ -717,5 +719,510 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
         fields.put("app_secret", new CredentialFieldMetadataVO(StrUtil.isNotBlank(params.getAppSecret())));
         response.setFields(fields);
         return response;
+    }
+
+    // ==================== 远程模型测试接口实现 ====================
+
+    @Override
+    public ModelTestResultVO testRemoteModel(@Nonnull ModelTestRequestDTO dto) {
+        log.info("Testing remote Chat model: {}", dto.getModelName());
+
+        // 如果提供了 modelId，从已存储模型中补齐密钥
+        if (StrUtil.isNotBlank(dto.getModelId())) {
+            fillSecretsFromStoredModel(dto);
+        }
+
+        String baseUrl = dto.getBaseUrl();
+        String apiKey = dto.getApiKey();
+
+        if (StrUtil.isBlank(baseUrl)) {
+            throw new ServiceException("Base URL 不能为空");
+        }
+
+        // 构建测试请求 URL
+        // Chat 接口：所有 provider 都追加 /chat/completions
+        String url = buildChatUrl(baseUrl);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", dto.getModelName());
+
+        // 构建最小化测试消息
+        List<Map<String, String>> messages = new ArrayList<>();
+        Map<String, String> userMsg = new HashMap<>();
+        userMsg.put("role", "user");
+        userMsg.put("content", "test");
+        messages.add(userMsg);
+
+        requestBody.put("messages", messages);
+        requestBody.put("max_tokens", 1);
+
+        try {
+            String response = HttpRequest.post(url)
+                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Content-Type", "application/json")
+                    .body(JSONUtil.toJsonStr(requestBody))
+                    .timeout(60000)
+                    .execute()
+                    .body();
+
+            Map<String, Object> result = JSONUtil.toBean(response, Map.class);
+
+            // 检查是否有错误
+            if (result.containsKey("error")) {
+                Map<String, Object> error = (Map<String, Object>) result.get("error");
+                String errorMsg = (String) error.get("message");
+                return new ModelTestResultVO(false, classifyConnectionError(errorMsg) + "：" + errorMsg);
+            }
+
+            // 检查是否有 choices
+            if (result.containsKey("choices")) {
+                return new ModelTestResultVO(true, "连接正常，模型可用");
+            }
+
+            return new ModelTestResultVO(false, "响应格式异常");
+        } catch (Exception e) {
+            log.error("Chat model test failed", e);
+            return new ModelTestResultVO(false, classifyConnectionError(e.getMessage()) + "：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public ModelTestResultVO testEmbeddingModel(@Nonnull ModelTestRequestDTO dto) {
+        log.info("Testing Embedding model: {}", dto.getModelName());
+
+        if (StrUtil.isNotBlank(dto.getModelId())) {
+            fillSecretsFromStoredModel(dto);
+        }
+
+        String baseUrl = dto.getBaseUrl();
+        String apiKey = dto.getApiKey();
+        String provider = dto.getProvider();
+
+        if (StrUtil.isBlank(baseUrl)) {
+            throw new ServiceException("Base URL 不能为空");
+        }
+
+        String url = buildEmbeddingUrl(baseUrl, provider);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", dto.getModelName());
+        requestBody.put("input", "hello");
+
+        try {
+            String response = HttpRequest.post(url)
+                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Content-Type", "application/json")
+                    .body(JSONUtil.toJsonStr(requestBody))
+                    .timeout(60000)
+                    .execute()
+                    .body();
+
+            Map<String, Object> result = JSONUtil.toBean(response, Map.class);
+
+            // 检查是否有错误
+            if (result.containsKey("error")) {
+                Map<String, Object> error = (Map<String, Object>) result.get("error");
+                String errorMsg = (String) error.get("message");
+                return new ModelTestResultVO(false, classifyConnectionError(errorMsg) + "：" + errorMsg, 0);
+            }
+
+            // 提取向量维度
+            if (result.containsKey("data")) {
+                List<?> dataList = (List<?>) result.get("data");
+                if (!dataList.isEmpty()) {
+                    Map<String, Object> data = (Map<String, Object>) dataList.get(0);
+                    List<?> embedding = (List<?>) data.get("embedding");
+                    if (embedding != null) {
+                        int dimension = embedding.size();
+                        return new ModelTestResultVO(true, "测试成功，向量维度=" + dimension, dimension);
+                    }
+                }
+            }
+
+            return new ModelTestResultVO(false, "响应格式异常", 0);
+        } catch (Exception e) {
+            log.error("Embedding model test failed", e);
+            return new ModelTestResultVO(false, classifyConnectionError(e.getMessage()) + "：" + e.getMessage(), 0);
+        }
+    }
+
+    @Override
+    public ModelTestResultVO testRerankModel(@Nonnull ModelTestRequestDTO dto) {
+        log.info("Testing Rerank model: {}", dto.getModelName());
+
+        if (StrUtil.isNotBlank(dto.getModelId())) {
+            fillSecretsFromStoredModel(dto);
+        }
+
+        String baseUrl = dto.getBaseUrl();
+        String apiKey = dto.getApiKey();
+        String provider = dto.getProvider();
+
+        if (StrUtil.isBlank(baseUrl)) {
+            throw new ServiceException("Base URL 不能为空");
+        }
+
+        String url = buildRerankUrl(baseUrl, provider);
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("model", dto.getModelName());
+
+        // 阿里云 DashScope 使用特殊的请求体格式
+        if ("aliyun".equalsIgnoreCase(provider) || "dashscope".equalsIgnoreCase(provider)) {
+            // 阿里云格式: { "model": "...", "input": { "query": "...", "documents": [...] } }
+            Map<String, Object> input = new HashMap<>();
+            input.put("query", "ping");
+            input.put("documents", Arrays.asList("pong"));
+            requestBody.put("input", input);
+        } else {
+            // OpenAI/Jina 等格式: { "model": "...", "query": "...", "documents": [...] }
+            requestBody.put("query", "ping");
+            requestBody.put("documents", Arrays.asList("pong"));
+        }
+
+        try {
+            String response = HttpRequest.post(url)
+                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Content-Type", "application/json")
+                    .body(JSONUtil.toJsonStr(requestBody))
+                    .timeout(60000)
+                    .execute()
+                    .body();
+
+            Map<String, Object> result = JSONUtil.toBean(response, Map.class);
+
+            // 检查是否有错误
+            if (result.containsKey("error")) {
+                Map<String, Object> error = (Map<String, Object>) result.get("error");
+                String errorMsg = (String) error.get("message");
+                return new ModelTestResultVO(false, classifyConnectionError(errorMsg) + "：" + errorMsg);
+            }
+
+            // 检查是否有错误（阿里云格式）
+            if (result.containsKey("code")) {
+                String errorCode = (String) result.get("code");
+                String errorMsg = (String) result.get("message");
+                return new ModelTestResultVO(false, classifyConnectionError(errorMsg) + "：" + errorMsg);
+            }
+
+            // 根据 provider 解析不同的响应格式
+            List<?> results = null;
+            
+            if (StrUtil.equalsIgnoreCase(provider, "aliyun") || StrUtil.equalsIgnoreCase(provider, "dashscope")) {
+                // 阿里云格式: { "output": { "results": [...] } }
+                if (result.containsKey("output")) {
+                    Map<String, Object> output = (Map<String, Object>) result.get("output");
+                    if (output.containsKey("results")) {
+                        results = (List<?>) output.get("results");
+                    }
+                }
+            } else {
+                // OpenAI/Jina 格式: { "results": [...] }
+                if (result.containsKey("results")) {
+                    results = (List<?>) result.get("results");
+                }
+            }
+
+            // 检查是否有结果
+            if (results != null && !results.isEmpty()) {
+                return new ModelTestResultVO(true, "重排功能正常，返回" + results.size() + "个结果");
+            }
+            
+            return new ModelTestResultVO(false, "重排接口连接成功，但未返回重排结果");
+        } catch (Exception e) {
+            log.error("Rerank model test failed", e);
+            return new ModelTestResultVO(false, classifyConnectionError(e.getMessage()) + "：" + e.getMessage());
+        }
+    }
+
+    @Override
+    public ModelTestResultVO testASRModel(@Nonnull ModelTestRequestDTO dto) {
+        log.info("Testing ASR model: {}", dto.getModelName());
+
+        if (StrUtil.isNotBlank(dto.getModelId())) {
+            fillSecretsFromStoredModel(dto);
+        }
+
+        String baseUrl = dto.getBaseUrl();
+        String apiKey = dto.getApiKey();
+
+        if (StrUtil.isBlank(baseUrl)) {
+            throw new ServiceException("Base URL 不能为空");
+        }
+
+        String url = buildASRUrl(baseUrl);
+
+        try {
+            // 构建 multipart/form-data 请求
+            // 使用一个空的测试音频（实际使用时应该提供测试音频文件）
+            byte[] testAudio = new byte[0];
+            String fileName = "test.wav";
+
+            String response = HttpRequest.post(url)
+                    .header("Authorization", "Bearer " + apiKey)
+                    .form("file", testAudio, fileName)
+                    .form("model", dto.getModelName())
+                    .timeout(60000)
+                    .execute()
+                    .body();
+
+            Map<String, Object> result = JSONUtil.toBean(response, Map.class);
+
+            // 检查是否有错误
+            if (result.containsKey("error")) {
+                Map<String, Object> error = (Map<String, Object>) result.get("error");
+                String errorMsg = (String) error.get("message");
+                return new ModelTestResultVO(false, classifyConnectionError(errorMsg) + "：" + errorMsg);
+            }
+
+            // 如果有转写结果，说明连接成功
+            if (result.containsKey("text")) {
+                String text = (String) result.get("text");
+                if (StrUtil.isNotBlank(text)) {
+                    return new ModelTestResultVO(true, "ASR连接成功，转写结果: " + text);
+                }
+            }
+
+            return new ModelTestResultVO(true, "ASR连接成功");
+        } catch (Exception e) {
+            log.error("ASR model test failed", e);
+            String errorMsg = e.getMessage();
+            return new ModelTestResultVO(false, classifyConnectionError(errorMsg) + "：" + errorMsg);
+        }
+    }
+
+    @Override
+    public ModelTestResultVO testMultimodalModel(@Nonnull ModelTestRequestDTO dto, MultipartFile file) {
+        log.info("Testing Multimodal model: {}", dto.getModelName());
+
+        if (file == null || file.isEmpty()) {
+            throw new ServiceException("图片文件不能为空");
+        }
+
+        if (StrUtil.isNotBlank(dto.getModelId())) {
+            fillSecretsFromStoredModel(dto);
+        }
+
+        String baseUrl = dto.getBaseUrl();
+        String apiKey = dto.getApiKey();
+
+        if (StrUtil.isBlank(baseUrl)) {
+            throw new ServiceException("Base URL 不能为空");
+        }
+
+        String url = buildMultimodalUrl(baseUrl);
+
+        try {
+            // 将图片转为 base64
+            String base64Image = Base64.getEncoder().encodeToString(file.getBytes());
+            String imageDataUrl = "data:" + file.getContentType() + ";base64," + base64Image;
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", dto.getModelName());
+
+            // 构建包含图片的消息
+            List<Map<String, Object>> messages = new ArrayList<>();
+            Map<String, Object> userMsg = new HashMap<>();
+            userMsg.put("role", "user");
+
+            List<Map<String, Object>> content = new ArrayList<>();
+            Map<String, Object> textContent = new HashMap<>();
+            textContent.put("type", "text");
+            textContent.put("text", "Describe this image");
+            content.add(textContent);
+
+            Map<String, Object> imageContent = new HashMap<>();
+            imageContent.put("type", "image_url");
+            Map<String, String> imageUrl = new HashMap<>();
+            imageUrl.put("url", imageDataUrl);
+            imageContent.put("image_url", imageUrl);
+            content.add(imageContent);
+
+            userMsg.put("content", content);
+            messages.add(userMsg);
+
+            requestBody.put("messages", messages);
+            requestBody.put("max_tokens", 100);
+
+            String response = HttpRequest.post(url)
+                    .header("Authorization", "Bearer " + apiKey)
+                    .header("Content-Type", "application/json")
+                    .body(JSONUtil.toJsonStr(requestBody))
+                    .timeout(120000)
+                    .execute()
+                    .body();
+
+            Map<String, Object> result = JSONUtil.toBean(response, Map.class);
+
+            // 检查是否有错误
+            if (result.containsKey("error")) {
+                Map<String, Object> error = (Map<String, Object>) result.get("error");
+                String errorMsg = (String) error.get("message");
+                return new ModelTestResultVO(false, classifyConnectionError(errorMsg) + "：" + errorMsg);
+            }
+
+            // 检查是否有响应
+            if (result.containsKey("choices")) {
+                return new ModelTestResultVO(true, "多模态模型连接正常");
+            }
+
+            return new ModelTestResultVO(false, "响应格式异常");
+        } catch (Exception e) {
+            log.error("Multimodal model test failed", e);
+            return new ModelTestResultVO(false, classifyConnectionError(e.getMessage()) + "：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 从已存储模型中补齐密钥
+     */
+    private void fillSecretsFromStoredModel(ModelTestRequestDTO dto) {
+        if (dto == null || StrUtil.isBlank(dto.getModelId())) {
+            return;
+        }
+
+        // 如果两个密钥都已提供，不需要补齐
+        if (StrUtil.isNotBlank(dto.getApiKey()) && StrUtil.isNotBlank(dto.getAppSecret())) {
+            return;
+        }
+
+        try {
+            Models storedModel = this.baseMapper.selectById(dto.getModelId());
+            if (storedModel == null) {
+                log.warn("Stored model {} not found, leaving secrets empty", dto.getModelId());
+                return;
+            }
+
+            ModelParametersDTO params = JSONUtil.toBean(storedModel.getParameters(), ModelParametersDTO.class);
+
+            // 解密凭证
+            String apiKey = null;
+            String appSecret = null;
+
+            if (StrUtil.isNotBlank(params.getApiKey())) {
+                CryptoUtils.DecryptResult result = CryptoUtils.decryptLenient(params.getApiKey());
+                if (result.isSuccess()) {
+                    apiKey = result.getPlaintext();
+                }
+            }
+            if (StrUtil.isNotBlank(params.getAppSecret())) {
+                CryptoUtils.DecryptResult result = CryptoUtils.decryptLenient(params.getAppSecret());
+                if (result.isSuccess()) {
+                    appSecret = result.getPlaintext();
+                }
+            }
+
+            // 补齐缺失的密钥
+            if (StrUtil.isBlank(dto.getApiKey()) && StrUtil.isNotBlank(apiKey)) {
+                dto.setApiKey(apiKey);
+            }
+            if (StrUtil.isBlank(dto.getAppSecret()) && StrUtil.isNotBlank(appSecret)) {
+                dto.setAppSecret(appSecret);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fill secrets from stored model: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 分类连接错误，返回人类可读的提示
+     */
+    private String classifyConnectionError(String errMsg) {
+        if (errMsg == null) {
+            return "连接失败";
+        }
+
+        if (errMsg.contains("401") || errMsg.contains("unauthorized") || errMsg.contains("Unauthorized")) {
+            return "认证失败，请检查API Key";
+        }
+        if (errMsg.contains("403") || errMsg.contains("forbidden")) {
+            return "权限不足，请检查API Key权限";
+        }
+        if (errMsg.contains("404") || errMsg.contains("not found") || errMsg.contains("Not Found")) {
+            return "API端点不存在，请检查Base URL";
+        }
+        if (errMsg.contains("timeout") || errMsg.contains("deadline exceeded")) {
+            return "连接超时，请检查网络连接";
+        }
+        if (errMsg.contains("connection refused") || errMsg.contains("no such host") || errMsg.contains("dial tcp")) {
+            return "无法连接到服务器，请检查Base URL";
+        }
+
+        return "连接失败";
+    }
+
+    /**
+     * 去除 URL 末尾的斜杠
+     */
+    private String trimTrailingSlash(String url) {
+        if (url == null) {
+            return null;
+        }
+        return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+    }
+
+    /**
+     * 构建 Chat API URL
+     * 所有 provider 都追加 /chat/completions
+     */
+    private String buildChatUrl(String baseUrl) {
+        String url = trimTrailingSlash(baseUrl);
+        return url + "/chat/completions";
+    }
+
+    /**
+     * 构建 Embedding API URL
+     * - 阿里云: 追加 /api/v1/services/embeddings/multimodal-embedding/multimodal-embedding
+     * - 其他: 追加 /embeddings
+     */
+    private String buildEmbeddingUrl(String baseUrl, String provider) {
+        String url = trimTrailingSlash(baseUrl);
+        
+        // 阿里云 DashScope 使用特殊的 embedding 端点
+        if (StrUtil.equalsIgnoreCase(provider, "aliyun") || StrUtil.equalsIgnoreCase(provider, "dashscope")) {
+            // 如果 baseUrl 包含 /compatible-mode/v1，需要移除
+            if (url.contains("/compatible-mode/v1")) {
+                url = url.replace("/compatible-mode/v1", "");
+            }
+            return url + "/api/v1/services/embeddings/multimodal-embedding/multimodal-embedding";
+        }
+        
+        // 其他 provider 使用 OpenAI 兼容的 /embeddings 端点
+        return url + "/embeddings";
+    }
+
+    /**
+     * 构建 Rerank API URL
+     * - 阿里云、NVIDIA: 直接使用 baseUrl（已经是完整端点）
+     * - OpenAI、Jina 等: 追加 /rerank
+     */
+    private String buildRerankUrl(String baseUrl, String provider) {
+        String url = trimTrailingSlash(baseUrl);
+        
+        // 阿里云 DashScope 和 NVIDIA 的 baseUrl 已经是完整的 rerank 端点
+        if (StrUtil.equalsIgnoreCase(provider, "aliyun") || StrUtil.equalsIgnoreCase(provider, "dashscope")
+                || StrUtil.equalsIgnoreCase(provider, "nvidia")) {
+            return url;
+        }
+        
+        // OpenAI、Jina 等 provider 需要追加 /rerank
+        return url + "/rerank";
+    }
+
+    /**
+     * 构建 ASR API URL
+     * 使用 OpenAI 兼容的 /audio/transcriptions 端点
+     */
+    private String buildASRUrl(String baseUrl) {
+        String url = trimTrailingSlash(baseUrl);
+        return url + "/audio/transcriptions";
+    }
+
+    /**
+     * 构建多模态 API URL
+     * 与 Chat 相同，追加 /chat/completions
+     */
+    private String buildMultimodalUrl(String baseUrl) {
+        return buildChatUrl(baseUrl);
     }
 }
