@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 
 /**
  * Ollama 模型信息 VO
@@ -24,7 +25,7 @@ public class OllamaModelVO {
 
     @Schema(description = "修改时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime modifiedAt;
+    private Date modifiedAt;
 
     @Schema(description = "模型摘要")
     private String digest;

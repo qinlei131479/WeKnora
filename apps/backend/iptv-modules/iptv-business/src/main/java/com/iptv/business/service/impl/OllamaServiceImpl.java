@@ -1,5 +1,6 @@
 package com.iptv.business.service.impl;
 
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
@@ -119,7 +120,7 @@ public class OllamaServiceImpl implements OllamaService {
                             OllamaModelVO modelVO = new OllamaModelVO();
                             modelVO.setName(modelJson.getString("name"));
                             modelVO.setSize(modelJson.getLong("size"));
-                            modelVO.setModifiedAt(LocalDateTime.parse(modelJson.getString("modified_at")));
+                            modelVO.setModifiedAt(DateUtil.parse(modelJson.getString("modified_at")));
                             modelVO.setDigest(modelJson.getString("digest"));
                             models.add(modelVO);
                         }
