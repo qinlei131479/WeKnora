@@ -5,6 +5,7 @@ import com.iptv.business.domain.dto.McpServicesDTO;
 import com.iptv.business.domain.dto.McpToolApprovalsDTO;
 import com.iptv.business.domain.dto.page.McpServicesPageDTO;
 import com.iptv.business.domain.vo.McpServicesVO;
+import com.iptv.business.domain.vo.McpTestResultVO;
 import com.iptv.business.service.McpServicesService;
 import com.iptv.common.core.domain.R;
 import com.iptv.common.core.web.domain.dto.BaseDTO;
@@ -36,6 +37,13 @@ public class McpServicesController {
 
     @Autowired
     private McpServicesService mcpServicesService;
+
+    @Operation(summary = "按 id 查询", description = "按 id 查询")
+    @GetMapping("/test")
+    public R<McpTestResultVO> testMcpService(String id) {
+        return R.ok(mcpServicesService.testMcpService(id));
+    }
+
 
     @Operation(summary = "按 id 查询", description = "按 id 查询")
     @GetMapping("/single")

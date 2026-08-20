@@ -5,6 +5,7 @@ import com.iptv.business.domain.dto.McpToolApprovalsDTO;
 import jakarta.annotation.Nonnull;
 import com.iptv.business.domain.McpServices;
 import com.iptv.business.domain.vo.McpServicesVO;
+import com.iptv.business.domain.vo.McpTestResultVO;
 import com.iptv.business.domain.dto.McpServicesDTO;
 import com.iptv.business.domain.dto.page.McpServicesPageDTO;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -102,4 +103,12 @@ public interface McpServicesService extends IService<McpServices> {
      * @return 影响行数
      */
     void updateToolDisabledBatch(@Nonnull List<McpToolApprovalsDTO> dto);
+
+    /**
+     * 测试MCP服务连接
+     *
+     * @param id MCP服务ID
+     * @return 测试结果
+     */
+    McpTestResultVO testMcpService(@Nonnull String id);
 }
