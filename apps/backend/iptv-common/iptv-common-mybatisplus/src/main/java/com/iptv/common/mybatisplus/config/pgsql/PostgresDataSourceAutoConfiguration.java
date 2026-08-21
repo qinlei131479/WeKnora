@@ -2,10 +2,12 @@ package com.iptv.common.mybatisplus.config.pgsql;
 
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
 import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
+import com.baomidou.mybatisplus.autoconfigure.MybatisPlusProperties;
 import com.iptv.common.mybatisplus.config.MybatisUpdateHandler;
 import com.zaxxer.hikari.HikariDataSource;
 import org.apache.ibatis.session.SqlSessionFactory;
@@ -15,6 +17,7 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
@@ -49,6 +52,7 @@ import javax.sql.DataSource;
 @AutoConfiguration
 @ConditionalOnClass(name = "org.postgresql.Driver")
 @ConditionalOnProperty(prefix = "spring.datasource.postgres", name = "url")
+@EnableConfigurationProperties(MybatisPlusProperties.class)
 public class PostgresDataSourceAutoConfiguration {
 
     // defaultCandidate = false: 不参与按类型自动注入，避免与 dynamic-datasource 的
@@ -61,7 +65,8 @@ public class PostgresDataSourceAutoConfiguration {
 
     @Bean(name = "postgresSqlSessionFactory")
     public SqlSessionFactory postgresSqlSessionFactory(
-            @Qualifier("postgresDataSource") DataSource dataSource) throws Exception {
+            @Qualifier("postgresDataSource") DataSource dataSource,
+            MybatisPlusProperties properties) throws Exception {
         // 分页插件不注册为 Spring Bean，避免被 MybatisPlusAutoConfiguration 收集到
         // 默认 sqlSessionFactory（MySQL），导致 MySQL 查询出现多余的 LIMIT 子句
         MybatisPlusInterceptor pgInterceptor = new MybatisPlusInterceptor();
@@ -72,8 +77,28 @@ public class PostgresDataSourceAutoConfiguration {
         factory.setMapperLocations(
                 new PathMatchingResourcePatternResolver()
                         .getResources("classpath*:pgmapper/**/*.xml"));
+
+        // 应用 MyBatis-Plus 配置
+        if (properties.getTypeAliasesPackage() != null) {
+            factory.setTypeAliasesPackage(properties.getTypeAliasesPackage());
+        }
+
+        // 创建 MybatisConfiguration 并应用配置
+        MybatisConfiguration configuration = new MybatisConfiguration();
+        if (properties.getConfiguration() != null) {
+            // 复制 log-impl 等配置
+            configuration.setLogImpl(properties.getConfiguration().getLogImpl());
+        }
+        factory.setConfiguration(configuration);
+
         GlobalConfig globalConfig = GlobalConfigUtils.defaults();
         globalConfig.setMetaObjectHandler(new MybatisUpdateHandler());
+
+        // 应用全局配置（如逻辑删除）
+        if (properties.getGlobalConfig() != null && properties.getGlobalConfig().getDbConfig() != null) {
+            globalConfig.setDbConfig(properties.getGlobalConfig().getDbConfig());
+        }
+
         factory.setGlobalConfig(globalConfig);
         factory.setPlugins(pgInterceptor);
         return factory.getObject();
