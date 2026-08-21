@@ -2,6 +2,8 @@ package com.iptv.business.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -31,10 +33,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -60,7 +59,54 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         Page<UsersVO> page = PageUtils.toPage(pg);
         List<Users> list = this.baseMapper.queryPage(dto, page);
         List<UsersVO> voList = BeanUtil.copyToList(list, UsersVO.class);
-        return PageUtils.getDataTable(voList, page);
+        if(CollUtil.isEmpty(voList)){
+            return PageUtils.getDataTable(voList, page);
+        }
+
+        // 查询用户可访问的工作空间
+        List<TenantMembers> tenantMembersList = tenantMembersMapper.selectList(
+                new LambdaQueryWrapper<TenantMembers>()
+                        .in(TenantMembers::getUserId, voList.stream().map(UsersVO::getId).collect(Collectors.toSet()))
+                        .eq(TenantMembers::getStatus, BusinessStatusEnum.ACTIVE.getCode())
+                        .isNull(TenantMembers::getDeletedAt)
+        );
+
+        if(CollUtil.isEmpty(tenantMembersList)){
+            return PageUtils.getDataTable(voList, page);
+        }
+
+        // 查询用户可访问的工作空间
+        List<Tenants> tenantsList = tenantsMapper.selectList(
+                new LambdaQueryWrapper<Tenants>()
+                        .in(Tenants::getId, tenantMembersList.stream().map(TenantMembers::getTenantId).collect(Collectors.toSet()))
+                        .isNull(Tenants::getDeletedAt)
+                        .eq(Tenants::getStatus, BusinessStatusEnum.ACTIVE.getCode())
+        );
+        if(CollUtil.isEmpty(tenantsList)){
+            return PageUtils.getDataTable(voList, page);
+        }
+        voList.forEach(vo -> {
+            List<UsersVO.UserTenantVO> userTenantVOList = new ArrayList<>();
+            tenantMembersList
+                    .stream()
+                    .filter(t -> StrUtil.equals(t.getUserId(), vo.getId()))
+                    .forEach(t2 -> {
+                        UsersVO.UserTenantVO userTenantVO = new UsersVO.UserTenantVO();
+                        userTenantVO.setTenantId(t2.getTenantId());
+                        userTenantVO.setTenantName(
+                                tenantsList.stream()
+                                        .filter(tenant2 -> ObjectUtil.equals(tenant2.getId(), t2.getTenantId()))
+                                        .map(Tenants::getName)
+                                        .findFirst()
+                                        .orElse(null)
+                        );
+                        userTenantVO.setRole(t2.getRole());
+                        userTenantVO.setRoleName(TenantMemberRoleEnum.getDesc(t2.getRole()));
+                        userTenantVOList.add(userTenantVO);
+                    });
+           vo.setTenants(userTenantVOList);
+        });
+       return PageUtils.getDataTable(voList, page);
     }
 
     @Override

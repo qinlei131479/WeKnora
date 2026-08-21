@@ -1,5 +1,6 @@
 package com.iptv.business.enums;
 
+import cn.hutool.core.util.StrUtil;
 import com.iptv.common.core.utils.MessageUtils;
 import lombok.Getter;
 
@@ -25,5 +26,14 @@ public enum TenantMemberRoleEnum {
 
     public String getInfo() {
         return MessageUtils.desc(this, info);
+    }
+
+    public static String getDesc(String code) {
+        for (TenantMemberRoleEnum role : TenantMemberRoleEnum.values()) {
+            if (StrUtil.equals(role.getCode(), code)) {
+                return role.getInfo();
+            }
+        }
+        return null;
     }
 }

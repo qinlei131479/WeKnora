@@ -3,9 +3,13 @@ package com.iptv.business.domain.vo;
 import java.io.Serializable;
 import java.util.Date;
 import java.io.Serializable;
+import java.util.List;
+
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.NoArgsConstructor;
 
 /**
  * <p>
@@ -98,4 +102,37 @@ public class UsersVO implements Serializable {
      */
     @Schema(description = "是否系统管理员（独立于租户角色）")
     private Boolean isSystemAdmin;
+
+    /**
+     * 用户可访问的工作空间列表
+     */
+    @Schema(description = "用户可访问的工作空间列表信息")
+    private List<UserTenantVO> tenants;
+
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class UserTenantVO{
+        /**
+         * 工作空间 ID
+        */
+        @Schema(description = "工作空间 ID")
+        private Integer tenantId;
+        /**
+         * 工作空间名称
+        */
+        @Schema(description = "工作空间名称")
+        private String tenantName;
+        /**
+         * 角色
+        */
+        @Schema(description = "角色")
+        private String role;
+
+        /**
+         * 角色
+         */
+        @Schema(description = "角色名称")
+        private String roleName;
+    }
 }
