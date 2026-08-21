@@ -1,5 +1,6 @@
 package com.iptv.business.service;
 
+import com.iptv.business.domain.dto.UserBindTenantsDTO;
 import jakarta.annotation.Nonnull;
 import com.iptv.business.domain.Users;
 import com.iptv.business.domain.vo.UsersVO;
@@ -60,4 +61,11 @@ public interface UsersService extends IService<Users> {
      * @param id 主键
      */
     void deleteById(@Nonnull String id);
+
+    /**
+     * 用户绑定租户
+     *
+     * @param dto 实体
+     */
+    void userBindTenants(@Nonnull UserBindTenantsDTO dto);
 }

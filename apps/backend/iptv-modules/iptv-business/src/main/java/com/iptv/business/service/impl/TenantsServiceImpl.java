@@ -1,13 +1,20 @@
 package com.iptv.business.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.iptv.business.domain.TenantMembers;
 import com.iptv.business.domain.Tenants;
+import com.iptv.business.domain.Users;
+import com.iptv.business.domain.dto.TenantBindUsersDTO;
 import com.iptv.business.domain.dto.TenantsDTO;
 import com.iptv.business.domain.dto.page.TenantsPageDTO;
 import com.iptv.business.domain.vo.TenantsVO;
+import com.iptv.business.pgmapper.TenantMembersMapper;
 import com.iptv.business.pgmapper.TenantsMapper;
+import com.iptv.business.pgmapper.UsersMapper;
 import com.iptv.business.service.TenantsService;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
@@ -15,6 +22,7 @@ import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +41,12 @@ import java.util.List;
 @Service
 public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> implements TenantsService {
 
+    @Autowired
+    private TenantMembersMapper tenantMembersMapper;
+
+    @Autowired
+    private UsersMapper usersMapper;
+
     // 默认存储配额：10GB
     private static final Long DEFAULT_STORAGE_QUOTA = 10L * 1024 * 1024 * 1024;
 
@@ -45,7 +59,7 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
     }
 
     @Override
-    public TenantsVO queryById(@Nonnull String id) {
+    public TenantsVO queryById(@Nonnull Integer id) {
         Tenants entity = this.baseMapper.selectById(id);
         return BeanUtil.copyProperties(entity, TenantsVO.class);
     }
@@ -102,5 +116,25 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
         if (BeanUtil.isNotEmpty(entity)) {
             this.baseMapper.deleteById(id);
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void tenantBindUsers(@Nonnull TenantBindUsersDTO dto) {
+        // 1. 检查用户是否存在
+        Tenants tenant = this.baseMapper.selectById(dto.getTenantId());
+        if (BeanUtil.isEmpty(tenant)) {
+            throw new ServiceException("租户不存在");
+        }
+        // 2. 检查租户是否存在
+        List<Users> userList = usersMapper.selectList(new LambdaQueryWrapper<Users>()
+                .in(Users::getId, dto.getUserIds()));
+        if (CollUtil.isEmpty(userList)) {
+            throw new ServiceException("用户不存在");
+        }
+        userList.forEach(user -> {
+            TenantMembers tenantMember = TenantMembers.create(user, tenant, dto.getRole());
+            tenantMembersMapper.insert(tenantMember);
+        });
     }
 }

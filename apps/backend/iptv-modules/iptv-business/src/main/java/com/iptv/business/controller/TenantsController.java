@@ -1,28 +1,23 @@
 package com.iptv.business.controller;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-import com.iptv.common.core.domain.R;
-import com.iptv.business.domain.vo.TenantsVO;
+import com.iptv.business.domain.dto.TenantBindUsersDTO;
 import com.iptv.business.domain.dto.TenantsDTO;
 import com.iptv.business.domain.dto.page.TenantsPageDTO;
-import com.iptv.business.domain.Users;
+import com.iptv.business.domain.vo.TenantsVO;
 import com.iptv.business.service.TenantsService;
 import com.iptv.business.service.UsersService;
+import com.iptv.common.core.domain.R;
 import com.iptv.common.core.web.domain.dto.BaseDTO;
 import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
-import com.iptv.common.core.utils.poi.ExcelUtil;
 import com.iptv.common.log.annotation.Log;
 import com.iptv.common.log.enums.BusinessType;
 import com.iptv.common.security.annotation.RequiresPermissions;
-import com.iptv.common.security.utils.SecurityUtils;
-
-import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * <p>
@@ -47,13 +42,12 @@ public class TenantsController {
     @Operation(summary = "按 id 查询", description = "按 id 查询")
     @GetMapping("/single")
     @RequiresPermissions("business:tenants:query")
-    public R<TenantsVO> queryById(String id) {
+    public R<TenantsVO> queryById(Integer id) {
         return R.ok(tenantsService.queryById(id));
     }
 
     @Operation(summary = "分页查询", description = "按条件分页查询")
     @GetMapping("/list")
-    @RequiresPermissions("business:tenants:list")
     public TableDataInfo<TenantsVO> list(TenantsPageDTO dto, PageDTO pg) {
         return tenantsService.queryPage(dto, pg);
     }
@@ -80,6 +74,14 @@ public class TenantsController {
     @RequiresPermissions("business:tenants:remove")
     public R<Void> deleteById(String id) {
         tenantsService.deleteById(id);
+        return R.ok();
+    }
+
+    @Operation(summary = "绑定用户", description = "绑定用户")
+    @PostMapping("/bind")
+    @RequiresPermissions("business:tenants:edit")
+    public R<Void> tenantBindUsers(@RequestBody @Validated(BaseDTO.Update.class) TenantBindUsersDTO dto) {
+        tenantsService.tenantBindUsers(dto);
         return R.ok();
     }
 }

@@ -1,5 +1,6 @@
 package com.iptv.business.controller;
 
+import com.iptv.business.domain.dto.UserBindTenantsDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
@@ -46,7 +47,6 @@ public class UsersController {
 
     @Operation(summary = "分页查询", description = "按条件分页查询")
     @GetMapping("/list")
-    @RequiresPermissions("business:users:list")
     public TableDataInfo<UsersVO> list(UsersPageDTO dto, PageDTO pg) {
         return usersService.queryPage(dto, pg);
     }
@@ -76,13 +76,13 @@ public class UsersController {
         return R.ok();
     }
 
-    @Log(title = "导出用户账号：登录凭证、系统管理员标志、跨租户访问与个人偏好", businessType = BusinessType.EXPORT)
-    @Operation(summary = "导出", description = "导出数据到 Excel")
-    @GetMapping("/excel")
-    @RequiresPermissions("business:users:export")
-    public void export(UsersPageDTO dto, PageDTO pg, HttpServletResponse response) {
-        List<UsersVO> list = usersService.queryPage(dto, pg).getRows();
-        ExcelUtil<UsersVO> util = new ExcelUtil<>(UsersVO.class);
-        util.exportExcel(response, list, "用户账号：登录凭证、系统管理员标志、跨租户访问与个人偏好数据.xlsx");
+    @Operation(summary = "绑定租户", description = "绑定租户")
+    @PostMapping("/bind")
+    @RequiresPermissions("business:users:edit")
+    public R<Void> userBindTenants(@RequestBody @Validated(BaseDTO.Update.class) UserBindTenantsDTO dto) {
+        usersService.userBindTenants(dto);
+        return R.ok();
     }
+
+
 }

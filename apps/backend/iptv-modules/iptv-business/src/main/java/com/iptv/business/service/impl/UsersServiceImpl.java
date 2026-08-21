@@ -1,19 +1,24 @@
 package com.iptv.business.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.BCrypt;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.iptv.business.domain.TenantMembers;
 import com.iptv.business.domain.Tenants;
 import com.iptv.business.domain.Users;
+import com.iptv.business.domain.dto.UserBindTenantsDTO;
 import com.iptv.business.domain.dto.UsersDTO;
 import com.iptv.business.domain.dto.page.UsersPageDTO;
 import com.iptv.business.domain.vo.UsersVO;
+import com.iptv.business.enums.TenantMemberRoleEnum;
 import com.iptv.business.pgmapper.TenantMembersMapper;
+import com.iptv.business.pgmapper.TenantsMapper;
 import com.iptv.business.pgmapper.UsersMapper;
 import com.iptv.business.service.TenantsService;
 import com.iptv.business.service.UsersService;
@@ -28,7 +33,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * <p>
@@ -43,6 +47,8 @@ import java.util.UUID;
 public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements UsersService {
 
     private final TenantsService tenantsService;
+
+    private final TenantsMapper tenantsMapper;
 
     private final TenantMembersMapper tenantMembersMapper;
 
@@ -79,10 +85,10 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
 
         // 3. 检查邮箱唯一性
         Users existingUserByEmail = this.baseMapper.selectOne(
-            new LambdaUpdateWrapper<Users>()
-                    .eq(Users::getEmail, dto.getEmail())
-                    .eq(Users::getIsActive, true)
-                    .isNull(Users::getDeletedAt)
+                new LambdaUpdateWrapper<Users>()
+                        .eq(Users::getEmail, dto.getEmail())
+                        .eq(Users::getIsActive, true)
+                        .isNull(Users::getDeletedAt)
         );
         if (existingUserByEmail != null) {
             throw new ServiceException("该邮箱已被注册");
@@ -90,7 +96,7 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
 
         // 4. 检查用户名唯一性
         Users existingUserByUsername = this.baseMapper.selectOne(
-            new LambdaUpdateWrapper<Users>().eq(Users::getUsername, dto.getUsername())
+                new LambdaUpdateWrapper<Users>().eq(Users::getUsername, dto.getUsername())
         );
         if (existingUserByUsername != null) {
             throw new ServiceException("该用户名已被使用");
@@ -100,7 +106,7 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         String hashedPassword = BCrypt.hashpw(dto.getPassword(), BCrypt.gensalt());
 
         Tenants defaultTenant = null;
-        if(ObjectUtil.isNull(dto.getTenantId())){
+        if (ObjectUtil.isNull(dto.getTenantId())) {
             // 6. 创建默认工作空间
             defaultTenant = new Tenants();
             defaultTenant.setName(dto.getUsername() + "'s Workspace");
@@ -112,7 +118,7 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
             defaultTenant.setStorageQuota(10L * 1024 * 1024 * 1024); // 10GB
             defaultTenant.setStorageUsed(0L);
             tenantsService.save(defaultTenant);
-        }else{
+        } else {
             // 6. 检查工作空间是否存在
             defaultTenant = tenantsService.getById(dto.getTenantId());
             if (BeanUtil.isEmpty(defaultTenant)) {
@@ -122,7 +128,6 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
 
         // 7. 创建用户记录
         Users entity = new Users();
-        entity.setId(UUID.randomUUID().toString()); // 生成UUID
         entity.setUsername(dto.getUsername());
         entity.setEmail(dto.getEmail());
         entity.setPasswordHash(hashedPassword);
@@ -136,7 +141,7 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         this.baseMapper.insert(entity);
 
         // 8. 创建默认租户成员
-        TenantMembers defaultTenantMember = TenantMembers.create(entity, defaultTenant, "owner");
+        TenantMembers defaultTenantMember = TenantMembers.create(entity, defaultTenant, TenantMemberRoleEnum.OWNER.getCode());
         tenantMembersMapper.insert(defaultTenantMember);
 
         return BeanUtil.copyProperties(entity, UsersVO.class);
@@ -188,5 +193,26 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         if (BeanUtil.isNotEmpty(entity)) {
             this.baseMapper.deleteById(id);
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void userBindTenants(@Nonnull UserBindTenantsDTO dto) {
+
+        // 1. 检查用户是否存在
+        Users user = this.baseMapper.selectById(dto.getUserId());
+        if (BeanUtil.isEmpty(user)) {
+            throw new ServiceException("用户不存在");
+        }
+        // 2. 检查租户是否存在
+        List<Tenants> tenantList = tenantsMapper.selectList(new LambdaQueryWrapper<Tenants>()
+                .in(Tenants::getId, dto.getTenantIds()));
+        if (CollUtil.isEmpty(tenantList)) {
+            throw new ServiceException("租户不存在");
+        }
+        tenantList.forEach(tenant -> {
+            TenantMembers tenantMember = TenantMembers.create(user, tenant, dto.getRole());
+            tenantMembersMapper.insert(tenantMember);
+        });
     }
 }
