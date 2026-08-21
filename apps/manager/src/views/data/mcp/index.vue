@@ -34,13 +34,14 @@
         </button> -->
         <button type="button" class="toolbar-btn" :disabled="multiple" v-hasPermi="['business:mcpServices:edit']"
           @click="handleEnable()">
-          批量启用
+          {{ $t('page.mcp.batchEnable', '批量启用') }}
         </button>
         <button type="button" class="toolbar-btn" :disabled="multiple" v-hasPermi="['business:mcpServices:edit']"
           @click="handleDisable()">
-          批量停用
+          {{ $t('page.mcp.batchDisable', '批量停用') }}
         </button>
-        <span class="selected-text">共选中 <span>{{ ids.length }}</span> 条</span>
+        <span class="selected-text">{{ $t('page.mcp.selected', '共选中') }} <span>{{ ids.length }}</span> {{
+          $t('page.mcp.items', '条') }}</span>
       </div>
 
       <div class="action-toolbar__right">
@@ -59,22 +60,22 @@
             <kjsc-empty />
           </template>
           <el-table-column type="selection" width="50" align="center" />
-          <el-table-column label="编号" align="left" key="id" prop="id" min-width="280"
+          <el-table-column :label="$t('page.mcp.id', '编号')" align="left" key="id" prop="id" min-width="280"
             :show-overflow-tooltip="true" />
-          <el-table-column label="名称" align="left" key="name" prop="name" min-width="120" v-if="columns.name.visible"
-            :show-overflow-tooltip="true" />
-          <el-table-column label="描述" align="left" key="description" prop="description" min-width="120"
-            v-if="columns.description.visible" :show-overflow-tooltip="true" />
-          <el-table-column label="启用/停用" align="left" key="enabled" prop="enabled" min-width="120"
-            v-if="columns.enabled.visible" :show-overflow-tooltip="true">
+          <el-table-column :label="$t('page.mcp.name', '名称')" align="left" key="name" prop="name" min-width="120"
+            v-if="columns.name.visible" :show-overflow-tooltip="true" />
+          <el-table-column :label="$t('page.mcp.description', '描述')" align="left" key="description" prop="description"
+            min-width="120" v-if="columns.description.visible" :show-overflow-tooltip="true" />
+          <el-table-column :label="$t('page.mcp.enableddisabled', '启用/停用')" align="left" key="enabled" prop="enabled"
+            min-width="120" v-if="columns.enabled.visible" :show-overflow-tooltip="true">
             <template #default="scope">
-              <span>{{ scope.row.enabled ? '启用' : '停用' }}</span>
+              <span>{{ scope.row.enabled ? $t('page.mcp.enable', '启用') : $t('page.mcp.disable', '停用') }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="是否内置" align="left" key="isBuiltin" prop="isBuiltin" min-width="120"
-            v-if="columns.isBuiltin.visible" :show-overflow-tooltip="true">
+          <el-table-column :label="$t('page.mcp.isBuiltin', '是否内置')" align="left" key="isBuiltin" prop="isBuiltin"
+            min-width="120" v-if="columns.isBuiltin.visible" :show-overflow-tooltip="true">
             <template #default="scope">
-              <span>{{ scope.row.isBuiltin ? '是' : '否' }}</span>
+              <span>{{ scope.row.isBuiltin ? $t('page.mcp.yes', '是') : $t('page.mcp.no', '否') }}</span>
             </template>
           </el-table-column>
 
@@ -96,7 +97,7 @@
               <span>{{ parseTime(scope.row.updateTime) }}</span>
             </template>
           </el-table-column> -->
-          <el-table-column label="操作" align="left" width="220" fixed="right">
+          <el-table-column :label="$t('page.mcp.operation', '操作')" align="left" width="220" fixed="right">
             <template #default="scope">
               <el-button link class="action-link action-link--primary" @click="handleUpdate(scope.row)"
                 v-hasPermi="['business:mcpServices:edit']">
@@ -106,10 +107,12 @@
                 v-hasPermi="['business:mcpServices:remove']">
                 {{ $t('form.button.delete') }}
               </el-button>
-              <el-button v-if="!scope.row.enabled" link class="action-link action-link--primary" @click="handleEnable(scope.row)" v-hasPermi="['business:mcpServices:edit']">
+              <el-button v-if="!scope.row.enabled" link class="action-link action-link--primary"
+                @click="handleEnable(scope.row)" v-hasPermi="['business:mcpServices:edit']">
                 {{ $t('form.button.enable') }}
               </el-button>
-              <el-button v-else link class="action-link action-link--primary" @click="handleDisable(scope.row)" v-hasPermi="['business:mcpServices:edit']">
+              <el-button v-else link class="action-link action-link--primary" @click="handleDisable(scope.row)"
+                v-hasPermi="['business:mcpServices:edit']">
                 {{ $t('form.button.disable') }}
               </el-button>
             </template>
@@ -150,7 +153,7 @@
               :placeholder="codeImportPlaceholder" class="code-import__textarea" />
             <p v-if="codeImportError" class="code-import__error">{{ codeImportError }}</p>
             <div class="code-import__actions">
-              <el-button type="primary" variant="outline" @click="handleCodeImport">
+              <el-button type="primary" @click="handleCodeImport">
                 {{ t('mcpServiceDialog.codeImport.parse') }}
               </el-button>
             </div>
@@ -160,11 +163,12 @@
         <section class="setting-drawer__section">
           <h4 class="setting-drawer__section-title">{{ t('mcpServiceDialog.basicSection', '基本信息') }}</h4>
           <el-form-item :label="t('mcpServiceDialog.name')" prop="name">
-            <el-input v-model="form.name" :placeholder="t('mcpServiceDialog.namePlaceholder')" maxlength="999" :show-word-limit="false" />
+            <el-input v-model="form.name" :placeholder="t('mcpServiceDialog.namePlaceholder')" maxlength="999"
+              :show-word-limit="false" />
           </el-form-item>
           <el-form-item :label="t('mcpServiceDialog.description')" prop="description">
             <el-input v-model="form.description" type="textarea" :autosize="{ minRows: 2, maxRows: 5 }"
-              :placeholder="t('mcpServiceDialog.descriptionPlaceholder')"/>
+              :placeholder="t('mcpServiceDialog.descriptionPlaceholder')" />
           </el-form-item>
           <el-form-item :label="t('mcpServiceDialog.enableService')" prop="enabled">
             <el-switch v-model="form.enabled" />
@@ -183,7 +187,8 @@
             </el-radio-group>
           </el-form-item>
           <el-form-item :label="t('mcpServiceDialog.serviceUrl')" prop="serviceUrl">
-            <el-input v-model="form.serviceUrl" :placeholder="t('mcpServiceDialog.serviceUrlPlaceholder')" maxlength="9999" :show-word-limit="false" />
+            <el-input v-model="form.serviceUrl" :placeholder="t('mcpServiceDialog.serviceUrlPlaceholder')"
+              maxlength="9999" :show-word-limit="false" />
           </el-form-item>
           <el-form-item prop="custom_headers">
             <template #label>
@@ -192,7 +197,9 @@
                   <div>{{ t('mcpServiceDialog.custom_headers.label') }}</div>
                   <div>
                     <el-button text size="small" @click="addCustomHeader">
-                      <el-icon><Plus /></el-icon>
+                      <el-icon>
+                        <Plus />
+                      </el-icon>
                       {{ t('mcpServiceDialog.custom_headers.add') }}
                     </el-button>
                   </div>
@@ -202,24 +209,15 @@
             </template>
             <div v-if="form.custom_headers.length > 0" class="custom-headers-list">
               <div v-for="(item, idx) in form.custom_headers" :key="idx" class="custom-header-row">
-                <el-input
-                  v-model="item.key"
-                  :placeholder="t('mcpServiceDialog.custom_headers.keyPlaceholder')"
-                  class="custom-header-key"
-                />
-                <el-input
-                  v-model="item.value"
-                  :placeholder="t('mcpServiceDialog.custom_headers.valuePlaceholder')"
-                  class="custom-header-value"
-                />
-                <el-button
-                  text
-                  size="small"
-                  class="custom-header-remove"
-                  :aria-label="t('common.delete')"
-                  @click="removeCustomHeader(idx)"
-                >
-                  <el-icon><Close /></el-icon>
+                <el-input v-model="item.key" :placeholder="t('mcpServiceDialog.custom_headers.keyPlaceholder')"
+                  class="custom-header-key" />
+                <el-input v-model="item.value" :placeholder="t('mcpServiceDialog.custom_headers.valuePlaceholder')"
+                  class="custom-header-value" />
+                <el-button text size="small" class="custom-header-remove" :aria-label="t('common.delete')"
+                  @click="removeCustomHeader(idx)">
+                  <el-icon>
+                    <Close />
+                  </el-icon>
                 </el-button>
               </div>
             </div>
@@ -230,13 +228,12 @@
           <h4 class="setting-drawer__section-title">{{ t('mcpServiceDialog.authConfig') }}</h4>
           <el-form-item :label="t('mcpServiceDialog.authType')" prop="authType">
             <el-radio-group v-model="form.authType">
-              <el-radio-button v-for="(item, idx) in authTypeOptions"
-                :key="idx" :value="item.value"
+              <el-radio-button v-for="(item, idx) in authTypeOptions" :key="idx" :value="item.value"
                 :disabled="item.disabled">{{ item.label }}</el-radio-button>
             </el-radio-group>
           </el-form-item>
           <!-- OAuth 2.0：零配置（自动发现 + 动态客户端注册），按用户授权 -->
-          <template v-if="form.authType==='oauth'">
+          <template v-if="form.authType === 'oauth'">
             <!-- <el-form-item :label="t('mcpServiceDialog.oauthScopes', 'Scopes（可选，空格分隔）')" prop="oauthClientId">
               <el-input v-model="form.oauthScopesText" :placeholder="t('mcpServiceDialog.optional')" />
             </el-form-item>
@@ -275,7 +272,7 @@
             </el-form-item>
              -->
           </template>
-        
+
           <!--
             非 OAuth：Edit 模式下凭证由 CredentialResource 管理（独立的
             /credentials 子资源调用）；Create 模式下用 plain password input。
@@ -285,16 +282,13 @@
           <template v-else-if="form.authType === 'api_key'">
             <el-form-item :label="t('mcpServiceDialog.apiKeyHeader', '请求头名称')" prop="api_key_header">
               <el-input v-model="form.api_key_header" placeholder="X-API-Key" />
-              <p class="form-desc">{{ t('mcpServiceDialog.apiKeyHeaderDesc', '留空默认 X-API-Key。Bearer 方式请填 Authorization，并在下方密钥值中写 “Bearer <token>”；需要裸 token 时填 Authorization 并直接填入 token。') }}</p>
+              <p class="form-desc">{{ t('mcpServiceDialog.apiKeyHeaderDesc', '留空默认 X-API-Key。Bearer 方式请填 Authorization，并在下方密钥值中写 “Bearer<token>”；需要裸 token 时填 Authorization 并直接填入 token。') }}</p>
             </el-form-item>
-            <CredentialResource
-              v-if="mode === 'edit'"
-              :api="credentialApi"
-              :fields="credentialFields"
-              :meta="credentialMeta"
-            />
+            <CredentialResource v-if="mode === 'edit'" :api="credentialApi" :fields="credentialFields"
+              :meta="credentialMeta" />
             <el-form-item v-else :label="t('mcpServiceDialog.credentialValue', '密钥值 / Token')" prop="api_key">
-              <el-input v-model="form.api_key" type="password" show-password :placeholder="t('mcpServiceDialog.optional')" prefix-icon="Lock" />
+              <el-input v-model="form.api_key" type="password" show-password
+                :placeholder="t('mcpServiceDialog.optional')" prefix-icon="Lock" />
             </el-form-item>
           </template>
         </section>
@@ -326,43 +320,30 @@
           </el-form-item>
         </section>
 
-        <!-- <el-form-item label="用户昵称" prop="nickName">
-          <el-input v-model="form.nickName" placeholder="支持中文、数字、字母" maxlength="6" show-word-limit />
-        </el-form-item>
-        <el-form-item label="登录账号" prop="name">
-          <el-input v-model="form.name" placeholder="支持数字、字母，推荐使用手机号" :disabled="form.userId" maxlength="20"
-            show-word-limit />
-        </el-form-item>
-        <el-form-item label="部门" prop="deptIds">
-          <el-tree-select v-model="form.deptIds" :data="enabledDeptOptions" :props="deptTreeProps" multiple
-            check-strictly :render-after-expand="false" placeholder="请选择" style="width: 100%" />
-        </el-form-item>
-        <el-form-item label="岗位" prop="postIds">
-          <el-select-v2 v-model="form.postIds" :options="positionService.listData" :props="positionProps" multiple
-            placeholder="请选择" style="width: 100%" />
-        </el-form-item>
-
-        <el-form-item label="所属租户" prop="tenantId">
-          <el-select style="width: 100%" v-model="form.tenantId" placeholder="请选择租户" :disabled="form.userId"
-            @change="handleChangeTenant">
-            <el-option v-for="item in tenantOptions" :key="item.value" :label="item.label"
-              :value="item.value"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="所属角色" prop="roleIds">
-          <el-select style="width: 100%" v-model="form.roleIds" placeholder="请选择角色">
-            <template #prefix>
-              <el-tag v-if="isInternalRole" :key="form.roleKey" size="small" type="info" effect="light">系统内置</el-tag>
-            </template>
-            <el-option v-for="item in roleOptions" :key="item.roleId" :label="item.roleName"
-              :value="item.roleId"></el-option>
-          </el-select>
-        </el-form-item> -->
+        <!-- Section 5 — 测试结果（内联，避免在抽屉上再叠一个居中弹窗） -->
+        <section v-if="testResult" ref="testResultSection" class="setting-drawer__section">
+          <div class="test-result-header">
+            <h4 class="setting-drawer__section-title">{{ t('mcpServiceDialog.testResultTitle', '测试结果') }}</h4>
+            <el-button text shape="square" size="small" class="test-result-close" @click="testResult = null">
+              <template #icon><el-icon>
+                  <Close />
+                </el-icon></template>
+            </el-button>
+          </div>
+          <McpTestResultBody :result="testResult" :service-id="form.id" />
+        </section>
       </el-form>
       <template #prefixFooter>
         <div class="manage-dialog-footer">
-          <el-button class="test-btn" size="large" round @click="handleTestConnection">
-            {{ t('form.button.test', '测试连接') }}
+          <el-button class="test-btn" size="large" round :disabled="!form.id" @click="handleTestConnection">
+            <template v-if="!testing && typeof lastTestOk === 'boolean'" #icon>
+              <el-icon v-if="!testing && lastTestOk === true" class="status-icon available">
+                <CircleCheckFilled />
+              </el-icon>
+              <el-icon v-else-if="!testing && lastTestOk === false" class="status-icon unavailable">
+                <CircleCloseFilled />
+              </el-icon>
+            </template>{{ t('form.button.test', '测试连接') }}
           </el-button>
           <el-button class="close-btn" size="large" round @click="closeDialog">
             {{ t('form.button.close', '取消') }}
@@ -379,12 +360,14 @@
 
 <script setup lang="ts" name="Models">
 import { ElMessage } from 'element-plus'
+import { Close, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
+import McpTestResultBody from './components/McpTestResultBody.vue'
 import CredentialResource, {
   type CredentialFieldDef,
   type CredentialResourceApi,
 } from "@/components/credentials/CredentialResource.vue";
 import { isEmpty } from "@/utils/common.js";
-import { AjaxResult, McpEntity, McpListReq, TableShowColumns, MCPOAuthTokenState, McpCredentialField } from "@/types";
+import { AjaxResult, McpEntity, McpListReq, TableShowColumns, MCPOAuthTokenState, McpCredentialField, McpAuthConfig, McpAdvancedConfig } from "@/types";
 import { deleteMcpSingleApi, disableMcpBatchApi, enableMcpBatchApi, getMcplistApi, getMcpSingleApi, insertMcpSingleApi, updateMcpSingleApi, testMcpServiceApi, type MCPTestResult } from "@/api/data/mcp";
 
 interface FormEntity extends McpEntity {
@@ -393,22 +376,24 @@ interface FormEntity extends McpEntity {
   oauthScopesText: string;
   api_key_header: string;
   api_key: string;
+  authConfigToken?: string;
+  auth_server_metadata_url?: string;
   advancedConfig_timeout: number;
   advancedConfig_retry_count: number;
   advancedConfig_retry_delay: number;
-  auth_config: {
-    authType: string;
-    apiKey: string;
-    apiKeyHeader: string;
-    token: string;
-    scopes: string[];
-    authServerMetadataUrl: string;
-  },
-  advanced_config: {
-    timeout: number;
-    retry_count: number;
-    retry_delay: number;
-  }
+  // auth_config: {
+  //   authType: string;
+  //   apiKey: string;
+  //   apiKeyHeader: string;
+  //   token: string;
+  //   scopes: string[];
+  //   authServerMetadataUrl: string;
+  // },
+  // advanced_config: {
+  //   timeout: number;
+  //   retry_count: number;
+  //   retry_delay: number;
+  // }
 }
 const { proxy } = getCurrentInstance()
 
@@ -433,7 +418,7 @@ const pageLangConfig: Record<string, string> = {
   'mcpServiceDialog.codeImport.errors.empty': '请先粘贴配置内容',
   'mcpServiceDialog.codeImport.errors.invalidJson': '无法解析，请检查 JSON 格式'
 }
-const t = function (key: string, params?: Record<string, string>|string) {
+const t = function (key: string, params?: Record<string, string> | string) {
   let msg = pageLangConfig[key] || key
   if (params) {
     if (typeof params == 'string') {
@@ -458,10 +443,10 @@ const multiple = ref<boolean>(true)
 const total = ref<number>(0)
 // 列显隐信息
 const columns = ref<Record<string, TableShowColumns>>({
-  name: { label: '登录账号', visible: true },
-  description: { label: '模型描述', visible: true },
-  enabled: { label: '启用/停用', visible: true },
-  isBuiltin: { label: '是否内置', visible: true }
+  name: { label: $t('page.mcp.name', '名称'), visible: true },
+  description: { label: $t('page.mcp.description', '描述'), visible: true },
+  enabled: { label: $t('page.mcp.enableddisabled', '启用/停用'), visible: true },
+  isBuiltin: { label: $t('page.mcp.isBuiltin', '是否内置'), visible: true }
 })
 
 // // 校验登录账号
@@ -520,19 +505,19 @@ const data = reactive({
     advancedConfig_timeout: 0,
     advancedConfig_retry_count: 0,
     advancedConfig_retry_delay: 0,
-    auth_config: {
-      authType: '',
-      apiKey: '',
-      apiKeyHeader: '',
-      token: '',
-      scopes: [],
-      authServerMetadataUrl: '',
-    },
-    advanced_config: {
-      timeout: 0,
-      retry_count: 0,
-      retry_delay: 0,
-    }
+    // auth_config: {
+    //   authType: '',
+    //   apiKey: '',
+    //   apiKeyHeader: '',
+    //   token: '',
+    //   scopes: [],
+    //   authServerMetadataUrl: '',
+    // },
+    // advanced_config: {
+    //   timeout: 0,
+    //   retry_count: 0,
+    //   retry_delay: 0,
+    // }
   } as FormEntity,
   queryParams: {
     name: undefined,
@@ -744,13 +729,113 @@ function handleUpdate(row: McpEntity) {
   })
 }
 
-function serverDataToFormData(data: any){
-  const formData: FormEntity = {...data, custom_headers: []} as FormEntity;
+function serverDataToFormData(data: McpEntity) {
+  const formData = { ...data } as FormEntity;
+  formData.custom_headers = []
+  if (formData.headers) {
+    try {
+      formData.custom_headers = JSON.parse(formData.headers);
+    } catch (error) {
+      console.log('解析headers失败', formData.headers, error)
+    }
+  }
+  if (formData.authConfig) {
+    let authConfigSouce: any = formData.authConfig;
+    let authConfig: McpAuthConfig = {};
+    if (typeof authConfigSouce == 'string') {
+      try {
+        authConfig = JSON.parse(authConfigSouce);
+      } catch (error) {
+        console.log('解析authConfig失败', authConfigSouce, error)
+      }
+    } else {
+      authConfig = authConfigSouce;
+    }
+    if (authConfig.auth_type) {
+      formData.authType = authConfig.auth_type;
+    }
+    if (authConfig.api_key) {
+      formData.api_key = authConfig.api_key;
+    }
+    if (authConfig.api_key_header) {
+      formData.api_key_header = authConfig.api_key_header;
+    }
+    if (authConfig.scopes) {
+      let scopes: any = authConfig.scopes;
+      if (typeof scopes == 'string') {
+        try {
+          scopes = JSON.parse(scopes);
+        } catch (error) {
+          console.log('解析scopes失败', scopes, error)
+          scopes = scopes.split(' ');
+        }
+      }
+      formData.oauthScopesText = scopes.join(' ');
+    } else {
+      formData.oauthScopesText = '';
+    }
+    if (authConfig.token) {
+      formData.authConfigToken = authConfig.token;
+    }
+    if (authConfig.auth_server_metadata_url) {
+      formData.auth_server_metadata_url = authConfig.auth_server_metadata_url;
+    }
+  }
+  formData.advancedConfig_timeout = 30;
+  formData.advancedConfig_retry_count = 3;
+  formData.advancedConfig_retry_delay = 1;
+  if (formData.advancedConfig) {
+    let advancedConfigSource: any = formData.advancedConfig;
+    let advancedConfig: McpAdvancedConfig = {};
+    if (typeof advancedConfigSource == 'string') {
+      try {
+        advancedConfig = JSON.parse(advancedConfigSource);
+      } catch (error) {
+        console.log('解析advancedConfig失败', advancedConfigSource, error)
+      }
+    } else {
+      advancedConfig = advancedConfigSource;
+    }
+    if (advancedConfig.timeout) {
+      formData.advancedConfig_timeout = +advancedConfig.timeout || 30;
+    }
+    if (advancedConfig.retry_count) {
+      formData.advancedConfig_retry_count = +advancedConfig.retry_count || 3;
+    }
+    if (advancedConfig.retry_delay) {
+      formData.advancedConfig_retry_delay = +advancedConfig.retry_delay || 0;
+    }
+  }
   return formData
 }
-function formDataToServerData(formData: FormEntity){
-  const {custom_headers, ...serverData}: any = formData;
+function formDataToServerData(formData: FormEntity) {
+  const {
+    custom_headers, authType, oauthScopesText,
+    api_key_header, api_key, authConfigToken,
+    auth_server_metadata_url,
+    advancedConfig_timeout, advancedConfig_retry_count, advancedConfig_retry_delay,
+    ...serverData
+  } = formData;
   serverData.headers = JSON.stringify(custom_headers);
+  const authConfig: McpAuthConfig = {
+    auth_type: authType,
+    api_key,
+    api_key_header,
+    scopes: oauthScopesText.split(' ')
+  }
+  if (authConfigToken) {
+    authConfig.token = authConfigToken;
+  }
+  if (auth_server_metadata_url) {
+    authConfig.auth_server_metadata_url = auth_server_metadata_url;
+  }
+  serverData.authConfig = JSON.stringify(authConfig);
+  const advancedConfig: McpAdvancedConfig = {
+    timeout: advancedConfig_timeout,
+    retry_count: advancedConfig_retry_count,
+    retry_delay: advancedConfig_retry_delay,
+  }
+  serverData.advancedConfig = JSON.stringify(advancedConfig);
   return serverData
 }
 
@@ -788,7 +873,7 @@ function submitForm() {
     }
   })
 }
-function closeDialog(){
+function closeDialog() {
   open.value = false
 }
 
@@ -856,16 +941,23 @@ function applyServerConfig(name: string, cfg: Record<string, unknown>) {
   const formData = form;
   formData.value.name = name || formData.value.name
   formData.value.url = url
-  formData.value.transport_type = transport
+  // formData.value.transport_type = transport
   if (typeof cfg.description === 'string') formData.value.description = cfg.description
-  formData.value.headers = custom_headers
+  // formData.value.headers = custom_headers
   // No recognised auth header → none (custom headers carry the rest).
-  formData.value.auth_config.auth_type = authType
-  formData.value.auth_config.token = ''
-  formData.value.auth_config.api_key = apiKey
-  formData.value.auth_config.api_key_header = apiKeyHeader
-  formData.value.auth_config.scopes = []
+  // formData.value.auth_config.auth_type = authType
+  // formData.value.auth_config.token = ''
+  // formData.value.auth_config.api_key = apiKey
+  // formData.value.auth_config.api_key_header = apiKeyHeader
+  // formData.value.auth_config.scopes = []
 
+  const formValue: FormEntity = formData.value
+  formValue.transportType = transport
+  formValue.custom_headers = custom_headers
+  formValue.authType = authType
+  formValue.oauthScopesText = ''
+  formValue.api_key_header = apiKeyHeader
+  formValue.api_key = apiKey
   return true
 }
 
@@ -948,9 +1040,9 @@ const oauthScopesText = computed({
   },
 })
 const authTypeOptions = computed(() => [
-  { value: '', disabled:false, label: t('mcpServiceDialog.authTypeNone', '无 / 自定义 Header') },
-  { value: 'api_key', disabled:false, label: t('mcpServiceDialog.authTypeApiKey', 'API Key / Token') },
-  { value: 'oauth', disabled:true, label: t('mcpServiceDialog.authTypeOAuth', 'OAuth 2.0（首次连接授权）') },
+  { value: '', disabled: false, label: t('mcpServiceDialog.authTypeNone', '无 / 自定义 Header') },
+  { value: 'api_key', disabled: false, label: t('mcpServiceDialog.authTypeApiKey', 'API Key / Token') },
+  { value: 'oauth', disabled: true, label: t('mcpServiceDialog.authTypeOAuth', 'OAuth 2.0（首次连接授权）') },
 ])
 
 // Field metadata for the credential subresource. Keep label keys local to
@@ -974,7 +1066,9 @@ const credentialApi = computed<CredentialResourceApi<McpCredentialField>>(() => 
     save: async (patch: any) => {
       // const meta = await putMCPCredentials(id, patch)
       // return meta.fields
-      return []
+      const newValue = { ...patch }
+      newValue.configured = true
+      return newValue
     },
     remove: async (field: McpCredentialField) => {
       // await deleteMCPCredentialField(id, field)
@@ -982,10 +1076,6 @@ const credentialApi = computed<CredentialResourceApi<McpCredentialField>>(() => 
   }
 })
 
-// Initial "configured?" metadata read from the main service response. The
-// component reads this on mount; subsequent state changes after save/remove
-// are tracked locally by the component itself (and re-derived from this
-// whenever the parent reloads the service).
 const credentialMeta = computed(() => form.value.credentials ?? {
   api_key: { configured: false },
   token: { configured: false },
@@ -1013,7 +1103,7 @@ function scrollToTestResult() {
 }
 
 watch(
-  () => [form.value.transport_type, form.value.url],
+  () => [form.value.transportType, form.value.url],
   () => {
     lastTestOk.value = null
     testResult.value = null
@@ -1076,6 +1166,7 @@ getList()
 .el-input-number {
   width: 100%;
 }
+
 // ---- 从代码导入 ----
 .code-import {
   &__toggle {
@@ -1164,12 +1255,42 @@ getList()
     color: var(--td-error-color);
   }
 }
+
+.test-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .setting-drawer__section-title {
+    margin-bottom: 0;
+  }
+
+  .test-result-close {
+    flex-shrink: 0;
+    color: var(--td-text-color-placeholder);
+  }
+}
+
 .manage-dialog-footer {
   .test-btn {
     margin-right: auto;
   }
+
   .close-btn {
     margin-right: 12px;
+  }
+}
+// ---- footer-left 测试按钮的状态 icon ----
+.status-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+
+  &.available {
+    color: var(--el-color-success);
+  }
+
+  &.unavailable {
+    color: var(--el-color-danger);
   }
 }
 </style>
@@ -1182,87 +1303,4 @@ getList()
   }
 }
 
-.reset-pwd-dialog.kjsc-dialog-v2 {
-
-  .el-dialog__body {
-    padding: 24px 32px 8px;
-  }
-
-  .el-dialog__footer {
-    padding: 24px 32px 32px;
-  }
-
-  .reset-pwd-form {
-    &__label {
-      margin: 0 0 16px;
-      font-size: 14px;
-      line-height: 22px;
-      color: #2b2f33;
-    }
-
-    &__input {
-      .el-input__wrapper {
-        min-height: 44px;
-        padding: 0 16px;
-        border-radius: 999px;
-        box-shadow: 0 0 0 1px #31aba0 inset !important;
-      }
-
-      .el-input__inner {
-        font-size: 14px;
-        color: #2b2f33;
-
-        &::placeholder {
-          color: #a8abb2;
-        }
-      }
-    }
-
-    &__error {
-      margin: 8px 0 0;
-      font-size: 12px;
-      line-height: 18px;
-      color: #fe595d;
-    }
-  }
-
-  .reset-pwd-dialog-footer {
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-  }
-
-  .reset-pwd-dialog-cancel,
-  .reset-pwd-dialog-submit {
-    min-width: 88px;
-    height: 40px;
-    padding: 0 24px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: opacity 0.2s, border-color 0.2s;
-  }
-
-  .reset-pwd-dialog-cancel {
-    border: 1px solid #e1e6ec;
-    border-radius: 8px;
-    background: #ffffff;
-    color: #2b2f33;
-
-    &:hover {
-      border-color: #c8ced6;
-    }
-  }
-
-  .reset-pwd-dialog-submit {
-    border: none;
-    border-radius: 8px;
-    background: linear-gradient(180deg, #31aba0 0%, #2897be 100%);
-    color: #ffffff;
-
-    &:hover {
-      opacity: 0.92;
-    }
-  }
-}
 </style>

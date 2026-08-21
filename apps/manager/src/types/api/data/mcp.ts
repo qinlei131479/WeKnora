@@ -36,6 +36,20 @@ export interface McpBase {
   isBuiltin?: boolean;
 }
 
+export interface McpAuthConfig {
+  auth_type?: string;
+  api_key?: string;
+  api_key_header?: string;
+  scopes?: string[];
+  token?: string;
+  auth_server_metadata_url?: string;
+}
+export interface McpAdvancedConfig {
+  timeout?: number;
+  retry_count?: number;
+  retry_delay?: number;
+}
+
 export interface McpListReq extends McpBase {
 
 }

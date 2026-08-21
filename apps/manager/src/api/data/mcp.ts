@@ -1,4 +1,4 @@
-import { AjaxResult, McpEntity, McpListReq, McpSaveReq, McpToolResp, PageDomain, TableDataInfo } from '@/types';
+import { AjaxResult, McpEntity, McpListReq, McpSaveReq, McpToolBatchReqItem, McpToolResp, PageDomain, TableDataInfo } from '@/types';
 import request from '@/utils/request'
 
 
@@ -69,11 +69,11 @@ export function getMcpToolListApi(mcpId : string): Promise<AjaxResult<McpToolRes
   return request.post(`${API}/mcpServices/tool/list?mcpId=${mcpId}`)
 }
 // 批量启用工具
-export function enableMcpToolBatchApi(req: McpToolResp[]): Promise<AjaxResult<any>> {
+export function enableMcpToolBatchApi(req: McpToolBatchReqItem[]): Promise<AjaxResult<any>> {
   return request.post(`${API}/mcpServices/tool/enabled/batch`, req)
 }
 // 批量停用工具
-export function disableMcpToolBatchApi(req: McpToolResp[]): Promise<AjaxResult<any>> {
+export function disableMcpToolBatchApi(req: McpToolBatchReqItem[]): Promise<AjaxResult<any>> {
   return request.post(`${API}/mcpServices/tool/disabled/batch`, req)
 }
 
