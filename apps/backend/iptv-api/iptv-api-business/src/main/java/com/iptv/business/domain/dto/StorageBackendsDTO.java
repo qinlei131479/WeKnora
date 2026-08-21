@@ -10,7 +10,7 @@ import java.util.Date;
 
 /**
  * <p>
- * 具体对象/文件存储后端实例（可多实例同 provider）
+ * 具体存储后端实例
  * </p>
  *
  * @author kjsc
@@ -26,7 +26,7 @@ public class StorageBackendsDTO implements Serializable {
     private String id;
 
     @Schema(description = "所属工作空间（租户）ID")
-    private Long tenantId;
+    private Integer tenantId;
 
     @Schema(description = "存储后端实例名称")
     private String name;
