@@ -10,7 +10,8 @@ import lombok.Getter;
  */
 @Getter
 public enum BusinessStatusEnum {
-    ACTIVE("active", "激活");
+    ACTIVE("active", "活跃状态"),
+    INACTIVE("inactive", "非活跃状态");
 
     private final String code;
     private final String info;
