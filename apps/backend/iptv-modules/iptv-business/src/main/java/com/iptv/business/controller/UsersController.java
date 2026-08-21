@@ -91,6 +91,4 @@ public class UsersController {
         usersService.userBindTenants(dto);
         return R.ok();
     }
-
-
 }

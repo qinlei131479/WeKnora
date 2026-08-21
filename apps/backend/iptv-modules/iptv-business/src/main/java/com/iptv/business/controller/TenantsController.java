@@ -39,9 +39,6 @@ public class TenantsController {
     @Autowired
     private TenantsService tenantsService;
 
-    @Autowired
-    private UsersService usersService;
-
     @Operation(summary = "按 id 查询", description = "按 id 查询")
     @GetMapping("/single")
     @RequiresPermissions("business:tenants:query")

@@ -17,6 +17,7 @@ import com.iptv.business.enums.BusinessStatusEnum;
 import com.iptv.business.pgmapper.TenantMembersMapper;
 import com.iptv.business.pgmapper.TenantsMapper;
 import com.iptv.business.pgmapper.UsersMapper;
+import com.iptv.business.service.TenantMembersService;
 import com.iptv.business.service.TenantsService;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
@@ -28,8 +29,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -50,6 +51,9 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
 
     @Autowired
     private UsersMapper usersMapper;
+
+    @Autowired
+    private TenantMembersService tenantMembersService;
 
     // 默认存储配额：10GB
     private static final Long DEFAULT_STORAGE_QUOTA = 10L * 1024 * 1024 * 1024;
@@ -146,9 +150,12 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
         if (CollUtil.isEmpty(userList)) {
             throw new ServiceException("用户不存在");
         }
+
+        List<TenantMembers> tenantMembersList = new ArrayList<>();
         userList.forEach(user -> {
             TenantMembers tenantMember = TenantMembers.create(user, tenant, dto.getRole());
-            tenantMembersMapper.insert(tenantMember);
+            tenantMembersList.add(tenantMember);
         });
+        tenantMembersService.saveBatch(tenantMembersList);
     }
 }

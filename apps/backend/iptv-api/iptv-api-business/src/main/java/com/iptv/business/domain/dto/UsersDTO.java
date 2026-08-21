@@ -1,14 +1,16 @@
 package com.iptv.business.domain.dto;
 
-import java.io.Serializable;
-import java.util.Date;
-import java.io.Serializable;
-
 import com.iptv.common.core.web.domain.dto.BaseDTO;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
+import java.util.List;
 
 /**
  * <p>
@@ -27,6 +29,7 @@ public class UsersDTO implements Serializable {
     /**
      * 主键 ID
      */
+    @NotNull(message = "主键 ID 不能为空", groups = {BaseDTO.Update.class})
     @Schema(description = "主键 ID")
     private String id;
 
@@ -52,56 +55,25 @@ public class UsersDTO implements Serializable {
     private String password;
 
     /**
-     * 头像/图标
+     * 绑定租户列表
      */
-    @Schema(description = "头像/图标")
-    private String avatar;
+    @Schema(description = "绑定租户列表")
+    private List<BindTenantDTO> bindTenants;
 
-    /**
-     * 用户默认/归属工作空间 ID
-     */
-    @Schema(description = "用户默认/归属工作空间 ID")
-    private Integer tenantId;
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public class BindTenantDTO {
+        /**
+         * 租户 ID
+         */
+        @Schema(description = "租户 ID")
+        private Integer tenantId;
 
-    /**
-     * 是否激活
-     */
-    @Schema(description = "是否激活")
-    private Boolean isActive;
-
-    /**
-     * 创建时间
-     */
-    @Schema(description = "创建时间")
-    private Date createdAt;
-
-    /**
-     * 最后更新时间
-     */
-    @Schema(description = "最后更新时间")
-    private Date updatedAt;
-
-    /**
-     * 软删除时间；非空表示已删除
-     */
-    @Schema(description = "软删除时间；非空表示已删除")
-    private Date deletedAt;
-
-    /**
-     * 是否可访问全部工作空间
-     */
-    @Schema(description = "是否可访问全部工作空间")
-    private Boolean canAccessAllTenants;
-
-    /**
-     * 用户偏好（JSONB，如记忆开关等）
-     */
-    @Schema(description = "用户偏好（JSONB，如记忆开关等）")
-    private String preferences;
-
-    /**
-     * 是否系统管理员（独立于租户角色）
-     */
-    @Schema(description = "是否系统管理员（独立于租户角色）")
-    private Boolean isSystemAdmin;
+        /**
+         * 租户名称
+         */
+        @Schema(description = "角色(owner/admin/contributor/viewer)")
+        private String role;
+    }
 }
