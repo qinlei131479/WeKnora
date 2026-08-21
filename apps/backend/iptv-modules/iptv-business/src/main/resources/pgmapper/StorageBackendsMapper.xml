@@ -27,41 +27,38 @@
         SELECT
         <include refid="Base_Column_List"/>
         FROM storage_backends
-        <where>
-            <if test="param.id != null and param.id != ''">
-                AND id ILIKE CONCAT('%', #{param.id}, '%')
-            </if>
-            <if test="param.tenantId != null">
-                AND tenant_id = #{param.tenantId}
-            </if>
-            <if test="param.name != null and param.name != ''">
-                AND name ILIKE CONCAT('%', #{param.name}, '%')
-            </if>
-            <if test="param.provider != null and param.provider != ''">
-                AND provider ILIKE CONCAT('%', #{param.provider}, '%')
-            </if>
-            <if test="param.config != null and param.config != ''">
-                AND config ILIKE CONCAT('%', #{param.config}, '%')
-            </if>
-            <if test="param.source != null and param.source != ''">
-                AND source ILIKE CONCAT('%', #{param.source}, '%')
-            </if>
-            <if test="param.status != null and param.status != ''">
-                AND status ILIKE CONCAT('%', #{param.status}, '%')
-            </if>
-            <if test="param.legacyAlias != null">
-                AND legacy_alias = #{param.legacyAlias}
-            </if>
-            <if test="param.createdAt != null">
-                AND created_at = #{param.createdAt}
-            </if>
-            <if test="param.updatedAt != null">
-                AND updated_at = #{param.updatedAt}
-            </if>
-            <if test="param.deletedAt != null">
-                AND deleted_at = #{param.deletedAt}
-            </if>
-        </where>
+        WHERE
+        deleted_at IS NULL
+        <if test="param.id != null and param.id != ''">
+            AND id ILIKE CONCAT('%', #{param.id}, '%')
+        </if>
+        <if test="param.tenantId != null">
+            AND tenant_id = #{param.tenantId}
+        </if>
+        <if test="param.name != null and param.name != ''">
+            AND name ILIKE CONCAT('%', #{param.name}, '%')
+        </if>
+        <if test="param.provider != null and param.provider != ''">
+            AND provider ILIKE CONCAT('%', #{param.provider}, '%')
+        </if>
+        <if test="param.config != null and param.config != ''">
+            AND config ILIKE CONCAT('%', #{param.config}, '%')
+        </if>
+        <if test="param.source != null and param.source != ''">
+            AND source ILIKE CONCAT('%', #{param.source}, '%')
+        </if>
+        <if test="param.status != null and param.status != ''">
+            AND status ILIKE CONCAT('%', #{param.status}, '%')
+        </if>
+        <if test="param.legacyAlias != null">
+            AND legacy_alias = #{param.legacyAlias}
+        </if>
+        <if test="param.createdAt != null">
+            AND created_at = #{param.createdAt}
+        </if>
+        <if test="param.updatedAt != null">
+            AND updated_at = #{param.updatedAt}
+        </if>
         ORDER BY id DESC
     </select>
 

@@ -57,4 +57,7 @@ public class StorageBackendsVO implements Serializable {
 
     @Schema(description = "软删除时间；非空表示已删除")
     private Date deletedAt;
+
+    @Schema(description = "是否工作空间默认存储后端")
+    private Boolean isDefault;
 }

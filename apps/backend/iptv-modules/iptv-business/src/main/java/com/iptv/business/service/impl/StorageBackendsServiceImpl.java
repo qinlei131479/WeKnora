@@ -1,10 +1,13 @@
 package com.iptv.business.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.IdUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.iptv.business.domain.StorageBackends;
@@ -47,13 +50,37 @@ public class StorageBackendsServiceImpl extends ServiceImpl<StorageBackendsMappe
         Page<StorageBackendsVO> page = PageUtils.toPage(pg);
         List<StorageBackends> list = this.baseMapper.queryPage(dto, page);
         List<StorageBackendsVO> voList = BeanUtil.copyToList(list, StorageBackendsVO.class);
+
+        if (CollUtil.isNotEmpty(voList)) {
+            List<Tenants> tenantList = tenantsMapper.selectList(new LambdaQueryWrapper<Tenants>()
+                    .in(Tenants::getId, voList.stream().map(StorageBackendsVO::getTenantId).toList()));
+            voList.forEach(vo -> {
+                tenantList.stream()
+                        .filter(t -> ObjectUtil.equal(t.getId(), vo.getTenantId()))
+                        .findFirst()
+                        .ifPresent(t -> {
+                            vo.setTenantName(t.getName());
+                            vo.setIsDefault(ObjectUtil.equal(vo.getId(), t.getDefaultStorageBackendId()));
+                        });
+            });
+        }
+
         return PageUtils.getDataTable(voList, page);
     }
 
     @Override
     public StorageBackendsVO queryById(@Nonnull String id) {
+        StorageBackendsVO vo = null;
         StorageBackends entity = this.baseMapper.selectById(id);
-        return BeanUtil.copyProperties(entity, StorageBackendsVO.class);
+        if (entity != null) {
+            vo = BeanUtil.copyProperties(entity, StorageBackendsVO.class);
+            Tenants tenants = tenantsMapper.selectById(entity.getTenantId());
+            if (tenants != null) {
+                vo.setTenantName(tenants.getName());
+                vo.setIsDefault(ObjectUtil.equal(vo.getId(), tenants.getDefaultStorageBackendId()));
+            }
+        }
+        return vo;
     }
 
     @Override
@@ -72,7 +99,10 @@ public class StorageBackendsServiceImpl extends ServiceImpl<StorageBackendsMappe
         entity.setLegacyAlias(false);
 
         this.baseMapper.insert(entity);
-        return BeanUtil.copyProperties(entity, StorageBackendsVO.class);
+        StorageBackendsVO vo = BeanUtil.copyProperties(entity, StorageBackendsVO.class);
+        vo.setTenantName(tenants.getName());
+        vo.setIsDefault(ObjectUtil.equal(vo.getId(), tenants.getDefaultStorageBackendId()));
+        return vo;
     }
 
     @Override
@@ -88,7 +118,13 @@ public class StorageBackendsServiceImpl extends ServiceImpl<StorageBackendsMappe
         BeanUtil.copyProperties(dto, entity);
 
         this.baseMapper.updateById(entity);
-        return BeanUtil.copyProperties(entity, StorageBackendsVO.class);
+        StorageBackendsVO vo = BeanUtil.copyProperties(entity, StorageBackendsVO.class);
+        Tenants tenants = tenantsMapper.selectById(entity.getTenantId());
+        if (tenants != null) {
+            vo.setTenantName(tenants.getName());
+            vo.setIsDefault(ObjectUtil.equal(vo.getId(), tenants.getDefaultStorageBackendId()));
+        }
+        return vo;
     }
 
     @Override

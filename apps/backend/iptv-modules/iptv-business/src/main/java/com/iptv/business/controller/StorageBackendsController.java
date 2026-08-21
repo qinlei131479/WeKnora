@@ -1,13 +1,9 @@
 package com.iptv.business.controller;
 
-import cn.hutool.core.util.ObjectUtil;
-import com.iptv.business.domain.Tenants;
 import com.iptv.business.domain.dto.StorageBackendsDTO;
 import com.iptv.business.domain.dto.page.StorageBackendsPageDTO;
 import com.iptv.business.domain.vo.StorageBackendsVO;
-import com.iptv.business.domain.vo.TenantsVO;
 import com.iptv.business.service.StorageBackendsService;
-import com.iptv.business.service.TenantsService;
 import com.iptv.common.core.domain.R;
 import com.iptv.common.core.web.domain.dto.BaseDTO;
 import com.iptv.common.core.web.page.PageDTO;
@@ -20,8 +16,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * <p>
@@ -37,36 +31,20 @@ import java.util.List;
 public class StorageBackendsController {
     @Resource
     private StorageBackendsService storageBackendsService;
-    @Resource
-    private TenantsService tenantsService;
+
 
     @Operation(summary = "按 id 查询", description = "按 id 查询")
     @GetMapping("/single")
     @RequiresPermissions("business:storageBackends:query")
     public R<StorageBackendsVO> queryById(String id) {
-        StorageBackendsVO vo = storageBackendsService.queryById(id);
-        if (vo != null) {
-            TenantsVO tenantsVO = tenantsService.queryById(vo.getTenantId());
-            if (tenantsVO != null) {
-                vo.setTenantName(tenantsVO.getName());
-            }
-        }
-        return R.ok(vo);
+        return R.ok(storageBackendsService.queryById(id));
     }
 
     @Operation(summary = "分页查询", description = "按条件分页查询")
     @GetMapping("/list")
     @RequiresPermissions("business:storageBackends:list")
     public TableDataInfo<StorageBackendsVO> list(StorageBackendsPageDTO dto, PageDTO pg) {
-        TableDataInfo<StorageBackendsVO> tableDataInfo = storageBackendsService.queryPage(dto, pg);
-        List<Tenants> tenantsList = tenantsService.list();
-        tableDataInfo.getRows().forEach(vo -> {
-            tenantsList.stream()
-                    .filter(t -> ObjectUtil.equal(t.getId(), vo.getTenantId()))
-                    .findFirst()
-                    .ifPresent(tenants -> vo.setTenantName(tenants.getName()));
-        });
-        return tableDataInfo;
+        return storageBackendsService.queryPage(dto, pg);
     }
 
     @Log(title = "新增存储后端实例", businessType = BusinessType.INSERT)
@@ -74,14 +52,7 @@ public class StorageBackendsController {
     @PostMapping("/insert/single")
     @RequiresPermissions("business:storageBackends:add")
     public R<StorageBackendsVO> insert(@RequestBody @Validated(BaseDTO.Insert.class) StorageBackendsDTO dto) {
-        StorageBackendsVO vo = storageBackendsService.insert(dto);
-        if (vo != null) {
-            TenantsVO tenantsVO = tenantsService.queryById(vo.getTenantId());
-            if (tenantsVO != null) {
-                vo.setTenantName(tenantsVO.getName());
-            }
-        }
-        return R.ok(vo);
+        return R.ok(storageBackendsService.insert(dto));
     }
 
     @Log(title = "更新存储后端实例", businessType = BusinessType.UPDATE)
@@ -89,13 +60,6 @@ public class StorageBackendsController {
     @PostMapping("/update/single")
     @RequiresPermissions("business:storageBackends:edit")
     public R<StorageBackendsVO> update(@RequestBody @Validated(BaseDTO.Update.class) StorageBackendsDTO dto) {
-        StorageBackendsVO vo = storageBackendsService.update(dto);
-        if (vo != null) {
-            TenantsVO tenantsVO = tenantsService.queryById(vo.getTenantId());
-            if (tenantsVO != null) {
-                vo.setTenantName(tenantsVO.getName());
-            }
-        }
         return R.ok(storageBackendsService.update(dto));
     }
 
