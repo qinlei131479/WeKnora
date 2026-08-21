@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.StorageBackendsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.StorageBackends">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="name" property="name"/>
+        <result column="provider" property="provider"/>
+        <result column="config" property="config"/>
+        <result column="source" property="source"/>
+        <result column="status" property="status"/>
+        <result column="legacy_alias" property="legacyAlias"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted_at" property="deletedAt"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, tenant_id, name, provider, config, source, status, legacy_alias, created_at, updated_at, deleted_at
+    </sql>
+
+    <!-- 分页查询（PostgreSQL：字符串使用 ILIKE 大小写不敏感模糊查询） -->
+    <select id="queryPage" resultMap="BaseResultMap" parameterType="com.iptv.business.domain.dto.page.StorageBackendsPageDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM storage_backends
+        <where>
+            <if test="param.id != null and param.id != ''">
+                AND id ILIKE CONCAT('%', #{param.id}, '%')
+            </if>
+            <if test="param.tenantId != null">
+                AND tenant_id = #{param.tenantId}
+            </if>
+            <if test="param.name != null and param.name != ''">
+                AND name ILIKE CONCAT('%', #{param.name}, '%')
+            </if>
+            <if test="param.provider != null and param.provider != ''">
+                AND provider ILIKE CONCAT('%', #{param.provider}, '%')
+            </if>
+            <if test="param.config != null and param.config != ''">
+                AND config ILIKE CONCAT('%', #{param.config}, '%')
+            </if>
+            <if test="param.source != null and param.source != ''">
+                AND source ILIKE CONCAT('%', #{param.source}, '%')
+            </if>
+            <if test="param.status != null and param.status != ''">
+                AND status ILIKE CONCAT('%', #{param.status}, '%')
+            </if>
+            <if test="param.legacyAlias != null">
+                AND legacy_alias = #{param.legacyAlias}
+            </if>
+            <if test="param.createdAt != null">
+                AND created_at = #{param.createdAt}
+            </if>
+            <if test="param.updatedAt != null">
+                AND updated_at = #{param.updatedAt}
+            </if>
+            <if test="param.deletedAt != null">
+                AND deleted_at = #{param.deletedAt}
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+</mapper>
