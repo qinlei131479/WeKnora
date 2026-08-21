@@ -2,7 +2,9 @@ package com.iptv.business.domain;
 
 import java.util.Date;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.iptv.common.core.typehandler.JsonbTypeHandler;
 import lombok.Data;
@@ -27,6 +29,7 @@ public class Models implements java.io.Serializable {
     /**
      * 唯一ID
      */
+    @TableId(type = IdType.ASSIGN_UUID)
     @Schema(description = "唯一ID")
     private String id;
 

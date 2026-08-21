@@ -49,12 +49,14 @@ public class PgCodeGenerator {
     static final String[] SUPER_ENTITY_COLS = {};
 
     // ===== 待生成的 PostgreSQL 表 =====
-    static final String[] DATA_TABLES = {"web_search_providers"};
+    static final String[] DATA_TABLES = {"tenant_members"};
 
     // ===== PostgreSQL jsonb 列配置 =====
     // Key: 表名（小写），Value: jsonb 列名数组（下划线命名）
     static final Map<String, String[]> JSONB_COLUMNS = Map.of(
-        "web_search_providers", new String[]{"parameters"}
+            "users", new String[]{"preferences"},
+        "tenants", new String[]{"agent_config", "context_config", "conversation_config", "web_search_config"
+        ,"parser_engine_config","storage_engine_config","chat_history_config","retrieval_config","credentials","api_principal_config"}
     );
     // jsonb 列名后缀（自动匹配以这些后缀结尾的列）
     static final String[] JSONB_COLUMN_SUFFIXES = {"_config", "_headers", "_vars", "_data", "_json"};

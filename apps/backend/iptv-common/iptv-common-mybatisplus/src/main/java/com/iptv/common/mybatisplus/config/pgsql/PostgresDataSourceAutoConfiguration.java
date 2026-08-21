@@ -8,7 +8,6 @@ import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import com.baomidou.mybatisplus.extension.spring.MybatisSqlSessionFactoryBean;
 import com.baomidou.mybatisplus.autoconfigure.MybatisPlusProperties;
-import com.iptv.common.mybatisplus.config.MybatisUpdateHandler;
 import com.zaxxer.hikari.HikariDataSource;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.mybatis.spring.SqlSessionTemplate;
@@ -92,7 +91,7 @@ public class PostgresDataSourceAutoConfiguration {
         factory.setConfiguration(configuration);
 
         GlobalConfig globalConfig = GlobalConfigUtils.defaults();
-        globalConfig.setMetaObjectHandler(new MybatisUpdateHandler());
+        globalConfig.setMetaObjectHandler(new PostgresUpdateHandler());
 
         // 应用全局配置（如逻辑删除）
         if (properties.getGlobalConfig() != null && properties.getGlobalConfig().getDbConfig() != null) {

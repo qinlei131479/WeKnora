@@ -94,8 +94,7 @@ public class McpServicesServiceImpl extends ServiceImpl<McpServicesMapper, McpSe
     public void deleteById(@Nonnull String id) {
         McpServices entity = this.baseMapper.selectById(id);
         if (BeanUtil.isNotEmpty(entity)) {
-            entity.setDeletedAt(new Date());
-            this.baseMapper.updateById(entity);
+            this.baseMapper.deleteById(id);
         }
     }
 

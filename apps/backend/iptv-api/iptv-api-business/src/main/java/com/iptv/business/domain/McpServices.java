@@ -1,8 +1,11 @@
 package com.iptv.business.domain;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.iptv.common.core.typehandler.JsonbTypeHandler;
 import lombok.Data;
@@ -27,6 +30,7 @@ public class McpServices implements java.io.Serializable {
     /**
      * 唯一ID
      */
+    @TableId(type = IdType.ASSIGN_UUID)
     @Schema(description = "唯一ID")
     private String id;
 
@@ -111,7 +115,7 @@ public class McpServices implements java.io.Serializable {
      * 删除时间
      */
     @Schema(description = "删除时间")
-    private Date deletedAt;
+    private LocalDateTime deletedAt;
 
     /**
      * 是否内置

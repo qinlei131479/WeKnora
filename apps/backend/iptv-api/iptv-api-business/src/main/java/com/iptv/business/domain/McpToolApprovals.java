@@ -2,6 +2,8 @@ package com.iptv.business.domain;
 
 import java.util.Date;
 import java.io.Serializable;
+
+import com.baomidou.mybatisplus.annotation.IdType;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -29,7 +31,7 @@ public class McpToolApprovals implements java.io.Serializable {
      * 审批记录主键
      */
 
-
+    @TableId(type = IdType.ASSIGN_UUID)
     @Schema(description = "审批记录主键")
     private String id;
 

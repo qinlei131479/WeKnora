@@ -1,8 +1,11 @@
 package com.iptv.business.domain;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.iptv.common.core.typehandler.JsonbTypeHandler;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -23,6 +26,8 @@ public class CustomAgent implements Serializable {
     /**
      * 智能体ID（内置智能体为固定ID，自定义为UUID）
      */
+    @TableId(type = IdType.ASSIGN_UUID)
+    @Schema(description = "智能体ID")
     private String id;
 
     /**

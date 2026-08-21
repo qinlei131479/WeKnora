@@ -4,6 +4,7 @@ import java.util.Date;
 import java.io.Serializable;
 import java.util.Map;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.iptv.common.core.typehandler.JsonbTypeHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -33,7 +34,7 @@ public class WebSearchProviders implements java.io.Serializable {
      * 主键 ID
      */
 
-
+    @TableId(type = IdType.ASSIGN_UUID)
     @Schema(description = "主键 ID")
     private String id;
 

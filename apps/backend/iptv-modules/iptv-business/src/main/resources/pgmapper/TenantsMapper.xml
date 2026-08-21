@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.TenantsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.Tenants">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="retriever_engines" property="retrieverEngines"/>
+        <result column="status" property="status"/>
+        <result column="business" property="business"/>
+        <result column="storage_quota" property="storageQuota"/>
+        <result column="storage_used" property="storageUsed"/>
+        <result column="agent_config" property="agentConfig"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted_at" property="deletedAt"/>
+        <result column="context_config" property="contextConfig"/>
+        <result column="conversation_config" property="conversationConfig"/>
+        <result column="web_search_config" property="webSearchConfig"/>
+        <result column="parser_engine_config" property="parserEngineConfig"/>
+        <result column="storage_engine_config" property="storageEngineConfig"/>
+        <result column="chat_history_config" property="chatHistoryConfig"/>
+        <result column="retrieval_config" property="retrievalConfig"/>
+        <result column="credentials" property="credentials"/>
+        <result column="api_principal_config" property="apiPrincipalConfig"/>
+        <result column="default_storage_backend_id" property="defaultStorageBackendId"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, name, description, retriever_engines, status, business, storage_quota, storage_used, agent_config, created_at, updated_at, deleted_at, context_config, conversation_config, web_search_config, parser_engine_config, storage_engine_config, chat_history_config, retrieval_config, credentials, api_principal_config, default_storage_backend_id
+    </sql>
+
+    <!-- 分页查询（PostgreSQL：字符串使用 ILIKE 大小写不敏感模糊查询） -->
+    <select id="queryPage" resultMap="BaseResultMap" parameterType="com.iptv.business.domain.dto.page.TenantsPageDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM tenants
+        <where>
+            <if test="param.id != null">
+                AND id = #{param.id}
+            </if>
+            <if test="param.name != null and param.name != ''">
+                AND name ILIKE CONCAT('%', #{param.name}, '%')
+            </if>
+            <if test="param.description != null and param.description != ''">
+                AND description ILIKE CONCAT('%', #{param.description}, '%')
+            </if>
+            <if test="param.retrieverEngines != null and param.retrieverEngines != ''">
+                AND retriever_engines ILIKE CONCAT('%', #{param.retrieverEngines}, '%')
+            </if>
+            <if test="param.status != null and param.status != ''">
+                AND status ILIKE CONCAT('%', #{param.status}, '%')
+            </if>
+            <if test="param.business != null and param.business != ''">
+                AND business ILIKE CONCAT('%', #{param.business}, '%')
+            </if>
+            <if test="param.storageQuota != null">
+                AND storage_quota = #{param.storageQuota}
+            </if>
+            <if test="param.storageUsed != null">
+                AND storage_used = #{param.storageUsed}
+            </if>
+            <if test="param.agentConfig != null and param.agentConfig != ''">
+                AND agent_config ILIKE CONCAT('%', #{param.agentConfig}, '%')
+            </if>
+            <if test="param.createdAt != null">
+                AND created_at = #{param.createdAt}
+            </if>
+            <if test="param.updatedAt != null">
+                AND updated_at = #{param.updatedAt}
+            </if>
+            <if test="param.deletedAt != null">
+                AND deleted_at = #{param.deletedAt}
+            </if>
+            <if test="param.contextConfig != null and param.contextConfig != ''">
+                AND context_config ILIKE CONCAT('%', #{param.contextConfig}, '%')
+            </if>
+            <if test="param.conversationConfig != null and param.conversationConfig != ''">
+                AND conversation_config ILIKE CONCAT('%', #{param.conversationConfig}, '%')
+            </if>
+            <if test="param.webSearchConfig != null and param.webSearchConfig != ''">
+                AND web_search_config ILIKE CONCAT('%', #{param.webSearchConfig}, '%')
+            </if>
+            <if test="param.parserEngineConfig != null and param.parserEngineConfig != ''">
+                AND parser_engine_config ILIKE CONCAT('%', #{param.parserEngineConfig}, '%')
+            </if>
+            <if test="param.storageEngineConfig != null and param.storageEngineConfig != ''">
+                AND storage_engine_config ILIKE CONCAT('%', #{param.storageEngineConfig}, '%')
+            </if>
+            <if test="param.chatHistoryConfig != null and param.chatHistoryConfig != ''">
+                AND chat_history_config ILIKE CONCAT('%', #{param.chatHistoryConfig}, '%')
+            </if>
+            <if test="param.retrievalConfig != null and param.retrievalConfig != ''">
+                AND retrieval_config ILIKE CONCAT('%', #{param.retrievalConfig}, '%')
+            </if>
+            <if test="param.credentials != null and param.credentials != ''">
+                AND credentials ILIKE CONCAT('%', #{param.credentials}, '%')
+            </if>
+            <if test="param.apiPrincipalConfig != null and param.apiPrincipalConfig != ''">
+                AND api_principal_config ILIKE CONCAT('%', #{param.apiPrincipalConfig}, '%')
+            </if>
+            <if test="param.defaultStorageBackendId != null and param.defaultStorageBackendId != ''">
+                AND default_storage_backend_id ILIKE CONCAT('%', #{param.defaultStorageBackendId}, '%')
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+</mapper>

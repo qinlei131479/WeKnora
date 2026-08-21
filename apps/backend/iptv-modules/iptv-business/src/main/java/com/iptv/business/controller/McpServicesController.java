@@ -38,7 +38,7 @@ public class McpServicesController {
     @Autowired
     private McpServicesService mcpServicesService;
 
-    @Operation(summary = "按 id 查询", description = "按 id 查询")
+    @Operation(summary = "测试MCP service", description = "测试MCP service")
     @GetMapping("/test")
     public R<McpTestResultVO> testMcpService(String id) {
         return R.ok(mcpServicesService.testMcpService(id));
