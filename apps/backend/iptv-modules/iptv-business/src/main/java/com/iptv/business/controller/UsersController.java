@@ -1,6 +1,7 @@
 package com.iptv.business.controller;
 
 import com.iptv.business.domain.dto.UserBindTenantsDTO;
+import com.iptv.business.domain.vo.TenantsVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
@@ -74,6 +75,13 @@ public class UsersController {
     public R<Void> deleteById(String id) {
         usersService.deleteById(id);
         return R.ok();
+    }
+
+    @Operation(summary = "该用户绑定的租户列表", description = "查询该用户绑定的租户列表")
+    @GetMapping("/bindTenants")
+    @RequiresPermissions("business:tenants:query")
+    public R<List<TenantsVO>> bindTenants(String userId) {
+        return R.ok(usersService.bindTenants(userId));
     }
 
     @Operation(summary = "绑定租户", description = "绑定租户")

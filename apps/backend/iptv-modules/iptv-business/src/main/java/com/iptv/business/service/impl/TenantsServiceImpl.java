@@ -12,6 +12,8 @@ import com.iptv.business.domain.dto.TenantBindUsersDTO;
 import com.iptv.business.domain.dto.TenantsDTO;
 import com.iptv.business.domain.dto.page.TenantsPageDTO;
 import com.iptv.business.domain.vo.TenantsVO;
+import com.iptv.business.domain.vo.UsersVO;
+import com.iptv.business.enums.BusinessStatusEnum;
 import com.iptv.business.pgmapper.TenantMembersMapper;
 import com.iptv.business.pgmapper.TenantsMapper;
 import com.iptv.business.pgmapper.UsersMapper;
@@ -26,8 +28,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -69,28 +73,21 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
     public TenantsVO insert(@Nonnull TenantsDTO dto) {
         log.info("Start creating tenant...");
 
-        // 2. 创建租户实体
         Tenants entity = BeanUtil.copyProperties(dto, Tenants.class);
-
-        // 3. 设置状态为active
         entity.setStatus("active");
+        entity.setBusiness("");
 
-        // 4. 设置创建时间和更新时间
-        Date now = new Date();
-        entity.setCreatedAt(now);
-        entity.setUpdatedAt(now);
-
-        // 5. 设置默认存储配额（如果未提供）
+        // 设置默认存储配额（如果未提供）
         if (entity.getStorageQuota() == null || entity.getStorageQuota() <= 0) {
             entity.setStorageQuota(DEFAULT_STORAGE_QUOTA);
         }
 
-        // 6. 设置已用存储为0
+        // 设置已用存储为0
         if (entity.getStorageUsed() == null) {
             entity.setStorageUsed(0L);
         }
 
-        // 7. 保存到数据库
+        // 保存到数据库
         this.baseMapper.insert(entity);
         log.info("Tenant created successfully, ID: {}, name: {}", entity.getId(), entity.getName());
 
@@ -116,6 +113,23 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
         if (BeanUtil.isNotEmpty(entity)) {
             this.baseMapper.deleteById(id);
         }
+    }
+
+    @Override
+    public List<UsersVO> bindUsers(Integer tenantId) {
+        List<TenantMembers> tenantMembers = tenantMembersMapper.selectList(new LambdaQueryWrapper<TenantMembers>()
+                .eq(TenantMembers::getTenantId, tenantId)
+                .eq(TenantMembers::getStatus, BusinessStatusEnum.ACTIVE.getCode()));
+        if (CollUtil.isEmpty(tenantMembers)) {
+            return Collections.emptyList();
+        }
+        // 查询用户信息
+        List<Users> userList = usersMapper.selectList(new LambdaQueryWrapper<Users>()
+                .in(Users::getId, tenantMembers.stream().map(TenantMembers::getUserId).collect(Collectors.toList())));
+        if (CollUtil.isEmpty(userList)) {
+            return Collections.emptyList();
+        }
+        return BeanUtil.copyToList(userList, UsersVO.class);
     }
 
     @Override

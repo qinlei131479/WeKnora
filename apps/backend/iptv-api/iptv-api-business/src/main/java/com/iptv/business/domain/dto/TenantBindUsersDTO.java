@@ -4,6 +4,7 @@ import com.iptv.common.core.web.domain.dto.BaseDTO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -27,7 +28,7 @@ public class TenantBindUsersDTO implements Serializable {
     /**
      * 用户 ID
      */
-    @NotBlank(message = "租户ID不能为空", groups = {BaseDTO.Update.class})
+    @NotNull(message = "租户ID不能为空", groups = {BaseDTO.Update.class})
     @Schema(description = "租户ID")
     private Integer tenantId;
 

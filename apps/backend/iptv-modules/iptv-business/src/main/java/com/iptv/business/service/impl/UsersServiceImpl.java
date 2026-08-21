@@ -15,7 +15,9 @@ import com.iptv.business.domain.Users;
 import com.iptv.business.domain.dto.UserBindTenantsDTO;
 import com.iptv.business.domain.dto.UsersDTO;
 import com.iptv.business.domain.dto.page.UsersPageDTO;
+import com.iptv.business.domain.vo.TenantsVO;
 import com.iptv.business.domain.vo.UsersVO;
+import com.iptv.business.enums.BusinessStatusEnum;
 import com.iptv.business.enums.TenantMemberRoleEnum;
 import com.iptv.business.pgmapper.TenantMembersMapper;
 import com.iptv.business.pgmapper.TenantsMapper;
@@ -31,8 +33,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -193,6 +197,22 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         if (BeanUtil.isNotEmpty(entity)) {
             this.baseMapper.deleteById(id);
         }
+    }
+
+    @Override
+    public List<TenantsVO> bindTenants(String userId) {
+        List<TenantMembers> tenantMembers = tenantMembersMapper.selectList(new LambdaQueryWrapper<TenantMembers>()
+                .eq(TenantMembers::getUserId, userId)
+                .eq(TenantMembers::getStatus, BusinessStatusEnum.ACTIVE.getCode()));
+        if (CollUtil.isEmpty(tenantMembers)) {
+            return Collections.emptyList();
+        }
+        List<Tenants> tenantList = tenantsMapper.selectList(new LambdaQueryWrapper<Tenants>()
+                .in(Tenants::getId, tenantMembers.stream().map(TenantMembers::getTenantId).collect(Collectors.toList())));
+        if (CollUtil.isEmpty(tenantList)) {
+            return Collections.emptyList();
+        }
+        return BeanUtil.copyToList(tenantList, TenantsVO.class);
     }
 
     @Override

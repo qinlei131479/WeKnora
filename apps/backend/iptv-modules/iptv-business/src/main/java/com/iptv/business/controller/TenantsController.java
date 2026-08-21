@@ -4,6 +4,7 @@ import com.iptv.business.domain.dto.TenantBindUsersDTO;
 import com.iptv.business.domain.dto.TenantsDTO;
 import com.iptv.business.domain.dto.page.TenantsPageDTO;
 import com.iptv.business.domain.vo.TenantsVO;
+import com.iptv.business.domain.vo.UsersVO;
 import com.iptv.business.service.TenantsService;
 import com.iptv.business.service.UsersService;
 import com.iptv.common.core.domain.R;
@@ -18,6 +19,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * <p>
@@ -75,6 +78,13 @@ public class TenantsController {
     public R<Void> deleteById(String id) {
         tenantsService.deleteById(id);
         return R.ok();
+    }
+
+    @Operation(summary = "该租户下用户列表", description = "查询该租户下绑定的用户列表")
+    @GetMapping("/bindUsers")
+    @RequiresPermissions("business:tenants:query")
+    public R<List<UsersVO>> bindUsers(Integer tenantId) {
+        return R.ok(tenantsService.bindUsers(tenantId));
     }
 
     @Operation(summary = "绑定用户", description = "绑定用户")

@@ -1,14 +1,15 @@
 package com.iptv.business.service;
 
-import com.iptv.business.domain.dto.UserBindTenantsDTO;
-import jakarta.annotation.Nonnull;
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.iptv.business.domain.Users;
-import com.iptv.business.domain.vo.UsersVO;
+import com.iptv.business.domain.dto.UserBindTenantsDTO;
 import com.iptv.business.domain.dto.UsersDTO;
 import com.iptv.business.domain.dto.page.UsersPageDTO;
-import com.baomidou.mybatisplus.extension.service.IService;
+import com.iptv.business.domain.vo.TenantsVO;
+import com.iptv.business.domain.vo.UsersVO;
 import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
+import jakarta.annotation.Nonnull;
 
 import java.util.List;
 
@@ -61,6 +62,14 @@ public interface UsersService extends IService<Users> {
      * @param id 主键
      */
     void deleteById(@Nonnull String id);
+
+    /**
+     * 查询用户绑定的租户列表
+     *
+     * @param userId 用户 ID
+     * @return 租户列表
+     */
+    List<TenantsVO> bindTenants(String userId);
 
     /**
      * 用户绑定租户
