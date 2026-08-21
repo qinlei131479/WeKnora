@@ -1,5 +1,7 @@
-import { storage } from './storage';
+import { Storage } from './data/storage';
+import { Tenants } from './tenants/tenants';
 
-export const api = {
-  storage
+export const API = {
+  Storage,
+  Tenants
 };
