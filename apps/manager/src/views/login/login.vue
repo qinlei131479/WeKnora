@@ -486,7 +486,7 @@ getCookie();
   flex-basis: 0;
   border-radius: 16px;
 
-  ::v-deep .el-input__wrapper {
+  :deep(.el-input__wrapper) {
     border-radius: 16px;
   }
 }
@@ -500,7 +500,7 @@ getCookie();
   display: flex;
   margin-bottom: 30px;
 
-  ::v-deep .el-switch {
+  :deep(.el-switch) {
     width: 36px;
     height: 20px;
   }

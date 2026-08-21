@@ -77,11 +77,6 @@ function refreshSelectedTag() {
 findAllCompany(0, state.companyId);
 </script>
 <style lang="less" scoped>
-// .select-v2 {
-//   ::v-deep .el-select-v2__suffix {
-//     margin-top: 0;
-//   }
-// }
 .company-switch {
   width: 80%;
   margin: 0 auto 10px;

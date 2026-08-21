@@ -480,7 +480,7 @@ const getInitPassword = async () => {
   height: 40px;
   margin-left: 20px;
   display: flex;
-  ::v-deep .el-switch {
+  :deep(.el-switch) {
     width: 36px;
     height: 20px;
   }
