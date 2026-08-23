@@ -1,0 +1,18 @@
+{
+  "component": {},
+
+  "page": {
+    "data": {
+      "storage": {
+        "table.createdAt": 180,
+        "table.isDefault": 100,
+        "table.name": 220,
+        "table.provider": 90,
+        "table.source": 180,
+        "table.status": 80,
+        "table.tenantName": 300,
+        "table.updatedAt": 180
+      }
+    }
+  }
+}

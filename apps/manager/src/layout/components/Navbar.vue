@@ -26,7 +26,7 @@ import Breadcrumb from '@/components/Breadcrumb/index.vue';
 import TopNav from './TopNav/index.vue';
 import TopBar from './TopBar/index.vue';
 import Logo from './Sidebar/Logo.vue';
-import logoUrl from '@/assets/logo/logo.png';
+// import logoUrl from '@/assets/logo/logo@1x.png';
 import TopRightMenu from './TopRightMenu.vue';
 // import CompanySwitch from './Sidebar/CompanySwitch.vue'
 
@@ -57,8 +57,8 @@ function setLayout(): void {
 
 .navbar {
   // width: 100%;
-  // height: var(--navbar-height, 96px);
-  height: 50px;
+  width: calc(100% - var(--layout-margin) * 3);
+  height: var(--navbar-height, 96px);
   // overflow: visible;
   overflow: hidden;
   position: relative;
@@ -68,6 +68,9 @@ function setLayout(): void {
   align-items: center;
   // padding-right: 16px;
   box-sizing: border-box;
+  top: var(--layout-margin);
+  left: calc(var(--layout-margin) * 2);
+  border-radius: var(--layout-radius);
 
   // .navbar-collapsed-logo {
   //   position: fixed;

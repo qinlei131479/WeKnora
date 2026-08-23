@@ -1,12 +1,11 @@
 <template>
   <div class="header-search">
-    <!--
-    <div class="search-bar" @click.stop="click">
-      <span class="search-bar__placeholder">搜索全局资源</span>
-      <svg-icon class-name="search-bar__icon" icon-class="search" />
-    </div>
-    -->
-    <svg-icon class-name="search-icon" icon-class="search" @click.stop="click" />
+    <!-- <div class="search-bar" @click.stop="click">
+      <el-icon><Search /></el-icon>
+      <div class="search-bar__placeholder">搜索全局资源</div>
+    </div> -->
+    <el-icon @click.stop="click"><Search /></el-icon>
+
     <el-dialog v-model="show" width="600" @close="close" @opened="onDialogOpened" :show-close="false" append-to-body>
       <el-input
         v-model="search"
@@ -76,6 +75,7 @@ import { getNormalPath } from '@/utils/ruoyi';
 import { isHttp } from '@/utils/validate';
 import useSettingsStore from '@/store/modules/settings';
 import usePermissionStore from '@/store/modules/permission';
+import { Search } from 'lucide-vue-next';
 
 interface SearchItem {
   path: string;

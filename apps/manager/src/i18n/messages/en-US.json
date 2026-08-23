@@ -1,0 +1,30 @@
+{
+  "app": {
+    "copyright": "Copyright &copy;2018-{current_year} Innovative Space Vision (Chongqing) Technology Co Ltd, All Rights Reserved",
+    "loading": "Loading system resources, please wait",
+    "title": "ISV. AgentSphere Platform",
+    "title_short": "ISV. AgentSphere"
+  },
+
+  "component": {},
+
+  "page": {
+    "data": {
+      "storage": {
+        "table.createdAt": "Created Time",
+        "table.isDefault": "Is Default",
+        "table.isDefault_true": "Yes",
+        "table.name": "Name",
+        "table.provider": "Provider",
+        "table.source": "Source",
+        "table.status": "Status",
+        "table.status_active": "Active",
+        "table.status_disabled": "Disabled",
+        "table.tenantName": "Tenant Name",
+        "table.updatedAt": "Updated Time"
+      }
+    }
+  },
+
+  "plugin": {}
+}

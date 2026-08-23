@@ -1,7 +1,7 @@
 <template>
   <div class="page-name">
     <div class="page-name-left">
-      <svg-icon :icon-class="iconClass || meta.icon" />
+      <!-- <svg-icon :icon-class="iconClass || meta.icon" /> -->
       <div class="name-container">
         <div class="name-text">{{ title || meta.title || meta.name }}</div>
         <div v-if="$slots.subtitle || subtitle" class="subtitle-text">
@@ -14,6 +14,7 @@
     </div>
   </div>
 </template>
+
 <script setup>
 const props = defineProps({
   subtitle: {
@@ -27,22 +28,24 @@ const props = defineProps({
   title: {
     type: String,
     default: ''
-  },
-})
-const route = useRoute()
-const meta = route.meta || {}
+  }
+});
+const route = useRoute();
+const meta = route.meta || {};
 </script>
+
 <style scoped lang="scss">
-$size: 32px;
+$iconSize: 32px;
 
 .page-name {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  height: var(--page-name-height);
 }
 
 .page-name-left {
-  line-height: $size;
+  line-height: $iconSize;
   font-size: 16px;
   font-weight: 700;
   display: flex;
@@ -50,8 +53,8 @@ $size: 32px;
 
   .svg-icon {
     color: var(--el-color-primary);
-    width: $size;
-    height: $size;
+    width: $iconSize;
+    height: $iconSize;
     margin-right: 8px;
   }
 
@@ -67,7 +70,7 @@ $size: 32px;
   .subtitle-text {
     font-weight: 400;
     font-size: 14px;
-    color: #77838F;
+    color: #77838f;
     line-height: 20px;
     margin-top: 7px;
   }

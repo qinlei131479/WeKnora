@@ -12,10 +12,10 @@
         <div class="login-main-content-left">
           <el-form ref="loginRef" :model="loginForm" :rules="loginRules" label-position="top" hide-required-asterisk="true" class="login-form">
             <el-form-item prop="username" label="用户名">
-              <input-radius v-model="loginForm.username" :prefix-icon="User" type="text" size="large" auto-complete="off" placeholder="请输入账号" />
+              <el-input v-model="loginForm.username" :prefix-icon="User" type="text" size="large" auto-complete="off" placeholder="请输入账号" />
             </el-form-item>
             <el-form-item prop="password" label="密码">
-              <input-radius
+              <el-input
                 v-model="loginForm.password"
                 :prefix-icon="LockKeyhole"
                 type="password"
@@ -28,7 +28,7 @@
             </el-form-item>
             <div class="row-captcha">
               <el-form-item prop="code" v-if="captchaEnabled" label="验证码">
-                <input-radius
+                <el-input
                   v-model="loginForm.code"
                   :prefix-icon="ShieldCheck"
                   size="large"

@@ -1,0 +1,34 @@
+:root {
+  --el-font-size-base: 16px;
+  --el-component-size: 48px;
+  // Custom
+  --layout-margin: 16px;
+  --layout-radius: 16px;
+  --layout-bg-color-page: #f4f6f6;
+  --navbar-height: 80px;
+  --page-name-height: 80px;
+}
+
+// 表头
+.el-table__header-wrapper {
+  th.el-table__cell > .cell {
+    padding-top: 10px;
+    padding-bottom: 9px;
+    line-height: var(--el-font-size-base);
+  }
+}
+// 表体
+.el-table__body-wrapper {
+  td.el-table__cell > .cell {
+    padding-top: 16px;
+    padding-bottom: 15px;
+    line-height: var(--el-font-size-base);
+  }
+}
+
+.search-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}

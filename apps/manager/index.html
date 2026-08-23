@@ -7,7 +7,7 @@
   <meta name="renderer" content="webkit">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <link rel="icon" href="/favicon.ico">
-  <title>%VITE_APP_TITLE%</title>
+  <title></title>
   <!--[if lt IE 11]><script>window.location.href='/html/ie.html';</script><![endif]-->
   <style>
     html,
@@ -206,9 +206,13 @@
       <div id="loader"></div>
       <div class="loader-section section-left"></div>
       <div class="loader-section section-right"></div>
-      <div class="load_title">正在加载系统资源，请耐心等待</div>
+      <div id="loading-text" class="load_title"></div>
     </div>
   </div>
+  <script type="module">
+    import { t } from '/src/i18n/index.ts';
+    document.getElementById('loading-text').textContent = t('app.loading');
+  </script>
   <script type="module" src="/src/main.ts"></script>
 </body>
 

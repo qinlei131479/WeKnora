@@ -2,12 +2,15 @@
 
 import Cookies from 'js-cookie';
 
+import { dim, i18n } from '@/i18n';
 import ElementPlus from 'element-plus';
 import 'element-plus/dist/index.css';
 import 'element-plus/theme-chalk/dark/css-vars.css';
-import locale from 'element-plus/es/locale/lang/zh-cn';
+import eleLocaleZh from 'element-plus/es/locale/lang/zh-cn';
+import eleLocaleEn from 'element-plus/es/locale/lang/en';
 
 import '@/assets/styles/index.scss'; // global css
+import '@/assets/styles/override.scss'; // 覆盖样式
 
 import App from './App.vue';
 import store from './store';
@@ -46,6 +49,7 @@ import DictTag from '@/components/DictTag/index.vue';
 
 import KJSCDialogV2 from '@/components/KJSCCmpt/KJSCDialogV2.vue';
 import PageName from '@/components/PageName/PageName.vue';
+import PageContent from '@/components/PageContent/PageContent.vue';
 
 const app = createApp(App);
 
@@ -71,6 +75,7 @@ app.component('Editor', Editor);
 
 app.component('KJSCDialogV2', KJSCDialogV2);
 app.component('page-name', PageName);
+app.component('page-content', PageContent);
 
 app.use(router);
 app.use(store);
@@ -80,12 +85,21 @@ app.component('svg-icon', SvgIcon);
 
 directive(app);
 
+app.use(i18n);
+// 注册 $dim
+app.config.globalProperties.$dim = dim;
 // 使用element-plus 并且设置全局的大小
-// @ts-ignore
 app.use(ElementPlus, {
-  locale: locale,
+  locale: i18n.global.locale.value === 'en-US' ? eleLocaleEn : eleLocaleZh,
   // 支持 large、default、small
   size: Cookies.get('size') || 'default'
 });
+watch(
+  i18n.global.locale,
+  () => {
+    document.title = i18n.global.t('app.title');
+  },
+  { immediate: true }
+);
 
 app.mount('#app');

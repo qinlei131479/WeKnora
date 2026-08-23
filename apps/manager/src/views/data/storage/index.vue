@@ -57,6 +57,15 @@ const onClearTenants = () => {
   getBackends();
 };
 
+const onInput = (value: string) => {
+  if (!value) {
+    state.tenantsId = undefined;
+    delete state.backendsDto.tenantId;
+    state.page.pageNum = 1;
+    getBackends();
+  }
+};
+
 const getBackends = () => {
   API.Storage.list(state.backendsDto, state.page)
     .then((res) => {
@@ -75,48 +84,107 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="manage-page agent-stroage-page">
-    <page-name class="page-name" title="存储引擎" />
-    <div class="table-pager-area">
-      <br />
-      <div @keydown.capture="handleAutocompleteKeydown">
-        <el-autocomplete
-          v-model="state.keyword"
-          value-key="name"
-          placeholder="租户名称"
-          clearable
-          hide-loading
-          :trigger-on-focus="false"
-          :fetch-suggestions="getTenants"
-          @select="onSelectTenants"
-          @clear="onClearTenants"
-        />
-      </div>
+  <section>
+    <page-name />
+    <page-content>
+      <template #header>
+        <div class="autocomplete" @keydown.capture="handleAutocompleteKeydown">
+          <el-autocomplete
+            v-model="state.keyword"
+            value-key="name"
+            placeholder="输入租户名称查询"
+            clearable
+            hide-loading
+            :trigger-on-focus="false"
+            :fetch-suggestions="getTenants"
+            @select="onSelectTenants"
+            @clear="onClearTenants"
+            @input="onInput"
+          />
+        </div>
+      </template>
 
-      <br />
-      <el-table :data="state.backendsVOs" style="width: 100%; height: 100%">
-        <el-table-column prop="name" label="name" min-width="180" />
-        <el-table-column prop="tenantName" label="tenantName" min-width="180" />
-        <el-table-column prop="provider" label="provider" min-width="180" />
-        <el-table-column prop="source" label="source" min-width="180" />
-        <el-table-column prop="status" label="status" min-width="180" />
-        <el-table-column prop="isDefault" label="isDefault" min-width="180" />
-        <el-table-column prop="createdAt" label="createdAt" min-width="180" />
-        <el-table-column prop="updatedAt" label="updatedAt" min-width="180" />
+      <el-table :data="state.backendsVOs" height="100%" show-overflow-tooltip style="width: 100%">
+        <el-table-column prop="name" :label="$t('page.data.storage.table.name', '名称')" :min-width="$dim('page.data.storage.table.name', 220)" />
+        <el-table-column
+          prop="tenantName"
+          :label="$t('page.data.storage.table.tenantName', '所属工作空间（租户）')"
+          :min-width="$dim('page.data.storage.table.tenantName', 300)"
+        />
+        <el-table-column
+          prop="provider"
+          :label="$t('page.data.storage.table.provider', '供应商')"
+          align="center"
+          :min-width="$dim('page.data.storage.table.provider', 90)"
+        />
+        <el-table-column
+          prop="source"
+          :label="$t('page.data.storage.table.source', '来源')"
+          align="center"
+          :min-width="$dim('page.data.storage.table.source', 180)"
+        />
+        <el-table-column
+          prop="status"
+          :label="$t('page.data.storage.table.status', '状态')"
+          align="center"
+          :min-width="$dim('page.data.storage.table.status', 80)"
+        >
+          <template #default="{ row }">
+            <el-tag v-if="row.status === 'active'" type="primary">{{ $t('page.data.storage.table.status_active', '活动') }}</el-tag>
+            <el-tag v-else-if="row.status === 'disabled'" type="danger">{{ $t('page.data.storage.table.status_disabled', '禁用') }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="isDefault"
+          :label="$t('page.data.storage.table.isDefault', '是否默认')"
+          align="center"
+          :min-width="$dim('page.data.storage.table.isDefault', 100)"
+        >
+          <template #default="{ row }">
+            <el-tag v-if="row.isDefault === true" type="success">{{ $t('page.data.storage.table.isDefault_true', '默认') }}</el-tag>
+            <el-text v-else></el-text>
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="createdAt"
+          :label="$t('page.data.storage.table.createdAt', '创建时间')"
+          align="center"
+          :min-width="$dim('page.data.storage.table.createdAt', 180)"
+        />
+        <el-table-column
+          prop="updatedAt"
+          :label="$t('page.data.storage.table.updatedAt', '更新时间')"
+          align="center"
+          :min-width="$dim('page.data.storage.table.updatedAt', 180)"
+        />
         <template #empty>
           <el-empty />
         </template>
       </el-table>
 
-      <el-pagination
-        v-model:current-page="state.page.pageNum"
-        v-model:page-size="state.page.pageSize"
-        :total="state.total"
-        layout="total, sizes, prev, pager, next, jumper"
-        @change="getBackends"
-      />
-    </div>
+      <template #footer>
+        <div class="pagination">
+          <el-pagination
+            v-model:current-page="state.page.pageNum"
+            v-model:page-size="state.page.pageSize"
+            :total="state.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @change="getBackends"
+          />
+        </div>
+      </template>
+    </page-content>
   </section>
 </template>
 
-<style lang="sass" scoped></style>
+<style lang="scss" scoped>
+.autocomplete {
+  margin: 0 16px 16px 16px;
+}
+
+.pagination {
+  margin: 16px 16px 0 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+</style>

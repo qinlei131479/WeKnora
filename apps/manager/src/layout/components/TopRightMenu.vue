@@ -29,6 +29,21 @@
     </template>
     -->
 
+    <!-- 暂不显示语言切换按钮 -->
+    <el-dropdown v-if="false" trigger="hover" @command="changeLanguage">
+      <div class="icon-round">
+        <el-icon size="14" color="#77838f">
+          <Languages />
+        </el-icon>
+      </div>
+      <template #dropdown>
+        <el-dropdown-menu>
+          <el-dropdown-item command="zh-CN">简体中文</el-dropdown-item>
+          <el-dropdown-item divided command="en-US">English</el-dropdown-item>
+        </el-dropdown-menu>
+      </template>
+    </el-dropdown>
+
     <el-dropdown @command="handleCommand" class="avatar-container right-menu-item hover-effect" trigger="hover">
       <div class="avatar-wrapper">
         <img :src="userStore.avatar" class="user-avatar" />
@@ -58,22 +73,29 @@
 
 <script setup lang="ts">
 import { ElMessageBox } from 'element-plus';
-// import Screenfull from '@/components/Screenfull/index.vue'
-// import SizeSelect from '@/components/SizeSelect/index.vue'
-// import RuoYiGit from '@/components/RuoYi/Git/index.vue'
-// import RuoYiDoc from '@/components/RuoYi/Doc/index.vue'
-// import useAppStore from '@/store/modules/app';
 import useUserStore from '@/store/modules/user';
 import useLockStore from '@/store/modules/lock';
-// import useSettingsStore from '@/store/modules/settings'
-// import HeaderNotice from './HeaderNotice'
+import usePermissionStore from '@/store/modules/permission';
+import { Languages } from 'lucide-vue-next';
+import { locale, t } from '@/i18n';
+import tab from '@/plugins/tab';
 
 const route = useRoute();
 const router = useRouter();
 // const appStore = useAppStore();
 const userStore = useUserStore();
 const lockStore = useLockStore();
+const permissionStore = usePermissionStore();
 // const settingsStore = useSettingsStore()
+
+const changeLanguage = async (lang: string) => {
+  locale.value = lang;
+  localStorage.setItem('language', lang);
+  // 重新获取动态路由数据，更新菜单语言
+  await permissionStore.generateRoutes();
+  // 无刷新重建当前 Tab
+  await tab.refreshPage(route);
+};
 
 function handleCommand(command: string): void {
   switch (command) {
@@ -164,6 +186,7 @@ function lockScreen() {
   display: flex;
   align-items: center;
   margin-left: auto;
+  gap: 16px;
 
   &:focus {
     outline: none;
@@ -205,7 +228,7 @@ function lockScreen() {
     padding-right: 0px;
 
     .avatar-wrapper {
-      margin-top: 10px;
+      // margin-top: 10px;
       right: 8px;
       position: relative;
 
@@ -213,6 +236,7 @@ function lockScreen() {
         cursor: pointer;
         width: 30px;
         height: 30px;
+        border: 1px solid #e1e6ec;
         margin-right: 8px;
         border-radius: 50%;
       }
@@ -233,6 +257,19 @@ function lockScreen() {
         font-size: 12px;
       }
     }
+  }
+
+  .icon-round {
+    width: 30px;
+    height: 30px;
+    background-color: rgba(#fff, 0.8);
+    border: 1px solid #e1e6ec;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
   }
 }
 </style>

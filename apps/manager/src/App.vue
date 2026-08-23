@@ -1,10 +1,17 @@
 <template>
-  <router-view />
+  <el-config-provider :locale="elementLocale">
+    <router-view />
+  </el-config-provider>
 </template>
 
 <script setup lang="ts">
+import eleLocaleZh from 'element-plus/es/locale/lang/zh-cn';
+import eleLocaleEn from 'element-plus/es/locale/lang/en';
+import { locale } from '@/i18n';
 import useSettingsStore from '@/store/modules/settings';
 import { handleThemeStyle } from '@/utils/theme';
+
+const elementLocale = computed(() => (locale.value === 'en-US' ? eleLocaleEn : eleLocaleZh));
 
 onMounted(() => {
   nextTick(() => {

@@ -14,9 +14,10 @@
 </template>
 
 <script setup lang="ts">
-import logo from '@/assets/logo/logo.png';
+import logo from '@/assets/logo/logo@1x.png';
 import useSettingsStore from '@/store/modules/settings';
 import variables from '@/assets/styles/variables.module.scss';
+import { t } from '@/i18n';
 
 defineProps({
   collapse: {
@@ -25,7 +26,7 @@ defineProps({
   }
 });
 
-const title = import.meta.env.VITE_APP_TITLE;
+const title = t('app.title_short');
 const settingsStore = useSettingsStore();
 const sideTheme = computed(() => settingsStore.sideTheme);
 
@@ -64,8 +65,9 @@ const getLogoTextColor = computed(() => {
 
 .sidebar-logo-container {
   position: relative;
-  height: 50px;
-  line-height: 50px;
+  height: 40px;
+  // line-height: 40px;
+  margin: 20px auto;
   background: v-bind(getLogoBackground);
   text-align: center;
   overflow: hidden;
@@ -75,19 +77,17 @@ const getLogoTextColor = computed(() => {
     width: 100%;
 
     & .sidebar-logo {
-      width: 32px;
-      height: 32px;
+      width: 40px;
+      height: 40px;
       vertical-align: middle;
-      margin-right: 12px;
     }
 
     & .sidebar-title {
       display: inline-block;
-      margin: 0;
+      margin: 0 0 0 16px;
       color: v-bind(getLogoTextColor);
-      font-weight: 600;
-      line-height: 50px;
-      font-size: 14px;
+      font-weight: bold;
+      font-size: 24px;
       font-family:
         Avenir,
         Helvetica Neue,

@@ -1,0 +1,30 @@
+{
+  "app": {
+    "copyright": "Copyright &copy;2018-{current_year} 空间视创（重庆）科技股份有限公司 版权所有",
+    "loading": "正在加载系统资源，请耐心等待",
+    "title": "智能体中台",
+    "title_short": "智能体中台"
+  },
+
+  "component": {},
+
+  "page": {
+    "data": {
+      "storage": {
+        "table.createdAt": "创建时间",
+        "table.isDefault": "是否默认",
+        "table.isDefault_true": "默认",
+        "table.name": "名称",
+        "table.provider": "提供商",
+        "table.source": "来源",
+        "table.status": "状态",
+        "table.status_active": "活动",
+        "table.status_disabled": "禁用",
+        "table.tenantName": "所属工作空间（租户）",
+        "table.updatedAt": "更新时间"
+      }
+    }
+  },
+
+  "plugins": {}
+}
