@@ -5,6 +5,7 @@ import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.iptv.business.domain.StorageBackends;
 import com.iptv.business.domain.TenantMembers;
 import com.iptv.business.domain.Tenants;
 import com.iptv.business.domain.Users;
@@ -14,6 +15,7 @@ import com.iptv.business.domain.dto.page.TenantsPageDTO;
 import com.iptv.business.domain.vo.TenantsVO;
 import com.iptv.business.domain.vo.UsersVO;
 import com.iptv.business.enums.BusinessStatusEnum;
+import com.iptv.business.pgmapper.StorageBackendsMapper;
 import com.iptv.business.pgmapper.TenantMembersMapper;
 import com.iptv.business.pgmapper.TenantsMapper;
 import com.iptv.business.pgmapper.UsersMapper;
@@ -54,6 +56,9 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
 
     @Autowired
     private TenantMembersService tenantMembersService;
+
+    @Autowired
+    private StorageBackendsMapper storageBackendsMapper;
 
     // 默认存储配额：10GB
     private static final Long DEFAULT_STORAGE_QUOTA = 10L * 1024 * 1024 * 1024;
@@ -116,6 +121,9 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
         Tenants entity = this.baseMapper.selectById(id);
         if (BeanUtil.isNotEmpty(entity)) {
             this.baseMapper.deleteById(id);
+            // 删除存储
+            storageBackendsMapper.delete(new LambdaQueryWrapper<StorageBackends>()
+                    .eq(StorageBackends::getTenantId, id));
         }
     }
 
