@@ -63,7 +63,7 @@ public interface TenantsService extends IService<Tenants> {
      *
      * @param id 主键
      */
-    void deleteById(@Nonnull String id);
+    void deleteById(@Nonnull Integer id);
 
     /**
      * 查询该租户下绑定的用户列表

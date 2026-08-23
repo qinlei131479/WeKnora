@@ -240,10 +240,32 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
     public UsersVO update(@Nonnull UsersDTO dto) {
         Users entity = this.baseMapper.selectById(dto.getId());
         if (BeanUtil.isEmpty(entity)) {
-            throw new ServiceException("用户账号：登录凭证、系统管理员标志、跨租户访问与个人偏好不存在");
+            throw new ServiceException("用户不存在");
         }
-        BeanUtil.copyProperties(dto, entity);
-        this.baseMapper.updateById(entity);
+        if(CollUtil.isNotEmpty(dto.getBindTenants())){
+            // 先删除以前的租户成员关系
+            tenantMembersMapper.delete(new LambdaQueryWrapper<TenantMembers>()
+                    .eq(TenantMembers::getUserId, dto.getId()));
+            // 加入新的
+            List<Tenants> defaultTenantsList = tenantsMapper.selectList(new LambdaQueryWrapper<Tenants>()
+                    .in(Tenants::getId, dto.getBindTenants()
+                            .stream()
+                            .map(UsersDTO.BindTenantDTO::getTenantId)
+                            .collect(Collectors.toSet())));
+            if (CollUtil.isNotEmpty(defaultTenantsList)) {
+                List<TenantMembers> tenantMembersList = new ArrayList<>();
+                defaultTenantsList.forEach(b -> {
+                    String role = dto.getBindTenants().stream()
+                            .filter(t -> ObjectUtil.equal(t.getTenantId(), b.getId()))
+                            .map(UsersDTO.BindTenantDTO::getRole)
+                            .findFirst()
+                            .orElse(TenantMemberRoleEnum.OWNER.getCode());
+                    TenantMembers defaultTenantMember = TenantMembers.create(entity, b, role);
+                    tenantMembersList.add(defaultTenantMember);
+                });
+                tenantMembersService.saveBatch(tenantMembersList);
+            }
+        }
         return BeanUtil.copyProperties(entity, UsersVO.class);
     }
 
@@ -294,5 +316,29 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
             tenantMembersList.add(tenantMember);
         });
         tenantMembersService.saveBatch(tenantMembersList);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void enable(String userId) {
+        Users user = this.baseMapper.selectById(userId);
+        if (BeanUtil.isEmpty(user)) {
+            throw new ServiceException("用户不存在");
+        }
+        this.baseMapper.update(null,new LambdaUpdateWrapper<Users>()
+                .set(Users::getIsActive, true)
+                .eq(Users::getId, userId));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void disable(String userId) {
+        Users user = this.baseMapper.selectById(userId);
+        if (BeanUtil.isEmpty(user)) {
+            throw new ServiceException("用户不存在");
+        }
+        this.baseMapper.update(null,new LambdaUpdateWrapper<Users>()
+                .set(Users::getIsActive, false)
+                .eq(Users::getId, userId));
     }
 }

@@ -91,4 +91,22 @@ public class UsersController {
         usersService.userBindTenants(dto);
         return R.ok();
     }
+
+
+
+    @Operation(summary = "启用", description = "启用用户")
+    @GetMapping("/enable")
+    @RequiresPermissions("business:users:edit")
+    public R<Void> enable(String userId) {
+        usersService.enable(userId);
+        return R.ok();
+    }
+
+    @Operation(summary = "禁用", description = "禁用用户")
+    @GetMapping("/disable")
+    @RequiresPermissions("business:users:edit")
+    public R<Void> disable(String userId) {
+        usersService.disable(userId);
+        return R.ok();
+    }
 }

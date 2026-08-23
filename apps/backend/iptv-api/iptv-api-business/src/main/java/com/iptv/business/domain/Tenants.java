@@ -4,6 +4,7 @@ import java.util.Date;
 import java.io.Serializable;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.iptv.common.core.typehandler.JsonbTypeHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -23,6 +24,7 @@ import com.baomidou.mybatisplus.annotation.TableId;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
+@TableName(value="tenants", autoResultMap = true)
 public class Tenants implements java.io.Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -54,8 +56,7 @@ public class Tenants implements java.io.Serializable {
     /**
      * 检索引擎配置列表（JSONB）
      */
-
-
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "检索引擎配置列表（JSONB）")
     private String retrieverEngines;
 
@@ -96,6 +97,7 @@ public class Tenants implements java.io.Serializable {
      */
 
 
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "智能体相关配置或会话最近请求状态（历史列名复用）")
     private String agentConfig;
 
@@ -128,6 +130,7 @@ public class Tenants implements java.io.Serializable {
      */
 
 
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "全局上下文管理配置（会话默认）")
     private String contextConfig;
 
@@ -136,6 +139,7 @@ public class Tenants implements java.io.Serializable {
      */
 
 
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "全局对话配置（普通模式会话默认）")
     private String conversationConfig;
 
@@ -144,6 +148,7 @@ public class Tenants implements java.io.Serializable {
      */
 
 
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "全局联网搜索配置")
     private String webSearchConfig;
 
@@ -152,6 +157,7 @@ public class Tenants implements java.io.Serializable {
      */
 
 
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "解析引擎覆盖配置（如 MinerU），覆盖环境变量")
     private String parserEngineConfig;
 
@@ -160,6 +166,7 @@ public class Tenants implements java.io.Serializable {
      */
 
 
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "存储引擎配置（Local/MinIO/COS 等）")
     private String storageEngineConfig;
 
@@ -168,6 +175,7 @@ public class Tenants implements java.io.Serializable {
      */
 
 
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "会话历史写入知识库并向量检索的配置")
     private String chatHistoryConfig;
 
@@ -176,6 +184,7 @@ public class Tenants implements java.io.Serializable {
      */
 
 
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "全局检索参数（知识检索与消息检索共用）")
     private String retrievalConfig;
 
@@ -184,6 +193,7 @@ public class Tenants implements java.io.Serializable {
      */
 
 
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "凭证配置（JSON，通常加密）")
     private String credentials;
 
@@ -192,6 +202,7 @@ public class Tenants implements java.io.Serializable {
      */
 
 
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "X-API-Key 映射到终端主体的策略配置")
     private String apiPrincipalConfig;
 

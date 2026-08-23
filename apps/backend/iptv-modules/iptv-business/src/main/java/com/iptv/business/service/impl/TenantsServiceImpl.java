@@ -2,6 +2,7 @@ package com.iptv.business.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -31,9 +32,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -95,6 +94,10 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
         if (entity.getStorageUsed() == null) {
             entity.setStorageUsed(0L);
         }
+        // 设置默认检索引擎配置列表（JSONB）
+        Map<String, Object> retrieverEngines = new HashMap<>();
+        retrieverEngines.put("engines", new ArrayList<>());
+        entity.setRetrieverEngines(JSONUtil.toJsonStr(retrieverEngines));
 
         // 保存到数据库
         this.baseMapper.insert(entity);
@@ -117,7 +120,7 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void deleteById(@Nonnull String id) {
+    public void deleteById(@Nonnull Integer id) {
         Tenants entity = this.baseMapper.selectById(id);
         if (BeanUtil.isNotEmpty(entity)) {
             this.baseMapper.deleteById(id);

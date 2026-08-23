@@ -72,7 +72,7 @@ public class TenantsController {
     @Operation(summary = "按 id 删除", description = "按 id 删除")
     @PostMapping("/delete/single")
     @RequiresPermissions("business:tenants:remove")
-    public R<Void> deleteById(String id) {
+    public R<Void> deleteById(Integer id) {
         tenantsService.deleteById(id);
         return R.ok();
     }

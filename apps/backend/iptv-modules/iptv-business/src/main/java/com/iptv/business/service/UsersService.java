@@ -77,4 +77,18 @@ public interface UsersService extends IService<Users> {
      * @param dto 实体
      */
     void userBindTenants(@Nonnull UserBindTenantsDTO dto);
+
+    /**
+     * 启用用户
+     *
+     * @param userId 用户 ID
+     */
+    void enable(String userId);
+
+    /**
+     * 禁用用户
+     *
+     * @param userId 用户 ID
+     */
+    void disable(String userId);
 }
