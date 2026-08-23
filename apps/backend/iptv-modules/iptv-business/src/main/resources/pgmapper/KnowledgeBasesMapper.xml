@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.KnowledgeBasesMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.KnowledgeBases">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="chunking_config" property="chunkingConfig"/>
+        <result column="image_processing_config" property="imageProcessingConfig"/>
+        <result column="embedding_model_id" property="embeddingModelId"/>
+        <result column="summary_model_id" property="summaryModelId"/>
+        <result column="cos_config" property="cosConfig"/>
+        <result column="vlm_config" property="vlmConfig"/>
+        <result column="extract_config" property="extractConfig"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted_at" property="deletedAt"/>
+        <result column="is_temporary" property="isTemporary"/>
+        <result column="type" property="type"/>
+        <result column="faq_config" property="faqConfig"/>
+        <result column="question_generation_config" property="questionGenerationConfig"/>
+        <result column="storage_provider_config" property="storageProviderConfig"/>
+        <result column="is_pinned" property="isPinned"/>
+        <result column="pinned_at" property="pinnedAt"/>
+        <result column="asr_config" property="asrConfig"/>
+        <result column="vector_store_id" property="vectorStoreId"/>
+        <result column="wiki_config" property="wikiConfig"/>
+        <result column="indexing_strategy" property="indexingStrategy"/>
+        <result column="creator_id" property="creatorId"/>
+        <result column="storage_backend_id" property="storageBackendId"/>
+        <result column="auto_tag_config" property="autoTagConfig"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, name, description, tenant_id, chunking_config, image_processing_config, embedding_model_id, summary_model_id, cos_config, vlm_config, extract_config, created_at, updated_at, deleted_at, is_temporary, type, faq_config, question_generation_config, storage_provider_config, is_pinned, pinned_at, asr_config, vector_store_id, wiki_config, indexing_strategy, creator_id, storage_backend_id, auto_tag_config
+    </sql>
+
+    <!-- 分页查询（PostgreSQL：字符串使用 ILIKE 大小写不敏感模糊查询） -->
+    <select id="queryPage" resultMap="BaseResultMap" parameterType="com.iptv.business.domain.dto.page.KnowledgeBasesPageDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM knowledge_bases
+        <where>
+            deleted_at IS NULL
+            <if test="param.id != null and param.id != ''">
+                AND id ILIKE CONCAT('%', #{param.id}, '%')
+            </if>
+            <if test="param.name != null and param.name != ''">
+                AND name ILIKE CONCAT('%', #{param.name}, '%')
+            </if>
+            <if test="param.description != null and param.description != ''">
+                AND description ILIKE CONCAT('%', #{param.description}, '%')
+            </if>
+            <if test="param.tenantId != null">
+                AND tenant_id = #{param.tenantId}
+            </if>
+            <if test="param.chunkingConfig != null and param.chunkingConfig != ''">
+                AND chunking_config ILIKE CONCAT('%', #{param.chunkingConfig}, '%')
+            </if>
+            <if test="param.imageProcessingConfig != null and param.imageProcessingConfig != ''">
+                AND image_processing_config ILIKE CONCAT('%', #{param.imageProcessingConfig}, '%')
+            </if>
+            <if test="param.embeddingModelId != null and param.embeddingModelId != ''">
+                AND embedding_model_id ILIKE CONCAT('%', #{param.embeddingModelId}, '%')
+            </if>
+            <if test="param.summaryModelId != null and param.summaryModelId != ''">
+                AND summary_model_id ILIKE CONCAT('%', #{param.summaryModelId}, '%')
+            </if>
+            <if test="param.cosConfig != null and param.cosConfig != ''">
+                AND cos_config ILIKE CONCAT('%', #{param.cosConfig}, '%')
+            </if>
+            <if test="param.vlmConfig != null and param.vlmConfig != ''">
+                AND vlm_config ILIKE CONCAT('%', #{param.vlmConfig}, '%')
+            </if>
+            <if test="param.extractConfig != null and param.extractConfig != ''">
+                AND extract_config ILIKE CONCAT('%', #{param.extractConfig}, '%')
+            </if>
+            <if test="param.createdAt != null">
+                AND created_at = #{param.createdAt}
+            </if>
+            <if test="param.updatedAt != null">
+                AND updated_at = #{param.updatedAt}
+            </if>
+            <if test="param.deletedAt != null">
+                AND deleted_at = #{param.deletedAt}
+            </if>
+            <if test="param.isTemporary != null">
+                AND is_temporary = #{param.isTemporary}
+            </if>
+            <if test="param.type != null and param.type != ''">
+                AND type ILIKE CONCAT('%', #{param.type}, '%')
+            </if>
+            <if test="param.faqConfig != null and param.faqConfig != ''">
+                AND faq_config ILIKE CONCAT('%', #{param.faqConfig}, '%')
+            </if>
+            <if test="param.questionGenerationConfig != null and param.questionGenerationConfig != ''">
+                AND question_generation_config ILIKE CONCAT('%', #{param.questionGenerationConfig}, '%')
+            </if>
+            <if test="param.storageProviderConfig != null and param.storageProviderConfig != ''">
+                AND storage_provider_config ILIKE CONCAT('%', #{param.storageProviderConfig}, '%')
+            </if>
+            <if test="param.isPinned != null">
+                AND is_pinned = #{param.isPinned}
+            </if>
+            <if test="param.pinnedAt != null">
+                AND pinned_at = #{param.pinnedAt}
+            </if>
+            <if test="param.asrConfig != null and param.asrConfig != ''">
+                AND asr_config ILIKE CONCAT('%', #{param.asrConfig}, '%')
+            </if>
+            <if test="param.vectorStoreId != null and param.vectorStoreId != ''">
+                AND vector_store_id ILIKE CONCAT('%', #{param.vectorStoreId}, '%')
+            </if>
+            <if test="param.wikiConfig != null and param.wikiConfig != ''">
+                AND wiki_config ILIKE CONCAT('%', #{param.wikiConfig}, '%')
+            </if>
+            <if test="param.indexingStrategy != null and param.indexingStrategy != ''">
+                AND indexing_strategy ILIKE CONCAT('%', #{param.indexingStrategy}, '%')
+            </if>
+            <if test="param.creatorId != null and param.creatorId != ''">
+                AND creator_id ILIKE CONCAT('%', #{param.creatorId}, '%')
+            </if>
+            <if test="param.storageBackendId != null and param.storageBackendId != ''">
+                AND storage_backend_id ILIKE CONCAT('%', #{param.storageBackendId}, '%')
+            </if>
+            <if test="param.autoTagConfig != null and param.autoTagConfig != ''">
+                AND auto_tag_config ILIKE CONCAT('%', #{param.autoTagConfig}, '%')
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+</mapper>

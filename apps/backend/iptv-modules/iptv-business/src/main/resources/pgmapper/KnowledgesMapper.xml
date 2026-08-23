@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.KnowledgesMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.Knowledges">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="knowledge_base_id" property="knowledgeBaseId"/>
+        <result column="type" property="type"/>
+        <result column="title" property="title"/>
+        <result column="description" property="description"/>
+        <result column="source" property="source"/>
+        <result column="parse_status" property="parseStatus"/>
+        <result column="enable_status" property="enableStatus"/>
+        <result column="embedding_model_id" property="embeddingModelId"/>
+        <result column="file_name" property="fileName"/>
+        <result column="file_type" property="fileType"/>
+        <result column="file_size" property="fileSize"/>
+        <result column="file_path" property="filePath"/>
+        <result column="file_hash" property="fileHash"/>
+        <result column="storage_size" property="storageSize"/>
+        <result column="metadata" property="metadata"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="processed_at" property="processedAt"/>
+        <result column="error_message" property="errorMessage"/>
+        <result column="deleted_at" property="deletedAt"/>
+        <result column="summary_status" property="summaryStatus"/>
+        <result column="last_faq_import_result" property="lastFaqImportResult"/>
+        <result column="channel" property="channel"/>
+        <result column="pending_subtasks_count" property="pendingSubtasksCount"/>
+        <result column="custom_metadata" property="customMetadata"/>
+        <result column="folder_path" property="folderPath"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, tenant_id, knowledge_base_id, type, title, description, source, parse_status, enable_status, embedding_model_id, file_name, file_type, file_size, file_path, file_hash, storage_size, metadata, created_at, updated_at, processed_at, error_message, deleted_at, summary_status, last_faq_import_result, channel, pending_subtasks_count, custom_metadata, folder_path
+    </sql>
+
+    <!-- 分页查询（参照Go代码优化：排除删除中记录、支持多种过滤条件） -->
+    <select id="queryPage" resultMap="BaseResultMap" parameterType="com.iptv.business.domain.dto.page.KnowledgesPageDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM knowledges
+        <where>
+            deleted_at IS NULL
+            -- 排除删除中的记录（参照Go代码）
+            AND (parse_status IS NULL OR parse_status != 'deleting')
+            <if test="param.knowledgeBaseId != null and param.knowledgeBaseId != ''">
+                AND knowledge_base_id = #{param.knowledgeBaseId}
+            </if>
+            <if test="param.parseStatus != null and param.parseStatus != ''">
+                AND parse_status = #{param.parseStatus}
+            </if>
+            <if test="param.fileName != null and param.fileName != ''">
+                AND file_name ILIKE CONCAT('%', #{param.fileName}, '%')
+            </if>
+            <if test="param.fileType != null and param.fileType != ''">
+                AND file_type = #{param.fileType}
+            </if>
+            <if test="param.channel != null and param.channel != ''">
+                AND channel = #{param.channel}
+            </if>
+            <choose>
+                <when test="param.folderPath != null and param.folderPath != ''">
+                    AND folder_path ILIKE CONCAT('%', #{param.folderPath}, '%')
+                </when>
+                <otherwise>
+                    AND (folder_path IS NULL OR folder_path = '')
+                </otherwise>
+            </choose>
+            -- 支持关键词搜索（参照Go代码）
+            <if test="param.keyword != null and param.keyword != ''">
+                AND (title ILIKE CONCAT('%', #{param.keyword}, '%')
+                     OR description ILIKE CONCAT('%', #{param.keyword}, '%')
+                     OR file_name ILIKE CONCAT('%', #{param.keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- 按文件夹路径分组统计文档数量（排除删除中的记录） -->
+    <select id="selectFolderCounts" resultType="java.util.Map">
+        SELECT folder_path AS "folderPath", COUNT(*) AS count
+        FROM knowledges
+        WHERE knowledge_base_id = #{knowledgeBaseId}
+          AND (deleted_at IS NULL)
+          AND (parse_status IS NULL OR parse_status != 'deleting')
+        GROUP BY folder_path
+    </select>
+
+</mapper>

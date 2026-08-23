@@ -39,6 +39,7 @@
         <include refid="Base_Column_List"/>
         FROM tenants
         <where>
+            deleted_at IS NULL
             <if test="param.id != null">
                 AND id = #{param.id}
             </if>
