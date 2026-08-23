@@ -33,7 +33,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -59,10 +62,14 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         Page<UsersVO> page = PageUtils.toPage(pg);
         List<Users> list = this.baseMapper.queryPage(dto, page);
         List<UsersVO> voList = BeanUtil.copyToList(list, UsersVO.class);
-        if(CollUtil.isEmpty(voList)){
+        if (CollUtil.isEmpty(voList)) {
             return PageUtils.getDataTable(voList, page);
         }
+        queryTenants(voList);
+        return PageUtils.getDataTable(voList, page);
+    }
 
+    private void queryTenants(List<UsersVO> voList) {
         // 查询用户可访问的工作空间
         List<TenantMembers> tenantMembersList = tenantMembersMapper.selectList(
                 new LambdaQueryWrapper<TenantMembers>()
@@ -71,8 +78,8 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
                         .isNull(TenantMembers::getDeletedAt)
         );
 
-        if(CollUtil.isEmpty(tenantMembersList)){
-            return PageUtils.getDataTable(voList, page);
+        if (CollUtil.isEmpty(tenantMembersList)) {
+            return;
         }
 
         // 查询用户可访问的工作空间
@@ -82,8 +89,8 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
                         .isNull(Tenants::getDeletedAt)
                         .eq(Tenants::getStatus, BusinessStatusEnum.ACTIVE.getCode())
         );
-        if(CollUtil.isEmpty(tenantsList)){
-            return PageUtils.getDataTable(voList, page);
+        if (CollUtil.isEmpty(tenantsList)) {
+            return;
         }
         voList.forEach(vo -> {
             List<UsersVO.UserTenantVO> userTenantVOList = new ArrayList<>();
@@ -104,15 +111,16 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
                         userTenantVO.setRoleName(TenantMemberRoleEnum.getDesc(t2.getRole()));
                         userTenantVOList.add(userTenantVO);
                     });
-           vo.setTenants(userTenantVOList);
+            vo.setTenants(userTenantVOList);
         });
-       return PageUtils.getDataTable(voList, page);
     }
 
     @Override
     public UsersVO queryById(@Nonnull String id) {
         Users entity = this.baseMapper.selectById(id);
-        return BeanUtil.copyProperties(entity, UsersVO.class);
+        UsersVO usersVO = BeanUtil.copyProperties(entity, UsersVO.class);
+        queryTenants(Collections.singletonList(usersVO));
+        return usersVO;
     }
 
     @Override
