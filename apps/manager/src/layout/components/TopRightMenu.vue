@@ -1,17 +1,18 @@
 <template>
   <div class="right-menu">
+    <!--
     <template v-if="appStore.device !== 'mobile'">
-      <!-- <el-tooltip content="源码地址" effect="dark" placement="bottom">
+      <el-tooltip content="源码地址" effect="dark" placement="bottom">
         <ruo-yi-git id="ruoyi-git" class="right-menu-item hover-effect" />
       </el-tooltip>
 
       <el-tooltip content="文档地址" effect="dark" placement="bottom">
         <ruo-yi-doc id="ruoyi-doc" class="right-menu-item hover-effect" />
-      </el-tooltip> -->
+      </el-tooltip>
 
-      <!-- <Screenfull id="screenfull" class="right-menu-item hover-effect" /> -->
+      <Screenfull id="screenfull" class="right-menu-item hover-effect" />
 
-      <!-- <el-tooltip content="主题模式" effect="dark" placement="bottom">
+      <el-tooltip content="主题模式" effect="dark" placement="bottom">
         <div class="right-menu-item hover-effect theme-switch-wrapper" @click="toggleTheme">
           <svg-icon v-if="settingsStore.isDark" icon-class="sunny" />
           <svg-icon v-if="!settingsStore.isDark" icon-class="moon" />
@@ -24,8 +25,9 @@
 
       <el-tooltip content="消息通知" effect="dark" placement="bottom">
         <header-notice id="header-notice" class="right-menu-item hover-effect" />
-      </el-tooltip> -->
+      </el-tooltip>
     </template>
+    -->
 
     <el-dropdown @command="handleCommand" class="avatar-container right-menu-item hover-effect" trigger="hover">
       <div class="avatar-wrapper">
@@ -37,12 +39,14 @@
           <router-link to="/user/profile">
             <el-dropdown-item>个人中心</el-dropdown-item>
           </router-link>
-          <!-- <el-dropdown-item command="setLayout" v-if="settingsStore.showSettings">
-              <span>布局设置</span>
+          <!--
+          <el-dropdown-item command="setLayout" v-if="settingsStore.showSettings">
+            <span>布局设置</span>
           </el-dropdown-item>
           <el-dropdown-item command="lockScreen">
-              <span>锁定屏幕</span>
-          </el-dropdown-item> -->
+            <span>锁定屏幕</span>
+          </el-dropdown-item>
+          -->
           <el-dropdown-item divided command="logout">
             <span>退出登录</span>
           </el-dropdown-item>
@@ -51,38 +55,39 @@
     </el-dropdown>
   </div>
 </template>
+
 <script setup lang="ts">
-import { ElMessageBox } from 'element-plus'
+import { ElMessageBox } from 'element-plus';
 // import Screenfull from '@/components/Screenfull/index.vue'
 // import SizeSelect from '@/components/SizeSelect/index.vue'
 // import RuoYiGit from '@/components/RuoYi/Git/index.vue'
 // import RuoYiDoc from '@/components/RuoYi/Doc/index.vue'
-import useAppStore from '@/store/modules/app'
-import useUserStore from '@/store/modules/user'
-import useLockStore from '@/store/modules/lock'
+// import useAppStore from '@/store/modules/app';
+import useUserStore from '@/store/modules/user';
+import useLockStore from '@/store/modules/lock';
 // import useSettingsStore from '@/store/modules/settings'
 // import HeaderNotice from './HeaderNotice'
 
-const route = useRoute()
-const router = useRouter()
-const appStore = useAppStore()
-const userStore = useUserStore()
-const lockStore = useLockStore()
+const route = useRoute();
+const router = useRouter();
+// const appStore = useAppStore();
+const userStore = useUserStore();
+const lockStore = useLockStore();
 // const settingsStore = useSettingsStore()
 
 function handleCommand(command: string): void {
   switch (command) {
-    case "setLayout":
-      setLayout()
-      break
-    case "lockScreen":
-      lockScreen()
-      break
-    case "logout":
-      logout()
-      break
+    case 'setLayout':
+      setLayout();
+      break;
+    case 'lockScreen':
+      lockScreen();
+      break;
+    case 'logout':
+      logout();
+      break;
     default:
-      break
+      break;
   }
 }
 
@@ -91,22 +96,24 @@ function logout(): void {
     confirmButtonText: '确定',
     cancelButtonText: '取消',
     type: 'warning'
-  }).then(() => {
-    userStore.logOut().then(() => {
-      location.href = '/'
+  })
+    .then(() => {
+      userStore.logOut().then(() => {
+        location.href = '/';
+      });
     })
-  }).catch(() => { })
+    .catch(() => {});
 }
 
-const emits = defineEmits(['setLayout'])
+const emits = defineEmits(['setLayout']);
 function setLayout(): void {
-  emits('setLayout')
+  emits('setLayout');
 }
 
 function lockScreen() {
-  const currentPath = route.fullPath
-  lockStore.lockScreen(currentPath)
-  router.push('/lock')
+  const currentPath = route.fullPath;
+  lockStore.lockScreen(currentPath);
+  router.push('/lock');
 }
 
 // async function toggleTheme(event?: MouseEvent): Promise<void> {
@@ -149,13 +156,14 @@ function lockScreen() {
 //   }
 // }
 </script>
+
 <style lang="scss" scoped>
-.right-menu {
+.navbar .right-menu {
   height: 100%;
-  line-height: var(--navbar-height, 96px);
+  line-height: 50px;
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  margin-left: auto;
 
   &:focus {
     outline: none;
@@ -193,29 +201,26 @@ function lockScreen() {
   }
 
   .avatar-container {
-    margin-right: 0;
-    padding-right: 0;
-    flex-shrink: 0;
+    margin-right: 0px;
+    padding-right: 0px;
 
     .avatar-wrapper {
-      margin-top: 0;
+      margin-top: 10px;
+      right: 8px;
       position: relative;
-      display: flex;
-      align-items: center;
-      height: var(--navbar-height, 96px);
 
       .user-avatar {
         cursor: pointer;
-        width: 48px;
-        height: 48px;
+        width: 30px;
+        height: 30px;
         margin-right: 8px;
         border-radius: 50%;
       }
 
       .user-nickname {
         position: relative;
-        // left: 0px;
-        // bottom: 10px;
+        left: 0px;
+        bottom: 10px;
         font-size: 14px;
         font-weight: bold;
       }

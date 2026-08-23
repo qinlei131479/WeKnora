@@ -8,9 +8,6 @@ import 'element-plus/theme-chalk/dark/css-vars.css';
 import locale from 'element-plus/es/locale/lang/zh-cn';
 
 import '@/assets/styles/index.scss'; // global css
-// import './index.css';
-import '@/assets/styles/newStyle.scss';
-import '@/assets/styles/newStyle2.scss';
 
 import App from './App.vue';
 import store from './store';
@@ -19,7 +16,7 @@ import directive from './directive'; // directive
 
 // 注册指令
 import plugins from './plugins'; // plugins
-import { download, getDownload, postDownload, postDownload2, uploadFile } from '@/utils/request';
+import { download } from '@/utils/request';
 
 // svg图标
 import 'virtual:svg-icons-register';
@@ -48,31 +45,13 @@ import ImagePreview from '@/components/ImagePreview/index.vue';
 import DictTag from '@/components/DictTag/index.vue';
 
 import KJSCDialogV2 from '@/components/KJSCCmpt/KJSCDialogV2.vue';
-import KJSCToolBar from '@/components/KJSCCmpt/KJSCToolBar.vue';
-
-import KjscUi from '@/components/KjscUi';
-import MyPage from '@/components/my-page.vue';
-import PageName from '@/components/page/PageName.vue';
-import PageLayout from '@/components/page/PageLayout.vue';
-import PageSearchForm from '@/components/page/PageSearchForm.vue';
-import OverflowTooltip from '@/components/common/OverflowTooltip.vue';
-
-// import Btn from '@/components/controls/Btn.vue';
-// import EmptyCell from '@/components/controls/EmptyCell.vue';
-// import InputNumberRadius from '@/components/controls/InputNumberRadius.vue';
-// import InputRadius from '@/components/controls/InputRadius.vue';
-// import InputRound from '@/components/controls/InputRound.vue';
-// import RadioGroup from '@/components/controls/RadioGroup.vue';
+import PageName from '@/components/PageName/PageName.vue';
 
 const app = createApp(App);
 
 // 全局方法挂载
 app.config.globalProperties.useDict = useDict;
 app.config.globalProperties.download = download;
-app.config.globalProperties.getDownload = getDownload;
-app.config.globalProperties.postDownload = postDownload;
-app.config.globalProperties.postDownload2 = postDownload2;
-app.config.globalProperties.uploadFile = uploadFile;
 app.config.globalProperties.parseTime = parseTime;
 app.config.globalProperties.resetForm = resetForm;
 app.config.globalProperties.handleTree = handleTree;
@@ -89,26 +68,14 @@ app.component('ImageUpload', ImageUpload);
 app.component('ImagePreview', ImagePreview);
 app.component('RightToolbar', RightToolbar);
 app.component('Editor', Editor);
-app.component('KJSCDialogV2', KJSCDialogV2);
-// app.component(KJSCToolBar.name, KJSCToolBar);
-app.component('my-page', MyPage);
-app.component('page-name', PageName);
-app.component('page-layout', PageLayout);
-app.component('page-search-form', PageSearchForm);
 
-// app.component('btn', Btn);
-// app.component('empty-cell', EmptyCell);
-// app.component('input-number-radius', InputNumberRadius);
-// app.component('input-radius', InputRadius);
-// app.component('input-round', InputRound);
-// app.component('radio-group', RadioGroup);
-app.component('g-text', OverflowTooltip);
+app.component('KJSCDialogV2', KJSCDialogV2);
+app.component('page-name', PageName);
 
 app.use(router);
 app.use(store);
 app.use(plugins);
 app.use(elementIcons);
-app.use(KjscUi);
 app.component('svg-icon', SvgIcon);
 
 directive(app);

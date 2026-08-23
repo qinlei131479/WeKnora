@@ -30,6 +30,11 @@ export default {
   tagsViewPersist: false,
 
   /**
+   * 标签页样式：card 卡片（默认）、chrome 谷歌浏览器风格
+   */
+  tagsViewStyle: 'card',
+
+  /**
    * 显示页签图标
    */
   tagsIcon: false,
@@ -58,5 +63,4 @@ export default {
    * 底部版权文本内容
    */
   footerContent: 'Copyright © 2018-2026 RuoYi. All Rights Reserved.'
-}
-
+};

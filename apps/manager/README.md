@@ -4,22 +4,22 @@ Vue 3 管理前端，基于 **Vue 3 + Vite + TypeScript + Element Plus** 构建�
 
 ## 技术栈
 
-| 技术 | 版本 | 说明 |
-|------|------|------|
-| Vue | 3.5+ | 渐进式前端框架 |
-| TypeScript | 5.x | 类型安全的 JavaScript |
-| Vite | 6.x | 前端构建工具 |
-| Element Plus | 2.13+ | Vue 3 UI 组件库 |
-| Pinia | - | Vue 3 状态管理 |
-| Vue Router | 4 | 路由管理 |
-| Axios | - | HTTP 请求库 |
-| ECharts | - | 数据可视化图表 |
-| SCSS / Less | - | CSS 预处理器 |
+| 技术         | 版本  | 说明                  |
+| ------------ | ----- | --------------------- |
+| Vue          | 3.5+  | 渐进式前端框架        |
+| TypeScript   | 5.x   | 类型安全的 JavaScript |
+| Vite         | 6.x   | 前端构建工具          |
+| Element Plus | 2.13+ | Vue 3 UI 组件库       |
+| Pinia        | -     | Vue 3 状态管理        |
+| Vue Router   | 4     | 路由管理              |
+| Axios        | -     | HTTP 请求库           |
+| ECharts      | -     | 数据可视化图表        |
+| SCSS / Less  | -     | CSS 预处理器          |
 
 ## 环境要求
 
-- **Node.js** >= 18
-- **npm** >= 8（或使用 pnpm）
+- **Node.js** >= 22
+- **npm** >= 10（或使用 pnpm）
 
 ## 快速开始
 
@@ -62,7 +62,7 @@ apps/web/
 │   ├── permission.ts       # 路由权限控制
 │   └── settings.ts         # 全局配置
 ├── vite/                   # Vite 插件配置
-│   └── plugins/                # auto-import / svg-icons / compression
+│   └── plugins/            # auto-import / svg-icons / compression
 ├── vite.config.ts          # Vite 主配置
 ├── .env.production         # 生产环境变量
 ├── .env.staging            # 预发环境变量
@@ -73,14 +73,15 @@ apps/web/
 
 ### 路径别名
 
-| 别名 | 映射 |
-|------|------|
-| `@` | `./src` |
-| `~` | 项目根目录 |
+| 别名 | 映射       |
+| ---- | ---------- |
+| `@`  | `./src`    |
+| `~`  | 项目根目录 |
 
 ### 开发代理
 
 开发模式下通过 Vite proxy 代理后端 API：
+
 - `VITE_APP_BASE_API` → 后端网关服务
 - `VITE_APP_STATIC_API` → 静态资源服务
 

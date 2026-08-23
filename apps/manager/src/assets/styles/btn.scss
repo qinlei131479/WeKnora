@@ -1,99 +1,60 @@
-@use './variables.module.scss' as *;
-
-@mixin colorBtn($color) {
-  background: $color;
-
-  &:hover {
-    color: $color;
-
-    &:before,
-    &:after {
-      background: $color;
-    }
-  }
-}
-
-.blue-btn {
-  @include colorBtn($blue)
-}
-
-.light-blue-btn {
-  @include colorBtn($light-blue)
-}
-
-.red-btn {
-  @include colorBtn($red)
-}
-
-.pink-btn {
-  @include colorBtn($pink)
-}
-
-.green-btn {
-  @include colorBtn($green)
-}
-
-.tiffany-btn {
-  @include colorBtn($tiffany)
-}
-
-.yellow-btn {
-  @include colorBtn($yellow)
-}
-
-.pan-btn {
-  font-size: 14px;
-  color: #fff;
-  padding: 14px 36px;
-  border-radius: 8px;
-  border: none;
-  outline: none;
-  transition: 600ms ease all;
-  position: relative;
-  display: inline-block;
-
-  &:hover {
-    background: #fff;
-
-    &:before,
-    &:after {
-      width: 100%;
-      transition: 600ms ease all;
-    }
-  }
-
-  &:before,
+@mixin clearfix {
   &:after {
     content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    height: 2px;
-    width: 0;
-    transition: 400ms ease all;
-  }
-
-  &::after {
-    right: inherit;
-    top: inherit;
-    left: 0;
-    bottom: 0;
+    display: table;
+    clear: both;
   }
 }
 
-.custom-button {
-  display: inline-block;
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-  background: #fff;
-  color: #fff;
-  -webkit-appearance: none;
-  text-align: center;
-  box-sizing: border-box;
-  outline: 0;
-  margin: 0;
-  padding: 10px 15px;
-  font-size: 14px;
-  border-radius: 4px;
+@mixin scrollBar {
+  &::-webkit-scrollbar-track-piece {
+    background: #d3dce6;
+  }
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #99a9bf;
+    border-radius: 20px;
+  }
+}
+
+@mixin relative {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+@mixin pct($pct) {
+  width: #{$pct};
+  position: relative;
+  margin: 0 auto;
+}
+
+@mixin triangle($width, $height, $color, $direction) {
+  $width: $width/2;
+  $color-border-style: $height solid $color;
+  $transparent-border-style: $width solid transparent;
+  height: 0;
+  width: 0;
+
+  @if $direction==up {
+    border-bottom: $color-border-style;
+    border-left: $transparent-border-style;
+    border-right: $transparent-border-style;
+  } @else if $direction==right {
+    border-left: $color-border-style;
+    border-top: $transparent-border-style;
+    border-bottom: $transparent-border-style;
+  } @else if $direction==down {
+    border-top: $color-border-style;
+    border-left: $transparent-border-style;
+    border-right: $transparent-border-style;
+  } @else if $direction==left {
+    border-right: $color-border-style;
+    border-top: $transparent-border-style;
+    border-bottom: $transparent-border-style;
+  }
 }

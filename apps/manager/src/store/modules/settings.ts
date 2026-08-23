@@ -11,6 +11,7 @@ const {
   navType,
   tagsView,
   tagsViewPersist,
+  tagsViewStyle,
   tagsIcon,
   fixedHeader,
   sidebarLogo,
@@ -24,12 +25,12 @@ const storageSetting = JSON.parse(localStorage.getItem('layout-setting') || '{}'
 interface SettingsState {
   title: string;
   theme: string;
-  themeSuccess: string;
   sideTheme: string;
   showSettings: boolean;
   navType: number;
   tagsView: boolean;
   tagsViewPersist: boolean;
+  tagsViewStyle: string;
   tagsIcon: boolean;
   fixedHeader: boolean;
   sidebarLogo: boolean;
@@ -42,14 +43,14 @@ interface SettingsState {
 const useSettingsStore = defineStore('settings', {
   state: (): SettingsState => ({
     title: '',
-    theme: storageSetting.theme || '#3297A0',
-    themeSuccess: storageSetting.themeSuccess || '#29B276',
+    theme: storageSetting.theme || '#409EFF',
     sideTheme: storageSetting.sideTheme || sideTheme,
     showSettings: showSettings,
     navType: storageSetting.navType === undefined ? navType : storageSetting.navType,
     tagsView: storageSetting.tagsView === undefined ? tagsView : storageSetting.tagsView,
     tagsViewPersist: storageSetting.tagsViewPersist === undefined ? tagsViewPersist : storageSetting.tagsViewPersist,
     tagsIcon: storageSetting.tagsIcon === undefined ? tagsIcon : storageSetting.tagsIcon,
+    tagsViewStyle: storageSetting.tagsViewStyle === undefined ? tagsViewStyle : storageSetting.tagsViewStyle,
     fixedHeader: storageSetting.fixedHeader === undefined ? fixedHeader : storageSetting.fixedHeader,
     sidebarLogo: storageSetting.sidebarLogo === undefined ? sidebarLogo : storageSetting.sidebarLogo,
     dynamicTitle: storageSetting.dynamicTitle === undefined ? dynamicTitle : storageSetting.dynamicTitle,

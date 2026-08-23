@@ -1,17 +1,13 @@
 <template>
   <div class="header-search">
+    <!--
     <div class="search-bar" @click.stop="click">
       <span class="search-bar__placeholder">搜索全局资源</span>
       <svg-icon class-name="search-bar__icon" icon-class="search" />
     </div>
-    <el-dialog
-      v-model="show"
-      width="600"
-      @close="close"
-      @opened="onDialogOpened"
-      :show-close="false"
-      append-to-body
-    >
+    -->
+    <svg-icon class-name="search-icon" icon-class="search" @click.stop="click" />
+    <el-dialog v-model="show" width="600" @close="close" @opened="onDialogOpened" :show-close="false" append-to-body>
       <el-input
         v-model="search"
         ref="headerSearchSelectRef"
@@ -32,7 +28,6 @@
 
       <div class="result-wrap">
         <el-scrollbar>
-
           <template v-if="options.length > 0">
             <div
               class="search-item"
@@ -57,93 +52,89 @@
 
           <div class="empty-state" v-else-if="search && options.length === 0">
             <el-icon class="empty-icon"><Search /></el-icon>
-            <p class="empty-text">未找到 "<strong>{{ search }}</strong>" 相关菜单</p>
+            <p class="empty-text">
+              未找到 "<strong>{{ search }}</strong
+              >" 相关菜单
+            </p>
             <p class="empty-tip">试试其他关键词或路径</p>
           </div>
-
         </el-scrollbar>
       </div>
 
       <div class="search-footer">
-        <span class="shortcut-item">
-          <kbd>↑</kbd><kbd>↓</kbd> 切换
-        </span>
-        <span class="shortcut-item">
-          <kbd>↵</kbd> 选择
-        </span>
-        <span class="shortcut-item">
-          <kbd>Esc</kbd> 关闭
-        </span>
+        <span class="shortcut-item"> <kbd>↑</kbd><kbd>↓</kbd> 切换 </span>
+        <span class="shortcut-item"> <kbd>↵</kbd> 选择 </span>
+        <span class="shortcut-item"> <kbd>Esc</kbd> 关闭 </span>
       </div>
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import Fuse from 'fuse.js'
-import { getNormalPath } from '@/utils/ruoyi'
-import { isHttp } from '@/utils/validate'
-import useSettingsStore from '@/store/modules/settings'
-import usePermissionStore from '@/store/modules/permission'
+import Fuse from 'fuse.js';
+import { getNormalPath } from '@/utils/ruoyi';
+import { isHttp } from '@/utils/validate';
+import useSettingsStore from '@/store/modules/settings';
+import usePermissionStore from '@/store/modules/permission';
 
 interface SearchItem {
-  path: string
-  title: string[]
-  icon: string
-  query?: string
+  path: string;
+  title: string[];
+  icon: string;
+  query?: string;
 }
 
-const search = ref<string>('')
-const options = ref<SearchItem[]>([])
-const searchPool = ref<SearchItem[]>([])
-const activeIndex = ref<number>(-1)
-const show = ref<boolean>(false)
-const fuse = ref<Fuse<SearchItem> | undefined>(undefined)
-const headerSearchSelectRef = ref<any>(null)
-const router = useRouter()
-const theme = computed(() => useSettingsStore().theme)
-const routes = computed(() => usePermissionStore().defaultRoutes)
+const search = ref<string>('');
+const options = ref<SearchItem[]>([]);
+const searchPool = ref<SearchItem[]>([]);
+const activeIndex = ref<number>(-1);
+const show = ref<boolean>(false);
+const fuse = ref<Fuse<SearchItem> | undefined>(undefined);
+const headerSearchSelectRef = ref<any>(null);
+const router = useRouter();
+const theme = computed(() => useSettingsStore().theme);
+const routes = computed(() => usePermissionStore().defaultRoutes);
 
 function click(): void {
-  show.value = !show.value
+  show.value = !show.value;
   if (show.value) {
-    options.value = searchPool.value
+    options.value = searchPool.value;
   }
 }
 
 function onDialogOpened(): void {
   nextTick(() => {
-    headerSearchSelectRef.value && headerSearchSelectRef.value.focus()
-  })
+    headerSearchSelectRef.value && headerSearchSelectRef.value.focus();
+  });
 }
 
 function close(): void {
-  headerSearchSelectRef.value && headerSearchSelectRef.value.blur()
-  search.value = ''
-  options.value = searchPool.value
-  show.value = false
-  activeIndex.value = -1
+  headerSearchSelectRef.value && headerSearchSelectRef.value.blur();
+  search.value = '';
+  options.value = searchPool.value;
+  show.value = false;
+  activeIndex.value = -1;
 }
 
 function change(val: SearchItem): void {
-  const p = val.path
-  const query = val.query
+  const p = val.path;
+  const query = val.query;
   if (isHttp(p)) {
     // http(s):// 路径新窗口打开
-    const pindex = p.indexOf("http")
-    window.open(p.substr(pindex, p.length), "_blank")
+    const pindex = p.indexOf('http');
+    window.open(p.substr(pindex, p.length), '_blank');
   } else {
     if (query) {
-      router.push({ path: p, query: JSON.parse(query) })
+      router.push({ path: p, query: JSON.parse(query) });
     } else {
-      router.push(p)
+      router.push(p);
     }
   }
-  search.value = ''
-  options.value = searchPool.value
+  search.value = '';
+  options.value = searchPool.value;
   nextTick(() => {
-    show.value = false
-  })
+    show.value = false;
+  });
 }
 
 function initFuse(list: SearchItem[]): void {
@@ -152,105 +143,103 @@ function initFuse(list: SearchItem[]): void {
     threshold: 0.2,
     minMatchCharLength: 1,
     keys: ['title', 'path']
-  })
+  });
 }
 
 function generateRoutes(routes: any, basePath = '', prefixTitle: string[] = []): SearchItem[] {
-  let res: SearchItem[] = []
+  let res: SearchItem[] = [];
   for (const r of routes) {
     if (r.hidden) {
-      continue
+      continue;
     }
-    const p = r.path.length > 0 && r.path[0] === '/' ? r.path : '/' + r.path
+    const p = r.path.length > 0 && r.path[0] === '/' ? r.path : '/' + r.path;
     const data: SearchItem = {
       path: !isHttp(r.path) ? getNormalPath(basePath + p) : r.path,
       title: [...prefixTitle],
       icon: ''
-    }
+    };
     if (r.meta && r.meta.title) {
-      data.title = [...data.title, r.meta.title as string]
-      data.icon = (r.meta.icon as string) || ''
-      if (r.redirect !== "noRedirect") {
-        res.push(data)
+      data.title = [...data.title, r.meta.title as string];
+      data.icon = (r.meta.icon as string) || '';
+      if (r.redirect !== 'noRedirect') {
+        res.push(data);
       }
     }
     if (r.query) {
-      data.query = r.query
+      data.query = r.query;
     }
     if (r.children) {
-      const tempRoutes = generateRoutes(r.children, data.path, data.title)
+      const tempRoutes = generateRoutes(r.children, data.path, data.title);
       if (tempRoutes.length >= 1) {
-        res = [...res, ...tempRoutes]
+        res = [...res, ...tempRoutes];
       }
     }
   }
-  return res
+  return res;
 }
 
 function querySearch(query: string): void {
-  activeIndex.value = -1
+  activeIndex.value = -1;
   if (query !== '') {
-    const q = query.toLowerCase()
-    const pathMatches = searchPool.value.filter((item: SearchItem) =>
-      item.path.toLowerCase().includes(q)
-    )
-    const fuseMatches = (fuse.value?.search(query) ?? []).map((item: any) => item.item as SearchItem)
-    const merged: SearchItem[] = [...pathMatches]
+    const q = query.toLowerCase();
+    const pathMatches = searchPool.value.filter((item: SearchItem) => item.path.toLowerCase().includes(q));
+    const fuseMatches = (fuse.value?.search(query) ?? []).map((item: any) => item.item as SearchItem);
+    const merged: SearchItem[] = [...pathMatches];
     fuseMatches.forEach((item: SearchItem) => {
       if (!merged.find((m: SearchItem) => m.path === item.path)) {
-        merged.push(item)
+        merged.push(item);
       }
-    })
-    options.value = merged
+    });
+    options.value = merged;
   } else {
-    options.value = searchPool.value
+    options.value = searchPool.value;
   }
 }
 
 function activeStyle(index: number): Record<string, string> {
-  if (index !== activeIndex.value) return {}
+  if (index !== activeIndex.value) return {};
   return {
-    "background-color": theme.value,
-    "color": "#fff"
-  }
+    'background-color': theme.value,
+    color: '#fff'
+  };
 }
 
 function navigateResult(direction: 'up' | 'down'): void {
-  if (direction === "up") {
-    activeIndex.value = activeIndex.value <= 0 ? options.value.length - 1 : activeIndex.value - 1
-  } else if (direction === "down") {
-    activeIndex.value = activeIndex.value >= options.value.length - 1 ? 0 : activeIndex.value + 1
+  if (direction === 'up') {
+    activeIndex.value = activeIndex.value <= 0 ? options.value.length - 1 : activeIndex.value - 1;
+  } else if (direction === 'down') {
+    activeIndex.value = activeIndex.value >= options.value.length - 1 ? 0 : activeIndex.value + 1;
   }
 }
 
 function selectActiveResult(): void {
   if (options.value.length > 0 && activeIndex.value >= 0) {
-    change(options.value[activeIndex.value])
+    change(options.value[activeIndex.value]);
   }
 }
 
 function highlightText(text: string): string {
-  if (!text) return ''
-  if (!search.value) return text
-  const keyword = escapeRegExp(search.value)
-  const reg = new RegExp(`(${keyword})`, 'gi')
-  return text.replace(reg, '<span class="highlight">$1</span>')
+  if (!text) return '';
+  if (!search.value) return text;
+  const keyword = escapeRegExp(search.value);
+  const reg = new RegExp(`(${keyword})`, 'gi');
+  return text.replace(reg, '<span class="highlight">$1</span>');
 }
 
 function escapeRegExp(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 onMounted(() => {
-  searchPool.value = generateRoutes(routes.value)
-})
+  searchPool.value = generateRoutes(routes.value);
+});
 
 watch(searchPool, (list: SearchItem[]) => {
-  initFuse(list)
-})
+  initFuse(list);
+});
 </script>
 
-<style lang='scss' scoped>
+<style lang="scss" scoped>
 :deep(.el-dialog__header) {
   padding: 6px !important;
 }
@@ -266,40 +255,48 @@ watch(searchPool, (list: SearchItem[]) => {
 }
 
 .header-search {
-  display: flex;
-  align-items: center;
-  width: 494px;
-  flex-shrink: 0;
+  // display: flex;
+  // align-items: center;
+  // width: 494px;
+  // flex-shrink: 0;
 
-  .search-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    height: 48px;
-    padding: 0 16px;
-    border: 1px solid #DCDFE6;
-    border-radius: 24px;
-    background-color: #FFFFFF;
+  // .search-bar {
+  //   display: flex;
+  //   align-items: center;
+  //   justify-content: space-between;
+  //   width: 100%;
+  //   height: 48px;
+  //   padding: 0 16px;
+  //   border: 1px solid #dcdfe6;
+  //   border-radius: 24px;
+  //   background-color: #ffffff;
+  //   cursor: pointer;
+  //   transition:
+  //     border-color 0.2s,
+  //     background-color 0.2s;
+
+  //   &:hover {
+  //     border-color: #3297a0;
+  //     background-color: #ebf3f5;
+  //   }
+  // }
+
+  // .search-bar__placeholder {
+  //   font-size: 14px;
+  //   color: #a8abb2;
+  //   user-select: none;
+  // }
+
+  // .search-bar__icon {
+  //   flex-shrink: 0;
+  //   font-size: 16px;
+  //   color: #77838f;
+  // }
+
+  .search-icon {
     cursor: pointer;
-    transition: border-color 0.2s, background-color 0.2s;
-
-    &:hover {
-      border-color: #3297A0;
-      background-color: #EBF3F5;
-    }
-  }
-
-  .search-bar__placeholder {
-    font-size: 14px;
-    color: #A8ABB2;
-    user-select: none;
-  }
-
-  .search-bar__icon {
-    flex-shrink: 0;
-    font-size: 16px;
-    color: #77838F;
+    font-size: 18px;
+    vertical-align: middle;
   }
 }
 

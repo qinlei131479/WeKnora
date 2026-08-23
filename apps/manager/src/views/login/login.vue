@@ -47,7 +47,7 @@
               <div class="login-form-remember-text">记住账号密码</div>
             </div>
             <el-form-item class="login-submit">
-              <btn
+              <el-button
                 :loading="loading"
                 size="large"
                 type="primary"
@@ -57,7 +57,7 @@
               >
                 <div v-if="!loading">登 录</div>
                 <div v-else>登 录 中...</div>
-              </btn>
+              </el-button>
             </el-form-item>
           </el-form>
         </div>
