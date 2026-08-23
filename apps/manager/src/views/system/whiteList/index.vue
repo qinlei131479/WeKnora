@@ -189,6 +189,7 @@ import {
 } from "@/api/system/white";
 import cache from "@/plugins/cache";
 import DialogAdd from "./component/edit.vue";
+import KJSCToolBar from '@/components/KJSCCmpt/KJSCToolBar.vue';
 import { showConfirm } from "@/utils/element-plus-message.js";
 const { proxy } = getCurrentInstance();
 const headers = ref({ Authorization: "Bearer " + getToken() });

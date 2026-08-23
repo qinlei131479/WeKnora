@@ -8,7 +8,7 @@ import 'element-plus/theme-chalk/dark/css-vars.css';
 import locale from 'element-plus/es/locale/lang/zh-cn';
 
 import '@/assets/styles/index.scss'; // global css
-import './index.css';
+// import './index.css';
 import '@/assets/styles/newStyle.scss';
 import '@/assets/styles/newStyle2.scss';
 
@@ -57,12 +57,12 @@ import PageLayout from '@/components/page/PageLayout.vue';
 import PageSearchForm from '@/components/page/PageSearchForm.vue';
 import OverflowTooltip from '@/components/common/OverflowTooltip.vue';
 
-import Btn from '@/components/controls/Btn.vue';
-import EmptyCell from '@/components/controls/EmptyCell.vue';
-import InputNumberRadius from '@/components/controls/InputNumberRadius.vue';
-import InputRadius from '@/components/controls/InputRadius.vue';
-import InputRound from '@/components/controls/InputRound.vue';
-import RadioGroup from '@/components/controls/RadioGroup.vue';
+// import Btn from '@/components/controls/Btn.vue';
+// import EmptyCell from '@/components/controls/EmptyCell.vue';
+// import InputNumberRadius from '@/components/controls/InputNumberRadius.vue';
+// import InputRadius from '@/components/controls/InputRadius.vue';
+// import InputRound from '@/components/controls/InputRound.vue';
+// import RadioGroup from '@/components/controls/RadioGroup.vue';
 
 const app = createApp(App);
 
@@ -90,18 +90,18 @@ app.component('ImagePreview', ImagePreview);
 app.component('RightToolbar', RightToolbar);
 app.component('Editor', Editor);
 app.component('KJSCDialogV2', KJSCDialogV2);
-app.component(KJSCToolBar.name, KJSCToolBar);
+// app.component(KJSCToolBar.name, KJSCToolBar);
 app.component('my-page', MyPage);
 app.component('page-name', PageName);
 app.component('page-layout', PageLayout);
 app.component('page-search-form', PageSearchForm);
 
-app.component('btn', Btn);
-app.component('empty-cell', EmptyCell);
-app.component('input-number-radius', InputNumberRadius);
-app.component('input-radius', InputRadius);
-app.component('input-round', InputRound);
-app.component('radio-group', RadioGroup);
+// app.component('btn', Btn);
+// app.component('empty-cell', EmptyCell);
+// app.component('input-number-radius', InputNumberRadius);
+// app.component('input-radius', InputRadius);
+// app.component('input-round', InputRound);
+// app.component('radio-group', RadioGroup);
 app.component('g-text', OverflowTooltip);
 
 app.use(router);

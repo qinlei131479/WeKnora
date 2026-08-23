@@ -198,7 +198,7 @@
 <script setup lang="ts" name="Config">
 import type { SysConfig, ConfigQueryParams } from '@/types/api/system/config'
 import { listConfig, getConfig, delConfig, addConfig, updateConfig, refreshCache } from "@/api/system/config"
-
+import KJSCToolBar from '@/components/KJSCCmpt/KJSCToolBar.vue';
 const { proxy } = getCurrentInstance()
 const { sys_yes_no } = proxy.useDict("sys_yes_no")
 
