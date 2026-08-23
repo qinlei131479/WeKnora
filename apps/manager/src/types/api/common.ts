@@ -83,3 +83,10 @@ export interface UploadFileResult extends AjaxResult {
   /** 原始文件名称 */
   originalFilename: string;
 }
+
+export interface ValueLabelOption {
+  /** 选项值 */
+  value: any;
+  /** 选项显示名称 */
+  label: string;
+}

@@ -9,7 +9,7 @@
     <div class="search-bar">
       <div class="search-bar__keyword">
         <el-input v-model="queryParams.name" class="search-bar__input" clearable
-          :placeholder="$t('page.tenantSpace.searchPlaceholder', '空间名称或空间id')" @keyup.enter="handleQuery" />
+          :placeholder="$t('page.tenantSpace.searchPlaceholder', '搜索空间名称')" @keyup.enter="handleQuery" />
         <button type="button" class="search-bar__icon-btn" @click="handleQuery">
           <svg-icon icon-class="search" class="search-bar__icon" />
         </button>
