@@ -60,10 +60,10 @@ help:
 	@echo ""
 	@echo "Agent-Harness:"
 	@echo "  harness-init      补齐 .env 中 JWT/Sandbox Token，并拉取 harness 构建镜像"
-	@echo "  harness-api       启动 harness api 及完整共享基础设施"
-	@echo "  harness-worker    启动 harness worker 及完整共享基础设施"
-	@echo "  harness-web       启动 harness web；依赖的 api 会自动启动"
-	@echo "  harness-up        启动 api + worker + web + sandbox-provisioner"
+	@echo "  harness-api       仅启动 harness api，不拉起其它服务（含 milvus）"
+	@echo "  harness-worker    仅启动 harness worker，不拉起其它服务"
+	@echo "  harness-web       仅启动 harness web，不拉起其它服务"
+	@echo "  harness-up        启动 api + worker + web + sandbox-provisioner（不含 milvus）"
 	@echo "  harness-up-lite   同上，LITE_MODE=true（跳过知识库/图谱重依赖）"
 	@echo "  harness-down      仅停止上述 harness 容器，不动 postgres/app/frontend"
 	@echo "  harness-logs      跟踪 api/worker/web/sandbox-provisioner 日志"
@@ -86,9 +86,9 @@ DOCKER_TAG=latest
 
 # Agent-Harness（不要对整份 compose 做 down / --remove-orphans）
 COMPOSE_FILE ?= docker-compose-mac.yml
-HARNESS_PROFILES := --profile harness --profile minio --profile neo4j --profile milvus
+HARNESS_PROFILES := --profile harness --profile minio --profile neo4j
 HARNESS_SERVICES := api worker web sandbox-provisioner
-HARNESS_INFRA := postgres redis minio neo4j milvus
+HARNESS_INFRA := postgres redis minio neo4j
 
 # Platform detection
 ifeq ($(shell uname -m),x86_64)
@@ -351,6 +351,7 @@ dev-frontend:
 	./scripts/dev.sh frontend
 
 # Agent-Harness：只 up/stop 点名服务，不 down 整栈、不加 --remove-orphans
+# --no-deps：不因 depends_on 拉起 postgres/redis/minio/api/milvus 等
 define harness-up-one
 	@test -f .env || { echo "缺少 .env，请先 make harness-init"; exit 1; }
 	@grep -Eq '^SANDBOX_PROVISIONER_TOKEN=.+' .env || { echo "SANDBOX_PROVISIONER_TOKEN 为空，请先 make harness-init"; exit 1; }
@@ -358,7 +359,7 @@ define harness-up-one
 	if ! docker image inspect "kjsc/agent-middle-harness:$$VERSION" >/dev/null 2>&1; then \
 		AGENT_HARNESS_VERSION="$$VERSION" docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) build api; \
 	fi; \
-	AGENT_HARNESS_VERSION="$$VERSION" docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) up -d $(HARNESS_INFRA) $(1)
+	AGENT_HARNESS_VERSION="$$VERSION" docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) up -d --no-deps $(1)
 endef
 
 harness-init:
@@ -371,7 +372,9 @@ harness-worker:
 	$(call harness-up-one,worker)
 
 harness-web:
-	$(call harness-up-one,web)
+	@test -f .env || { echo "缺少 .env，请先 make harness-init"; exit 1; }
+	@VERSION=$$(tr -d '\n\r' < VERSION); \
+	AGENT_HARNESS_VERSION="$$VERSION" docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) up -d --no-deps web
 
 harness-up:
 	$(call harness-up-one,$(HARNESS_SERVICES))

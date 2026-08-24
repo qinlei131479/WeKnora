@@ -35,6 +35,10 @@ export type FeatureFlags = {
   hideVersionInfo: boolean
   /** 隐藏常规设置中的界面字体 / 代码字体选择 */
   hideFontPickers: boolean
+  /** 隐藏顶部栏与常规设置中的字体大小 */
+  hideFontSize: boolean
+  /** 隐藏知识库「知识图谱」配置 */
+  hideKnowledgeGraph: boolean
   /** 隐藏知识库「数据源导入」 */
   hideDatasource: boolean
   /** 隐藏智能体 / 知识库编辑页「共享管理」 */
@@ -151,6 +155,8 @@ export function getFeatureFlags(): FeatureFlags {
     hideClaw: hide,
     hideVersionInfo: hide,
     hideFontPickers: hide,
+    hideFontSize: hide,
+    hideKnowledgeGraph: hide,
     hideDatasource: hide,
     hideShareManagement: hide,
     restrictProviderOptions: hide,
@@ -186,8 +192,18 @@ export function isHiddenMenuPath(path: string): boolean {
   return readHide() && path === 'organizations'
 }
 
-/** 是否隐藏界面字体 / 代码字体选择（字体大小不受影响） */
+/** 是否隐藏界面字体 / 代码字体选择 */
 export function shouldHideFontPickers(): boolean {
+  return readHide()
+}
+
+/** 是否隐藏顶部栏与常规设置中的字体大小 */
+export function shouldHideFontSize(): boolean {
+  return readHide()
+}
+
+/** 是否隐藏知识库「知识图谱」配置入口 */
+export function shouldHideKnowledgeGraph(): boolean {
   return readHide()
 }
 

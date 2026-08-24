@@ -390,7 +390,7 @@
                 </div>
 
                 <!-- 知识图谱 -->
-                <div v-if="!isFAQ && currentSection === 'graph'" class="section">
+                <div v-if="!hideKnowledgeGraph && !isFAQ && currentSection === 'graph'" class="section">
                   <GraphSettings
                     v-if="formData"
                     :graph-extract="formData.nodeExtractConfig"
@@ -490,7 +490,7 @@ import GraphSettings from './settings/GraphSettings.vue'
 import KBShareSettings from './settings/KBShareSettings.vue'
 import DataSourceSettings from './settings/DataSourceSettings.vue'
 import KnowledgeBaseActivitySettings from './settings/KnowledgeBaseActivitySettings.vue'
-import { shouldHideDatasource, shouldHideShareManagement } from '@/utils/weknoraFeatures'
+import { shouldHideDatasource, shouldHideKnowledgeGraph, shouldHideShareManagement } from '@/utils/weknoraFeatures'
 import { useI18n } from 'vue-i18n'
 
 const uiStore = useUIStore()
@@ -500,6 +500,7 @@ const editorResources = useEditorResourcesStore()
 const { t } = useI18n()
 const hideDatasource = shouldHideDatasource()
 const hideShareManagement = shouldHideShareManagement()
+const hideKnowledgeGraph = shouldHideKnowledgeGraph()
 
 // Props
 const props = defineProps<{
@@ -642,7 +643,7 @@ const navItems = computed(() => {
       { key: 'asr', icon: 'sound', label: t('knowledgeEditor.sidebar.asr') },
       { key: 'storage', icon: 'cloud', label: t('knowledgeEditor.sidebar.storage') },
       { key: 'chunking', icon: 'file-copy', label: t('knowledgeEditor.sidebar.chunking') },
-      { key: 'graph', icon: 'chart-bubble', label: t('knowledgeEditor.sidebar.graph') },
+      ...(hideKnowledgeGraph ? [] : [{ key: 'graph', icon: 'chart-bubble', label: t('knowledgeEditor.sidebar.graph') }]),
       { key: 'advanced', icon: 'setting', label: t('knowledgeEditor.sidebar.advanced') }
     )
     if (!hideDatasource && editorMode.value === 'edit' && activeKbId.value) {
@@ -1575,7 +1576,10 @@ watch(() => props.visible, async (newVal) => {
     // 检查是否有初始 section，如果有则跳转
     if (uiStore.kbEditorInitialSection) {
       const initial = uiStore.kbEditorInitialSection
-      currentSection.value = (hideShareManagement && initial === 'share') ? 'basic' : initial
+      currentSection.value = (
+        (hideShareManagement && initial === 'share') ||
+        (hideKnowledgeGraph && initial === 'graph')
+      ) ? 'basic' : initial
     }
     
     // 加载模型列表与空间默认存储引擎（创建 KB 时即使用，不依赖是否打开「存储引擎」Tab）

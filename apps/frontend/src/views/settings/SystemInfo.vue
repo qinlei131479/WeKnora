@@ -138,7 +138,7 @@
           <template #default>
             <p class="migration-error-desc">{{ $t('system.dbMigrationFailedDesc') }}</p>
             <pre class="migration-error-detail">{{ systemInfo.db_migration_error }}</pre>
-            <div class="migration-error-actions">
+            <div v-if="!hideGithub" class="migration-error-actions">
               <t-link
                 theme="primary"
                 :href="troubleshootingDocsURL"
@@ -198,8 +198,10 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { getSystemInfo, type SystemInfo } from '@/api/system'
 import { useI18n } from 'vue-i18n'
+import { getFeatureFlags } from '@/utils/weknoraFeatures'
 
 const { t, locale } = useI18n()
+const hideGithub = getFeatureFlags().hideGithub
 
 // Reactive state
 const systemInfo = ref<SystemInfo | null>(null)

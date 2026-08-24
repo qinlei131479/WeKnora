@@ -1,6 +1,7 @@
 # Agent-Harness 镜像 tag 使用 AGENT_HARNESS_VERSION（.env），须与仓库根 VERSION 一致：
 #   AGENT_HARNESS_VERSION=$(tr -d '\n\r' < VERSION)
-# 启动：docker compose -f docker-compose-mac.yml --profile harness --profile minio --profile neo4j --profile milvus up -d
+# 启动：docker compose -f docker-compose-mac.yml --profile harness --profile minio --profile neo4j up -d
+# milvus 由本机独立启动，不纳入 harness make 目标
 x-api-worker-env: &api-worker-env
   HOST_IP: ${HOST_IP:-}
   LITE_MODE: ${LITE_MODE:-false}
@@ -1290,15 +1291,10 @@ services:
     image: kjsc/agent-middle-harness-web:${AGENT_HARNESS_VERSION:-0.7.2}
     container_name: agent-middle-harness-web
     volumes:
-      - ./apps/agent-web/src:/app/src
-      - ./apps/agent-web/public:/app/public
-      - ./apps/agent-web/index.html:/app/index.html
-      - ./apps/agent-web/vite.config.js:/app/vite.config.js
+      - ./apps/agent-web:/app
+      - /app/node_modules
     ports:
       - "${AGENT_WEB_BIND:-127.0.0.1}:${AGENT_WEB_PORT:-5174}:5173"
-    depends_on:
-      api:
-        condition: service_healthy
     networks:
       - agent-middle-network
     environment:

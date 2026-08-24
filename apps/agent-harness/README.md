@@ -12,8 +12,9 @@
 # 1. 补齐 JWT / Sandbox Token（复用仓库根已有 .env，不覆盖 WeKnora 键）
 make harness-init
 
-# 2. 启动（完整模式会复用并拉起 postgres/redis/minio/neo4j/milvus）
-make harness-api          # 或 harness-worker / harness-web
+# 2. 启动（api/web/worker 均只起自身，不拉基础设施；milvus 需自行 docker 启动）
+make harness-api          # 仅 api
+make harness-web          # 仅 web
 make harness-up           # api + worker + web + sandbox-provisioner
 
 # 3. 首次写入演示用户（需 api 已 healthy）
@@ -44,5 +45,5 @@ make harness-seed
 - `make harness-api` / `harness-worker` / `harness-web`
 - `make harness-up` / `harness-down` / `harness-logs`
 - `make harness-seed`
-- `make harness-up-lite`（`LITE_MODE=true`，仅拉起 postgres/redis/minio，跳过 neo4j/milvus）
+- `make harness-up-lite`（`LITE_MODE=true`，仅拉起 postgres/redis/minio，跳过 neo4j；milvus 自行启动）
 - `COMPOSE_FILE=docker-compose-kjsc.yml` 可换 kjsc 编排

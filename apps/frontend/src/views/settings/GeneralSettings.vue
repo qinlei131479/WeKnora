@@ -108,7 +108,7 @@
       </div>
 
       <!-- 字体大小 -->
-      <div class="setting-row">
+      <div v-if="!hideFontSize" class="setting-row">
         <div class="setting-info">
           <label>{{ $t('font.fontSize') }}</label>
           <p class="desc">{{ $t('font.fontSizeDescription') }}</p>
@@ -162,6 +162,7 @@ import {
   getFeatureFlags,
   isAllowedLocale,
   shouldHideFontPickers,
+  shouldHideFontSize,
 } from '@/utils/weknoraFeatures'
 import { useEditorResourcesStore } from '@/stores/editorResources'
 
@@ -180,6 +181,7 @@ const {
 } = useFont()
 
 const hideFontPickers = shouldHideFontPickers()
+const hideFontSize = shouldHideFontSize()
 const featureFlags = getFeatureFlags()
 
 const ALL_LANGUAGE_OPTIONS = [

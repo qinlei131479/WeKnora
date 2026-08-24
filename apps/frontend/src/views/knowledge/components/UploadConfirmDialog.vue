@@ -560,6 +560,7 @@ import { useChatResourcesStore } from '@/stores/chatResources'
 import { useEditorResourcesStore } from '@/stores/editorResources'
 import { useUIStore } from '@/stores/ui'
 import { formatFileSize, getFileIcon } from '@/utils/files'
+import { shouldHideKnowledgeGraph } from '@/utils/weknoraFeatures'
 import { getUploadFileKey } from '../utils/uploadSources'
 import { listKnowledgeTags } from '@/api/knowledge-base'
 import KbUploadSourceDropdown from './KbUploadSourceDropdown.vue'
@@ -575,6 +576,7 @@ import type {
 
 const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp']
 const AUDIO_EXTENSIONS = ['mp3', 'wav', 'm4a', 'flac', 'ogg']
+const hideKnowledgeGraph = shouldHideKnowledgeGraph()
 
 type ConfigSectionKey = 'tags' | 'parser' | 'chunking' | 'multimodal' | 'asr' | 'question' | 'graph'
 type IssueSectionKey = 'multimodal' | 'asr'
@@ -864,7 +866,7 @@ const isGraphDatabaseEnabled = computed(() => {
 })
 
 const isGraphSectionAvailable = computed(() => {
-  return isGraphDatabaseEnabled.value && uiState.value.graphEnabled
+  return !hideKnowledgeGraph && isGraphDatabaseEnabled.value && uiState.value.graphEnabled
 })
 
 const showMultimodalModelError = computed(() => {

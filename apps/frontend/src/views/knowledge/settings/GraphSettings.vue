@@ -11,7 +11,12 @@
       >
         <template #message>
           <div>{{ t('graphSettings.disabledWarning') }}</div>
-          <t-link class="graph-guide-link" theme="primary" @click="handleOpenGraphGuide">
+          <t-link
+            v-if="!hideGithub"
+            class="graph-guide-link"
+            theme="primary"
+            @click="handleOpenGraphGuide"
+          >
             {{ t('graphSettings.howToEnable') }}
           </t-link>
         </template>
@@ -326,9 +331,11 @@ import { useI18n } from 'vue-i18n'
 import { extractTextRelations, fabriText, fabriTag, type Node, type Relation } from '@/api/initialization'
 import { useEditorResourcesStore } from '@/stores/editorResources'
 import { useAuthStore } from '@/stores/auth'
+import { getFeatureFlags } from '@/utils/weknoraFeatures'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
+const hideGithub = getFeatureFlags().hideGithub
 
 // canRunGraphExtract 对应后端 POST /initialization/extract/{fabri-tag,fabri-text,
 // text-relation} 的 g.Admin() 守卫——这三个都是会调用大模型 + 写库的 admin

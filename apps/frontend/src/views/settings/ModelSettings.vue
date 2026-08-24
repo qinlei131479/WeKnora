@@ -27,8 +27,13 @@
             ? 'modelSettings.builtinModels.descriptionAdmin'
             : 'modelSettings.builtinModels.description') }}
         </p>
-        <a class="doc-link" href="https://github.com/Tencent/WeKnora/blob/main/docs/BUILTIN_MODELS.md" target="_blank"
-          rel="noopener noreferrer">
+        <a
+          v-if="!featureFlags.hideGithub"
+          class="doc-link"
+          href="https://github.com/Tencent/WeKnora/blob/main/docs/BUILTIN_MODELS.md"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           {{ $t('modelSettings.builtinModels.viewGuide') }}
           <t-icon name="link" class="link-icon" />
         </a>
@@ -149,9 +154,11 @@ import ModelEditorDialog from '@/components/ModelEditorDialog.vue'
 import ModelDebugDrawer from '@/components/ModelDebugDrawer.vue'
 import { listModels, createModel, updateModel as updateModelAPI, deleteModel as deleteModelAPI, type ModelConfig } from '@/api/model'
 import { useAuthStore } from '@/stores/auth'
+import { getFeatureFlags } from '@/utils/weknoraFeatures'
 
 const { t, te } = useI18n()
 const authStore = useAuthStore()
+const featureFlags = getFeatureFlags()
 type ModelType = 'chat' | 'embedding' | 'rerank' | 'vllm' | 'asr'
 type FilterType = 'all' | ModelType
 

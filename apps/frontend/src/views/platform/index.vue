@@ -18,7 +18,7 @@
                     </t-tooltip>
                     <div class="platform-topbar-prefs">
                         <LanguageSwitch variant="topbar" />
-                        <FontSizeSelect />
+                        <FontSizeSelect v-if="!hideFontSize" />
                     </div>
                     <GlobalInvitationBell />
                     <ThemeToggle />
@@ -66,6 +66,7 @@ import { getKnowledgeBaseById } from '@/api/knowledge-base/index'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { Settings as SettingsIcon } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
+import { shouldHideFontSize } from '@/utils/weknoraFeatures'
 
 const route = useRoute();
 const router = useRouter();
@@ -73,6 +74,7 @@ const commandPaletteStore = useCommandPaletteStore();
 const uiStore = useUIStore();
 let ismask = ref(false)
 const { t } = useI18n();
+const hideFontSize = shouldHideFontSize()
 const isMacLike = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform || '');
 const cmdModKeyLabel = isMacLike ? '⌘' : 'Ctrl';
 
