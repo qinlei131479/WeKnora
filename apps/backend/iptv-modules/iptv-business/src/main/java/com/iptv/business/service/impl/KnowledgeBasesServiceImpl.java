@@ -10,6 +10,7 @@ import com.iptv.business.domain.*;
 import com.iptv.business.domain.dto.page.KnowledgeBasesPageDTO;
 import com.iptv.business.domain.vo.KnowledgeBasesVO;
 import com.iptv.business.pgmapper.*;
+import com.iptv.business.service.ChunksService;
 import com.iptv.business.service.KnowledgeBasesService;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -41,6 +43,7 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
     private final KnowledgesMapper knowledgesMapper;
     private final VectorStoresMapper vectorStoresMapper;
     private final TenantsMapper tenantsMapper;
+    private final ChunksMapper chunksMapper;
 
     @Override
     public TableDataInfo<KnowledgeBasesVO> queryPage(KnowledgeBasesPageDTO dto, PageDTO pg) {
@@ -79,18 +82,14 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
         this.baseMapper.updateById(knowledgeBase);
         log.info("知识库软删除完成: {}", id);
 
-        // 3. 删除关联的知识条目（软删除）
-        deleteRelatedKnowledges(id);
+        // 3. 删除关联的知识条目和分块数据
+        deleteRelatedKnowledgesAndChunks(id);
 
-        // TODO: 4. 删除关联的分块数据（chunks表）
-        // 需要先创建 ChunksMapper 和 ChunksService
-        // deleteRelatedChunks(id);
-
-        // TODO: 5. 删除向量数据（如有向量库集成）
+        // TODO: 4. 删除向量数据（如有向量库集成）
         // 需要实现向量库删除逻辑
         // deleteVectorData(id);
 
-        // TODO: 6. 删除物理文件（如有文件存储）
+        // TODO: 5. 删除物理文件（如有文件存储）
         // 需要实现文件存储删除逻辑
         // deletePhysicalFiles(id);
 
@@ -98,9 +97,11 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
     }
 
     /**
-     * 删除关联的知识条目（软删除）
+     * 删除关联的知识条目和分块数据（软删除）
+     * 参照Go代码逻辑：先删除chunks，再删除knowledges
      */
-    private void deleteRelatedKnowledges(String knowledgeBaseId) {
+    private void deleteRelatedKnowledgesAndChunks(String knowledgeBaseId) {
+        // 1. 查询知识库下的所有知识条目
         LambdaQueryWrapper<Knowledges> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(Knowledges::getKnowledgeBaseId, knowledgeBaseId)
                 .isNull(Knowledges::getDeletedAt);
@@ -113,7 +114,16 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
 
         log.info("开始删除知识库 {} 的 {} 个知识条目", knowledgeBaseId, knowledges.size());
 
-        // 软删除知识条目
+        // 2. 获取知识条目ID列表
+        List<String> knowledgeIds = knowledges.stream()
+                .map(Knowledges::getId)
+                .collect(Collectors.toList());
+
+        // 3. 删除关联的分块数据（软删除）
+        int deletedChunks = chunksMapper.deleteByKnowledgeIds(knowledgeIds);
+        log.info("已删除 {} 个分块数据", deletedChunks);
+
+        // 4. 软删除知识条目
         Date now = new Date();
         for (Knowledges knowledge : knowledges) {
             knowledge.setDeletedAt(now);

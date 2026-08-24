@@ -7,6 +7,8 @@ import com.iptv.business.service.KnowledgesService;
 import com.iptv.common.core.domain.R;
 import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
+import com.iptv.common.log.annotation.Log;
+import com.iptv.common.log.enums.BusinessType;
 import com.iptv.common.security.annotation.RequiresPermissions;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -14,6 +16,7 @@ import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -49,5 +52,14 @@ public class KnowledgesController {
     @GetMapping("/folders")
     public KnowledgesFolderVO folders(@NotBlank(message = "知识库id不能为空") String knowledgeBaseId) {
         return knowledgesService.queryFolders(knowledgeBaseId);
+    }
+
+    @Log(title = "删除知识条目", businessType = BusinessType.DELETE)
+    @Operation(summary = "删除知识条目", description = "删除知识条目及其关联资源（知识条目、分块、向量数据等）")
+    @GetMapping("/delete/single")
+    @RequiresPermissions("business:knowledges:remove")
+    public R<Void> deleteById(@RequestParam String id) {
+        knowledgesService.deleteById(id);
+        return R.ok();
     }
 }

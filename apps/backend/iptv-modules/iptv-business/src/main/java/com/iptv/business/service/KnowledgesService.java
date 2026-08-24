@@ -43,4 +43,11 @@ public interface KnowledgesService extends IService<Knowledges> {
      * @return 文件夹信息
      */
     KnowledgesFolderVO queryFolders(String knowledgeBaseId);
+
+    /**
+     * 按 id 删除
+     *
+     * @param id 主键
+     */
+    void deleteById(@Nonnull String id);
 }

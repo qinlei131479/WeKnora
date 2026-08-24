@@ -2,19 +2,27 @@ package com.iptv.business.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.iptv.business.domain.Chunks;
 import com.iptv.business.domain.Knowledges;
 import com.iptv.business.domain.dto.page.KnowledgesPageDTO;
 import com.iptv.business.domain.vo.KnowledgesFolderVO;
 import com.iptv.business.domain.vo.KnowledgesVO;
+import com.iptv.business.pgmapper.ChunksMapper;
 import com.iptv.business.pgmapper.KnowledgesMapper;
 import com.iptv.business.service.KnowledgesService;
+import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
 import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
 import jakarta.annotation.Nonnull;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -25,8 +33,12 @@ import java.util.stream.Collectors;
  * @author kjsc
  * @since 2026-08-23
  */
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowledges> implements KnowledgesService {
+
+    private final ChunksMapper chunksMapper;
 
     @Override
     public TableDataInfo<KnowledgesVO> queryPage(KnowledgesPageDTO dto, PageDTO pg) {
@@ -49,6 +61,76 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
         
         // 2. 构建文件夹树
         return buildFolderTree(folderCounts);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteById(@Nonnull String id) {
+        log.info("开始删除知识条目: {}", id);
+
+        // 1. 查找知识条目
+        Knowledges knowledge = this.baseMapper.selectById(id);
+        if (knowledge == null) {
+            throw new ServiceException("知识条目不存在");
+        }
+
+        // 2. 标记状态为 deleting（防止并发访问）
+        this.baseMapper.update(null,new LambdaUpdateWrapper<Knowledges>()
+                .set(Knowledges::getParseStatus, "deleting")
+                .eq(Knowledges::getId, id));
+        log.info("知识条目标记为删除中: {}", id);
+
+        // 3. 删除关联的分块数据（chunks）
+        deleteRelatedChunks(id);
+
+        // TODO: 4. 删除向量数据（embeddings）
+        // 需要实现向量库集成
+        // deleteVectorData(id);
+
+        // TODO: 5. 清理 wiki 数据
+        // 需要实现 wiki 集成
+        // deleteWikiData(id);
+
+        // TODO: 6. 删除知识图谱数据
+        // 需要实现知识图谱集成
+        // deleteGraphData(id);
+
+        // TODO: 7. 删除 tag 关系
+        // 需要实现 tag 关系表
+        // deleteTagRelations(id);
+
+        // 8. 删除知识条目记录（硬删除）
+        this.baseMapper.deleteById(id);
+        log.info("知识条目删除完成: {}", id);
+
+        // TODO: 9. 删除物理文件和提取的图片
+        // 需要实现文件存储集成
+        // deletePhysicalFiles(knowledge);
+
+        // TODO: 10. 调整租户存储空间
+        // 需要实现租户存储调整
+        // adjustTenantStorage(knowledge);
+    }
+
+    /**
+     * 删除关联的分块数据
+     */
+    private void deleteRelatedChunks(String knowledgeId) {
+        LambdaQueryWrapper<Chunks> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Chunks::getKnowledgeId, knowledgeId);
+
+        List<Chunks> chunks = chunksMapper.selectList(queryWrapper);
+        if (chunks.isEmpty()) {
+            log.info("知识条目 {} 无关联分块数据", knowledgeId);
+            return;
+        }
+
+        log.info("开始删除知识条目 {} 的 {} 个分块", knowledgeId, chunks.size());
+
+        // 硬删除分块
+        chunksMapper.delete(queryWrapper);
+
+        log.info("分块数据删除完成: {}", knowledgeId);
     }
 
     /**

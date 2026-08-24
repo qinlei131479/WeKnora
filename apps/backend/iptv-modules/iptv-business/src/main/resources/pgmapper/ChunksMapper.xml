@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.ChunksMapper">
+
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.Chunks">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="knowledge_base_id" property="knowledgeBaseId"/>
+        <result column="knowledge_id" property="knowledgeId"/>
+        <result column="content" property="content"/>
+        <result column="chunk_index" property="chunkIndex"/>
+        <result column="is_enabled" property="isEnabled"/>
+        <result column="start_at" property="startAt"/>
+        <result column="end_at" property="endAt"/>
+        <result column="pre_chunk_id" property="preChunkId"/>
+        <result column="next_chunk_id" property="nextChunkId"/>
+        <result column="chunk_type" property="chunkType"/>
+        <result column="parent_chunk_id" property="parentChunkId"/>
+        <result column="image_info" property="imageInfo"/>
+        <result column="relation_chunks" property="relationChunks" typeHandler="com.iptv.common.core.typehandler.JsonbTypeHandler"/>
+        <result column="indirect_relation_chunks" property="indirectRelationChunks"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted_at" property="deletedAt"/>
+        <result column="metadata" property="metadata" typeHandler="com.iptv.common.core.typehandler.JsonbTypeHandler"/>
+        <result column="tag_id" property="tagId"/>
+        <result column="status" property="status"/>
+        <result column="content_hash" property="contentHash"/>
+        <result column="flags" property="flags"/>
+        <result column="seq_id" property="seqId"/>
+        <result column="video_info" property="videoInfo"/>
+        <result column="source_content" property="sourceContent"/>
+        <result column="content_revision" property="contentRevision"/>
+        <result column="index_status" property="indexStatus"/>
+        <result column="last_editor_id" property="lastEditorId"/>
+        <result column="context_header" property="contextHeader"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, tenant_id, knowledge_base_id, knowledge_id, content, chunk_index, is_enabled,
+        start_at, end_at, pre_chunk_id, next_chunk_id, chunk_type, parent_chunk_id,
+        image_info, relation_chunks, indirect_relation_chunks, created_at, updated_at,
+        deleted_at, metadata, tag_id, status, content_hash, flags, seq_id, video_info,
+        source_content, content_revision, index_status, last_editor_id, context_header
+    </sql>
+
+    <!-- 根据知识条目ID列表软删除分块 -->
+    <update id="deleteByKnowledgeIds">
+        UPDATE chunks
+        SET deleted_at = NOW(),
+            updated_at = NOW()
+        WHERE knowledge_id IN
+        <foreach collection="knowledgeIds" item="knowledgeId" open="(" separator="," close=")">
+            #{knowledgeId}
+        </foreach>
+          AND deleted_at IS NULL
+    </update>
+
+</mapper>
