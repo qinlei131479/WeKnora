@@ -1,11 +1,12 @@
 package com.iptv.business.domain.dto.page;
 
-import java.util.Date;
-import java.io.Serializable;
-import lombok.Data;
 import com.iptv.common.core.web.page.PageDTO;
-import lombok.EqualsAndHashCode;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.io.Serial;
+import java.util.Date;
 
 /**
  * <p>
@@ -18,60 +19,33 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Data
 @EqualsAndHashCode(callSuper = false)
 public class VectorStoresPageDTO extends PageDTO {
+    @Serial
+    private static final long serialVersionUID = -6024401293326900743L;
 
-    private static final long serialVersionUID = 1L;
-
-    /**
-     * 主键 ID
-     */
     @Schema(description = "主键 ID")
     private String id;
 
-    /**
-     * 展示名，如 elasticsearch-hot
-     */
     @Schema(description = "展示名，如 elasticsearch-hot")
     private String name;
 
-    /**
-     * 引擎类型
-     */
     @Schema(description = "引擎类型")
     private String engineType;
 
-    /**
-     * 连接配置（敏感字段加密）
-     */
     @Schema(description = "连接配置（敏感字段加密）")
     private String connectionConfig;
 
-    /**
-     * 索引/集合配置
-     */
     @Schema(description = "索引/集合配置")
     private String indexConfig;
 
-    /**
-     * 所属工作空间（租户）ID
-     */
     @Schema(description = "所属工作空间（租户）ID")
     private Long tenantId;
 
-    /**
-     * 创建时间
-     */
     @Schema(description = "创建时间")
     private Date createdAt;
 
-    /**
-     * 最后更新时间
-     */
     @Schema(description = "最后更新时间")
     private Date updatedAt;
 
-    /**
-     * 软删除时间；非空表示已删除
-     */
     @Schema(description = "软删除时间；非空表示已删除")
     private Date deletedAt;
 }

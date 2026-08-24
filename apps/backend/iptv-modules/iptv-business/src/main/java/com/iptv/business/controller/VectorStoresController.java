@@ -76,13 +76,13 @@ public class VectorStoresController {
         return R.ok();
     }
 
-    @Log(title = "导出向量库连接实例：引擎类型、连接与索引配置", businessType = BusinessType.EXPORT)
-    @Operation(summary = "导出", description = "导出数据到 Excel")
-    @GetMapping("/excel")
-    @RequiresPermissions("business:vectorStores:export")
-    public void export(VectorStoresPageDTO dto, PageDTO pg, HttpServletResponse response) {
-        List<VectorStoresVO> list = vectorStoresService.queryPage(dto, pg).getRows();
-        ExcelUtil<VectorStoresVO> util = new ExcelUtil<>(VectorStoresVO.class);
-        util.exportExcel(response, list, "向量库连接实例：引擎类型、连接与索引配置数据.xlsx");
-    }
+//    @Log(title = "导出向量库连接实例：引擎类型、连接与索引配置", businessType = BusinessType.EXPORT)
+//    @Operation(summary = "导出", description = "导出数据到 Excel")
+//    @GetMapping("/excel")
+//    @RequiresPermissions("business:vectorStores:export")
+//    public void export(VectorStoresPageDTO dto, PageDTO pg, HttpServletResponse response) {
+//        List<VectorStoresVO> list = vectorStoresService.queryPage(dto, pg).getRows();
+//        ExcelUtil<VectorStoresVO> util = new ExcelUtil<>(VectorStoresVO.class);
+//        util.exportExcel(response, list, "向量库连接实例：引擎类型、连接与索引配置数据.xlsx");
+//    }
 }
