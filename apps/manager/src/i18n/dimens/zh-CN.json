@@ -13,6 +13,29 @@
         "table.tenantName": 300,
         "table.updatedAt": 180
       }
+    },
+    "models": {},
+    "ollama": {},
+    "mcp": {},
+    "tenantSpace": {},
+    "tenantMember": {},
+    "knowledgeBase": {
+      "id": 340,
+      "name": 220,
+      "type": 120,
+      "indexingStrategy": 180,
+      "llmModel": 200,
+      "embeddingModel": 200,
+      "vectorStore": 200,
+      "splitStrategy": 120,
+      "multiModal": 120,
+      "audioRecognition": 120,
+      "aiQuestionGeneration": 120,
+      "autoTagAssociation": 120,
+      "storageEngine": 120,
+      "tenantId": 120,
+      "updatedAt": 180,
+      "operation": 220
     }
   }
 }

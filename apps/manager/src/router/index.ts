@@ -82,6 +82,19 @@ export const constantRoutes = [
     ]
   },
   {
+    path: '/test',
+    component: Layout,
+    redirect: 'noredirect',
+    children: [
+      {
+        path: 'kb',
+        component: () => import('@/views/knowledgeBase/index.vue'),
+        name: 'KnowledgeBase',
+        meta: { title: '知识库', icon: 'knowledge-base' }
+      }
+    ]
+  },
+  {
     path: '/:pathMatch(.*)*',
     component: () => import('@/views/error/404.vue'),
     hidden: true
