@@ -18,19 +18,22 @@
     />
     <div v-else-if="loading" class="preview-state">
       <a-spin />
-      <span>正在加载预览...</span>
+      <span>{{ t('workspacePage.loadingPreview') }}</span>
     </div>
     <div v-else class="preview-empty">
       <FileSearch :size="28" />
-      <h3>选择文件以预览</h3>
-      <p>支持 Markdown、TXT 编辑，其他格式保持只读预览。</p>
+      <h3>{{ t('workspacePage.selectToPreview') }}</h3>
+      <p>{{ t('workspacePage.previewHint') }}</p>
     </div>
   </aside>
 </template>
 
 <script setup>
 import { FileSearch } from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
 import AgentFilePreview from '@harness/components/AgentFilePreview.vue'
+
+const { t } = useI18n()
 
 defineProps({
   file: { type: Object, default: null },

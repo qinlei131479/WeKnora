@@ -1,6 +1,11 @@
 <template>
   <div class="language-switch" :class="`language-switch--${variant}`">
-    <button type="button" @click="toggleLanguageMenu" :title="currentLangOption?.label">
+    <button
+      ref="triggerRef"
+      type="button"
+      @click.stop="toggleLanguageMenu"
+      :title="currentLangOption?.label"
+    >
       <span class="lang-flag-icon">{{ currentLangOption?.flag }}</span>
       <span class="link-text">{{ currentLangOption?.shortLabel }}</span>
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -9,24 +14,32 @@
       </svg>
     </button>
 
-    <div v-if="showLanguageMenu" class="language-dropdown">
+    <Teleport to="body">
       <div
-        v-for="lang in languageOptions"
-        :key="lang.value"
-        class="language-option"
-        :class="{ active: currentLanguage === lang.value }"
-        @click="selectLanguage(lang.value)"
+        v-if="showLanguageMenu"
+        class="language-dropdown"
+        :class="`language-dropdown--${variant}`"
+        :style="dropdownStyle"
+        @click.stop
       >
-        <span class="lang-flag">{{ lang.flag }}</span>
-        <span class="lang-label">{{ lang.label }}</span>
-        <span v-if="currentLanguage === lang.value" class="check-icon">✓</span>
+        <div
+          v-for="lang in languageOptions"
+          :key="lang.value"
+          class="language-option"
+          :class="{ active: currentLanguage === lang.value }"
+          @click="selectLanguage(lang.value)"
+        >
+          <span class="lang-flag">{{ lang.flag }}</span>
+          <span class="lang-label">{{ lang.label }}</span>
+          <span v-if="currentLanguage === lang.value" class="check-icon">✓</span>
+        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { getFeatureFlags, isAllowedLocale } from '@/utils/weknoraFeatures'
@@ -42,6 +55,8 @@ const { t, locale } = useI18n()
 const editorResources = useEditorResourcesStore()
 const featureFlags = getFeatureFlags()
 const showLanguageMenu = ref(false)
+const triggerRef = ref<HTMLButtonElement | null>(null)
+const dropdownStyle = ref<Record<string, string>>({})
 
 const allLanguageOptions = [
   { value: 'zh-CN', label: '简体中文', shortLabel: '中文', flag: '🇨🇳' },
@@ -60,8 +75,23 @@ const currentLangOption = computed(() =>
   || allLanguageOptions.find((l) => l.value === currentLanguage.value),
 )
 
+const positionDropdown = () => {
+  const el = triggerRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  dropdownStyle.value = {
+    position: 'fixed',
+    top: `${Math.round(rect.bottom + 8)}px`,
+    right: `${Math.round(window.innerWidth - rect.right)}px`,
+    zIndex: '10000',
+  }
+}
+
 const toggleLanguageMenu = () => {
   showLanguageMenu.value = !showLanguageMenu.value
+  if (showLanguageMenu.value) {
+    nextTick(positionDropdown)
+  }
 }
 
 const selectLanguage = (lang: string) => {
@@ -74,13 +104,14 @@ const selectLanguage = (lang: string) => {
 
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement
-  if (!target.closest('.language-switch')) {
+  if (!target.closest('.language-switch') && !target.closest('.language-dropdown')) {
     showLanguageMenu.value = false
   }
 }
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('resize', positionDropdown)
   if (featureFlags.restrictProviderOptions && !isAllowedLocale(locale.value)) {
     locale.value = 'zh-CN'
     localStorage.setItem('locale', 'zh-CN')
@@ -89,6 +120,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('resize', positionDropdown)
 })
 </script>
 
@@ -96,19 +128,18 @@ onBeforeUnmount(() => {
 .language-switch {
   position: relative;
   flex-shrink: 0;
+  z-index: 110;
 }
 
 .language-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  position: fixed;
   min-width: 160px;
   background: var(--td-bg-color-container);
   border: 1px solid var(--td-component-stroke);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   overflow: hidden;
-  z-index: 1000;
+  z-index: 10000;
 }
 
 .language-option {
@@ -184,10 +215,10 @@ onBeforeUnmount(() => {
       color: var(--td-text-color-anti);
     }
   }
+}
 
-  .language-dropdown {
-    background: rgba(255, 255, 255, 0.97);
-  }
+.language-dropdown--login {
+  background: rgba(255, 255, 255, 0.97);
 }
 
 .language-switch--topbar {
@@ -239,9 +270,9 @@ html[theme-mode="dark"] {
     }
   }
 
-  .language-switch--login .language-dropdown,
-  .language-switch--topbar .language-dropdown {
-    background: rgba(36, 36, 36, 0.97);
+  .language-dropdown--login,
+  .language-dropdown--topbar {
+    background: var(--td-bg-color-container);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   }
 }

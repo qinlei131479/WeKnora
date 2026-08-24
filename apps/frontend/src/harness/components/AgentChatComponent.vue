@@ -12,11 +12,20 @@
         <div class="header__left">
           <slot name="header-left"></slot>
           <div
-            v-if="currentThread?.title && currentThread.title !== '新的对话'"
+            v-if="currentThread?.title && !isDefaultThreadTitle(currentThread.title)"
             class="conversation-title"
           >
             {{ currentThread.title }}
           </div>
+        </div>
+        <div
+          v-if="!singleMode && !conversations.length"
+          class="header__center"
+        >
+          <ChatEngineSegmented
+            :model-value="chatEngine"
+            @update:model-value="goToEngine"
+          />
         </div>
         <div class="header__right">
           <button
@@ -24,25 +33,25 @@
             type="button"
             class="agent-nav-btn agent-state-btn state-entry-btn"
             :class="{ active: statePanelOpen }"
-            title="查看状态"
+            :title="t('harness.chat.viewState')"
             :aria-expanded="statePanelOpen"
             aria-controls="agent-state-panel"
             @click.stop="toggleStatePanel"
           >
             <LayoutList size="16" class="nav-btn-icon" />
-            <span class="hide-text">状态</span>
+            <span class="hide-text">{{ t('harness.chat.state') }}</span>
           </button>
           <button
             v-if="showFileEntry && !isFilePanelOpen"
             type="button"
             class="agent-nav-btn agent-state-btn file-entry-btn"
-            title="查看文件"
+            :title="t('harness.chat.viewFiles')"
             :aria-expanded="isFilePanelOpen"
             aria-controls="agent-file-panel"
             @click.stop="toggleAgentPanel"
           >
             <FolderKanban size="16" class="nav-btn-icon" />
-            <span class="hide-text">文件</span>
+            <span class="hide-text">{{ t('harness.chat.files') }}</span>
           </button>
           <slot
             name="header-right"
@@ -127,7 +136,7 @@
               <!-- 加载状态：加载消息 -->
               <div v-if="isLoadingMessages" class="chat-loading">
                 <div class="loading-spinner"></div>
-                <span>正在加载消息...</span>
+                <span>{{ t('harness.chat.loadingMessages') }}</span>
               </div>
 
               <!-- 打招呼区域 - 在输入框上方 -->
@@ -135,20 +144,10 @@
                 <h1>{{ randomGreeting }}</h1>
               </div>
 
-              <div
-                v-if="!singleMode && !conversations.length"
-                class="chat-engine-switch"
-              >
-                <ChatEngineSegmented
-                  :model-value="chatEngine"
-                  @update:model-value="goToEngine"
-                />
-              </div>
-
               <section
                 v-if="currentQueuedRequests.length"
                 class="queued-request-panel"
-                aria-label="排队请求"
+                :aria-label="t('harness.chat.queuedRequests')"
               >
                 <div
                   v-if="currentQueueSnapshot.status === 'paused'"
@@ -162,14 +161,14 @@
                     @click="handleContinueQueue"
                   >
                     <Play :size="14" fill="currentColor" />
-                    继续队列
+                    {{ t('harness.chat.continueQueue') }}
                   </button>
                 </div>
                 <div
                   v-else-if="currentQueueSnapshot.status === 'interrupted'"
                   class="queued-request-notice"
                 >
-                  当前任务正在等待回答或审批，完成后将继续处理后续请求。
+                  {{ t('harness.chat.queueWaiting') }}
                 </div>
                 <div class="queued-request-list">
                   <div
@@ -178,12 +177,12 @@
                     class="queued-request-row"
                   >
                     <CornerDownRight :size="16" class="queued-request-icon" aria-hidden="true" />
-                    <span class="queued-request-content" :title="request.content || '排队请求'">
-                      {{ request.content || '排队请求' }}
+                    <span class="queued-request-content" :title="request.content || t('harness.chat.queuedRequest')">
+                      {{ request.content || t('harness.chat.queuedRequest') }}
                     </span>
                     <div class="queued-request-actions">
                       <span v-if="request.queue_policy === 'steer'" class="queued-request-position">
-                        引导 · 下一条执行
+                        {{ t('harness.chat.steerNext') }}
                       </span>
                       <button
                         v-if="canSteerQueuedRequest(request)"
@@ -193,14 +192,14 @@
                         @click="handleSteerQueuedRequest(request.request_id)"
                       >
                         <CornerDownRight :size="14" aria-hidden="true" />
-                        引导
+                        {{ t('harness.chat.steer') }}
                       </button>
                       <button
                         v-if="canCancelQueuedRequest(request)"
                         type="button"
                         class="queued-request-delete lucide-icon-btn"
                         :disabled="cancellingRequestIds.has(request.request_id)"
-                        :aria-label="`删除排队请求：${request.content || '排队请求'}`"
+                        :aria-label="t('harness.chat.deleteQueued', { content: request.content || t('harness.chat.queuedRequest') })"
                         @click="handleCancelQueuedRequest(request.request_id)"
                       >
                         <Trash2 :size="16" />
@@ -254,18 +253,18 @@
                         v-if="canSubmitSteer"
                         type="button"
                         class="direct-steer-button"
-                        title="当前步骤结束后优先执行这条消息"
+                        :title="t('harness.chat.steerHint')"
                         @click="handleDirectSteer"
                       >
                         <CornerDownRight :size="14" aria-hidden="true" />
-                        引导
+                        {{ t('harness.chat.steer') }}
                       </button>
                       <div class="input-model-selector">
                         <ModelSelectorComponent
                           :model_spec="currentModelSpec"
                           size="nano"
                           display-name="mini"
-                          placeholder="选择模型"
+                          :placeholder="t('harness.chat.selectModel')"
                           @select-model="handleModelSelect"
                         />
                       </div>
@@ -305,12 +304,12 @@
         >
           <div v-if="statePanelOpen" class="state-panel">
             <div class="side-panel__header state-panel-header">
-              <span class="state-panel-title">状态</span>
+              <span class="state-panel-title">{{ t('harness.chat.state') }}</span>
               <div class="state-panel-header-actions">
                 <button
                   type="button"
                   class="state-refresh-btn"
-                  title="刷新状态"
+                  :title="t('harness.chat.refreshState')"
                   :disabled="isRefreshingState"
                   @click.stop="handleAgentStateRefresh()"
                 >
@@ -324,7 +323,7 @@
                 v-if="currentTokenUsage"
                 class="state-section"
                 :class="{ 'is-collapsed': !isStateSectionExpanded('tokenUsage') }"
-                aria-label="上下文使用情况"
+                :aria-label="t('harness.chat.contextUsage')"
               >
                 <button
                   type="button"
@@ -334,7 +333,7 @@
                   @click="toggleStateSection('tokenUsage')"
                 >
                   <span class="state-section-label">
-                    <span class="state-section-title">上下文使用</span>
+                    <span class="state-section-title">{{ t('harness.chat.contextUsage') }}</span>
                     <ChevronDown
                       :size="15"
                       class="state-section-chevron"
@@ -353,7 +352,7 @@
                         <span>{{ tokenUsageHeaderPercentLabel }}</span>
                         <strong>{{ tokenUsageStackHeadLabel }}</strong>
                       </div>
-                      <div class="token-usage-stack-track" aria-label="Token 构成">
+                      <div class="token-usage-stack-track" :aria-label="t('harness.chat.tokenComposition')">
                         <div
                           v-for="segment in tokenUsageBarSegments"
                           :key="segment.key"
@@ -402,7 +401,7 @@
                   @click="toggleStateSection('todos')"
                 >
                   <span class="state-section-label">
-                    <span class="state-section-title">待办</span>
+                    <span class="state-section-title">{{ t('harness.chat.todos') }}</span>
                     <ChevronDown
                       :size="15"
                       class="state-section-chevron"
@@ -455,7 +454,7 @@
                   @click="toggleStateSection('files')"
                 >
                   <span class="state-section-label">
-                    <span class="state-section-title">附件/文件</span>
+                    <span class="state-section-title">{{ t('harness.chat.files') }}</span>
                     <ChevronDown
                       :size="15"
                       class="state-section-chevron"
@@ -498,7 +497,7 @@
                   @click="toggleStateSection('artifacts')"
                 >
                   <span class="state-section-label">
-                    <span class="state-section-title">产物</span>
+                    <span class="state-section-title">{{ t('harness.chat.artifacts') }}</span>
                     <ChevronDown
                       :size="15"
                       class="state-section-chevron"
@@ -518,7 +517,7 @@
                       :key="file.path"
                       type="button"
                       class="state-list-item state-list-item--button"
-                      :title="`打开 ${file.name}`"
+                      :title="t('harness.chat.openFile', { name: file.name })"
                       @click="openPanelPreview(file)"
                     >
                       <FileTypeIcon
@@ -548,7 +547,7 @@
                   @click="toggleStateSection('subagents')"
                 >
                   <span class="state-section-label">
-                    <span class="state-section-title">子智能体</span>
+                    <span class="state-section-title">{{ t('harness.chat.subagent') }}</span>
                     <ChevronDown
                       :size="15"
                       class="state-section-chevron"
@@ -607,7 +606,7 @@
                 </div>
               </section>
 
-              <div v-if="!hasVisibleStateSections" class="state-panel-empty">暂无状态内容</div>
+              <div v-if="!hasVisibleStateSections" class="state-panel-empty">{{ t('harness.chat.emptyState') }}</div>
             </div>
           </div>
         </div>
@@ -675,6 +674,7 @@ import {
   onDeactivated
 } from 'vue'
 import { message } from 'ant-design-vue'
+import { useI18n } from 'vue-i18n'
 import {
   ChevronDown,
   CornerDownRight,
@@ -744,7 +744,11 @@ const props = defineProps({
   sendDisabled: { type: Boolean, default: false }
 })
 const emit = defineEmits(['thread-change'])
+const { t } = useI18n()
 const { engine: chatEngine, goToEngine } = useChatEngineNav()
+const defaultThreadTitle = computed(() => t('menu.newSession'))
+const isDefaultThreadTitle = (title) =>
+  !title || title === defaultThreadTitle.value || title === '新的对话' || title === '新对话'
 
 // ==================== STORE MANAGEMENT ====================
 const agentStore = useAgentStore()
@@ -763,16 +767,10 @@ const cancellingRequestIds = reactive(new Set())
 const steeringRequestIds = reactive(new Set())
 let sendCooldownTimer = null
 // 预设的打招呼文本
-const greetingMessages = [
-  '👋 您好，有什么可以帮您？',
-  '👋 你好！有什么想聊的吗？',
-  '👋 嘿，有什么我可以帮助你的？',
-  '👋 欢迎！今天想讨论什么话题？',
-  '👋 你好呀，随时为你服务！'
-]
-
-// 随机选择一个打招呼文本
-const randomGreeting = greetingMessages[Math.floor(Math.random() * greetingMessages.length)]
+const greetingMessages = computed(() => [t('createChat.title')])
+const randomGreeting = computed(
+  () => greetingMessages.value[Math.floor(Math.random() * greetingMessages.value.length)]
+)
 
 // 业务状态（保留在组件本地）
 const chatState = reactive({
@@ -942,20 +940,20 @@ const showFileTreePanel = () => {
 const getPanelFileName = (file) => {
   if (file?.name) return file.name
   if (file?.path) return String(file.path).split('/').pop() || String(file.path)
-  return '未知文件'
+  return t('harness.chat.unknownFile')
 }
 
 const getArtifactMetaLabel = (path) => {
   const filename = getPanelFileName({ path })
-  if (!filename.includes('.')) return '交付文件'
+  if (!filename.includes('.')) return t('harness.chat.deliveryFile')
   const extension = filename.split('.').pop()
-  return extension ? `交付文件 · ${extension.toUpperCase()}` : '交付文件'
+  return extension ? t('harness.chat.deliveryFileExt', { ext: extension.toUpperCase() }) : t('harness.chat.deliveryFile')
 }
 
 const getSubagentRunName = (run) => {
   const subagentSlug = run?.subagent_slug ? String(run.subagent_slug) : ''
   return (
-    run?.subagent_name || currentSubagentOptionBySlug.value.get(subagentSlug)?.name || '子智能体'
+    run?.subagent_name || currentSubagentOptionBySlug.value.get(subagentSlug)?.name || t('harness.chat.subagent')
   )
 }
 
@@ -975,7 +973,7 @@ const getSubagentDefaultIconSrc = (run) =>
 
 const getSubagentRunMeta = (run) => {
   const artifacts = Array.isArray(run?.artifacts) ? run.artifacts.length : 0
-  return artifacts ? `${artifacts} 个产物` : run?.id || ''
+  return artifacts ? t('harness.chat.artifactCount', { count: artifacts }) : run?.id || ''
 }
 
 const normalizePanelPath = (path) => String(path || '').replace(/\/+$/, '')
@@ -1100,7 +1098,7 @@ const currentAgentId = computed(() => {
 
 const currentAgentName = computed(() => {
   const agent = currentAgent.value
-  return agent ? agent.name : '智能体'
+  return agent ? agent.name : t('harness.chat.agent')
 })
 
 const currentAgent = computed(() => {
@@ -1164,7 +1162,7 @@ const handleToolApprovalModeSelect = async (mode) => {
     writeToolApprovalModePreference(mode)
   } catch {
     thread.metadata = previousMetadata
-    message.error('审批模式保存失败')
+    message.error(t('harness.chat.approvalSaveFailed'))
   }
 }
 
@@ -1249,40 +1247,40 @@ const tokenUsageSegments = computed(() => {
   const rawSegments = [
     {
       key: 'system',
-      label: '系统提示',
+      label: t('harness.chat.systemPrompt'),
       value: systemTokens,
       tone: 'is-system'
     },
     {
       key: 'tools',
-      label: `工具定义 (${usage.tool_count || 0})`,
+      label: t('harness.chat.toolDefs', { count: usage.tool_count || 0 }),
       value: toolsTokens,
       tone: 'is-tools'
     },
     {
       key: 'messages',
-      label: '内容消息',
+      label: t('harness.chat.contentMessages'),
       value: contentMessageTokens,
       messageCount: contentMessageCount,
       tone: 'is-messages'
     },
     {
       key: 'toolMessages',
-      label: '工具消息',
+      label: t('harness.chat.toolMessages'),
       value: toolMessageTokens,
       messageCount: toolMessageCount,
       tone: 'is-tool-messages'
     },
     {
       key: 'summary',
-      label: '摘要',
+      label: t('harness.chat.summary'),
       value: summaryTokens,
       messageCount: usage.summary_active ? 1 : 0,
       tone: 'is-summary'
     },
     {
       key: 'cut',
-      label: '已压缩',
+      label: t('harness.chat.compressed'),
       value: cutMessageTokens,
       messageCount: cutMessageCount,
       tone: 'is-cut'
@@ -1293,7 +1291,7 @@ const tokenUsageSegments = computed(() => {
   if (inputTokens > accountedInputTokens) {
     rawSegments.push({
       key: 'overhead',
-      label: '其他',
+      label: t('harness.chat.other'),
       value: inputTokens - accountedInputTokens,
       tone: 'is-overhead'
     })
@@ -1363,7 +1361,7 @@ const tokenUsageMetaRows = computed(() => {
   if (toFiniteNumber(usage.context_window)) {
     rows.push({
       key: 'context',
-      label: '窗口/剩余',
+      label: t('harness.chat.windowRemaining'),
       value: `${formatTokenCount(usage.context_window)} / ${formatTokenCount(usage.remaining_context_tokens)}`
     })
   }
@@ -1455,7 +1453,7 @@ const toggleStateSection = (key) => {
 const currentStateFiles = computed(() => {
   const files = []
   const seenPaths = new Set()
-  const pushFile = (entry, fallbackName = '文件') => {
+  const pushFile = (entry, fallbackName = t('harness.chat.file')) => {
     const path = String(entry?.path || entry?.file_path || entry?.file_name || entry?.name || '')
     if (!path || seenPaths.has(path)) return
     seenPaths.add(path)
@@ -1474,7 +1472,7 @@ const currentStateFiles = computed(() => {
   if (typeof rawFiles === 'object' && !Array.isArray(rawFiles)) {
     Object.entries(rawFiles).forEach(([path, fileData]) => pushFile({ path, ...fileData }))
   }
-  currentThreadAttachments.value.forEach((attachment) => pushFile(attachment, '附件'))
+  currentThreadAttachments.value.forEach((attachment) => pushFile(attachment, t('harness.chat.attachment')))
 
   return files
 })
@@ -1626,7 +1624,7 @@ const runningSubagentRunsFromStream = computed(() => {
       return {
         id: call.id,
         subagent_slug: call.subagentSlug,
-        subagent_name: option?.name || call.subagentSlug || '子智能体',
+        subagent_name: option?.name || call.subagentSlug || t('harness.chat.subagent'),
         description: call.description,
         child_thread_id: call.childThreadId || '',
         status: 'running'
@@ -1949,8 +1947,8 @@ const isWaitingForUserAction = computed(() =>
 )
 const queuePausedMessage = computed(() =>
   currentQueueSnapshot.value.paused_reason === 'cancelled'
-    ? '当前任务已停止，后续队列已暂停。'
-    : '上一个任务失败，后续队列已暂停。'
+    ? t('harness.chat.queuePausedCancelled')
+    : t('harness.chat.queuePausedFailed')
 )
 const shouldShowStopButton = computed(
   () => isStreaming.value && !String(userInput.value || '').trim()
@@ -1987,9 +1985,9 @@ const isReplyLoading = computed(() => {
 })
 const replyLoadingText = computed(() => {
   const threadState = currentThreadState.value
-  if (threadState?.contextCompressing) return '正在压缩上下文...'
-  if (hasQueuedRequests.value) return `排队中（${queuedRequestCount.value} 条）...`
-  return '正在生成回复...'
+  if (threadState?.contextCompressing) return t('harness.chat.compressing')
+  if (hasQueuedRequests.value) return t('harness.chat.queuedCount', { count: queuedRequestCount.value })
+  return t('harness.chat.generating')
 })
 const isSendButtonDisabled = computed(() => {
   return (
@@ -2072,8 +2070,7 @@ const rollbackAttachments = (threadId, previousAttachments) => {
   threadAttachmentsMap.value[threadId] = previousAttachments
 }
 
-const CONFIG_CHANGE_NOTICE_MESSAGE =
-  '在运行过程中切换或修改配置可能会影响最终效果，建议新建一个对话。'
+const configChangeNoticeMessage = computed(() => t('harness.chat.configChangeHint'))
 
 const withConfigNoticeSync = async (task) => {
   configNoticeSyncDepth.value += 1
@@ -2111,7 +2108,7 @@ const upsertThreadConfigNotice = (threadId, insertAfterConversationCount) => {
   const existingNotice = threadConfigNoticeMap.value[threadId]
   const nextNotice = {
     id: existingNotice?.id || `config-change-notice-${threadId}`,
-    message: existingNotice?.message || CONFIG_CHANGE_NOTICE_MESSAGE,
+    message: existingNotice?.message || configChangeNoticeMessage.value,
     insertAfterConversationCount
   }
   const shouldScroll =
@@ -2139,7 +2136,7 @@ const queuePendingThreadConfigNotice = (threadId) => {
     ...threadPendingConfigNoticeMap.value,
     [threadId]: {
       id: `config-change-notice-${threadId}`,
-      message: CONFIG_CHANGE_NOTICE_MESSAGE
+      message: configChangeNoticeMessage.value
     }
   }
 }
@@ -2325,7 +2322,7 @@ const fetchThreads = async (agentId = null) => {
 }
 
 // 创建新线程
-const createThread = async (agentId, title = '新的对话') => {
+const createThread = async (agentId, title = defaultThreadTitle.value) => {
   if (!agentId) return null
 
   try {
@@ -2469,10 +2466,10 @@ const fetchAgentState = async (agentId, threadId, { required = false } = {}) => 
   }
 }
 
-const ensureActiveThread = async (title = '新的对话') => {
+const ensureActiveThread = async (title = defaultThreadTitle.value) => {
   if (currentChatId.value) return currentChatId.value
   try {
-    const newThread = await createThread(currentAgentId.value, title || '新的对话')
+    const newThread = await createThread(currentAgentId.value, title || defaultThreadTitle.value)
     if (newThread) {
       setCurrentThreadId(newThread.id)
       return newThread.id
@@ -2487,7 +2484,7 @@ const handleAttachmentUpload = async (files = []) => {
   if (
     !AgentValidator.validateAgentIdWithError(
       currentAgentId.value,
-      '上传附件',
+      t('harness.chat.addAttachment'),
       handleValidationError
     )
   )
@@ -2504,7 +2501,7 @@ const handleAttachmentUpload = async (files = []) => {
 
 const ensureAttachmentThread = async () => {
   if (currentChatId.value) return currentChatId.value
-  return await ensureActiveThread('新的对话')
+  return await ensureActiveThread(defaultThreadTitle.value)
 }
 
 const handleTmpAttachmentsAdded = async () => {
@@ -2606,7 +2603,7 @@ const handleCancelQueuedRequest = async (requestId) => {
   cancellingRequestIds.delete(requestId)
   if (cancelled) {
     await resumeQueuedRequestsForThread(threadId)
-    message.success('已删除排队请求')
+    message.success(t('harness.chat.queuedDeleted'))
   }
 }
 
@@ -2619,7 +2616,7 @@ const handleSteerQueuedRequest = async (requestId) => {
   const steered = await steerRequest(threadId, agentSlug, requestId)
   steeringRequestIds.delete(requestId)
   if (steered) {
-    message.success('已设为下一条引导请求')
+    message.success(t('harness.chat.steered'))
   }
 }
 
@@ -2630,7 +2627,7 @@ const handleContinueQueue = async () => {
   if (!threadId || !agentSlug || currentThreadState.value?.continueQueueInFlight) return
 
   if (await continueQueue(threadId, agentSlug)) {
-    message.success('队列已继续')
+    message.success(t('harness.chat.queueContinued'))
   }
 }
 
@@ -2791,7 +2788,7 @@ const handleSendMessage = async ({ image, queuePolicy = 'enqueue' } = {}) => {
   if (!threadId) {
     threadId = await ensureActiveThread(text)
     if (!threadId) {
-      message.error('创建对话失败，请重试')
+      message.error(t('harness.chat.createFailed'))
       return
     }
     // 新建线程：把草稿态的模型选择迁移到真实线程，避免选择丢失
@@ -2913,7 +2910,7 @@ const handleSendMessage = async ({ image, queuePolicy = 'enqueue' } = {}) => {
       try {
         await fetchAgentState(currentAgentId.value, threadId, { required: true })
       } catch {
-        message.error('审批状态恢复失败，请刷新页面后重试')
+        message.error(t('harness.chat.approvalRestoreFailed'))
       }
     }
     if (queuePolicy === 'steer' && currentChatId.value === threadId && !userInput.value) {
@@ -2944,7 +2941,7 @@ const handleSendOrStop = async (payload) => {
       if (approvalState.threadId === threadId) {
         hideApprovalState()
       }
-      message.info('已发送取消请求')
+      message.info(t('harness.chat.cancelSent'))
     } catch (error) {
       handleChatError(error, 'stop')
     }
@@ -2958,20 +2955,20 @@ const handleApprovalWithStream = async (answer) => {
   const threadId = approvalState.threadId
   const interruptedRunId = approvalState.interruptedRunId
   if (!threadId) {
-    message.error('无效的提问请求')
+    message.error(t('harness.chat.invalidQuestion'))
     approvalState.showModal = false
     return
   }
 
   const threadState = getThreadState(threadId)
   if (!threadState) {
-    message.error('无法找到对应的对话线程')
+    message.error(t('harness.chat.threadNotFound'))
     approvalState.showModal = false
     return
   }
 
   if (!interruptedRunId) {
-    message.error('无法找到需要恢复的运行任务')
+    message.error(t('harness.chat.runNotFound'))
     approvalState.showModal = false
     return
   }
@@ -3026,8 +3023,8 @@ const buildExportPayload = () => {
   }
 
   const payload = {
-    chatTitle: currentThread.value?.title || '新对话',
-    agentName: currentAgentName.value || currentAgent.value?.name || '智能助手',
+    chatTitle: currentThread.value?.title || defaultThreadTitle.value,
+    agentName: currentAgentName.value || currentAgent.value?.name || t('harness.chat.assistant'),
     agentDescription: agentDescription || currentAgent.value?.description || '',
     messages: conversations.value ? JSON.parse(JSON.stringify(conversations.value)) : [],
     onGoingMessages: onGoingConvMessages.value
@@ -3374,13 +3371,13 @@ watch(currentChatId, (threadId, oldThreadId) => {
   .chat-header {
     user-select: none;
     z-index: 10;
-    height: var(--header-height);
     min-height: var(--header-height);
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0 8px;
     flex-shrink: 0; /* Prevent header from shrinking */
+    position: relative;
     transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     &.has-active-thread {
@@ -3392,6 +3389,21 @@ watch(currentChatId, (threadId, oldThreadId) => {
       display: flex;
       align-items: center;
       gap: 8px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .header__right {
+      justify-content: flex-end;
+    }
+
+    .header__center {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+      pointer-events: auto;
     }
 
     .switch-icon {
@@ -3700,17 +3712,21 @@ watch(currentChatId, (threadId, oldThreadId) => {
 
 .chat-box {
   width: 100%;
-  max-width: 800px;
+  max-width: min(800px, 100%);
+  min-width: 0;
   margin: 0 auto;
   flex-grow: 1;
   padding: 1rem var(--page-padding);
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
 }
 
 .conv-box {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .chat-inline-notice {
@@ -3729,18 +3745,12 @@ watch(currentChatId, (threadId, oldThreadId) => {
   width: 100%;
   margin: 0 auto;
   padding: 4px 1rem 0 1rem;
-  z-index: 1000;
+  z-index: 20;
 
-  .message-input-wrapper {
+    .message-input-wrapper {
     width: 100%;
     max-width: 800px;
     margin: 0 auto;
-
-    .chat-engine-switch {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 12px;
-    }
 
     .message-input-stage {
       position: relative;

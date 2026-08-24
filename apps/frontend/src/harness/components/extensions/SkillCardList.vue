@@ -1295,7 +1295,8 @@ defineExpose({
       border-color: var(--gray-200);
 
       &:hover {
-        border-color: var(--gray-300);
+        border-color: var(--td-brand-color);
+        box-shadow: 0 4px 12px color-mix(in srgb, var(--td-brand-color) 12%, transparent);
       }
     }
 

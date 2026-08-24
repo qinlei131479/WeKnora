@@ -1,10 +1,11 @@
 <template>
   <div class="font-size-select">
     <button
+      ref="triggerRef"
       type="button"
       :title="t('font.fontSize')"
       :aria-label="t('font.fontSize')"
-      @click="toggleMenu"
+      @click.stop="toggleMenu"
     >
       <span class="link-text">{{ currentLabel }}</span>
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
@@ -13,29 +14,38 @@
       </svg>
     </button>
 
-    <div v-if="menuVisible" class="font-size-dropdown">
+    <Teleport to="body">
       <div
-        v-for="opt in sizeOptions"
-        :key="opt.value"
-        class="font-size-option"
-        :class="{ active: currentSize === opt.value }"
-        @click="selectSize(opt.value)"
+        v-if="menuVisible"
+        class="font-size-dropdown"
+        :style="dropdownStyle"
+        @click.stop
       >
-        <span class="font-size-label">{{ opt.label }}</span>
-        <span v-if="currentSize === opt.value" class="check-icon">✓</span>
+        <div
+          v-for="opt in sizeOptions"
+          :key="opt.value"
+          class="font-size-option"
+          :class="{ active: currentSize === opt.value }"
+          @click="selectSize(opt.value)"
+        >
+          <span class="font-size-label">{{ opt.label }}</span>
+          <span v-if="currentSize === opt.value" class="check-icon">✓</span>
+        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useFont, type FontSizeKey } from '@/composables/useFont'
 
 const { t } = useI18n()
 const { currentSize, setFontSize } = useFont()
 const menuVisible = ref(false)
+const triggerRef = ref<HTMLButtonElement | null>(null)
+const dropdownStyle = ref<Record<string, string>>({})
 
 const sizeOptions = computed(() => ([
   { value: 'small' as const, label: t('font.size.small') },
@@ -48,8 +58,23 @@ const currentLabel = computed(() =>
   ?? t('font.size.normal'),
 )
 
+const positionDropdown = () => {
+  const el = triggerRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  dropdownStyle.value = {
+    position: 'fixed',
+    top: `${Math.round(rect.bottom + 8)}px`,
+    right: `${Math.round(window.innerWidth - rect.right)}px`,
+    zIndex: '10000',
+  }
+}
+
 const toggleMenu = () => {
   menuVisible.value = !menuVisible.value
+  if (menuVisible.value) {
+    nextTick(positionDropdown)
+  }
 }
 
 const selectSize = (size: FontSizeKey) => {
@@ -61,17 +86,19 @@ const selectSize = (size: FontSizeKey) => {
 
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement
-  if (!target.closest('.font-size-select')) {
+  if (!target.closest('.font-size-select') && !target.closest('.font-size-dropdown')) {
     menuVisible.value = false
   }
 }
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('resize', positionDropdown)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('resize', positionDropdown)
 })
 </script>
 
@@ -79,6 +106,7 @@ onBeforeUnmount(() => {
 .font-size-select {
   position: relative;
   flex-shrink: 0;
+  z-index: 110;
 }
 
 button {
@@ -111,16 +139,14 @@ button {
 }
 
 .font-size-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  position: fixed;
   min-width: 120px;
   background: var(--td-bg-color-container);
   border: 1px solid var(--td-component-stroke);
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   overflow: hidden;
-  z-index: 1000;
+  z-index: 10000;
 }
 
 .font-size-option {

@@ -7,7 +7,7 @@
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ basicStats?.total_conversations || 0 }}</div>
-          <div class="stat-label">累计会话</div>
+          <div class="stat-label">{{ $t('dashboard.stats.conversations') }}</div>
           <div class="stat-trend" v-if="basicStats?.conversation_trend">
             <TrendingUp v-if="basicStats.conversation_trend > 0" class="trend-icon up" />
             <TrendingDown v-else-if="basicStats.conversation_trend < 0" class="trend-icon down" />
@@ -22,7 +22,7 @@
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ basicStats?.active_conversations || 0 }}</div>
-          <div class="stat-label">活跃对话</div>
+          <div class="stat-label">{{ $t('dashboard.stats.activeConversations') }}</div>
         </div>
       </div>
 
@@ -32,7 +32,7 @@
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ basicStats?.total_messages || 0 }}</div>
-          <div class="stat-label">总消息数</div>
+          <div class="stat-label">{{ $t('dashboard.stats.messages') }}</div>
         </div>
       </div>
 
@@ -42,7 +42,7 @@
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ basicStats?.total_users || 0 }}</div>
-          <div class="stat-label">用户数</div>
+          <div class="stat-label">{{ $t('dashboard.stats.users') }}</div>
         </div>
       </div>
 
@@ -52,7 +52,7 @@
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ basicStats?.feedback_stats?.total_feedbacks || 0 }}</div>
-          <div class="stat-label">总反馈数</div>
+          <div class="stat-label">{{ $t('dashboard.stats.feedbacks') }}</div>
         </div>
       </div>
 
@@ -62,7 +62,7 @@
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ basicStats?.feedback_stats?.satisfaction_rate || 0 }}%</div>
-          <div class="stat-label">满意度</div>
+          <div class="stat-label">{{ $t('dashboard.stats.satisfaction') }}</div>
         </div>
       </div>
     </div>
@@ -113,12 +113,17 @@ const getSatisfactionClass = () => {
 /* Stats Overview Component - 统计概览组件样式 */
 .stats-overview-container {
   margin-top: 8px;
+  max-width: 100%;
+  overflow-x: hidden;
 
   .stats-grid {
     display: grid;
     padding: 0 var(--page-padding);
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 16px;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
 
     .stat-card {
       background: var(--gray-0);

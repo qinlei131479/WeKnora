@@ -41,7 +41,7 @@
             <button
               class="attachment-remove-btn"
               type="button"
-              :aria-label="`移除附件 ${attachment.name}`"
+              :aria-label="t('harness.chat.removeAttachment', { name: attachment.name })"
               @click.stop="handleAttachmentRemoved(attachment)"
             >
               <X :size="14" />
@@ -76,6 +76,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import MessageInputComponent from '@harness/components/MessageInputComponent.vue'
 import ImagePreviewComponent from '@harness/components/ImagePreviewComponent.vue'
 import AttachmentOptionsComponent from '@harness/components/AttachmentOptionsComponent.vue'
@@ -106,9 +107,10 @@ const emit = defineEmits([
   'remove-attachment'
 ])
 
+const { t } = useI18n()
 const inputRef = ref(null)
 const currentImage = ref(null)
-const placeholder = '问点什么？使用 @ 可以提及哦~'
+const placeholder = computed(() => t('input.placeholder'))
 
 const previewAttachments = computed(() => normalizeAttachmentPreviews(props.attachments))
 const showInputOptions = computed(

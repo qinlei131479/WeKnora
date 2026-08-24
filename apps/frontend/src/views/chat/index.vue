@@ -5,6 +5,12 @@
         'has-references-panel': referencesDrawerVisible,
     }">
         <ChatHeader v-if="!embeddedMode" :session="currentSession" :has-references-panel="referencesDrawerVisible" />
+        <ChatEngineSegmented
+            v-if="!embeddedMode && !historyLoading && messagesList.length === 0"
+            class="chat-engine-switch"
+            :model-value="chatEngine"
+            @update:model-value="goToEngine"
+        />
         <div ref="scrollContainer" class="chat_scroll_box" @scroll="handleScroll">
             <div class="msg_list" :class="{ 'is-embedded': embeddedMode }">
                 <!-- 消息列表骨架屏 -->
@@ -111,12 +117,6 @@
             </div>
         </transition>
         <div class="input-container" :class="{ 'is-embedded': embeddedMode }">
-            <ChatEngineSegmented
-                v-if="!embeddedMode && !historyLoading && messagesList.length === 0"
-                class="chat-engine-switch"
-                :model-value="chatEngine"
-                @update:model-value="goToEngine"
-            />
             <InputField ref="inputFieldRef"
                 @send-msg="(query, modelId, mentionedItems, imageFiles, attachmentFiles) => sendMsg(query, modelId, mentionedItems, imageFiles, attachmentFiles)"
                 @stop-generation="handleStopGeneration" :isReplying="isReplying" :sessionId="session_id"
@@ -1049,6 +1049,14 @@ onBeforeRouteUpdate((to, from, next) => {
     max-width: calc(100vw - 260px);
     min-width: 400px;
 
+    > .chat-engine-switch {
+        position: absolute;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 6;
+    }
+
     &.is-sidebar-collapsed {
         max-width: calc(100vw - 60px);
     }
@@ -1224,10 +1232,6 @@ onBeforeRouteUpdate((to, from, next) => {
     display: flex;
     flex-direction: column;
     align-items: center;
-
-    .chat-engine-switch {
-        margin-bottom: 10px;
-    }
 
     :deep(.answers-input) {
         width: 100%;

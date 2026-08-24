@@ -125,6 +125,24 @@ func GetBuiltinAgentWithContext(ctx context.Context, id string, tenantID uint64)
 	return buildAgentFromEntry(id, tenantID, locale)
 }
 
+// ApplyBuiltinDisplayI18n overwrites Name and Description from YAML i18n
+// so built-in agents keep following locale even after their config is persisted.
+func ApplyBuiltinDisplayI18n(ctx context.Context, agent *CustomAgent) {
+	if agent == nil || !IsBuiltinAgentID(agent.ID) {
+		return
+	}
+	def := GetBuiltinAgentWithContext(ctx, agent.ID, agent.TenantID)
+	if def == nil {
+		return
+	}
+	if def.Name != "" {
+		agent.Name = def.Name
+	}
+	if def.Description != "" {
+		agent.Description = def.Description
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------

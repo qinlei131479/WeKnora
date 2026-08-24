@@ -1,6 +1,8 @@
 import {
   BUILTIN_QUICK_ANSWER_ID,
   BUILTIN_SMART_REASONING_ID,
+  BUILTIN_WIKI_RESEARCHER_ID,
+  BUILTIN_DATA_ANALYST_ID,
 } from '@/api/agent'
 
 /** Whether the selected agent id is the builtin quick-answer (RAG) mode. */
@@ -20,7 +22,7 @@ export function isAgentStreamAgentId(
 }
 
 /**
- * Localized label for the two chat-mode builtins. Other agents keep their stored name.
+ * Localized label for built-in conversation agents. Custom agents keep their stored name.
  * The closed input dropdown must use this — API `agent.name` is seeded in one language
  * and will not follow UI locale changes.
  */
@@ -31,6 +33,8 @@ export function localizedBuiltinAgentName(
 ): string {
   if (agentId === BUILTIN_QUICK_ANSWER_ID) return t('input.normalMode')
   if (agentId === BUILTIN_SMART_REASONING_ID) return t('input.agentMode')
+  if (agentId === BUILTIN_WIKI_RESEARCHER_ID) return t('agent.builtinWikiQa')
+  if (agentId === BUILTIN_DATA_ANALYST_ID) return t('agent.builtinTableAnalysis')
   return fallbackName || t('input.normalMode')
 }
 

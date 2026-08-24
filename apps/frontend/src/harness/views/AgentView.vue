@@ -64,7 +64,7 @@
                       :alt="`${agent.label}图标`"
                     />
                     <span class="config-dropdown-item-label">{{ agent.label }}</span>
-                    <span v-if="agent.isBuiltin" class="config-dropdown-item-badge">内置</span>
+                    <span v-if="agent.isBuiltin" class="config-dropdown-item-badge">{{ t('harness.chat.builtin') }}</span>
                     <Check
                       v-if="agent.value === selectedAgentId"
                       :size="14"
@@ -73,7 +73,7 @@
                   </button>
 
                   <div v-if="hasActiveThread" class="config-dropdown-hint">
-                    当前对话已绑定智能体，新对话可切换。
+                    {{ t('harness.chat.boundHint') }}
                   </div>
 
                   <div class="config-dropdown-divider"></div>
@@ -85,7 +85,7 @@
                       @click="openAgentManagement"
                     >
                       <Settings2 :size="15" class="config-dropdown-item-icon" />
-                      <span class="config-dropdown-item-label">编辑智能体</span>
+                      <span class="config-dropdown-item-label">{{ t('harness.chat.editAgent') }}</span>
                     </button>
                     <button
                       type="button"
@@ -93,7 +93,7 @@
                       @click="openCreateAgent"
                     >
                       <Plus :size="15" class="config-dropdown-item-icon" />
-                      <span class="config-dropdown-item-label">新建智能体</span>
+                      <span class="config-dropdown-item-label">{{ t('harness.chat.createAgent') }}</span>
                     </button>
                   </div>
                 </div>
@@ -113,6 +113,7 @@
 
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { message } from 'ant-design-vue'
 import { Settings2, ChevronDown, Check, Plus } from 'lucide-vue-next'
 import { useRoute, useRouter } from 'vue-router'
@@ -126,6 +127,8 @@ import { generatePixelAvatar } from '@harness/utils/pixelAvatar'
 import FallbackAvatar from '@harness/components/common/FallbackAvatar.vue'
 
 import { storeToRefs } from 'pinia'
+
+const { t } = useI18n()
 
 // 组件引用
 const chatComponentRef = ref(null)
@@ -245,8 +248,8 @@ const currentAgentOption = computed(() =>
 )
 
 const currentAgentLabel = computed(() => {
-  if (isLoadingConfig.value) return '加载中...'
-  return currentAgentOption.value?.label || '智能体'
+  if (isLoadingConfig.value) return t('common.loading')
+  return currentAgentOption.value?.label || t('harness.chat.agent')
 })
 
 const agentDropdownOpen = ref(false)
@@ -268,7 +271,7 @@ const loadAgentBackends = async () => {
 const handleAgentSwitch = async (agentId, hasActiveThread) => {
   if (!agentId || agentId === selectedAgentId.value) return
   if (hasActiveThread) {
-    message.info('当前对话已绑定智能体，请新建对话后切换')
+    message.info(t('harness.chat.switchBound'))
     return
   }
   try {
@@ -276,7 +279,7 @@ const handleAgentSwitch = async (agentId, hasActiveThread) => {
     agentDropdownOpen.value = false
   } catch (error) {
     console.error('切换智能体出错:', error)
-    message.error('切换智能体失败')
+    message.error(t('harness.chat.switchFailed'))
   }
 }
 
@@ -297,21 +300,21 @@ const openCreateAgent = async () => {
     await loadAgentBackends()
     agentEditModalRef.value?.openCreate()
   } catch (error) {
-    message.error(error.message || '打开新建智能体弹窗失败')
+    message.error(error.message || t('harness.chat.openCreateFailed'))
   }
 }
 
 const openAgentManagement = async () => {
   agentDropdownOpen.value = false
   if (!selectedAgentId.value) {
-    message.warning('请先选择智能体')
+    message.warning(t('harness.chat.selectAgentFirst'))
     return
   }
   try {
     await loadAgentBackends()
     await agentEditModalRef.value?.openEdit(selectedAgentId.value)
   } catch (error) {
-    message.error(error.message || '打开智能体配置失败')
+    message.error(error.message || t('harness.chat.openConfigFailed'))
   }
 }
 

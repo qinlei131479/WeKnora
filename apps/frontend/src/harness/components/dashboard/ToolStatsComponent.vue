@@ -1,26 +1,26 @@
 <template>
-  <a-card title="工具调用监控" :loading="loading" class="dashboard-card">
+  <a-card :title="$t('dashboard.tools.title')" :loading="loading" class="dashboard-card">
     <!-- 工具调用概览 -->
     <div class="stats-overview">
       <a-row :gutter="16">
         <a-col :span="8">
           <a-statistic
-            title="总调用次数"
+            :title="$t('dashboard.tools.totalCalls')"
             :value="toolStats?.total_calls || 0"
             :value-style="{ color: 'var(--color-info-500)' }"
           />
         </a-col>
         <a-col :span="8">
           <a-statistic
-            title="失败调用"
+            :title="$t('dashboard.tools.failedCalls')"
             :value="toolStats?.failed_calls || 0"
             :value-style="{ color: 'var(--color-error-500)' }"
-            suffix="次"
+            :suffix="$t('dashboard.tools.times')"
           />
         </a-col>
         <a-col :span="8">
           <a-statistic
-            title="成功率"
+            :title="$t('dashboard.tools.successRate')"
             :value="toolStats?.success_rate || 0"
             suffix="%"
             :value-style="{
@@ -39,14 +39,14 @@
     <!-- 最常用工具 -->
     <a-divider />
     <div class="chart-container">
-      <h4>最常用工具 TOP 10</h4>
+      <h4>{{ $t('dashboard.tools.top10') }}</h4>
       <div ref="toolsChartRef" class="chart"></div>
     </div>
 
     <!-- 错误分析 -->
     <a-divider />
     <div class="error-analysis" v-if="hasErrorData">
-      <h4>工具错误分析</h4>
+      <h4>{{ $t('dashboard.tools.errorAnalysis') }}</h4>
       <a-row :gutter="16">
         <a-col :span="12">
           <a-table
@@ -70,7 +70,7 @@
         </a-col>
         <a-col :span="12">
           <div class="chart-container">
-            <h4>错误分布图</h4>
+            <h4>{{ $t('dashboard.tools.errorDistribution') }}</h4>
             <div ref="errorChartRef" class="chart-small"></div>
           </div>
         </a-col>
@@ -81,12 +81,15 @@
 
 <script setup>
 import { ref, onMounted, watch, nextTick, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
 import { getColorByIndex, getColorPalette } from '@harness/utils/chartColors'
 import { useThemeStore } from '@harness/stores/theme'
 
 // CSS 变量解析工具函数
 import { getCSSVariable } from '@harness/utils/cssVars'
+
+const { t } = useI18n()
 
 // theme store
 const themeStore = useThemeStore()
@@ -110,21 +113,21 @@ let toolsChart = null
 let errorChart = null
 
 // 错误分析相关
-const errorColumns = [
+const errorColumns = computed(() => [
   {
-    title: '工具名称',
+    title: t('dashboard.tools.toolName'),
     dataIndex: 'tool_name',
     key: 'tool_name',
     width: '50%'
   },
   {
-    title: '错误次数',
+    title: t('dashboard.tools.errorCount'),
     dataIndex: 'error_count',
     key: 'error_count',
     width: '50%',
     sorter: (a, b) => a.error_count - b.error_count
   }
-]
+])
 
 const hasErrorData = computed(() => {
   return (
@@ -206,7 +209,7 @@ const initToolsChart = () => {
     },
     series: [
       {
-        name: '调用次数',
+        name: t('dashboard.tools.totalCalls'),
         type: 'bar',
         data: data.map((item) => item.count),
         itemStyle: {
@@ -254,7 +257,7 @@ const initErrorChart = () => {
     },
     series: [
       {
-        name: '错误分布',
+        name: t('dashboard.tools.errorDistribution'),
         type: 'pie',
         radius: ['30%', '70%'],
         center: ['50%', '60%'],

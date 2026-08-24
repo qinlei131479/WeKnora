@@ -61,7 +61,8 @@
 --td-bg-color-page: var(--td-gray-color-14);
 --td-bg-color-sidebar: #181818;
 --td-bg-color-settings-modal: #181818;
---td-bg-color-container: var(--td-gray-color-13);
+--td-bg-color-container: var(--td-gray-color-14);
+--td-bg-color-elevated: var(--td-gray-color-13);
 --td-bg-color-container-hover: var(--td-gray-color-12);
 --td-bg-color-container-active: var(--td-gray-color-10);
 --td-bg-color-container-select: var(--td-gray-color-9);
@@ -96,6 +97,22 @@
     /* 阴影配置 */  --td-shadow-1: 0px 1px 10px rgba(0, 0, 0, 0.05),    0px 4px 5px rgba(0, 0, 0, 0.08), 0px 2px 4px -1px rgba(0, 0, 0, 0.12);  --td-shadow-2: 0px 3px 14px 2px rgba(0, 0, 0, 0.05),    0px 8px 10px 1px rgba(0, 0, 0, 0.06), 0px 5px 5px -3px rgba(0, 0, 0, 0.1);  --td-shadow-3: 0px 6px 30px 5px rgba(0, 0, 0, 0.05),    0px 16px 24px 2px rgba(0, 0, 0, 0.04), 0px 8px 10px -5px rgba(0, 0, 0, 0.08);  /* end 阴影配置 */
 
     }
+
+/* 深色模式：页面与普通内容面统一为 #181818，浮层保留 #242424 以维持层级。 */
+:root[theme-mode="dark"] .t-popup,
+:root[theme-mode="dark"] .t-popup__content,
+:root[theme-mode="dark"] .t-dialog,
+:root[theme-mode="dark"] .t-dialog__ctx,
+:root[theme-mode="dark"] .t-drawer,
+:root[theme-mode="dark"] .t-drawer__content,
+:root[theme-mode="dark"] .t-dropdown,
+:root[theme-mode="dark"] .t-select__dropdown,
+:root[theme-mode="dark"] .t-date-picker,
+:root[theme-mode="dark"] .t-cascader__panel,
+:root[theme-mode="dark"] .t-notification,
+:root[theme-mode="dark"] .t-message {
+    --td-bg-color-container: var(--td-bg-color-elevated);
+}
 
 /* 全局深色模式滚动条样式 */
 :root[theme-mode="dark"] *::-webkit-scrollbar-thumb {

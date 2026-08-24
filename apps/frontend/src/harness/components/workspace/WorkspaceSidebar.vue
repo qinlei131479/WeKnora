@@ -7,13 +7,13 @@
         :class="{ active: activeKey === 'personal' && !isQuickAccessPath(currentPath) }"
         @click="$emit('select-personal')"
       >
-        <FileTypeIcon is-dir folder-variant="personal" :size="18" />
-        <span>个人工作区</span>
+        <FileTypeIcon is-dir :size="18" />
+        <span>{{ t('workspacePage.personal') }}</span>
       </button>
     </section>
 
     <section class="sidebar-section">
-      <div class="section-title">快速访问</div>
+      <div class="section-title">{{ t('workspacePage.quickAccess') }}</div>
       <button
         type="button"
         class="workspace-nav-item secondary"
@@ -22,8 +22,8 @@
         }"
         @click="$emit('select-path', savedArtifactsPath)"
       >
-        <FileTypeIcon is-dir folder-variant="favorite" :size="18" />
-        <span>保存的交付物</span>
+        <FileTypeIcon is-dir :size="18" />
+        <span>{{ t('workspacePage.savedArtifacts') }}</span>
       </button>
       <button
         type="button"
@@ -31,13 +31,13 @@
         :class="{ active: activeKey === 'personal' && isSameOrChildPath(currentPath, agentsPath) }"
         @click="$emit('select-path', agentsPath)"
       >
-        <FileTypeIcon is-dir folder-variant="agent" :size="18" />
-        <span>智能体文件</span>
+        <FileTypeIcon is-dir :size="18" />
+        <span>{{ t('workspacePage.agentFiles') }}</span>
       </button>
     </section>
 
     <section v-if="myDatabases.length" class="sidebar-section">
-      <div class="section-title">我的知识库</div>
+      <div class="section-title">{{ t('workspacePage.myKnowledge') }}</div>
       <button
         v-for="database in myDatabases"
         :key="database.kb_id || database.id || database.name"
@@ -52,7 +52,7 @@
     </section>
 
     <section v-if="sharedDatabases.length" class="sidebar-section">
-      <div class="section-title">共享知识库</div>
+      <div class="section-title">{{ t('workspacePage.sharedKnowledge') }}</div>
       <button
         v-for="database in sharedDatabases"
         :key="database.kb_id || database.id || database.name"
@@ -67,17 +67,20 @@
     </section>
 
     <section v-if="loadingDatabases" class="sidebar-section">
-      <div class="sidebar-muted">正在加载知识库...</div>
+      <div class="sidebar-muted">{{ t('workspacePage.loadingKnowledge') }}</div>
     </section>
     <section v-else-if="!databases.length" class="sidebar-section">
-      <div class="sidebar-muted">暂无可访问知识库</div>
+      <div class="sidebar-muted">{{ t('workspacePage.noKnowledge') }}</div>
     </section>
   </aside>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
+
+const { t } = useI18n()
 
 const savedArtifactsPath = '/saved_artifacts'
 const agentsPath = '/agents/'
@@ -117,9 +120,9 @@ const sharedDatabases = computed(() =>
   flex-direction: column;
   gap: 12px;
   min-width: 0;
-  padding: 14px 10px;
+  padding: 14px 10px 14px calc(var(--page-padding) - 10px);
   border-right: 1px solid var(--gray-100);
-  background: var(--gray-0);
+  background: var(--bg-sider, var(--gray-25));
   overflow-y: auto;
 }
 
@@ -167,8 +170,9 @@ const sharedDatabases = computed(() =>
 
   &:hover:not(:disabled),
   &.active {
-    border-color: transparent;
-    color: var(--main-600);
+    border-color: var(--td-brand-color, var(--main-color));
+    background: var(--td-brand-color-light, color-mix(in srgb, var(--td-brand-color) 12%, transparent));
+    color: var(--td-brand-color, var(--main-600));
   }
 
   &.secondary {

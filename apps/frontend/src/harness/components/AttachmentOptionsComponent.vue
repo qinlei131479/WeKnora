@@ -2,7 +2,7 @@
   <div
     class="config-dropdown-panel attachment-options-panel"
     role="menu"
-    :aria-label="activeResourceType ? `${activeResourceLabel}选择` : '添加内容'"
+    :aria-label="activeResourceType ? activeResourceLabel : t('harness.chat.addContent')"
     @click.stop
   >
     <template v-if="!activeResourceType">
@@ -13,11 +13,11 @@
           class="config-dropdown-item"
           :class="{ disabled }"
           :disabled="disabled"
-          title="支持任意文件格式 ≤ 5 MB"
+          :title="t('harness.chat.fileHint')"
           @click="handleAttachmentClick"
         >
           <FileText :size="15" class="config-dropdown-item-icon" />
-          <span class="config-dropdown-item-label">添加附件</span>
+          <span class="config-dropdown-item-label">{{ t('harness.chat.addAttachment') }}</span>
         </button>
 
         <button
@@ -26,11 +26,11 @@
           class="config-dropdown-item"
           :class="{ disabled }"
           :disabled="disabled"
-          title="支持 jpg/jpeg/png/gif，≤ 5 MB"
+          :title="t('harness.chat.imageHint')"
           @click="handleImageUpload"
         >
           <Image :size="15" class="config-dropdown-item-icon" />
-          <span class="config-dropdown-item-label">上传图片</span>
+          <span class="config-dropdown-item-label">{{ t('harness.chat.uploadImage') }}</span>
         </button>
       </template>
 
@@ -56,7 +56,7 @@
       <button
         type="button"
         class="attachment-options-back"
-        aria-label="返回添加内容菜单"
+        :aria-label="t('harness.chat.backToAdd')"
         @click="activeResourceType = ''"
       >
         <ArrowLeft :size="15" />
@@ -83,7 +83,7 @@
           <span class="attachment-resource-content">
             <span class="config-dropdown-item-label">{{ item.label }}</span>
             <span class="attachment-resource-description">
-              {{ item.description || '暂无描述' }}
+              {{ item.description || t('common.noData') }}
             </span>
           </span>
         </button>
@@ -94,16 +94,18 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ArrowLeft, ChevronRight, Database, FileText, Image, WandSparkles } from 'lucide-vue-next'
 import { message } from 'ant-design-vue'
 import { uploadMultimodalImage } from '@harness/utils/multimodal_image_upload'
 import { getMentionIconComponent } from '@harness/utils/mention_icon_utils'
 import { buildMentionResourceItems } from '@harness/utils/mention_resource_items'
 
-const RESOURCE_GROUPS = [
-  { key: 'knowledgeBases', label: '知识库', icon: Database },
-  { key: 'skills', label: '技能', icon: WandSparkles }
-]
+const { t } = useI18n()
+const RESOURCE_GROUPS = computed(() => [
+  { key: 'knowledgeBases', label: t('menu.knowledgeBase'), icon: Database },
+  { key: 'skills', label: t('harness.chat.skill'), icon: WandSparkles }
+])
 
 const props = defineProps({
   disabled: {
@@ -124,12 +126,12 @@ const emit = defineEmits(['upload', 'upload-image', 'upload-image-success', 'sel
 const activeResourceType = ref('')
 const resourceItems = computed(() => buildMentionResourceItems(props.mention || {}))
 const visibleResourceGroups = computed(() =>
-  RESOURCE_GROUPS.filter((group) => resourceItems.value[group.key].length)
+  RESOURCE_GROUPS.value.filter((group) => resourceItems.value[group.key].length)
 )
 const hasMentionResources = computed(() => visibleResourceGroups.value.length > 0)
 const activeResourceItems = computed(() => resourceItems.value[activeResourceType.value] || [])
 const activeResourceLabel = computed(
-  () => RESOURCE_GROUPS.find((group) => group.key === activeResourceType.value)?.label ?? ''
+  () => RESOURCE_GROUPS.value.find((group) => group.key === activeResourceType.value)?.label ?? ''
 )
 
 const handleAttachmentClick = () => {

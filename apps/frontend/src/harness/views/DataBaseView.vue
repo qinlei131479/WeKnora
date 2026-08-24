@@ -2,23 +2,23 @@
   <div class="database-container layout-container">
     <PageHeader
       v-if="!props.embedded"
-      title="知识库"
+      :title="t('runtimeKnowledge.title')"
+      :subtitle="t('knowledgeList.runtimeSubtitle')"
       :active-key="knowledgeActiveView"
       :tabs="knowledgeViewItems"
       :loading="dbState.listLoading"
-      :show-border="true"
-      aria-label="知识库视图切换"
+      :aria-label="t('runtimeKnowledge.viewSwitch')"
     />
 
-    <PageShoulder v-model:search="searchQuery" search-placeholder="搜索知识库...">
+    <PageShoulder v-model:search="searchQuery" :search-placeholder="t('runtimeKnowledge.searchPlaceholder')">
       <template #filters>
         <a-select
           v-model:value="typeFilter"
           style="width: 120px"
-          placeholder="全部类型"
+          :placeholder="t('runtimeKnowledge.allTypes')"
           allow-clear
         >
-          <a-select-option :value="null">全部类型</a-select-option>
+          <a-select-option :value="null">{{ t('runtimeKnowledge.allTypes') }}</a-select-option>
           <a-select-option v-for="t in kbTypes" :key="t" :value="t">
             {{ getKbTypeLabel(t) }}
           </a-select-option>
@@ -31,14 +31,14 @@
           :disabled="!kbTypes.length"
           @click="state.openNewDatabaseModel = true"
         >
-          <Plus :size="16" /> 新建知识库
+          <Plus :size="16" /> {{ t('runtimeKnowledge.create') }}
         </a-button>
       </template>
     </PageShoulder>
 
     <a-modal
       :open="state.openNewDatabaseModel"
-      title="新建知识库"
+      :title="t('runtimeKnowledge.create')"
       :confirm-loading="dbState.creating"
       @ok="handleCreateDatabase"
       @cancel="cancelCreateDatabase"
@@ -49,7 +49,7 @@
       <div class="new-database-form">
         <!-- 知识库类型选择 -->
         <div class="form-section">
-          <h3 class="section-title">知识库类型<span class="required-mark">*</span></h3>
+          <h3 class="section-title">{{ t('runtimeKnowledge.type') }}<span class="required-mark">*</span></h3>
           <div class="kb-type-cards">
             <div
               v-for="(typeInfo, typeKey) in orderedKbTypes"
@@ -69,17 +69,17 @@
         </div>
 
         <div class="form-section">
-          <h3 class="section-title">知识库名称<span class="required-mark">*</span></h3>
-          <a-input v-model:value="newDatabase.name" placeholder="新建知识库名称" />
+          <h3 class="section-title">{{ t('runtimeKnowledge.name') }}<span class="required-mark">*</span></h3>
+          <a-input v-model:value="newDatabase.name" :placeholder="t('runtimeKnowledge.createNamePlaceholder')" />
         </div>
 
         <div v-if="selectedKbTypeInfo?.requires_embedding_model" class="form-grid two-columns">
           <div class="form-section compact-section">
-            <h3 class="section-title">嵌入模型</h3>
+            <h3 class="section-title">{{ t('runtimeKnowledge.embeddingModel') }}</h3>
             <EmbeddingModelSelector
               v-model:value="newDatabase.embedding_model_spec"
               class="full-width"
-              placeholder="请选择嵌入模型"
+              :placeholder="t('runtimeKnowledge.embeddingPlaceholder')"
             />
           </div>
 
@@ -149,7 +149,7 @@
           <AiTextarea
             v-model="newDatabase.description"
             :name="newDatabase.name"
-            placeholder="新建知识库描述"
+            :placeholder="t('runtimeKnowledge.createDescPlaceholder')"
             :auto-size="{ minRows: 3, maxRows: 10 }"
           />
         </div>
@@ -170,14 +170,14 @@
         </div>
       </div>
       <template #footer>
-        <a-button key="back" @click="cancelCreateDatabase">取消</a-button>
+        <a-button key="back" @click="cancelCreateDatabase">{{ t('runtimeKnowledge.cancel') }}</a-button>
         <a-button
           key="submit"
           type="primary"
           :loading="dbState.creating"
           :disabled="!selectedKbTypeInfo"
           @click="handleCreateDatabase"
-          >创建</a-button
+          >{{ t('runtimeKnowledge.createAction') }}</a-button
         >
       </template>
     </a-modal>
@@ -185,14 +185,14 @@
     <!-- 加载状态 -->
     <div v-if="dbState.listLoading" class="loading-container">
       <a-spin size="large" />
-      <p>正在加载知识库...</p>
+      <p>{{ t('runtimeKnowledge.loading') }}</p>
     </div>
 
     <!-- 空状态显示 -->
     <ResourceEmptyState
       v-else-if="!databases || databases.length === 0"
-      title="暂无知识库"
-      description="创建知识库后，可以上传文件并配置检索、图谱和评估能力。"
+      :title="t('runtimeKnowledge.emptyTitle')"
+      :description="t('runtimeKnowledge.emptyDescription')"
       :icon="getKbTypeIcon('milvus')"
     >
       <template #actions>
@@ -206,7 +206,7 @@
           <template #icon>
             <Plus :size="16" />
           </template>
-          创建知识库
+          {{ t('runtimeKnowledge.createEmpty') }}
         </a-button>
       </template>
     </ResourceEmptyState>
@@ -255,6 +255,7 @@
 
 <script setup>
 import { ref, onMounted, reactive, watch, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter, useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useConfigStore } from '@harness/stores/config'
@@ -277,6 +278,7 @@ import { getKbTypeLabel, getKbTypeIcon, getKbTypeColor, kbUtils } from '@harness
 import { getShareConfigLabel } from '@harness/utils/shareConfig'
 import { DEFAULT_CHUNK_PRESET_ID } from '@harness/utils/chunkUtils'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const configStore = useConfigStore()
@@ -296,9 +298,9 @@ const props = defineProps({
 const { databases, state: dbState } = storeToRefs(databaseStore)
 
 const knowledgeActiveView = 'documents'
-const knowledgeViewItems = [
-  { key: 'documents', label: '文档知识库', path: '/platform/knowledge-bases?surface=runtime' }
-]
+const knowledgeViewItems = computed(() => [
+  { key: 'documents', label: t('knowledgeList.tabs.runtime'), path: '/platform/knowledge-bases?surface=runtime' }
+])
 
 const kbTypes = computed(() => Object.keys(supportedKbTypes.value))
 const searchQuery = ref('')

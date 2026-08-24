@@ -2,7 +2,7 @@
   <section class="conversation-nav-section" :class="{ collapsed }">
     <div v-if="showHistory && !collapsed" class="history-panel">
       <div class="history-label" @click="listCollapsed = !listCollapsed">
-        <span>最近</span>
+        <span>{{ t('harness.history.recent') }}</span>
         <ChevronDown :size="14" class="collapse-icon" :class="{ collapsed: listCollapsed }" />
       </div>
       <div v-show="!listCollapsed" class="conversation-list">
@@ -17,7 +17,7 @@
             @dblclick.stop="renameChat(chat.id)"
             @click.middle="$emit('delete-chat', chat.id)"
           >
-            <span class="conversation-title">{{ chat.title || '新的对话' }}</span>
+            <span class="conversation-title">{{ chat.title || t('menu.newSession') }}</span>
             <span class="actions-mask"></span>
             <span class="conversation-actions" @click.stop @dblclick.stop>
               <a-dropdown :trigger="['click']">
@@ -28,21 +28,21 @@
                       :icon="h(chat.is_pinned ? PinOff : Pin, { size: 14 })"
                       @click.stop="$emit('toggle-pin', chat.id)"
                     >
-                      {{ chat.is_pinned ? '取消置顶' : '置顶' }}
+                      {{ chat.is_pinned ? t('menu.unpin') : t('menu.pin') }}
                     </a-menu-item>
                     <a-menu-item
                       key="rename"
                       :icon="h(SquarePen, { size: 14 })"
                       @click.stop="renameChat(chat.id)"
                     >
-                      重命名
+                      {{ t('harness.history.rename') }}
                     </a-menu-item>
                     <a-menu-item
                       key="delete"
                       :icon="h(Trash2, { size: 14 })"
                       @click.stop="$emit('delete-chat', chat.id)"
                     >
-                      删除
+                      {{ t('common.delete') }}
                     </a-menu-item>
                   </a-menu>
                 </template>
@@ -56,7 +56,7 @@
             </span>
           </div>
         </template>
-        <div v-else-if="!collapsed" class="empty-list">暂无对话历史</div>
+        <div v-else-if="!collapsed" class="empty-list">{{ t('harness.history.empty') }}</div>
         <div v-if="hasMoreChats && !collapsed" class="load-more-wrapper">
           <a-button
             type="text"
@@ -64,7 +64,7 @@
             :loading="isLoadingMore"
             @click="$emit('load-more-chats')"
           >
-            {{ isLoadingMore ? '加载中...' : '加载更多' }}
+            {{ isLoadingMore ? t('common.loading') : t('harness.history.loadMore') }}
           </a-button>
         </div>
       </div>
@@ -74,9 +74,12 @@
 
 <script setup>
 import { computed, h, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { message, Modal } from 'ant-design-vue'
 import { ChevronDown, MoreVertical, Pin, PinOff, SquarePen, Trash2 } from 'lucide-vue-next'
 import { parseToShanghai } from '@harness/utils/time'
+
+const { t } = useI18n()
 
 const props = defineProps({
   currentChatId: {
@@ -133,7 +136,7 @@ const renameChat = async (chatId) => {
 
   let newTitle = chat.title || ''
   Modal.confirm({
-    title: '重命名对话',
+    title: t('harness.history.renameTitle'),
     icon: null,
     closable: false,
     maskClosable: true,
@@ -141,7 +144,7 @@ const renameChat = async (chatId) => {
     width: 400,
     class: 'rename-conversation-modal',
     content: h('div', [
-      h('p', { class: 'rename-conversation-description' }, '保持简短且易于识别'),
+      h('p', { class: 'rename-conversation-description' }, t('harness.history.renameHint')),
       h('input', {
         value: newTitle,
         class: 'rename-conversation-input',
@@ -150,11 +153,11 @@ const renameChat = async (chatId) => {
         }
       })
     ]),
-    okText: '保存',
-    cancelText: '取消',
+    okText: t('common.save'),
+    cancelText: t('common.cancel'),
     onOk: () => {
       if (!newTitle.trim()) {
-        message.warning('标题不能为空')
+        message.warning(t('harness.history.titleRequired'))
         return Promise.reject()
       }
       emit('rename-chat', { chatId, title: newTitle })
@@ -319,7 +322,8 @@ const renameChat = async (chatId) => {
     color 0.2s ease;
 
   &:hover {
-    background: var(--td-bg-color-container-hover, var(--gray-50));
+    background: var(--td-brand-color-light, color-mix(in srgb, var(--td-brand-color) 12%, transparent));
+    color: var(--td-brand-color, var(--main-color));
 
     .actions-mask,
     .conversation-actions {
@@ -327,7 +331,7 @@ const renameChat = async (chatId) => {
     }
 
     .actions-mask {
-      background: linear-gradient(to right, transparent, var(--td-bg-color-container-hover, var(--gray-50)));
+      background: linear-gradient(to right, transparent, var(--td-brand-color-light, var(--gray-50)));
     }
 
     .more-btn {

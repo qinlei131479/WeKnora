@@ -3,7 +3,7 @@
     <div class="file-browser-header">
       <div class="file-browser-path">
         <slot name="toolbar-left">
-          <nav class="file-browser-breadcrumbs" aria-label="文件路径">
+          <nav class="file-browser-breadcrumbs" :aria-label="t('workspacePage.filePath')">
             <button
               v-for="(item, index) in resolvedBreadcrumbs"
               :key="item.key || item.path || item.name || index"
@@ -14,7 +14,7 @@
               :title="item.title || item.path || item.name"
               @click="handleBreadcrumbClick(item, index)"
             >
-              <span class="file-browser-breadcrumb-label">{{ item.name || rootLabel }}</span>
+              <span class="file-browser-breadcrumb-label">{{ item.name || resolvedRootLabel }}</span>
             </button>
             <slot name="breadcrumb-suffix" />
           </nav>
@@ -23,12 +23,12 @@
 
       <div class="file-browser-actions">
         <slot name="toolbar-actions" />
-        <a-tooltip v-if="refreshable" title="刷新">
+        <a-tooltip v-if="refreshable" :title="t('workspacePage.refresh')">
           <a-button
             type="text"
             class="file-browser-icon-button"
             :loading="refreshing"
-            aria-label="刷新"
+            :aria-label="t('workspacePage.refresh')"
             @click="$emit('refresh')"
           >
             <template #icon><RotateCw :size="16" /></template>
@@ -89,7 +89,7 @@
 
       <template #emptyText>
         <slot name="empty">
-          <a-empty :description="emptyText" />
+          <a-empty :description="resolvedEmptyText" />
         </slot>
       </template>
     </a-table>
@@ -98,8 +98,11 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { RotateCw } from 'lucide-vue-next'
 import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
+
+const { t } = useI18n()
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },
@@ -112,8 +115,8 @@ const props = defineProps({
   rowClassName: { type: [String, Function], default: '' },
   pagination: { type: Object, default: null },
   selection: { type: Object, default: null },
-  emptyText: { type: String, default: '暂无文件' },
-  rootLabel: { type: String, default: '文件' },
+  emptyText: { type: String, default: '' },
+  rootLabel: { type: String, default: '' },
   refreshable: { type: Boolean, default: false },
   refreshing: { type: Boolean, default: false }
 })
@@ -127,9 +130,12 @@ const emit = defineEmits([
   'refresh'
 ])
 
+const resolvedEmptyText = computed(() => props.emptyText || t('workspacePage.emptyFolder'))
+const resolvedRootLabel = computed(() => props.rootLabel || t('harness.chat.file'))
+
 const resolvedBreadcrumbs = computed(() => {
   if (props.breadcrumbs.length) return props.breadcrumbs
-  return [{ key: 'root', name: props.rootLabel, path: '/' }]
+  return [{ key: 'root', name: resolvedRootLabel.value, path: '/' }]
 })
 
 const tablePagination = computed(() => {
@@ -403,6 +409,7 @@ const handleTableChange = (pagination, filters, sorter, extra) => {
   font-size: 12px;
   font-weight: 600;
   line-height: 18px;
+  white-space: nowrap;
   border-bottom: 1px solid var(--gray-100);
   background: var(--gray-0);
 }

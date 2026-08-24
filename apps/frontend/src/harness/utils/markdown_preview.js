@@ -209,6 +209,14 @@ const setCachedHtml = (cacheKey, html) => {
   renderedHtmlCache.set(cacheKey, html)
 }
 
+const wrapMarkdownTables = (html) => {
+  if (!html || !html.includes('<table')) return html
+  return html.replace(
+    /<table\b[\s\S]*?<\/table>/gi,
+    (tableHtml) => `<div class="chat-markdown-table">${tableHtml}</div>`
+  )
+}
+
 export const renderMarkdown = async (content, { theme = 'github-light' } = {}) => {
   try {
     const normalizedContent = normalizeHtmlTagQuotes(normalizeLegacyMinioPublicUrls(content))
@@ -228,21 +236,23 @@ export const renderMarkdown = async (content, { theme = 'github-light' } = {}) =
     }
 
     const md = await getRenderer(themeName, needsHighlight)
-    const html = DOMPurify.sanitize(md.render(svgContent), {
-      ADD_TAGS: ['input'],
-      ADD_ATTR: [
-        'class',
-        'style',
-        'target',
-        'rel',
-        'type',
-        'checked',
-        'disabled',
-        'source',
-        'colspan',
-        'rowspan'
-      ]
-    })
+    const html = wrapMarkdownTables(
+      DOMPurify.sanitize(md.render(svgContent), {
+        ADD_TAGS: ['input'],
+        ADD_ATTR: [
+          'class',
+          'style',
+          'target',
+          'rel',
+          'type',
+          'checked',
+          'disabled',
+          'source',
+          'colspan',
+          'rowspan'
+        ]
+      })
+    )
     setCachedHtml(cacheKey, html)
     return html
   } catch (error) {

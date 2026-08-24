@@ -1,10 +1,8 @@
 <template>
   <div class="dashboard-container">
-    <PageHeader :title="t('menu.dashboard')" :show-border="true" />
+    <PageHeader :title="t('menu.dashboard')" :subtitle="t('dashboard.subtitle')" />
 
-    <!-- 现代化顶部统计栏 -->
     <div class="modern-stats-header">
-      <StatusBar />
       <StatsOverviewComponent :basic-stats="basicStats" @open-feedback="handleOpenFeedback" />
     </div>
 
@@ -63,7 +61,6 @@ import { dashboardApi } from '@harness/apis/dashboard_api'
 
 // 导入子组件
 import PageHeader from '@harness/components/shared/PageHeader.vue'
-import StatusBar from '@harness/components/StatusBar.vue'
 import UserStatsComponent from '@harness/components/dashboard/UserStatsComponent.vue'
 import ToolStatsComponent from '@harness/components/dashboard/ToolStatsComponent.vue'
 import KnowledgeStatsComponent from '@harness/components/dashboard/KnowledgeStatsComponent.vue'
@@ -116,20 +113,18 @@ const loadAllStats = async () => {
       agents: response.agents
     }
 
-    console.log('Dashboard 数据加载完成:', response)
-    message.success('数据加载成功')
   } catch (error) {
     console.error('加载统计数据失败:', error)
-    message.error('加载统计数据失败')
+    message.error(t('dashboard.loadFailed'))
 
     // 如果并行请求失败，尝试单独加载基础数据
     try {
       const basicResponse = await dashboardApi.getStats()
       basicStats.value = basicResponse
-      message.warning('详细数据加载失败，仅显示基础统计')
+      message.warning(t('dashboard.loadPartial'))
     } catch (basicError) {
       console.error('加载基础统计数据也失败:', basicError)
-      message.error('无法加载任何统计数据')
+      message.error(t('dashboard.loadNone'))
     }
   } finally {
     loading.value = false
@@ -163,20 +158,30 @@ onUnmounted(() => {
 
 <style scoped lang="less">
 .dashboard-container {
-  background-color: var(--gray-25);
-  min-height: calc(100vh - 64px);
+  background-color: var(--td-bg-color-page, var(--gray-25));
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
   overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 // Dashboard 特有的网格布局
 .dashboard-grid {
   display: grid;
   padding: var(--page-padding);
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
   grid-template-rows: auto auto;
   gap: 16px;
   margin-bottom: 24px;
   min-height: 600px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 
   .grid-item {
     border-radius: 8px;
@@ -185,6 +190,8 @@ onUnmounted(() => {
     flex-direction: column;
     min-width: 0;
     min-height: 300px;
+    max-width: 100%;
+    overflow-x: hidden;
     background-color: transparent;
     border: none;
     transition: all 0.2s ease;
@@ -359,7 +366,7 @@ onUnmounted(() => {
 // Dashboard 特有的响应式设计
 @media (max-width: 1200px) {
   .dashboard-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     grid-template-rows: auto auto auto;
     gap: 16px;
 

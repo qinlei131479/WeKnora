@@ -1,6 +1,11 @@
 <template>
   <div class="kb-list-container">
-    <ListSpaceSidebar v-if="!authStore.isLiteMode && surface === 'platform'" v-model="spaceSelection" :count-all="allKnowledgeBases"
+    <ListSpaceSidebar
+      v-model="spaceSelection"
+      v-model:surface-value="surface"
+      :surface-items="surfaceNavItems"
+      :show-scope-nav="SHOW_SCOPE_NAV"
+      :count-all="allKnowledgeBases"
       :count-mine="kbs.length" :count-by-org="effectiveSharedCountByOrg" :count-favorites="kbFavoritesCount"
       :count-recents="kbRecentsCount" />
     <div class="kb-list-content">
@@ -24,11 +29,6 @@
           }}</p>
         </div>
       </div>
-      <ListSurfaceTabs
-        v-model="surface"
-        :items="surfaceTabs"
-        :aria-label="$t('knowledgeBase.title')"
-      />
       <HarnessIsland v-if="surface !== 'platform'" class="surface-embed">
         <DataBaseView v-if="surface === 'runtime'" embedded />
         <SkillCardList v-else-if="surface === 'skills'" />
@@ -812,7 +812,6 @@ import KnowledgeBaseEditorModal from './KnowledgeBaseEditorModal.vue'
 import KbWikiBadge from './components/KbWikiBadge.vue'
 import ShareKnowledgeBaseDialog from '@/components/ShareKnowledgeBaseDialog.vue'
 import ListSpaceSidebar from '@/components/ListSpaceSidebar.vue'
-import ListSurfaceTabs from '@/components/ListSurfaceTabs.vue'
 import ResourceOriginBadge from '@/components/ResourceOriginBadge.vue'
 import { shouldShowResourceOriginBadge } from '@/utils/card-list-badge'
 import { useListUrlState } from '@/composables/useListUrlState'
@@ -837,6 +836,7 @@ const orgStore = useOrganizationStore()
 const chatResources = useChatResourcesStore()
 const { t } = useI18n()
 
+const SHOW_SCOPE_NAV = false
 // 左侧空间选择：默认根据当前角色决定。
 // Viewer 在该空间里通常 0 KB owned，"我的"会显示空状态、又把共享 KB 藏起来，
 // 体验非常误导；所以 Viewer 默认落到 "all"（我的 + 共享给我都显示）。
@@ -847,32 +847,23 @@ const { t } = useI18n()
 // stored value (not "workspace") for back-compat with any external link
 // that might point at the old query — its display label is rebranded
 // via ListSpaceSidebar's workspaceLabel computed.
-const defaultScope: 'all' | 'mine' = authStore.hasRole('contributor') ? 'mine' : 'all'
+const defaultScope: 'all' | 'mine' = SHOW_SCOPE_NAV && !authStore.hasRole('contributor') ? 'all' : 'mine'
 const { scope: spaceSelection, creator: creatorFilter } = useListUrlState({
   defaultScope,
   defaultCreator: 'all',
 })
 type KbSurface = 'platform' | 'runtime' | 'skills' | 'tools' | 'mcp'
 const { surface } = useListSurface<KbSurface>(
-  () => (authStore.hasRole('admin') ? ['platform', 'runtime', 'skills', 'tools', 'mcp'] : ['platform', 'skills']),
+  () => ['platform', 'runtime', 'skills', 'tools', 'mcp'],
   'platform',
 )
-const surfaceTabs = computed(() => {
-  const tabs = [
-    { value: 'platform', label: t('knowledgeList.tabs.platform') },
-  ]
-  if (authStore.hasRole('admin')) {
-    tabs.push({ value: 'runtime', label: t('knowledgeList.tabs.runtime') })
-  }
-  tabs.push({ value: 'skills', label: t('knowledgeList.tabs.skills') })
-  if (authStore.hasRole('admin')) {
-    tabs.push(
-      { value: 'tools', label: t('knowledgeList.tabs.tools') },
-      { value: 'mcp', label: t('knowledgeList.tabs.mcp') },
-    )
-  }
-  return tabs
-})
+const surfaceNavItems = computed(() => [
+  { value: 'platform', label: t('knowledgeList.tabs.platform'), icon: 'folder' },
+  { value: 'runtime', label: t('knowledgeList.tabs.runtime'), icon: 'server' },
+  { value: 'skills', label: t('knowledgeList.tabs.skills'), icon: 'app' },
+  { value: 'tools', label: t('knowledgeList.tabs.tools'), icon: 'tools' },
+  { value: 'mcp', label: t('knowledgeList.tabs.mcp'), icon: 'link' },
+])
 
 // Per-user favorites + recents (localStorage-backed). isFavorite & touchRecent
 // are wired into card render and click handlers below.
@@ -1293,7 +1284,11 @@ watch(spaceSelection, (val) => {
   // value fall through to the per-space fetch branch (which would 404
   // on the string "shared").
   if (val === 'shared') {
-    spaceSelection.value = 'all'
+    spaceSelection.value = SHOW_SCOPE_NAV ? 'all' : 'mine'
+    return
+  }
+  if (!SHOW_SCOPE_NAV && (val === 'all' || val === 'favorites' || val === 'recents')) {
+    spaceSelection.value = 'mine'
     return
   }
   if (val === 'all' || val === 'mine' || val === 'favorites' || val === 'recents' || !val) {

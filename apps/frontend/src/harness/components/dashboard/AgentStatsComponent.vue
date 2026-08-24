@@ -1,30 +1,30 @@
 <template>
-  <a-card title="AI智能体分析" :loading="loading" class="dashboard-card">
+  <a-card :title="$t('dashboard.agents.title')" :loading="loading" class="dashboard-card">
     <!-- 智能体概览 -->
     <div class="stats-overview">
       <a-row :gutter="16">
         <a-col :span="8">
           <a-statistic
-            title="智能体总数"
+            :title="$t('dashboard.agents.total')"
             :value="agentStats?.total_agents || 0"
             :value-style="{ color: 'var(--color-info-500)' }"
-            suffix="个"
+            :suffix="$t('dashboard.agents.unit')"
           />
         </a-col>
         <a-col :span="8">
           <a-statistic
-            title="总对话数"
+            :title="$t('dashboard.agents.conversations')"
             :value="totalConversations"
             :value-style="{ color: 'var(--color-accent-500)' }"
-            suffix="次"
+            :suffix="$t('dashboard.agents.times')"
           />
         </a-col>
         <a-col :span="8">
           <a-statistic
-            title="工具调用总数"
+            :title="$t('dashboard.agents.toolCalls')"
             :value="totalToolUsage"
             :value-style="{ color: 'var(--color-warning-500)' }"
-            suffix="次"
+            :suffix="$t('dashboard.agents.times')"
           />
         </a-col>
       </a-row>
@@ -37,7 +37,7 @@
       <!-- 对话数和工具调用数分布 -->
       <a-col :span="24">
         <div class="chart-container">
-          <h4>对话/工具调用分布 (TOP 3)</h4>
+          <h4>{{ $t('dashboard.agents.distribution') }}</h4>
           <div ref="conversationToolChartRef" class="chart"></div>
         </div>
       </a-col>
@@ -46,7 +46,7 @@
     <!-- 表现排行榜 -->
     <a-divider />
     <div class="top-performers">
-      <h4>表现最佳智能体 TOP 5</h4>
+      <h4>{{ $t('dashboard.agents.topPerformers') }}</h4>
       <a-table
         :columns="performerColumns"
         :data-source="topPerformers"
@@ -90,12 +90,15 @@
 
 <script setup>
 import { ref, onMounted, watch, nextTick, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
 import { getColorByIndex } from '@harness/utils/chartColors'
 import { useThemeStore } from '@harness/stores/theme'
 
 // CSS 变量解析工具函数
 import { getCSSVariable } from '@harness/utils/cssVars'
+
+const { t } = useI18n()
 
 // theme store
 const themeStore = useThemeStore()
@@ -117,31 +120,31 @@ const conversationToolChartRef = ref(null)
 let conversationToolChart = null
 
 // 表格列定义
-const performerColumns = [
+const performerColumns = computed(() => [
   {
-    title: '排名',
+    title: t('dashboard.agents.rank'),
     key: 'rank',
     width: '80px',
     align: 'center'
   },
   {
-    title: '智能体',
+    title: t('dashboard.agents.agent'),
     key: 'agent_id',
     width: '30%'
   },
   {
-    title: '满意度',
+    title: t('dashboard.agents.satisfaction'),
     key: 'satisfaction_rate',
     width: '25%',
     align: 'center'
   },
   {
-    title: '对话数',
+    title: t('dashboard.agents.conversationCount'),
     key: 'conversation_count',
     width: '20%',
     align: 'center'
   }
-]
+])
 
 // 计算属性
 const totalConversations = computed(() => {
@@ -219,7 +222,7 @@ const initConversationToolChart = () => {
       }
     },
     legend: {
-      data: ['对话数', '工具调用数'],
+      data: [t('dashboard.agents.conversationCount'), t('dashboard.agents.toolCallCount')],
       right: '0%',
       top: '0%',
       orient: 'horizontal',
@@ -266,7 +269,7 @@ const initConversationToolChart = () => {
     },
     series: [
       {
-        name: '对话数',
+        name: t('dashboard.agents.conversationCount'),
         type: 'bar',
         data: topAgentIds.map((agentId) => {
           const item = conversationData.find((d) => d.agent_id === agentId)
@@ -285,7 +288,7 @@ const initConversationToolChart = () => {
         }
       },
       {
-        name: '工具调用数',
+        name: t('dashboard.agents.toolCallCount'),
         type: 'bar',
         data: topAgentIds.map((agentId) => {
           const item = toolData.find((d) => d.agent_id === agentId)

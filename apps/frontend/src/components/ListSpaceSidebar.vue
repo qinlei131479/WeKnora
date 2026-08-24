@@ -4,6 +4,18 @@
     <!-- Collapsed: icon strip -->
     <div v-if="!isExpanded" class="icon-strip">
       <template v-if="mode === 'resource'">
+        <template v-if="surfaceItems.length">
+          <t-tooltip v-for="item in surfaceItems" :key="item.value" :content="item.label" placement="right"
+            :show-arrow="false">
+            <div class="icon-item-labeled" :class="{ active: surfaceValue === item.value }"
+              @click="selectSurface(item.value)">
+              <t-icon :name="item.icon" size="16px" />
+              <span class="icon-label">{{ truncateLabel(item.label) }}</span>
+            </div>
+          </t-tooltip>
+          <div v-if="showScopeNav" class="icon-strip-divider" />
+        </template>
+        <template v-if="showScopeNav">
         <t-tooltip v-if="!hideAll" :content="tooltipText($t('listSpaceSidebar.all'), countAll)" placement="right"
           :show-arrow="false">
           <div class="icon-item-labeled" :class="{ active: selected === 'all' }" @click="select('all')">
@@ -47,6 +59,7 @@
             </div>
           </t-tooltip>
         </template>
+        </template>
       </template>
 
       <template v-else>
@@ -75,7 +88,17 @@
 
     <!-- Expanded: full nav panel -->
     <nav v-else class="expanded-panel">
-      <div v-if="!hideAll" class="sidebar-item" :class="{ active: selected === 'all' }" @click="select('all')">
+      <template v-if="mode === 'resource' && surfaceItems.length">
+        <div v-for="item in surfaceItems" :key="item.value" class="sidebar-item"
+          :class="{ active: surfaceValue === item.value }" @click="selectSurface(item.value)">
+          <div class="item-left">
+            <t-icon :name="item.icon" class="item-icon" />
+            <span class="item-label">{{ item.label }}</span>
+          </div>
+        </div>
+        <div v-if="showScopeNav" class="sidebar-divider" />
+      </template>
+      <div v-if="showScopeNav && !hideAll" class="sidebar-item" :class="{ active: selected === 'all' }" @click="select('all')">
         <div class="item-left">
           <t-icon name="layers" class="item-icon" />
           <span class="item-label">{{ $t('listSpaceSidebar.all') }}</span>
@@ -83,7 +106,7 @@
         <span v-if="countAll !== undefined" class="item-count">{{ countAll }}</span>
       </div>
 
-      <template v-if="mode === 'resource'">
+      <template v-if="mode === 'resource' && showScopeNav">
         <div v-if="showFavorites" class="sidebar-item" :class="{ active: selected === 'favorites' }"
           @click="select('favorites')">
           <div class="item-left">
@@ -125,7 +148,7 @@
         </template>
       </template>
 
-      <template v-else>
+      <template v-else-if="mode === 'organization'">
         <div class="sidebar-item" :class="{ active: selected === 'created' }" @click="select('created')">
           <div class="item-left">
             <t-icon name="usergroup-add" class="item-icon" />
@@ -161,6 +184,12 @@ const COLLAPSED_WIDTH = 56
 const EXPANDED_WIDTH = 208
 const SNAP_THRESHOLD = 120
 
+export type ListSurfaceNavItem = {
+  value: string
+  label: string
+  icon: string
+}
+
 const props = withDefaults(
   defineProps<{
     mode?: 'resource' | 'organization'
@@ -178,6 +207,10 @@ const props = withDefaults(
     /** Recents entry. Only meaningful in resource mode. */
     countRecents?: number
     showRecents?: boolean
+    /** When false, hide all/favorites/recents/workspace without deleting them. */
+    showScopeNav?: boolean
+    surfaceItems?: ListSurfaceNavItem[]
+    surfaceValue?: string
   }>(),
   {
     mode: 'resource',
@@ -192,6 +225,9 @@ const props = withDefaults(
     showFavorites: true,
     countRecents: 0,
     showRecents: true,
+    showScopeNav: true,
+    surfaceItems: () => [],
+    surfaceValue: '',
   }
 )
 
@@ -248,6 +284,7 @@ function truncateLabel(text: string, max = 4): string {
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
+  'update:surfaceValue': [value: string]
 }>()
 
 const orgStore = useOrganizationStore()
@@ -275,6 +312,10 @@ const organizationsWithCount = computed(() => {
 
 function select(value: string) {
   selected.value = value
+}
+
+function selectSurface(value: string) {
+  emit('update:surfaceValue', value)
 }
 
 function getOrgCount(orgId: string): number | undefined {

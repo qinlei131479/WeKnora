@@ -2,11 +2,11 @@
   <div v-if="message.type === 'human' && message.image_content" class="message-image">
     <img
       :src="`data:${messageImageMimeType};base64,${message.image_content}`"
-      alt="用户上传的图片"
+      :alt="t('harness.chat.uploadedImage')"
       @click="
         openImagePreview(
           `data:${messageImageMimeType};base64,${message.image_content}`,
-          '用户上传的图片'
+          t('harness.chat.uploadedImage')
         )
       "
     />
@@ -50,7 +50,7 @@
             <LoaderCircle v-if="isReasoningActive" size="14" class="reasoning-loading" />
             <Brain v-else size="14" />
           </span>
-          <span class="summary-title">{{ isReasoningActive ? 'Thinking...' : '推理过程' }}</span>
+          <span class="summary-title">{{ isReasoningActive ? t('harness.chat.thinking') : t('harness.chat.reasoning') }}</span>
           <span v-if="!isReasoningActive" class="summary-trailing">
             <ChevronDown v-if="reasoningExpanded" size="14" />
             <ChevronRight v-else size="14" />
@@ -75,12 +75,12 @@
       <!-- 错误提示块 -->
       <div v-if="displayError" class="error-hint">
         <span v-if="getErrorMessage">{{ getErrorMessage }}</span>
-        <span v-else-if="message.error_type === 'interrupted'">回答生成已中断</span>
-        <span v-else-if="message.error_type === 'unexpect'">生成过程中出现异常</span>
+        <span v-else-if="message.error_type === 'interrupted'">{{ t('harness.chat.errorInterrupted') }}</span>
+        <span v-else-if="message.error_type === 'unexpect'">{{ t('harness.chat.errorUnexpected') }}</span>
         <span v-else-if="message.error_type === 'content_guard_blocked'"
-          >检测到敏感内容，已中断输出</span
+          >{{ t('harness.chat.errorGuard') }}</span
         >
-        <span v-else>{{ message.error_type || '未知错误' }}</span>
+        <span v-else>{{ message.error_type || t('harness.chat.unknownError') }}</span>
       </div>
 
       <ToolCallsGroupComponent
@@ -89,9 +89,9 @@
       />
 
       <div v-if="message.isStoppedByUser" class="retry-hint">
-        你停止生成了本次回答
+        {{ t('harness.chat.stoppedHint') }}
         <span class="retry-link" @click="emit('retryStoppedMessage', message.id)"
-          >重新编辑问题</span
+          >{{ t('harness.chat.reedit') }}</span
         >
       </div>
 
@@ -147,7 +147,7 @@
       class="message-image-preview-overlay"
       @click="closeImagePreview"
     >
-      <button class="message-image-preview-close" title="关闭" @click.stop="closeImagePreview">
+      <button class="message-image-preview-close" :title="t('common.close')" @click.stop="closeImagePreview">
         <X :size="20" />
       </button>
       <img :src="imagePreview.src" :alt="imagePreview.alt" class="message-image-preview-img" />
@@ -157,6 +157,7 @@
 
 <script setup>
 import { computed, ref, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import RefsComponent from '@harness/components/RefsComponent.vue'
 import { Brain, Check, ChevronDown, ChevronRight, Copy, LoaderCircle, X } from 'lucide-vue-next'
 import ToolCallsGroupComponent from '@harness/components/ToolCallsGroupComponent.vue'
@@ -170,6 +171,8 @@ import { inferImageMimeTypeFromBase64, normalizeAttachmentPreviews } from '@harn
 import { buildMentionDisplayLabels } from '@harness/utils/mention_utils'
 import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
 import { enrichTaskToolCalls } from '@harness/components/ToolCallingResult/toolRegistry'
+
+const { t } = useI18n()
 
 const props = defineProps({
   // 消息角色：'user'|'assistant'|'sent'|'received'
@@ -297,13 +300,13 @@ const getErrorMessage = computed(() => {
   // 对于已知的错误类型，返回默认提示
   switch (props.message.error_type) {
     case 'interrupted':
-      return '回答生成已中断'
+      return t('harness.chat.errorInterrupted')
     case 'content_guard_blocked':
-      return '检测到敏感内容，已中断输出'
+      return t('harness.chat.errorGuard')
     case 'unexpect':
-      return '生成过程中出现异常'
+      return t('harness.chat.errorUnexpected')
     case 'agent_error':
-      return '智能体获取失败'
+      return t('harness.chat.errorAgent')
     default:
       return null
   }
@@ -349,11 +352,13 @@ const parsedData = computed(() => {
   user-select: text;
   word-break: break-word;
   word-wrap: break-word;
-  font-size: 15px;
+  font-size: 16px;
   line-height: 24px;
   box-sizing: border-box;
   color: var(--gray-10000);
   max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
   position: relative;
   letter-spacing: 0.25px;
 
@@ -681,6 +686,8 @@ const parsedData = computed(() => {
 
 .message-md {
   margin: 8px 0;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .message-image-preview-overlay {

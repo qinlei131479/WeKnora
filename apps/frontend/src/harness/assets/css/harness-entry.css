@@ -14,8 +14,9 @@
   --min-width: 450px;
   height: 100%;
   min-height: 0;
+  min-width: 0;
   color: var(--gray-900);
-  background: var(--gray-0);
+  background: var(--gray-25);
 }
 
 .harness-root .layout-container {
@@ -59,4 +60,115 @@
   background: var(--gray-100);
   color: var(--gray-600);
   border-radius: 4px;
+}
+
+/* Ant Design 暗色表面：所有 harness 页 + 挂到 body 的弹层，对齐 WeKnora */
+html[theme-mode="dark"] .harness-root,
+html[theme-mode="dark"] .harness-root .ant-layout,
+html[theme-mode="dark"] .harness-root .ant-layout-content {
+  background: var(--td-bg-color-page, #181818);
+  color: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+}
+
+html[theme-mode="dark"] .ant-card,
+html[theme-mode="dark"] .ant-card-head,
+html[theme-mode="dark"] .ant-card-body,
+html[theme-mode="dark"] .ant-modal-content,
+html[theme-mode="dark"] .ant-modal-header,
+html[theme-mode="dark"] .ant-modal-footer,
+html[theme-mode="dark"] .ant-drawer-content,
+html[theme-mode="dark"] .ant-drawer-header,
+html[theme-mode="dark"] .ant-drawer-body,
+html[theme-mode="dark"] .ant-dropdown,
+html[theme-mode="dark"] .ant-dropdown-menu,
+html[theme-mode="dark"] .ant-select-dropdown,
+html[theme-mode="dark"] .ant-picker-dropdown,
+html[theme-mode="dark"] .ant-picker-panel-container,
+html[theme-mode="dark"] .ant-popover-inner,
+html[theme-mode="dark"] .ant-tooltip-inner,
+html[theme-mode="dark"] .ant-message-notice-content,
+html[theme-mode="dark"] .ant-notification-notice,
+html[theme-mode="dark"] .ant-table,
+html[theme-mode="dark"] .ant-table-thead > tr > th,
+html[theme-mode="dark"] .ant-table-tbody > tr > td,
+html[theme-mode="dark"] .ant-table-container,
+html[theme-mode="dark"] .ant-collapse,
+html[theme-mode="dark"] .ant-collapse-content,
+html[theme-mode="dark"] .ant-collapse-header,
+html[theme-mode="dark"] .ant-tabs-nav,
+html[theme-mode="dark"] .ant-menu,
+html[theme-mode="dark"] .ant-list-item,
+html[theme-mode="dark"] .ant-empty,
+html[theme-mode="dark"] .ant-pagination-item,
+html[theme-mode="dark"] .ant-pagination-prev .ant-pagination-item-link,
+html[theme-mode="dark"] .ant-pagination-next .ant-pagination-item-link {
+  background: var(--td-bg-color-container, #242424) !important;
+  background-color: var(--td-bg-color-container, #242424) !important;
+  color: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  border-color: var(--td-component-stroke, #383838);
+}
+
+/* 弹窗、菜单等浮层保留一级亮度，普通页面和卡片则跟随 #181818。 */
+html[theme-mode="dark"] .ant-modal-content,
+html[theme-mode="dark"] .ant-modal-header,
+html[theme-mode="dark"] .ant-modal-footer,
+html[theme-mode="dark"] .ant-drawer-content,
+html[theme-mode="dark"] .ant-drawer-header,
+html[theme-mode="dark"] .ant-drawer-body,
+html[theme-mode="dark"] .ant-dropdown,
+html[theme-mode="dark"] .ant-dropdown-menu,
+html[theme-mode="dark"] .ant-select-dropdown,
+html[theme-mode="dark"] .ant-picker-dropdown,
+html[theme-mode="dark"] .ant-picker-panel-container,
+html[theme-mode="dark"] .ant-popover-inner,
+html[theme-mode="dark"] .ant-tooltip-inner,
+html[theme-mode="dark"] .ant-message-notice-content,
+html[theme-mode="dark"] .ant-notification-notice {
+  background: var(--td-bg-color-elevated, #242424) !important;
+  background-color: var(--td-bg-color-elevated, #242424) !important;
+}
+
+html[theme-mode="dark"] .ant-table-thead > tr > th {
+  background: var(--td-bg-color-container-hover, #2c2c2c) !important;
+  color: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55)) !important;
+}
+
+html[theme-mode="dark"] .ant-table-tbody > tr.ant-table-row:hover > td,
+html[theme-mode="dark"] .ant-table-tbody > tr > td.ant-table-cell-row-hover {
+  background: var(--td-bg-color-container-hover, #2c2c2c) !important;
+}
+
+html[theme-mode="dark"] .ant-input,
+html[theme-mode="dark"] .ant-input-affix-wrapper,
+html[theme-mode="dark"] .ant-input-number,
+html[theme-mode="dark"] .ant-input-number-input,
+html[theme-mode="dark"] .ant-select-selector,
+html[theme-mode="dark"] .ant-picker,
+html[theme-mode="dark"] .ant-input-textarea textarea {
+  background: var(--td-bg-color-container, #242424) !important;
+  background-color: var(--td-bg-color-container, #242424) !important;
+  color: var(--td-text-color-primary, rgba(255, 255, 255, 0.9)) !important;
+  border-color: var(--td-component-border, #5e5e5e) !important;
+}
+
+html[theme-mode="dark"] .ant-input::placeholder,
+html[theme-mode="dark"] .ant-select-selection-placeholder {
+  color: var(--td-text-color-placeholder, rgba(255, 255, 255, 0.35)) !important;
+}
+
+html[theme-mode="dark"] .ant-btn-default {
+  background: var(--td-bg-color-container, #242424);
+  color: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  border-color: var(--td-component-border, #5e5e5e);
+}
+
+html[theme-mode="dark"] .ant-btn-default:not(:disabled):hover {
+  background: var(--td-bg-color-container-hover, #2c2c2c);
+  border-color: var(--td-component-border, #5e5e5e);
+  color: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+}
+
+html[theme-mode="dark"] .ant-modal-mask,
+html[theme-mode="dark"] .ant-drawer-mask {
+  background: rgba(0, 0, 0, 0.6);
 }

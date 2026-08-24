@@ -1,5 +1,10 @@
 <template>
     <div class="dialogue-wrap">
+        <ChatEngineSegmented
+            class="chat-engine-switch"
+            :model-value="chatEngine"
+            @update:model-value="goToEngine"
+        />
         <div class="dialogue-answers">
             <div class="dialogue-title" style="--wails-draggable: drag">
                 <span style="--wails-draggable: drag">{{ $t('createChat.title') }}</span>
@@ -43,11 +48,6 @@
                     </div>
                 </transition>
             </div>
-            <ChatEngineSegmented
-                class="chat-engine-switch"
-                :model-value="chatEngine"
-                @update:model-value="goToEngine"
-            />
             <InputField ref="inputFieldRef" @send-msg="sendMsg"></InputField>
         </div>
     </div>
@@ -256,6 +256,7 @@ const handleKBEditorSuccess = (kbId: string) => {
     display: flex;
     justify-content: center;
     align-items: center;
+    position: relative;
 }
 
 .dialogue-answers {
@@ -273,7 +274,11 @@ const handleKBEditorSuccess = (kbId: string) => {
 }
 
 .chat-engine-switch {
-    align-self: center;
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
 }
 
 .dialogue-title {

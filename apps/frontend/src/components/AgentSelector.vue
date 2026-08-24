@@ -260,7 +260,7 @@ const builtinAgents = computed(() => {
     if (agent.id === BUILTIN_SMART_REASONING_ID) {
       return { ...agent, name, description: t('input.agentModeDesc') };
     }
-    return agent;
+    return { ...agent, name };
   });
 });
 

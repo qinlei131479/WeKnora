@@ -24,7 +24,7 @@
             <span
               v-if="isNodeLoading(data.key)"
               class="folder-loading-icon"
-              aria-label="正在加载"
+              :aria-label="t('harness.chat.loading')"
             ></span>
             <FileTypeIcon v-else is-dir :size="18" />
           </template>
@@ -50,6 +50,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { FileText } from 'lucide-vue-next'
 import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
 
@@ -101,6 +102,7 @@ const emit = defineEmits([
   'toggleFolder'
 ])
 
+const { t } = useI18n()
 const loadingKeys = ref(new Set())
 
 const setNodeLoading = (key, isLoading) => {

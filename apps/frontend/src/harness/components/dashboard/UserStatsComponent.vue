@@ -1,26 +1,26 @@
 <template>
-  <a-card title="用户活跃度分析" :loading="loading" class="dashboard-card">
+  <a-card :title="$t('dashboard.users.title')" :loading="loading" class="dashboard-card">
     <!-- 紧凑型用户统计概览 -->
     <div class="compact-stats-grid">
       <div class="mini-stat-card">
         <div class="mini-stat-value">{{ userStats?.total_users || 0 }}</div>
-        <div class="mini-stat-label">总用户</div>
+        <div class="mini-stat-label">{{ $t('dashboard.users.total') }}</div>
       </div>
       <div class="mini-stat-card">
         <div class="mini-stat-value">{{ userStats?.active_users_24h || 0 }}</div>
-        <div class="mini-stat-label">24h活跃</div>
+        <div class="mini-stat-label">{{ $t('dashboard.users.active24h') }}</div>
       </div>
       <div class="mini-stat-card">
         <div class="mini-stat-value">{{ userStats?.active_users_30d || 0 }}</div>
-        <div class="mini-stat-label">30天活跃</div>
+        <div class="mini-stat-label">{{ $t('dashboard.users.active30d') }}</div>
       </div>
     </div>
 
     <!-- 图表区域 - 更紧凑 -->
     <div class="compact-chart-container">
       <div class="chart-header">
-        <span class="chart-title">活跃度趋势</span>
-        <span class="chart-subtitle">最近7天</span>
+        <span class="chart-title">{{ $t('dashboard.users.trend') }}</span>
+        <span class="chart-subtitle">{{ $t('dashboard.users.last7days') }}</span>
       </div>
       <div ref="activityChartRef" class="compact-chart"></div>
     </div>
@@ -29,11 +29,14 @@
 
 <script setup>
 import { ref, onMounted, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
 import { useThemeStore } from '@harness/stores/theme'
 
 // CSS 变量解析工具函数
 import { getCSSVariable } from '@harness/utils/cssVars'
+
+const { t } = useI18n()
 
 // theme store
 const themeStore = useThemeStore()
@@ -113,7 +116,7 @@ const initActivityChart = () => {
     },
     series: [
       {
-        name: '活跃用户数',
+        name: t('dashboard.users.series'),
         type: 'line',
         data: props.userStats.daily_active_users.map((item) => item.active_users),
         smooth: true,

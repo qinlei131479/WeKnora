@@ -324,7 +324,8 @@ onUnmounted(() => {
     border-bottom: 1px solid var(--td-component-stroke);
     background: var(--td-bg-color-container);
     position: relative;
-    z-index: 20;
+    z-index: 200;
+    overflow: visible;
 }
 
 .platform-topbar-right {
@@ -387,6 +388,8 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
+    z-index: 0;
 }
 
 .upload-mask {

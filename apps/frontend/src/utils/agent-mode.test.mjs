@@ -3,6 +3,8 @@ import test from 'node:test'
 
 const BUILTIN_QUICK_ANSWER_ID = 'builtin-quick-answer'
 const BUILTIN_SMART_REASONING_ID = 'builtin-smart-reasoning'
+const BUILTIN_WIKI_RESEARCHER_ID = 'builtin-wiki-researcher'
+const BUILTIN_DATA_ANALYST_ID = 'builtin-data-analyst'
 
 function isQuickAnswerAgentId(agentId) {
   return (agentId || BUILTIN_QUICK_ANSWER_ID) === BUILTIN_QUICK_ANSWER_ID
@@ -61,6 +63,8 @@ test('reconcileBuiltinAgentMode repairs drifted localStorage flags', () => {
 function localizedBuiltinAgentName(agentId, t, fallbackName) {
   if (agentId === BUILTIN_QUICK_ANSWER_ID) return t('input.normalMode')
   if (agentId === BUILTIN_SMART_REASONING_ID) return t('input.agentMode')
+  if (agentId === BUILTIN_WIKI_RESEARCHER_ID) return t('agent.builtinWikiQa')
+  if (agentId === BUILTIN_DATA_ANALYST_ID) return t('agent.builtinTableAnalysis')
   return fallbackName || t('input.normalMode')
 }
 
@@ -68,5 +72,7 @@ test('localizedBuiltinAgentName follows locale keys for mode builtins', () => {
   const t = (key) => key
   assert.equal(localizedBuiltinAgentName('builtin-smart-reasoning', t), 'input.agentMode')
   assert.equal(localizedBuiltinAgentName('builtin-quick-answer', t), 'input.normalMode')
+  assert.equal(localizedBuiltinAgentName('builtin-wiki-researcher', t), 'agent.builtinWikiQa')
+  assert.equal(localizedBuiltinAgentName('builtin-data-analyst', t), 'agent.builtinTableAnalysis')
   assert.equal(localizedBuiltinAgentName('custom-1', t, 'My Agent'), 'My Agent')
 })

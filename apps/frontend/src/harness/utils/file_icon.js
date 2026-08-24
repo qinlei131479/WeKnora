@@ -1,5 +1,5 @@
-// 文件 / 文件夹类型图标（彩色 SVG），用于在文件路径前渲染。
-// 注意：仅用于「渲染文件/文件夹名称前的类型图标」，按钮图标请勿使用此处的资源。
+// 文件类型图标（彩色 SVG），用于在文件名/路径前渲染。目录图标由 FileTypeIcon 使用 TDesign folder。
+// 注意：仅用于「渲染文件名称前的类型图标」，按钮图标请勿使用此处的资源。
 import archiveIcon from '@harness/assets/icons/files/archive.svg?url'
 import audioIcon from '@harness/assets/icons/files/audio.svg?url'
 import cadIcon from '@harness/assets/icons/files/cad.svg?url'
@@ -16,23 +16,6 @@ import textIcon from '@harness/assets/icons/files/text.svg?url'
 import videoIcon from '@harness/assets/icons/files/video.svg?url'
 import webIcon from '@harness/assets/icons/files/web.svg?url'
 import wordIcon from '@harness/assets/icons/files/word.svg?url'
-import folderIcon from '@harness/assets/icons/files/folder.svg?url'
-import folderAgentIcon from '@harness/assets/icons/files/folder-agent.svg?url'
-import folderEnterpriseIcon from '@harness/assets/icons/files/folder-enterprise.svg?url'
-import folderFavoriteIcon from '@harness/assets/icons/files/folder-favorite.svg?url'
-import folderKnowledgeIcon from '@harness/assets/icons/files/folder-knowledge.svg?url'
-import folderPersonalIcon from '@harness/assets/icons/files/folder-personal.svg?url'
-import folderTrashIcon from '@harness/assets/icons/files/folder-trash.svg?url'
-
-export const FOLDER_ICONS = {
-  default: folderIcon,
-  agent: folderAgentIcon,
-  enterprise: folderEnterpriseIcon,
-  favorite: folderFavoriteIcon,
-  knowledge: folderKnowledgeIcon,
-  personal: folderPersonalIcon,
-  trash: folderTrashIcon
-}
 
 const EXTENSION_ICONS = {
   // 文档
@@ -133,14 +116,7 @@ const getExtension = (name) => {
 }
 
 /**
- * 解析文件 / 文件夹对应的彩色图标 URL。
- * @param {string} name 文件名或路径（目录可以 `/` 结尾）
- * @param {object} [options]
- * @param {boolean} [options.isDir] 是否为目录
- * @param {string} [options.folderVariant] 文件夹图标变体：default | agent | enterprise | favorite | knowledge | personal | trash
+ * 解析文件对应的彩色图标 URL。目录图标由 FileTypeIcon 使用 TDesign folder。
+ * @param {string} name 文件名或路径
  */
-export const resolveFileIconUrl = (name, { isDir = false, folderVariant = 'default' } = {}) => {
-  const isDirectory = isDir || String(name || '').endsWith('/')
-  if (isDirectory) return FOLDER_ICONS[folderVariant] || FOLDER_ICONS.default
-  return EXTENSION_ICONS[getExtension(name)] || fileIcon
-}
+export const resolveFileIconUrl = (name) => EXTENSION_ICONS[getExtension(name)] || fileIcon

@@ -146,6 +146,7 @@ func (s *customAgentService) GetAgentByID(ctx context.Context, id string) (*type
 		if err == nil {
 			// Found in database, return with customized config
 			agent.EnsureDefaults()
+			types.ApplyBuiltinDisplayI18n(ctx, agent)
 			return agent, nil
 		}
 		// Not in database, return default built-in agent from registry (i18n-aware)
@@ -167,6 +168,7 @@ func (s *customAgentService) GetAgentByID(ctx context.Context, id string) (*type
 	}
 
 	agent.EnsureDefaults()
+	types.ApplyBuiltinDisplayI18n(ctx, agent)
 	return agent, nil
 }
 
@@ -184,6 +186,7 @@ func (s *customAgentService) GetAgentByIDAndTenant(ctx context.Context, id strin
 		return nil, err
 	}
 	agent.EnsureDefaults()
+	types.ApplyBuiltinDisplayI18n(ctx, agent)
 	return agent, nil
 }
 
@@ -207,6 +210,7 @@ func (s *customAgentService) ListAgents(ctx context.Context) ([]*types.CustomAge
 	builtinInDB := make(map[string]bool)
 	for _, agent := range allAgents {
 		agent.EnsureDefaults()
+		types.ApplyBuiltinDisplayI18n(ctx, agent)
 		if types.IsBuiltinAgentID(agent.ID) {
 			builtinInDB[agent.ID] = true
 		}
@@ -340,6 +344,7 @@ func (s *customAgentService) updateBuiltinAgent(ctx context.Context, agent *type
 		}
 
 		logger.Infof(ctx, "Built-in agent config updated successfully, ID: %s", agent.ID)
+		types.ApplyBuiltinDisplayI18n(ctx, existingAgent)
 		return existingAgent, nil
 	}
 
@@ -371,6 +376,7 @@ func (s *customAgentService) updateBuiltinAgent(ctx context.Context, agent *type
 	}
 
 	logger.Infof(ctx, "Built-in agent config record created successfully, ID: %s", agent.ID)
+	types.ApplyBuiltinDisplayI18n(ctx, newAgent)
 	return newAgent, nil
 }
 

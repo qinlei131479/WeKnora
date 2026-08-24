@@ -191,8 +191,9 @@ const normalizedTags = computed(() => {
   overflow: hidden;
 
   &:hover {
-    border-color: var(--gray-300);
-    background: var(--gray-25);
+    border-color: var(--td-brand-color, var(--main-color));
+    background: var(--td-bg-color-container, var(--gray-0));
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--td-brand-color, var(--main-color)) 12%, transparent);
   }
 
   &-disabled {

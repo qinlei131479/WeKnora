@@ -3771,7 +3771,7 @@ const handleAddToKnowledge = (answerEvent: any) => {
     }
 
     .chat-markdown-table {
-      width: fit-content;
+      width: 100%;
       max-width: 100%;
       overflow-x: auto;
       margin: 0 0 16px;
@@ -3783,8 +3783,8 @@ const handleAddToKnowledge = (answerEvent: any) => {
 
     table {
       display: table;
-      width: max-content;
-      min-width: 0;
+      width: 100%;
+      min-width: max-content;
       border-collapse: separate;
       border-spacing: 0;
       font-size: 13px;

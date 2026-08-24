@@ -2,6 +2,7 @@
   <div
     class="input-box"
     :class="[customClasses, { 'dragging-files': isDraggingFiles }]"
+    :data-drop-label="t('harness.chat.dropToUpload')"
     @click="handleInputBoxClick"
     @dragenter="handleDragEnter"
     @dragover="handleDragOver"
@@ -31,7 +32,7 @@
           type="button"
           class="expand-btn"
           :class="{ active: optionsExpanded }"
-          aria-label="添加内容"
+          :aria-label="t('harness.chat.addContent')"
           aria-haspopup="menu"
           :aria-expanded="optionsExpanded"
         >
@@ -46,9 +47,9 @@
       class="user-input mention-editor"
       role="textbox"
       aria-multiline="true"
-      :aria-label="placeholder"
+      :aria-label="inputPlaceholder"
       :contenteditable="disabled ? 'false' : 'true'"
-      :data-placeholder="placeholder"
+      :data-placeholder="inputPlaceholder"
       @keydown="handleKeyPress"
       @keyup="handleKeyUp"
       @input="handleInput"
@@ -259,13 +260,13 @@
         </div>
 
         <!-- 无结果 -->
-        <div v-if="!hasAnyItems" class="mention-empty">暂无可引用的项</div>
+        <div v-if="!hasAnyItems" class="mention-empty">{{ t('harness.chat.mentionEmpty') }}</div>
       </div>
     </div>
 
     <div class="send-button-container">
       <slot name="actions-right"></slot>
-      <a-tooltip :title="isLoading ? '停止回答' : ''">
+      <a-tooltip :title="isLoading ? t('input.stopGeneration') : ''">
         <a-button
           @click="handleSendOrStop"
           :disabled="sendButtonDisabled"
@@ -303,6 +304,7 @@ import { searchMentionFiles } from '@harness/apis/mention_api'
 import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
 import { useOutsidePointerdown } from '@harness/composables/useOutsidePointerdown'
 import { buildMentionResourceItems } from '@harness/utils/mention_resource_items'
+import { useI18n } from 'vue-i18n'
 import {
   getMentionIconComponent,
   getMentionIconStyle,
@@ -318,6 +320,8 @@ import {
   parseMentionText,
   replaceRawRange
 } from '@harness/utils/mention_utils'
+
+const { t } = useI18n()
 
 // 点击外部关闭下拉框
 const mentionDropdownRef = ref(null)
@@ -341,7 +345,7 @@ const props = defineProps({
   },
   placeholder: {
     type: String,
-    default: '输入问题...'
+    default: ''
   },
   isLoading: {
     type: Boolean,
@@ -387,6 +391,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'send', 'keydown', 'paste-image', 'drop-files'])
 const slots = useSlots()
+const inputPlaceholder = computed(() => props.placeholder || t('input.placeholder'))
 
 // @ 提及功能是否启用
 const mentionEnabled = computed(() => {
@@ -1289,11 +1294,11 @@ defineExpose({
   display: grid;
   width: 100%;
   margin: 0 auto;
-  border: 1px solid var(--gray-150);
-  border-radius: 0.8rem;
+  border: 1px solid var(--td-component-stroke, var(--gray-150));
+  border-radius: 12px;
   box-shadow: 0 2px 8px var(--shadow-1);
-  transition: all 0.3s ease;
-  background: var(--gray-0);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background: var(--td-bg-color-container, var(--gray-0));
   gap: 0px;
   position: relative;
 
@@ -1332,18 +1337,17 @@ defineExpose({
     grid-column: 1 / -1;
   }
 
-  // &:focus-within {
-  //   border-color: var(--main-500);
-  //   background: var(--gray-0);
-  //   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  // }
+  &:focus-within {
+    border-color: var(--td-brand-color, var(--main-color));
+    background: var(--td-bg-color-container, var(--gray-0));
+  }
 
   &.dragging-files {
-    border-color: var(--main-color);
-    background: var(--main-10);
+    border-color: var(--td-brand-color, var(--main-color));
+    background: var(--td-bg-color-container, var(--gray-0));
 
     &::after {
-      content: '释放以上传附件';
+      content: attr(data-drop-label);
       position: absolute;
       inset: 6px;
       z-index: 5;
@@ -1375,12 +1379,12 @@ defineExpose({
   border: none;
   margin: 0;
   margin-bottom: 0.5rem;
-  color: var(--gray-1000);
-  font-size: 15px;
+  color: var(--td-text-color-primary, var(--gray-1000));
+  font-size: 16px;
   outline: none;
   resize: none;
-  line-height: 1.5;
-  font-family: inherit;
+  line-height: 24px;
+  font-family: var(--app-font-family, inherit);
   min-height: 44px; /* Default min-height for multi-line */
   max-height: 200px;
   overflow-y: auto;

@@ -1,32 +1,46 @@
 <template>
-  <div class="page-header" :class="{ 'page-header--bordered': showBorder }">
+  <div
+    class="page-header"
+    :class="{
+      'page-header--bordered': showBorder,
+      'page-header--sticky': sticky
+    }"
+  >
     <div v-if="loading" class="page-header-loading-bar-wrapper">
       <div class="page-header-loading-bar"></div>
     </div>
     <div class="page-header-left">
-      <h1 v-if="title" class="page-header-title">{{ title }}</h1>
-      <nav v-if="tabs.length > 0" class="page-header-tabs" :aria-label="ariaLabel">
-        <template v-for="item in tabs" :key="item.key">
-          <RouterLink
-            v-if="item.path"
-            :to="item.path"
-            class="tab-item"
-            :class="{ active: activeKey === item.key }"
-            @click="emitChange(item)"
-          >
-            {{ item.label }}
-          </RouterLink>
-          <button
-            v-else
-            type="button"
-            class="tab-item"
-            :class="{ active: activeKey === item.key }"
-            @click="emitChange(item)"
-          >
-            {{ item.label }}
-          </button>
-        </template>
-      </nav>
+      <div class="page-header-heading">
+        <h1 v-if="title" class="page-header-title">{{ title }}</h1>
+        <nav
+          v-if="tabs.length > 0"
+          class="page-header-tabs"
+          :class="{ 'page-header-tabs--solo': !title }"
+          :aria-label="ariaLabel"
+        >
+          <template v-for="item in tabs" :key="item.key">
+            <RouterLink
+              v-if="item.path"
+              :to="item.path"
+              class="tab-item"
+              :class="{ active: activeKey === item.key }"
+              @click="emitChange(item)"
+            >
+              {{ item.label }}
+            </RouterLink>
+            <button
+              v-else
+              type="button"
+              class="tab-item"
+              :class="{ active: activeKey === item.key }"
+              @click="emitChange(item)"
+            >
+              {{ item.label }}
+            </button>
+          </template>
+        </nav>
+      </div>
+      <p v-if="subtitle" class="page-header-subtitle">{{ subtitle }}</p>
     </div>
     <div v-if="$slots.info || $slots.actions" class="page-header-right">
       <slot name="info" />
@@ -39,11 +53,13 @@
 import { RouterLink } from 'vue-router'
 
 defineProps({
-  title: { type: String, required: true },
+  title: { type: String, default: '' },
+  subtitle: { type: String, default: '' },
   activeKey: { type: String, default: '' },
   tabs: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
   showBorder: { type: Boolean, default: false },
+  sticky: { type: Boolean, default: false },
   ariaLabel: { type: String, default: '视图切换' }
 })
 
@@ -61,31 +77,54 @@ function emitChange(item) {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px var(--page-padding);
-  background-color: var(--light-60);
-  backdrop-filter: blur(10px);
-  position: sticky;
-  top: 0;
-  z-index: 1000;
+  padding: 8px var(--page-padding) 16px;
+  background-color: transparent;
+  position: relative;
+  z-index: 0;
 
   &--bordered {
-    border-bottom: 1px solid var(--gray-100);
+    border-bottom: none;
+  }
+
+  &--sticky {
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 }
 
 .page-header-left {
   display: flex;
-  align-items: baseline;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.page-header-heading {
+  display: flex;
+  align-items: center;
   gap: 10px;
   min-width: 0;
 }
 
 .page-header-title {
   margin: 0;
-  font-size: 20px;
+  color: var(--td-text-color-primary, var(--gray-2000));
+  font-family: var(--app-font-family, inherit);
+  font-size: 24px;
   font-weight: 600;
-  color: var(--gray-2000);
+  line-height: 32px;
   white-space: nowrap;
+}
+
+.page-header-subtitle {
+  margin: 0;
+  color: var(--td-text-color-placeholder, var(--gray-500));
+  font-family: var(--app-font-family, inherit);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
 }
 
 .page-header-tabs {
@@ -98,6 +137,12 @@ function emitChange(item) {
   height: 18px;
   line-height: 18px;
   flex-shrink: 0;
+
+  &--solo {
+    padding-left: 0;
+    margin-left: 0;
+    border-left: none;
+  }
 }
 
 .tab-item {

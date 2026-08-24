@@ -1,6 +1,6 @@
 <template>
   <div class="grid-item call-stats">
-    <a-card class="dashboard-card call-stats-section" title="调用统计" :loading="loading">
+    <a-card class="dashboard-card call-stats-section" :title="t('dashboard.calls.title')" :loading="loading">
       <template #extra>
         <div class="simple-controls">
           <div class="simple-toggle-group">
@@ -11,8 +11,7 @@
               class="simple-toggle"
               :class="{ active: callTimeRange === opt.value }"
               @click="switchTimeRange(opt.value)"
-              >{{ opt.label }}
-            </span>
+            >{{ opt.label }}</span>
           </div>
           <div class="divider"></div>
           <div class="simple-toggle-group">
@@ -23,8 +22,7 @@
               class="simple-toggle"
               :class="{ active: callDataType === opt.value }"
               @click="switchDataType(opt.value)"
-              >{{ opt.label }}
-            </span>
+            >{{ opt.label }}</span>
           </div>
           <!-- <div class="subtitle">总计：{{ callStatsData?.total_count || 0 }}</div> -->
         </div>
@@ -41,11 +39,14 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, defineExpose, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
 import { dashboardApi } from '@harness/apis/dashboard_api'
 import { getColorByIndex, truncateLegend, initColorPalette } from '@harness/utils/chartColors'
 import { getCSSVariable } from '@harness/utils/cssVars'
 import { useThemeStore } from '@harness/stores/theme'
+
+const { t } = useI18n()
 
 const props = defineProps({
   loading: { type: Boolean, default: false }
@@ -59,17 +60,17 @@ const callStatsData = ref(null)
 const callStatsLoading = ref(false)
 const callTimeRange = ref('14days')
 const callDataType = ref('agents')
-const timeRangeOptions = [
-  { value: '14hours', label: '近14小时' },
-  { value: '14days', label: '近14天' },
-  { value: '14weeks', label: '近14周' }
-]
-const dataTypeOptions = [
-  { value: 'models', label: '模型调用' },
-  { value: 'agents', label: '智能体调用' },
-  { value: 'tokens', label: 'Token消耗' },
-  { value: 'tools', label: '工具调用' }
-]
+const timeRangeOptions = computed(() => [
+  { value: '14hours', label: t('dashboard.calls.hours') },
+  { value: '14days', label: t('dashboard.calls.days') },
+  { value: '14weeks', label: t('dashboard.calls.weeks') }
+])
+const dataTypeOptions = computed(() => [
+  { value: 'models', label: t('dashboard.calls.models') },
+  { value: 'agents', label: t('dashboard.calls.agents') },
+  { value: 'tokens', label: t('dashboard.calls.tokens') },
+  { value: 'tools', label: t('dashboard.calls.tools') }
+])
 const isTokenView = computed(() => callDataType.value === 'tokens')
 
 const formatTokenValue = (value) => {
@@ -162,7 +163,7 @@ const renderCallStatsChart = () => {
     if (callTimeRange.value === '14hours') {
       return date.split(' ')[1]
     } else if (callTimeRange.value === '14weeks') {
-      return `第${date.split('-')[1]}周`
+      return t('dashboard.calls.weekLabel', { week: date.split('-')[1] })
     } else {
       return date.split('-').slice(1).join('-')
     }
@@ -171,7 +172,7 @@ const renderCallStatsChart = () => {
   const agentNames = callStatsData.value.agent_names || {}
 
   const resolveCategoryLabel = (cat) => {
-    if (cat === 'None') return '未知模型'
+    if (cat === 'None') return t('dashboard.calls.unknownModel')
     return agentNames[cat] || cat
   }
 
@@ -240,13 +241,13 @@ const renderCallStatsChart = () => {
           result += `<span style="${itemStyle}">${truncatedName}: ${formatValueForDisplay(param.value)}</span><br/>`
         })
         const labelMap = {
-          models: '模型调用',
-          agents: '智能体调用',
-          tokens: 'Token消耗',
-          tools: '工具调用'
+          models: t('dashboard.calls.models'),
+          agents: t('dashboard.calls.agents'),
+          tokens: t('dashboard.calls.tokens'),
+          tools: t('dashboard.calls.tools')
         }
         const formattedTotal = formatValueForDisplay(total)
-        return `<div style="font-weight:bold;margin-bottom:5px">${labelMap[callDataType.value]}</div>${result}<strong>总计: ${formattedTotal}</strong>`
+        return `<div style="font-weight:bold;margin-bottom:5px">${labelMap[callDataType.value]}</div>${result}<strong>${t('dashboard.calls.total', { value: formattedTotal })}</strong>`
       }
     },
     legend: {
@@ -376,17 +377,6 @@ onUnmounted(() => {
   flex: 1;
 }
 
-:deep(.ant-card-head-wrapper) {
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
-:deep(.ant-card-extra) {
-  margin-inline-start: auto;
-  max-width: 70%;
-}
-
 .call-stats .chart-container {
   height: 280px;
   flex: 1;
@@ -404,18 +394,43 @@ onUnmounted(() => {
   background-color: transparent !important;
 }
 
+:deep(.ant-card-head-wrapper) {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 12px;
+  width: 100%;
+}
+
+:deep(.ant-card-head-title) {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:deep(.ant-card-extra) {
+  margin-inline-start: auto;
+  flex: 1 0 auto;
+  max-width: none;
+  min-width: 0;
+}
+
 .simple-controls {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   justify-content: flex-end;
-  gap: 16px;
+  gap: 10px;
+  min-width: 0;
 }
 
 .simple-toggle-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 4px;
 }
 
 .simple-toggle-label {
@@ -427,11 +442,13 @@ onUnmounted(() => {
 .simple-toggle {
   padding: 4px 8px;
   font-size: 12px;
+  line-height: 18px;
   color: var(--gray-500);
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.2s ease;
   user-select: none;
+  white-space: nowrap;
 }
 
 .simple-toggle:hover {

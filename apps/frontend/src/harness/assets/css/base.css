@@ -2,28 +2,28 @@
 /* https://material-foundation.github.io/material-theme-builder/ */
 .harness-root,
 .harness-theme {
-  --main-1000: #01151f;
-  --main-900: #023944;
-  --main-800: #035065;
-  --main-700: #046a82;
-  --main-600: #24839a;
-  --main-500: #3996ae;
-  --main-400: #5faec2;
-  --main-300: #82c3d6;
-  --main-200: #a3d8e8;
-  --main-100: #c4eaf5;
-  --main-50: #e1f6fb;
-  --main-40: #eaf3f5;
-  --main-30: #f7fbfd;
-  --main-20: #f6f9fa;
-  --main-10: #fafcfd;
-  --main-5: #fcfefe;
+  --main-1000: #004b05;
+  --main-900: #015e0d;
+  --main-800: #027218;
+  --main-700: #038626;
+  --main-600: #049b38;
+  --main-500: #07c05f;
+  --main-400: #08dd6e;
+  --main-300: #09f479;
+  --main-200: #8ce0af;
+  --main-100: #b7ebc8;
+  --main-50: #e9f8ec;
+  --main-40: #eef9f1;
+  --main-30: #f4fbf6;
+  --main-20: #f7fcf8;
+  --main-10: #fafefb;
+  --main-5: #fcfefd;
   --main-1: #fefefe;
   --main-0: #ffffff;
 
-  /* 保留原有的 main 变量 */
-  --main-color: var(--main-700);
-  --main-bright: #0188a6;
+  /* Align with WeKnora brand green (--td-brand-color) */
+  --main-color: var(--main-500);
+  --main-bright: #08dd6e;
 
   --gray-10000: #000000; /* 保持纯黑 */
   --gray-2000: #0c0d0d; /* 更精致的暗灰，用于极深背景 */

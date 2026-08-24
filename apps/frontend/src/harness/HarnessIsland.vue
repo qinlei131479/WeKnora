@@ -43,6 +43,15 @@ const rootClass = computed(() => ({
 
 const antdLocale = computed(() => ANTD_LOCALES[locale.value] || zhCN)
 
+const getPopupContainer = (trigger) => {
+  if (!trigger || typeof trigger.closest !== 'function') return document.body
+  return (
+    trigger.closest('.ant-modal-wrap') ||
+    trigger.closest('.ant-drawer-content-wrapper') ||
+    document.body
+  )
+}
+
 const syncOverlayTheme = () => {
   document.body.classList.add(HARNESS_THEME_CLASS)
   document.body.classList.toggle(HARNESS_DARK_CLASS, !!themeStore.isDark)
@@ -80,7 +89,11 @@ onMounted(async () => {
 
 <template>
   <div class="harness-shell">
-    <a-config-provider :theme="themeStore.currentTheme" :locale="antdLocale">
+    <a-config-provider
+      :theme="themeStore.currentTheme"
+      :locale="antdLocale"
+      :get-popup-container="getPopupContainer"
+    >
       <div :class="rootClass">
         <div v-if="booting" class="harness-root-body" />
         <HarnessTokenGate v-else-if="!userStore.token" />

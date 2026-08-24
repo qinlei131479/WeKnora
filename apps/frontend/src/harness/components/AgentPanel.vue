@@ -22,34 +22,34 @@
             <button
               type="button"
               class="preview-tab-close"
-              title="关闭预览"
-              aria-label="关闭预览"
+              :title="t('harness.chat.closePreview')"
+              :aria-label="t('harness.chat.closePreview')"
               @click.stop="closePreviewTab(tab.path)"
             >
               <X :size="13" />
             </button>
           </div>
         </div>
-        <span v-else><strong>文件</strong></span>
+        <span v-else><strong>{{ t('harness.chat.panel.title') }}</strong></span>
       </div>
       <div class="window-actions">
         <button
           v-if="hasActivePreview"
           class="header-action-btn"
           :class="{ active: treePaneVisible }"
-          :title="treePaneVisible ? '隐藏文件列表' : '查看文件列表'"
-          :aria-label="treePaneVisible ? '隐藏文件列表' : '查看文件列表'"
+          :title="treePaneVisible ? t('harness.chat.panel.hideFileList') : t('harness.chat.panel.showFileList')"
+          :aria-label="treePaneVisible ? t('harness.chat.panel.hideFileList') : t('harness.chat.panel.showFileList')"
           @click="toggleFileTree"
         >
           <Folders :size="15" />
         </button>
-        <button class="header-action-btn" title="刷新" aria-label="刷新" @click="emitRefresh">
+        <button class="header-action-btn" :title="t('harness.chat.panel.refresh')" :aria-label="t('harness.chat.panel.refresh')" @click="emitRefresh">
           <RefreshCw :size="15" />
         </button>
         <button
           class="header-action-btn"
-          title="关闭文件面板"
-          aria-label="关闭文件面板"
+          :title="t('harness.chat.panel.closePanel')"
+          :aria-label="t('harness.chat.panel.closePanel')"
           @click="emitClose"
         >
           <PanelRight :size="15" />
@@ -78,19 +78,19 @@
             @download="downloadFile"
           />
           <div v-else class="preview-empty">
-            <div class="preview-empty-title">选择交付物后可在此预览</div>
-            <div class="preview-empty-desc">也可以打开文件列表，浏览当前工作区文件。</div>
+            <div class="preview-empty-title">{{ t('harness.chat.panel.previewEmptyTitle') }}</div>
+            <div class="preview-empty-desc">{{ t('harness.chat.panel.previewEmptyDesc') }}</div>
           </div>
         </div>
 
         <div v-if="treePaneVisible" class="tree-pane">
-          <div v-if="!threadId" class="empty">创建对话后可查看工作区</div>
-          <div v-else-if="loadingFiles" class="empty">正在加载文件系统...</div>
+          <div v-if="!threadId" class="empty">{{ t('harness.chat.panel.createThreadHint') }}</div>
+          <div v-else-if="loadingFiles" class="empty">{{ t('harness.chat.panel.loadingFs') }}</div>
           <div v-else-if="filesystemError" class="empty error-state">
             <div>{{ filesystemError }}</div>
-            <a-button type="link" size="small" @click="refreshFileSystem">重试</a-button>
+            <a-button type="link" size="small" @click="refreshFileSystem">{{ t('harness.chat.retry') }}</a-button>
           </div>
-          <div v-else-if="!fileTreeData.length" class="empty">当前工作区为空</div>
+          <div v-else-if="!fileTreeData.length" class="empty">{{ t('harness.chat.panel.emptyWorkspace') }}</div>
           <div v-else class="file-tree-container">
             <FileTreeComponent
               v-model:selectedKeys="selectedKeys"
@@ -111,8 +111,8 @@
                     v-if="node.isLeaf"
                     class="tree-action-btn tree-download-btn"
                     @click.stop="downloadFile(node.fileData)"
-                    title="下载文件"
-                    aria-label="下载文件"
+                    :title="t('harness.chat.panel.downloadFile')"
+                    :aria-label="t('harness.chat.panel.downloadFile')"
                   >
                     <Download :size="14" />
                   </button>
@@ -120,8 +120,8 @@
                     class="tree-action-btn tree-delete-btn"
                     :disabled="deletingPaths.has(node.key)"
                     @click.stop="confirmDeleteNode(node)"
-                    :title="node.isLeaf ? '删除文件' : '删除文件夹'"
-                    :aria-label="node.isLeaf ? '删除文件' : '删除文件夹'"
+                    :title="node.isLeaf ? t('harness.chat.panel.deleteFile') : t('harness.chat.panel.deleteFolder')"
+                    :aria-label="node.isLeaf ? t('harness.chat.panel.deleteFile') : t('harness.chat.panel.deleteFolder')"
                   >
                     <Trash2 :size="14" />
                   </button>
@@ -137,6 +137,7 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Download, Folders, PanelRight, RefreshCw, Trash2, X } from 'lucide-vue-next'
 import { Modal, message } from 'ant-design-vue'
 import FileTreeComponent from '@harness/components/FileTreeComponent.vue'
@@ -194,6 +195,8 @@ const emit = defineEmits([
   'view-mode-change'
 ])
 const DISPLAY_ROOT_DIRECTORY_NAME = 'user-data'
+
+const { t } = useI18n()
 
 const currentFile = ref(null)
 const currentFilePath = ref('')
@@ -342,7 +345,7 @@ const getFileName = (fileItem) => {
   if (fileItem?.path) {
     return String(fileItem.path).split('/').pop() || String(fileItem.path)
   }
-  return '未知文件'
+  return t('harness.chat.unknownFile')
 }
 
 const loadDirectoryChildren = async (directoryPath) => {
@@ -377,7 +380,7 @@ const refreshFileSystem = async () => {
     }
   } catch (error) {
     dynamicTreeData.value = []
-    filesystemError.value = error?.message || '加载文件系统失败'
+    filesystemError.value = error?.message || t('harness.chat.panel.loadFsFailed')
     console.error('Failed to load root files', error)
   } finally {
     loadingFiles.value = false
@@ -464,10 +467,10 @@ const loadActivePreview = async () => {
       if (requestSeq === previewRequestSeq) {
         currentFile.value = {
           ...baseFile,
-          content: '文件预览失败',
+          content: t('harness.chat.previewFailed'),
           supported: false,
           previewType: 'unsupported',
-          message: '文件预览失败',
+          message: t('harness.chat.previewFailed'),
           previewUrl: ''
         }
       }
@@ -495,7 +498,7 @@ const loadActivePreview = async () => {
       content: `Error loading file: ${error?.message || 'unknown error'}`,
       supported: false,
       previewType: 'unsupported',
-      message: error?.message || '文件预览失败',
+      message: error?.message || t('harness.chat.previewFailed'),
       previewUrl: ''
     }
   }
@@ -529,11 +532,15 @@ const confirmDeleteNode = (node) => {
   const fileName = node?.title || getFileName(node?.fileData)
   const isDirectory = !node?.isLeaf
   Modal.confirm({
-    title: isDirectory ? `确认删除文件夹「${fileName}」？` : `确认删除文件「${fileName}」？`,
-    content: isDirectory ? '将删除该文件夹及其所有内容，删除后不可恢复。' : '删除后不可恢复。',
-    okText: '删除',
+    title: isDirectory
+      ? t('harness.chat.panel.confirmDeleteFolder', { name: fileName })
+      : t('harness.chat.panel.confirmDeleteFile', { name: fileName }),
+    content: isDirectory
+      ? t('harness.chat.panel.deleteFolderContent')
+      : t('harness.chat.panel.deleteIrreversible'),
+    okText: t('harness.chat.delete'),
     okType: 'danger',
-    cancelText: '取消',
+    cancelText: t('harness.chat.cancel'),
     onOk: async () => {
       const nextDeletingPaths = new Set(deletingPaths.value)
       nextDeletingPaths.add(node.key)
@@ -543,10 +550,17 @@ const confirmDeleteNode = (node) => {
         await deleteViewerFile(props.threadId, node.key)
         dynamicTreeData.value = removeTreeNode(dynamicTreeData.value, node.key)
         pruneTreeStateAfterDelete(node.key)
-        message.success(isDirectory ? '文件夹删除成功' : '文件删除成功')
+        message.success(
+          isDirectory ? t('harness.chat.panel.deleteFolderSuccess') : t('harness.chat.panel.deleteFileSuccess')
+        )
       } catch (error) {
         console.error(isDirectory ? '删除文件夹失败:' : '删除文件失败:', error)
-        message.error(error?.message || (isDirectory ? '删除文件夹失败' : '删除文件失败'))
+        message.error(
+          error?.message ||
+            (isDirectory
+              ? t('harness.chat.panel.deleteFolderFailed')
+              : t('harness.chat.panel.deleteFileFailed'))
+        )
       } finally {
         const latestDeletingPaths = new Set(deletingPaths.value)
         latestDeletingPaths.delete(node.key)

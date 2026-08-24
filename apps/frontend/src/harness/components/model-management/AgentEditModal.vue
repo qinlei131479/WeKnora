@@ -1,16 +1,8 @@
 <script setup>
 import { computed, nextTick, reactive, ref } from 'vue'
-import { message } from 'ant-design-vue'
-import {
-  Bot,
-  Info,
-  Microscope,
-  RefreshCw,
-  Settings2,
-  SlidersHorizontal,
-  Upload,
-  Wrench
-} from 'lucide-vue-next'
+import { useI18n } from 'vue-i18n'
+import { MessagePlugin } from 'tdesign-vue-next'
+import { Bot, Microscope, RefreshCw, Upload } from 'lucide-vue-next'
 
 import { userApi } from '@harness/apis/user_api'
 import AgentRuntimeConfigForm from '@harness/components/AgentRuntimeConfigForm.vue'
@@ -27,6 +19,7 @@ const props = defineProps({
 
 const emit = defineEmits(['saved'])
 
+const { t } = useI18n()
 const userStore = useUserStore()
 const agentStore = useAgentStore()
 
@@ -148,18 +141,17 @@ const normalizeAgent = (agent) => {
 }
 
 const agentModalMenuItems = computed(() => {
-  const items = [{ key: 'basic', label: '基本信息', icon: Info }]
+  const items = [{ key: 'basic', label: t('agent.editor.basicInfo'), icon: 'info-circle' }]
   if (editingAgentId.value) {
     items.push(
-      { key: 'model', label: '模型配置', icon: SlidersHorizontal },
-      { key: 'tools', label: '工具配置', icon: Wrench },
-      { key: 'other', label: '其他配置', icon: Settings2 }
+      { key: 'model', label: t('agent.editor.modelConfig'), icon: 'control-platform' },
+      { key: 'tools', label: t('agent.editor.toolsConfig'), icon: 'tools' },
+      { key: 'other', label: t('agent.runtimeManage.editor.other'), icon: 'setting' }
     )
   }
   return items
 })
 
-const showAgentModalSidebar = computed(() => agentModalMenuItems.value.length > 1)
 const runtimeConfigSegment = computed(() =>
   runtimeAgentModalTabs.includes(agentModalActiveTab.value) ? agentModalActiveTab.value : 'model'
 )
@@ -196,16 +188,20 @@ const getAgentShareAllowedLevels = () => {
   return ['user']
 }
 
-const agentModalTitle = computed(() => (editingAgentId.value ? '编辑智能体' : '新增智能体'))
+const agentModalTitle = computed(() =>
+  editingAgentId.value ? t('agent.editor.editTitle') : t('agent.editor.createTitle')
+)
 const agentPreviewDefaultIcon = computed(() =>
   editingAgentId.value ? generatePixelAvatar(editingAgentId.value) : ''
 )
-const agentPreviewName = computed(() => agentForm.name || editingAgentId.value || '智能体')
+const agentPreviewName = computed(
+  () => agentForm.name || editingAgentId.value || t('agent.title')
+)
 const selectedBackendOption = computed(() =>
   props.backendOptions.find((backend) => backend.value === agentForm.backend_id)
 )
 const selectedBackendLabel = computed(
-  () => selectedBackendOption.value?.label || agentForm.backend_id || '未选择'
+  () => selectedBackendOption.value?.label || agentForm.backend_id || t('agent.runtimeManage.editor.noBackend')
 )
 const selectedBackendIcon = computed(() => {
   const backendText = `${agentForm.backend_id} ${selectedBackendLabel.value}`.toLowerCase()
@@ -215,7 +211,7 @@ const selectedBackendIcon = computed(() => {
 const generateDefaultAgentProfile = () => {
   const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')
   return {
-    name: '新建智能体',
+    name: t('agent.runtimeManage.editor.defaultName'),
     slug: `agent-${stamp}`
   }
 }
@@ -246,10 +242,6 @@ const focusAgentNameInput = async () => {
   el.select?.()
 }
 
-const handleAgentModalAfterOpenChange = (open) => {
-  if (open && !editingAgentId.value) focusAgentNameInput()
-}
-
 const openCreate = () => {
   editingAgentId.value = null
   agentModalActiveTab.value = 'basic'
@@ -265,7 +257,7 @@ const openEdit = async (agent) => {
 
   const detail = await agentStore.fetchAgentDetail(agentId, true)
   if (!detail?.can_manage) {
-    message.warning('当前智能体不可编辑')
+    MessagePlugin.warning(t('agent.runtimeManage.editor.notEditable'))
     return
   }
 
@@ -304,12 +296,12 @@ const closeAgentModal = async () => {
 
 const beforeAgentIconUpload = (file) => {
   if (!file.type.startsWith('image/')) {
-    message.error('只能上传图片文件')
+    MessagePlugin.error(t('agent.runtimeManage.editor.iconUploadType'))
     return false
   }
 
   if (file.size > MAX_IMAGE_UPLOAD_SIZE_BYTES) {
-    message.error(`图片大小不能超过 ${MAX_IMAGE_UPLOAD_SIZE_MB}MB`)
+    MessagePlugin.error(t('agent.runtimeManage.editor.iconUploadSize', { size: MAX_IMAGE_UPLOAD_SIZE_MB }))
     return false
   }
 
@@ -322,9 +314,9 @@ const uploadAgentIcon = async (file) => {
   try {
     const data = await userApi.uploadImage(file)
     agentForm.icon = data.image_url || data.url || ''
-    message.success('图标上传成功')
+    MessagePlugin.success(t('agent.runtimeManage.editor.iconUploaded'))
   } catch (error) {
-    message.error(error.message || '图标上传失败')
+    MessagePlugin.error(error.message || t('agent.runtimeManage.editor.iconUploadFailed'))
   } finally {
     agentIconUploading.value = false
   }
@@ -350,7 +342,7 @@ const buildAgentPayload = () => {
 const saveAgent = async () => {
   if (!agentForm.name.trim()) {
     agentModalActiveTab.value = 'basic'
-    message.error('请填写智能体名称')
+    MessagePlugin.error(t('agent.runtimeManage.editor.nameRequired'))
     return
   }
 
@@ -359,7 +351,7 @@ const saveAgent = async () => {
     : null
   if (validation && !validation.valid) {
     agentModalActiveTab.value = 'basic'
-    message.error(validation.message)
+    MessagePlugin.error(validation.message)
     return
   }
 
@@ -381,16 +373,16 @@ const saveAgent = async () => {
       agentStore.originalAgentConfig = { ...agentStore.agentConfig }
       captureProfileBaseline()
       emit('saved', { mode: 'edit', agent: updated })
-      message.success('智能体已保存')
+      MessagePlugin.success(t('agent.runtimeManage.editor.saved'))
     } else {
       const created = await agentStore.createAgent(payload)
       emit('saved', { mode: 'create', agent: normalizeAgent(created) })
-      message.success('智能体已创建')
+      MessagePlugin.success(t('agent.runtimeManage.editor.created'))
     }
     showAgentModal.value = false
     await restoreChatAgentSelectionIfNeeded()
   } catch (error) {
-    message.error(error.message || '保存智能体失败')
+    MessagePlugin.error(error.message || t('agent.runtimeManage.editor.saveFailed'))
   } finally {
     saving.value = false
   }
@@ -404,296 +396,358 @@ defineExpose({
 </script>
 
 <template>
-  <a-modal
-    v-model:open="showAgentModal"
-    class="agent-edit-modal"
-    :width="editingAgentId ? 820 : 740"
-    :footer="null"
-    :closable="false"
-    @cancel="closeAgentModal"
-    @after-open-change="handleAgentModalAfterOpenChange"
-  >
-    <template #title>
-      <div class="agent-modal-titlebar">
-        <span class="agent-modal-title">{{ agentModalTitle }}</span>
-        <div class="agent-modal-actions" v-if="hasAnyUnsavedChanges || !editingAgentId">
-          <a-button size="small" :disabled="saving" @click="closeAgentModal">取消</a-button>
-          <a-button size="small" type="primary" :loading="saving" @click="saveAgent">
-            {{ editingAgentId ? '保存（有修改）' : '创建' }}
-          </a-button>
-        </div>
-      </div>
-    </template>
-    <div
-      class="agent-modal-content"
-      :class="{
-        'without-sidebar': !showAgentModalSidebar,
-        'create-mode': !editingAgentId
-      }"
-    >
-      <aside v-if="showAgentModalSidebar" class="agent-modal-sidebar" aria-label="智能体配置分组">
-        <button
-          v-for="item in agentModalMenuItems"
-          :key="item.key"
-          type="button"
-          class="agent-modal-nav-item"
-          :class="{ active: agentModalActiveTab === item.key }"
-          @click="agentModalActiveTab = item.key"
-        >
-          <span class="nav-item-main">
-            <component :is="item.icon" :size="16" />
-            <span>{{ item.label }}</span>
-          </span>
-          <span v-if="item.key === 'model' && agentStore.hasConfigChanges" class="nav-dirty-dot" />
-        </button>
-      </aside>
-
-      <div class="agent-modal-main">
-        <section v-show="agentModalActiveTab === 'basic'" class="agent-modal-section">
-          <div class="agent-profile-header">
-            <div class="agent-icon-preview" aria-label="智能体图标、名称与后端">
-              <div class="agent-profile-main">
-                <a-upload
-                  :show-upload-list="false"
-                  :before-upload="beforeAgentIconUpload"
-                  :disabled="agentIconUploading"
-                  accept="image/*"
+  <Teleport to="body">
+    <Transition name="modal">
+      <div v-if="showAgentModal" class="settings-overlay" @click.self="closeAgentModal">
+        <div class="settings-modal">
+          <button class="close-btn" :aria-label="t('common.close')" @click="closeAgentModal">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          </button>
+          <div class="settings-container">
+            <div class="settings-sidebar">
+              <div class="sidebar-header">
+                <h2 class="sidebar-title">{{ agentModalTitle }}</h2>
+              </div>
+              <div class="settings-nav">
+                <div
+                  v-for="item in agentModalMenuItems"
+                  :key="item.key"
+                  :class="['nav-item', { active: agentModalActiveTab === item.key }]"
+                  @click="agentModalActiveTab = item.key"
                 >
-                  <div
-                    class="agent-icon-upload"
-                    :class="{
-                      uploading: agentIconUploading,
-                      'is-empty': !agentForm.icon && !editingAgentId
-                    }"
-                  >
-                    <FallbackAvatar
-                      v-if="agentForm.icon || editingAgentId"
-                      :src="agentForm.icon"
-                      :default-src="agentPreviewDefaultIcon"
-                      :name="agentPreviewName"
-                      :seed="editingAgentId || agentForm.slug || agentForm.name"
-                      kind="agent"
-                      :size="56"
-                      shape="rounded"
-                      :alt="`${agentForm.name || '智能体'}图标`"
-                      class="agent-icon-preview-avatar"
-                    />
-                    <div class="agent-icon-mask">
-                      <RefreshCw v-if="agentIconUploading" :size="16" class="spinning" />
-                      <Upload v-else :size="16" />
-                      <span>{{ agentForm.icon ? '更换图标' : '上传图标' }}</span>
+                  <t-icon :name="item.icon" class="nav-icon" />
+                  <span class="nav-label">{{ item.label }}</span>
+                  <span v-if="item.key === 'model' && agentStore.hasConfigChanges" class="nav-dirty-dot" />
+                </div>
+              </div>
+            </div>
+            <div class="settings-content">
+              <div class="content-wrapper">
+                <section v-show="agentModalActiveTab === 'basic'" class="agent-modal-section">
+                  <div class="section-header">
+                    <h2>{{ t('agent.editor.basicInfo') }}</h2>
+                    <p class="section-description">{{ t('agent.runtimeManage.editor.basicInfoDesc') }}</p>
+                  </div>
+                  <div class="agent-profile-header">
+                    <div class="agent-icon-preview">
+                      <div class="agent-profile-main">
+                        <a-upload
+                          :show-upload-list="false"
+                          :before-upload="beforeAgentIconUpload"
+                          :disabled="agentIconUploading"
+                          accept="image/*"
+                        >
+                          <div
+                            class="agent-icon-upload"
+                            :class="{
+                              uploading: agentIconUploading,
+                              'is-empty': !agentForm.icon && !editingAgentId
+                            }"
+                          >
+                            <FallbackAvatar
+                              v-if="agentForm.icon || editingAgentId"
+                              :src="agentForm.icon"
+                              :default-src="agentPreviewDefaultIcon"
+                              :name="agentPreviewName"
+                              :seed="editingAgentId || agentForm.slug || agentForm.name"
+                              kind="agent"
+                              :size="56"
+                              shape="rounded"
+                              :alt="agentForm.name || t('agent.title')"
+                              class="agent-icon-preview-avatar"
+                            />
+                            <div class="agent-icon-mask">
+                              <RefreshCw v-if="agentIconUploading" :size="16" class="spinning" />
+                              <Upload v-else :size="16" />
+                              <span>{{
+                                agentForm.icon
+                                  ? t('agent.runtimeManage.editor.changeIcon')
+                                  : t('agent.runtimeManage.editor.uploadIcon')
+                              }}</span>
+                            </div>
+                          </div>
+                        </a-upload>
+                        <div class="agent-icon-preview-text">
+                          <input
+                            ref="agentNameInputRef"
+                            v-model="agentForm.name"
+                            class="agent-inline-name-input"
+                            type="text"
+                            :placeholder="t('agent.runtimeManage.editor.namePlaceholder')"
+                            :aria-label="t('agent.editor.name')"
+                          />
+                          <input
+                            v-if="!editingAgentId"
+                            v-model="agentForm.slug"
+                            class="agent-inline-slug-input"
+                            type="text"
+                            :placeholder="t('agent.runtimeManage.editor.slugPlaceholder')"
+                            :aria-label="t('agent.runtimeManage.editor.slug')"
+                          />
+                          <span v-else class="agent-inline-slug">{{
+                            agentForm.slug || editingAgentId
+                          }}</span>
+                        </div>
+                      </div>
+                      <div class="agent-backend-summary" :class="{ editable: !editingAgentId }">
+                        <span class="agent-backend-icon">
+                          <component :is="selectedBackendIcon" :size="16" />
+                        </span>
+                        <div class="agent-backend-text">
+                          <span class="agent-backend-label">{{ t('agent.runtimeManage.editor.backend') }}</span>
+                          <a-select
+                            v-if="!editingAgentId"
+                            v-model:value="agentForm.backend_id"
+                            class="agent-backend-select"
+                            :bordered="false"
+                            :options="backendOptions"
+                          />
+                          <span v-else class="agent-backend-name">{{ selectedBackendLabel }}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </a-upload>
-                <div class="agent-icon-preview-text">
-                  <input
-                    ref="agentNameInputRef"
-                    v-model="agentForm.name"
-                    class="agent-inline-name-input"
-                    type="text"
-                    placeholder="点击输入智能体名称"
-                    aria-label="智能体名称"
+                  <div class="modal-form">
+                    <label class="form-label full-width">
+                      <span>{{ t('agent.runtimeManage.editor.description') }}</span>
+                      <a-textarea
+                        v-model:value="agentForm.description"
+                        class="agent-description-textarea"
+                        :rows="3"
+                        :placeholder="t('agent.runtimeManage.editor.descriptionPlaceholder')"
+                      />
+                    </label>
+                  </div>
+                  <div v-if="canEditAgentShareConfig" class="share-config-block">
+                    <div class="section-heading">
+                      <span>{{ t('agent.runtimeManage.editor.share') }}</span>
+                    </div>
+                    <ShareConfigForm
+                      ref="agentShareConfigFormRef"
+                      v-model="agentShareConfig"
+                      :auto-select-user-dept="true"
+                      :allowed-access-levels="getAgentShareAllowedLevels()"
+                    />
+                  </div>
+                </section>
+                <section
+                  v-if="editingAgentId"
+                  v-show="isRuntimeAgentModalTab(agentModalActiveTab)"
+                  class="agent-modal-section runtime-section"
+                >
+                  <AgentRuntimeConfigForm
+                    ref="runtimeConfigFormRef"
+                    :segment="runtimeConfigSegment"
+                    :show-segmented="false"
                   />
-                  <input
-                    v-if="!editingAgentId"
-                    v-model="agentForm.slug"
-                    class="agent-inline-slug-input"
-                    type="text"
-                    placeholder="标识可选，留空自动生成"
-                    aria-label="智能体标识"
-                  />
-                  <span v-else class="agent-inline-slug">{{
-                    agentForm.slug || editingAgentId
-                  }}</span>
-                </div>
+                </section>
               </div>
-              <div
-                class="agent-backend-summary"
-                :class="{ editable: !editingAgentId }"
-                aria-label="智能体后端"
-              >
-                <span class="agent-backend-icon">
-                  <component :is="selectedBackendIcon" :size="16" />
-                </span>
-                <div class="agent-backend-text">
-                  <span class="agent-backend-label">智能体后端</span>
-                  <a-select
-                    v-if="!editingAgentId"
-                    v-model:value="agentForm.backend_id"
-                    class="agent-backend-select"
-                    :bordered="false"
-                    :options="backendOptions"
-                  />
-                  <span v-else class="agent-backend-name">{{ selectedBackendLabel }}</span>
+              <div class="settings-footer">
+                <div class="settings-footer-actions">
+                  <t-button variant="outline" :disabled="saving" @click="closeAgentModal">
+                    {{ t('common.cancel') }}
+                  </t-button>
+                  <t-button theme="primary" :loading="saving" @click="saveAgent">
+                    {{
+                      editingAgentId
+                        ? t('agent.editor.buttons.saveAndClose')
+                        : t('agent.editor.buttons.create')
+                    }}
+                  </t-button>
                 </div>
               </div>
             </div>
           </div>
-          <div class="modal-form">
-            <label class="form-label full-width">
-              <span>描述</span>
-              <a-textarea
-                v-model:value="agentForm.description"
-                class="agent-description-textarea"
-                :rows="3"
-                placeholder="可选"
-              />
-            </label>
-          </div>
-
-          <div v-if="canEditAgentShareConfig" class="share-config-block">
-            <div class="section-heading">
-              <span>共享权限</span>
-            </div>
-            <ShareConfigForm
-              ref="agentShareConfigFormRef"
-              v-model="agentShareConfig"
-              :auto-select-user-dept="true"
-              :allowed-access-levels="getAgentShareAllowedLevels()"
-            />
-          </div>
-        </section>
-
-        <section
-          v-if="editingAgentId"
-          v-show="isRuntimeAgentModalTab(agentModalActiveTab)"
-          class="agent-modal-section runtime-section"
-        >
-          <AgentRuntimeConfigForm
-            ref="runtimeConfigFormRef"
-            :segment="runtimeConfigSegment"
-            :show-segmented="false"
-          />
-        </section>
+        </div>
       </div>
-    </div>
-  </a-modal>
+    </Transition>
+  </Teleport>
 </template>
 
 <style lang="less" scoped>
-.agent-modal-titlebar {
+.settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  width: 100%;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 
-.agent-modal-title {
-  color: var(--gray-900);
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.agent-modal-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-
-  :deep(.ant-btn) {
-    min-width: 56px;
-    border-radius: 6px;
-    font-weight: 500;
-  }
-
-  :deep(.ant-btn-primary) {
-    border-color: var(--main-700);
-    background: var(--main-700);
-    color: var(--main-0);
-
-    &:hover,
-    &:focus {
-      border-color: var(--main-800);
-      background: var(--main-800);
-      color: var(--main-0);
-    }
-  }
-}
-
-.agent-modal-content {
-  display: grid;
-  grid-template-columns: 144px minmax(0, 1fr);
-  height: min(72vh, 640px);
-  min-height: 0;
-  overflow: hidden;
-  background: var(--gray-0);
-
-  &.without-sidebar {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  &.create-mode {
-    height: auto;
-    min-height: 360px;
-  }
-}
-
-.agent-modal-sidebar {
+.settings-modal {
+  position: relative;
+  width: 90vw;
+  max-width: 1100px;
+  height: 85vh;
+  max-height: 750px;
+  background: var(--td-bg-color-container);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  min-height: 0;
-  padding: 14px 10px;
-  overflow-y: auto;
-  border-right: 1px solid var(--gray-150);
-  background: transparent;
+  overflow: hidden;
 }
 
-.agent-modal-nav-item {
+.close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  min-height: 34px;
-  padding: 6px 9px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--gray-800);
-  font-size: 13px;
-  font-weight: 500;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    background 0.16s ease,
-    border-color 0.16s ease,
-    color 0.16s ease;
+  justify-content: center;
+  color: var(--td-text-color-secondary);
+  transition: all 0.2s ease;
+  z-index: 10;
 
   &:hover {
-    background: var(--gray-50);
-    color: var(--gray-900);
+    background: var(--td-bg-color-container-hover);
+    color: var(--td-text-color-primary);
   }
+}
 
-  &:focus-visible {
-    outline: 2px solid var(--main-100);
-    outline-offset: 1px;
-    border-color: var(--main-200);
+.settings-container {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.settings-sidebar {
+  width: 208px;
+  background-color: var(--td-bg-color-settings-modal);
+  border-right: 1px solid var(--td-component-stroke);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: 16px 14px 12px;
+  border-bottom: 1px solid var(--td-component-stroke);
+  flex-shrink: 0;
+}
+
+.sidebar-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--td-text-color-primary);
+}
+
+.settings-nav {
+  flex: 1;
+  padding: 8px 8px 12px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  margin-bottom: 2px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  color: var(--td-text-color-primary);
+  user-select: none;
+
+  &:hover {
+    background-color: var(--td-bg-color-container-hover);
   }
 
   &.active {
-    background: var(--gray-100);
-    color: var(--gray-900);
-
-    span {
-      font-weight: 600;
-    }
+    background-color: var(--td-bg-color-secondarycontainer);
+    color: var(--td-brand-color);
+    font-weight: 500;
   }
 }
 
-.nav-item-main {
-  display: inline-flex;
-  align-items: center;
+.nav-icon {
+  margin-right: 9px;
+  font-size: 16px;
+  flex-shrink: 0;
+  color: inherit;
+}
+
+.nav-label {
+  flex: 1;
+}
+
+.settings-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--td-bg-color-container);
   min-width: 0;
-  gap: 8px;
+  min-height: 0;
+}
 
-  svg {
-    flex-shrink: 0;
-    color: var(--gray-600);
+.content-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 28px 40px 48px;
+  box-sizing: border-box;
+}
+
+.section-header {
+  margin-bottom: 20px;
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--td-text-color-primary);
   }
 }
 
-.agent-modal-nav-item.active .nav-item-main svg {
-  color: var(--gray-700);
+.section-description {
+  margin: 0;
+  font-size: 14px;
+  color: var(--td-text-color-placeholder);
+  line-height: 22px;
+}
+
+.settings-footer {
+  padding: 12px 40px;
+  border-top: 1px solid var(--td-component-stroke);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-shrink: 0;
+  background-color: var(--td-bg-color-container);
+}
+
+.settings-footer-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
 }
 
 .nav-dirty-dot {

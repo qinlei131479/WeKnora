@@ -1,8 +1,15 @@
 <template>
+  <t-icon
+    v-if="isDirectory"
+    name="folder"
+    class="file-type-icon weknora-folder-icon"
+    :style="iconSizeStyle"
+  />
   <img
+    v-else
     class="file-type-icon"
     :src="iconUrl"
-    :style="{ width: `${size}px`, height: `${size}px` }"
+    :style="iconSizeStyle"
     alt=""
     draggable="false"
   />
@@ -16,21 +23,31 @@ const props = defineProps({
   // 文件名或路径（目录可 `/` 结尾）
   name: { type: String, default: '' },
   isDir: { type: Boolean, default: false },
-  // 文件夹图标变体：default | agent | enterprise | favorite | knowledge | personal | trash
-  folderVariant: { type: String, default: 'default' },
   size: { type: Number, default: 16 }
 })
 
-const iconUrl = computed(() =>
-  resolveFileIconUrl(props.name, { isDir: props.isDir, folderVariant: props.folderVariant })
-)
+const isDirectory = computed(() => props.isDir || String(props.name || '').endsWith('/'))
+
+const iconSizeStyle = computed(() => ({
+  width: `${props.size}px`,
+  height: `${props.size}px`,
+  fontSize: `${props.size}px`
+}))
+
+const iconUrl = computed(() => resolveFileIconUrl(props.name))
 </script>
 
 <style scoped>
 .file-type-icon {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   object-fit: contain;
   flex-shrink: 0;
   vertical-align: middle;
+}
+
+.weknora-folder-icon {
+  color: var(--td-brand-color);
 }
 </style>
