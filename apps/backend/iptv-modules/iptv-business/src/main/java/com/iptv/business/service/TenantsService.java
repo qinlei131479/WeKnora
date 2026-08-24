@@ -79,4 +79,18 @@ public interface TenantsService extends IService<Tenants> {
      * @param dto 绑定信息
      */
     void tenantBindUsers(@Nonnull TenantBindUsersDTO dto);
+
+    /**
+     * 启用租户
+     *
+     * @param tenantId 租户 ID
+     */
+    void enable(Integer tenantId);
+
+    /**
+     * 禁用租户
+     *
+     * @param tenantId 租户 ID
+     */
+    void disable(Integer tenantId);
 }

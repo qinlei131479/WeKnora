@@ -6,7 +6,6 @@ import com.iptv.business.domain.dto.page.TenantsPageDTO;
 import com.iptv.business.domain.vo.TenantsVO;
 import com.iptv.business.domain.vo.UsersVO;
 import com.iptv.business.service.TenantsService;
-import com.iptv.business.service.UsersService;
 import com.iptv.common.core.domain.R;
 import com.iptv.common.core.web.domain.dto.BaseDTO;
 import com.iptv.common.core.web.page.PageDTO;
@@ -89,6 +88,22 @@ public class TenantsController {
     @RequiresPermissions("business:tenants:edit")
     public R<Void> tenantBindUsers(@RequestBody @Validated(BaseDTO.Update.class) TenantBindUsersDTO dto) {
         tenantsService.tenantBindUsers(dto);
+        return R.ok();
+    }
+
+    @Operation(summary = "启用", description = "启用租户")
+    @GetMapping("/enable")
+    @RequiresPermissions("business:tenants:edit")
+    public R<Void> enable(Integer tenantId) {
+        tenantsService.enable(tenantId);
+        return R.ok();
+    }
+
+    @Operation(summary = "停用", description = "停用租户")
+    @GetMapping("/disable")
+    @RequiresPermissions("business:tenants:edit")
+    public R<Void> disable(Integer tenantId) {
+        tenantsService.disable(tenantId);
         return R.ok();
     }
 }

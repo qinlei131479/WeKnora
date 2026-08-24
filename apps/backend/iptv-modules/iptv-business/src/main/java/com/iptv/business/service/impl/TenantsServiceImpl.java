@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.iptv.business.domain.StorageBackends;
@@ -168,5 +169,29 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
             tenantMembersList.add(tenantMember);
         });
         tenantMembersService.saveBatch(tenantMembersList);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void enable(Integer tenantId) {
+        Tenants tenant = this.baseMapper.selectById(tenantId);
+        if (BeanUtil.isEmpty(tenant)) {
+            throw new ServiceException("租户不存在");
+        }
+        this.baseMapper.update(null,new LambdaUpdateWrapper<Tenants>()
+                .eq(Tenants::getId, tenantId)
+                .set(Tenants::getStatus, "active"));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void disable(Integer tenantId) {
+        Tenants tenant = this.baseMapper.selectById(tenantId);
+        if (BeanUtil.isEmpty(tenant)) {
+            throw new ServiceException("租户不存在");
+        }
+        this.baseMapper.update(null,new LambdaUpdateWrapper<Tenants>()
+                .eq(Tenants::getId, tenantId)
+                .set(Tenants::getStatus, "inactive"));
     }
 }
