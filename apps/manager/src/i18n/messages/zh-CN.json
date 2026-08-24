@@ -697,9 +697,25 @@
       "remove": "删除",
       "enable": "启用",
       "disable": "停用",
-      "batchDeleteConfirm": "确认批量删除选中项吗？",
-      "batchEnableConfirm": "确认批量启用选中项吗？",
-      "batchDisableConfirm": "确认批量停用选中项吗？"
+      "cancel": "取消",
+      "close": "关闭",
+      "confirm": "确认",
+      "save": "保存",
+      "addNew": "新增",
+      
+      "confirmInfo": {
+        "remove": "确认删除吗？",
+        "batchRemove": "确认批量删除选中项吗？",
+        "batchEnable": "确认批量启用选中项吗？",
+        "batchDisable": "确认批量停用选中项吗？",
+        "addSuccess": "新增成功",
+        "updateSuccess": "修改成功",
+        "removeSuccess": "删除成功",
+        "enableSuccess": "启用成功",
+        "disableSuccess": "停用成功",
+        "batchEnableSuccess": "批量启用成功",
+        "batchDisableSuccess": "批量停用成功"
+      }
     },
     "data": {
       "storage": {
@@ -719,8 +735,58 @@
     "models": {},
     "ollama": {},
     "mcp": {},
-    "tenantSpace": {},
-    "tenantMember": {},
+    "tenantSpace": {
+      "add": "添加空间",
+      "searchPlaceholder": "搜索空间名称",
+      "id": "空间id",
+      "name": "空间名称",
+      "storageQuota": "存储配额",
+      "storageUsed": "已使用储存",
+      "storageRate": "储存使用率",
+      "status": "空间状态",
+      "description": "空间描述",
+      "createdAt": "空间创建时间",
+      "namePlaceholder": "例如：我的新项目",
+      "descriptionPlaceholder": "简单描述一下这个空间的用途"
+    },
+    "tenantMember": {
+      "add": "添加成员",
+      "searchPlaceholder": "搜索成员名称",
+      "id": "成员ID",
+      "username": "成员名称",
+      "tenants": "关联空间&空间角色",
+      "email": "登录账号",
+      "createdAt": "注册时间",
+      "addTitle": "新增空间成员",
+      "updateTitle": "修改成员信息",
+      "usernamePlaceholder": "请输入成员名称",
+      "password": "密码",
+      "passwordPlaceholder": "请输入账号密码",
+      "tenantsPlaceholder": "请选择关联空间&空间角色",
+      "emailPlaceholder": "请输入登录账号",
+      "spaceAndRole": "空间&角色",
+      "spacePlaceholder": "请选择空间",
+      "rolePlaceholder": "请选择角色",
+      "error": {
+        "tenants": {
+          "empty": "关联空间&空间角色不能为空",
+          "space": "关联空间不能为空",
+          "role": "关联角色不能为空"
+        },
+        "username": "租户成员名称不能为空",
+        "password": "密码不能为空",
+        "email": "登录账号不能为空"
+      },
+      "confirmInfo": {
+        "remove": "是否确认删除成员编号为\"{id}\"的数据项？",
+        "enable": "是否确认启用成员名称为\"{username}\"的数据项？",
+        "disable": "是否确认停用成员名称为\"{username}\"的数据项？",
+        "enableBatch": "是否确认启用选中的成员？",
+        "enableBatchSuccess": "批量启用成功",
+        "disableBatch": "是否确认停用选中的成员？",
+        "disableBatchSuccess": "批量停用成功"
+      }
+    },
     "knowledgeBase": {
       "types": {
         "document": "文档",

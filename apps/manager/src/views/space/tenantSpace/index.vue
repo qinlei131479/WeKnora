@@ -1,7 +1,7 @@
 <template>
   <section>
     <page-name>
-      <el-button type="success" icon="Plus" @click="handleAdd">{{ $t('page.tenantSpace.add', '添加空间') }}</el-button>
+      <el-button type="success" icon="Plus" @click="handleAdd" v-hasPermi="['business:tenants:add']">{{ $t('page.tenantSpace.add', '添加空间') }}</el-button>
     </page-name>
 
     <page-content>
@@ -17,7 +17,7 @@
           />
         </div>
 
-        <!-- <div class="search-bar__date-wrap">
+        <!-- 
         <el-date-picker
           v-model="dateRange"
           class="search-bar__date"
@@ -27,10 +27,10 @@
           :start-placeholder="$t('page.mcp.start_date.placeholder')"
           :end-placeholder="$t('page.mcp.end_date.placeholder')"
         />
-        </div> -->
+        -->
 
-        <el-button @click="resetQuery">{{ $t('page.tenantSpace.reset', '重置') }}</el-button>
-        <el-button type="primary" @click="handleQuery">{{ $t('page.tenantSpace.search', '搜索') }}</el-button>
+        <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
+        <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
       </div>
 
       <div class="action-toolbar" style="display: none">
@@ -40,13 +40,13 @@
           批量删除
         </button> -->
           <button type="button" class="toolbar-btn" :disabled="ids.length === 0" v-hasPermi="['business:tenants:edit']" @click="handleEnable()">
-            {{ $t('page.batchEnable', '批量启用') }}
+            {{ $t('page.normal.batchEnable', '批量启用') }}
           </button>
           <button type="button" class="toolbar-btn" :disabled="ids.length === 0" v-hasPermi="['business:tenants:edit']" @click="handleDisable()">
-            {{ $t('page.batchDisable', '批量停用') }}
+            {{ $t('page.normal.batchDisable', '批量停用') }}
           </button>
           <span class="selected-text"
-            >{{ $t('page.selected', '共选中') }} <span>{{ ids.length }}</span> {{ $t('page.items', '条') }}</span
+            >{{ $t('page.normal.selected', '共选中') }} <span>{{ ids.length }}</span> {{ $t('page.normal.items', '条') }}</span
           >
         </div>
 
@@ -70,13 +70,14 @@
           <kjsc-empty />
         </template>
         <el-table-column type="selection" width="50" align="center" />
-        <el-table-column :label="$t('page.tenantSpace.id', '空间id')" align="left" key="id" prop="id" width="100" :show-overflow-tooltip="true" />
+        <el-table-column :label="$t('page.tenantSpace.id', '空间id')" align="left" key="id" prop="id" 
+          :width="$dim('page.tenantSpace.id', 100)" :show-overflow-tooltip="true" />
         <el-table-column
           :label="$t('page.tenantSpace.name', '空间名称')"
           align="left"
           key="name"
           prop="name"
-          min-width="120"
+          :min-width="$dim('page.tenantSpace.name', 120)"
           v-if="columns.name.visible"
           :show-overflow-tooltip="true"
         />
@@ -85,7 +86,7 @@
           align="left"
           key="storageQuota"
           prop="storageQuota"
-          width="120"
+          :width="$dim('page.tenantSpace.storageQuota', 120)"
           v-if="columns.storageQuota.visible"
           :show-overflow-tooltip="true"
         >
@@ -98,7 +99,7 @@
           align="left"
           key="storageUsed"
           prop="storageUsed"
-          width="120"
+          :width="$dim('page.tenantSpace.storageUsed', 120)"
           v-if="columns.storageUsed.visible"
           :show-overflow-tooltip="true"
         >
@@ -111,7 +112,7 @@
           align="left"
           key="storageRate"
           prop="storageRate"
-          width="120"
+          :width="$dim('page.tenantSpace.storageRate', 120)"
           v-if="columns.storageRate.visible"
           :show-overflow-tooltip="true"
         >
@@ -124,7 +125,7 @@
           align="left"
           key="status"
           prop="status"
-          width="120"
+          :width="$dim('page.tenantSpace.status', 120)"
           v-if="columns.status.visible"
           :show-overflow-tooltip="true"
         >
@@ -137,7 +138,7 @@
           align="left"
           key="description"
           prop="description"
-          min-width="120"
+          :min-width="$dim('page.tenantSpace.description', 120)"
           v-if="columns.description.visible"
           :show-overflow-tooltip="true"
         />
@@ -155,18 +156,20 @@
             </template>
           </el-table-column>
           -->
-        <el-table-column label="空间创建时间" align="left" prop="createdAt" width="180" v-if="columns.createdAt.visible">
+        <el-table-column :label="$t('page.tenantSpace.createdAt', '空间创建时间')" align="left" prop="createdAt"
+          :width="$dim('page.tenantSpace.createdAt', 180)" v-if="columns.createdAt.visible">
           <template #default="scope">
             <span>{{ parseTime(scope.row.createdAt) }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="$t('page.tenantSpace.operation', '操作')" prop="operation" align="left" width="200" fixed="right">
+        <el-table-column :label="$t('page.normal.operation', '操作')" prop="operation" align="left"
+          :width="$dim('page.tenantSpace.operation', 200)" fixed="right">
           <template #default="scope">
-            <el-button link class="action-link action-link--primary" @click.stop="handleUpdate(scope.row)" v-hasPermi="['business:tenants:edit']">
-              {{ $t('form.button.edit') }}
+            <el-button link type="primary" @click.stop="handleUpdate(scope.row)" v-hasPermi="['business:tenants:edit']">
+              {{ $t('page.normal.edit') }}
             </el-button>
-            <el-button link class="action-link action-link--danger" @click.stop="handleDelete(scope.row)" v-hasPermi="['business:tenants:remove']">
-              {{ $t('form.button.delete') }}
+            <el-button link type="danger" @click.stop="handleDelete(scope.row)" v-hasPermi="['business:tenants:remove']">
+              {{ $t('page.normal.remove') }}
             </el-button>
             <!-- <el-button v-if="!scope.row.enabled" link class="action-link action-link--primary"
                 @click.stop="handleEnable(scope.row)" v-hasPermi="['business:tenants:edit']">
@@ -215,12 +218,12 @@
       </el-form>
       <template #prefixFooter>
         <div class="manage-dialog-footer">
-          <el-button class="close-btn" size="large" round @click="closeDialog">
-            {{ t('form.button.close', '取消') }}
+          <el-button class="close-btn" @click="closeDialog">
+            {{ $t('page.normal.cancel', '取消') }}
           </el-button>
-          <button class="submit-btn" :disabled="submitDisabled" @click="submitForm">
-            {{ t('form.button.submit', '保存') }}
-          </button>
+          <el-button class="submit-btn" type="primary" :disabled="submitDisabled" @click="submitForm">
+            {{ $t('page.normal.save', '保存') }}
+          </el-button>
         </div>
       </template>
     </KJSCDialogV2>
@@ -262,8 +265,8 @@
       </el-form>
       <template #prefixFooter>
         <div class="manage-dialog-footer">
-          <el-button class="close-btn" size="large" round @click="closeDialogDetail">
-            {{ t('form.button.close.detail', '关闭') }}
+          <el-button class="close-btn" @click="closeDialogDetail">
+            {{ $t('page.normal.close', '关闭') }}
           </el-button>
         </div>
       </template>
@@ -274,6 +277,7 @@
 <script setup lang="ts" name="Models">
 // import { ElMessage } from 'element-plus'
 // import { Close, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
+import { useI18n } from 'vue-i18n'
 import { isEmpty } from '@/utils/common.js';
 import { formatSize } from '@/utils';
 import { AjaxResult, McpEntity, TableShowColumns, TenantSpaceEntity, TenantSpaceListReq } from '@/types';
@@ -291,41 +295,42 @@ import {
 
 interface FormEntity extends TenantSpaceEntity {}
 const { proxy } = getCurrentInstance();
+const { t } = useI18n();
 
-const pageLangConfig: Record<string, string> = {
-  'page.mcp.add': '新增MCP',
-  'page.mcp.searchPlaceholder': '通过模型ID、模型名称、创建人进行模糊搜索',
-  'page.mcp.range_separator': '至',
-  'page.mcp.start_date.placeholder': '开始时间',
-  'page.mcp.end_date.placeholder': '结束时间',
-  'page.mcp.reset': '重置',
-  'page.mcp.search': '搜索',
-  'form.button.reset': '重置',
-  'form.button.edit': '编辑',
-  'form.button.delete': '删除',
-  'form.button.enable': '启用',
-  'form.button.disable': '禁用',
+// const pageLangConfig: Record<string, string> = {
+//   'page.mcp.add': '新增MCP',
+//   'page.mcp.searchPlaceholder': '通过模型ID、模型名称、创建人进行模糊搜索',
+//   'page.mcp.range_separator': '至',
+//   'page.mcp.start_date.placeholder': '开始时间',
+//   'page.mcp.end_date.placeholder': '结束时间',
+//   'page.mcp.reset': '重置',
+//   'page.mcp.search': '搜索',
+//   'form.button.reset': '重置',
+//   'form.button.edit': '编辑',
+//   'form.button.delete': '删除',
+//   'form.button.enable': '启用',
+//   'form.button.disable': '禁用',
 
-  'mcpServiceDialog.codeImport.toggle': '从代码导入',
-  'mcpServiceDialog.codeImport.hint': '粘贴标准 mcpServers JSON 配置，自动填充表单',
-  'mcpServiceDialog.codeImport.editOverwriteHint': '导入会覆盖当前表单内容（不影响已保存的凭证，需点保存生效）',
-  'mcpServiceDialog.codeImport.parse': '解析并填充',
-  'mcpServiceDialog.codeImport.errors.empty': '请先粘贴配置内容',
-  'mcpServiceDialog.codeImport.errors.invalidJson': '无法解析，请检查 JSON 格式'
-};
-const t = function (key: string, params?: Record<string, string> | string) {
-  let msg = pageLangConfig[key] || key;
-  if (params) {
-    if (typeof params == 'string') {
-      msg = pageLangConfig[key] || params;
-    } else {
-      Object.keys(params).forEach((key) => {
-        msg = msg.replace(`{${key}}`, params[key]);
-      });
-    }
-  }
-  return msg;
-};
+//   'mcpServiceDialog.codeImport.toggle': '从代码导入',
+//   'mcpServiceDialog.codeImport.hint': '粘贴标准 mcpServers JSON 配置，自动填充表单',
+//   'mcpServiceDialog.codeImport.editOverwriteHint': '导入会覆盖当前表单内容（不影响已保存的凭证，需点保存生效）',
+//   'mcpServiceDialog.codeImport.parse': '解析并填充',
+//   'mcpServiceDialog.codeImport.errors.empty': '请先粘贴配置内容',
+//   'mcpServiceDialog.codeImport.errors.invalidJson': '无法解析，请检查 JSON 格式'
+// };
+// const t = function (key: string, params?: Record<string, string> | string) {
+//   let msg = pageLangConfig[key] || key;
+//   if (params) {
+//     if (typeof params == 'string') {
+//       msg = pageLangConfig[key] || params;
+//     } else {
+//       Object.keys(params).forEach((key) => {
+//         msg = msg.replace(`{${key}}`, params[key]);
+//       });
+//     }
+//   }
+//   return msg;
+// };
 const $t = t;
 
 const tableData = ref<McpEntity[]>([]);

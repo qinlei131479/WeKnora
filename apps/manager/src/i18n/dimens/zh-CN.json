@@ -2,6 +2,9 @@
   "component": {},
 
   "page": {
+    "normal": {
+      "datetime": 180
+    },
     "data": {
       "storage": {
         "table.createdAt": 180,
@@ -17,8 +20,25 @@
     "models": {},
     "ollama": {},
     "mcp": {},
-    "tenantSpace": {},
-    "tenantMember": {},
+    "tenantSpace": {
+      "id": 100,
+      "name": 120,
+      "storageQuota": 120,
+      "storageUsed": 120,
+      "storageRate": 120,
+      "status": 120,
+      "description": 120,
+      "createdAt": 180,
+      "operation": 200
+    },
+    "tenantMember": {
+      "id": 300,
+      "username": 120,
+      "tenants": 120,
+      "email": 100,
+      "operation": 220,
+      "formLabel": 120
+    },
     "knowledgeBase": {
       "id": 340,
       "name": 220,
