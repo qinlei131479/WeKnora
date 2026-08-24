@@ -4,6 +4,7 @@
     v-bind="$attrs"
     :close-on-click-modal="props.closeOnClickModal"
     :class="className"
+    modal-class="kjsc-dialog-v2-blur"
     :close-on-press-escape="props.closeOnPressEscape"
   >
     <template #default>
@@ -11,83 +12,69 @@
     </template>
     <template #footer>
       <div>
-        <slot name="prefixFooter"> </slot>
-        <kjsc-button v-if="props.showCloseBtn" @click="closeClick">
+        <slot name="prefixFooter" />
+        <el-button v-if="props.showCloseBtn" @click="closeClick">
           {{ props.closeBtnText }}
-        </kjsc-button>
-        <kjsc-button
-          v-if="props.showSubitBtn"
-          :is-async="props.isAsync"
-          type="primary"
-          @click="submitClick"
-        >
+        </el-button>
+        <el-button v-if="props.showSubitBtn" :is-async="props.isAsync" type="primary" @click="submitClick">
           {{ props.subitBtnText }}
-        </kjsc-button>
-        <slot name="suffixFooter"> </slot>
+        </el-button>
+        <slot name="suffixFooter" />
       </div>
     </template>
   </el-dialog>
 </template>
 
 <script setup>
-import {
-  defineProps,
-  defineEmits,
-  computed,
-  useAttrs,
-  reactive,
-  watchEffect,
-} from "vue";
+import { defineProps, defineEmits, computed, useAttrs, reactive, watchEffect } from 'vue';
 
 const props = defineProps({
   modelValue: {
     type: Boolean,
-    default: false,
+    default: false
   },
   showCloseBtn: {
     type: Boolean,
-    default: true,
+    default: true
   },
   showSubitBtn: {
     type: Boolean,
-    default: true,
+    default: true
   },
   subitBtnText: {
     type: String,
-    default: "确定",
+    default: '确定'
   },
   closeBtnText: {
     type: String,
-    default: "取消",
+    default: '取消'
   },
   customClass: {
     type: String,
-    default: "",
+    default: ''
   },
   closeOnClickModal: {
     type: Boolean,
-    default: false,
+    default: false
   },
   closeOnPressEscape: {
     type: Boolean,
-    default: false,
+    default: false
   },
   isAsync: {
     type: Boolean,
-    default: true,
+    default: true
   },
-  onSubmitClick: Function,
+  onSubmitClick: Function
 });
 
-const emits = defineEmits(["update:modelValue"]);
+const emits = defineEmits(['update:modelValue']);
 
-const className = computed(
-  () => "kjsc-dialog-v2" + (props.customClass ? " " + props.customClass : "")
-);
+const className = computed(() => 'kjsc-dialog-v2' + (props.customClass ? ' ' + props.customClass : ''));
 const attrs = useAttrs();
 
 const state = reactive({
-  visible: props.modelValue,
+  visible: props.modelValue
 });
 
 const submitClick = async () => {
@@ -97,7 +84,7 @@ const submitClick = async () => {
   // emits('submitClick');
 };
 const closeClick = () => {
-  const beforeClose = attrs["before-close"] || attrs.beforeClose;
+  const beforeClose = attrs['before-close'] || attrs.beforeClose;
   if (beforeClose) {
     beforeClose(() => {
       state.visible = false;
@@ -112,16 +99,22 @@ watchEffect(() => {
 });
 
 watchEffect(() => {
-  emits("update:modelValue", state.visible);
+  emits('update:modelValue', state.visible);
 });
 </script>
 <script>
 export default {
-  name: "KjscDialogV2",
+  name: 'KjscDialogV2'
 };
 </script>
 
 <style lang="less">
+.kjsc-dialog-v2-blur {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
 .kjsc-dialog-v2 {
   .el-dialog__headerbtn {
     right: 2px;

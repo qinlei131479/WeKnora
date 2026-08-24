@@ -13,6 +13,91 @@
         "table.tenantName": 300,
         "table.updatedAt": 180
       }
+    },
+    "system": {
+      "user": {
+        "table.userId": 100,
+        "table.nickName": 160,
+        "table.userName": 160,
+        "table.createBy": 130,
+        "table.roleName": 150,
+        "table.tenantName": 150,
+        "table.status": 160,
+        "table.updateTime": 170,
+        "table.operation": 180
+      },
+      "role": {
+        "table.roleName": 160,
+        "table.tenantName": 150,
+        "table.remark": 200,
+        "table.updateTime": 170,
+        "table.operation": 140
+      },
+      "dept": {
+        "table.deptName": 260,
+        "table.orderNum": 120,
+        "table.description": 220,
+        "table.status": 100,
+        "table.createTime": 170,
+        "table.operation": 200
+      },
+      "post": {
+        "table.postId": 100,
+        "table.postCode": 140,
+        "table.postName": 160,
+        "table.postSort": 120,
+        "table.remark": 200,
+        "table.status": 100,
+        "table.createTime": 170,
+        "table.operation": 140
+      },
+      "logininfor": {
+        "table.infoId": 120,
+        "table.userName": 140,
+        "table.status": 140,
+        "table.message": 200,
+        "table.accessTime": 170
+      },
+      "operlog": {
+        "table.operId": 100,
+        "table.title": 160,
+        "table.businessType": 160,
+        "table.requestMethod": 170,
+        "table.operName": 110,
+        "table.operIp": 190,
+        "table.status": 180,
+        "table.operTime": 170,
+        "table.costTime": 110,
+        "table.operation": 100
+      },
+      "menu": {
+        "table.menuName": 220,
+        "table.type": 100,
+        "table.order": 140,
+        "table.permission": 210,
+        "table.component": 180,
+        "table.status": 100,
+        "table.operation": 200
+      },
+      "dict": {
+        "data": {
+          "table.createdAt": 170,
+          "table.dictCode": 170,
+          "table.dictLabel": 170,
+          "table.dictSort": 120,
+          "table.dictValue": 170,
+          "table.operation": 140,
+          "table.remark": 160,
+          "table.status": 100
+        },
+        "table.id": 140,
+        "table.name": 170,
+        "table.type": 180,
+        "table.status": 100,
+        "table.remark": 160,
+        "table.createdAt": 170,
+        "table.operation": 200
+      }
     }
   }
 }

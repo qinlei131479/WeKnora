@@ -1,13 +1,51 @@
 <template>
   <div class="login">
-    <div class="manufacturer-img"></div>
-    <div class="login-main">
-      <div class="login-main-title">
-        <!-- <div class="login-main-title-text">智能审核</div> -->
-        <div class="login-main-title-text">{{ loginTitle }}</div>
-        <!-- <div class="login-main-title-decs">让安全更智慧</div> -->
+    <aside class="login-brand">
+      <div class="login-brand__content">
+        <img class="login-brand__logo" src="../../assets/images/login/login_logo@1x.png" alt="空间视创" />
+        <div class="login-brand__name">空间视创</div>
+        <div class="login-brand__subtitle">管理后台登录</div>
+
+        <div class="login-brand__features">
+          <div class="login-feature">
+            <div class="login-feature__icon">
+              <img src="../../assets/images/login/login_ic_user.png" alt="" />
+            </div>
+            <div>
+              <div class="login-feature__title">用户与岗位管理</div>
+              <div class="login-feature__description">求职者、雇主账号全周期管理</div>
+            </div>
+          </div>
+          <div class="login-feature">
+            <div class="login-feature__icon">
+              <img src="../../assets/images/login/login_ic_shield.png" alt="" />
+            </div>
+            <div>
+              <div class="login-feature__title">风控与内容治理</div>
+              <div class="login-feature__description">违规检测、投诉工单一站式处理</div>
+            </div>
+          </div>
+          <div class="login-feature">
+            <div class="login-feature__icon">
+              <img src="../../assets/images/login/login_ic_report.png" alt="" />
+            </div>
+            <div>
+              <div class="login-feature__title">数据统计看板</div>
+              <div class="login-feature__description">实时掌握平台运营核心指标</div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="login-main-logo"></div>
+
+      <div class="copyright">&copy; 2026 空间视创（重庆）科技股份有限公司</div>
+    </aside>
+
+    <main class="login-main">
+      <div class="login-main-title">
+        <div class="login-main-title-text">欢迎回来</div>
+        <div class="login-main-title-desc">请登录你的管理员账号</div>
+      </div>
+
       <div class="login-main-content">
         <div class="login-main-content-left">
           <el-form ref="loginRef" :model="loginForm" :rules="loginRules" label-position="top" hide-required-asterisk="true" class="login-form">
@@ -61,34 +99,8 @@
             </el-form-item>
           </el-form>
         </div>
-        <!-- <el-divider direction="vertical" style="height: 100%" />
-        <div style="width:100%">
-          <div class="login-main-content-right">
-            <div class="loseEfficacy" v-if="state.qrCodeType==1" @click="getQrCodeImg()">
-              <div style="width:100%;text-align:center">
-                <img src="../../assets/icons/svg/qrprompt.svg" />
-                <div>二维码已失效</div>
-                <div style="color:#6397FF">点击刷新</div>
-              </div>
-            </div>
-            <div class="loseEfficacy" v-if="state.qrCodeType==2" @click="getQrCodeImg()">
-              <div style="width:100%;text-align:center">
-                <img style="width:32px;height:32px" src="../../assets/icons/svg/qrsuccess.svg" />
-                <div>扫码成功</div>
-                <div style="font-size:12px">请在APP中授权，或 <span style="color:#6397FF">刷新</span> 重新扫码登录</div>
-              </div>
-            </div>
-            <img :src="qrcodeUrl"/>
-          </div>
-          <div class="login-main-content-right-bottom">
-            <div class="desc">绑定账号后</div>
-            <div class="desc" style="font-size: 20px;">请使用<span style="color:#6397FF">通用智能体中台 App</span>扫码登录</div>
-            <div class="desc">（支持V6.1.2及以上版本）</div>
-          </div>
-        </div> -->
       </div>
-    </div>
-    <div class="copyright">&copy; Copyright Reserved 空间视创（重庆）科技股份有限公司 版权所有 | AI 智能体中台</div>
+    </main>
   </div>
   <LoginFailureDialog
     v-model="state.loginFailureDialog"

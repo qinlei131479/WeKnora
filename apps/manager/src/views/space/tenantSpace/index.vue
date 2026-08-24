@@ -5,58 +5,47 @@
     </page-name>
 
     <page-content>
-      <div class="search-bar">
-        <div class="search-bar__keyword">
-          <el-input
-            v-model="queryParams.name"
-            class="search-bar__input"
-            :suffix-icon="Search"
-            clearable
-            :placeholder="$t('page.tenantSpace.searchPlaceholder', '搜索空间名称')"
-            @keyup.enter="handleQuery"
-          />
+      <template #header>
+        <div class="search-bar">
+          <div class="search-bar__keyword">
+            <el-input
+              v-model="queryParams.name"
+              class="search-bar__input"
+              :suffix-icon="Search"
+              clearable
+              :placeholder="$t('page.tenantSpace.searchPlaceholder', '搜索空间名称')"
+              @keyup.enter="handleQuery"
+            />
+          </div>
+
+          <!-- <div class="search-bar__date-wrap">
+            <el-date-picker
+              v-model="dateRange"
+              class="search-bar__date"
+              value-format="YYYY-MM-DD"
+              type="daterange"
+              :range-separator="$t('page.mcp.range_separator')"
+              :start-placeholder="$t('page.mcp.start_date.placeholder')"
+              :end-placeholder="$t('page.mcp.end_date.placeholder')"
+            />
+          </div> -->
+
+          <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
+          <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
         </div>
 
-        <!-- 
-        <el-date-picker
-          v-model="dateRange"
-          class="search-bar__date"
-          value-format="YYYY-MM-DD"
-          type="daterange"
-          :range-separator="$t('page.mcp.range_separator')"
-          :start-placeholder="$t('page.mcp.start_date.placeholder')"
-          :end-placeholder="$t('page.mcp.end_date.placeholder')"
-        />
-        -->
-
-        <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
-        <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
-      </div>
-
-      <div class="action-toolbar" style="display: none">
-        <div class="action-toolbar__left">
-          <!-- <button type="button" class="toolbar-btn" :disabled="multiple" v-hasPermi="['system:dict:remove']"
-          @click="handleDelete()">
-          批量删除
-        </button> -->
-          <button type="button" class="toolbar-btn" :disabled="ids.length === 0" v-hasPermi="['business:tenants:edit']" @click="handleEnable()">
+        <div class="action-toolbar" style="display: none">
+          <el-button :disabled="ids.length === 0" v-hasPermi="['business:tenants:edit']" @click="handleEnable()">
             {{ $t('page.normal.batchEnable', '批量启用') }}
-          </button>
-          <button type="button" class="toolbar-btn" :disabled="ids.length === 0" v-hasPermi="['business:tenants:edit']" @click="handleDisable()">
+          </el-button>
+          <el-button :disabled="ids.length === 0" v-hasPermi="['business:tenants:edit']" @click="handleDisable()">
             {{ $t('page.normal.batchDisable', '批量停用') }}
-          </button>
-          <span class="selected-text"
-            >{{ $t('page.normal.selected', '共选中') }} <span>{{ ids.length }}</span> {{ $t('page.normal.items', '条') }}</span
-          >
+          </el-button>
+          <el-text class="selected-text">
+            {{ $t('page.normal.selected', '共选中') }} {{ ids.length }} {{ $t('page.normal.items', '条') }}
+          </el-text>
         </div>
-
-        <div class="action-toolbar__right">
-          <!-- <button type="button" class="toolbar-btn" v-hasPermi="['system:dict:export']" @click="handleExport">导出</button> -->
-          <!-- <button type="button" class="toolbar-btn" v-hasPermi="['system:dict:remove']"
-          @click="handleRefreshCache">刷新缓存</button> -->
-          <!-- <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" /> -->
-        </div>
-      </div>
+      </template>
 
       <el-table
         ref="tableRef"

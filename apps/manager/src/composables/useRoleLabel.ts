@@ -7,7 +7,7 @@ import { useI18n } from 'vue-i18n'
 
 /**
  * Format a tenant role enum value ('viewer' | 'contributor' | 'admin' | 'owner')
- * into the user-facing label declared under tenantMember.role.* in the i18n
+ * into the user-facing label declared under page.tenantMember.role.* in the i18n
  * bundle. Falls back to the raw role string when the locale does not carry
  * the key — same behaviour as the inline helper this used to live in
  * (UserMenu.vue), now extracted so role-aware UI gates across views can
@@ -22,7 +22,7 @@ export function useRoleLabel() {
   const { t } = useI18n()
   const formatRole = (role: string | null | undefined): string => {
     if (!role) return ''
-    const key = `tenantMember.role.${role}`
+    const key = `page.tenantMember.role.${role}`
     const label = t(key)
     return label === key ? role : label
   }
@@ -40,9 +40,9 @@ export function useRoleLabel() {
 export function useRoleOptions(): Array<ValueLabelOption> {
   const { t } = useI18n()
   return [
-    { label: t('tenantMember.role.owner'), value: 'owner' },
-    { label: t('tenantMember.role.admin'), value: 'admin' },
-    { label: t('tenantMember.role.contributor'), value: 'contributor' },
-    { label: t('tenantMember.role.viewer'), value: 'viewer' }
+    { label: t('page.tenantMember.role.owner'), value: 'owner' },
+    { label: t('page.tenantMember.role.admin'), value: 'admin' },
+    { label: t('page.tenantMember.role.contributor'), value: 'contributor' },
+    { label: t('page.tenantMember.role.viewer'), value: 'viewer' }
   ];
 }

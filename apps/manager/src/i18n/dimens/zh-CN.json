@@ -1,10 +1,6 @@
 {
   "component": {},
-
   "page": {
-    "normal": {
-      "datetime": 180
-    },
     "data": {
       "storage": {
         "table.createdAt": 180,
@@ -17,45 +13,133 @@
         "table.updatedAt": 180
       }
     },
-    "models": {},
-    "ollama": {},
-    "mcp": {},
-    "tenantSpace": {
-      "id": 100,
-      "name": 120,
-      "storageQuota": 120,
-      "storageUsed": 120,
-      "storageRate": 120,
-      "status": 120,
-      "description": 120,
-      "createdAt": 180,
-      "operation": 200
-    },
-    "tenantMember": {
-      "id": 300,
-      "username": 120,
-      "tenants": 120,
-      "email": 100,
-      "operation": 220,
-      "formLabel": 120
-    },
     "knowledgeBase": {
+      "aiQuestionGeneration": 120,
+      "audioRecognition": 120,
+      "autoTagAssociation": 120,
+      "embeddingModel": 200,
       "id": 340,
-      "name": 220,
-      "type": 120,
       "indexingStrategy": 180,
       "llmModel": 200,
-      "embeddingModel": 200,
-      "vectorStore": 200,
-      "splitStrategy": 120,
       "multiModal": 120,
-      "audioRecognition": 120,
-      "aiQuestionGeneration": 120,
-      "autoTagAssociation": 120,
+      "name": 220,
+      "operation": 220,
+      "splitStrategy": 120,
       "storageEngine": 120,
       "tenantId": 120,
+      "type": 120,
       "updatedAt": 180,
-      "operation": 220
+      "vectorStore": 200
+    },
+    "mcp": {},
+    "models": {},
+    "normal": {
+      "datetime": 180
+    },
+    "ollama": {},
+    "system": {
+      "dept": {
+        "table.createTime": 170,
+        "table.deptName": 260,
+        "table.description": 220,
+        "table.operation": 200,
+        "table.orderNum": 120,
+        "table.status": 100
+      },
+      "dict": {
+        "data": {
+          "table.createdAt": 170,
+          "table.dictCode": 100,
+          "table.dictLabel": 140,
+          "table.dictSort": 100,
+          "table.dictValue": 120,
+          "table.operation": 140,
+          "table.remark": 160,
+          "table.status": 100
+        },
+        "table.createdAt": 170,
+        "table.id": 100,
+        "table.name": 160,
+        "table.operation": 200,
+        "table.remark": 160,
+        "table.status": 100,
+        "table.type": 180
+      },
+      "logininfor": {
+        "table.accessTime": 170,
+        "table.infoId": 100,
+        "table.message": 200,
+        "table.status": 100,
+        "table.userName": 140
+      },
+      "menu": {
+        "table.component": 180,
+        "table.menuName": 220,
+        "table.operation": 200,
+        "table.order": 140,
+        "table.permission": 160,
+        "table.status": 100,
+        "table.type": 100
+      },
+      "operlog": {
+        "table.businessType": 100,
+        "table.costTime": 110,
+        "table.operation": 80,
+        "table.operId": 100,
+        "table.operIp": 130,
+        "table.operName": 110,
+        "table.operTime": 170,
+        "table.requestMethod": 100,
+        "table.status": 100,
+        "table.title": 140
+      },
+      "post": {
+        "table.createTime": 170,
+        "table.operation": 140,
+        "table.postCode": 140,
+        "table.postId": 100,
+        "table.postName": 160,
+        "table.postSort": 100,
+        "table.remark": 200,
+        "table.status": 100
+      },
+      "role": {
+        "table.operation": 140,
+        "table.remark": 200,
+        "table.roleName": 160,
+        "table.tenantName": 140,
+        "table.updateTime": 170
+      },
+      "user": {
+        "table.createBy": 120,
+        "table.nickName": 120,
+        "table.operation": 180,
+        "table.roleName": 120,
+        "table.status": 100,
+        "table.tenantName": 120,
+        "table.updateTime": 170,
+        "table.userId": 100,
+        "table.userName": 120
+      }
+    },
+    "tenantMember": {
+      "email": 100,
+      "formLabel": 120,
+      "id": 300,
+      "operation": 220,
+      "tenants": 120,
+      "username": 120
+    },
+    "tenantSpace": {
+      "createdAt": 180,
+      "description": 120,
+      "id": 100,
+      "name": 120,
+      "operation": 200,
+      "status": 120,
+      "storageQuota": 120,
+      "storageRate": 120,
+      "storageUsed": 120
     }
   }
 }

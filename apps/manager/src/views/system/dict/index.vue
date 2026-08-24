@@ -1,185 +1,179 @@
 <template>
-  <section class="dict-manage-page">
-    <page-name class="page-name" title="字典管理">
-      <button type="button" class="add-dict-btn" v-hasPermi="['system:dict:add']" @click="handleAdd">+ 新增字典</button>
+  <section>
+    <page-name>
+      <el-button type="success" icon="Plus" v-hasPermi="['system:dict:add']" @click="handleAdd">
+        {{ $t('page.system.dict.add', '新增字典') }}
+      </el-button>
     </page-name>
 
-    <div v-show="showSearch" class="search-bar">
-      <div class="search-bar__keywords">
-        <div class="search-bar__keyword">
-          <el-input
-            v-model="queryParams.dictName"
-            class="search-bar__input"
+    <page-content>
+      <template #header>
+        <div v-show="showSearch" class="search-bar">
+          <div class="search-bar__keywords">
+            <el-input
+              v-model="queryParams.dictName"
+              class="search-bar__input"
+              :suffix-icon="'Search'"
+              style="max-width: 300px"
+              clearable
+              :placeholder="$t('page.system.dict.search.namePlaceholder', '请输入字典名称')"
+              @keyup.enter="handleQuery"
+            />
+          </div>
+          <div class="search-bar__keywords">
+            <el-input
+              v-model="queryParams.dictType"
+              class="search-bar__input"
+              style="max-width: 300px"
+              :suffix-icon="'Search'"
+              clearable
+              :placeholder="$t('page.system.dict.search.typePlaceholder', '请输入字典类型')"
+              @keyup.enter="handleQuery"
+            />
+          </div>
+
+          <el-select
+            v-model="queryParams.status"
+            style="width: 150px"
             clearable
-            placeholder="请输入字典名称"
-            @keyup.enter="handleQuery"
-          />
-          <button type="button" class="search-bar__icon-btn" @click="handleQuery">
-            <svg-icon icon-class="search" class="search-bar__icon" />
-          </button>
-        </div>
-
-        <div class="search-bar__keyword">
-          <el-input
-            v-model="queryParams.dictType"
-            class="search-bar__input"
-            clearable
-            placeholder="请输入字典类型"
-            @keyup.enter="handleQuery"
-          />
-          <button type="button" class="search-bar__icon-btn" @click="handleQuery">
-            <svg-icon icon-class="search" class="search-bar__icon" />
-          </button>
-        </div>
-      </div>
-
-      <div class="search-bar__status">
-        <el-select v-model="queryParams.status" clearable placeholder="字典状态">
-          <el-option v-for="dict in sys_normal_disable" :key="dict.value" :label="dict.label" :value="dict.value" />
-        </el-select>
-      </div>
-
-      <div class="search-bar__date-wrap">
-        <el-date-picker
-          v-model="dateRange"
-          class="search-bar__date"
-          value-format="YYYY-MM-DD"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始时间"
-          end-placeholder="结束时间"
-        />
-      </div>
-
-      <button type="button" class="search-bar__reset" @click="resetQuery">重置</button>
-      <button type="button" class="search-bar__submit" @click="handleQuery">搜索</button>
-    </div>
-
-    <div class="action-toolbar">
-      <div class="action-toolbar__left">
-        <button
-          type="button"
-          class="toolbar-btn"
-          :disabled="multiple"
-          v-hasPermi="['system:dict:remove']"
-          @click="handleDelete()"
-        >
-          批量删除
-        </button>
-        <span class="selected-text">共选中 <span>{{ ids.length }}</span> 条</span>
-      </div>
-
-      <div class="action-toolbar__right">
-        <button type="button" class="toolbar-btn" v-hasPermi="['system:dict:export']" @click="handleExport">导出</button>
-        <button type="button" class="toolbar-btn" v-hasPermi="['system:dict:remove']" @click="handleRefreshCache">刷新缓存</button>
-        <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
-      </div>
-    </div>
-
-    <div class="dict-content-card">
-      <div class="table-wrap">
-        <el-table
-          ref="dictTableRef"
-          v-loading="loading"
-          :data="typeList"
-          height="100%"
-          class="dict-table"
-          @selection-change="handleSelectionChange"
-        >
-          <template #empty>
-            <kjsc-empty />
-          </template>
-          <el-table-column type="selection" width="50" align="center" />
-          <el-table-column label="字典编号" prop="dictId" width="100" align="left" />
-          <el-table-column label="字典名称" prop="dictName" min-width="160" align="left" :show-overflow-tooltip="true" />
-          <el-table-column label="字典类型" min-width="180" align="left" :show-overflow-tooltip="true">
-            <template #default="scope">
-              <button type="button" class="dict-type-link" @click="handleViewData(scope.row)">{{ scope.row.dictType }}</button>
-            </template>
-          </el-table-column>
-          <el-table-column label="状态" width="100" align="center">
-            <template #default="scope">
-              <el-switch
-                v-model="scope.row.status"
-                style="--el-switch-on-color: #31aba0"
-                active-value="0"
-                inactive-value="1"
-                @change="handleStatusChange(scope.row)"
-              />
-            </template>
-          </el-table-column>
-          <el-table-column label="备注" prop="remark" min-width="160" align="left" :show-overflow-tooltip="true" />
-          <el-table-column label="创建时间" prop="createTime" min-width="170" align="left">
-            <template #default="scope">
-              <span>{{ parseTime(scope.row.createTime) }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column
-            label="操作"
-            align="left"
-            width="200"
-            fixed="right"
-            class-name="action-column"
-            label-class-name="action-column-header"
+            :placeholder="$t('page.system.dict.search.statusPlaceholder', '字典状态')"
           >
-            <template #default="scope">
-              <div class="table-action-cell">
-                <el-button link class="action-link action-link--primary" @click="handleUpdate(scope.row)" v-hasPermi="['system:dict:edit']">
-                  编辑
-                </el-button>
-                <el-button link class="action-link action-link--primary" @click="handleDataList(scope.row)" v-hasPermi="['system:dict:edit']">
-                  列表
-                </el-button>
-                <el-button link class="action-link action-link--danger" @click="handleDelete(scope.row)" v-hasPermi="['system:dict:remove']">
-                  删除
-                </el-button>
-              </div>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
+            <el-option v-for="dict in sys_normal_disable" :key="dict.value" :label="dict.label" :value="dict.value" />
+          </el-select>
 
-      <div class="pagination-row">
-        <pagination
-          v-show="total > 0"
-          :total="total"
-          v-model:page="queryParams.pageNum"
-          v-model:limit="queryParams.pageSize"
-          @pagination="getList"
+          <el-date-picker
+            v-model="dateRange"
+            class="search-bar__date"
+            value-format="YYYY-MM-DD"
+            type="daterange"
+            style="max-width: 250px"
+            :range-separator="$t('page.system.dict.search.rangeSeparator', '至')"
+            :start-placeholder="$t('page.system.dict.search.startTime', '开始时间')"
+            :end-placeholder="$t('page.system.dict.search.endTime', '结束时间')"
+          />
+
+          <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
+          <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
+        </div>
+
+        <div class="action-toolbar">
+          <el-button :disabled="multiple" v-hasPermi="['system:dict:remove']" @click="handleDelete()">批量删除</el-button>
+          <el-text>共选中 {{ ids.length }} 条</el-text>
+          <el-button v-hasPermi="['system:dict:export']" @click="handleExport">导出</el-button>
+          <el-button v-hasPermi="['system:dict:remove']" @click="handleRefreshCache">刷新缓存</el-button>
+          <!--<right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />-->
+        </div>
+      </template>
+
+      <el-table ref="dictTableRef" v-loading="loading" :data="typeList" height="100%" @selection-change="handleSelectionChange">
+        <template #empty>
+          <kjsc-empty />
+        </template>
+        <el-table-column type="selection" align="center" />
+        <el-table-column
+          :label="$t('page.system.dict.table.id', '字典编号')"
+          prop="dictId"
+          :min-width="$dim('page.system.dict.table.id', 100)"
+          align="left"
         />
-      </div>
-    </div>
+        <el-table-column
+          :label="$t('page.system.dict.table.name', '字典名称')"
+          prop="dictName"
+          :min-width="$dim('page.system.dict.table.name', 160)"
+          align="left"
+          :show-overflow-tooltip="true"
+        />
+        <el-table-column
+          :label="$t('page.system.dict.table.type', '字典类型')"
+          :min-width="$dim('page.system.dict.table.type', 180)"
+          align="left"
+          :show-overflow-tooltip="true"
+        >
+          <template #default="scope">
+            <el-link type="primary" @click="handleViewData(scope.row)">{{ scope.row.dictType }}</el-link>
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('page.system.dict.table.status', '状态')" :min-width="$dim('page.system.dict.table.status', 100)" align="center">
+          <template #default="{ row }">
+            <el-switch
+              v-model="row.status"
+              style="--el-switch-on-color: var(--el-color-success)"
+              active-value="0"
+              inactive-value="1"
+              @change="handleStatusChange(row)"
+            />
+          </template>
+        </el-table-column>
+        <el-table-column
+          :label="$t('page.system.dict.table.remark', '备注')"
+          prop="remark"
+          :min-width="$dim('page.system.dict.table.remark', 160)"
+          align="left"
+          :show-overflow-tooltip="true"
+        />
+        <el-table-column
+          :label="$t('page.system.dict.table.createdAt', '创建时间')"
+          prop="createTime"
+          :min-width="$dim('page.system.dict.table.createdAt', 170)"
+          align="left"
+        >
+          <template #default="{ row }">
+            <span>{{ parseTime(row.createTime) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          :label="$t('page.system.dict.table.operation', '操作')"
+          :min-width="$dim('page.system.dict.table.operation', 200)"
+          align="left"
+          fixed="right"
+        >
+          <template #default="scope">
+            <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['system:dict:edit']">
+              {{ $t('page.normal.edit', '编辑') }}
+            </el-button>
+            <el-button link type="primary" @click="handleDataList(scope.row)" v-hasPermi="['system:dict:edit']">
+              {{ $t('page.system.dict.list', '列表') }}
+            </el-button>
+            <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['system:dict:remove']">
+              {{ $t('page.normal.remove', '删除') }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <template #footer>
+        <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+      </template>
+    </page-content>
 
     <KJSCDialogV2
-      :title="title"
+      :title="form.dictId ? $t('page.system.dict.form.editTitle', '修改字典类型') : $t('page.system.dict.form.addTitle', '添加字典类型')"
       v-model="open"
       width="800px"
       append-to-body
-      custom-class="dict-form-dialog"
       :showCloseBtn="false"
       :showSubitBtn="false"
     >
-      <el-form ref="dictRef" :model="form" :rules="rules" label-position="top" class="dict-form" hide-required-asterisk>
-        <el-form-item label="字典名称" prop="dictName">
-          <el-input v-model="form.dictName" placeholder="请输入字典名称" />
+      <el-form ref="dictRef" :model="form" :rules="rules" label-position="top" hide-required-asterisk>
+        <el-form-item :label="$t('page.system.dict.form.name', '字典名称')" prop="dictName">
+          <el-input v-model="form.dictName" :placeholder="$t('page.system.dict.form.namePlaceholder', '请输入字典名称')" />
         </el-form-item>
-        <el-form-item label="字典类型" prop="dictType">
-          <el-input v-model="form.dictType" placeholder="请输入字典类型" />
+        <el-form-item :label="$t('page.system.dict.form.type', '字典类型')" prop="dictType">
+          <el-input v-model="form.dictType" :placeholder="$t('page.system.dict.form.typePlaceholder', '请输入字典类型')" />
         </el-form-item>
-        <el-form-item label="状态">
-          <el-switch v-model="form.status" style="--el-switch-on-color: #31aba0" active-value="0" inactive-value="1" />
+        <el-form-item :label="$t('page.system.dict.form.status', '状态')">
+          <el-switch v-model="form.status" style="--el-switch-on-color: var(--el-color-success)" active-value="0" inactive-value="1" />
         </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="form.remark" type="textarea" :rows="4" placeholder="请输入备注" />
+        <el-form-item :label="$t('page.system.dict.form.remark', '备注')" prop="remark">
+          <el-input v-model="form.remark" type="textarea" :rows="4" :placeholder="$t('page.system.dict.form.remarkPlaceholder', '请输入备注')" />
         </el-form-item>
       </el-form>
 
       <template #prefixFooter>
-        <div class="dict-dialog-footer">
-          <button type="button" class="dict-dialog-submit" @click="submitForm">
-            确认{{ form.dictId ? '修改' : '新增' }}
-          </button>
-        </div>
+        <el-button type="primary" @click="submitForm">
+          {{ $t('page.system.dict.form.confirm', '确认')
+          }}{{ form.dictId ? $t('page.system.dict.form.update', '修改') : $t('page.system.dict.form.add', '新增') }}
+        </el-button>
       </template>
     </KJSCDialogV2>
 
@@ -188,28 +182,27 @@
 </template>
 
 <script setup lang="ts" name="Dict">
-import DictDataDrawer from './detail.vue'
-import useDictStore from '@/store/modules/dict'
-import { listType, getType, delType, addType, updateType, refreshCache } from '@/api/system/dict/type'
-import type { SysDictType, DictTypeQueryParams } from '@/types/api/system/dict'
-import { nextTick } from 'vue'
+import DictDataDrawer from './detail.vue';
+import useDictStore from '@/store/modules/dict';
+import { listType, getType, delType, addType, updateType, refreshCache } from '@/api/system/dict/type';
+import type { SysDictType, DictTypeQueryParams } from '@/types/api/system/dict';
 
-const { proxy } = getCurrentInstance()
-const { sys_normal_disable } = proxy.useDict('sys_normal_disable')
+const { proxy } = getCurrentInstance();
+const { sys_normal_disable } = proxy.useDict('sys_normal_disable');
 
-const typeList = ref<SysDictType[]>([])
-const dictTableRef = ref()
-const open = ref<boolean>(false)
-const loading = ref<boolean>(true)
-const showSearch = ref<boolean>(true)
-const ids = ref<number[]>([])
-const single = ref<boolean>(true)
-const multiple = ref<boolean>(true)
-const total = ref<number>(0)
-const title = ref<string>('')
-const dateRange = ref<string[]>([])
-const drawerVisible = ref<boolean>(false)
-const drawerRow = ref<SysDictType>({} as SysDictType)
+const typeList = ref<SysDictType[]>([]);
+const dictTableRef = ref();
+const open = ref<boolean>(false);
+const loading = ref<boolean>(true);
+const showSearch = ref<boolean>(true);
+const ids = ref<number[]>([]);
+const single = ref<boolean>(true);
+const multiple = ref<boolean>(true);
+const total = ref<number>(0);
+const title = ref<string>('');
+const dateRange = ref<string[]>([]);
+const drawerVisible = ref<boolean>(false);
+const drawerRow = ref<SysDictType>({} as SysDictType);
 
 const data = reactive({
   form: {} as SysDictType,
@@ -224,20 +217,20 @@ const data = reactive({
     dictName: [{ required: true, message: '字典名称不能为空', trigger: 'blur' }],
     dictType: [{ required: true, message: '字典类型不能为空', trigger: 'blur' }]
   }
-})
+});
 
-const { queryParams, form, rules } = toRefs(data)
+const { queryParams, form, rules } = toRefs(data);
 
 function getList() {
-  loading.value = true
-  listType(proxy.addDateRange(queryParams.value, dateRange.value)).then(response => {
-    typeList.value = response.rows
-    total.value = response.total
-    loading.value = false
+  loading.value = true;
+  listType(proxy.addDateRange(queryParams.value, dateRange.value)).then((response) => {
+    typeList.value = response.rows;
+    total.value = response.total;
+    loading.value = false;
     nextTick(() => {
-      dictTableRef.value?.doLayout()
-    })
-  })
+      dictTableRef.value?.doLayout();
+    });
+  });
 }
 
 function reset() {
@@ -247,65 +240,65 @@ function reset() {
     dictType: undefined,
     status: '0',
     remark: undefined
-  }
-  proxy.resetForm('dictRef')
+  };
+  proxy.resetForm('dictRef');
 }
 
 function handleQuery() {
-  queryParams.value.pageNum = 1
-  getList()
+  queryParams.value.pageNum = 1;
+  getList();
 }
 
 function resetQuery() {
-  dateRange.value = []
-  queryParams.value.dictName = undefined
-  queryParams.value.dictType = undefined
-  queryParams.value.status = undefined
-  handleQuery()
+  dateRange.value = [];
+  queryParams.value.dictName = undefined;
+  queryParams.value.dictType = undefined;
+  queryParams.value.status = undefined;
+  handleQuery();
 }
 
 function handleAdd() {
-  reset()
-  open.value = true
-  title.value = '添加字典类型'
+  reset();
+  open.value = true;
+  title.value = '添加字典类型';
 }
 
 function handleSelectionChange(selection: SysDictType[]) {
-  ids.value = selection.map(item => item.dictId!)
-  single.value = selection.length != 1
-  multiple.value = !selection.length
+  ids.value = selection.map((item) => item.dictId!);
+  single.value = selection.length != 1;
+  multiple.value = !selection.length;
 }
 
 function handleViewData(row: SysDictType) {
-  drawerRow.value = row
-  drawerVisible.value = true
+  drawerRow.value = row;
+  drawerVisible.value = true;
 }
 
 function handleDataList(row: SysDictType) {
-  proxy.$tab.openPage('字典数据', '/system/dict-data/index/' + row.dictId)
+  proxy.$tab.openPage('字典数据', '/system/dict-data/index/' + row.dictId);
 }
 
 function handleUpdate(row?: SysDictType) {
-  reset()
-  const dictId = row?.dictId || ids.value[0]
-  getType(dictId).then(response => {
-    form.value = response.data!
-    open.value = true
-    title.value = '修改字典类型'
-  })
+  reset();
+  const dictId = row?.dictId || ids.value[0];
+  getType(dictId).then((response) => {
+    form.value = response.data!;
+    open.value = true;
+    title.value = '修改字典类型';
+  });
 }
 
 function handleStatusChange(row: SysDictType) {
-  const text = row.status === '0' ? '启用' : '停用'
+  const text = row.status === '0' ? '启用' : '停用';
   proxy.$modal
     .confirm('确认要"' + text + '""' + row.dictName + '"字典吗?')
     .then(() => updateType(row))
     .then(() => {
-      proxy.$modal.msgSuccess(text + '成功')
+      proxy.$modal.msgSuccess(text + '成功');
     })
     .catch(() => {
-      row.status = row.status === '0' ? '1' : '0'
-    })
+      row.status = row.status === '0' ? '1' : '0';
+    });
 }
 
 function submitForm() {
@@ -313,33 +306,33 @@ function submitForm() {
     if (valid) {
       if (form.value.dictId != undefined) {
         updateType(form.value).then(() => {
-          proxy.$modal.msgSuccess('修改成功')
-          open.value = false
-          getList()
-        })
+          proxy.$modal.msgSuccess('修改成功');
+          open.value = false;
+          getList();
+        });
       } else {
         addType(form.value).then(() => {
-          proxy.$modal.msgSuccess('新增成功')
-          open.value = false
-          getList()
-        })
+          proxy.$modal.msgSuccess('新增成功');
+          open.value = false;
+          getList();
+        });
       }
     }
-  })
+  });
 }
 
 function handleDelete(row?: SysDictType) {
-  const dictIds = row?.dictId || ids.value
+  const dictIds = row?.dictId || ids.value;
   proxy.$modal
     .confirm('是否确认删除字典编号为"' + dictIds + '"的数据项？')
     .then(function () {
-      return delType(dictIds)
+      return delType(dictIds);
     })
     .then(() => {
-      getList()
-      proxy.$modal.msgSuccess('删除成功')
+      getList();
+      proxy.$modal.msgSuccess('删除成功');
     })
-    .catch(() => {})
+    .catch(() => {});
 }
 
 function handleExport() {
@@ -349,631 +342,15 @@ function handleExport() {
       ...queryParams.value
     },
     `dict_${new Date().getTime()}.xlsx`
-  )
+  );
 }
 
 function handleRefreshCache() {
   refreshCache().then(() => {
-    proxy.$modal.msgSuccess('刷新成功')
-    useDictStore().cleanDict()
-  })
+    proxy.$modal.msgSuccess('刷新成功');
+    useDictStore().cleanDict();
+  });
 }
 
-getList()
+getList();
 </script>
-
-<style scoped lang="scss">
-.dict-manage-page {
-  display: flex;
-  box-sizing: border-box;
-  height: 100%;
-  min-height: calc(100vh - var(--navbar-height, 96px));
-  flex-direction: column;
-  padding: 40px 40px 20px;
-  background: #ebf3f5;
-  border-radius: 40px 0 0 0;
-  overflow: hidden;
-}
-
-.page-name {
-  margin-bottom: 40px;
-
-  :deep(.page-name-right) {
-    align-self: flex-start;
-    padding-top: 4px;
-  }
-}
-
-.add-dict-btn {
-  min-width: 130px;
-  height: 40px;
-  padding: 0 20px;
-  border: none;
-  border-radius: 20px;
-  background: #29b276;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: opacity 0.2s;
-
-  &:hover {
-    opacity: 0.92;
-  }
-}
-
-.search-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-
-  &__keywords {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 620px;
-    flex: none;
-  }
-
-  &__keyword {
-    display: flex;
-    align-items: center;
-    flex: 1;
-    min-width: 0;
-    height: 36px;
-    padding: 0 8px 0 16px;
-    border: 1px solid #e1e6ec;
-    border-radius: 12px;
-    background: #ffffff;
-    box-sizing: border-box;
-  }
-
-  &__input {
-    flex: 1;
-    min-width: 0;
-
-    :deep(.el-input__wrapper) {
-      padding: 0;
-      background: transparent;
-      box-shadow: none !important;
-    }
-
-    :deep(.el-input__inner) {
-      height: 38px;
-      line-height: 38px;
-      font-size: 14px;
-      color: #303133;
-
-      &::placeholder {
-        color: #a8abb2;
-      }
-    }
-  }
-
-  &__icon-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    margin: 0;
-    padding: 0;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    cursor: pointer;
-    flex-shrink: 0;
-
-    &:hover {
-      background: #ebf3f5;
-    }
-  }
-
-  &__icon {
-    font-size: 16px;
-    color: #77838f;
-  }
-
-  &__status {
-    width: 200px;
-    flex: none;
-
-    :deep(.el-select) {
-      width: 100%;
-    }
-
-    :deep(.el-select__wrapper) {
-      min-height: 36px;
-      border-radius: 12px;
-      box-shadow: 0 0 0 1px #e1e6ec inset !important;
-    }
-  }
-
-  &__date-wrap {
-    width: 326px;
-    flex: none;
-
-    :deep(.el-date-editor) {
-      --el-date-editor-daterange-width: 326px;
-      --el-date-editor-width: 326px;
-      width: 326px !important;
-      max-width: 326px !important;
-      flex-grow: 0 !important;
-    }
-
-    :deep(.el-input__wrapper) {
-      width: 100%;
-      height: 36px;
-      border-radius: 12px;
-      box-shadow: 0 0 0 1px #e1e6ec inset !important;
-    }
-  }
-
-  &__date {
-    width: 100%;
-  }
-
-  &__reset {
-    min-width: 76px;
-    height: 36px;
-    padding: 0 20px;
-    border: 1px solid #e1e6ec;
-    border-radius: 12px;
-    background: #ffffff;
-    color: #77838f;
-    font-size: 14px;
-    cursor: pointer;
-    transition: border-color 0.2s, color 0.2s;
-
-    &:hover {
-      border-color: #3297a0;
-      color: #3297a0;
-    }
-  }
-
-  &__submit {
-    min-width: 72px;
-    height: 36px;
-    padding: 0 24px;
-    border: none;
-    border-radius: 12px;
-    background: linear-gradient(180deg, #31aba0 0%, #2897be 100%);
-    color: #ffffff;
-    font-size: 14px;
-    cursor: pointer;
-    transition: opacity 0.2s;
-
-    &:hover {
-      opacity: 0.92;
-    }
-  }
-}
-
-.action-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-  min-height: 50px;
-  gap: 12px;
-
-  &__left {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  &__right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-left: auto;
-  }
-}
-
-.toolbar-btn {
-  min-width: 76px;
-  height: 36px;
-  padding: 0 20px;
-  border: 1px solid #e1e6ec;
-  border-radius: 12px;
-  background: #ffffff;
-  color: #77838f;
-  font-size: 14px;
-  cursor: pointer;
-  transition: border-color 0.2s, color 0.2s, opacity 0.2s;
-
-  &:hover:not(:disabled) {
-    border-color: #3297a0;
-    color: #3297a0;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.selected-text {
-  font-size: 14px;
-  color: #999999;
-  line-height: 36px;
-
-  span {
-    padding: 0 5px;
-    color: #6397ff;
-  }
-}
-
-.dict-content-card {
-  display: flex;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-  padding: 0 0 32px;
-  border-radius: 24px;
-  background: #ffffff;
-  overflow: hidden;
-}
-
-.table-wrap {
-  min-height: 0;
-  flex: 1;
-  overflow: hidden;
-}
-
-.dict-type-link {
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: #3297a0;
-  font-size: 14px;
-  cursor: pointer;
-
-  &:hover {
-    color: #66b8bf;
-  }
-}
-
-.dict-table {
-  height: 100%;
-
-  :deep(.el-table) {
-    --el-table-border-color: #ebeef5;
-    --el-table-header-bg-color: #ffffff !important;
-    --el-table-tr-bg-color: #fbfcfd;
-  }
-
-  :deep(.el-table__inner-wrapper::before) {
-    display: none;
-  }
-
-  :deep(.el-table__body-wrapper) {
-    background-color: #fbfcfd;
-  }
-
-  :deep(.el-table__header-wrapper th),
-  :deep(.el-table__fixed-header-wrapper th) {
-    background-color: #ffffff !important;
-    color: #77838f;
-    font-size: 14px;
-    font-weight: 600;
-  }
-
-  :deep(.el-table__header-wrapper th.el-table__cell),
-  :deep(.el-table__fixed-header-wrapper th.el-table__cell) {
-    height: 60px !important;
-    padding: 0 !important;
-    box-sizing: border-box;
-    background-color: #ffffff !important;
-
-    .cell {
-      padding: 20px 12px;
-      box-sizing: border-box;
-      line-height: 20px;
-    }
-  }
-
-  :deep(.el-table.is-scrolling-none .el-table__header-wrapper th.el-table__cell.gutter) {
-    display: none;
-    width: 0 !important;
-  }
-
-  :deep(.el-table.is-scrolling-none .el-table__fixed-right-patch) {
-    display: none;
-    width: 0 !important;
-  }
-
-  :deep(.el-table.is-scrolling-none) {
-    .el-table__fixed-right,
-    .el-table__fixed-header-wrapper {
-      display: none !important;
-    }
-
-    .el-table__header-wrapper th.el-table-fixed-column--right,
-    .el-table__header-wrapper th.action-column-header,
-    .el-table__body-wrapper td.el-table-fixed-column--right,
-    .el-table__body-wrapper td.action-column {
-      visibility: visible !important;
-    }
-  }
-
-  :deep(.el-table__header-wrapper th.el-table-column--selection .cell),
-  :deep(.el-table__body td.el-table-column--selection .cell) {
-    text-align: center;
-  }
-
-  :deep(.el-table__body tr.el-table__row) {
-    background-color: #fbfcfd !important;
-  }
-
-  :deep(.el-table__body tr.el-table__row td.el-table__cell) {
-    background-color: #fbfcfd !important;
-    padding: 0 !important;
-  }
-
-  :deep(.el-table__body tr.el-table__row td.el-table__cell .cell) {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    padding: 11px 12px;
-    box-sizing: border-box;
-    color: #2b2f33;
-    font-size: 14px;
-    line-height: 20px;
-  }
-
-  :deep(.el-table__fixed-right),
-  :deep(.el-table__fixed-right-patch) {
-    background-color: transparent;
-  }
-
-  :deep(.el-table__fixed-right th.el-table__cell),
-  :deep(.el-table__fixed-header-wrapper th.el-table__cell) {
-    height: 60px !important;
-    padding: 0 !important;
-    background-color: #ffffff !important;
-
-    .cell {
-      padding: 20px 12px;
-      box-sizing: border-box;
-      line-height: 20px;
-      text-align: left;
-    }
-  }
-
-  :deep(.el-table__fixed-right td.el-table__cell) {
-    padding: 0 !important;
-    background-color: #fbfcfd !important;
-
-    .cell {
-      padding: 11px 12px;
-      box-sizing: border-box;
-      line-height: 20px;
-      text-align: left;
-      overflow: visible;
-      white-space: nowrap;
-    }
-  }
-
-  :deep(.table-action-cell) {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  :deep(.el-button.is-link) {
-    padding: 0;
-    margin: 0;
-    font-size: 14px;
-  }
-
-  :deep(.action-link--primary.el-button.is-link) {
-    color: #3297a0;
-    background: transparent !important;
-    background-image: none !important;
-    border: none;
-
-    &:hover:not(.is-disabled),
-    &:focus:not(.is-disabled) {
-      color: #66b8bf;
-    }
-  }
-
-  :deep(.action-link--danger.el-button.is-link) {
-    color: #fe595d;
-    background: transparent !important;
-    background-image: none !important;
-    border: none;
-
-    &:hover:not(.is-disabled),
-    &:focus:not(.is-disabled) {
-      color: #ff7b7e;
-    }
-  }
-}
-
-.pagination-row {
-  display: flex;
-  flex-shrink: 0;
-  justify-content: flex-end;
-  padding: 24px 40px 0;
-
-  :deep(.pagination-container) {
-    padding: 0;
-    margin: 0;
-    background: transparent;
-  }
-}
-
-@media (max-width: 768px) {
-  .dict-manage-page {
-    padding: 16px;
-    border-radius: 24px 0 0 0;
-  }
-
-  .dict-content-card {
-    padding: 0 0 16px;
-  }
-
-  .pagination-row {
-    padding: 16px 16px 0;
-  }
-
-  .search-bar {
-    &__keywords,
-    &__status,
-    &__date-wrap {
-      width: 100%;
-      max-width: none;
-    }
-
-    &__date-wrap :deep(.el-date-editor) {
-      width: 100% !important;
-      max-width: none !important;
-    }
-  }
-
-  .action-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-
-    &__right {
-      margin-left: 0;
-      justify-content: flex-end;
-    }
-  }
-}
-</style>
-
-<style lang="scss">
-.dict-form-dialog.kjsc-dialog-v2 {
-  border-radius: 24px;
-  overflow: hidden;
-  padding: 0;
-
-  .el-dialog__header {
-    padding: 24px 32px 20px;
-    margin-right: 0;
-    border-bottom: 1px solid #ebeef5;
-
-    .el-dialog__title {
-      font-size: 20px;
-      font-weight: 600;
-      color: #2b2f33;
-      line-height: 26px;
-    }
-
-    .el-dialog__headerbtn {
-      top: 24px;
-      right: 24px;
-      width: 24px;
-      height: 24px;
-
-      .el-dialog__close {
-        color: #77838f;
-        font-size: 18px;
-      }
-    }
-  }
-
-  .el-dialog__body {
-    padding: 20px 40px 0;
-  }
-
-  .el-dialog__footer {
-    padding: 32px 32px 32px;
-  }
-
-  .dict-form {
-    .el-form-item {
-      margin-bottom: 20px;
-    }
-
-    .el-form-item__label {
-      display: inline-flex;
-      align-items: center;
-      line-height: 20px;
-      font-size: 14px;
-      font-weight: 500;
-      color: #2b2f33;
-    }
-
-    .el-form-item.is-required > .el-form-item__label::before {
-      display: none !important;
-      margin: 0 !important;
-      content: '' !important;
-    }
-
-    .el-form-item.is-required > .el-form-item__label::after {
-      content: '*';
-      margin-left: 4px;
-      color: #fe595d;
-    }
-
-    .el-input__wrapper,
-    .el-select__wrapper,
-    .el-textarea__inner {
-      border-radius: 8px;
-      box-shadow: 0 0 0 1px #e1e6ec inset !important;
-    }
-
-    .el-input__wrapper,
-    .el-select__wrapper {
-      min-height: 40px;
-    }
-
-    .el-textarea__inner {
-      min-height: 96px;
-      padding: 10px 12px;
-    }
-
-    .el-input__inner {
-      font-size: 14px;
-      color: #2b2f33;
-
-      &::placeholder {
-        color: #a8abb2;
-      }
-    }
-  }
-
-  .dict-form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 24px;
-  }
-
-  .dict-dialog-footer {
-    display: flex;
-    justify-content: flex-end;
-  }
-
-  .dict-dialog-submit {
-    min-width: 120px;
-    height: 40px;
-    padding: 0 28px;
-    border: none;
-    border-radius: 999px;
-    background: linear-gradient(180deg, #31aba0 0%, #2897be 100%);
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: opacity 0.2s;
-
-    &:hover:not(:disabled) {
-      opacity: 0.92;
-    }
-
-    &:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-    }
-  }
-}
-</style>

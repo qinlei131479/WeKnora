@@ -13,6 +13,30 @@
   },
 
   "page": {
+    "normal": {
+      "add": "Add",
+      "batchDelete": "Batch Delete",
+      "batchDeleteConfirm": "Delete the selected items?",
+      "batchDisable": "Batch Disable",
+      "batchDisableConfirm": "Disable the selected items?",
+      "batchEnable": "Batch Enable",
+      "batchEnableConfirm": "Enable the selected items?",
+      "builtin": "Built-in",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "delete": "Delete",
+      "disable": "Disable",
+      "edit": "Edit",
+      "enable": "Enable",
+      "items": "items",
+      "loading": "Loading, please wait",
+      "operation": "Actions",
+      "remove": "Delete",
+      "reset": "Reset",
+      "search": "Search",
+      "selected": "Selected",
+      "selectPlaceholder": "Please select"
+    },
     "data": {
       "storage": {
         "table.createdAt": "Created Time",
@@ -26,6 +50,320 @@
         "table.status_disabled": "Disabled",
         "table.tenantName": "Tenant Name",
         "table.updatedAt": "Updated Time"
+      }
+    },
+    "system": {
+      "dept": {
+        "add": "Add Department",
+        "expandCollapse": "Expand/Collapse",
+        "form": {
+          "addTitle": "Add Department",
+          "confirmAdd": "Confirm Add",
+          "confirmEdit": "Confirm Changes",
+          "deptName": "Department Name",
+          "deptNamePlaceholder": "Enter a department name",
+          "description": "Responsibilities",
+          "descriptionPlaceholder": "Enter responsibilities",
+          "editTitle": "Edit Department",
+          "email": "Email",
+          "emailPlaceholder": "Enter an email address",
+          "leader": "Person in Charge",
+          "leaderPlaceholder": "Enter the person in charge",
+          "orderNum": "Display Order",
+          "parentDept": "Parent Department",
+          "parentDeptPlaceholder": "Select a parent department",
+          "phone": "Contact Number",
+          "phonePlaceholder": "Enter a contact number",
+          "status": "Department Status"
+        },
+        "searchPlaceholder": "Search department name...",
+        "statusPlaceholder": "Department Status",
+        "table": {
+          "createTime": "Created At",
+          "deptName": "Department Name",
+          "description": "Responsibilities",
+          "operation": "Actions",
+          "orderNum": "Order",
+          "status": "Status"
+        }
+      },
+      "dict": {
+        "add": "Add Dictionary",
+        "data": {
+          "add": "Add Dictionary Data",
+          "form": {
+            "addTitle": "Add Dictionary Data",
+            "confirmAdd": "Confirm Add",
+            "confirmEdit": "Confirm Edit",
+            "cssClass": "CSS Class",
+            "cssClassPlaceholder": "Enter CSS class",
+            "dictLabel": "Data Label",
+            "dictLabelPlaceholder": "Enter data label",
+            "dictSort": "Display Order",
+            "dictType": "Dictionary Type",
+            "dictTypePlaceholder": "Dictionary Type",
+            "dictValue": "Data Value",
+            "dictValuePlaceholder": "Enter data value",
+            "editTitle": "Edit Dictionary Data",
+            "listClass": "Display Style",
+            "listClassPlaceholder": "Select a display style",
+            "remark": "Remarks",
+            "remarkPlaceholder": "Enter remarks",
+            "status": "Status"
+          },
+          "search": {
+            "dictLabelPlaceholder": "Enter dictionary label",
+            "dictNamePlaceholder": "Select a dictionary",
+            "statusPlaceholder": "Data Status"
+          },
+          "table": {
+            "createdAt": "Created Time",
+            "dictCode": "Dictionary Code",
+            "dictLabel": "Dictionary Label",
+            "dictSort": "Sort Order",
+            "dictValue": "Dictionary Value",
+            "operation": "Actions",
+            "remark": "Remarks",
+            "status": "Status"
+          }
+        },
+        "form": {
+          "add": "Add",
+          "addTitle": "Add Dictionary Type",
+          "confirm": "Confirm",
+          "editTitle": "Edit Dictionary Type",
+          "name": "Dictionary Name",
+          "namePlaceholder": "Enter dictionary name",
+          "remark": "Remarks",
+          "remarkPlaceholder": "Enter remarks",
+          "status": "Status",
+          "type": "Dictionary Type",
+          "typePlaceholder": "Enter dictionary type",
+          "update": "Update"
+        },
+        "list": "List",
+        "search": {
+          "endTime": "End Time",
+          "namePlaceholder": "Enter dictionary name",
+          "rangeSeparator": "To",
+          "startTime": "Start Time",
+          "statusPlaceholder": "Dictionary Status",
+          "typePlaceholder": "Enter dictionary type"
+        },
+        "table": {
+          "createdAt": "Created Time",
+          "id": "Dictionary ID",
+          "name": "Dictionary Name",
+          "operation": "Actions",
+          "remark": "Remarks",
+          "status": "Status",
+          "type": "Dictionary Type"
+        }
+      },
+      "logininfor": {
+        "search": {
+          "endTimePlaceholder": "End Time",
+          "rangeSeparator": "To",
+          "startTimePlaceholder": "Start Time",
+          "statusPlaceholder": "Login Status",
+          "userNamePlaceholder": "Enter username"
+        },
+        "table": {
+          "accessTime": "Access Time",
+          "infoId": "Access ID",
+          "message": "Description",
+          "status": "Login Status",
+          "userName": "Username"
+        }
+      },
+      "menu": {
+        "add": "Add Menu",
+        "addShort": "Add",
+        "form": {
+          "add": "Add",
+          "addTitle": "Add Menu",
+          "component": "Component Path",
+          "componentPlaceholder": "Enter component path",
+          "confirm": "Confirm",
+          "editTitle": "Edit Menu",
+          "icon": "Menu Icon",
+          "iconPlaceholder": "Click to select an icon",
+          "isCache": "Cache",
+          "isExternalLink": "External Link",
+          "menuName": "Menu Name",
+          "menuNamePlaceholder": "Enter menu name",
+          "menuType": "Menu Type",
+          "order": "Display Order",
+          "parentMenu": "Parent Menu",
+          "parentMenuPlaceholder": "Select a parent menu",
+          "path": "Route Path",
+          "pathPlaceholder": "Enter route path",
+          "permission": "Permission String",
+          "permissionPlaceholder": "Enter permission identifier",
+          "query": "Route Parameters",
+          "queryPlaceholder": "Enter route parameters",
+          "routeName": "Route Name",
+          "routeNamePlaceholder": "Enter route name",
+          "status": "Menu Status",
+          "update": "Update",
+          "visible": "Visibility"
+        },
+        "saveSort": "Save Order",
+        "search": {
+          "menuNamePlaceholder": "Enter menu name",
+          "statusPlaceholder": "Menu Status"
+        },
+        "table": {
+          "component": "Component Path",
+          "menuName": "Menu Name",
+          "operation": "Actions",
+          "order": "Sort Order",
+          "permission": "Permission Identifier",
+          "status": "Status",
+          "type": "Type"
+        },
+        "toggleExpand": "Expand/Collapse",
+        "type": {
+          "button": "Button",
+          "directory": "Directory",
+          "externalLink": "External Link",
+          "menu": "Menu"
+        }
+      },
+      "operlog": {
+        "detail": "Details",
+        "millisecond": "ms",
+        "search": {
+          "businessTypePlaceholder": "Operation Type",
+          "endTimePlaceholder": "End Time",
+          "operIpPlaceholder": "Enter operation address",
+          "operNamePlaceholder": "Enter operator",
+          "rangeSeparator": "To",
+          "startTimePlaceholder": "Start Time",
+          "statusPlaceholder": "Operation Status",
+          "titlePlaceholder": "Enter system module"
+        },
+        "table": {
+          "businessType": "Operation Type",
+          "costTime": "Duration",
+          "operation": "Actions",
+          "operId": "Log ID",
+          "operIp": "Operation Address",
+          "operName": "Operator",
+          "operTime": "Operation Date",
+          "requestMethod": "Request Method",
+          "status": "Operation Status",
+          "title": "System Module"
+        }
+      },
+      "post": {
+        "add": "Add Post",
+        "export": "Export",
+        "form": {
+          "addTitle": "Add Post",
+          "confirmAdd": "Confirm Add",
+          "confirmEdit": "Confirm Changes",
+          "editTitle": "Edit Post",
+          "postCode": "Post Code",
+          "postCodePlaceholder": "Enter post code",
+          "postName": "Post Name",
+          "postNamePlaceholder": "Enter post name",
+          "postSort": "Sort Order",
+          "remark": "Responsibilities",
+          "remarkPlaceholder": "Enter responsibilities",
+          "status": "Post Status"
+        },
+        "search": {
+          "postCodePlaceholder": "Enter post code",
+          "postNamePlaceholder": "Enter post name",
+          "statusPlaceholder": "Post Status"
+        },
+        "table": {
+          "createTime": "Created Time",
+          "operation": "Actions",
+          "postCode": "Post Code",
+          "postId": "Post ID",
+          "postName": "Post Name",
+          "postSort": "Sort Order",
+          "remark": "Responsibilities",
+          "status": "Status"
+        }
+      },
+      "role": {
+        "add": "Add Role",
+        "allTenants": "All Tenants",
+        "deleteConfirm": "Confirm deletion?",
+        "endDatePlaceholder": "End Date",
+        "form": {
+          "addTitle": "Add Role",
+          "confirmAdd": "Confirm Add",
+          "confirmEdit": "Confirm Changes",
+          "description": "Role Description",
+          "descriptionPlaceholder": "Enter a role description",
+          "editTitle": "Edit Role",
+          "expandCollapse": "Expand/Collapse",
+          "menuPermission": "Menu Permissions",
+          "parentChildLinkage": "Parent-Child Linkage",
+          "roleName": "Role Name",
+          "roleNamePlaceholder": "Enter a role name",
+          "selectAllToggle": "Select All/Deselect All",
+          "tenantName": "Tenant",
+          "tenantPlaceholder": "Select a tenant"
+        },
+        "rangeSeparator": "to",
+        "searchPlaceholder": "Search by role name",
+        "startDatePlaceholder": "Start Date",
+        "table": {
+          "operation": "Actions",
+          "remark": "Description",
+          "roleName": "Role Name",
+          "tenantName": "Tenant Name",
+          "updateTime": "Update Time"
+        }
+      },
+      "user": {
+        "add": "Add User",
+        "endDatePlaceholder": "End Date",
+        "form": {
+          "addTitle": "Add User",
+          "confirmAdd": "Confirm Add",
+          "confirmEdit": "Confirm Changes",
+          "dept": "Department",
+          "editTitle": "Edit User",
+          "initialPassword": "Initial account password:",
+          "nickName": "User Nickname",
+          "nickNamePlaceholder": "Supports Chinese characters, numbers, and letters",
+          "post": "Position",
+          "roleName": "Role",
+          "rolePlaceholder": "Select a role",
+          "tenantName": "Tenant",
+          "tenantPlaceholder": "Select a tenant",
+          "userName": "Login Account",
+          "userNamePlaceholder": "Supports numbers and letters; phone number recommended"
+        },
+        "import": {
+          "title": "Import Users",
+          "updateExisting": "Update existing user data"
+        },
+        "rangeSeparator": "to",
+        "resetPassword": {
+          "placeholder": "Enter new password",
+          "prompt": "Enter a new password for “{userName}”",
+          "title": "Notice"
+        },
+        "searchPlaceholder": "Search by user ID, nickname, or creator",
+        "startDatePlaceholder": "Start Date",
+        "table": {
+          "createBy": "Created By",
+          "nickName": "User Nickname",
+          "operation": "Actions",
+          "roleName": "Assigned Role",
+          "status": "Enabled Status",
+          "tenantName": "Tenant Name",
+          "updateTime": "Update Time",
+          "userId": "User ID",
+          "userName": "Login Account"
+        }
       }
     }
   },

@@ -110,17 +110,25 @@
   &__keyword {
     display: flex;
     align-items: center;
-    width: 100%;
-    max-width: 420px;
     box-sizing: border-box;
   }
 
   &__input {
     flex: 1;
+    width: 400px;
     min-width: 0;
+    max-width: 400px;
   }
 
   .el-button + .el-button {
     margin-left: 0;
   }
+}
+
+.action-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: calc(var(--layout-padding) * 2) var(--layout-padding) var(--layout-padding);
 }
