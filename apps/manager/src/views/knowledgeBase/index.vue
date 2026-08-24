@@ -99,7 +99,7 @@
             :show-overflow-tooltip="true"
           >
             <template #default="scope">
-              <KnowledgeBaseTypeTag :type="scope.row.type" />
+              <!-- <KnowledgeBaseTypeTag :type="scope.row.type" /> -->
             </template>
           </el-table-column>
           <el-table-column
@@ -295,7 +295,7 @@ import { useI18n } from 'vue-i18n';
 import { Search } from 'lucide-vue-next';
 
 // import KnowledgeBaseEditorModal from './components/KnowledgeBaseEditorModal.vue'
-import KnowledgeBaseTypeTag from './components/KnowledgetBaseTypeTag.vue';
+// import KnowledgeBaseTypeTag from './components/KnowledgetBaseTypeTag.vue';
 import { deleteKnowledgeBaseSingleApi, getKnowledgeBaseListApi } from '@/api/data/knowledgeBase.js';
 
 import { getKBChunkStrategyOptionLabel } from '@/composables/useKBChunk.js';
