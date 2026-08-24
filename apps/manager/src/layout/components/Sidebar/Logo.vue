@@ -65,42 +65,33 @@ const getLogoTextColor = computed(() => {
 
 .sidebar-logo-container {
   position: relative;
-  height: 40px;
-  // line-height: 40px;
-  margin: 20px auto;
   background: v-bind(getLogoBackground);
   text-align: center;
   overflow: hidden;
+  border-radius: var(--layout-radius) var(--layout-radius) 0 0;
+  border-bottom: 1px dashed var(--layout-bg-color-page);
+  height: 60px;
+  display: flex;
+  align-items: center;
 
   & .sidebar-logo-link {
-    height: 100%;
+    // height: 100%;
     width: 100%;
 
     & .sidebar-logo {
-      width: 40px;
-      height: 40px;
+      width: 36px;
+      height: 36px;
       vertical-align: middle;
     }
 
     & .sidebar-title {
       display: inline-block;
-      margin: 0 0 0 16px;
+      margin-left: 0.5em;
       color: v-bind(getLogoTextColor);
       font-weight: bold;
-      font-size: 24px;
-      font-family:
-        Avenir,
-        Helvetica Neue,
-        Arial,
-        Helvetica,
-        sans-serif;
+      font-size: 20px;
+      line-height: 1em;
       vertical-align: middle;
-    }
-  }
-
-  &.collapse {
-    .sidebar-logo {
-      margin-right: 0px;
     }
   }
 }

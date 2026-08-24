@@ -57,9 +57,7 @@ function setLayout(): void {
 
 .navbar {
   // width: 100%;
-  width: calc(100% - var(--layout-margin) * 3);
   height: var(--navbar-height, 96px);
-  // overflow: visible;
   overflow: hidden;
   position: relative;
   background: var(--navbar-bg);
@@ -68,23 +66,8 @@ function setLayout(): void {
   align-items: center;
   // padding-right: 16px;
   box-sizing: border-box;
-  top: var(--layout-margin);
-  left: calc(var(--layout-margin) * 2);
+  border: var(--el-border-width) var(--el-border-style) var(--el-border-color);
   border-radius: var(--layout-radius);
-
-  // .navbar-collapsed-logo {
-  //   position: fixed;
-  //   left: calc(var(--sidebar-collapse-width, 120px) / 2);
-  //   top: calc((var(--navbar-height, 96px) - 28px) / 2);
-  //   z-index: 1002;
-  //   display: flex;
-  //   align-items: center;
-  //   justify-content: center;
-  //   width: 25px;
-  //   height: 28px;
-  //   line-height: 0;
-  //   transform: translateX(-50%);
-  // }
 
   .hamburger-container {
     //   line-height: var(--navbar-height, 96px);

@@ -6,7 +6,11 @@
     "title_short": "ISV. AgentSphere"
   },
 
-  "component": {},
+  "component": {
+    "headerSearch": {
+      "input.placeholder": "Search Anything"
+    }
+  },
 
   "page": {
     "data": {

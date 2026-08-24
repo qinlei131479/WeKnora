@@ -89,6 +89,7 @@ function setLayout() {
 .main-container:has(.fixed-header) {
   height: 100vh;
   overflow: hidden;
+  padding: var(--layout-padding) var(--layout-padding) var(--layout-padding) 0;
 }
 
 .drawer-bg {
@@ -103,15 +104,15 @@ function setLayout() {
 
 .fixed-header {
   position: fixed;
-  top: 0;
-  right: 0;
+  top: var(--layout-padding);
+  right: var(--layout-padding);
   z-index: 9;
-  width: calc(100% - #{vars.$base-sidebar-width});
+  width: calc(100% - #{vars.$base-sidebar-width} - var(--layout-padding));
   transition: width 0.28s;
 }
 
 .hideSidebar .fixed-header {
-  width: calc(100% - 54px);
+  width: calc(100% - 54px - var(--layout-padding) * 3);
 }
 
 .sidebarHide .fixed-header {

@@ -1,10 +1,15 @@
 <template>
-  <div class="header-search">
+  <div>
     <!-- <div class="search-bar" @click.stop="click">
       <el-icon><Search /></el-icon>
       <div class="search-bar__placeholder">搜索全局资源</div>
     </div> -->
-    <el-icon @click.stop="click"><Search /></el-icon>
+    <!-- <el-icon @click.stop="click"><Search /></el-icon> -->
+
+    <div class="header-search-bar" @click.stop="click">
+      <el-icon color="var(--el-text-color-placeholder)"><Search /></el-icon>
+      <el-text class="header-search-bar__placeholder">{{ $t('component.headerSearch.input.placeholder', '搜索全局资源') }}</el-text>
+    </div>
 
     <el-dialog v-model="show" width="600" @close="close" @opened="onDialogOpened" :show-close="false" append-to-body>
       <el-input
@@ -240,6 +245,23 @@ watch(searchPool, (list: SearchItem[]) => {
 </script>
 
 <style lang="scss" scoped>
+.header-search-bar {
+  display: flex;
+  align-items: center;
+  width: 300px;
+  height: var(--el-component-size);
+  line-height: var(--el-component-size);
+  padding: 1px 11px;
+  cursor: text;
+  border: var(--el-border-width) var(--el-border-style) var(--el-border-color);
+  border-radius: var(--el-border-radius-base);
+
+  &__placeholder {
+    color: var(--el-text-color-placeholder);
+    padding-left: 0.5em;
+  }
+}
+
 :deep(.el-dialog__header) {
   padding: 6px !important;
 }
@@ -252,52 +274,6 @@ watch(searchPool, (list: SearchItem[]) => {
 :deep(.is-active .highlight) {
   color: rgba(255, 255, 255, 0.9);
   font-weight: 600;
-}
-
-.header-search {
-  // display: flex;
-  // align-items: center;
-  // width: 494px;
-  // flex-shrink: 0;
-
-  // .search-bar {
-  //   display: flex;
-  //   align-items: center;
-  //   justify-content: space-between;
-  //   width: 100%;
-  //   height: 48px;
-  //   padding: 0 16px;
-  //   border: 1px solid #dcdfe6;
-  //   border-radius: 24px;
-  //   background-color: #ffffff;
-  //   cursor: pointer;
-  //   transition:
-  //     border-color 0.2s,
-  //     background-color 0.2s;
-
-  //   &:hover {
-  //     border-color: #3297a0;
-  //     background-color: #ebf3f5;
-  //   }
-  // }
-
-  // .search-bar__placeholder {
-  //   font-size: 14px;
-  //   color: #a8abb2;
-  //   user-select: none;
-  // }
-
-  // .search-bar__icon {
-  //   flex-shrink: 0;
-  //   font-size: 16px;
-  //   color: #77838f;
-  // }
-
-  .search-icon {
-    cursor: pointer;
-    font-size: 18px;
-    vertical-align: middle;
-  }
 }
 
 .result-count {

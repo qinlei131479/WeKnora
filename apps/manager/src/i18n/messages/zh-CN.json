@@ -6,7 +6,11 @@
     "title_short": "智能体中台"
   },
 
-  "component": {},
+  "component": {
+    "headerSearch": {
+      "input.placeholder": "搜索全局资源"
+    }
+  },
 
   "page": {
     "data": {

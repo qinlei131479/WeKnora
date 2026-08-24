@@ -1,22 +1,24 @@
 <template>
-  <div :class="['sidebar-theme-wrapper', { 'has-logo': showLogo }, sideTheme]" class="sidebar-container">
-    <div v-if="showLogo && isCollapse" class="sidebar-logo-slot" aria-hidden="true" />
-    <logo v-if="showLogo" :collapse="isCollapse" />
-    <el-scrollbar wrap-class="scrollbar-wrapper">
-      <el-menu
-        :default-active="activeMenu"
-        :collapse="isCollapse"
-        :background-color="getMenuBackground"
-        :text-color="getMenuTextColor"
-        :unique-opened="true"
-        :active-text-color="theme"
-        :collapse-transition="false"
-        mode="vertical"
-        :class="sideTheme"
-      >
-        <sidebar-item v-for="(route, index) in sidebarRouters" :key="route.path + index" :item="route" :base-path="route.path" />
-      </el-menu>
-    </el-scrollbar>
+  <div class="sidebar-container">
+    <div :class="['sidebar-theme-wrapper', { 'has-logo': showLogo }, sideTheme]">
+      <div v-if="showLogo && isCollapse" class="sidebar-logo-slot" aria-hidden="true" />
+      <logo v-if="showLogo" :collapse="isCollapse" />
+      <el-scrollbar wrap-class="scrollbar-wrapper">
+        <el-menu
+          :default-active="activeMenu"
+          :collapse="isCollapse"
+          :background-color="getMenuBackground"
+          :text-color="getMenuTextColor"
+          :unique-opened="true"
+          :active-text-color="theme"
+          :collapse-transition="false"
+          mode="vertical"
+          :class="sideTheme"
+        >
+          <sidebar-item v-for="(route, index) in sidebarRouters" :key="route.path + index" :item="route" :base-path="route.path" />
+        </el-menu>
+      </el-scrollbar>
+    </div>
   </div>
 </template>
 
@@ -66,10 +68,28 @@ const activeMenu = computed(() => {
 
 <style lang="scss" scoped>
 .sidebar-container {
-  background-color: v-bind(getMenuBackground);
+  // background-color: v-bind(getMenuBackground);
+  padding: var(--layout-padding);
+  height: 100vh;
+  border-radius: var(--layout-radius);
 
-  .scrollbar-wrapper {
+  &::before {
+    position: absolute;
+    inset: var(--layout-padding);
     background-color: v-bind(getMenuBackground);
+    border-radius: inherit;
+    z-index: 0;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .sidebar-theme-wrapper {
+    background-color: v-bind(getMenuBackground);
+    height: 100%;
+    border-radius: var(--layout-radius);
   }
 
   .el-menu {

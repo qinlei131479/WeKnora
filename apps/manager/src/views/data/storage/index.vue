@@ -88,8 +88,9 @@ onMounted(() => {
     <page-name />
     <page-content>
       <template #header>
-        <div class="autocomplete" @keydown.capture="handleAutocompleteKeydown">
+        <div class="search-bar" @keydown.capture="handleAutocompleteKeydown">
           <el-autocomplete
+            class="search-bar__keyword"
             v-model="state.keyword"
             value-key="name"
             placeholder="输入租户名称查询"
@@ -104,7 +105,7 @@ onMounted(() => {
         </div>
       </template>
 
-      <el-table :data="state.backendsVOs" height="100%" show-overflow-tooltip style="width: 100%">
+      <el-table :data="state.backendsVOs" height="100%" style="width: 100%">
         <el-table-column prop="name" :label="$t('page.data.storage.table.name', '名称')" :min-width="$dim('page.data.storage.table.name', 220)" />
         <el-table-column
           prop="tenantName"
@@ -163,28 +164,10 @@ onMounted(() => {
       </el-table>
 
       <template #footer>
-        <div class="pagination">
-          <el-pagination
-            v-model:current-page="state.page.pageNum"
-            v-model:page-size="state.page.pageSize"
-            :total="state.total"
-            layout="total, sizes, prev, pager, next, jumper"
-            @change="getBackends"
-          />
-        </div>
+        <pagination v-model:page="state.page.pageNum" v-model:limit="state.page.pageSize" :total="state.total" @pagination="getBackends" />
       </template>
     </page-content>
   </section>
 </template>
 
-<style lang="scss" scoped>
-.autocomplete {
-  margin: 0 16px 16px 16px;
-}
-
-.pagination {
-  margin: 16px 16px 0 16px;
-  display: flex;
-  justify-content: flex-end;
-}
-</style>
+<style lang="scss" scoped></style>
