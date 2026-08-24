@@ -60,7 +60,7 @@
           <el-button :disabled="multiple" v-hasPermi="['system:dict:remove']" @click="handleDelete()">批量删除</el-button>
           <el-text>共选中 {{ ids.length }} 条</el-text>
           <el-button v-hasPermi="['system:dict:export']" @click="handleExport">导出</el-button>
-          <el-button v-hasPermi="['system:dict:remove']" @click="handleRefreshCache">刷新缓存</el-button>
+          <el-button style="margin-left: auto" v-hasPermi="['system:dict:remove']" @click="handleRefreshCache">刷新缓存</el-button>
           <!--<right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />-->
         </div>
       </template>

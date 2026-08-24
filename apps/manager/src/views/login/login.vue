@@ -37,7 +37,7 @@
         </div>
       </div>
 
-      <div class="copyright">&copy; 2026 空间视创（重庆）科技股份有限公司</div>
+      <div class="login-brand__copyright">&copy; Copyright Reserved 空间视创（重庆）科技股份有限公司 版权所有</div>
     </aside>
 
     <main class="login-main">
@@ -50,7 +50,7 @@
         <div class="login-main-content-left">
           <el-form ref="loginRef" :model="loginForm" :rules="loginRules" label-position="top" hide-required-asterisk="true" class="login-form">
             <el-form-item prop="username" label="用户名">
-              <el-input v-model="loginForm.username" :prefix-icon="User" type="text" size="large" auto-complete="off" placeholder="请输入账号" />
+              <el-input v-model="loginForm.username" :prefix-icon="User" type="text" size="large" auto-complete="off" placeholder="请输入用户名" />
             </el-form-item>
             <el-form-item prop="password" label="密码">
               <el-input
@@ -339,233 +339,378 @@ getCookie();
 <style lang="scss" scoped>
 .login {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  background-image: url('../../assets/images/bg-login.png');
-  background-size: cover;
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: #f4f6f6;
 }
 
-.manufacturer-img {
-  width: 153px;
-  height: 53px;
-  background: url('../../assets/images/manufacturer.png') no-repeat;
-  background-size: 100% 100%;
+.login-brand {
+  position: relative;
+  display: flex;
+  flex: 0 0 51.8229167%;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  color: #ffffff;
+  background: #12412f url('../../assets/images/login/login_bg_left.png') center / cover no-repeat;
+}
+
+.login-brand__content {
+  width: min(400px, calc(100% - 64px));
+  transform: translateY(-25px);
+  text-align: center;
+}
+
+.login-brand__logo {
+  display: block;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto;
+}
+
+.login-brand__name {
+  margin-top: 26px;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 42px;
+}
+
+.login-brand__subtitle {
+  margin-top: 8px;
+  color: #89a097;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.login-brand__features {
+  display: flex;
+  width: 272px;
+  max-width: 100%;
+  margin: 48px auto 0;
+  flex-direction: column;
+  gap: 20px;
+  text-align: left;
+}
+
+.login-feature {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.login-feature__icon {
+  display: flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+
+  img {
+    display: block;
+    max-width: 18px;
+    max-height: 18px;
+  }
+}
+
+.login-feature__title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.login-feature__description {
+  margin-top: 2px;
+  color: #89a097;
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.login-brand__copyright {
   position: absolute;
-  left: 80px;
-  top: 60px;
+  right: 32px;
+  bottom: 54px;
+  left: 32px;
+  color: rgba(255, 255, 255, 0.28);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
 }
 
 .login-main {
-  width: 640px;
-  background: rgba(255, 255, 255, 0.8);
-  box-shadow: 0px 3px 8px 1px rgba(85, 88, 113, 0.1);
-  border-radius: 40px;
-  position: absolute;
-  right: 200px;
-  top: 160px;
+  display: flex;
+  min-width: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: clamp(32px, 6vh, 72px) clamp(24px, 5vw, 96px);
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  box-sizing: border-box;
+  background: #f4f6f6;
+}
+
+.login-main-title,
+.login-main-content {
+  width: min(400px, 100%);
 }
 
 .login-main-title {
-  // font-family: '思源黑体 CN';
-  font-weight: bold;
-  font-size: 36px;
-  color: #2b2f33;
-  text-align: left;
-  font-style: normal;
-  text-transform: none;
-  text-align: center;
-  padding: 70px 0 0 50px;
-  box-sizing: border-box;
+  margin-bottom: 34px;
 }
 
 .login-main-title-text {
-  font-weight: bold;
-  font-size: 40px;
-  color: #0c113d;
+  color: #0c110f;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 40px;
 }
 
-.login-main-content {
-  // margin-top: 50px;
-  padding: 40px 88px 80px 88px;
-  box-sizing: border-box;
-  display: flex;
-  justify-content: center;
-  height: calc(100% - 160px);
+.login-main-title-desc {
+  margin-top: 4px;
+  color: #a5aca6;
+  font-size: 14px;
+  line-height: 22px;
 }
 
-.login-main-content-left {
-  width: 400px;
-}
-
-.login-main-content-right {
-  position: relative;
+.login-main-content-left,
+.login-form {
   width: 100%;
-  height: calc(100% - 83px);
-  display: flex;
-  justify-content: center;
-
-  img {
-    width: 240px;
-    height: 240px;
-  }
-
-  .loseEfficacy {
-    position: absolute;
-    cursor: pointer;
-    // top: 0px;
-    // left: 0px;
-    width: 240px;
-    height: 240px;
-    background: rgba(255, 255, 255, 0.95);
-    font-size: 14px;
-    display: grid;
-    place-items: center;
-
-    img {
-      width: 15px;
-      height: 15px;
-    }
-  }
-}
-
-.login-main-content-right-bottom {
-  width: 100%;
-  height: 83px;
-  padding-top: 25px;
-
-  .desc {
-    width: 100%;
-    text-align: center;
-    font-size: 14px;
-    color: #0c113d;
-  }
+  min-width: 0;
 }
 
 .login-form {
-  width: 400px;
-
-  .el-input {
-    height: 48px;
-
-    input {
-      height: 48px;
-    }
+  :deep(.el-form-item) {
+    margin-bottom: 18px;
   }
 
-  .input-icon {
-    height: 24px;
-    width: 24px;
-    margin-left: 0px;
+  :deep(.el-form-item__label) {
+    height: auto;
+    padding: 0;
+    color: #6f7372;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+  }
+
+  :deep(.el-input) {
+    height: 48px;
+  }
+
+  :deep(.el-input__wrapper) {
+    min-height: 48px;
+    padding: 0 16px;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 0 0 1px #e6e8e5 inset;
+    transition: box-shadow 0.2s;
+  }
+
+  :deep(.el-input__wrapper:hover) {
+    box-shadow: 0 0 0 1px #c8d1cc inset;
+  }
+
+  :deep(.el-input__wrapper.is-focus) {
+    box-shadow: 0 0 0 1px #27a779 inset;
+  }
+
+  :deep(.el-input__prefix) {
+    margin-right: 10px;
+    color: #7c8580;
+  }
+
+  :deep(.el-input__inner) {
+    color: #242a27;
+    font-size: 14px;
+
+    &::placeholder {
+      color: #9ca4a0;
+    }
   }
 }
 
-.login-tip {
-  font-size: 13px;
-  text-align: center;
-  color: #bfbfbf;
+.row-captcha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  align-items: start;
+  gap: 12px;
+
+  :deep(.el-form-item) {
+    min-width: 0;
+  }
 }
 
 .login-code {
-  // width: 50%;
-  flex-grow: 1;
-  flex-shrink: 1;
-  flex-basis: 0;
-  margin-top: 30px;
-  height: 48px;
-  // float: right;
-  // border-radius: 0 4px 4px 0;
   position: relative;
+  height: 48px;
+  margin-top: 28px;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px #e6e8e5 inset;
 
   img {
-    cursor: pointer;
-    // vertical-align: middle;
     position: absolute;
     inset: -4px;
     display: block;
     width: calc(100% + 8px);
     height: calc(100% + 8px);
     max-width: none;
+    cursor: pointer;
+    object-fit: cover;
   }
 }
 
 .login-verific-code {
-  // width: 50%;
-  flex-grow: 1;
-  flex-shrink: 1;
-  flex-basis: 0;
-  border-radius: 16px;
-
-  :deep(.el-input__wrapper) {
-    border-radius: 16px;
-  }
-}
-
-.login-code-img {
-  height: 48px;
   width: 100%;
 }
 
 .login-form-remember {
   display: flex;
-  margin-bottom: 30px;
+  min-height: 20px;
+  margin-bottom: 20px;
+  align-items: center;
 
   :deep(.el-switch) {
-    width: 36px;
-    height: 20px;
+    --el-switch-on-color: #27a779;
+    --el-switch-off-color: #d6ddd9;
+    flex-shrink: 0;
   }
 }
 
 .login-form-remember-text {
-  // font-family: '思源黑体 CN';
-  font-weight: 400;
+  margin-left: 10px;
+  color: #6f7773;
   font-size: 14px;
-  color: #8a8c9d;
-  margin-left: 12px;
+  line-height: 20px;
 }
 
 .login-submit {
-  margin-bottom: 0px;
   width: 100%;
+  margin-bottom: 0;
+
+  :deep(.el-button) {
+    --el-button-bg-color: #27a779;
+    --el-button-border-color: #27a779;
+    --el-button-hover-bg-color: #23956d;
+    --el-button-hover-border-color: #23956d;
+    --el-button-active-bg-color: #1f8662;
+    --el-button-active-border-color: #1f8662;
+    width: 100%;
+    height: 48px;
+    border-radius: 12px;
+    background-image: linear-gradient(180deg, #2fa377 0%, #2b986f 52%, #25825f 100%);
+    box-shadow: 0 6px 12px rgba(24, 117, 84, 0.18);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 4px;
+  }
 }
 
-.login-main-logo {
-  position: absolute;
-  left: 165px;
-  top: 80px;
-  width: 40px;
-  height: 40px;
-  background: url('../../assets/logo/logo@1x.png') no-repeat;
-  background-size: 100% 100%;
-  // border-radius: 8px;
-  z-index: 999;
+@media (max-width: 1280px) {
+  .login-brand {
+    flex-basis: 48%;
+  }
+
+  .login-main {
+    padding-right: 48px;
+    padding-left: 48px;
+  }
 }
 
-.copyright {
-  position: absolute;
-  width: 100vw;
-  bottom: 30px;
-  text-align: center;
-  font-weight: 400;
-  font-size: 16px;
-  color: #77838f;
+@media (max-width: 980px) {
+  .login-brand {
+    flex-basis: 44%;
+  }
+
+  .login-brand__content {
+    width: min(340px, calc(100% - 48px));
+  }
+
+  .login-brand__features {
+    width: 300px;
+  }
+
+  .login-main {
+    padding-right: 32px;
+    padding-left: 32px;
+  }
 }
 
-:deep(.input-radius) {
-  height: 48px;
-  border-radius: 16px;
+@media (max-width: 900px) {
+  .login {
+    overflow-y: auto;
+  }
+
+  .login-brand {
+    display: none;
+  }
+
+  .login-main {
+    width: 100%;
+    min-height: 100vh;
+    padding: 48px 24px;
+  }
 }
 
-.row-captcha {
-  display: flex;
-  flex-direction: row;
-  gap: 20px;
+@media (max-width: 520px) {
+  .login-main {
+    padding: 32px 20px;
+  }
+
+  .login-main-title {
+    margin-bottom: 28px;
+  }
+
+  .row-captcha {
+    grid-template-columns: minmax(0, 1fr) 112px;
+    gap: 8px;
+  }
 }
 
-.el-button {
-  height: 48px;
-  font-size: 16px;
+@media (max-height: 720px) and (min-width: 901px) {
+  .login-brand__logo {
+    width: 64px;
+    height: 64px;
+  }
+
+  .login-brand__name {
+    margin-top: 18px;
+  }
+
+  .login-brand__features {
+    margin-top: 30px;
+    gap: 14px;
+  }
+
+  .login-brand__copyright {
+    bottom: 24px;
+  }
+
+  .login-main-title {
+    margin-bottom: 24px;
+  }
+
+  .login-form {
+    :deep(.el-form-item) {
+      margin-bottom: 14px;
+    }
+  }
+
+  .login-form-remember {
+    margin-bottom: 14px;
+  }
 }
 </style>
