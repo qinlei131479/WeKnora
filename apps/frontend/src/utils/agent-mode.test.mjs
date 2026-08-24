@@ -57,3 +57,16 @@ test('reconcileBuiltinAgentMode repairs drifted localStorage flags', () => {
   const custom = { selectedAgentId: 'custom-agent', isAgentEnabled: true }
   assert.equal(reconcileBuiltinAgentMode(custom), false)
 })
+
+function localizedBuiltinAgentName(agentId, t, fallbackName) {
+  if (agentId === BUILTIN_QUICK_ANSWER_ID) return t('input.normalMode')
+  if (agentId === BUILTIN_SMART_REASONING_ID) return t('input.agentMode')
+  return fallbackName || t('input.normalMode')
+}
+
+test('localizedBuiltinAgentName follows locale keys for mode builtins', () => {
+  const t = (key) => key
+  assert.equal(localizedBuiltinAgentName('builtin-smart-reasoning', t), 'input.agentMode')
+  assert.equal(localizedBuiltinAgentName('builtin-quick-answer', t), 'input.normalMode')
+  assert.equal(localizedBuiltinAgentName('custom-1', t, 'My Agent'), 'My Agent')
+})

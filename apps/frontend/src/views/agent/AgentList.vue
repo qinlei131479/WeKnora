@@ -1,6 +1,6 @@
 <template>
   <div class="agent-list-container">
-    <ListSpaceSidebar v-if="!authStore.isLiteMode" v-model="spaceSelection" :count-all="allAgentsCount"
+    <ListSpaceSidebar v-if="!authStore.isLiteMode && surface === 'platform'" v-model="spaceSelection" :count-all="allAgentsCount"
       :count-mine="agents.length" :count-by-org="effectiveSharedCountByOrg" :count-favorites="agentFavoritesCount"
       :count-recents="agentRecentsCount" />
     <div class="agent-list-content">
@@ -8,7 +8,7 @@
         <div class="header-title" style="--wails-draggable: drag">
           <div class="title-row" style="--wails-draggable: drag">
             <h2 style="--wails-draggable: drag">{{ $t('agent.title') }}</h2>
-            <t-tooltip v-if="authStore.hasRole('contributor')" :content="$t('agent.createAgent')" placement="bottom">
+            <t-tooltip v-if="authStore.hasRole('contributor') && surface === 'platform'" :content="$t('agent.createAgent')" placement="bottom">
               <t-button variant="text" theme="default" size="small" class="header-action-btn"
                 data-guide="agent-list-create" style="--wails-draggable: no-drag" @click="handleCreateAgent">
                 <template #icon>
@@ -33,10 +33,20 @@
               </t-button>
             </t-tooltip>
           </div>
-          <p class="header-subtitle" style="--wails-draggable: drag">{{ $t('agent.subtitle') }}</p>
+          <p class="header-subtitle" style="--wails-draggable: drag">{{
+            surface === 'runtime' ? $t('agent.runtimeSubtitle') : $t('agent.subtitle')
+          }}</p>
         </div>
       </div>
-      <div class="agent-list-main">
+      <ListSurfaceTabs
+        v-model="surface"
+        :items="surfaceTabs"
+        :aria-label="$t('agent.title')"
+      />
+      <HarnessIsland v-if="surface === 'runtime'" class="surface-embed">
+        <AgentManageView embedded />
+      </HarnessIsland>
+      <div v-else class="agent-list-main">
         <!-- creator filter removed; see KnowledgeBaseList for rationale.
              Card-level creator display + URL-state field are retained. -->
 
@@ -192,7 +202,7 @@
                   </div>
                   <div v-else-if="agent.avatar" class="builtin-avatar agent-emoji">{{ agent.avatar }}</div>
                   <AgentAvatar v-else :name="agent.name" size="small" />
-                  <span class="card-title" :title="agent.name">{{ agent.name }}</span>
+                  <span class="card-title" :title="localizedAgentName(agent)">{{ localizedAgentName(agent) }}</span>
                 </div>
                 <t-popup
                   v-if="agent.isMine && (canManageAgent(agent) || authStore.hasRole('contributor') || authStore.hasRole('admin'))"
@@ -394,7 +404,7 @@
                   </div>
                   <div v-else-if="agent.avatar" class="builtin-avatar agent-emoji">{{ agent.avatar }}</div>
                   <AgentAvatar v-else :name="agent.name" size="small" />
-                  <span class="card-title" :title="agent.name">{{ agent.name }}</span>
+                  <span class="card-title" :title="localizedAgentName(agent)">{{ localizedAgentName(agent) }}</span>
                 </div>
                 <t-popup v-if="canManageAgent(agent) || authStore.hasRole('contributor') || authStore.hasRole('admin')"
                   :visible="openMoreAgentId === agent.id" trigger="hover" overlayClassName="card-more-popup"
@@ -816,6 +826,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { MessagePlugin, Icon as TIcon } from 'tdesign-vue-next'
 import { deleteAgent, copyAgent, type CustomAgent } from '@/api/agent'
+import { localizedBuiltinAgentName } from '@/utils/agent-mode'
 import { useChatResourcesStore } from '@/stores/chatResources'
 import { formatStringDate } from '@/utils/index'
 import { useI18n } from 'vue-i18n'
@@ -833,13 +844,21 @@ import { useTenantModelReadiness } from '@/composables/useTenantModelReadiness'
 import { useUIStore } from '@/stores/ui'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import ListSpaceSidebar from '@/components/ListSpaceSidebar.vue'
+import ListSurfaceTabs from '@/components/ListSurfaceTabs.vue'
 import ResourceOriginBadge from '@/components/ResourceOriginBadge.vue'
 import { shouldShowResourceOriginBadge } from '@/utils/card-list-badge'
 import { useAuthStore } from '@/stores/auth'
 import { useListUrlState } from '@/composables/useListUrlState'
+import { useListSurface } from '@/composables/useListSurface'
 import { useResourcePins } from '@/composables/useResourcePins'
+import HarnessIsland from '@harness/HarnessIsland.vue'
+import AgentManageView from '@harness/views/AgentManageView.vue'
 
 const { t } = useI18n()
+
+function localizedAgentName(agent: { id?: string; name?: string }) {
+  return localizedBuiltinAgentName(agent.id, t, agent.name)
+}
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
@@ -870,6 +889,14 @@ const { scope: spaceSelection, creator: creatorFilter } = useListUrlState({
   defaultScope,
   defaultCreator: 'all',
 })
+const { surface } = useListSurface<'platform' | 'runtime'>(
+  () => ['platform', 'runtime'],
+  'platform',
+)
+const surfaceTabs = computed(() => [
+  { value: 'platform', label: t('agent.tabs.platform') },
+  { value: 'runtime', label: t('agent.tabs.runtime') },
+])
 
 // Per-user favorites + recents (localStorage-backed). See useResourcePins.
 const pins = useResourcePins()
@@ -1620,6 +1647,12 @@ defineExpose({
   min-height: 200px;
   padding: 12px;
   background: var(--td-bg-color-container);
+}
+
+.surface-embed {
+  flex: 1;
+  min-height: 0;
+  margin-right: 0;
 }
 
 .shared-by-me-badge {

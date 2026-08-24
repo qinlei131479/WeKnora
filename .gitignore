@@ -3,9 +3,8 @@
 # 但不忽略特定隐藏文件和目录
 !.env.example
 !.env.kjsc.example
-!**/.env.local.example
-!**/.env.development.local.example
-!**/.env.development
+!.python-version
+!**/.python-version
 !.gitignore
 !.github/
 !.dockerignore
@@ -37,6 +36,12 @@ tmp/
 temp/
 logs/
 *.pid
+
+# Agent-Harness 运行时数据（主 Compose 挂载 docker/volumes/agent-harness）
+/docker/volumes/
+
+# 本地 Docker 卷备份（含数据库转储，勿提交）
+/backups/
 
 WeKnora
 WeKnora-lite

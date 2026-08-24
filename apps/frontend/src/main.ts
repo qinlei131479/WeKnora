@@ -1,5 +1,7 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
+import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
+import Antd from "ant-design-vue";
 import App from "./App.vue";
 import router from "./router";
 import "./assets/fonts.css";
@@ -9,6 +11,7 @@ import "tdesign-vue-next/dist/tdesign.css";
 import "@/assets/theme/theme.css";
 import "@/assets/dropdown-menu.less";
 import "@/components/css/chat-hljs-dark.less";
+import "@harness/assets/css/harness-entry.css";
 // vue-virtual-scroller ships its own tiny stylesheet — required for
 // RecycleScroller/DynamicScroller to size their viewport correctly.
 // Without it the scroller computes 0 height and renders no items.
@@ -36,8 +39,12 @@ app.config.errorHandler = (err, instance, info) => {
   console.error("[WeKnora] Unhandled Vue error:", err, "\nComponent:", instance, "\nInfo:", info);
 };
 
+const pinia = createPinia();
+pinia.use(piniaPluginPersistedstate);
+
 app.use(TDesign);
-app.use(createPinia());
+app.use(Antd);
+app.use(pinia);
 app.use(router);
 app.use(i18n);
 

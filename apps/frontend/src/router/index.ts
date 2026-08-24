@@ -197,6 +197,85 @@ const router = createRouter({
           redirect: { path: "/platform/settings", query: { section: "runtime-queues" } },
           meta: { requiresInit: true, requiresAuth: true, requiresSystemAdmin: true },
         },
+        {
+          path: "harness",
+          component: () => import("@harness/HarnessRoot.vue"),
+          meta: { requiresInit: true, requiresAuth: true },
+          children: [
+            { path: "", redirect: "/platform/harness/workspace" },
+            {
+              path: "chat",
+              name: "harnessCreatChat",
+              component: () => import("@harness/views/AgentView.vue"),
+              meta: { requiresInit: true, requiresAuth: true }
+            },
+            {
+              path: "chat/:thread_id",
+              name: "harnessChat",
+              component: () => import("@harness/views/AgentView.vue"),
+              meta: { requiresInit: true, requiresAuth: true }
+            },
+            {
+              path: "agents",
+              name: "harnessAgents",
+              redirect: (to) => ({
+                path: "/platform/agents",
+                query: { surface: "runtime", ...(to.query.tab ? { tab: String(to.query.tab) } : {}) }
+              }),
+              meta: { requiresInit: true, requiresAuth: true }
+            },
+            {
+              path: "workspace",
+              name: "harnessWorkspace",
+              component: () => import("@harness/views/WorkspaceView.vue"),
+              meta: { requiresInit: true, requiresAuth: true }
+            },
+            {
+              path: "extensions",
+              component: () => import("@harness/layouts/BlankLayout.vue"),
+              meta: { requiresInit: true, requiresAuth: true },
+              children: [
+                {
+                  path: "",
+                  name: "harnessExtensions",
+                  redirect: (to) => {
+                    const tab = String(to.query.tab || "skills")
+                    const surface = tab === "knowledge"
+                      ? "runtime"
+                      : (tab === "platform"
+                        ? "platform"
+                        : (tab === "tools" || tab === "mcp" ? tab : "skills"))
+                    return { path: "/platform/knowledge-bases", query: { surface } }
+                  }
+                },
+                {
+                  path: "knowledgebase/:kbId",
+                  name: "harnessExtensionKb",
+                  component: () => import("@harness/views/DataBaseInfoView.vue"),
+                  meta: { requiresInit: true, requiresAuth: true }
+                },
+                {
+                  path: "mcp/:slug",
+                  name: "harnessExtensionMcp",
+                  component: () => import("@harness/components/extensions/McpDetailView.vue"),
+                  meta: { requiresInit: true, requiresAuth: true }
+                },
+                {
+                  path: "skill/:slug",
+                  name: "harnessExtensionSkill",
+                  component: () => import("@harness/components/extensions/SkillDetailView.vue"),
+                  meta: { requiresInit: true, requiresAuth: true }
+                }
+              ]
+            },
+            {
+              path: "dashboard",
+              name: "harnessDashboard",
+              component: () => import("@harness/views/DashboardView.vue"),
+              meta: { requiresInit: true, requiresAuth: true }
+            }
+          ]
+        },
       ],
     },
     // Dev-only markdown rendering test page

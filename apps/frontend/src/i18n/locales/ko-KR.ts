@@ -1,4 +1,7 @@
 export default {
+  brand: {
+    name: 'ZhiWen'
+  },
   platformApiKeys: {
     title: '플랫폼 API 키',
     description: '워크스페이스 간 자동화를 위한 플랫폼 자격 증명입니다. 워크스페이스 API에는 X-Tenant-ID를 사용하세요.',
@@ -270,7 +273,7 @@ export default {
     filterAllAgents: '전체 에이전트',
     claw: {
       title: 'WeKnora Skill',
-      subtitle: 'WeKnora REST API로 문서를 가져오고 하이브리드 검색(벡터+키워드)을 수행합니다. 파일/URL/Markdown 업로드 및 검색에 사용.',
+      subtitle: '@:{\'brand.name\'} REST API로 문서를 가져오고 하이브리드 검색(벡터+키워드)을 수행합니다. 파일/URL/Markdown 업로드 및 검색에 사용.',
       capabilitiesTitle: 'Skill 기능',
       stepsTitle: '구성 단계',
       openApiSettings: 'API 정보 열기',
@@ -324,7 +327,7 @@ export default {
     },
     chrome: {
       title: '지식 관리 어시스턴트',
-      subtitle: '자체 호스팅 WeKnora와 함께: 사이드바에서 질문하고, 웹 페이지를 클리핑하며, Markdown 메모를 지식베이스에 저장하세요.',
+      subtitle: '자체 호스팅 @:{\'brand.name\'}와 함께: 사이드바에서 질문하고, 웹 페이지를 클리핑하며, Markdown 메모를 지식베이스에 저장하세요.',
       capabilitiesTitle: '핵심 기능',
       stepsTitle: '구성 단계',
       openApiSettings: 'API 정보 열기',
@@ -344,7 +347,7 @@ export default {
         },
         port: {
           title: '데스크톱: 고정 포트(권장)',
-          desc: 'WeKnora 데스크톱에서는 API 정보에서 고정 포트(예: 37841)를 설정하세요.'
+          desc: '@:{\'brand.name\'} 데스크톱에서는 API 정보에서 고정 포트(예: 37841)를 설정하세요.'
         },
         api: {
           title: 'API 자격 증명',
@@ -474,14 +477,14 @@ export default {
       directWarning: '직접 사용자 ID 모드는 요청 헤더를 신뢰합니다. 신뢰된 서버 간 호출에만 사용하세요.',
       directWarningDetail: 'API Key를 가진 호출자는 사용자 ID 헤더를 바꿔 다른 외부 사용자를 가장하고 해당 사용자의 MCP OAuth 인증을 공유하거나 탈취할 수 있습니다. 브라우저나 신뢰할 수 없는 클라이언트에는 사용하지 마세요. 최종 사용자 앱에는 서명 토큰을 사용하세요.',
       signedRecommended: '사용자 대상 앱에 권장: 비즈니스 백엔드가 외부 사용자용 단기 HS256 JWT를 서명합니다.',
-      signedFlowDetail: 'HMAC secret은 WeKnora와 신뢰할 수 있는 백엔드에만 보관하세요. 요청에 넣거나 브라우저에 배포하지 마세요. 요청 헤더에는 secret이 아니라 해당 secret으로 서명한 JWT 문자열을 넣습니다(발급마다 또는 만료 후 변경). JWT에는 sub(외부 사용자 ID), tenant_id, aud=weknora, exp(최대 24시간)가 필요합니다.',
+      signedFlowDetail: 'HMAC secret은 @:{\'brand.name\'}와 신뢰할 수 있는 백엔드에만 보관하세요. 요청에 넣거나 브라우저에 배포하지 마세요. 요청 헤더에는 secret이 아니라 해당 secret으로 서명한 JWT 문자열을 넣습니다(발급마다 또는 만료 후 변경). JWT에는 sub(외부 사용자 ID), tenant_id, aud=weknora, exp(최대 24시간)가 필요합니다.',
       directHeader: '사용자 ID 헤더',
       requireDirectHeader: '사용자 ID 헤더 필수',
       requireDirectHeaderDesc: '켜면 사용자 ID 헤더가 없는 API Key 요청을 거부하고, 끄면 워크스페이스 전체로 통일 처리하며 개별 사용자를 구분하지 않습니다.',
       tokenHeader: '토큰 헤더',
       tokenHeaderDesc: '클라이언트는 이 고정 헤더에 백엔드가 서명한 JWT를 전달합니다.',
       hmacSecret: 'HMAC secret',
-      hmacSecretDesc: 'WeKnora에 저장된 것과 동일한 secret. 백엔드에서 JWT 서명에만 사용하며 요청 헤더로 보내지 않습니다.',
+      hmacSecretDesc: '@:{\'brand.name\'}에 저장된 것과 동일한 secret. 백엔드에서 JWT 서명에만 사용하며 요청 헤더로 보내지 않습니다.',
       secretConfigured: 'Secret configured (not shown again); enter a new value to rotate',
       secretSavedCopyHint: 'Secret saved. Copy it to your backend now — you will not be able to view it again after leaving this page.',
       generateSecret: 'Secret 생성',
@@ -2206,7 +2209,9 @@ export default {
     light: '라이트',
     dark: '다크',
     system: '시스템 설정',
-    selectTheme: '테마 선택'
+    selectTheme: '테마 선택',
+    switchToLight: '라이트 모드로 전환',
+    switchToDark: '다크 모드로 전환'
   },
   general: {
     title: '일반 설정',
@@ -4062,7 +4067,7 @@ export default {
     allowFileUploadDesc: '활성화하면 방문자 입력창에 이미지 업로드 버튼이 표시됩니다. 연결된 에이전트에서 이미지 업로드가 활성화된 경우에만 버튼이 나타납니다.',
     webhookUrl: 'Webhook URL',
     webhookUrlPlaceholder: 'https://your-server.example.com/weknora/embed-events',
-    webhookUrlDesc: 'Optional. WeKnora POSTs message_sent / message_received events to this HTTPS endpoint.',
+    webhookUrlDesc: 'Optional. @:{\'brand.name\'} POSTs message_sent / message_received events to this HTTPS endpoint.',
     webhookSecret: 'Webhook secret',
     webhookSecretPlaceholder: 'HMAC-SHA256 secret (X-WeKnora-Signature header)',
     webhookSecretKeep: 'Leave blank to keep the saved secret',
@@ -4099,6 +4104,15 @@ export default {
   knowledgeList: {
     create: '지식베이스 생성',
     subtitle: '지식베이스를 관리하고 구성합니다. 문서형과 Q&A형 지식베이스를 지원합니다',
+    extensionsSubtitle: '런타임 스킬, 도구, MCP를 관리합니다',
+    runtimeSubtitle: '런타임 지식베이스와 파싱, 그래프, 마인드맵, 평가 기능을 관리합니다',
+    tabs: {
+      platform: '지식베이스',
+      runtime: '런타임',
+      skills: '스킬',
+      tools: '도구',
+      mcp: 'MCP'
+    },
     sharedToOrgs: '{count} 스페이스에 공유됨',
     uninitializedBanner: '일부 지식베이스가 아직 초기화되지 않았습니다. 지식 문서를 추가하려면 먼저 설정에서 모델 정보를 구성해야 합니다',
     uploadProgress: {
@@ -4175,7 +4189,7 @@ export default {
     }
   },
   createChat: {
-    title: '안녕하세요, WeKnora입니다 — 당신의 지식을 손끝에',
+    title: '안녕하세요, @:{\'brand.name\'}입니다 — 당신의 지식을 손끝에',
     newSessionTitle: '새 세션',
     messages: {
       createFailed: '세션 생성 실패',
@@ -4419,11 +4433,11 @@ export default {
     haveAccount: '이미 계정이 있으신가요?',
     backToLogin: '로그인으로 돌아가기',
     loginHint: '로그인하여 계속하세요. 처음이시라면 아래에서 계정을 만드세요.',
-    firstTime: 'WeKnora가 처음이신가요?',
+    firstTime: '@:{\'brand.name\'}가 처음이신가요?',
     registerSuccess: '가입이 완료되었습니다. 로그인해주세요',
     registerFailed: '가입 실패',
     subtitle: 'RAG Q&A, ReAct 에이전트, Wiki 지식베이스 — 대규모 언어 모델 기반 엔터프라이즈 지식 프레임워크',
-    registerSubtitle: '계정을 만들고 WeKnora를 시작하세요',
+    registerSubtitle: '계정을 만들고 @:{\'brand.name\'}를 시작하세요',
     emailPlaceholder: '이메일 주소 입력',
     passwordPlaceholder: '비밀번호 입력 (8-32자, 문자와 숫자 포함)',
     confirmPasswordPlaceholder: '비밀번호 다시 입력',
@@ -4905,6 +4919,7 @@ export default {
     stepSummarySeparator: ' · ',
     title: '에이전트',
     subtitle: '에이전트 구성 및 관리, 대화 동작 및 기능 맞춤화',
+    runtimeSubtitle: '작업 에이전트를 관리합니다. 과정에서 중간 파일과 산출물을 생성합니다.',
     createAgent: '에이전트 만들기',
     builtin: '내장',
     disabled: '비활성화됨',
@@ -5100,6 +5115,9 @@ export default {
       sharedReadonly: '공유받음 · 읽기 전용'
     },
     tabs: {
+      platform: '대화',
+      runtime: '작업',
+      providers: '모델 공급자',
       sharedToMe: '나와 공유됨'
     },
     features: {
@@ -5857,10 +5875,10 @@ export default {
       },
       knowledge: {
         title: '지식 베이스 만들기',
-        desc: '모든 것의 시작점입니다. 문서, 웹페이지, FAQ를 업로드하면 WeKnora가 자동으로 분석하고 색인합니다. 여기를 클릭해 지식 베이스로 이동하세요.'
+        desc: '모든 것의 시작점입니다. 문서, 웹페이지, FAQ를 업로드하면 @:{\'brand.name\'}가 자동으로 분석하고 색인합니다. 여기를 클릭해 지식 베이스로 이동하세요.'
       },
       welcome: {
-        title: 'WeKnora에 오신 것을 환영합니다',
+        title: '@:{\'brand.name\'}에 오신 것을 환영합니다',
         desc: '몇 단계만으로 지식 베이스, 대화, 에이전트의 핵심 사용법을 안내합니다. \'다음\'을 눌러 시작하세요.'
       }
     }
@@ -5896,6 +5914,8 @@ export default {
   menu: {
     knowledgeBase: '지식베이스',
     agents: '에이전트',
+    workspace: '작업 공간',
+    dashboard: '데이터 개요',
     organizations: '공유 공간',
     newChat: '새 대화',
     settings: '시스템 설정',
@@ -5919,5 +5939,22 @@ export default {
     myChats: '내 대화',
     apiChats: 'API 세션',
     noSessions: '대화가 없습니다'
+  },
+  harness: {
+    backToPlatformChat: '대화로 돌아가기',
+    tokenGate: {
+      title: '작업 연결',
+      description: '로그인은 현재 @:{\'brand.name\'} 계정을 사용합니다. 작업 에이전트 API에는 별도의 토큰이 필요합니다. 실행 중인 agent-web에서 localStorage.user_token을 복사해 여기에 붙여넣으세요.',
+      placeholder: 'agent-web의 user_token을 붙여넣으세요',
+      save: '저장하고 불러오기',
+      sidebarHint: '토큰을 연결하면 작업 대화를 볼 수 있습니다.',
+      sidebarAction: '연결하기'
+    }
+  },
+  chatEngine: {
+    switchLabel: '유형 선택',
+    platform: '대화',
+    runtime: '작업',
+    lockedHint: '이미 대화 내용이 있어 유형을 변경할 수 없습니다'
   }
 }

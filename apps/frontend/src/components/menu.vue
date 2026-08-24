@@ -3,7 +3,7 @@
         <!-- 展开时：Logo + 折叠按钮同行 -->
         <div class="logo_row" v-if="!uiStore.sidebarCollapsed">
             <div class="logo_box" @click="router.push('/platform/knowledge-bases')" style="cursor: pointer;">
-                <img class="logo" src="@/assets/img/weknora.png" alt="">
+                <span class="logo-text">{{ t('brand.name') }}</span>
                 <sup v-if="isLiteEdition" class="lite-badge">Lite</sup>
             </div>
             <div class="logo_actions">
@@ -48,17 +48,29 @@
             <div class="menu_box" :class="{ 'menu_box--sticky': item.children && !uiStore.sidebarCollapsed }"
                 v-for="(item, index) in topMenuItems" :key="index">
                 <t-tooltip :content="item.title" placement="right" :disabled="!uiStore.sidebarCollapsed">
-                    <div @click="handleMenuClick(item.path)" @mouseenter="mouseenteMenu(item.path)"
-                        @mouseleave="mouseleaveMenu(item.path)" :data-guide="`nav-${item.path}`"
+                    <div @click="handleMenuClick(item.path)" :data-guide="`nav-${item.path}`"
                         :class="['menu_item', item.childrenPath && item.childrenPath == currentpath ? 'menu_item_c_active' : isMenuItemActive(item.path) ? 'menu_item_active' : '']">
                         <div class="menu_item-box">
                             <div class="menu_icon">
-                                <img class="icon"
-                                    :src="getImgSrc(item.icon == 'zhishiku' ? knowledgeIcon : item.icon == 'agent' ? agentIcon : item.icon == 'organization' ? organizationIcon : item.icon == 'logout' ? logoutIcon : item.icon == 'setting' ? settingIcon : prefixIcon)"
+                                <component
+                                    v-if="harnessMenuIcon(item.icon)"
+                                    :is="harnessMenuIcon(item.icon)"
+                                    class="icon harness-lucide-icon"
+                                    :size="18"
+                                    :stroke-width="2"
+                                />
+                                <img
+                                    v-else
+                                    class="icon"
+                                    :src="getImgSrc(item.icon == 'zhishiku' ? knowledgeIcon : item.icon == 'agent' ? agentIcon : item.icon == 'organization' ? organizationIcon : item.icon == 'logout' ? logoutIcon : item.icon == 'setting' ? settingIcon : 'prefixIcon.svg')"
                                     alt="">
                             </div>
                             <template v-if="!uiStore.sidebarCollapsed">
-                                <span class="menu_title" :title="item.title">{{ item.title }}</span>
+                                <span
+                                    class="menu_title"
+                                    :class="{ 'menu_title--harness': item.path.startsWith('harness/') }"
+                                    :title="item.title"
+                                >{{ item.title }}</span>
                                 <span v-if="item.path === 'organizations' && orgStore.totalPendingJoinRequestCount > 0"
                                     class="menu-pending-badge"
                                     :title="t('organization.settings.pendingJoinRequestsBadge')">{{
@@ -69,8 +81,28 @@
                 </t-tooltip>
             </div>
 
-            <!-- 历史会话：按来源筛选后统一按日期分组展示 -->
             <div class="submenu" v-if="!uiStore.sidebarCollapsed">
+                <div class="history-engine-switch">
+                    <ChatEngineSegmented
+                        :model-value="chatEngine"
+                        size="compact"
+                        @update:model-value="setHistoryEngine"
+                    />
+                </div>
+                <div
+                    v-if="chatEngine === 'runtime'"
+                    class="harness-history-wrap harness-root"
+                    :class="{ dark: themeIsDark }"
+                >
+                    <div v-if="!hasHarnessToken" class="harness-history-gate">
+                        <p>{{ t('harness.tokenGate.sidebarHint') }}</p>
+                        <button type="button" class="harness-history-gate__action" @click="goToEngine('runtime')">
+                            {{ t('harness.tokenGate.sidebarAction') }}
+                        </button>
+                    </div>
+                    <HarnessHistoryNav v-else />
+                </div>
+                <template v-else>
                 <!-- Stable, always-mounted source filter: reserving its row here
                      (instead of embedding it in the first date group, which
                      appears/disappears while a bucket loads) prevents the
@@ -135,6 +167,7 @@
                         </div>
                     </template>
                 </div>
+                </template>
             </div>
         </div>
 
@@ -162,7 +195,7 @@
 
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
-import { onMounted, onUnmounted, watch, computed, ref, h, nextTick } from 'vue';
+import { onMounted, onUnmounted, watch, computed, ref, h, nextTick, type Component } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { getSessionsList, batchDelSessions, deleteAllSessions, getSession } from "@/api/chat/index";
 import { useChatResourcesStore } from '@/stores/chatResources';
@@ -215,8 +248,13 @@ import { useOrganizationStore } from '@/stores/organization';
 import { useUIStore } from '@/stores/ui';
 import { MessagePlugin, DialogPlugin, Icon as TIcon } from "tdesign-vue-next";
 import TenantSelector from '@/components/TenantSelector.vue';
+import HarnessHistoryNav from '@harness/HarnessHistoryNav.vue';
+import ChatEngineSegmented from '@/components/ChatEngineSegmented.vue';
+import { FolderKanban, BarChart3, MessageCirclePlus } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 import { getSystemInfo } from '@/api/system';
+import { useChatEngineNav } from '@/composables/useChatEngineNav';
+import { useTheme } from '@/composables/useTheme';
 
 const chatResources = useChatResourcesStore();
 // Platform logos reused from IMChannelsOverviewPanel — keeps the session list
@@ -252,6 +290,18 @@ const orgStore = useOrganizationStore();
 const uiStore = useUIStore();
 const route = useRoute();
 const router = useRouter();
+const {
+    engine: chatEngine,
+    goToEngine,
+    goToNewChat,
+    setHistoryEngine,
+    syncFromRoute,
+} = useChatEngineNav();
+const { isDark: themeIsDark } = useTheme();
+watch(() => route.fullPath, syncFromRoute, { immediate: true });
+const hasHarnessToken = computed(() =>
+    !!(localStorage.getItem('harness_user_token') || localStorage.getItem('user_token') || import.meta.env.VITE_HARNESS_TOKEN)
+);
 const currentpath = ref('');
 const total = ref(0);
 const sessionBuckets = ref<Record<string, SidebarSessionBucket>>({});
@@ -355,13 +405,22 @@ const isMenuItemActive = (itemPath: string): boolean => {
         case 'knowledge-bases':
             return currentRoute === 'knowledgeBaseList' ||
                 currentRoute === 'knowledgeBaseDetail' ||
-                currentRoute === 'knowledgeBaseSettings';
+                currentRoute === 'knowledgeBaseSettings' ||
+                (typeof currentRoute === 'string' && currentRoute.startsWith('harnessExtension'));
         case 'agents':
             return currentRoute === 'agentList';
         case 'organizations':
             return currentRoute === 'organizationList';
         case 'creatChat':
-            return currentRoute === 'kbCreatChat' || currentRoute === 'globalCreatChat';
+            return currentRoute === 'kbCreatChat' ||
+                currentRoute === 'globalCreatChat' ||
+                currentRoute === 'chat' ||
+                currentRoute === 'harnessCreatChat' ||
+                currentRoute === 'harnessChat';
+        case 'harness/workspace':
+            return currentRoute === 'harnessWorkspace';
+        case 'harness/dashboard':
+            return currentRoute === 'harnessDashboard';
         case 'settings':
             return currentRoute === 'settings';
         default:
@@ -377,24 +436,28 @@ const getIconActiveState = (itemPath: string) => {
         isKbActive: itemPath === 'knowledge-bases' && (
             currentRoute === 'knowledgeBaseList' ||
             currentRoute === 'knowledgeBaseDetail' ||
-            currentRoute === 'knowledgeBaseSettings'
+            currentRoute === 'knowledgeBaseSettings' ||
+            (typeof currentRoute === 'string' && currentRoute.startsWith('harnessExtension'))
         ),
-        isCreatChatActive: itemPath === 'creatChat' && (currentRoute === 'kbCreatChat' || currentRoute === 'globalCreatChat'),
         isSettingsActive: itemPath === 'settings' && currentRoute === 'settings',
-        isChatActive: itemPath === 'chat' && currentRoute === 'chat'
     };
 };
+
+const HARNESS_TOP_MENU_PATHS = new Set([
+    'harness/workspace',
+    'harness/dashboard',
+]);
 
 // 分离上下两部分菜单（使用 visibleMenuArr 以便 lite 模式过滤 logout）
 const topMenuItems = computed<MenuItem[]>(() => {
     return (visibleMenuArr.value as unknown as MenuItem[]).filter((item: MenuItem) =>
-        item.path === 'knowledge-bases' || item.path === 'agents' || item.path === 'organizations' || item.path === 'creatChat'
+        item.path === 'knowledge-bases' || item.path === 'agents' || item.path === 'organizations' || item.path === 'creatChat' || HARNESS_TOP_MENU_PATHS.has(item.path)
     );
 });
 
 const bottomMenuItems = computed<MenuItem[]>(() => {
     return (visibleMenuArr.value as unknown as MenuItem[]).filter((item: MenuItem) => {
-        if (item.path === 'knowledge-bases' || item.path === 'agents' || item.path === 'organizations' || item.path === 'creatChat') {
+        if (item.path === 'knowledge-bases' || item.path === 'agents' || item.path === 'organizations' || item.path === 'creatChat' || HARNESS_TOP_MENU_PATHS.has(item.path)) {
             return false;
         }
         return true;
@@ -982,7 +1045,6 @@ watch([() => route.name, () => route.params], (newvalue, oldvalue) => {
     }
 });
 let knowledgeIcon = ref('zhishiku-green.svg');
-let prefixIcon = ref('prefixIcon.svg');
 let logoutIcon = ref('logout.svg');
 let settingIcon = ref('setting.svg');
 let agentIcon = ref('agent.svg');
@@ -991,7 +1053,6 @@ let pathPrefix = ref(route.name)
 const getIcon = (path: string) => {
     // 根据当前路由状态更新所有图标
     const kbActiveState = getIconActiveState('knowledge-bases');
-    const creatChatActiveState = getIconActiveState('creatChat');
     const settingsActiveState = getIconActiveState('settings');
     const agentsActiveState = route.name === 'agentList';
     const organizationsActiveState = route.name === 'organizationList';
@@ -1004,9 +1065,6 @@ const getIcon = (path: string) => {
 
     // 组织图标：只在组织页面显示绿色
     organizationIcon.value = organizationsActiveState ? 'organization-green.svg' : 'organization.svg';
-
-    // 对话图标：只在对话创建页面显示绿色，其他情况显示默认
-    prefixIcon.value = creatChatActiveState.isCreatChatActive ? 'prefixIcon-green.svg' : 'prefixIcon.svg';
 
     // 设置图标：只在设置页面显示绿色
     settingIcon.value = settingsActiveState.isSettingsActive ? 'setting-green.svg' : 'setting.svg';
@@ -1069,13 +1127,7 @@ const gotopage = async (path: string) => {
         return;
     } else {
         if (path === 'creatChat') {
-            // 如果在知识库详情页，跳转到全局对话创建页
-            if (isInKnowledgeBase.value) {
-                router.push('/platform/creatChat')
-            } else {
-                // 如果不在知识库内，进入对话创建页
-                router.push(`/platform/creatChat`)
-            }
+            goToNewChat();
         } else {
             router.push(`/platform/${path}`);
         }
@@ -1087,10 +1139,13 @@ const getImgSrc = (url: string) => {
     return new URL(`/src/assets/img/${url}`, import.meta.url).href;
 }
 
-const mouseenteMenu = (path: string) => {
+const HARNESS_MENU_ICONS: Record<string, Component> = {
+    'harness-new-chat': MessageCirclePlus,
+    'harness-workspace': FolderKanban,
+    'harness-dashboard': BarChart3,
 }
-const mouseleaveMenu = (path: string) => {
-}
+
+const harnessMenuIcon = (icon: string) => HARNESS_MENU_ICONS[icon] || null
 
 const onDragHandleMouseDown = (e: MouseEvent) => {
     e.preventDefault()
@@ -1179,10 +1234,11 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
     .logo_row {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: center;
+        position: relative;
         height: 50px;
         flex-shrink: 0;
-        padding: 0 10px 0 var(--sidebar-inset-x);
+        padding: 0 10px;
     }
 
     .sidebar-toggle {
@@ -1221,13 +1277,22 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
     .logo_box {
         display: flex;
         align-items: center;
-        flex: 1;
+        justify-content: center;
+        width: 100%;
+        padding: 0 36px;
+        box-sizing: border-box;
         min-width: 0;
         overflow: hidden;
 
-        .logo {
-            width: 128px;
-            height: auto;
+        .logo-text {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            line-height: 1.2;
+            color: var(--td-text-color-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .lite-badge {
@@ -1428,13 +1493,71 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
         flex: 1;
     }
 
+    .menu_title--harness {
+        max-width: none;
+    }
+
+    .harness-lucide-icon {
+        flex-shrink: 0;
+        color: inherit;
+        overflow: visible;
+    }
+
     .submenu {
         position: relative;
         font-family: var(--app-font-family);
         font-size: 14px;
         font-style: normal;
         min-width: 0;
+        max-width: 100%;
         padding-top: 3px;
+        overflow-x: hidden;
+    }
+
+    .harness-history-wrap.harness-root {
+        min-width: 0;
+        max-width: 100%;
+        width: 100%;
+        min-height: 0;
+        height: auto;
+        flex: none;
+        padding: 0 4px 8px;
+        overflow-x: hidden;
+        box-sizing: border-box;
+        background: transparent;
+        --min-width: 0;
+        --scrollbar-width: 0px;
+    }
+
+    .history-engine-switch {
+        padding: 6px 8px 10px;
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        box-sizing: border-box;
+        background: var(--td-bg-color-sidebar);
+    }
+
+    .harness-history-gate {
+        padding: 12px 8px;
+        color: var(--td-text-color-secondary);
+        font-size: 12px;
+        line-height: 18px;
+    }
+
+    .harness-history-gate__action {
+        margin-top: 8px;
+        padding: 4px 10px;
+        border: 1px solid var(--td-component-stroke);
+        border-radius: 6px;
+        background: transparent;
+        color: var(--td-brand-color);
+        font-family: var(--app-font-family);
+        font-size: 12px;
+        cursor: pointer;
     }
 
     :deep(.submenu_pin_icon) {
@@ -1774,6 +1897,11 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
 
 // 顶部 logo_row 右侧的图标按钮组（搜索 + 折叠），与折叠按钮风格一致
 .logo_actions {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -1842,11 +1970,6 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
 }
 </style>
 <style lang="less">
-// Dark mode: invert dark logo to light
-html[theme-mode="dark"] .aside_box .logo_box .logo {
-    filter: invert(1) hue-rotate(180deg);
-}
-
 // Dark mode: 滚动条在深色背景下需要更亮的颜色才看得见
 html[theme-mode="dark"] .aside_box .menu_top:hover {
     scrollbar-color: rgba(255, 255, 255, 0.22) transparent;

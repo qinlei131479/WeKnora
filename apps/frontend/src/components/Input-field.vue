@@ -18,6 +18,7 @@ import { getCaretCoordinates } from '@/utils/caret';
 import { getRootZoom, rectToCssPx, cssViewportSize } from '@/utils/zoom';
 import { type ModelConfig } from '@/api/model';
 import { type CustomAgent, BUILTIN_QUICK_ANSWER_ID, BUILTIN_SMART_REASONING_ID } from '@/api/agent';
+import { localizedBuiltinAgentName } from '@/utils/agent-mode';
 import { useChatResourcesStore } from '@/stores/chatResources';
 import { useEditorResourcesStore } from '@/stores/editorResources';
 import { useI18n } from 'vue-i18n';
@@ -173,6 +174,9 @@ const selectedAgent = computed(() => {
     config: { agent_mode: 'quick-answer' as const }
   } as CustomAgent;
 });
+const selectedAgentDisplayName = computed(() =>
+  localizedBuiltinAgentName(selectedAgent.value?.id, t, selectedAgent.value?.name),
+);
 const selectedSharedAgent = computed(() => {
   const sourceTenantId = settingsStore.selectedAgentSourceTenantId;
   if (!sourceTenantId) return undefined;
@@ -2543,7 +2547,7 @@ defineExpose({
             'is-custom': isCustomAgent
           }" @click.stop="toggleAgentModeSelector">
             <span class="agent-mode-text">
-              {{ selectedAgent.name || (isAgentEnabled ? $t('input.agentMode') : $t('input.normalMode')) }}
+              {{ selectedAgentDisplayName }}
             </span>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" class="dropdown-arrow"
               :class="{ 'rotate': showAgentModeSelector }">

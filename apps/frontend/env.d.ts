@@ -7,3 +7,8 @@ declare module '*.vue' {
 
 declare const __FRONTEND_VERSION__: string;
 declare const __FRONTEND_COMMIT__: string;
+
+interface ImportMetaEnv {
+    readonly VITE_HARNESS_TOKEN?: string
+    readonly VITE_HARNESS_PROXY_TARGET?: string
+}
