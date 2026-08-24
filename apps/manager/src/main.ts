@@ -48,6 +48,7 @@ import ImagePreview from '@/components/ImagePreview/index.vue';
 import DictTag from '@/components/DictTag/index.vue';
 
 import KJSCDialogV2 from '@/components/KJSCCmpt/KJSCDialogV2.vue';
+import KjscEmpty from '@/components/KjscUi/KjscEmpty.vue';
 import PageName from '@/components/PageName/PageName.vue';
 import PageContent from '@/components/PageContent/PageContent.vue';
 
@@ -74,6 +75,7 @@ app.component('RightToolbar', RightToolbar);
 app.component('Editor', Editor);
 
 app.component('KJSCDialogV2', KJSCDialogV2);
+app.component('kjsc-empty', KjscEmpty);
 app.component('page-name', PageName);
 app.component('page-content', PageContent);
 

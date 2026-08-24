@@ -1,5 +1,5 @@
 <template>
-  <section class="manage-page tenant-space-manage-page">
+  <section>
     <page-name>
       <el-button type="success" icon="Plus" @click="handleAdd">{{ $t('page.tenantSpace.add', '添加空间') }}</el-button>
     </page-name>
@@ -10,6 +10,7 @@
           <el-input
             v-model="queryParams.name"
             class="search-bar__input"
+            :suffix-icon="Search"
             clearable
             :placeholder="$t('page.tenantSpace.searchPlaceholder', '搜索空间名称')"
             @keyup.enter="handleQuery"
@@ -277,6 +278,7 @@ import { isEmpty } from '@/utils/common.js';
 import { formatSize } from '@/utils';
 import { AjaxResult, McpEntity, TableShowColumns, TenantSpaceEntity, TenantSpaceListReq } from '@/types';
 import { getStatusTheme, getStatusText } from '@/composables/useTenantSpace';
+import { Search } from 'lucide-vue-next';
 import {
   addTenantSpaceSingleApi,
   deleteTenantSpaceSingleApi,
@@ -660,13 +662,13 @@ getList();
 </script>
 
 <style scoped lang="scss">
-// .el-input-number {
-//   width: 100%;
-// }
+.el-input-number {
+  width: 100%;
+}
 
-// .manage-dialog-footer {
-//   .close-btn {
-//     margin-right: 12px;
-//   }
-// }
+.manage-dialog-footer {
+  .close-btn {
+    margin-right: 12px;
+  }
+}
 </style>

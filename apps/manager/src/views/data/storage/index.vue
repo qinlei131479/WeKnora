@@ -2,6 +2,7 @@
 import { API } from '@/api';
 import { PageDomain, StorageBackendsPageDTO, StorageBackendsVO } from '@/types';
 import { TenantsPageDTO, TenantsVO } from '@/types/api/data/tenants';
+import { Search } from 'lucide-vue-next';
 
 const state = reactive({
   keyword: '',
@@ -96,6 +97,7 @@ onMounted(() => {
             placeholder="输入租户名称查询"
             clearable
             hide-loading
+            :suffix-icon="Search"
             :trigger-on-focus="false"
             :fetch-suggestions="getTenants"
             @select="onSelectTenants"
@@ -106,6 +108,9 @@ onMounted(() => {
       </template>
 
       <el-table :data="state.backendsVOs" height="100%" style="width: 100%">
+        <template #empty>
+          <kjsc-empty />
+        </template>
         <el-table-column prop="name" :label="$t('page.data.storage.table.name', '名称')" :min-width="$dim('page.data.storage.table.name', 220)" />
         <el-table-column
           prop="tenantName"
@@ -158,9 +163,6 @@ onMounted(() => {
           align="center"
           :min-width="$dim('page.data.storage.table.updatedAt', 180)"
         />
-        <template #empty>
-          <el-empty />
-        </template>
       </el-table>
 
       <template #footer>
