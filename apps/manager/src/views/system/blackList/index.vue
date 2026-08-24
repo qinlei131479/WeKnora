@@ -3,26 +3,11 @@
     <div style="display: flex; justify-content: space-between">
       <el-form :model="state.queryParams" ref="queryRef" :inline="true">
         <el-form-item label="" prop="keyWord">
-          <el-input
-            v-model="state.queryParams.keyWord"
-            placeholder="通过黑名单搜索"
-            clearable
-            style="width: 300px"
-          />
+          <el-input v-model="state.queryParams.keyWord" placeholder="通过黑名单搜索" clearable style="width: 300px" />
         </el-form-item>
         <el-form-item label="" prop="enabled">
-          <el-select
-            v-model="state.queryParams.enabled"
-            placeholder="全部操作类型"
-            clearable
-            style="width: 180px"
-          >
-            <el-option
-              v-for="item in state.statusData"
-              :key="item.id + item.name"
-              :label="item.name"
-              :value="item.id"
-            />
+          <el-select v-model="state.queryParams.enabled" placeholder="全部操作类型" clearable style="width: 180px">
+            <el-option v-for="item in state.statusData" :key="item.id + item.name" :label="item.name" :value="item.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="">
@@ -42,11 +27,7 @@
         </el-form-item>
       </el-form>
       <div>
-        <kjsc-button
-          @click="handleDownload"
-          v-hasPermi="['system:blackList:export']"
-          >模板下载</kjsc-button
-        >
+        <kjsc-button @click="handleDownload" v-hasPermi="['system:blackList:export']">模板下载</kjsc-button>
         <div style="display: inline-block; margin: 0 20px">
           <el-upload
             v-model:file-list="state.fileList"
@@ -61,17 +42,10 @@
             :headers="headers"
             ref="fileUpload"
           >
-            <kjsc-button
-              v-hasPermi="['system:blackList:import']"
-              @click="handleImport"
-              >导入</kjsc-button
-            >
+            <kjsc-button v-hasPermi="['system:blackList:import']" @click="handleImport">导入</kjsc-button>
           </el-upload>
         </div>
-        <kjsc-button
-          v-hasPermi="['system:blackList:add']"
-          type="success"
-          @click="handleAdd"
+        <kjsc-button v-hasPermi="['system:blackList:add']" type="success" @click="handleAdd"
           ><el-icon><Plus /></el-icon>新增黑名单</kjsc-button
         >
       </div>
@@ -79,25 +53,11 @@
     <el-row :gutter="10">
       <el-col :span="14">
         <kjsc-tool-bar :length="state.ids.length">
-          <kjsc-button
-            plain
-            :disabled="state.multiple"
-            @click="funOperation('enable')"
-            v-hasPermi="['system:blackList:enable']"
+          <kjsc-button plain :disabled="state.multiple" @click="funOperation('enable')" v-hasPermi="['system:blackList:enable']"
             >批量启用</kjsc-button
           >
-          <kjsc-button
-            plain
-            :disabled="state.multiple"
-            @click="funOperation('stop')"
-            v-hasPermi="['system:blackList:stop']"
-            >批量停用</kjsc-button
-          >
-          <kjsc-button
-            plain
-            :disabled="state.multiple"
-            @click="funOperation('del')"
-            v-hasPermi="['system:blackList:batchDelete']"
+          <kjsc-button plain :disabled="state.multiple" @click="funOperation('stop')" v-hasPermi="['system:blackList:stop']">批量停用</kjsc-button>
+          <kjsc-button plain :disabled="state.multiple" @click="funOperation('del')" v-hasPermi="['system:blackList:batchDelete']"
             >批量删除</kjsc-button
           >
         </kjsc-tool-bar>
@@ -133,11 +93,7 @@
       </el-table-column>
       <el-table-column fixed="right" label="操作" width="100">
         <template #default="scope">
-          <kjsc-text-button
-            v-if="scope.row.enabled == 0"
-            type="danger"
-            v-hasPermi="['system:blackList:delete']"
-            :disabled="scope.row.enabled == 0"
+          <kjsc-text-button v-if="scope.row.enabled == 0" type="danger" v-hasPermi="['system:blackList:delete']" :disabled="scope.row.enabled == 0"
             >删除</kjsc-text-button
           >
           <el-popconfirm
@@ -149,11 +105,7 @@
             @confirm="confirmCallback(scope.row)"
           >
             <template #reference>
-              <kjsc-text-button
-                type="danger"
-                v-hasPermi="['system:blackList:delete']"
-                >删除</kjsc-text-button
-              >
+              <kjsc-text-button type="danger" v-hasPermi="['system:blackList:delete']">删除</kjsc-text-button>
             </template>
           </el-popconfirm>
         </template>
@@ -165,16 +117,12 @@
       :total="state.total"
       :page="{
         pageNum: state.pageInfo.pageNum,
-        pageSize: state.pageInfo.pageSize,
+        pageSize: state.pageInfo.pageSize
       }"
       @change="handlePageChange"
       style="padding-top: 16px"
     />
-    <DialogAdd
-      v-model="state.dialogVisible"
-      :data-id="state.dataId"
-      @done="doReset"
-    />
+    <DialogAdd v-model="state.dialogVisible" :data-id="state.dataId" @done="doReset" />
   </div>
 </template>
 <script setup name="blackList">
@@ -185,19 +133,17 @@ import {
   batchDeletewhite,
   batchStartwhite,
   batchStopwhite,
-  importBlackWhiteList,
-} from "@/api/system/white";
-import cache from "@/plugins/cache";
-import DialogAdd from "./component/edit.vue";
-import KJSCToolBar from '@/components/KJSCCmpt/KJSCToolBar.vue';
-import { showConfirm } from "@/utils/element-plus-message.js";
+  importBlackWhiteList
+} from '@/api/system/white';
+import cache from '@/plugins/cache';
+import DialogAdd from './component/edit.vue';
 const { proxy } = getCurrentInstance();
-const defaultSort = ref({ orderByColumn: "createTime", isAsc: "descending" });
-import { getToken } from "@/utils/auth";
-const headers = ref({ Authorization: "Bearer " + getToken() });
+const defaultSort = ref({ orderByColumn: 'createTime', isAsc: 'descending' });
+import { getToken } from '@/utils/auth';
+const headers = ref({ Authorization: 'Bearer ' + getToken() });
 const state = reactive({
   queryParams: {
-    enabled: "",
+    enabled: ''
   },
   operationTypeOptions: [],
   total: 0,
@@ -210,13 +156,13 @@ const state = reactive({
   fileList: [],
   pageInfo: {
     pageNum: 1,
-    pageSize: 10,
+    pageSize: 10
   },
   statusData: [
-    { id: "", name: "全部" },
-    { id: "0", name: "启用" },
-    { id: "1", name: "停用" },
-  ],
+    { id: '', name: '全部' },
+    { id: '0', name: '启用' },
+    { id: '1', name: '停用' }
+  ]
 });
 
 const statusBeforeChange = (item) => {
@@ -225,16 +171,16 @@ const statusBeforeChange = (item) => {
     return new Promise((resolve, reject) => {
       batchChangeStatus({
         dataList: [item.id],
-        enabled: item.enabled === 0 ? 1 : 0,
+        enabled: item.enabled === 0 ? 1 : 0
       }).then(
         () => {
-          proxy.$modal.msgSuccess("操作成功");
+          proxy.$modal.msgSuccess('操作成功');
           item.statusChanging = false;
           getTableData();
           resolve(true);
         },
         () => {
-          proxy.$modal.msgError("操作失败");
+          proxy.$modal.msgError('操作失败');
           item.statusChanging = false;
           getTableData();
           // reject('');
@@ -244,59 +190,59 @@ const statusBeforeChange = (item) => {
   };
 };
 const handleAdd = () => {
-  state.dataId = "";
+  state.dataId = '';
   state.dialogVisible = true;
 };
 const doReset = async () => {
   resetQuery();
-  state.dataId = "";
+  state.dataId = '';
   state.dialogVisible = false;
 };
 // 批量操作
 const funOperation = (type) => {
   switch (type) {
-    case "enable":
+    case 'enable':
       proxy.$modal
-        .confirm("启用黑名单", "是否确认启用选中黑名单？")
+        .confirm('启用黑名单', '是否确认启用选中黑名单？')
         .then(function () {
           return batchStartwhite({ dataList: state.ids, enabled: 0 });
         })
         .then(() => {
-          proxy.$modal.msgSuccess("操作成功");
+          proxy.$modal.msgSuccess('操作成功');
           getTableData();
         })
         .catch(function () {
-          proxy.$modal.msgError("操作失败");
+          proxy.$modal.msgError('操作失败');
           getTableData();
         });
       break;
-    case "stop":
+    case 'stop':
       proxy.$modal
-        .confirm("停用黑名单", "是否确认停用选中黑名单？")
+        .confirm('停用黑名单', '是否确认停用选中黑名单？')
         .then(function () {
           return batchStopwhite({ dataList: state.ids, enabled: 1 });
         })
         .then(() => {
-          proxy.$modal.msgSuccess("操作成功");
+          proxy.$modal.msgSuccess('操作成功');
           getTableData();
         })
         .catch(function () {
-          proxy.$modal.msgError("操作失败");
+          proxy.$modal.msgError('操作失败');
           getTableData();
         });
       break;
-    case "del":
+    case 'del':
       proxy.$modal
-        .confirm("删除黑名单", "是否确认批量删除选中黑名单？")
+        .confirm('删除黑名单', '是否确认批量删除选中黑名单？')
         .then(function () {
           return batchDeletewhite({ dataList: state.ids });
         })
         .then(() => {
-          proxy.$modal.msgSuccess("操作成功");
+          proxy.$modal.msgSuccess('操作成功');
           getTableData();
         })
         .catch(function () {
-          proxy.$modal.msgError("操作失败");
+          proxy.$modal.msgError('操作失败');
           getTableData();
         });
       break;
@@ -310,14 +256,12 @@ function requestUpload() {}
 function handleBeforeUpload(file) {
   debugger;
   // 校检文件类型
-  const fileType = ["xls", "xlsx"];
-  const fileName = file.name.split(".");
+  const fileType = ['xls', 'xlsx'];
+  const fileName = file.name.split('.');
   const fileExt = fileName[fileName.length - 1];
   const isTypeOk = fileType.indexOf(fileExt) >= 0;
   if (!isTypeOk) {
-    proxy.$modal.msgError(
-      `文件格式不正确, 请上传${fileType.join("/")}格式文件!`
-    );
+    proxy.$modal.msgError(`文件格式不正确, 请上传${fileType.join('/')}格式文件!`);
     return false;
   }
   // 校检文件大小
@@ -326,19 +270,19 @@ function handleBeforeUpload(file) {
   //   proxy.$modal.msgError(`上传文件大小不能超过 ${props.fileSize} MB!`);
   //   return false;
   // }
-  proxy.$modal.loading("正在上传文件，请稍候...");
+  proxy.$modal.loading('正在上传文件，请稍候...');
   upload(file);
 }
 function upload(file) {
   let formData = new FormData();
-  formData.append("file", file);
+  formData.append('file', file);
   importBlackWhiteList(formData, {
-    tenantId: cache.session.getJSON("tenantId"),
-    type: 1,
+    tenantId: cache.session.getJSON('tenantId'),
+    type: 1
   })
     .then((response) => {
       if (response.code == 200) {
-        proxy.$modal.msgSuccess("上传成功");
+        proxy.$modal.msgSuccess('上传成功');
         getTableData();
       } else {
         proxy.$modal.msgError(response.msg);
@@ -354,13 +298,13 @@ function upload(file) {
 // 上传失败
 function handleUploadError(err) {
   proxy.$modal.closeLoading();
-  proxy.$modal.msgError("上传文件失败");
+  proxy.$modal.msgError('上传文件失败');
 }
 // 上传成功回调
 function handleUploadSuccess(res, file) {
   if (res.code === 200) {
     proxy.$modal.closeLoading();
-    proxy.$modal.msgSuccess("上传成功");
+    proxy.$modal.msgSuccess('上传成功');
     getTableData();
   } else {
     proxy.$modal.closeLoading();
@@ -372,9 +316,9 @@ function handleUploadSuccess(res, file) {
 const batchStart = async () => {
   let res = await batchStartwhite({ dataList: state.ids, enabled: 0 });
   if (res.code == 200) {
-    proxy.$modal.msgSuccess("操作成功");
+    proxy.$modal.msgSuccess('操作成功');
   } else {
-    proxy.$modal.msgError("操作失败");
+    proxy.$modal.msgError('操作失败');
   }
   getTableData();
 };
@@ -382,9 +326,9 @@ const batchStart = async () => {
 const batchStop = async () => {
   let res = await batchStopwhite({ dataList: state.ids, enabled: 1 });
   if (res.code == 200) {
-    proxy.$modal.msgSuccess("操作成功");
+    proxy.$modal.msgSuccess('操作成功');
   } else {
-    proxy.$modal.msgError("操作失败");
+    proxy.$modal.msgError('操作失败');
   }
   getTableData();
 };
@@ -392,9 +336,9 @@ const batchStop = async () => {
 const batchDelete = async () => {
   let res = await batchDeletewhite({ dataList: state.ids });
   if (res.code == 200) {
-    proxy.$modal.msgSuccess("操作成功");
+    proxy.$modal.msgSuccess('操作成功');
   } else {
-    proxy.$modal.msgError("操作失败");
+    proxy.$modal.msgError('操作失败');
   }
   getTableData();
 };
@@ -403,18 +347,18 @@ const confirmCallback = async (row) => {
   const id = row.id;
   let res = await deletewhite({ dataList: [id] });
   if (res.code == 200) {
-    proxy.$modal.msgSuccess("操作成功");
+    proxy.$modal.msgSuccess('操作成功');
   } else {
-    proxy.$modal.msgError("操作失败");
+    proxy.$modal.msgError('操作失败');
   }
   getTableData();
 };
 // 模板下载
 const handleDownload = () => {
   proxy.download2(
-    "/audit/blackWhiteList/downloadImportTemplate",
+    '/audit/blackWhiteList/downloadImportTemplate',
     {
-      ...state.queryParams,
+      ...state.queryParams
     },
     `黑名单_${new Date().getTime()}.xlsx`
   );
@@ -439,13 +383,13 @@ const getTableData = async () => {
   state.loading = true;
   var params = { ...state.queryParams };
   if (state.dateRange.length > 0) {
-    params.beginTime = state.dateRange[0] + " 00:00:00";
-    params.endTime = state.dateRange[1] + " 23:59:59";
+    params.beginTime = state.dateRange[0] + ' 00:00:00';
+    params.endTime = state.dateRange[1] + ' 23:59:59';
   } else {
-    params.beginTime = "";
-    params.endTime = "";
+    params.beginTime = '';
+    params.endTime = '';
   }
-  params.tenantId = cache.session.getJSON("tenantId");
+  params.tenantId = cache.session.getJSON('tenantId');
   params.type = 1;
   let res = await queryTable(params, state.pageInfo, defaultSort.value);
   if (res.code == 200) {
@@ -465,7 +409,7 @@ function handleQuery() {
 function resetQuery() {
   state.dateRange = [];
   state.queryParams = {};
-  proxy.resetForm("queryRef");
+  proxy.resetForm('queryRef');
   handleQuery();
 }
 
