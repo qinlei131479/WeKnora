@@ -4,10 +4,10 @@ export default {
   },
   platformApiKeys: {
     title: '平台 API Key',
-    description: '为跨空间自动化创建平台级凭据；调用空间接口时通过 X-Tenant-ID 指定目标空间。',
-    securityNotice: '平台 API Key 默认可选择任意空间。请只授予必要能力；密钥明文仅在创建时显示一次。',
+    description: '为跨租户自动化创建平台级凭据；调用租户接口时通过 X-Tenant-ID 指定目标租户。',
+    securityNotice: '平台 API Key 默认可选择任意租户。请只授予必要能力；密钥明文仅在创建时显示一次。',
     create: '创建平台 API Key',
-    createDescription: '平台 Key 不绑定空间，所有操作仍受能力范围限制。',
+    createDescription: '平台 Key 不绑定租户，所有操作仍受能力范围限制。',
     loading: '正在加载…',
     empty: '暂无平台 API Key',
     name: '名称',
@@ -16,7 +16,7 @@ export default {
     capability: '能力授权',
     capabilityMore: '+{count}',
     viewAllCapabilities: '查看全部能力授权',
-    capabilityHint: '空间能力对任意 X-Tenant-ID 生效；系统能力用于平台控制面接口。',
+    capabilityHint: '租户能力对任意 X-Tenant-ID 生效；系统能力用于平台控制面接口。',
     lastUsed: '最后使用',
     createdAt: '创建时间',
     actions: '操作',
@@ -34,8 +34,8 @@ export default {
     loadFailed: '加载平台 API Key 失败',
     createFailed: '创建平台 API Key 失败',
     capabilityHints: {
-      tenantsRead: '列出、搜索和查看所有空间。',
-      tenantsManage: '创建、更新、删除空间及应用全局空间配置。',
+      tenantsRead: '列出、搜索和查看所有租户。',
+      tenantsManage: '创建、更新、删除租户及应用全局租户配置。',
       settingsRead: '读取平台级运行设置。',
       settingsManage: '更新和重置平台级运行设置。',
       runtimeRead: '查看任务队列和任务详情。',
@@ -43,8 +43,8 @@ export default {
       auditRead: '读取平台级审计日志。'
     },
     capabilities: {
-      tenantsRead: '查看空间',
-      tenantsManage: '管理空间',
+      tenantsRead: '查看租户',
+      tenantsManage: '管理租户',
       settingsRead: '查看系统设置',
       settingsManage: '管理系统设置',
       runtimeRead: '查看运行时',
@@ -67,7 +67,7 @@ export default {
     copyFailed: '复制失败，请手动选中文本',
     errors: {
       pendingExists: '已经向该用户发出过一条待接受的邀请。',
-      alreadyMember: '该用户已是当前空间的成员。',
+      alreadyMember: '该用户已是当前租户的成员。',
       notPending: '邀请已不在待处理状态。',
       forbidden: '只有被邀请人本人可以接受或拒绝该邀请。',
       notFound: '邀请不存在或已被撤销。',
@@ -75,14 +75,14 @@ export default {
     },
     myInbox: {
       title: '我的邀请',
-      description: '其他空间发给您的加入邀请。接受后您将以对应角色加入对方空间。',
+      description: '其他租户发给您的加入邀请。接受后您将以对应角色加入对方租户。',
       empty: '没有待处理的邀请。',
       acceptButton: '接受',
       declineButton: '拒绝',
       acceptSuccess: '已加入 "{tenant}"。',
       declineSuccess: '已拒绝邀请。',
       from: '邀请人',
-      tenantLabel: '空间',
+      tenantLabel: '租户',
       expiresIn: '到期：{date}',
       messageLabel: '留言'
     },
@@ -114,7 +114,7 @@ export default {
       cellAccepted: '已加入 {count} 人',
       cellEmpty: '尚无成员加入',
       dialogTitle: '生成共享邀请链接',
-      description: '生成一条多人可用的注册链接，发到群里就行；谁打开都能用自己的邮箱注册并加入当前空间。链接 {days} 天后过期，或随时可在列表中撤销。',
+      description: '生成一条多人可用的注册链接，发到群里就行；谁打开都能用自己的邮箱注册并加入当前租户。链接 {days} 天后过期，或随时可在列表中撤销。',
       generate: '生成链接',
       resultTitle: '邀请链接已生成',
       resultBody: '复制下方链接，通过任意私密渠道发给被邀请人。链接也会保存在下方列表中，随时可以重新复制或撤销。',
@@ -123,9 +123,9 @@ export default {
   },
   tenantMember: {
     title: '成员管理',
-    sectionDescription: '邀请伙伴加入当前空间并分配角色。只有 Owner 可以新增或移除成员。',
+    sectionDescription: '邀请伙伴加入当前租户并分配角色。只有 Owner 可以新增或移除成员。',
     learnRbacGuide: '了解 RBAC',
-    listTitle: '空间成员',
+    listTitle: '租户成员',
     loading: '正在加载成员…',
     retry: '重试',
     empty: '尚未邀请任何成员。点击右上角邀请伙伴加入。',
@@ -133,7 +133,7 @@ export default {
     searchPlaceholder: '按姓名或邮箱搜索',
     audit: {
       tabLabel: '审计日志',
-      description: '记录当前空间的成员变更与访问拒绝事件，按时间倒序展示。一分钟内的重复拒绝会自动去重。',
+      description: '记录当前租户的成员变更与访问拒绝事件，按时间倒序展示。一分钟内的重复拒绝会自动去重。',
       refresh: '刷新',
       end: '已经到底了。',
       empty: '暂无审计事件。',
@@ -186,14 +186,14 @@ export default {
       success: '角色已更新'
     },
     leave: {
-      confirmTitle: '确认退出当前空间？',
-      confirmBody: '退出后您将无法访问当前空间内的所有知识库和智能体。后续可被再次邀请加入。',
+      confirmTitle: '确认退出当前租户？',
+      confirmBody: '退出后您将无法访问当前租户内的所有知识库和智能体。后续可被再次邀请加入。',
       confirm: '退出',
-      success: '已退出当前空间'
+      success: '已退出当前租户'
     },
     remove: {
       button: '移除',
-      confirmBody: '确定要将 {name} 从当前空间中移除吗？该用户会立即失去访问权限。',
+      confirmBody: '确定要将 {name} 从当前租户中移除吗？该用户会立即失去访问权限。',
       confirm: '移除',
       success: '已移除成员'
     },
@@ -218,13 +218,13 @@ export default {
     },
     permissions: {
       title: '角色权限说明',
-      desc: '每个角色在当前空间内能做的事情。服务端强制执行，UI 控件仅作展示。',
+      desc: '每个角色在当前租户内能做的事情。服务端强制执行，UI 控件仅作展示。',
       iconHint: '悬停查看角色权限说明',
       manageMembers: '管理成员',
-      manageTenantConfig: '修改空间配置',
+      manageTenantConfig: '修改租户配置',
       manageInfra: '配置模型 / 向量库 / IM 通道',
       createOwnKB: '创建并编辑自己的知识库和智能体',
-      readAll: '查看空间内容'
+      readAll: '查看租户内容'
     }
   },
   userProfile: {
@@ -410,16 +410,16 @@ export default {
       apiKeyAccessMode: '授权方式',
       apiKeyScopedAccess: '能力授权',
       apiKeyAccessType: '访问类型',
-      apiKeyAccessTypeHint: '「知识库」按下方权限级别在知识库范围内操作；「空间完全访问」额外开放模型、数据源等全部空间级接口。',
+      apiKeyAccessTypeHint: '「知识库」按下方权限级别在知识库范围内操作；「租户完全访问」额外开放模型、数据源等全部租户级接口。',
       apiKeyCapabilities: '可用能力',
       apiKeyCapabilityGroupKnowledge: '知识库数据',
       apiKeyCapabilityGroupAutomation: '智能体与集成',
-      apiKeyCapabilityGroupCollaboration: '成员与空间',
-      apiKeyCapabilityGroupTenant: '空间配置',
+      apiKeyCapabilityGroupCollaboration: '成员与租户',
+      apiKeyCapabilityGroupTenant: '租户配置',
       apiKeyCapabilitySelectGroup: '全选',
       apiKeyCapabilityClearGroup: '清空',
-      capabilityTenantFull: '空间完全访问',
-      capabilityTenantFullHint: '允许调用模型、向量库、数据源、渠道等全部空间级接口；知识库范围不再生效。',
+      capabilityTenantFull: '租户完全访问',
+      capabilityTenantFullHint: '允许调用模型、向量库、数据源、渠道等全部租户级接口；知识库范围不再生效。',
       capabilityRetrieve: '检索知识库',
       capabilityRetrieveHint: '允许读取、查询和检索所选知识库范围内的数据；不创建会话，也不修改内容。',
       capabilityChat: '对话能力',
@@ -429,11 +429,11 @@ export default {
       capabilityIngest: '写入知识库内容',
       capabilityIngestHint: '允许向授权范围内的知识库写入内容（上传文档、编辑分块/FAQ/标签/wiki）；不能新建知识库、不能新建智能体、不能清空知识库，且仅限所选知识库范围。',
       capabilityManageKbs: '管理知识库',
-      capabilityManageKbsHint: '允许管理知识库全生命周期：新建、复制、修改、删除知识库并调整初始化/配置信息。针对已有知识库的操作（复制/更新/删除）仍受所选知识库范围限制；新建不受限（新知识库归本空间）。',
+      capabilityManageKbsHint: '允许管理知识库全生命周期：新建、复制、修改、删除知识库并调整初始化/配置信息。针对已有知识库的操作（复制/更新/删除）仍受所选知识库范围限制；新建不受限（新知识库归本租户）。',
       capabilityManageAgents: '管理智能体',
       capabilityManageAgentsHint: '允许创建、修改、删除、复制智能体。智能体配置可能含模型/MCP 等敏感绑定，默认关闭，按需开启。',
       capabilityMessageHistory: '消息历史',
-      capabilityMessageHistoryHint: '允许检索空间聊天历史并读取聊天历史统计；不授予空间配置权限。',
+      capabilityMessageHistoryHint: '允许检索租户聊天历史并读取聊天历史统计；不授予租户配置权限。',
       capabilityManageModels: '管理模型',
       capabilityManageModelsHint: '允许管理模型配置、模型凭据、模型连通性测试和 WeKnoraCloud 凭据。',
       capabilityManageMcpServices: '管理 MCP 服务',
@@ -445,17 +445,17 @@ export default {
       capabilityManageVectorStores: '管理检索基础设施',
       capabilityManageVectorStoresHint: '允许管理向量库配置，以及解析器、文档读取器和存储引擎连通性检查。',
       capabilityManageStorageBackends: '管理存储后端',
-      capabilityManageStorageBackendsHint: '允许管理对象/文件存储后端实例（如 S3 兼容或本地文件存储）的增删改查、连通性测试及空间默认存储设置。',
+      capabilityManageStorageBackendsHint: '允许管理对象/文件存储后端实例（如 S3 兼容或本地文件存储）的增删改查、连通性测试及租户默认存储设置。',
       capabilityManageWebSearch: '管理联网搜索',
       capabilityManageWebSearchHint: '允许管理联网搜索供应商配置、凭据和连接测试。',
       capabilityRunEvaluations: '运行评测',
       capabilityRunEvaluationsHint: '允许运行评测任务并读取评测结果。',
       capabilityManageMembers: '管理成员',
-      capabilityManageMembersHint: '允许查看和管理空间成员、角色、邀请和邀请链接；不包含 API Key 管理、空间删除或所有权转移。',
-      capabilityManageSpaces: '管理空间',
-      capabilityManageSpacesHint: '允许管理组织空间、加入流程、空间成员、邀请和共享空间可见性；不授予知识库或智能体分享管理权限。',
-      capabilityManageTenantSettings: '管理空间设置',
-      capabilityManageTenantSettingsHint: '允许读取和更新空间级集成设置，例如 API 终端用户身份模式、请求头配置、空间 KV 配置等；不包含 API Key 管理、成员管理、空间删除或所有权转移。',
+      capabilityManageMembersHint: '允许查看和管理租户成员、角色、邀请和邀请链接；不包含 API Key 管理、租户删除或所有权转移。',
+      capabilityManageSpaces: '管理共享空间',
+      capabilityManageSpacesHint: '允许管理组织空间、加入流程、租户成员、邀请和共享空间可见性；不授予知识库或智能体分享管理权限。',
+      capabilityManageTenantSettings: '管理租户设置',
+      capabilityManageTenantSettingsHint: '允许读取和更新租户级集成设置，例如 API 终端用户身份模式、请求头配置、租户 KV 配置等；不包含 API Key 管理、成员管理、租户删除或所有权转移。',
       apiKeyKnowledgeScope: '知识库范围',
       apiKeyKnowledgeScopePlaceholder: '留空表示允许访问全部知识库',
       allKnowledgeBases: '全部知识库',
@@ -471,7 +471,7 @@ export default {
       principalMode: '用户身份模式',
       principalModeDesc: '配置 API 请求如何识别终端用户。该身份会同时用于区分不同用户的对话 Session 与 MCP 工具授权。',
       principalScope: '终端用户身份负责隔离 Session 与 MCP OAuth；API Key 自身的操作权限和知识库范围由上方 API Keys 管理。',
-      modeTenant: '仅空间',
+      modeTenant: '仅租户',
       modeDirect: '直接传用户 ID',
       modeSigned: '签名 Token',
       directWarning: '直接传用户 ID 会信任调用方请求头，仅适用于可信服务端到服务端调用。',
@@ -480,7 +480,7 @@ export default {
       signedFlowDetail: 'HMAC 密钥仅保存在 @:{\'brand.name\'} 与你的可信后端，切勿放入请求或下发给浏览器。请求头里传的是用该密钥签出的 JWT 字符串（每次签发或过期后会变），不是密钥本身。JWT 须包含 sub（外部用户 ID）、tenant_id、aud=weknora、exp（有效期不超过 24 小时）。',
       directHeader: '用户 ID 请求头',
       requireDirectHeader: '必须携带用户 ID',
-      requireDirectHeaderDesc: '开启后，缺少用户 ID 请求头的 API Key 请求将被拒绝；关闭则按整个空间统一处理，不区分具体终端用户。',
+      requireDirectHeaderDesc: '开启后，缺少用户 ID 请求头的 API Key 请求将被拒绝；关闭则按整个租户统一处理，不区分具体终端用户。',
       tokenHeader: 'Token 请求头',
       tokenHeaderDesc: '客户端在该固定请求头中携带后端签发的 JWT。',
       hmacSecret: 'HMAC 密钥',
@@ -512,7 +512,7 @@ export default {
       playgroundAgentsLoadFailed: '智能体列表加载失败',
       playgroundExternalUser: '外部用户 ID',
       playgroundExternalUserPlaceholder: 'user_123',
-      playgroundTenantModeHint: '仅空间模式不会发送外部用户身份，所有 API 会话归属同一个空间级主体。',
+      playgroundTenantModeHint: '仅租户模式不会发送外部用户身份，所有 API 会话归属同一个租户级主体。',
       playgroundDirectModeHint: '将通过 {headerName} 请求头发送此用户 ID。',
       playgroundSignedModeHint: '签名模式由 JWT 的 sub 代表外部用户；Playground 会用这里的用户 ID 自动签出短期测试 JWT。',
       playgroundQuestion: '测试问题',
@@ -520,7 +520,7 @@ export default {
       playgroundRequestPreview: '请求预览（已遮蔽密钥）',
       playgroundRun: '运行测试',
       playgroundStop: '停止',
-      playgroundNeedApiKey: '当前空间没有 API Key。',
+      playgroundNeedApiKey: '当前租户没有 API Key。',
       playgroundNeedAgent: '请选择测试智能体。',
       playgroundNeedQuestion: '请输入测试问题。',
       playgroundNeedExternalUser: '请输入外部用户 ID。',
@@ -1389,7 +1389,7 @@ export default {
       description: '选择此知识库要写入的向量存储。绑定不可更改 — 如需将现有 KB 迁移到其他存储，请创建新 KB 并重新索引。',
       loading: '正在加载向量存储列表...',
       engineLabel: '向量存储',
-      engineDesc: '从全局向量存储配置中选择，或保持系统默认以使用空间的 RETRIEVE_DRIVER 引擎。',
+      engineDesc: '从全局向量存储配置中选择，或保持系统默认以使用租户的 RETRIEVE_DRIVER 引擎。',
       boundLabel: '已绑定的向量存储',
       systemDefault: '系统默认',
       immutableHint: '创建后不可更改。如需迁移，请创建一个绑定到目标存储的新 KB 并重新索引。',
@@ -1474,7 +1474,7 @@ export default {
   },
   organization: {
     title: '共享空间',
-    subtitle: '创建或加入共享空间，让多个空间互相协作，共享知识库与智能体',
+    subtitle: '创建或加入共享空间，让多个租户互相协作，共享知识库与智能体',
     createOrg: '创建共享空间',
     joinOrg: '加入共享空间',
     name: '共享空间名称',
@@ -1553,10 +1553,10 @@ export default {
     addMember: {
       button: '添加成员',
       dialogTitle: '添加成员',
-      tipTenant: '共享空间的成员单位是空间：选定一个空间后，其下全部用户都将获得访问权限。下方搜索结果按空间去重。',
-      searchTenant: '选择空间',
-      searchTenantPlaceholder: '输入空间名搜索...',
-      searchTenantHint: '输入至少 2 个字符开始搜索，按空间去重并自动过滤已加入的空间',
+      tipTenant: '共享空间的成员单位是租户：选定一个租户后，其下全部用户都将获得访问权限。下方搜索结果按租户去重。',
+      searchTenant: '选择租户',
+      searchTenantPlaceholder: '输入租户名搜索...',
+      searchTenantHint: '输入至少 2 个字符开始搜索，按租户去重并自动过滤已加入的租户',
       selectRole: '分配角色',
       confirmBtn: '添加',
       success: '成员添加成功',
@@ -1618,7 +1618,7 @@ export default {
     },
     settings: {
       editTitle: '共享空间设置',
-      membersDesc: '查看和管理共享空间成员、调整成员角色。成员的最小单位是空间——加入后该空间下的所有用户都将获得访问权限。',
+      membersDesc: '查看和管理共享空间成员、调整成员角色。成员的最小单位是租户——加入后该租户下的所有用户都将获得访问权限。',
       permissionsIconHint: '查看各角色权限说明',
       sharedDesc: '查看共享到此共享空间的所有知识库',
       noSharedKB: '暂无共享的知识库',
@@ -1773,10 +1773,10 @@ export default {
       backToSearch: '返回搜索'
     },
     rbac: {
-      needTenantAdminTip: '此操作需要当前空间的 admin 或更高角色，请联系空间 Owner 调整权限。',
-      cannotCreate: '当前空间角色不足，无法创建共享空间',
-      cannotJoin: '当前空间角色不足，无法加入或申请加入共享空间',
-      cannotManage: '当前空间角色不足，无法管理共享空间'
+      needTenantAdminTip: '此操作需要当前租户的 admin 或更高角色，请联系租户 Owner 调整权限。',
+      cannotCreate: '当前租户角色不足，无法创建共享空间',
+      cannotJoin: '当前租户角色不足，无法加入或申请加入共享空间',
+      cannotManage: '当前租户角色不足，无法管理共享空间'
     }
   },
   promptTemplate: {
@@ -1955,8 +1955,8 @@ export default {
     },
     builtinModels: {
       title: '内置模型',
-      description: '内置模型对所有空间可见，敏感信息会被隐藏，且不可编辑或删除。',
-      descriptionAdmin: '内置模型对所有空间可见。系统管理员可编辑配置和凭据；删除仍由部署配置管理。',
+      description: '内置模型对所有租户可见，敏感信息会被隐藏，且不可编辑或删除。',
+      descriptionAdmin: '内置模型对所有租户可见。系统管理员可编辑配置和凭据；删除仍由部署配置管理。',
       viewGuide: '查看内置模型管理指南'
     },
     toasts: {
@@ -2153,7 +2153,7 @@ export default {
     multimodalParsing: '多模态文档解析',
     hybridSearchEngine: '混合检索 + 知识图谱',
     ragQandA: 'ReAct 智能体问答',
-    independentTenant: '独立空间',
+    independentTenant: '独立租户',
     fullApiAccess: '完整 API 访问',
     knowledgeBaseManagement: '知识库管理',
     carousel: {
@@ -2481,13 +2481,13 @@ export default {
       testFailed: '测试失败'
     },
     tenant: {
-      listFailed: '获取空间列表失败',
-      searchFailed: '搜索空间失败',
+      listFailed: '获取租户列表失败',
+      searchFailed: '搜索租户失败',
       getApiPrincipalConfigFailed: '获取 API 用户身份配置失败',
       updateApiPrincipalConfigFailed: '更新 API 用户身份配置失败',
       createApiPrincipalTestTokenFailed: '生成 API 测试 Token 失败',
-      updateFailed: '更新空间信息失败',
-      deleteFailed: '删除空间失败'
+      updateFailed: '更新租户信息失败',
+      deleteFailed: '删除租户失败'
     },
     model: {
       createFailed: '创建模型失败',
@@ -2499,7 +2499,7 @@ export default {
       loginFailed: '登录失败',
       registerFailed: '注册失败',
       getUserFailed: '获取用户信息失败',
-      getTenantFailed: '获取空间信息失败',
+      getTenantFailed: '获取租户信息失败',
       updatePreferencesFailed: '更新个性化设置失败',
       refreshTokenFailed: '刷新Token失败',
       logoutFailed: '登出失败',
@@ -2559,7 +2559,7 @@ export default {
     unknown: '未知',
     globalSettings: {
       title: '系统设置',
-      description: '平台级运行时配置，保存后立即对所有空间生效。仅系统管理员可见可改。',
+      description: '平台级运行时配置，保存后立即对所有租户生效。仅系统管理员可见可改。',
       loading: '加载中...',
       empty: '暂无可配置的系统设置',
       saving: '保存中',
@@ -2598,7 +2598,7 @@ export default {
         },
         target: {
           bulkQuota: '批量同步：默认存储配额',
-          bulkQuotaDiff: '应用到 {count} 个空间（{gb} GB）',
+          bulkQuotaDiff: '应用到 {count} 个租户（{gb} GB）',
           promoteIdempotent: '目标已是系统管理员（幂等）',
           revokeNoop: '目标本就不是系统管理员（幂等）',
           requiredRole: '需要角色：{role}',
@@ -2637,12 +2637,12 @@ export default {
         }
       },
       bulkApply: {
-        label: '应用到所有现有空间',
-        tooltip: '保存的值默认只对之后新建的空间生效；点击此按钮将当前值同步写入所有现有空间。',
+        label: '应用到所有现有租户',
+        tooltip: '保存的值默认只对之后新建的租户生效；点击此按钮将当前值同步写入所有现有租户。',
         confirmBtn: '确认应用',
-        confirmBody: '将把所有现有空间的存储配额覆盖为 {value} GB。如有空间被运维单独调整过的配额，也会一并被覆盖。是否继续？',
-        success: '已将 {count} 个空间的存储配额更新为 {gb} GB',
-        failed: '应用到所有空间失败'
+        confirmBody: '将把所有现有租户的存储配额覆盖为 {value} GB。如有租户被运维单独调整过的配额，也会一并被覆盖。是否继续？',
+        success: '已将 {count} 个租户的存储配额更新为 {gb} GB',
+        failed: '应用到所有租户失败'
       },
       passwordReset: {
         label: '重置用户密码',
@@ -2685,7 +2685,7 @@ export default {
           },
           promote: {
             header: '提升为系统管理员',
-            body: '确认将 {email} 提升为系统管理员？该用户将获得平台级权限，可访问所有空间、修改系统设置、管理其他管理员。',
+            body: '确认将 {email} 提升为系统管理员？该用户将获得平台级权限，可访问所有租户、修改系统设置、管理其他管理员。',
             confirmBtn: '确认提升'
           }
         }
@@ -2728,8 +2728,8 @@ export default {
       enumLabels: {
         auth: {
           default_tenant_mode: {
-            create_personal: '自动创建个人空间',
-            tenantless: '不自动创建空间'
+            create_personal: '自动创建个人租户',
+            tenantless: '不自动创建租户'
           },
           registration_mode: {
             self_serve: '自助注册（任何人可注册）',
@@ -2750,17 +2750,17 @@ export default {
           wiki_concurrency: '每个服务实例的 Wiki 专用 Worker 并发数，与上游任务池相互隔离。最小值为 1；修改后需重启服务进程方可生效。'
         },
         tenant: {
-          max_owned_per_user: '每个非超管用户通过自助创建可拥有的最大空间数。每次创建空间时实时读取，修改后立即生效。0 表示使用内置默认值 10；负数表示完全关闭限制（不建议在公开部署使用）。',
-          self_service_creation_enabled: '是否允许非超管用户主动创建空间。关闭后，普通用户只能通过邀请加入已有空间；跨空间超管仍可创建。修改后立即生效。',
-          default_storage_quota_gb: '新建空间时默认分配的存储配额（GB），包含向量、原文、文本、索引等。仅在创建时读取，修改后只对之后新建的空间生效，不会回写已存在的空间。0 或负数表示使用内置默认值 10GB。',
-          auto_create_api_key: '为新空间自动生成 full_access API Key，并在创建响应中返回明文 token。仅用于兼容依赖旧行为的集成；默认关闭，建议通过 API Key 管理显式创建。'
+          max_owned_per_user: '每个非超管用户通过自助创建可拥有的最大租户数。每次创建租户时实时读取，修改后立即生效。0 表示使用内置默认值 10；负数表示完全关闭限制（不建议在公开部署使用）。',
+          self_service_creation_enabled: '是否允许非超管用户主动创建租户。关闭后，普通用户只能通过邀请加入已有租户；跨租户超管仍可创建。修改后立即生效。',
+          default_storage_quota_gb: '新建租户时默认分配的存储配额（GB），包含向量、原文、文本、索引等。仅在创建时读取，修改后只对之后新建的租户生效，不会回写已存在的租户。0 或负数表示使用内置默认值 10GB。',
+          auto_create_api_key: '为新租户自动生成 full_access API Key，并在创建响应中返回明文 token。仅用于兼容依赖旧行为的集成；默认关闭，建议通过 API Key 管理显式创建。'
         },
         ssrf: {
           whitelist: 'SSRF 防护白名单。可填入 example.com / *.foo.com / 10.0.0.0/8 / 2001:db8::1。修改后立即生效。SSRF_WHITELIST_EXTRA 环境变量仍由部署方维护，不在此处覆盖。'
         },
         auth: {
           registration_mode: '自助注册模式。self_serve = 任何人可注册账号；invite_only = 关闭公网注册，仅 Owner/Admin 可邀请。修改后立即生效，但谨慎对待 self_serve（公网会接受 spam）。',
-          default_tenant_mode: '公开注册后的空间初始化策略。create_personal 会自动创建个人空间并授予 Owner；tenantless 仅创建账户，用户需要接受邀请或主动创建空间。只影响之后注册的用户。'
+          default_tenant_mode: '公开注册后的租户初始化策略。create_personal 会自动创建个人租户并授予 Owner；tenantless 仅创建账户，用户需要接受邀请或主动创建租户。只影响之后注册的用户。'
         }
       },
       keyLabels: {
@@ -2776,17 +2776,17 @@ export default {
           wiki_concurrency: 'Wiki Worker 并发数'
         },
         tenant: {
-          max_owned_per_user: '每用户最大空间数',
-          self_service_creation_enabled: '允许用户自助创建空间',
-          default_storage_quota_gb: '新空间默认存储配额 (GB)',
-          auto_create_api_key: '创建空间时自动生成 API Key'
+          max_owned_per_user: '每用户最大租户数',
+          self_service_creation_enabled: '允许用户自助创建租户',
+          default_storage_quota_gb: '新租户默认存储配额 (GB)',
+          auto_create_api_key: '创建租户时自动生成 API Key'
         },
         ssrf: {
           whitelist: 'SSRF 防护白名单'
         },
         auth: {
           registration_mode: '自助注册模式',
-          default_tenant_mode: '注册默认空间策略'
+          default_tenant_mode: '注册默认租户策略'
         }
       },
       runtime: {
@@ -2846,7 +2846,7 @@ export default {
           knowledgeBaseLabel: '知识库 ID',
           knowledgeLabel: '文档 ID',
           taskIDLabel: '业务任务 ID',
-          tenantLabel: '空间 ID',
+          tenantLabel: '租户 ID',
           sourceLabel: '来源 ID',
           targetLabel: '目标 ID',
           sourceKBLabel: '来源知识库',
@@ -3018,14 +3018,14 @@ export default {
           restartHint: 'Worker 配置需重启生效'
         },
         tenant: {
-          tab: '空间默认值 {count}',
-          title: '空间默认值',
-          description: '设置新空间的初始配额与兼容性行为，不会自动改写已有空间。'
+          tab: '租户默认值 {count}',
+          title: '租户默认值',
+          description: '设置新租户的初始配额与兼容性行为，不会自动改写已有租户。'
         },
         access: {
           tab: '账户与访问 {count}',
           title: '账户与访问',
-          description: '管理系统管理员、公开注册与用户创建空间的规则。'
+          description: '管理系统管理员、公开注册与用户创建租户的规则。'
         }
       },
       priorityHint: {
@@ -3041,10 +3041,10 @@ export default {
     }
   },
   tenant: {
-    title: '空间信息',
-    currentTenant: '当前空间',
-    switchTenant: '切换空间',
-    sectionDescription: '查看空间的详细配置信息',
+    title: '租户信息',
+    currentTenant: '当前租户',
+    switchTenant: '切换租户',
+    sectionDescription: '查看租户的详细配置信息',
     statusActive: '活跃',
     statusInactive: '未激活',
     statusSuspended: '已暂停',
@@ -3053,11 +3053,11 @@ export default {
     retry: '重试',
     unknown: '未知',
     formatError: '格式错误',
-    searchPlaceholder: '搜索空间名称或输入空间 ID...',
-    noMatch: '未找到匹配的空间',
-    switchSuccessTitle: '已切换空间',
+    searchPlaceholder: '搜索租户名称或输入租户 ID...',
+    noMatch: '未找到匹配的租户',
+    switchSuccessTitle: '已切换租户',
     switchSuccessContent: '你已进入 {name}',
-    loadTenantsFailed: '加载空间列表失败',
+    loadTenantsFailed: '加载租户列表失败',
     loading: '加载中...',
     loadMore: '加载更多',
     api: {
@@ -3089,80 +3089,80 @@ export default {
       lanUrlUnavailable: '当前已监听所有网卡，但未能自动识别本机 IPv4。请在本机网络设置中查看局域网地址，并手动拼接为 http://你的IP:端口/api/v1。'
     },
     messages: {
-      fetchFailed: '获取空间信息失败',
+      fetchFailed: '获取租户信息失败',
       networkError: '网络错误，请稍后重试'
     },
     deleteDangerZone: {
-      title: '删除当前空间',
-      desc: '删除整个空间及其配置。删除后，空间成员将无法继续访问其中的知识库、智能体与 API Key。',
-      button: '删除空间',
-      confirmTitle: '删除当前空间？',
-      confirmBody: '此操作将删除空间「{name}」，并使其中的知识库、智能体、成员与 API Key 不再可用。此操作不可撤销。',
-      confirmHint: '请输入空间名称「{name}」以确认删除。',
+      title: '删除当前租户',
+      desc: '删除整个租户及其配置。删除后，租户成员将无法继续访问其中的知识库、智能体与 API Key。',
+      button: '删除租户',
+      confirmTitle: '删除当前租户？',
+      confirmBody: '此操作将删除租户「{name}」，并使其中的知识库、智能体、成员与 API Key 不再可用。此操作不可撤销。',
+      confirmHint: '请输入租户名称「{name}」以确认删除。',
       confirm: '确认删除',
-      nameMismatch: '空间名称不匹配',
-      success: '空间已删除',
-      failed: '删除空间失败'
+      nameMismatch: '租户名称不匹配',
+      success: '租户已删除',
+      failed: '删除租户失败'
     },
     leaveDangerZone: {
-      title: '退出当前空间',
-      desc: '终止您在本空间的成员身份。退出后将无法访问本空间的知识库与智能体，之后可被再次邀请加入。',
-      button: '退出空间'
+      title: '退出当前租户',
+      desc: '终止您在本租户的成员身份。退出后将无法访问本租户的知识库与智能体，之后可被再次邀请加入。',
+      button: '退出租户'
     },
     storage: {
       quotaLabel: '存储配额',
-      quotaDescription: '空间的总存储空间配额',
+      quotaDescription: '租户的总存储空间配额',
       usedLabel: '已使用存储',
       usedDescription: '已经使用的存储空间',
       usageLabel: '存储使用率',
       usageDescription: '存储空间的使用百分比'
     },
     details: {
-      idLabel: '空间 ID',
-      idDescription: '您所属空间的唯一标识',
-      nameLabel: '空间名称',
-      nameDescription: '您所属的空间名称',
-      descriptionLabel: '空间描述',
-      descriptionDescription: '空间的详细描述信息',
-      businessLabel: '空间业务',
-      businessDescription: '空间所属的业务类型',
-      statusLabel: '空间状态',
-      statusDescription: '空间当前的运行状态',
-      createdAtLabel: '空间创建时间',
-      createdAtDescription: '空间创建的时间',
+      idLabel: '租户 ID',
+      idDescription: '您所属租户的唯一标识',
+      nameLabel: '租户名称',
+      nameDescription: '您所属的租户名称',
+      descriptionLabel: '租户描述',
+      descriptionDescription: '租户的详细描述信息',
+      businessLabel: '租户业务',
+      businessDescription: '租户所属的业务类型',
+      statusLabel: '租户状态',
+      statusDescription: '租户当前的运行状态',
+      createdAtLabel: '租户创建时间',
+      createdAtDescription: '租户创建的时间',
       editName: '修改名称',
-      editNamePlaceholder: '请输入新的空间名称',
+      editNamePlaceholder: '请输入新的租户名称',
       editNameConfirm: '保存',
       editNameCancel: '取消',
-      editNameRequired: '空间名称不能为空',
-      editNameSuccess: '空间名称已更新',
-      editNameFailed: '更新空间名称失败',
+      editNameRequired: '租户名称不能为空',
+      editNameSuccess: '租户名称已更新',
+      editNameFailed: '更新租户名称失败',
       editDescription: '修改描述',
-      editDescriptionPlaceholder: '请输入新的空间描述',
-      editDescriptionSuccess: '空间描述已更新',
-      editDescriptionFailed: '更新空间描述失败',
+      editDescriptionPlaceholder: '请输入新的租户描述',
+      editDescriptionSuccess: '租户描述已更新',
+      editDescriptionFailed: '更新租户描述失败',
       descriptionEmptyPlaceholder: '未填写'
     },
     create: {
-      action: '创建新空间',
-      dialogTitle: '创建新空间',
-      dialogSubtitle: '空间拥有独立的知识库与成员，你将自动成为新空间的所有者。',
-      nameLabel: '空间名称',
+      action: '创建新租户',
+      dialogTitle: '创建新租户',
+      dialogSubtitle: '租户拥有独立的知识库与成员，你将自动成为新租户的所有者。',
+      nameLabel: '租户名称',
       namePlaceholder: '例如：我的新项目',
-      nameRequired: '请输入空间名称',
+      nameRequired: '请输入租户名称',
       descriptionLabel: '描述（可选）',
-      descriptionPlaceholder: '简单描述一下这个空间的用途',
+      descriptionPlaceholder: '简单描述一下这个租户的用途',
       submit: '创建',
       cancel: '取消',
-      success: '空间创建成功',
-      failed: '空间创建失败',
-      disabled: '当前系统只允许通过邀请加入空间，不能自行创建空间。'
+      success: '租户创建成功',
+      failed: '租户创建失败',
+      disabled: '当前系统只允许通过邀请加入租户，不能自行创建租户。'
     },
     switcher: {
-      menuLabel: '切换空间',
+      menuLabel: '切换租户',
       currentBadge: '当前',
-      homeTooltip: '我的空间',
-      empty: '你目前只属于这一个空间'
+      homeTooltip: '我的租户',
+      empty: '你目前只属于这一个租户'
     }
   },
   chat: {
@@ -3582,11 +3582,11 @@ export default {
       storageChangeConfirm: '知识库中已有文件，更改存储引擎后旧文件可能无法正常访问。是否确认更改？'
     },
     share: {
-      description: '将知识库共享给空间，让空间成员可以访问和使用',
+      description: '将知识库共享给租户，让租户成员可以访问和使用',
       hintTitle: '共享说明',
       addShare: '共享',
       unshareConfirm: '确定要取消对「{name}」的共享吗？',
-      tip1: '共享后，空间成员将根据设定的权限访问此知识库',
+      tip1: '共享后，租户成员将根据设定的权限访问此知识库',
       tip2: '可编辑权限允许成员修改知识库内容，只读权限仅允许检索和问答'
     },
     buttons: {
@@ -3597,7 +3597,7 @@ export default {
     postCreateHint: {
       title: '创建成功',
       footer: '可继续调整配置，设置共享与数据源，完成后点击「保存并关闭」。',
-      followUpDesc: '可在左侧配置数据源，或在「共享管理」中发布到空间',
+      followUpDesc: '可在左侧配置数据源，或在「共享管理」中发布到租户',
     },
     wikiBrowser: {
       editBtn: '编辑',
@@ -4113,7 +4113,7 @@ export default {
       tools: '工具',
       mcp: 'MCP'
     },
-    sharedToOrgs: '已共享给 {count} 个空间',
+    sharedToOrgs: '已共享给 {count} 个租户',
     uninitializedBanner: '部分知识库尚未初始化，需要先在设置中配置模型信息才能添加知识文档',
     uploadProgress: {
       uploadingTitle: '正在向「{name}」上传文件夹中的文档',
@@ -4134,9 +4134,9 @@ export default {
     detail: {
       title: '共享知识库',
       sourceType: '来源方式',
-      sourceTypeKbShare: '知识库直接共享到本空间',
+      sourceTypeKbShare: '知识库直接共享到本租户',
       sourceTypeAgent: '智能体可访问（通过共享智能体可见）',
-      sourceOrg: '来源空间',
+      sourceOrg: '来源租户',
       sourceFromAgent: '智能体',
       agentKbStrategy: '智能体知识库策略',
       agentKbStrategyAll: '全部知识库',
@@ -4155,8 +4155,8 @@ export default {
     sections: {
       pinned: '置顶',
       mine: '我创建的',
-      tenantOthers: '本空间 · 其他成员',
-      tenantReadonly: '本空间 · 仅查看',
+      tenantOthers: '本租户 · 其他成员',
+      tenantReadonly: '本租户 · 仅查看',
       sharedByMe: '我共享的',
       sharedEditable: '共享给我 · 可编辑',
       sharedReadonly: '共享给我 · 仅查看'
@@ -4350,7 +4350,7 @@ export default {
     faqCount: '共 {count} 条问答',
     kbCount: '共 {count} 个文档',
     belongsToKb: '所属知识库：',
-    belongsToOrg: '所属空间：',
+    belongsToOrg: '所属租户：',
     noCompatibleKbForAgent: '当前智能体的工具与作用域内知识库的能力不匹配，暂无可引用的知识库。'
   },
   common: {
@@ -4407,7 +4407,7 @@ export default {
   authStore: {
     errors: {
       parseUserFailed: '解析用户信息失败',
-      parseTenantFailed: '解析空间信息失败',
+      parseTenantFailed: '解析租户信息失败',
       parseKnowledgeBasesFailed: '解析知识库列表失败',
       parseCurrentKnowledgeBaseFailed: '解析当前知识库失败'
     }
@@ -4459,16 +4459,16 @@ export default {
     loginErrorRetry: '登录错误，请稍后重试',
     registerError: '注册错误，请稍后重试',
     workspaceOnboarding: {
-      title: '选择你的工作空间',
-      create: '创建空间',
+      title: '选择你的租户',
+      create: '创建租户',
       invitations: '查看邀请',
-      loadingPolicy: '正在确认可用的空间加入方式…',
-      policyLoadFailed: '暂时无法获取空间权限，请检查网络后重试。',
+      loadingPolicy: '正在确认可用的租户加入方式…',
+      policyLoadFailed: '暂时无法获取租户权限，请检查网络后重试。',
       retry: '重新加载',
-      inviteOnlyTitle: '等待加入工作空间',
-      inviteOnlyDescription: '当前系统不开放个人创建空间。你可以查看并接受管理员发来的空间邀请。',
-      inviteOnlyNotice: '此账户只能通过邀请加入已有空间',
-      inviteOnlyHelp: '还没有邀请？请把你的注册邮箱提供给空间管理员，由管理员向你发送邀请。'
+      inviteOnlyTitle: '等待加入租户',
+      inviteOnlyDescription: '当前系统不开放个人创建租户。你可以查看并接受管理员发来的租户邀请。',
+      inviteOnlyNotice: '此账户只能通过邀请加入已有租户',
+      inviteOnlyHelp: '还没有邀请？请把你的注册邮箱提供给租户管理员，由管理员向你发送邀请。'
     }
   },
   inviteRegister: {
@@ -4491,7 +4491,7 @@ export default {
     confirmPassword: '确认密码',
     submit: '完成注册',
     submitting: '提交中…',
-    success: '注册成功，正在进入工作空间…',
+    success: '注册成功，正在进入租户…',
     failed: '注册失败，请稍后重试',
     usernameRequired: '请输入姓名',
     passwordTooShort: '密码至少 6 位',
@@ -4668,8 +4668,8 @@ export default {
     mcpService: 'MCP服务',
     versionInfo: '版本信息',
     taskQueue: '任务队列',
-    tenantInfo: '空间信息',
-    workspaceSettings: '空间设置',
+    tenantInfo: '租户信息',
+    workspaceSettings: '租户设置',
     system: '系统设置',
     storage: {
       title: '存储引擎',
@@ -4879,7 +4879,7 @@ export default {
       },
       modelsSection: {
         title: '云模型接入',
-        descReady: '将 WeKnora Cloud 提供的四类标准模型注册到当前空间，用于对话、向量检索、重排序与多模态理解。',
+        descReady: '将 WeKnora Cloud 提供的四类标准模型注册到当前租户，用于对话、向量检索、重排序与多模态理解。',
         descPending: '请先保存上方凭证，再在此添加云模型。',
         statusAdded: '已添加',
         statusPending: '待配置凭证',
@@ -4893,11 +4893,11 @@ export default {
     },
     roleDenied: {
       title: '权限不足',
-      desc: '你当前的角色无权访问此设置项。请联系本空间的管理员获取所需角色。'
+      desc: '你当前的角色无权访问此设置项。请联系本租户的管理员获取所需角色。'
     },
     navGroups: {
       account: '账户',
-      workspace: '空间',
+      workspace: '租户',
       modelsRuntime: '模型',
       dataExtensions: '数据与扩展',
       systemAdministration: '系统管理',
@@ -5073,7 +5073,7 @@ export default {
       rerankModel: 'ReRank 模型',
       rerankModelDesc: '用于对知识库检索结果进行重排序，提高回答准确性',
       rerankModelPlaceholder: '请选择 ReRank 模型',
-      rerankModelOptionalHint: '当前作用域内暂无 RAG 类型知识库，可不填；后续若加入 RAG 知识库，将自动使用空间默认重排模型，仍建议显式配置。',
+      rerankModelOptionalHint: '当前作用域内暂无 RAG 类型知识库，可不填；后续若加入 RAG 知识库，将自动使用租户默认重排模型，仍建议显式配置。',
       maxIterations: '最大迭代次数',
       allowedTools: '允许的工具',
       multiTurn: '多轮对话',
@@ -5132,7 +5132,7 @@ export default {
     },
     shareScope: {
       title: '共享范围说明',
-      desc: '空间成员以只读方式使用该智能体，将遵循您当前配置的能力与资源；您对智能体的修改会同步给已共享的空间。如需允许空间成员编辑知识库内容，请将知识库共享到空间。',
+      desc: '租户成员以只读方式使用该智能体，将遵循您当前配置的能力与资源；您对智能体的修改会同步给已共享的租户。如需允许租户成员编辑知识库内容，请将知识库共享到租户。',
       knowledgeBase: '知识库',
       chatModel: '对话模型',
       rerankModel: '重排模型',
@@ -5157,7 +5157,7 @@ export default {
       title: '暂无自定义智能体',
       description: '点击右上角按钮创建您的第一个智能体',
       sharedTitle: '暂无共享智能体',
-      sharedDescription: '您可以加入空间或请求他人将智能体共享给您',
+      sharedDescription: '您可以加入租户或请求他人将智能体共享给您',
       favoritesTitle: '暂无收藏',
       favoritesDescription: '在智能体卡片右上角点击星标即可收藏',
       recentsTitle: '暂无最近访问',
@@ -5166,8 +5166,8 @@ export default {
     sections: {
       builtin: '内置',
       mine: '我创建的',
-      tenantOthers: '本空间 · 其他成员',
-      tenantReadonly: '本空间 · 仅查看',
+      tenantOthers: '本租户 · 其他成员',
+      tenantReadonly: '本租户 · 仅查看',
       sharedByMe: '我共享的',
       sharedEditable: '共享给我 · 可编辑',
       sharedReadonly: '共享给我 · 仅查看'
@@ -5666,7 +5666,7 @@ export default {
       permissionAdmin: '可编辑、管理共享设置',
       permissionEditor: '可编辑文档与标签',
       permissionViewer: '仅查看与检索',
-      fromOrg: '来自空间',
+      fromOrg: '来自租户',
       sharedAt: '共享于',
       lastUpdated: '最后更新'
     }
@@ -5674,18 +5674,18 @@ export default {
   resourceOrigin: {
     mine: '我创建',
     mineTooltip: '由当前用户创建',
-    tenant: '本空间',
-    tenantTooltip: '本空间其他成员创建',
+    tenant: '本租户',
+    tenantTooltip: '本租户其他成员创建',
     tenantTooltipWithCreator: '由 {creator} 创建',
     space: '共享空间',
     spaceTooltip: '来自共享空间「{space}」',
-    spaceTooltipWithTenant: '来自共享空间「{space}」· 源空间 {tenant}',
+    spaceTooltipWithTenant: '来自共享空间「{space}」· 源租户 {tenant}',
     shared: '外部共享',
-    sharedTooltip: '通过共享空间从其他空间访问'
+    sharedTooltip: '通过共享空间从其他租户访问'
   },
   listSpaceSidebar: {
     all: '全部',
-    workspace: '本空间',
+    workspace: '本租户',
     spaces: '共享给我',
     favorites: '收藏',
     recents: '最近'
@@ -5827,7 +5827,7 @@ export default {
         },
         storage: {
           title: '存储引擎（可选）',
-          desc: '原始文件存放位置（本地或对象存储）。默认跟随空间设置即可。'
+          desc: '原始文件存放位置（本地或对象存储）。默认跟随租户设置即可。'
         },
         chunking: {
           title: '分块策略（可选）',

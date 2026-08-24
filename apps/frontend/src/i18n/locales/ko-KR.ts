@@ -123,9 +123,9 @@ export default {
   },
   tenantMember: {
     title: '멤버 관리',
-    sectionDescription: '워크스페이스에 동료를 초대하고 역할을 관리합니다. 소유자만 멤버를 추가하거나 제거할 수 있습니다.',
+    sectionDescription: '테넌트에 동료를 초대하고 역할을 관리합니다. 소유자만 멤버를 추가하거나 제거할 수 있습니다.',
     learnRbacGuide: 'RBAC 알아보기',
-    listTitle: '워크스페이스 멤버',
+    listTitle: '테넌트 멤버',
     loading: '멤버를 불러오는 중…',
     retry: '다시 시도',
     empty: '아직 멤버가 없습니다. 동료를 초대해 시작하세요.',
@@ -133,7 +133,7 @@ export default {
     searchPlaceholder: '이름 또는 이메일로 검색',
     audit: {
       tabLabel: '감사 로그',
-      description: '이 워크스페이스의 멤버 변경 및 접근 거부 이벤트를 최신순으로 기록합니다. 1분 이내의 반복 거부는 자동으로 중복 제거됩니다.',
+      description: '이 테넌트의 멤버 변경 및 접근 거부 이벤트를 최신순으로 기록합니다. 1분 이내의 반복 거부는 자동으로 중복 제거됩니다.',
       refresh: '새로고침',
       end: '마지막 항목입니다.',
       empty: '감사 이벤트가 없습니다.',
@@ -3019,7 +3019,7 @@ export default {
         },
         tenant: {
           tab: '워크스페이스 기본값 {count}',
-          title: '워크스페이스 기본값',
+          title: '테넌트 기본값',
           description: '기존 워크스페이스를 변경하지 않고 신규 워크스페이스의 초기 할당량과 호환 동작을 설정합니다.'
         },
         access: {
@@ -3041,10 +3041,10 @@ export default {
     }
   },
   tenant: {
-    title: '워크스페이스 정보',
-    currentTenant: '현재 워크스페이스',
-    switchTenant: '워크스페이스 전환',
-    sectionDescription: '워크스페이스의 상세 설정 정보 보기',
+    title: '테넌트 정보',
+    currentTenant: '현재 테넌트',
+    switchTenant: '테넌트 전환',
+    sectionDescription: '테넌트의 상세 설정 정보 보기',
     statusActive: '활성',
     statusInactive: '비활성',
     statusSuspended: '일시 중지됨',
@@ -3053,11 +3053,11 @@ export default {
     retry: '재시도',
     unknown: '알 수 없음',
     formatError: '형식 오류',
-    searchPlaceholder: '워크스페이스 이름 검색 또는 워크스페이스 ID 입력...',
-    noMatch: '일치하는 워크스페이스를 찾을 수 없습니다',
-    switchSuccessTitle: '공간이 전환되었습니다',
+    searchPlaceholder: '테넌트 이름 검색 또는 테넌트 ID 입력...',
+    noMatch: '일치하는 테넌트를 찾을 수 없습니다',
+    switchSuccessTitle: '테넌트가 전환되었습니다',
     switchSuccessContent: '{name} 에 입장했습니다',
-    loadTenantsFailed: '워크스페이스 목록 로드 실패',
+    loadTenantsFailed: '테넌트 목록 로드 실패',
     loading: '로딩 중...',
     loadMore: '더 보기',
     api: {
@@ -3089,7 +3089,7 @@ export default {
       lanUrlUnavailable: 'The API is listening on all interfaces, but no LAN IPv4 could be detected automatically. Find your IPv4 in network settings and build http://YOUR_IP:PORT/api/v1 manually.'
     },
     messages: {
-      fetchFailed: '워크스페이스 정보 가져오기 실패',
+      fetchFailed: '테넌트 정보 가져오기 실패',
       networkError: '네트워크 오류, 나중에 다시 시도해주세요'
     },
     deleteDangerZone: {
@@ -3105,64 +3105,64 @@ export default {
       failed: 'Failed to delete workspace'
     },
     leaveDangerZone: {
-      title: '이 스페이스 나가기',
+      title: '이 테넌트 나가기',
       desc: '현재 스페이스에서 멤버십을 종료합니다. 지식 베이스 및 에이전트에 접근할 수 없게 되며, 이후 초대되면 다시 참여할 수 있습니다.',
-      button: '스페이스 나가기'
+      button: '테넌트 나가기'
     },
     storage: {
       quotaLabel: '저장소 할당량',
-      quotaDescription: '워크스페이스의 총 저장 스페이스 할당량',
+      quotaDescription: '테넌트의 총 저장 스페이스 할당량',
       usedLabel: '사용된 저장소',
       usedDescription: '이미 사용된 저장 스페이스',
       usageLabel: '저장소 사용률',
       usageDescription: '저장 스페이스의 사용 백분율'
     },
     details: {
-      idLabel: '워크스페이스 ID',
-      idDescription: '소속 워크스페이스의 고유 식별자',
-      nameLabel: '워크스페이스 이름',
-      nameDescription: '소속 워크스페이스의 이름',
-      descriptionLabel: '워크스페이스 설명',
-      descriptionDescription: '워크스페이스의 상세 설명',
-      businessLabel: '워크스페이스 비즈니스',
-      businessDescription: '워크스페이스가 속한 비즈니스 유형',
-      statusLabel: '워크스페이스 상태',
-      statusDescription: '워크스페이스의 현재 운영 상태',
-      createdAtLabel: '워크스페이스 생성 시간',
-      createdAtDescription: '워크스페이스가 생성된 시간',
+      idLabel: '테넌트 ID',
+      idDescription: '소속 테넌트의 고유 식별자',
+      nameLabel: '테넌트 이름',
+      nameDescription: '소속 테넌트의 이름',
+      descriptionLabel: '테넌트 설명',
+      descriptionDescription: '테넌트의 상세 설명',
+      businessLabel: '테넌트 비즈니스',
+      businessDescription: '테넌트가 속한 비즈니스 유형',
+      statusLabel: '테넌트 상태',
+      statusDescription: '테넌트의 현재 운영 상태',
+      createdAtLabel: '테넌트 생성 시간',
+      createdAtDescription: '테넌트가 생성된 시간',
       editName: '이름 수정',
-      editNamePlaceholder: '새 워크스페이스 이름을 입력하세요',
+      editNamePlaceholder: '새 테넌트 이름을 입력하세요',
       editNameConfirm: '저장',
       editNameCancel: '취소',
-      editNameRequired: '워크스페이스 이름은 비어 있을 수 없습니다',
-      editNameSuccess: '워크스페이스 이름이 업데이트되었습니다',
-      editNameFailed: '워크스페이스 이름 업데이트 실패',
+      editNameRequired: '테넌트 이름은 비어 있을 수 없습니다',
+      editNameSuccess: '테넌트 이름이 업데이트되었습니다',
+      editNameFailed: '테넌트 이름 업데이트 실패',
       editDescription: '설명 수정',
-      editDescriptionPlaceholder: '새 워크스페이스 설명을 입력하세요',
-      editDescriptionSuccess: '워크스페이스 설명이 업데이트되었습니다',
-      editDescriptionFailed: '워크스페이스 설명 업데이트 실패',
+      editDescriptionPlaceholder: '새 테넌트 설명을 입력하세요',
+      editDescriptionSuccess: '테넌트 설명이 업데이트되었습니다',
+      editDescriptionFailed: '테넌트 설명 업데이트 실패',
       descriptionEmptyPlaceholder: '미입력'
     },
     create: {
-      action: '새 워크스페이스 만들기',
-      dialogTitle: '새 워크스페이스 만들기',
-      dialogSubtitle: '워크스페이스는 자체 지식 베이스와 멤버를 가지며, 사용자가 자동으로 소유자가 됩니다.',
-      nameLabel: '워크스페이스 이름',
+      action: '새 테넌트 만들기',
+      dialogTitle: '새 테넌트 만들기',
+      dialogSubtitle: '테넌트는 자체 지식 베이스와 멤버를 가지며, 사용자가 자동으로 소유자가 됩니다.',
+      nameLabel: '테넌트 이름',
       namePlaceholder: '예: 새 프로젝트',
-      nameRequired: '워크스페이스 이름을 입력하세요',
+      nameRequired: '테넌트 이름을 입력하세요',
       descriptionLabel: '설명(선택)',
-      descriptionPlaceholder: '이 워크스페이스의 용도를 간단히 설명하세요',
+      descriptionPlaceholder: '이 테넌트의 용도를 간단히 설명하세요',
       submit: '만들기',
       cancel: '취소',
-      success: '워크스페이스가 생성되었습니다',
-      failed: '워크스페이스 생성 실패',
-      disabled: '현재 시스템에서는 초대를 통해서만 공간에 참여할 수 있으며 직접 만들 수 없습니다.'
+      success: '테넌트가 생성되었습니다',
+      failed: '테넌트 생성 실패',
+      disabled: '현재 시스템에서는 초대를 통해서만 테넌트에 참여할 수 있으며 직접 만들 수 없습니다.'
     },
     switcher: {
-      menuLabel: '워크스페이스 전환',
+      menuLabel: '테넌트 전환',
       currentBadge: '현재',
-      homeTooltip: '기본 워크스페이스',
-      empty: '현재 하나의 워크스페이스에만 속해 있습니다'
+      homeTooltip: '기본 테넌트',
+      empty: '현재 하나의 테넌트에만 속해 있습니다'
     }
   },
   chat: {
@@ -4459,16 +4459,16 @@ export default {
     loginErrorRetry: '로그인 오류, 나중에 다시 시도해주세요',
     registerError: '가입 오류, 나중에 다시 시도해주세요',
     workspaceOnboarding: {
-      title: '작업 공간 선택',
-      create: '공간 만들기',
+      title: '테넌트 선택',
+      create: '테넌트 만들기',
       invitations: '초대 보기',
-      loadingPolicy: '사용 가능한 공간 참여 방식을 확인하고 있습니다…',
-      policyLoadFailed: '공간 권한을 불러올 수 없습니다. 네트워크를 확인한 후 다시 시도하세요.',
+      loadingPolicy: '사용 가능한 테넌트 참여 방식을 확인하고 있습니다…',
+      policyLoadFailed: '테넌트 권한을 불러올 수 없습니다. 네트워크를 확인한 후 다시 시도하세요.',
       retry: '다시 불러오기',
-      inviteOnlyTitle: '작업 공간 초대 대기',
-      inviteOnlyDescription: '개인 공간 만들기가 비활성화되어 있습니다. 관리자가 보낸 초대를 확인하고 수락하세요.',
-      inviteOnlyNotice: '이 계정은 초대를 통해서만 기존 공간에 참여할 수 있습니다',
-      inviteOnlyHelp: '초대가 없다면 등록 이메일을 공간 관리자에게 전달하고 초대를 요청하세요.'
+      inviteOnlyTitle: '테넌트 초대 대기',
+      inviteOnlyDescription: '개인 테넌트 만들기가 비활성화되어 있습니다. 관리자가 보낸 초대를 확인하고 수락하세요.',
+      inviteOnlyNotice: '이 계정은 초대를 통해서만 기존 테넌트에 참여할 수 있습니다',
+      inviteOnlyHelp: '초대가 없다면 등록 이메일을 테넌트 관리자에게 전달하고 초대를 요청하세요.'
     }
   },
   inviteRegister: {
@@ -4668,8 +4668,8 @@ export default {
     mcpService: 'MCP 서비스',
     versionInfo: '버전 정보',
     taskQueue: '작업 큐',
-    tenantInfo: '워크스페이스 정보',
-    workspaceSettings: '워크스페이스 설정',
+    tenantInfo: '테넌트 정보',
+    workspaceSettings: '테넌트 설정',
     system: '시스템 설정',
     storage: {
       title: '스토리지 엔진',
@@ -4893,11 +4893,11 @@ export default {
     },
     roleDenied: {
       title: '권한 없음',
-      desc: '현재 역할로는 이 설정 페이지에 접근할 수 없습니다. 이 워크스페이스의 관리자에게 필요한 역할을 요청하세요.'
+      desc: '현재 역할로는 이 설정 페이지에 접근할 수 없습니다. 이 테넌트의 관리자에게 필요한 역할을 요청하세요.'
     },
     navGroups: {
       account: '계정',
-      workspace: '공간',
+      workspace: '테넌트',
       modelsRuntime: '모델',
       dataExtensions: '데이터 및 확장',
       systemAdministration: '시스템 관리',

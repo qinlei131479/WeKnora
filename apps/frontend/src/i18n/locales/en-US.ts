@@ -509,7 +509,7 @@ export default {
         },
         storage: {
           title: 'Storage (optional)',
-          desc: 'Where raw files are stored (local or object storage). The workspace default is usually fine.'
+          desc: 'Where raw files are stored (local or object storage). The tenant default is usually fine.'
         },
         navMultimodal: {
           title: 'Multimodal / images (optional)',
@@ -642,7 +642,7 @@ export default {
   },
   listSpaceSidebar: {
     all: 'All',
-    workspace: 'Workspace',
+    workspace: 'This tenant',
     spaces: 'Shared with me',
     favorites: 'Starred',
     recents: 'Recent'
@@ -650,14 +650,14 @@ export default {
   resourceOrigin: {
     mine: 'Mine',
     mineTooltip: 'Created by you',
-    tenant: 'Workspace',
-    tenantTooltip: 'Created by another member of this workspace',
+    tenant: 'Tenant',
+    tenantTooltip: 'Created by another member of this tenant',
     tenantTooltipWithCreator: 'Created by {creator}',
     space: 'Space',
     spaceTooltip: 'Shared via space "{space}"',
     spaceTooltipWithTenant: 'Shared via space "{space}" · from {tenant}',
     shared: 'External',
-    sharedTooltip: 'Accessed from an external workspace via a shared space'
+    sharedTooltip: 'Accessed from an external tenant via a shared space'
   },
   knowledgeBase: {
     title: 'Knowledge Base',
@@ -1245,8 +1245,8 @@ export default {
     sections: {
       builtin: 'Built-in',
       mine: 'Created by me',
-      tenantOthers: 'Workspace · Other members',
-      tenantReadonly: 'Workspace · View only',
+      tenantOthers: 'Tenant · Other members',
+      tenantReadonly: 'Tenant · View only',
       sharedByMe: 'Shared by me',
       sharedEditable: 'Shared with me · Can edit',
       sharedReadonly: 'Shared with me · View only'
@@ -1366,7 +1366,7 @@ export default {
       rerankModel: 'ReRank Model',
       rerankModelDesc: 'Used to rerank knowledge base retrieval results for better accuracy',
       rerankModelPlaceholder: 'Select ReRank Model',
-      rerankModelOptionalHint: 'No RAG knowledge base in current scope, so this is optional. If a RAG knowledge base is added later, the workspace default rerank model will be used as a fallback. Configuring it explicitly is still recommended.',
+      rerankModelOptionalHint: 'No RAG knowledge base in current scope, so this is optional. If a RAG knowledge base is added later, the tenant default rerank model will be used as a fallback. Configuring it explicitly is still recommended.',
       maxIterations: 'Max Iterations',
       allowedTools: 'Allowed Tools',
       multiTurn: 'Multi-turn Conversation',
@@ -1437,11 +1437,11 @@ export default {
     mcpService: 'MCP Service',
     versionInfo: 'Version Info',
     taskQueue: 'Task Queues',
-    tenantInfo: 'Workspace Info',
-    workspaceSettings: 'Workspace Settings',
+    tenantInfo: 'Tenant Info',
+    workspaceSettings: 'Tenant Settings',
     navGroups: {
       account: 'Account',
-      workspace: 'Workspace',
+      workspace: 'Tenant',
       modelsRuntime: 'Models',
       dataExtensions: 'Data & Extensions',
       systemAdministration: 'System Administration',
@@ -1449,7 +1449,7 @@ export default {
     },
     roleDenied: {
       title: 'Insufficient permissions',
-      desc: 'Your role can\'t access this settings page. Ask an admin of this workspace to grant the required role.'
+      desc: 'Your role can\'t access this settings page. Ask an admin of this tenant to grant the required role.'
     },
     weknoraCloud: {
       title: 'WeKnora Cloud',
@@ -1853,7 +1853,7 @@ export default {
     confirmPassword: 'Confirm password',
     submit: 'Complete registration',
     submitting: 'Submitting…',
-    success: 'Registration successful — entering workspace…',
+    success: 'Registration successful — entering tenant…',
     failed: 'Registration failed; please try again later',
     usernameRequired: 'Display name is required',
     passwordTooShort: 'Password must be at least 6 characters',
@@ -1906,22 +1906,22 @@ export default {
     loginErrorRetry: 'Login error, please try again later',
     registerError: 'Registration error, please try again later',
     workspaceOnboarding: {
-      title: 'Choose your workspace',
-      create: 'Create workspace',
+      title: 'Choose your tenant',
+      create: 'Create tenant',
       invitations: 'View invitations',
-      loadingPolicy: 'Checking the available workspace options…',
-      policyLoadFailed: 'Workspace permissions could not be loaded. Check your connection and try again.',
+      loadingPolicy: 'Checking the available tenant options…',
+      policyLoadFailed: 'Tenant permissions could not be loaded. Check your connection and try again.',
       retry: 'Reload',
-      inviteOnlyTitle: 'Waiting for a workspace invitation',
-      inviteOnlyDescription: 'Personal workspace creation is disabled. View and accept an invitation from a workspace administrator.',
-      inviteOnlyNotice: 'This account can only join an existing workspace by invitation',
-      inviteOnlyHelp: 'No invitation yet? Send your registered email address to a workspace administrator and ask them to invite you.'
+      inviteOnlyTitle: 'Waiting for a tenant invitation',
+      inviteOnlyDescription: 'Personal tenant creation is disabled. View and accept an invitation from a tenant administrator.',
+      inviteOnlyNotice: 'This account can only join an existing tenant by invitation',
+      inviteOnlyHelp: 'No invitation yet? Send your registered email address to a tenant administrator and ask them to invite you.'
     }
   },
   authStore: {
     errors: {
       parseUserFailed: 'Failed to parse user information',
-      parseTenantFailed: 'Failed to parse workspace information',
+      parseTenantFailed: 'Failed to parse tenant information',
       parseKnowledgeBasesFailed: 'Failed to parse knowledge base list',
       parseCurrentKnowledgeBaseFailed: 'Failed to parse current knowledge base'
     }
@@ -2185,8 +2185,8 @@ export default {
     sections: {
       pinned: 'Pinned',
       mine: 'Created by me',
-      tenantOthers: 'Workspace · Other members',
-      tenantReadonly: 'Workspace · View only',
+      tenantOthers: 'Tenant · Other members',
+      tenantReadonly: 'Tenant · View only',
       sharedByMe: 'Shared by me',
       sharedEditable: 'Shared with me · Can edit',
       sharedReadonly: 'Shared with me · View only'
@@ -3166,16 +3166,16 @@ export default {
     attachmentStillProcessing: 'Attachment {name} is still being parsed'
   },
   tenant: {
-    title: 'Workspace Information',
-    currentTenant: 'Current Workspace',
-    switchTenant: 'Switch workspace',
+    title: 'Tenant Information',
+    currentTenant: 'Current Tenant',
+    switchTenant: 'Switch tenant',
     switcher: {
-      menuLabel: 'Switch workspace',
+      menuLabel: 'Switch tenant',
       currentBadge: 'Current',
-      homeTooltip: 'Your home workspace',
-      empty: 'You only belong to one workspace'
+      homeTooltip: 'Your home tenant',
+      empty: 'You only belong to one tenant'
     },
-    sectionDescription: 'View detailed configuration for the workspace',
+    sectionDescription: 'View detailed configuration for the tenant',
     statusActive: 'Active',
     statusInactive: 'Not activated',
     statusSuspended: 'Suspended',
@@ -3184,81 +3184,81 @@ export default {
     retry: 'Retry',
     unknown: 'Unknown',
     formatError: 'Format error',
-    searchPlaceholder: 'Search by name or enter workspace ID...',
-    noMatch: 'No matching workspaces found',
-    switchSuccessTitle: 'Workspace switched',
+    searchPlaceholder: 'Search by name or enter tenant ID...',
+    noMatch: 'No matching tenants found',
+    switchSuccessTitle: 'Tenant switched',
     switchSuccessContent: 'You are now in {name}',
-    loadTenantsFailed: 'Failed to load workspace list',
+    loadTenantsFailed: 'Failed to load tenant list',
     loading: 'Loading...',
     loadMore: 'Load more',
     create: {
-      action: 'Create new workspace',
-      dialogTitle: 'Create new workspace',
-      dialogSubtitle: 'A workspace has its own knowledge bases and members. You will become the owner of the new workspace.',
-      nameLabel: 'Workspace name',
+      action: 'Create new tenant',
+      dialogTitle: 'Create new tenant',
+      dialogSubtitle: 'A tenant has its own knowledge bases and members. You will become the owner of the new tenant.',
+      nameLabel: 'Tenant name',
       namePlaceholder: 'e.g. My new project',
-      nameRequired: 'Please enter a workspace name',
+      nameRequired: 'Please enter a tenant name',
       descriptionLabel: 'Description (optional)',
-      descriptionPlaceholder: 'Briefly describe what this workspace is for',
+      descriptionPlaceholder: 'Briefly describe what this tenant is for',
       submit: 'Create',
       cancel: 'Cancel',
-      success: 'Workspace created successfully',
-      failed: 'Failed to create workspace',
-      disabled: 'This system only allows joining workspaces by invitation. You cannot create one yourself.'
+      success: 'Tenant created successfully',
+      failed: 'Failed to create tenant',
+      disabled: 'This system only allows joining tenants by invitation. You cannot create one yourself.'
     },
     details: {
-      idLabel: 'Workspace ID',
-      idDescription: 'Unique identifier of your workspace',
-      nameLabel: 'Workspace Name',
-      nameDescription: 'Name of your workspace',
-      descriptionLabel: 'Workspace Description',
-      descriptionDescription: 'Detailed description of the workspace',
-      businessLabel: 'Workspace Business',
-      businessDescription: 'Business domain that the workspace belongs to',
-      statusLabel: 'Workspace Status',
-      statusDescription: 'Current operational status of the workspace',
-      createdAtLabel: 'Workspace Creation Time',
-      createdAtDescription: 'Time when the workspace was created',
+      idLabel: 'Tenant ID',
+      idDescription: 'Unique identifier of your tenant',
+      nameLabel: 'Tenant Name',
+      nameDescription: 'Name of your tenant',
+      descriptionLabel: 'Tenant Description',
+      descriptionDescription: 'Detailed description of the tenant',
+      businessLabel: 'Tenant Business',
+      businessDescription: 'Business domain that the tenant belongs to',
+      statusLabel: 'Tenant Status',
+      statusDescription: 'Current operational status of the tenant',
+      createdAtLabel: 'Tenant Creation Time',
+      createdAtDescription: 'Time when the tenant was created',
       editName: 'Edit name',
-      editNamePlaceholder: 'Enter the new workspace name',
+      editNamePlaceholder: 'Enter the new tenant name',
       editNameConfirm: 'Save',
       editNameCancel: 'Cancel',
-      editNameRequired: 'Workspace name cannot be empty',
-      editNameSuccess: 'Workspace name updated',
-      editNameFailed: 'Failed to update workspace name',
+      editNameRequired: 'Tenant name cannot be empty',
+      editNameSuccess: 'Tenant name updated',
+      editNameFailed: 'Failed to update tenant name',
       editDescription: 'Edit description',
-      editDescriptionPlaceholder: 'Enter the new workspace description',
-      editDescriptionSuccess: 'Workspace description updated',
-      editDescriptionFailed: 'Failed to update workspace description',
+      editDescriptionPlaceholder: 'Enter the new tenant description',
+      editDescriptionSuccess: 'Tenant description updated',
+      editDescriptionFailed: 'Failed to update tenant description',
       descriptionEmptyPlaceholder: 'Not set'
     },
     storage: {
       quotaLabel: 'Storage Quota',
-      quotaDescription: 'Total storage capacity allocated to the workspace',
+      quotaDescription: 'Total storage capacity allocated to the tenant',
       usedLabel: 'Used Storage',
       usedDescription: 'Storage space that has been used',
       usageLabel: 'Storage Usage',
       usageDescription: 'Percentage of storage capacity used'
     },
     leaveDangerZone: {
-      title: 'Leave this workspace',
-      desc: 'Ends your membership in this workspace. You will lose access to its knowledge bases and agents. You can be invited again later.',
-      button: 'Leave workspace'
+      title: 'Leave this tenant',
+      desc: 'Ends your membership in this tenant. You will lose access to its knowledge bases and agents. You can be invited again later.',
+      button: 'Leave tenant'
     },
     deleteDangerZone: {
-      title: 'Delete this workspace',
-      desc: 'Delete the whole workspace and its configuration. Members will no longer be able to access its knowledge bases, agents, or API key.',
-      button: 'Delete workspace',
-      confirmTitle: 'Delete this workspace?',
+      title: 'Delete this tenant',
+      desc: 'Delete the whole tenant and its configuration. Members will no longer be able to access its knowledge bases, agents, or API key.',
+      button: 'Delete tenant',
+      confirmTitle: 'Delete this tenant?',
       confirmBody: 'This will delete "{name}" and make its knowledge bases, agents, members, and API key unavailable. This action cannot be undone.',
-      confirmHint: 'Type the workspace name "{name}" to confirm deletion.',
-      confirm: 'Delete workspace',
-      nameMismatch: 'Workspace name does not match',
-      success: 'Workspace deleted',
-      failed: 'Failed to delete workspace'
+      confirmHint: 'Type the tenant name "{name}" to confirm deletion.',
+      confirm: 'Delete tenant',
+      nameMismatch: 'Tenant name does not match',
+      success: 'Tenant deleted',
+      failed: 'Failed to delete tenant'
     },
     messages: {
-      fetchFailed: 'Failed to fetch workspace information',
+      fetchFailed: 'Failed to fetch tenant information',
       networkError: 'Network error, please try again later'
     },
     api: {
@@ -3332,7 +3332,7 @@ export default {
     },
     globalSettings: {
       title: 'System Settings',
-      description: 'Platform-wide runtime configuration. Saves take effect immediately for every workspace. Visible and editable by system administrators only.',
+      description: 'Platform-wide runtime configuration. Saves take effect immediately for every tenant. Visible and editable by system administrators only.',
       loading: 'Loading...',
       empty: 'No configurable system settings available',
       saving: 'Saving',
@@ -3355,12 +3355,12 @@ export default {
         access: {
           tab: 'Accounts & access {count}',
           title: 'Accounts & access',
-          description: 'Manage system administrators, public registration, and workspace-creation rules.'
+          description: 'Manage system administrators, public registration, and tenant-creation rules.'
         },
         tenant: {
-          tab: 'Workspace defaults {count}',
-          title: 'Workspace defaults',
-          description: 'Set initial quotas and compatibility behavior for new workspaces without rewriting existing workspaces.'
+          tab: 'Tenant defaults {count}',
+          title: 'Tenant defaults',
+          description: 'Set initial quotas and compatibility behavior for new tenants without rewriting existing tenants.'
         },
         runtime: {
           tab: 'Runtime & concurrency {count}',
@@ -3455,7 +3455,7 @@ export default {
           knowledgeBaseLabel: 'Knowledge base ID',
           knowledgeLabel: 'Document ID',
           taskIDLabel: 'Business task ID',
-          tenantLabel: 'Workspace ID',
+          tenantLabel: 'Tenant ID',
           sourceLabel: 'Source ID',
           targetLabel: 'Target ID',
           sourceKBLabel: 'Source knowledge base',
@@ -3593,16 +3593,16 @@ export default {
       keyLabels: {
         auth: {
           registration_mode: 'Self-service registration mode',
-          default_tenant_mode: 'Default workspace provisioning'
+          default_tenant_mode: 'Default tenant provisioning'
         },
         ssrf: {
           whitelist: 'SSRF protection allowlist'
         },
         tenant: {
-          max_owned_per_user: 'Max workspaces owned per user',
-          self_service_creation_enabled: 'Allow self-service workspace creation',
-          default_storage_quota_gb: 'Default storage quota for new workspaces (GB)',
-          auto_create_api_key: 'Automatically create an API key for new workspaces'
+          max_owned_per_user: 'Max tenants owned per user',
+          self_service_creation_enabled: 'Allow self-service tenant creation',
+          default_storage_quota_gb: 'Default storage quota for new tenants (GB)',
+          auto_create_api_key: 'Automatically create an API key for new tenants'
         },
         asynq: {
           core_concurrency: 'Guaranteed core parse concurrency',
@@ -3619,16 +3619,16 @@ export default {
       keyDescriptions: {
         auth: {
           registration_mode: 'Self-service registration mode. self_serve = anyone can register an account; invite_only = public registration is disabled and only Owners/Admins can invite. Takes effect immediately after saving, but use self_serve with care (the public internet will send spam sign-ups).',
-          default_tenant_mode: 'Workspace provisioning after public registration. create_personal creates an Owner workspace; tenantless creates only the account until the user accepts an invitation or creates a workspace. Applies to new users only.'
+          default_tenant_mode: 'Tenant provisioning after public registration. create_personal creates an Owner tenant; tenantless creates only the account until the user accepts an invitation or creates a tenant. Applies to new users only.'
         },
         ssrf: {
           whitelist: 'SSRF protection allowlist. Accepts entries such as example.com / *.foo.com / 10.0.0.0/8 / 2001:db8::1. Takes effect immediately after saving. The SSRF_WHITELIST_EXTRA environment variable is still maintained by the deployer and is not overridden here.'
         },
         tenant: {
-          max_owned_per_user: 'Maximum number of workspaces a non-superuser may own via self-service creation. Read on every workspace creation and takes effect immediately after saving. 0 uses the built-in default of 10; a negative value disables the cap entirely (not recommended on public deployments).',
-          self_service_creation_enabled: 'Whether non-superusers may create workspaces themselves. When disabled, regular users can only join existing workspaces by invitation; cross-workspace superusers remain exempt. Takes effect immediately.',
-          default_storage_quota_gb: 'Default storage quota (GB) assigned when a new workspace is created, covering vectors, originals, text, indexes, and related data. Read only at creation time — changes apply to newly created workspaces only and do not retroactively update existing workspaces. 0 or a negative value uses the built-in default of 10 GB.',
-          auto_create_api_key: 'Automatically creates a full_access API key for a new workspace and returns its plaintext token in the create response. Use only for integrations that depend on the legacy behavior; it is disabled by default and explicit API-key creation is recommended.'
+          max_owned_per_user: 'Maximum number of tenants a non-superuser may own via self-service creation. Read on every tenant creation and takes effect immediately after saving. 0 uses the built-in default of 10; a negative value disables the cap entirely (not recommended on public deployments).',
+          self_service_creation_enabled: 'Whether non-superusers may create tenants themselves. When disabled, regular users can only join existing tenants by invitation; cross-tenant superusers remain exempt. Takes effect immediately.',
+          default_storage_quota_gb: 'Default storage quota (GB) assigned when a new tenant is created, covering vectors, originals, text, indexes, and related data. Read only at creation time — changes apply to newly created tenants only and do not retroactively update existing tenants. 0 or a negative value uses the built-in default of 10 GB.',
+          auto_create_api_key: 'Automatically creates a full_access API key for a new tenant and returns its plaintext token in the create response. Use only for integrations that depend on the legacy behavior; it is disabled by default and explicit API-key creation is recommended.'
         },
         asynq: {
           core_concurrency: 'Guaranteed per-process concurrency for document and manual parsing. Core may also borrow the shared elastic pool. Minimum 1; requires a service restart.',
@@ -3649,8 +3649,8 @@ export default {
             invite_only: 'Invite only (public registration disabled)'
           },
           default_tenant_mode: {
-            create_personal: 'Create personal workspace',
-            tenantless: 'Do not create a workspace'
+            create_personal: 'Create personal tenant',
+            tenantless: 'Do not create a tenant'
           }
         }
       },
@@ -3699,7 +3699,7 @@ export default {
         confirm: {
           promote: {
             header: 'Promote to system administrator',
-            body: 'Promote {email} to system administrator? This user will gain platform-level privileges: access to every workspace, system settings, and the admin roster itself.',
+            body: 'Promote {email} to system administrator? This user will gain platform-level privileges: access to every tenant, system settings, and the admin roster itself.',
             confirmBtn: 'Promote'
           },
           revoke: {
@@ -3736,12 +3736,12 @@ export default {
         }
       },
       bulkApply: {
-        label: 'Apply to all existing workspaces',
-        tooltip: 'Saving the value only affects new workspaces by default; click here to also overwrite every existing workspace.',
+        label: 'Apply to all existing tenants',
+        tooltip: 'Saving the value only affects new tenants by default; click here to also overwrite every existing tenant.',
         confirmBtn: 'Confirm apply',
-        confirmBody: 'Overwrite the storage quota of every existing workspace to {value} GB. Workspaces whose quota was tuned manually by operations will also be overwritten. Continue?',
-        success: 'Updated storage quota for {count} workspaces to {gb} GB',
-        failed: 'Failed to apply to all workspaces'
+        confirmBody: 'Overwrite the storage quota of every existing tenant to {value} GB. Tenants whose quota was tuned manually by operations will also be overwritten. Continue?',
+        success: 'Updated storage quota for {count} tenants to {gb} GB',
+        failed: 'Failed to apply to all tenants'
       },
       audit: {
         tabLabel: 'Audit log',
@@ -3786,7 +3786,7 @@ export default {
         },
         target: {
           bulkQuota: 'Bulk sync: default storage quota',
-          bulkQuotaDiff: 'Applied to {count} workspaces ({gb} GB)',
+          bulkQuotaDiff: 'Applied to {count} tenants ({gb} GB)',
           promoteIdempotent: 'Target was already a system admin (idempotent)',
           revokeNoop: 'Target was not a system admin (idempotent)',
           requiredRole: 'Required role: {role}',
@@ -3840,7 +3840,7 @@ export default {
       loginFailed: 'Login failed',
       registerFailed: 'Registration failed',
       getUserFailed: 'Failed to get user info',
-      getTenantFailed: 'Failed to get workspace info',
+      getTenantFailed: 'Failed to get tenant info',
       updatePreferencesFailed: 'Failed to update preferences',
       refreshTokenFailed: 'Token refresh failed',
       logoutFailed: 'Logout failed',
@@ -3853,13 +3853,13 @@ export default {
       deleteFailed: 'Failed to delete model'
     },
     tenant: {
-      listFailed: 'Failed to list workspaces',
-      searchFailed: 'Failed to search workspaces',
+      listFailed: 'Failed to list tenants',
+      searchFailed: 'Failed to search tenants',
       getApiPrincipalConfigFailed: 'Failed to get API principal config',
       updateApiPrincipalConfigFailed: 'Failed to update API principal config',
       createApiPrincipalTestTokenFailed: 'Failed to create API test token',
-      updateFailed: 'Failed to update workspace information',
-      deleteFailed: 'Failed to delete workspace'
+      updateFailed: 'Failed to update tenant information',
+      deleteFailed: 'Failed to delete tenant'
     },
     initialization: {
       checkFailed: 'Check failed',
@@ -4173,7 +4173,7 @@ export default {
     multimodalParsing: 'Multimodal Document Parsing',
     hybridSearchEngine: 'Hybrid Search + Knowledge Graph',
     ragQandA: 'ReAct Agent Q&A',
-    independentTenant: 'Independent Workspace',
+    independentTenant: 'Independent Tenant',
     fullApiAccess: 'Full API Access',
     knowledgeBaseManagement: 'Knowledge Base Management',
     carousel: {
@@ -4376,8 +4376,8 @@ export default {
     copySuffix: ' Copy',
     builtinModels: {
       title: 'Built-in Models',
-      description: 'Built-in models are visible to all workspaces. Sensitive information is hidden, and they cannot be edited or deleted.',
-      descriptionAdmin: 'Built-in models are visible to all workspaces. System administrators can edit configuration and credentials; deletion remains deployment-managed.',
+      description: 'Built-in models are visible to all tenants. Sensitive information is hidden, and they cannot be edited or deleted.',
+      descriptionAdmin: 'Built-in models are visible to all tenants. System administrators can edit configuration and credentials; deletion remains deployment-managed.',
       viewGuide: 'View Built-in Models Guide'
     },
     builtinTag: 'Built-in',
@@ -4553,7 +4553,7 @@ export default {
   },
   organization: {
     title: 'Shared Spaces',
-    subtitle: 'Create or join shared spaces so multiple workspaces can collaborate and share knowledge bases and agents',
+    subtitle: 'Create or join shared spaces so multiple tenants can collaborate and share knowledge bases and agents',
     createOrg: 'Create Shared Space',
     joinOrg: 'Join Shared Space',
     name: 'Shared Space Name',
@@ -4574,10 +4574,10 @@ export default {
     inviteCodeRefreshed: 'Invite code refreshed',
     inviteCodeRefreshFailed: 'Failed to refresh invite code',
     rbac: {
-      needTenantAdminTip: 'This action requires the admin role (or higher) in the current workspace. Please contact the workspace owner.',
-      cannotCreate: 'Your workspace role is insufficient to create a shared space',
-      cannotJoin: 'Your workspace role is insufficient to join or request to join a shared space',
-      cannotManage: 'Your workspace role is insufficient to manage this shared space'
+      needTenantAdminTip: 'This action requires the admin role (or higher) in the current tenant. Please contact the tenant owner.',
+      cannotCreate: 'Your tenant role is insufficient to create a shared space',
+      cannotJoin: 'Your tenant role is insufficient to join or request to join a shared space',
+      cannotManage: 'Your tenant role is insufficient to manage this shared space'
     },
     join: {
       title: 'Join Shared Space',
@@ -4710,7 +4710,7 @@ export default {
     },
     settings: {
       editTitle: 'Shared Space Settings',
-      membersDesc: 'View and manage shared space members and their roles. Each member represents a workspace — all users in the same workspace share access to this shared space.',
+      membersDesc: 'View and manage shared space members and their roles. Each member represents a tenant — all users in the same tenant share access to this shared space.',
       permissionsIconHint: 'View role permissions',
       sharedDesc: 'View all knowledge bases shared to this shared space',
       noSharedKB: 'No shared knowledge bases yet',
@@ -4819,10 +4819,10 @@ export default {
     addMember: {
       button: 'Add Member',
       dialogTitle: 'Add Member',
-      tipTenant: 'Membership is at the workspace level: once a workspace joins, all of its users share access to this space. Results below are deduplicated by workspace.',
-      searchTenant: 'Select Workspace',
-      searchTenantPlaceholder: 'Search by workspace name...',
-      searchTenantHint: 'Type at least 2 characters; results are deduplicated by workspace and exclude workspaces already in this space',
+      tipTenant: 'Membership is at the tenant level: once a tenant joins, all of its users share access to this space. Results below are deduplicated by tenant.',
+      searchTenant: 'Select Tenant',
+      searchTenantPlaceholder: 'Search by tenant name...',
+      searchTenantHint: 'Type at least 2 characters; results are deduplicated by tenant and exclude tenants already in this space',
       selectRole: 'Assign Role',
       confirmBtn: 'Add',
       success: 'Member added successfully',
@@ -4938,7 +4938,7 @@ export default {
       description: 'Choose which vector store this knowledge base writes to. The binding is permanent — to move an existing KB to a different store, create a new KB and re-index.',
       loading: 'Loading vector stores...',
       engineLabel: 'Vector store',
-      engineDesc: 'Pick a store from the global Vector Stores configuration, or leave as System default to use the workspace-wide RETRIEVE_DRIVER engine.',
+      engineDesc: 'Pick a store from the global Vector Stores configuration, or leave as System default to use the tenant-wide RETRIEVE_DRIVER engine.',
       boundLabel: 'Bound vector store',
       systemDefault: 'System default',
       immutableHint: 'Cannot be changed after creation. To migrate later, create a new KB bound to the desired store and re-index.',
@@ -5812,16 +5812,16 @@ export default {
       apiKeyAccessMode: 'Access mode',
       apiKeyScopedAccess: 'Scoped access',
       apiKeyAccessType: 'Access type',
-      apiKeyAccessTypeHint: '"Knowledge base" operates within the KB scope at the permission level below; "Workspace full" additionally unlocks every workspace-level API such as models and data sources.',
+      apiKeyAccessTypeHint: '"Knowledge base" operates within the KB scope at the permission level below; "Tenant full" additionally unlocks every tenant-level API such as models and data sources.',
       apiKeyCapabilities: 'Capabilities',
       apiKeyCapabilityGroupKnowledge: 'Knowledge-base data',
       apiKeyCapabilityGroupAutomation: 'Agents and integrations',
       apiKeyCapabilityGroupCollaboration: 'Members and spaces',
-      apiKeyCapabilityGroupTenant: 'Workspace configuration',
+      apiKeyCapabilityGroupTenant: 'Tenant configuration',
       apiKeyCapabilitySelectGroup: 'Select all',
       apiKeyCapabilityClearGroup: 'Clear',
-      capabilityTenantFull: 'Workspace full access',
-      capabilityTenantFullHint: 'Allow every workspace-level API, including models, vector stores, data sources and channels. Knowledge-base scope does not apply.',
+      capabilityTenantFull: 'Tenant full access',
+      capabilityTenantFullHint: 'Allow every tenant-level API, including models, vector stores, data sources and channels. Knowledge-base scope does not apply.',
       capabilityRetrieve: 'Retrieve knowledge bases',
       capabilityRetrieveHint: 'Read, query, and search data inside the selected knowledge-base scope. Does not create sessions or modify content.',
       capabilityChat: 'Chat',
@@ -5835,7 +5835,7 @@ export default {
       capabilityManageAgents: 'Manage agents',
       capabilityManageAgentsHint: 'Let this key create, update, delete and copy agents. Agent config can carry sensitive model/MCP bindings, so this is off by default — enable only when needed.',
       capabilityMessageHistory: 'Message history',
-      capabilityMessageHistoryHint: 'Let this key search workspace chat history and read chat-history stats. It does not grant workspace configuration access.',
+      capabilityMessageHistoryHint: 'Let this key search tenant chat history and read chat-history stats. It does not grant tenant configuration access.',
       capabilityManageModels: 'Manage models',
       capabilityManageModelsHint: 'Manage model definitions, credentials, connectivity checks, and WeKnoraCloud credentials.',
       capabilityManageMcpServices: 'Manage MCP services',
@@ -5847,17 +5847,17 @@ export default {
       capabilityManageVectorStores: 'Manage retrieval infrastructure',
       capabilityManageVectorStoresHint: 'Manage vector-store configuration plus parser, document reader, and storage engine connectivity checks.',
       capabilityManageStorageBackends: 'Manage storage backends',
-      capabilityManageStorageBackendsHint: 'Manage object/file storage backend instances (e.g. S3-compatible or local file storage): their CRUD lifecycle, connectivity tests, and the workspace default selection.',
+      capabilityManageStorageBackendsHint: 'Manage object/file storage backend instances (e.g. S3-compatible or local file storage): their CRUD lifecycle, connectivity tests, and the tenant default selection.',
       capabilityManageWebSearch: 'Manage web search',
       capabilityManageWebSearchHint: 'Manage web-search provider configurations, credentials, and connection tests.',
       capabilityRunEvaluations: 'Run evaluations',
       capabilityRunEvaluationsHint: 'Run evaluation jobs and read evaluation results.',
       capabilityManageMembers: 'Manage members',
-      capabilityManageMembersHint: 'List and manage workspace members, roles, invitations, and invite links. Does not include API key management, workspace deletion, or ownership transfer.',
+      capabilityManageMembersHint: 'List and manage tenant members, roles, invitations, and invite links. Does not include API key management, tenant deletion, or ownership transfer.',
       capabilityManageSpaces: 'Manage spaces',
       capabilityManageSpacesHint: 'Manage organization spaces, join flows, space membership, invitations, and shared-space visibility. Does not grant KB or agent share management.',
-      capabilityManageTenantSettings: 'Manage workspace settings',
-      capabilityManageTenantSettingsHint: 'Read and update workspace-level integration settings such as API end-user identity mode, request header configuration, and workspace KV settings. Does not include API key management, member management, workspace deletion, or ownership transfer.',
+      capabilityManageTenantSettings: 'Manage tenant settings',
+      capabilityManageTenantSettingsHint: 'Read and update tenant-level integration settings such as API end-user identity mode, request header configuration, and tenant KV settings. Does not include API key management, member management, tenant deletion, or ownership transfer.',
       apiKeyKnowledgeScope: 'Knowledge bases',
       apiKeyKnowledgeScopePlaceholder: 'Leave empty to allow all knowledge bases',
       allKnowledgeBases: 'All knowledge bases',
@@ -5873,7 +5873,7 @@ export default {
       principalMode: 'User identity mode',
       principalModeDesc: 'Choose how API requests identify the end user. This identity scopes both conversation sessions and MCP tool authorization per user.',
       principalScope: 'End-user identity isolates sessions and MCP OAuth. Operation permissions and knowledge-base scope are controlled by API Keys above.',
-      modeTenant: 'Workspace only',
+      modeTenant: 'Tenant only',
       modeDirect: 'Direct user ID',
       modeSigned: 'Signed token',
       directWarning: 'Direct user ID trusts the caller-supplied header. Use only for trusted server-to-server calls.',
@@ -5882,7 +5882,7 @@ export default {
       signedFlowDetail: 'Keep the HMAC secret only on @:{\'brand.name\'} and your trusted backend—never put it in requests or ship it to browsers. The request header carries the JWT string signed with that secret (it changes on each issuance or after expiry), not the secret itself. JWT must include sub (external user ID), tenant_id, aud=weknora, and exp (max 24h lifetime).',
       directHeader: 'User ID header',
       requireDirectHeader: 'Require user ID header',
-      requireDirectHeaderDesc: 'When enabled, API Key requests without the user ID header are rejected; when disabled, all requests are treated as the whole workspace with no per-user distinction.',
+      requireDirectHeaderDesc: 'When enabled, API Key requests without the user ID header are rejected; when disabled, all requests are treated as the whole tenant with no per-user distinction.',
       tokenHeader: 'Token header',
       tokenHeaderDesc: 'Clients send the backend-signed JWT in this fixed header.',
       hmacSecret: 'HMAC secret',
@@ -5914,7 +5914,7 @@ export default {
       playgroundAgentsLoadFailed: 'Failed to load agents',
       playgroundExternalUser: 'External user ID',
       playgroundExternalUserPlaceholder: 'user_123',
-      playgroundTenantModeHint: 'Workspace-only mode does not send an external user identity; all API sessions use the same workspace-level principal.',
+      playgroundTenantModeHint: 'Tenant-only mode does not send an external user identity; all API sessions use the same tenant-level principal.',
       playgroundDirectModeHint: 'This user ID is sent with the {headerName} header.',
       playgroundSignedModeHint: 'Signed-token mode uses the JWT sub as the external user. The playground signs a short-lived test JWT for this user ID.',
       playgroundQuestion: 'Test question',
@@ -5922,7 +5922,7 @@ export default {
       playgroundRequestPreview: 'Request preview (secrets masked)',
       playgroundRun: 'Run test',
       playgroundStop: 'Stop',
-      playgroundNeedApiKey: 'This workspace has no API key.',
+      playgroundNeedApiKey: 'This tenant has no API key.',
       playgroundNeedAgent: 'Select a test agent.',
       playgroundNeedQuestion: 'Enter a test question.',
       playgroundNeedExternalUser: 'Enter an external user ID.',
@@ -6105,9 +6105,9 @@ export default {
   },
   tenantMember: {
     title: 'Members',
-    sectionDescription: 'Invite teammates to the workspace and manage their roles. Only Owner can add or remove members.',
+    sectionDescription: 'Invite teammates to the tenant and manage their roles. Only Owner can add or remove members.',
     learnRbacGuide: 'Learn about RBAC',
-    listTitle: 'Workspace members',
+    listTitle: 'Tenant members',
     loading: 'Loading members…',
     retry: 'Retry',
     empty: 'No members yet. Invite a teammate to get started.',
@@ -6115,13 +6115,13 @@ export default {
     searchPlaceholder: 'Search by name or email',
     permissions: {
       title: 'Role permissions',
-      desc: 'What each role can do inside this workspace. Server-enforced; UI controls reflect the rules but are not the source of truth.',
+      desc: 'What each role can do inside this tenant. Server-enforced; UI controls reflect the rules but are not the source of truth.',
       iconHint: 'Hover to view role permission details',
       manageMembers: 'Manage members',
-      manageTenantConfig: 'Edit workspace settings',
+      manageTenantConfig: 'Edit tenant settings',
       manageInfra: 'Configure models / vector stores / IM channels',
       createOwnKB: 'Create and edit own KBs and agents',
-      readAll: 'Read workspace content'
+      readAll: 'Read tenant content'
     },
     columns: {
       member: 'Name & email',
@@ -6144,15 +6144,15 @@ export default {
     },
     remove: {
       button: 'Remove',
-      confirmBody: 'Are you sure you want to remove {name} from this workspace? They will lose access immediately.',
+      confirmBody: 'Are you sure you want to remove {name} from this tenant? They will lose access immediately.',
       confirm: 'Remove',
       success: 'Member removed'
     },
     leave: {
-      confirmTitle: 'Leave this workspace?',
-      confirmBody: 'You will lose access to all knowledge bases and agents in this workspace. You can be re-invited later.',
+      confirmTitle: 'Leave this tenant?',
+      confirmBody: 'You will lose access to all knowledge bases and agents in this tenant. You can be re-invited later.',
       confirm: 'Leave',
-      success: 'You have left the workspace'
+      success: 'You have left the tenant'
     },
     roleChange: {
       success: 'Role updated'
@@ -6169,7 +6169,7 @@ export default {
     },
     audit: {
       tabLabel: 'Audit log',
-      description: 'Records every membership change and access denial in this workspace. Newest first. Repeated denials within a minute are deduplicated.',
+      description: 'Records every membership change and access denial in this tenant. Newest first. Repeated denials within a minute are deduplicated.',
       refresh: 'Refresh',
       end: 'End of log.',
       empty: 'No audit events yet.',
@@ -6217,7 +6217,7 @@ export default {
     inviteSubmit: 'Send invitation',
     inviteSuccess: 'Invitation sent. Waiting for the invitee to accept.',
     confirmInviteTitle: 'Send invitation?',
-    confirmInviteBody: 'Send an invitation to {email} (role: {role}). They will join the workspace only after accepting.',
+    confirmInviteBody: 'Send an invitation to {email} (role: {role}). They will join the tenant only after accepting.',
     confirmSend: 'Send',
     copyLink: 'Copy invite link',
     copied: 'Copied to clipboard',
@@ -6228,7 +6228,7 @@ export default {
       cellAccepted: '{count} joined',
       cellEmpty: 'No one has joined yet',
       dialogTitle: 'Generate share invitation link',
-      description: 'Generate a multi-use registration link you can drop in a group chat. Anyone who opens it registers with their own email and joins this workspace. Expires in {days} days, or revoke it any time from the list.',
+      description: 'Generate a multi-use registration link you can drop in a group chat. Anyone who opens it registers with their own email and joins this tenant. Expires in {days} days, or revoke it any time from the list.',
       generate: 'Generate link',
       resultTitle: 'Invitation link ready',
       resultBody: 'Copy the link below and share it via any private channel. It\'s also saved in the list — you can re-copy or revoke it later.',
@@ -6258,20 +6258,20 @@ export default {
     },
     myInbox: {
       title: 'My invitations',
-      description: 'Invitations from other workspaces. Accept to join with the assigned role.',
+      description: 'Invitations from other tenants. Accept to join with the assigned role.',
       empty: 'No pending invitations.',
       acceptButton: 'Accept',
       declineButton: 'Decline',
       acceptSuccess: 'Joined "{tenant}".',
       declineSuccess: 'Invitation declined.',
       from: 'From',
-      tenantLabel: 'Workspace',
+      tenantLabel: 'Tenant',
       expiresIn: 'Expires: {date}',
       messageLabel: 'Message'
     },
     errors: {
       pendingExists: 'A pending invitation for this user already exists.',
-      alreadyMember: 'This user is already an active member of the workspace.',
+      alreadyMember: 'This user is already an active member of the tenant.',
       notPending: 'The invitation is no longer pending.',
       forbidden: 'Only the invitee can accept or decline this invitation.',
       notFound: 'Invitation not found or already withdrawn.',
@@ -6280,10 +6280,10 @@ export default {
   },
   platformApiKeys: {
     title: 'Platform API Keys',
-    description: 'Create platform credentials for cross-workspace automation. Use X-Tenant-ID for workspace APIs.',
-    securityNotice: 'Platform API keys can target any workspace. Grant only required capabilities; plaintext is shown once.',
+    description: 'Create platform credentials for cross-tenant automation. Use X-Tenant-ID for tenant APIs.',
+    securityNotice: 'Platform API keys can target any tenant. Grant only required capabilities; plaintext is shown once.',
     create: 'Create platform API key',
-    createDescription: 'Platform keys are not bound to a workspace; capabilities still limit every operation.',
+    createDescription: 'Platform keys are not bound to a tenant; capabilities still limit every operation.',
     loading: 'Loading…',
     empty: 'No platform API keys',
     name: 'Name',
@@ -6292,15 +6292,15 @@ export default {
     capability: 'Capabilities',
     capabilityMore: '+{count}',
     viewAllCapabilities: 'View all capabilities',
-    capabilityHint: 'Workspace capabilities apply to the X-Tenant-ID target; system capabilities apply to control-plane APIs.',
+    capabilityHint: 'Tenant capabilities apply to the X-Tenant-ID target; system capabilities apply to control-plane APIs.',
     lastUsed: 'Last used',
     createdAt: 'Created',
     actions: 'Actions',
     never: 'Never',
     systemCapabilityGroup: 'Platform control plane',
     capabilities: {
-      tenantsRead: 'Read workspaces',
-      tenantsManage: 'Manage workspaces',
+      tenantsRead: 'Read tenants',
+      tenantsManage: 'Manage tenants',
       settingsRead: 'Read system settings',
       settingsManage: 'Manage system settings',
       runtimeRead: 'Read runtime',
@@ -6308,8 +6308,8 @@ export default {
       auditRead: 'Read system audit'
     },
     capabilityHints: {
-      tenantsRead: 'List, search, and inspect every workspace.',
-      tenantsManage: 'Create, update, delete workspaces and apply global workspace settings.',
+      tenantsRead: 'List, search, and inspect every tenant.',
+      tenantsManage: 'Create, update, delete tenants and apply global tenant settings.',
       settingsRead: 'Read platform runtime settings.',
       settingsManage: 'Update and reset platform runtime settings.',
       runtimeRead: 'Inspect task queues and task details.',

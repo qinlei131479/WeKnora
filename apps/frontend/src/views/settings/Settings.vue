@@ -153,7 +153,7 @@
                     <UserProfile />
                   </div>
 
-                  <!-- 空间信息 -->
+                  <!-- 租户信息 -->
                   <div v-if="currentSection === 'tenant'" class="section">
                     <TenantInfo />
                   </div>
@@ -349,9 +349,9 @@ const navItems = computed(() => {
 const navGroups = computed<NavGroup[]>(() => {
   const itemMap = new Map(navItems.value.map((item) => [item.key, item]))
   const pickItems = (keys: string[]) => keys.map((key) => itemMap.get(key)).filter(Boolean) as NavItem[]
-  // 分组：账户 → 空间 → 模型 → 发布集成 → 数据与扩展 → 系统管理 → 平台
+  // 分组：账户 → 租户 → 模型 → 发布集成 → 数据与扩展 → 系统管理 → 平台
   // 关键调整：把用户信息收进「账户」；
-  // 把空间内功能开关(chathistory)从「平台」挪到「空间」；
+  // 把租户内功能开关(chathistory)从「平台」挪到「租户」；
   // 把检索引擎和外部集成合并为「数据与扩展」，避免两个 2~3 项的窄分组。
   return [
     {
