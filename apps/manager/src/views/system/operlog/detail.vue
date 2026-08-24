@@ -235,8 +235,8 @@ function copyText(str?: string): void {
 
       &__copy {
         position: absolute;
-        top: 10px;
-        right: 10px;
+        top: 5px;
+        right: 5px;
         z-index: 1;
       }
     }

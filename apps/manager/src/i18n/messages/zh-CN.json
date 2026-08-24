@@ -684,6 +684,19 @@
   "page": {
     "data": {
       "storage": {
+        "detail.config": "配置",
+        "detail.createdAt": "创建时间",
+        "detail.id": "ID",
+        "detail.isDefault": "是否默认",
+        "detail.name": "名称",
+        "detail.provider": "提供商",
+        "detail.section.basic": "基本信息",
+        "detail.source": "来源",
+        "detail.status": "状态",
+        "detail.tenantId": "工作空间（租户）ID",
+        "detail.tenantName": "工作空间（租户）",
+        "detail.title": "存储引擎详情",
+        "detail.updatedAt": "更新时间",
         "table.createdAt": "创建时间",
         "table.isDefault": "是否默认",
         "table.isDefault_true": "默认",
@@ -693,6 +706,25 @@
         "table.status": "状态",
         "table.status_active": "活动",
         "table.status_disabled": "禁用",
+        "table.tenantName": "所属工作空间（租户）",
+        "table.updatedAt": "更新时间"
+      },
+      "vectorStores": {
+        "detail.connectionConfig": "连接配置",
+        "detail.createdAt": "创建时间",
+        "detail.engineType": "引擎类型",
+        "detail.id": "ID",
+        "detail.indexConfig": "索引配置",
+        "detail.name": "名称",
+        "detail.section.basic": "基本信息",
+        "detail.tenantId": "工作空间（租户）ID",
+        "detail.tenantName": "工作空间（租户）",
+        "detail.title": "向量库引擎详情",
+        "detail.updatedAt": "更新时间",
+        "search.tenantPlaceholder": "输入租户名称查询",
+        "table.createdAt": "创建时间",
+        "table.engineType": "引擎类型",
+        "table.name": "名称",
         "table.tenantName": "所属工作空间（租户）",
         "table.updatedAt": "更新时间"
       }
@@ -745,7 +777,11 @@
         "removeSuccess": "删除成功",
         "updateSuccess": "修改成功"
       },
+      "copy": "复制",
+      "copyFailed": "复制失败",
+      "copySuccess": "复制成功",
       "delete": "删除",
+      "detail": "详情",
       "disable": "停用",
       "edit": "编辑",
       "enable": "启用",

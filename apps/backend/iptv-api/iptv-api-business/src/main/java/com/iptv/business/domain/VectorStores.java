@@ -76,7 +76,7 @@ public class VectorStores implements java.io.Serializable {
 
 
     @Schema(description = "所属工作空间（租户）ID")
-    private Long tenantId;
+    private Integer tenantId;
 
     /**
      * 创建时间

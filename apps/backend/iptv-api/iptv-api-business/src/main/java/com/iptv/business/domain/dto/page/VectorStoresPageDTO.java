@@ -38,7 +38,7 @@ public class VectorStoresPageDTO extends PageDTO {
     private String indexConfig;
 
     @Schema(description = "所属工作空间（租户）ID")
-    private Long tenantId;
+    private Integer tenantId;
 
     @Schema(description = "创建时间")
     private Date createdAt;

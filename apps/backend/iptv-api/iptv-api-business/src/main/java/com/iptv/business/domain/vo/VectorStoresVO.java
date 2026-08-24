@@ -1,5 +1,6 @@
 package com.iptv.business.domain.vo;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -20,7 +21,7 @@ import java.util.Date;
 @EqualsAndHashCode(callSuper = false)
 public class VectorStoresVO implements Serializable {
     @Serial
-    private static final long serialVersionUID = 847920360447117883L;
+    private static final long serialVersionUID = 7555582293774608251L;
 
     @Schema(description = "主键 ID")
     private String id;
@@ -38,7 +39,7 @@ public class VectorStoresVO implements Serializable {
     private String indexConfig;
 
     @Schema(description = "所属工作空间（租户）ID")
-    private Long tenantId;
+    private Integer tenantId;
 
     @Schema(description = "所属工作空间（租户）名称")
     private String tenantName;

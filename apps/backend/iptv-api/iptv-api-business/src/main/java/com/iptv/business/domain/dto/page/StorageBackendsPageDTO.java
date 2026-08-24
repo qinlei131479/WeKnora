@@ -20,13 +20,13 @@ import java.util.Date;
 @EqualsAndHashCode(callSuper = false)
 public class StorageBackendsPageDTO extends PageDTO {
     @Serial
-    private static final long serialVersionUID = 6195049306179713L;
+    private static final long serialVersionUID = -3785203040686094954L;
 
     @Schema(description = "主键 ID")
     private String id;
 
     @Schema(description = "所属工作空间（租户）ID")
-    private Long tenantId;
+    private Integer tenantId;
 
     @Schema(description = "存储后端实例名称")
     private String name;

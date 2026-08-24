@@ -3,6 +3,7 @@ import { API } from '@/api';
 import { PageDomain, StorageBackendsPageDTO, StorageBackendsVO } from '@/types';
 import { TenantsPageDTO, TenantsVO } from '@/types/api/data/tenants';
 import { Search } from 'lucide-vue-next';
+import DetailDialog from './components/DetailDialog.vue';
 
 const state = reactive({
   keyword: '',
@@ -79,6 +80,14 @@ const getBackends = () => {
     });
 };
 
+const detailOpen = ref(false);
+const detailRow = ref<StorageBackendsVO>({});
+
+const showDetail = (row: StorageBackendsVO) => {
+  detailRow.value = { ...row };
+  detailOpen.value = true;
+};
+
 onMounted(() => {
   getBackends();
 });
@@ -91,8 +100,8 @@ onMounted(() => {
       <template #header>
         <div class="search-bar" @keydown.capture="handleAutocompleteKeydown">
           <el-autocomplete
-            class="search-bar__keyword"
             v-model="state.keyword"
+            class="search-bar__input"
             value-key="name"
             placeholder="输入租户名称查询"
             clearable
@@ -107,7 +116,7 @@ onMounted(() => {
         </div>
       </template>
 
-      <el-table :data="state.backendsVOs" height="100%" style="width: 100%">
+      <el-table :data="state.backendsVOs" show-overflow-tooltip height="100%" style="width: 100%">
         <template #empty>
           <kjsc-empty />
         </template>
@@ -163,12 +172,24 @@ onMounted(() => {
           align="center"
           :min-width="$dim('page.data.storage.table.updatedAt', 180)"
         />
+        <el-table-column
+          :label="$t('page.normal.operation', '操作')"
+          align="left"
+          fixed="right"
+          :min-width="$dim('page.data.storage.table.operation', 100)"
+        >
+          <template #default="{ row }">
+            <el-button link type="primary" @click.stop="showDetail(row)">{{ $t('page.normal.detail', '详情') }}</el-button>
+          </template>
+        </el-table-column>
       </el-table>
 
       <template #footer>
         <pagination v-model:page="state.page.pageNum" v-model:limit="state.page.pageSize" :total="state.total" @pagination="getBackends" />
       </template>
     </page-content>
+
+    <DetailDialog v-model:visible="detailOpen" :row="detailRow" />
   </section>
 </template>
 
