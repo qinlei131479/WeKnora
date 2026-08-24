@@ -46,8 +46,7 @@ const usePermissionStore = defineStore('permission', {
             router.addRoute(route);
           });
           this.setRoutes(rewriteRoutes);
-          // this.setSidebarRouters(constantRoutes.concat(sidebarRoutes));
-          this.setSidebarRouters(sidebarRoutes.concat(constantRoutes));
+          this.setSidebarRouters(constantRoutes.concat(sidebarRoutes));
           this.setDefaultRoutes(sidebarRoutes);
           this.setTopbarRoutes(defaultRoutes);
           resolve(rewriteRoutes);
