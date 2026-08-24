@@ -1,7 +1,7 @@
 // import { computed } from 'vue'
 import { TenantMemberRole, ValueLabelOption } from '@/types'
-// import { useI18n } from 'vue-i18n'
-import { useI18n } from '@/composables/i18nMock'
+import { useI18n } from 'vue-i18n'
+// import { useI18n } from '@/composables/i18nMock'
 
 // import { useAuthStore } from '@/stores/auth'
 

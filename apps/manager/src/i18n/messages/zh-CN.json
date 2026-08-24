@@ -23,6 +23,24 @@
         "table.tenantName": "所属工作空间（租户）",
         "table.updatedAt": "更新时间"
       }
+    },
+    "models": {},
+    "ollama": {},
+    "mcp": {},
+    "tenantSpace": {},
+    "tenantMember": {},
+    "knowledgeBase": {
+      "add": "添加知识库"
+    },
+    "knowledgeFile": {}
+  },
+
+  "tenantMember": {
+    "role": {
+      "viewer": "查看",
+      "contributor": "编辑",
+      "admin": "管理员",
+      "owner": "所有者"
     }
   },
 

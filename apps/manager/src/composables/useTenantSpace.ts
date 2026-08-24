@@ -1,5 +1,5 @@
-// import { useI18n } from 'vue-i18n'
-import { useI18n } from '@/composables/i18nMock'
+import { useI18n } from 'vue-i18n'
+// import { useI18n } from '@/composables/i18nMock'
 export function getStatusTheme(status: string | undefined): string {
   switch (status) {
     case 'active':
