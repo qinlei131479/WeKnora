@@ -1,18 +1,15 @@
 package com.iptv.business.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.iptv.business.domain.KnowledgeBases;
-import com.iptv.business.domain.Knowledges;
-import com.iptv.business.domain.Models;
+import com.iptv.business.domain.*;
 import com.iptv.business.domain.dto.page.KnowledgeBasesPageDTO;
 import com.iptv.business.domain.vo.KnowledgeBasesVO;
-import com.iptv.business.pgmapper.KnowledgeBasesMapper;
-import com.iptv.business.pgmapper.KnowledgesMapper;
-import com.iptv.business.pgmapper.ModelsMapper;
+import com.iptv.business.pgmapper.*;
 import com.iptv.business.service.KnowledgeBasesService;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
@@ -42,13 +39,17 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
 
     private final ModelsMapper modelsMapper;
     private final KnowledgesMapper knowledgesMapper;
+    private final VectorStoresMapper vectorStoresMapper;
+    private final TenantsMapper tenantsMapper;
 
     @Override
     public TableDataInfo<KnowledgeBasesVO> queryPage(KnowledgeBasesPageDTO dto, PageDTO pg) {
         Page<KnowledgeBasesVO> page = PageUtils.toPage(pg);
         List<KnowledgeBases> list = this.baseMapper.queryPage(dto, page);
         List<KnowledgeBasesVO> voList = BeanUtil.copyToList(list, KnowledgeBasesVO.class);
+        queryTenants(voList);
         queryModel(voList);
+        queryVector(voList);
         return PageUtils.getDataTable(voList, page);
     }
 
@@ -56,7 +57,9 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
     public KnowledgeBasesVO queryById(@Nonnull String id) {
         KnowledgeBases entity = this.baseMapper.selectById(id);
         KnowledgeBasesVO vo = BeanUtil.copyProperties(entity, KnowledgeBasesVO.class);
+        queryTenants(List.of(vo));
         queryModel(List.of(vo));
+        queryVector(List.of(vo));
         return vo;
     }
 
@@ -132,6 +135,32 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
             if(StrUtil.isNotBlank(vo.getSummaryModelId())){
                 vo.setSummaryModel(modelList.stream()
                         .filter(model -> StrUtil.equals(model.getId(), vo.getSummaryModelId()))
+                        .findFirst()
+                        .orElse(null));
+            }
+        });
+    }
+
+    private void queryVector(List<KnowledgeBasesVO> voList) {
+        List<VectorStores> vectorLibraryList = vectorStoresMapper.selectList(new LambdaQueryWrapper<VectorStores>()
+                .isNull(VectorStores::getDeletedAt));
+        voList.forEach(vo -> {
+            if(StrUtil.isNotBlank(vo.getVectorStoreId())){
+                vo.setVectorStore(vectorLibraryList.stream()
+                        .filter(vectorLibrary -> StrUtil.equals(vectorLibrary.getId(), vo.getVectorStoreId()))
+                        .findFirst()
+                        .orElse(null));
+            }
+        });
+    }
+
+    private void queryTenants(List<KnowledgeBasesVO> voList) {
+        List<Tenants> tenantList = tenantsMapper.selectList(new LambdaQueryWrapper<Tenants>()
+                .isNull(Tenants::getDeletedAt));
+        voList.forEach(vo -> {
+            if(ObjectUtil.isNotEmpty(vo.getTenantId())){
+                vo.setTenant(tenantList.stream()
+                        .filter(tenant -> ObjectUtil.equals(tenant.getId(), vo.getTenantId()))
                         .findFirst()
                         .orElse(null));
             }

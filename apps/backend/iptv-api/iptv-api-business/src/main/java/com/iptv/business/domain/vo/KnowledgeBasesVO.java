@@ -5,6 +5,8 @@ import java.util.Date;
 import java.io.Serializable;
 
 import com.iptv.business.domain.Models;
+import com.iptv.business.domain.Tenants;
+import com.iptv.business.domain.VectorStores;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -46,6 +48,12 @@ public class KnowledgeBasesVO implements Serializable {
      */
     @Schema(description = "所属工作空间（租户）ID")
     private Integer tenantId;
+
+    /**
+     * 所属工作空间
+     */
+    @Schema(description = "所属工作空间")
+    private Tenants tenant;
 
     /**
      * 分块配置
@@ -166,6 +174,9 @@ public class KnowledgeBasesVO implements Serializable {
      */
     @Schema(description = "绑定的向量库实例 ID（创建后通常不可改）")
     private String vectorStoreId;
+
+    @Schema(description = "向量库实例")
+    private VectorStores vectorStore;
 
     /**
      * Wiki 类型知识库配置
