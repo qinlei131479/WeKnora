@@ -20,7 +20,7 @@ import java.util.Date;
 @EqualsAndHashCode(callSuper = false)
 public class SessionsPageDTO extends PageDTO {
     @Serial
-    private static final long serialVersionUID = -1512489326183871484L;
+    private static final long serialVersionUID = 8348709013299433488L;
 
     @Schema(description = "主键 ID")
     private String id;
@@ -81,6 +81,12 @@ public class SessionsPageDTO extends PageDTO {
 
     @Schema(description = "创建时间")
     private Date createdAt;
+
+    @Schema(description = "创建时间 start")
+    private Date createdAtStart;
+
+    @Schema(description = "创建时间 end")
+    private Date createdAtEnd;
 
     @Schema(description = "最后更新时间")
     private Date updatedAt;
