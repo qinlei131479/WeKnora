@@ -10,6 +10,8 @@
 !.dockerignore
 !.vitepress/
 !.vitepress/**
+!.prettierignore
+!.vscode
 
 # 敏感文件
 *.pem
