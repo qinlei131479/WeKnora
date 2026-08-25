@@ -10,7 +10,7 @@
       <div class="search-bar">
         <div class="search-bar__keyword">
           <el-input
-            v-model="queryParams.username"
+            v-model="queryParams.name"
             class="search-bar__input"
             clearable
             :prefix-icon="Search"
@@ -273,9 +273,11 @@
 
 <script setup lang="ts" name="Models">
 // import { Delete } from '@element-plus/icons-vue'
+import { ref, reactive } from '@vue/runtime-core';
 import {
   AjaxResult,
   McpEntity,
+  PageDomain,
   TableShowColumns,
   TenantMemberEntity,
   TenantMemberListReq,
@@ -314,7 +316,7 @@ const tableData = ref<McpEntity[]>([]);
 const tableRef = ref();
 const loading = ref<boolean>(true);
 // const showSearch = ref<boolean>(true)
-const ids = ref<number[]>([]);
+const ids = ref<string[]>([]);
 const single = ref<boolean>(true);
 const multiple = ref<boolean>(true);
 const total = ref<number>(0);
@@ -352,13 +354,20 @@ const validateBindTenants = (rule: any, value: TenantMemberTenantIdAndRole[], ca
     }
   }
 };
-const data = reactive({
+interface DataType {
+  form: FormEntity;
+  queryParams: TenantMemberListReq;
+  pageParams: PageDomain;
+  addRules: Record<string, any>;
+  editRules: Record<string, any>;
+}
+const data = reactive<DataType>({
   form: {
-    bindTenants: [] as TenantMemberTenantIdAndRole[]
+    bindTenants: []
   } as FormEntity,
   queryParams: {
-    username: undefined
-  } as TenantMemberListReq,
+    name: undefined
+  },
   pageParams: {
     // orderByColumn: 'createTime',
     // isAsc: 'desc',
@@ -455,7 +464,7 @@ function handleQuery() {
 
 /** 重置按钮操作 */
 function resetQuery() {
-  queryParams.value.username = undefined;
+  queryParams.value.name = undefined;
   handleQuery();
 }
 
