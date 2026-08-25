@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.MessagesMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.Messages">
+        <id column="id" property="id"/>
+        <result column="request_id" property="requestId"/>
+        <result column="session_id" property="sessionId"/>
+        <result column="role" property="role"/>
+        <result column="content" property="content"/>
+        <result column="knowledge_references" property="knowledgeReferences"/>
+        <result column="agent_steps" property="agentSteps"/>
+        <result column="is_completed" property="isCompleted"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted_at" property="deletedAt"/>
+        <result column="mentioned_items" property="mentionedItems"/>
+        <result column="is_fallback" property="isFallback"/>
+        <result column="agent_duration_ms" property="agentDurationMs"/>
+        <result column="knowledge_id" property="knowledgeId"/>
+        <result column="images" property="images"/>
+        <result column="channel" property="channel"/>
+        <result column="rendered_content" property="renderedContent"/>
+        <result column="attachments" property="attachments"/>
+        <result column="agent_id" property="agentId"/>
+        <result column="agent_tenant_id" property="agentTenantId"/>
+        <result column="model_id" property="modelId"/>
+        <result column="execution_context" property="executionContext"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, request_id, session_id, role, content, knowledge_references, agent_steps, is_completed, created_at, updated_at, deleted_at, mentioned_items, is_fallback, agent_duration_ms, knowledge_id, images, channel, rendered_content, attachments, agent_id, agent_tenant_id, model_id, execution_context
+    </sql>
+
+    <!-- 分页查询（PostgreSQL：字符串使用 ILIKE 大小写不敏感模糊查询） -->
+    <select id="queryPage" resultMap="BaseResultMap" parameterType="com.iptv.business.domain.dto.page.MessagesPageDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM messages
+        <where>
+            <if test="param.id != null and param.id != ''">
+                AND id ILIKE CONCAT('%', #{param.id}, '%')
+            </if>
+            <if test="param.requestId != null and param.requestId != ''">
+                AND request_id ILIKE CONCAT('%', #{param.requestId}, '%')
+            </if>
+            <if test="param.sessionId != null and param.sessionId != ''">
+                AND session_id ILIKE CONCAT('%', #{param.sessionId}, '%')
+            </if>
+            <if test="param.role != null and param.role != ''">
+                AND role ILIKE CONCAT('%', #{param.role}, '%')
+            </if>
+            <if test="param.content != null and param.content != ''">
+                AND content ILIKE CONCAT('%', #{param.content}, '%')
+            </if>
+            <if test="param.knowledgeReferences != null and param.knowledgeReferences != ''">
+                AND knowledge_references ILIKE CONCAT('%', #{param.knowledgeReferences}, '%')
+            </if>
+            <if test="param.agentSteps != null and param.agentSteps != ''">
+                AND agent_steps ILIKE CONCAT('%', #{param.agentSteps}, '%')
+            </if>
+            <if test="param.isCompleted != null">
+                AND is_completed = #{param.isCompleted}
+            </if>
+            <if test="param.createdAt != null">
+                AND created_at = #{param.createdAt}
+            </if>
+            <if test="param.updatedAt != null">
+                AND updated_at = #{param.updatedAt}
+            </if>
+            <if test="param.deletedAt != null">
+                AND deleted_at = #{param.deletedAt}
+            </if>
+            <if test="param.mentionedItems != null and param.mentionedItems != ''">
+                AND mentioned_items ILIKE CONCAT('%', #{param.mentionedItems}, '%')
+            </if>
+            <if test="param.isFallback != null">
+                AND is_fallback = #{param.isFallback}
+            </if>
+            <if test="param.agentDurationMs != null">
+                AND agent_duration_ms = #{param.agentDurationMs}
+            </if>
+            <if test="param.knowledgeId != null and param.knowledgeId != ''">
+                AND knowledge_id ILIKE CONCAT('%', #{param.knowledgeId}, '%')
+            </if>
+            <if test="param.images != null and param.images != ''">
+                AND images ILIKE CONCAT('%', #{param.images}, '%')
+            </if>
+            <if test="param.channel != null and param.channel != ''">
+                AND channel ILIKE CONCAT('%', #{param.channel}, '%')
+            </if>
+            <if test="param.renderedContent != null and param.renderedContent != ''">
+                AND rendered_content ILIKE CONCAT('%', #{param.renderedContent}, '%')
+            </if>
+            <if test="param.attachments != null and param.attachments != ''">
+                AND attachments ILIKE CONCAT('%', #{param.attachments}, '%')
+            </if>
+            <if test="param.agentId != null and param.agentId != ''">
+                AND agent_id ILIKE CONCAT('%', #{param.agentId}, '%')
+            </if>
+            <if test="param.agentTenantId != null">
+                AND agent_tenant_id = #{param.agentTenantId}
+            </if>
+            <if test="param.modelId != null and param.modelId != ''">
+                AND model_id ILIKE CONCAT('%', #{param.modelId}, '%')
+            </if>
+            <if test="param.executionContext != null and param.executionContext != ''">
+                AND execution_context ILIKE CONCAT('%', #{param.executionContext}, '%')
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+</mapper>

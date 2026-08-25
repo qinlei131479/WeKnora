@@ -4,14 +4,12 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.iptv.business.domain.Tenants;
 import com.iptv.business.domain.VectorStores;
 import com.iptv.business.domain.dto.VectorStoresDTO;
 import com.iptv.business.domain.dto.page.VectorStoresPageDTO;
-import com.iptv.business.domain.vo.StorageBackendsVO;
 import com.iptv.business.domain.vo.VectorStoresVO;
 import com.iptv.business.pgmapper.TenantsMapper;
 import com.iptv.business.pgmapper.VectorStoresMapper;
@@ -48,16 +46,13 @@ public class VectorStoresServiceImpl extends ServiceImpl<VectorStoresMapper, Vec
         List<VectorStoresVO> voList = BeanUtil.copyToList(list, VectorStoresVO.class);
 
         if (CollUtil.isNotEmpty(voList)) {
-            List<Tenants> tenantList = tenantsMapper.selectList(new LambdaQueryWrapper<Tenants>()
-                    .in(Tenants::getId, voList.stream().map(VectorStoresVO::getTenantId).toList()));
-            voList.forEach(vo -> {
-                tenantList.stream()
-                        .filter(t -> ObjectUtil.equal(t.getId(), vo.getTenantId()))
-                        .findFirst()
-                        .ifPresent(t ->
-                                vo.setTenantName(t.getName())
-                        );
-            });
+            List<Tenants> tenantList = tenantsMapper.selectListByIdsIncludingDeleted(voList.stream().map(VectorStoresVO::getTenantId).toArray(Integer[]::new));
+            voList.forEach(vo ->
+                    tenantList.stream()
+                            .filter(t -> ObjectUtil.equal(t.getId(), vo.getTenantId()))
+                            .findFirst()
+                            .ifPresent(t -> vo.setTenantName(t.getName()))
+            );
         }
 
         return PageUtils.getDataTable(voList, page);
@@ -69,7 +64,7 @@ public class VectorStoresServiceImpl extends ServiceImpl<VectorStoresMapper, Vec
         VectorStores entity = this.baseMapper.selectById(id);
         if (entity != null) {
             vo = BeanUtil.copyProperties(entity, VectorStoresVO.class);
-            Tenants tenants = tenantsMapper.selectById(entity.getTenantId());
+            Tenants tenants = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
             if (tenants != null) {
                 vo.setTenantName(tenants.getName());
             }
@@ -80,7 +75,7 @@ public class VectorStoresServiceImpl extends ServiceImpl<VectorStoresMapper, Vec
     @Override
     @Transactional(rollbackFor = Exception.class)
     public VectorStoresVO insert(@Nonnull VectorStoresDTO dto) {
-        Tenants tenants = tenantsMapper.selectById(dto.getTenantId());
+        Tenants tenants = tenantsMapper.selectByIdIncludingDeleted(dto.getTenantId());
         if (tenants == null) {
             throw new ServiceException("租户不存在");
         }
@@ -107,7 +102,7 @@ public class VectorStoresServiceImpl extends ServiceImpl<VectorStoresMapper, Vec
 
         this.baseMapper.updateById(entity);
         VectorStoresVO vo = BeanUtil.copyProperties(entity, VectorStoresVO.class);
-        Tenants tenants = tenantsMapper.selectById(entity.getTenantId());
+        Tenants tenants = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
         if (tenants != null) {
             vo.setTenantName(tenants.getName());
         }

@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.SessionsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.Sessions">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="title" property="title"/>
+        <result column="description" property="description"/>
+        <result column="knowledge_base_id" property="knowledgeBaseId"/>
+        <result column="max_rounds" property="maxRounds"/>
+        <result column="enable_rewrite" property="enableRewrite"/>
+        <result column="fallback_strategy" property="fallbackStrategy"/>
+        <result column="fallback_response" property="fallbackResponse"/>
+        <result column="keyword_threshold" property="keywordThreshold"/>
+        <result column="vector_threshold" property="vectorThreshold"/>
+        <result column="rerank_model_id" property="rerankModelId"/>
+        <result column="embedding_top_k" property="embeddingTopK"/>
+        <result column="rerank_top_k" property="rerankTopK"/>
+        <result column="rerank_threshold" property="rerankThreshold"/>
+        <result column="summary_model_id" property="summaryModelId"/>
+        <result column="summary_parameters" property="summaryParameters"/>
+        <result column="agent_config" property="agentConfig"/>
+        <result column="context_config" property="contextConfig"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted_at" property="deletedAt"/>
+        <result column="agent_id" property="agentId"/>
+        <result column="user_id" property="userId"/>
+        <result column="is_pinned" property="isPinned"/>
+        <result column="pinned_at" property="pinnedAt"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, tenant_id, title, description, knowledge_base_id, max_rounds, enable_rewrite, fallback_strategy, fallback_response, keyword_threshold, vector_threshold, rerank_model_id, embedding_top_k, rerank_top_k, rerank_threshold, summary_model_id, summary_parameters, agent_config, context_config, created_at, updated_at, deleted_at, agent_id, user_id, is_pinned, pinned_at
+    </sql>
+
+    <!-- 分页查询（PostgreSQL：字符串使用 ILIKE 大小写不敏感模糊查询） -->
+    <select id="queryPage" resultMap="BaseResultMap" parameterType="com.iptv.business.domain.dto.page.SessionsPageDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM sessions
+        <where>
+            <if test="param.id != null and param.id != ''">
+                AND id ILIKE CONCAT('%', #{param.id}, '%')
+            </if>
+            <if test="param.tenantId != null">
+                AND tenant_id = #{param.tenantId}
+            </if>
+            <if test="param.title != null and param.title != ''">
+                AND title ILIKE CONCAT('%', #{param.title}, '%')
+            </if>
+            <if test="param.description != null and param.description != ''">
+                AND description ILIKE CONCAT('%', #{param.description}, '%')
+            </if>
+            <if test="param.knowledgeBaseId != null and param.knowledgeBaseId != ''">
+                AND knowledge_base_id ILIKE CONCAT('%', #{param.knowledgeBaseId}, '%')
+            </if>
+            <if test="param.maxRounds != null">
+                AND max_rounds = #{param.maxRounds}
+            </if>
+            <if test="param.enableRewrite != null">
+                AND enable_rewrite = #{param.enableRewrite}
+            </if>
+            <if test="param.fallbackStrategy != null and param.fallbackStrategy != ''">
+                AND fallback_strategy ILIKE CONCAT('%', #{param.fallbackStrategy}, '%')
+            </if>
+            <if test="param.fallbackResponse != null and param.fallbackResponse != ''">
+                AND fallback_response ILIKE CONCAT('%', #{param.fallbackResponse}, '%')
+            </if>
+            <if test="param.keywordThreshold != null">
+                AND keyword_threshold = #{param.keywordThreshold}
+            </if>
+            <if test="param.vectorThreshold != null">
+                AND vector_threshold = #{param.vectorThreshold}
+            </if>
+            <if test="param.rerankModelId != null and param.rerankModelId != ''">
+                AND rerank_model_id ILIKE CONCAT('%', #{param.rerankModelId}, '%')
+            </if>
+            <if test="param.embeddingTopK != null">
+                AND embedding_top_k = #{param.embeddingTopK}
+            </if>
+            <if test="param.rerankTopK != null">
+                AND rerank_top_k = #{param.rerankTopK}
+            </if>
+            <if test="param.rerankThreshold != null">
+                AND rerank_threshold = #{param.rerankThreshold}
+            </if>
+            <if test="param.summaryModelId != null and param.summaryModelId != ''">
+                AND summary_model_id ILIKE CONCAT('%', #{param.summaryModelId}, '%')
+            </if>
+            <if test="param.summaryParameters != null and param.summaryParameters != ''">
+                AND summary_parameters ILIKE CONCAT('%', #{param.summaryParameters}, '%')
+            </if>
+            <if test="param.agentConfig != null and param.agentConfig != ''">
+                AND agent_config ILIKE CONCAT('%', #{param.agentConfig}, '%')
+            </if>
+            <if test="param.contextConfig != null and param.contextConfig != ''">
+                AND context_config ILIKE CONCAT('%', #{param.contextConfig}, '%')
+            </if>
+            <if test="param.createdAt != null">
+                AND created_at = #{param.createdAt}
+            </if>
+            <if test="param.updatedAt != null">
+                AND updated_at = #{param.updatedAt}
+            </if>
+            <if test="param.deletedAt != null">
+                AND deleted_at = #{param.deletedAt}
+            </if>
+            <if test="param.agentId != null and param.agentId != ''">
+                AND agent_id ILIKE CONCAT('%', #{param.agentId}, '%')
+            </if>
+            <if test="param.userId != null and param.userId != ''">
+                AND user_id ILIKE CONCAT('%', #{param.userId}, '%')
+            </if>
+            <if test="param.isPinned != null">
+                AND is_pinned = #{param.isPinned}
+            </if>
+            <if test="param.pinnedAt != null">
+                AND pinned_at = #{param.pinnedAt}
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+</mapper>

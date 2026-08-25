@@ -7,7 +7,6 @@ import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.iptv.business.domain.StorageBackends;
@@ -52,17 +51,16 @@ public class StorageBackendsServiceImpl extends ServiceImpl<StorageBackendsMappe
         List<StorageBackendsVO> voList = BeanUtil.copyToList(list, StorageBackendsVO.class);
 
         if (CollUtil.isNotEmpty(voList)) {
-            List<Tenants> tenantList = tenantsMapper.selectList(new LambdaQueryWrapper<Tenants>()
-                    .in(Tenants::getId, voList.stream().map(StorageBackendsVO::getTenantId).toList()));
-            voList.forEach(vo -> {
-                tenantList.stream()
-                        .filter(t -> ObjectUtil.equal(t.getId(), vo.getTenantId()))
-                        .findFirst()
-                        .ifPresent(t -> {
-                            vo.setTenantName(t.getName());
-                            vo.setIsDefault(ObjectUtil.equal(vo.getId(), t.getDefaultStorageBackendId()));
-                        });
-            });
+            List<Tenants> tenantList = tenantsMapper.selectListByIdsIncludingDeleted(voList.stream().map(StorageBackendsVO::getTenantId).toArray(Integer[]::new));
+            voList.forEach(vo ->
+                    tenantList.stream()
+                            .filter(t -> ObjectUtil.equal(t.getId(), vo.getTenantId()))
+                            .findFirst()
+                            .ifPresent(t -> {
+                                vo.setTenantName(t.getName());
+                                vo.setIsDefault(ObjectUtil.equal(vo.getId(), t.getDefaultStorageBackendId()));
+                            })
+            );
         }
 
         return PageUtils.getDataTable(voList, page);
@@ -74,7 +72,7 @@ public class StorageBackendsServiceImpl extends ServiceImpl<StorageBackendsMappe
         StorageBackends entity = this.baseMapper.selectById(id);
         if (entity != null) {
             vo = BeanUtil.copyProperties(entity, StorageBackendsVO.class);
-            Tenants tenants = tenantsMapper.selectById(entity.getTenantId());
+            Tenants tenants = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
             if (tenants != null) {
                 vo.setTenantName(tenants.getName());
                 vo.setIsDefault(ObjectUtil.equal(vo.getId(), tenants.getDefaultStorageBackendId()));
@@ -86,7 +84,7 @@ public class StorageBackendsServiceImpl extends ServiceImpl<StorageBackendsMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public StorageBackendsVO insert(@Nonnull StorageBackendsDTO dto) {
-        Tenants tenants = tenantsMapper.selectById(dto.getTenantId());
+        Tenants tenants = tenantsMapper.selectByIdIncludingDeleted(dto.getTenantId());
         if (tenants == null) {
             throw new ServiceException("租户不存在");
         }
@@ -119,7 +117,7 @@ public class StorageBackendsServiceImpl extends ServiceImpl<StorageBackendsMappe
 
         this.baseMapper.updateById(entity);
         StorageBackendsVO vo = BeanUtil.copyProperties(entity, StorageBackendsVO.class);
-        Tenants tenants = tenantsMapper.selectById(entity.getTenantId());
+        Tenants tenants = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
         if (tenants != null) {
             vo.setTenantName(tenants.getName());
             vo.setIsDefault(ObjectUtil.equal(vo.getId(), tenants.getDefaultStorageBackendId()));
