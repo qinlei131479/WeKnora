@@ -170,7 +170,7 @@ const copyText = (value: unknown) => {
   padding-bottom: 8px;
 
   .detail-section {
-    border: var(--el-border-width) var(--el-border-style) var(--el-border-color);
+    border: var(--border);
     border-radius: var(--el-border-radius-base);
     overflow: hidden;
 
@@ -179,7 +179,7 @@ const copyText = (value: unknown) => {
       gap: 0.25em;
       align-items: center;
       padding: 0.75em;
-      border-bottom: var(--el-border-width) var(--el-border-style) var(--el-border-color);
+      border-bottom: var(--border);
       background-color: var(--el-menu-hover-bg-color);
       font-weight: bold;
     }
@@ -221,7 +221,7 @@ const copyText = (value: unknown) => {
     position: relative;
     max-height: 240px;
     overflow: auto;
-    border: var(--el-border-width) var(--el-border-style) var(--el-border-color);
+    border: var(--border);
     border-radius: 8px;
     background: #fbfcfd;
 

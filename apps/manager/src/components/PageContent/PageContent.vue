@@ -19,7 +19,7 @@ $height: calc(100vh - var(--navbar-height) - var(--page-name-height) - var(--lay
   padding: var(--layout-padding) 0;
   background-color: var(--el-color-white);
   box-sizing: border-box;
-  border: var(--el-border-width) var(--el-border-style) var(--el-border-color);
+  border: var(--border);
   border-radius: var(--layout-radius);
   display: flex;
   flex-direction: column;

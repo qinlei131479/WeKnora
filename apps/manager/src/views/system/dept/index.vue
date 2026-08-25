@@ -1,7 +1,7 @@
 <template>
   <section>
     <page-name>
-      <el-button type="success" icon="Plus" v-hasPermi="['system:dept:add']" @click="handleAdd()">
+      <el-button type="primary" icon="Plus" v-hasPermi="['system:dept:add']" @click="handleAdd()">
         {{ $t('page.system.dept.add', '新增部门') }}
       </el-button>
     </page-name>
@@ -69,13 +69,7 @@
           align="center"
         >
           <template #default="{ row }">
-            <el-switch
-              v-model="row.status"
-              style="--el-switch-on-color: var(--el-color-success)"
-              active-value="0"
-              inactive-value="1"
-              @change="handleStatusChange(row)"
-            />
+            <el-switch v-model="row.status" active-value="0" inactive-value="1" @change="handleStatusChange(row)" />
           </template>
         </el-table-column>
         <el-table-column
@@ -150,7 +144,7 @@
             <el-input v-model="form.email" :placeholder="$t('page.system.dept.form.emailPlaceholder', '请输入邮箱地址')" maxlength="50" />
           </el-form-item>
           <el-form-item :label="$t('page.system.dept.form.status', '部门状态')">
-            <el-switch v-model="form.status" style="--el-switch-on-color: var(--el-color-success)" active-value="0" inactive-value="1" />
+            <el-switch v-model="form.status" active-value="0" inactive-value="1" />
           </el-form-item>
         </div>
 

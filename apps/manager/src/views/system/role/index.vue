@@ -1,7 +1,7 @@
 <template>
   <section>
     <page-name>
-      <el-button type="success" icon="Plus" v-hasPermi="['system:role:add']" @click="handleAdd">
+      <el-button type="primary" icon="Plus" v-hasPermi="['system:role:add']" @click="handleAdd">
         {{ $t('page.system.role.add', '新增角色') }}
       </el-button>
     </page-name>

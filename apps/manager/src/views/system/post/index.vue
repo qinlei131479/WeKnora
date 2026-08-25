@@ -1,7 +1,7 @@
 <template>
   <section>
     <page-name>
-      <el-button type="success" icon="Plus" v-hasPermi="['system:post:add']" @click="handleAdd">
+      <el-button type="primary" icon="Plus" v-hasPermi="['system:post:add']" @click="handleAdd">
         {{ $t('page.system.post.add', '新增岗位') }}
       </el-button>
     </page-name>
@@ -88,13 +88,7 @@
         />
         <el-table-column :label="$t('page.system.post.table.status', '状态')" :min-width="$dim('page.system.post.table.status', 100)" align="center">
           <template #default="scope">
-            <el-switch
-              v-model="scope.row.status"
-              style="--el-switch-on-color: var(--el-color-success)"
-              active-value="0"
-              inactive-value="1"
-              @change="handleStatusChange(scope.row)"
-            />
+            <el-switch v-model="scope.row.status" active-value="0" inactive-value="1" @change="handleStatusChange(scope.row)" />
           </template>
         </el-table-column>
         <el-table-column
@@ -150,7 +144,7 @@
             <el-input-number v-model="form.postSort" controls-position="right" :min="0" style="width: 100%" />
           </el-form-item>
           <el-form-item :label="$t('page.system.post.form.status', '岗位状态')">
-            <el-switch v-model="form.status" style="--el-switch-on-color: var(--el-color-success)" active-value="0" inactive-value="1" />
+            <el-switch v-model="form.status" active-value="0" inactive-value="1" />
           </el-form-item>
         </div>
         <el-form-item :label="$t('page.system.post.form.remark', '职责描述')" prop="remark">

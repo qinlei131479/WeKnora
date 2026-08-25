@@ -1,7 +1,7 @@
 <template>
   <section>
     <page-name>
-      <el-button type="success" icon="Plus" v-hasPermi="['system:dict:add']" @click="handleAdd">
+      <el-button type="primary" icon="Plus" v-hasPermi="['system:dict:add']" @click="handleAdd">
         {{ $t('page.system.dict.data.add', '新增字典数据') }}
       </el-button>
     </page-name>
@@ -96,13 +96,7 @@
           align="center"
         >
           <template #default="scope">
-            <el-switch
-              v-model="scope.row.status"
-              style="--el-switch-on-color: var(--el-color-success)"
-              active-value="0"
-              inactive-value="1"
-              @change="handleStatusChange(scope.row)"
-            />
+            <el-switch v-model="scope.row.status" active-value="0" inactive-value="1" @change="handleStatusChange(scope.row)" />
           </template>
         </el-table-column>
         <el-table-column
@@ -180,7 +174,7 @@
             </el-select>
           </el-form-item>
           <el-form-item :label="$t('page.system.dict.data.form.status', '状态')">
-            <el-switch v-model="form.status" style="--el-switch-on-color: var(--el-color-success)" active-value="0" inactive-value="1" />
+            <el-switch v-model="form.status" active-value="0" inactive-value="1" />
           </el-form-item>
         </div>
 

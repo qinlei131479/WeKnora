@@ -173,7 +173,7 @@ const copyText = (value: unknown) => {
   padding-bottom: 8px;
 
   .detail-section {
-    border: var(--el-border-width) var(--el-border-style) var(--el-border-color);
+    border: var(--border);
     border-radius: var(--el-border-radius-base);
     overflow: hidden;
 
@@ -181,7 +181,7 @@ const copyText = (value: unknown) => {
       padding: 0.75em;
       font-weight: bold;
       background-color: var(--el-menu-hover-bg-color);
-      border-bottom: var(--el-border-width) var(--el-border-style) var(--el-border-color);
+      border-bottom: var(--border);
     }
 
     &__body {
@@ -223,7 +223,7 @@ const copyText = (value: unknown) => {
       max-height: 320px;
       overflow: auto;
       background: #fbfcfd;
-      border: var(--el-border-width) var(--el-border-style) var(--el-border-color);
+      border: var(--border);
       border-radius: 8px;
 
       &__pre {

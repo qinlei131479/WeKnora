@@ -1,4 +1,4 @@
-import type { PageDomain, BaseEntity } from "../common";
+import type { PageDomain, BaseEntity } from '../common';
 
 /** 字典分页查询参数 */
 export interface DictTypeQueryParams extends PageDomain {
@@ -21,6 +21,8 @@ export interface DictDataQueryParams extends PageDomain {
   dictName?: string;
   /** 字典标签 */
   dictLabel?: string;
+  /** 字典类型 */
+  dictType?: string;
   /** 状态 */
   status?: string;
 }

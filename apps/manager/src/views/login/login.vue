@@ -50,58 +50,68 @@
         <div class="login-main-content-left">
           <el-form ref="loginRef" :model="loginForm" :rules="loginRules" label-position="top" hide-required-asterisk="true" class="login-form">
             <el-form-item prop="username" label="用户名">
-              <el-input v-model="loginForm.username" :prefix-icon="User" type="text" size="large" auto-complete="off" placeholder="请输入用户名" />
+              <el-input v-model="loginForm.username" type="text" size="large" auto-complete="off" placeholder="请输入用户名">
+                <template #prefix>🤵</template>
+              </el-input>
             </el-form-item>
             <el-form-item prop="password" label="密码">
               <el-input
                 v-model="loginForm.password"
-                :prefix-icon="LockKeyhole"
                 type="password"
                 size="large"
-                auto-complete="off"
                 show-password
+                auto-complete="off"
                 placeholder="6-15位，由字母数字组成"
                 @keyup.enter="handleLogin"
-              />
+              >
+                <template #prefix>🔒</template>
+                <template #password-icon="{ visible }">
+                  {{ visible ? '🚫' : '👁️' }}
+                </template>
+              </el-input>
             </el-form-item>
             <div class="row-captcha">
               <el-form-item prop="code" v-if="captchaEnabled" label="验证码">
                 <el-input
                   v-model="loginForm.code"
-                  :prefix-icon="ShieldCheck"
                   size="large"
                   auto-complete="off"
                   placeholder="请输入验证码"
                   class="login-verific-code"
                   @keyup.enter="handleLogin"
-                />
+                >
+                  <template #prefix>🛡️</template>
+                </el-input>
               </el-form-item>
               <div class="login-code">
                 <img :src="codeUrl" @click="getCode" class="login-code-img" />
               </div>
             </div>
             <div class="login-form-remember">
-              <el-switch width="33" v-model="loginForm.rememberMe" />
-              <div class="login-form-remember-text">记住账号密码</div>
+              <el-checkbox v-model="loginForm.rememberMe" label="记住账号密码" />
             </div>
             <el-form-item class="login-submit">
-              <el-button
-                :loading="loading"
-                size="large"
-                type="primary"
-                :disabled="loginForm.username === '' || loginForm.password === ''"
-                style="width: 100%"
-                @click.prevent="handleLogin"
-              >
+              <el-button :loading="loading" type="success" @click.prevent="handleLogin">
                 <div v-if="!loading">登 录</div>
                 <div v-else>登 录 中...</div>
               </el-button>
             </el-form-item>
           </el-form>
+
+          <el-divider content-position="center">其他登录方式</el-divider>
+          <el-button>钉钉扫码登录</el-button>
+          <div class="login-policy">
+            <div class="login-policy-text">
+              登录即代表您同意
+              <el-link type="success" underline="never">《系统使用协议》</el-link> 及
+              <el-link type="success" underline="never">《隐私政策》</el-link>
+            </div>
+          </div>
         </div>
       </div>
     </main>
   </div>
+
   <LoginFailureDialog
     v-model="state.loginFailureDialog"
     :failureType="state.failureType"
@@ -119,7 +129,7 @@ import { encrypt, decrypt } from '@/utils/jsencrypt';
 import useUserStore from '@/store/modules/user';
 import LoginFailureDialog from '@/components/LoginFailureDialog';
 import AlertComponent from '@/components/TootipComponent/alertComponent.vue';
-import { getToken, setToken, removeToken } from '@/utils/auth';
+import { setToken, removeToken } from '@/utils/auth';
 const userStore = useUserStore();
 const router = useRouter();
 const { proxy } = getCurrentInstance();
@@ -350,7 +360,7 @@ getCookie();
 .login-brand {
   position: relative;
   display: flex;
-  flex: 0 0 51.8229167%;
+  flex: 0 0 52%;
   align-items: center;
   justify-content: center;
   min-width: 0;
@@ -402,7 +412,7 @@ getCookie();
 
 .login-feature {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-columns: 3em minmax(0, 1fr);
   align-items: center;
   gap: 12px;
 }
@@ -468,21 +478,19 @@ getCookie();
 }
 
 .login-main-title {
-  margin-bottom: 34px;
+  margin-bottom: 36px;
 }
 
 .login-main-title-text {
-  color: #0c110f;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 40px;
+  font-size: 26px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  color: #1e293b;
 }
 
 .login-main-title-desc {
-  margin-top: 4px;
-  color: #a5aca6;
+  color: #64748b;
   font-size: 14px;
-  line-height: 22px;
 }
 
 .login-main-content-left,
@@ -492,52 +500,20 @@ getCookie();
 }
 
 .login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
   :deep(.el-form-item) {
-    margin-bottom: 18px;
+    margin-bottom: 0;
   }
 
   :deep(.el-form-item__label) {
     height: auto;
     padding: 0;
-    color: #6f7372;
-    font-size: 14px;
-    font-weight: 500;
-    line-height: 20px;
-  }
-
-  :deep(.el-input) {
-    height: 48px;
-  }
-
-  :deep(.el-input__wrapper) {
-    min-height: 48px;
-    padding: 0 16px;
-    border-radius: 12px;
-    background: #ffffff;
-    box-shadow: 0 0 0 1px #e6e8e5 inset;
-    transition: box-shadow 0.2s;
-  }
-
-  :deep(.el-input__wrapper:hover) {
-    box-shadow: 0 0 0 1px #c8d1cc inset;
-  }
-
-  :deep(.el-input__wrapper.is-focus) {
-    box-shadow: 0 0 0 1px #27a779 inset;
-  }
-
-  :deep(.el-input__prefix) {
-    margin-right: 10px;
-    color: #7c8580;
-  }
-
-  :deep(.el-input__inner) {
-    color: #242a27;
-    font-size: 14px;
-
-    &::placeholder {
-      color: #9ca4a0;
-    }
+    margin: 0px;
+    font-weight: normal;
+    color: #1e293b;
   }
 }
 
@@ -545,7 +521,7 @@ getCookie();
   display: grid;
   grid-template-columns: minmax(0, 1fr) 132px;
   align-items: start;
-  gap: 12px;
+  gap: 10px;
 
   :deep(.el-form-item) {
     min-width: 0;
@@ -554,11 +530,12 @@ getCookie();
 
 .login-code {
   position: relative;
-  height: 48px;
-  margin-top: 28px;
+  height: 40px;
+  margin-top: 22px;
   overflow: hidden;
-  border-radius: 12px;
-  background: #ffffff;
+  border-radius: 8px;
+  background: #fff;
+  border: var(--el-border);
   box-shadow: 0 0 0 1px #e6e8e5 inset;
 
   img {
@@ -578,23 +555,22 @@ getCookie();
 }
 
 .login-form-remember {
-  display: flex;
-  min-height: 20px;
-  margin-bottom: 20px;
-  align-items: center;
-
-  :deep(.el-switch) {
-    --el-switch-on-color: #27a779;
-    --el-switch-off-color: #d6ddd9;
-    flex-shrink: 0;
+  .el-checkbox {
+    --el-checkbox-font-size: 14px;
+    --el-checkbox-font-weight: normal;
+    --el-checkbox-input-height: 15px;
+    --el-checkbox-input-width: 15px;
+    --el-checkbox-text-color: #64748b;
+    --el-checkbox-border-radius: 3px;
+    --el-checkbox-bg-color: #fff;
+    --el-checkbox-input-border: 1px solid #1a1f2e;
+    --el-checkbox-checked-text-color: #64748b;
+    --el-checkbox-checked-input-border-color: #40916c;
+    --el-checkbox-checked-bg-color: #40916c;
+    --el-checkbox-checked-icon-color: #fff;
+    --el-checkbox-input-border-color-hover: #1a1f2e;
+    color: #64748b;
   }
-}
-
-.login-form-remember-text {
-  margin-left: 10px;
-  color: #6f7773;
-  font-size: 14px;
-  line-height: 20px;
 }
 
 .login-submit {
@@ -602,20 +578,66 @@ getCookie();
   margin-bottom: 0;
 
   :deep(.el-button) {
-    --el-button-bg-color: #27a779;
-    --el-button-border-color: #27a779;
-    --el-button-hover-bg-color: #23956d;
-    --el-button-hover-border-color: #23956d;
-    --el-button-active-bg-color: #1f8662;
-    --el-button-active-border-color: #1f8662;
-    width: 100%;
-    height: 48px;
-    border-radius: 12px;
-    background-image: linear-gradient(180deg, #2fa377 0%, #2b986f 52%, #25825f 100%);
-    box-shadow: 0 6px 12px rgba(24, 117, 84, 0.18);
-    font-size: 16px;
+    --el-button-bg-color: #1b4332;
+    --el-button-hover-bg-color: #2d6a4f;
+    font-size: 15px;
     font-weight: 600;
-    letter-spacing: 4px;
+    color: #fff;
+
+    .el-icon.is-loading + span > div {
+      color: #c0c0c0;
+    }
+  }
+}
+
+:deep(.el-button) {
+  width: 100%;
+  height: 46px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  transition:
+    background 0.15s,
+    transform 0.1s;
+
+  --el-button-hover-text-color: var(--el-color-success);
+  --el-button-hover-bg-color: var(--el-color-success-light-9);
+  --el-button-hover-border-color: var(--el-color-success-light-7);
+  --el-button-active-border-color: var(--el-color-success);
+  --el-button-outline-color: var(--el-color-success-light-5);
+}
+
+:deep(i.el-icon) {
+  font-style: normal;
+}
+
+:deep(.el-divider) {
+  margin: 37px 0 29px;
+
+  .el-divider__text {
+    line-height: 18px;
+    color: #94a3b8;
+    background-color: transparent;
+  }
+}
+
+.login-policy {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+
+  .login-policy-text {
+    display: flex;
+    align-items: center;
+    color: #94a3b8;
+    font-size: 12px;
+
+    :deep(.el-link) {
+      font-size: 12px;
+      font-weight: normal;
+      --el-link-text-color: #40916c;
+      --el-link-hover-text-color: var(--el-color-success);
+    }
   }
 }
 
@@ -707,10 +729,6 @@ getCookie();
     :deep(.el-form-item) {
       margin-bottom: 14px;
     }
-  }
-
-  .login-form-remember {
-    margin-bottom: 14px;
   }
 }
 </style>

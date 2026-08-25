@@ -66,7 +66,7 @@ function setLayout(): void {
   align-items: center;
   // padding-right: 16px;
   box-sizing: border-box;
-  border: var(--el-border-width) var(--el-border-style) var(--el-border-color);
+  border: var(--border);
   border-radius: var(--layout-radius);
 
   .hamburger-container {

@@ -1,7 +1,7 @@
 <template>
   <section>
     <page-name>
-      <el-button type="success" icon="Plus" v-hasPermi="['system:dict:add']" @click="handleAdd">
+      <el-button type="primary" icon="Plus" v-hasPermi="['system:dict:add']" @click="handleAdd">
         {{ $t('page.system.dict.add', '新增字典') }}
       </el-button>
     </page-name>
@@ -95,13 +95,7 @@
         </el-table-column>
         <el-table-column :label="$t('page.system.dict.table.status', '状态')" :min-width="$dim('page.system.dict.table.status', 100)" align="center">
           <template #default="{ row }">
-            <el-switch
-              v-model="row.status"
-              style="--el-switch-on-color: var(--el-color-success)"
-              active-value="0"
-              inactive-value="1"
-              @change="handleStatusChange(row)"
-            />
+            <el-switch v-model="row.status" active-value="0" inactive-value="1" @change="handleStatusChange(row)" />
           </template>
         </el-table-column>
         <el-table-column
@@ -162,7 +156,7 @@
           <el-input v-model="form.dictType" :placeholder="$t('page.system.dict.form.typePlaceholder', '请输入字典类型')" />
         </el-form-item>
         <el-form-item :label="$t('page.system.dict.form.status', '状态')">
-          <el-switch v-model="form.status" style="--el-switch-on-color: var(--el-color-success)" active-value="0" inactive-value="1" />
+          <el-switch v-model="form.status" active-value="0" inactive-value="1" />
         </el-form-item>
         <el-form-item :label="$t('page.system.dict.form.remark', '备注')" prop="remark">
           <el-input v-model="form.remark" type="textarea" :rows="4" :placeholder="$t('page.system.dict.form.remarkPlaceholder', '请输入备注')" />

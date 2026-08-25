@@ -177,7 +177,7 @@ function copyText(str?: string): void {
   padding-bottom: 8px;
 
   .detail-section {
-    border: var(--el-border-width) var(--el-border-style) var(--el-border-color);
+    border: var(--border);
     border-radius: var(--el-border-radius-base);
     overflow: hidden;
 
@@ -188,7 +188,7 @@ function copyText(str?: string): void {
       font-weight: bold;
       padding: 0.75em;
       background-color: var(--el-menu-hover-bg-color);
-      border-bottom: var(--el-border-width) var(--el-border-style) var(--el-border-color);
+      border-bottom: var(--border);
     }
 
     &__body {
@@ -224,10 +224,8 @@ function copyText(str?: string): void {
     .code-block {
       position: relative;
       background: #fbfcfd;
-      border: var(--el-border-width) var(--el-border-style) var(--el-border-color);
+      border: var(--border);
       border-radius: 8px;
-      overflow-y: scroll;
-      max-height: 240px;
 
       &__pre {
         padding: 0 0.75em;

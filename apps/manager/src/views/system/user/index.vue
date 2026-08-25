@@ -1,7 +1,7 @@
 <template>
   <section>
     <page-name>
-      <el-button type="success" icon="Plus" v-hasPermi="['system:user:add']" @click="handleAdd">
+      <el-button type="primary" icon="Plus" v-hasPermi="['system:user:add']" @click="handleAdd">
         {{ $t('page.system.user.add', '新增用户') }}
       </el-button>
     </page-name>
@@ -99,13 +99,7 @@
           v-if="columns.status.visible"
         >
           <template #default="scope">
-            <el-switch
-              v-model="scope.row.status"
-              style="--el-switch-on-color: var(--el-color-success)"
-              active-value="0"
-              inactive-value="1"
-              @change="handleStatusChange(scope.row)"
-            />
+            <el-switch v-model="scope.row.status" active-value="0" inactive-value="1" @change="handleStatusChange(scope.row)" />
           </template>
         </el-table-column>
         <el-table-column

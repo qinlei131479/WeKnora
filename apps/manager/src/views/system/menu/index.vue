@@ -1,7 +1,7 @@
 <template>
   <section>
     <page-name>
-      <el-button type="success" icon="Plus" v-hasPermi="['system:menu:add']" @click="handleAdd()">
+      <el-button type="primary" icon="Plus" v-hasPermi="['system:menu:add']" @click="handleAdd()">
         {{ $t('page.system.menu.add', '新增菜单') }}
       </el-button>
     </page-name>
@@ -113,13 +113,7 @@
           align="center"
         >
           <template #default="scope">
-            <el-switch
-              v-model="scope.row.status"
-              style="--el-switch-on-color: var(--el-color-success)"
-              active-value="0"
-              inactive-value="1"
-              @change="handleStatusChange(scope.row)"
-            />
+            <el-switch v-model="scope.row.status" active-value="0" inactive-value="1" @change="handleStatusChange(scope.row)" />
           </template>
         </el-table-column>
         <el-table-column
@@ -207,7 +201,7 @@
           </el-form-item>
 
           <el-form-item v-if="form.menuType != 'F'" :label="$t('page.system.menu.form.isExternalLink', '是否外链')">
-            <el-switch v-model="form.isFrame" style="--el-switch-on-color: var(--el-color-success)" active-value="0" inactive-value="1" />
+            <el-switch v-model="form.isFrame" active-value="0" inactive-value="1" />
           </el-form-item>
 
           <el-form-item v-if="form.menuType != 'F'" :label="$t('page.system.menu.form.path', '路由地址')" prop="path">
@@ -227,15 +221,15 @@
           </el-form-item>
 
           <el-form-item v-if="form.menuType == 'C'" :label="$t('page.system.menu.form.isCache', '是否缓存')">
-            <el-switch v-model="form.isCache" style="--el-switch-on-color: var(--el-color-success)" active-value="0" inactive-value="1" />
+            <el-switch v-model="form.isCache" active-value="0" inactive-value="1" />
           </el-form-item>
 
           <el-form-item v-if="form.menuType != 'F'" :label="$t('page.system.menu.form.visible', '显示状态')">
-            <el-switch v-model="form.visible" style="--el-switch-on-color: var(--el-color-success)" active-value="0" inactive-value="1" />
+            <el-switch v-model="form.visible" active-value="0" inactive-value="1" />
           </el-form-item>
 
           <el-form-item :label="$t('page.system.menu.form.status', '菜单状态')">
-            <el-switch v-model="form.status" style="--el-switch-on-color: var(--el-color-success)" active-value="0" inactive-value="1" />
+            <el-switch v-model="form.status" active-value="0" inactive-value="1" />
           </el-form-item>
         </div>
       </el-form>
