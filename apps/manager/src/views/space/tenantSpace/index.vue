@@ -280,12 +280,13 @@
 </template>
 
 <script setup lang="ts" name="Models">
+import { ref, reactive } from '@vue/runtime-core';
 // import { ElMessage } from 'element-plus'
 // import { Close, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n';
 import { isEmpty } from '@/utils/common.js';
 import { formatSize } from '@/utils';
-import { AjaxResult, McpEntity, TableShowColumns, TenantSpaceEntity, TenantSpaceListReq } from '@/types';
+import { AjaxResult, TableShowColumns, TenantSpaceEntity, TenantSpaceListReq } from '@/types';
 import { getStatusTheme, getStatusText } from '@/composables/useTenantSpace';
 import { Search } from 'lucide-vue-next';
 import {
@@ -302,43 +303,9 @@ interface FormEntity extends TenantSpaceEntity {}
 const { proxy } = getCurrentInstance();
 const { t } = useI18n();
 
-// const pageLangConfig: Record<string, string> = {
-//   'page.mcp.add': '新增MCP',
-//   'page.mcp.searchPlaceholder': '通过模型ID、模型名称、创建人进行模糊搜索',
-//   'page.mcp.range_separator': '至',
-//   'page.mcp.start_date.placeholder': '开始时间',
-//   'page.mcp.end_date.placeholder': '结束时间',
-//   'page.mcp.reset': '重置',
-//   'page.mcp.search': '搜索',
-//   'form.button.reset': '重置',
-//   'form.button.edit': '编辑',
-//   'form.button.delete': '删除',
-//   'form.button.enable': '启用',
-//   'form.button.disable': '禁用',
-
-//   'mcpServiceDialog.codeImport.toggle': '从代码导入',
-//   'mcpServiceDialog.codeImport.hint': '粘贴标准 mcpServers JSON 配置，自动填充表单',
-//   'mcpServiceDialog.codeImport.editOverwriteHint': '导入会覆盖当前表单内容（不影响已保存的凭证，需点保存生效）',
-//   'mcpServiceDialog.codeImport.parse': '解析并填充',
-//   'mcpServiceDialog.codeImport.errors.empty': '请先粘贴配置内容',
-//   'mcpServiceDialog.codeImport.errors.invalidJson': '无法解析，请检查 JSON 格式'
-// };
-// const t = function (key: string, params?: Record<string, string> | string) {
-//   let msg = pageLangConfig[key] || key;
-//   if (params) {
-//     if (typeof params == 'string') {
-//       msg = pageLangConfig[key] || params;
-//     } else {
-//       Object.keys(params).forEach((key) => {
-//         msg = msg.replace(`{${key}}`, params[key]);
-//       });
-//     }
-//   }
-//   return msg;
-// };
 const $t = t;
 
-const tableData = ref<McpEntity[]>([]);
+const tableData = ref<TenantSpaceEntity[]>([]);
 const tableRef = ref();
 const loading = ref<boolean>(true);
 // const showSearch = ref<boolean>(true)
@@ -367,55 +334,13 @@ const detailOpen = ref<boolean>(false);
 const detailForm = ref<TenantSpaceEntity>({} as TenantSpaceEntity);
 const showDetail = (id: number) => {
   getTenantSpaceSingleApi(id).then((res: AjaxResult<TenantSpaceEntity>) => {
-    detailForm.value = res.data || {};
+    detailForm.value = res.data || ({} as TenantSpaceEntity);
     detailOpen.value = true;
   });
 };
 const closeDialogDetail = () => {
   detailOpen.value = false;
 };
-
-// // 校验登录账号
-// const validateUserName = (rule: any, value: string, callback: Function) => {
-//   if (!value) {
-//     callback(new Error("登录账号不能为空"));
-//   } else {
-//     if (form.value.userId) {
-//       callback();
-//     } else {
-//       const reg = /^[0-9a-zA-Z]*$/;
-//       if (reg.test(value)) {
-//         // 接口调用
-//         checkUserNameValue({ name: value })
-//           .then((res: any) => {
-//             if (!res.data) {
-//               callback();
-//             } else {
-//               callback(new Error("该登陆账号已被占用、请重新输入"));
-//             }
-//           })
-//           .catch((err: any) => {
-//             console.log(err);
-//           });
-//       } else {
-//         callback(new Error("只能输入数字和字母"));
-//       }
-//     }
-//   }
-// };
-// // 校验用户昵称
-// const validateNickName = (rule: any, value: string, callback: Function) => {
-//   if (!value) {
-//     callback(new Error("用户昵称不能为空"));
-//   } else {
-//     const regex = /^[\u4e00-\u9fa5a-zA-Z0-9]+$/;
-//     if (regex.test(value)) {
-//       callback();
-//     } else {
-//       callback(new Error("只能输入中文、数字、字母"));
-//     }
-//   }
-// };
 
 const open = ref<boolean>(false);
 let mode = '';
@@ -455,7 +380,7 @@ function getList() {
   getTenantSpaceListApi(params, pageParams.value).then(
     (res) => {
       loading.value = false;
-      tableData.value = res.rows || [];
+      tableData.value = res.rows || ([] as TenantSpaceEntity[]);
       total.value = +res.total || 0;
       // nextTick(() => {
       //   tableRef.value?.doLayout()
