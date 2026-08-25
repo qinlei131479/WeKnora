@@ -9,7 +9,6 @@ const state = reactive({
   keyword: '',
   tenantsDto: {} as TenantsPageDTO,
   tenantsVOs: [] as TenantsVO[],
-  tenantsId: undefined as number | undefined,
   backendsDto: {} as StorageBackendsPageDTO,
   page: { pageNum: 1, pageSize: 10, orderByColumn: 'createdAt', isAsc: 'desc' } as PageDomain,
   backendsVOs: [] as StorageBackendsVO[],
@@ -46,26 +45,15 @@ const getTenants = (): Promise<TenantsVO[]> => {
 };
 
 const onSelectTenants = (tenant: TenantsVO) => {
-  state.tenantsId = tenant.id;
   state.backendsDto.tenantId = tenant.id;
-  state.page.pageNum = 1;
-  getBackends();
 };
 
 const onClearTenants = () => {
-  state.tenantsId = undefined;
   delete state.backendsDto.tenantId;
-  state.page.pageNum = 1;
-  getBackends();
 };
 
-const onInput = (value: string) => {
-  if (!value) {
-    state.tenantsId = undefined;
-    delete state.backendsDto.tenantId;
-    state.page.pageNum = 1;
-    getBackends();
-  }
+const onInput = () => {
+  delete state.backendsDto.tenantId;
 };
 
 const getBackends = () => {
@@ -78,6 +66,11 @@ const getBackends = () => {
     .catch((error) => {
       console.error('--> --> Error:', error);
     });
+};
+
+const handleQuery = () => {
+  state.page.pageNum = 1;
+  getBackends();
 };
 
 const detailOpen = ref(false);
@@ -113,6 +106,7 @@ onMounted(() => {
             @clear="onClearTenants"
             @input="onInput"
           />
+          <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
         </div>
       </template>
 

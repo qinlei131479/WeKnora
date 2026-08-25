@@ -1,6 +1,18 @@
 {
   "component": {},
   "page": {
+    "agent": {
+      "sessions": {
+        "table.createdAt": 180,
+        "table.id": 300,
+        "table.operation": 140,
+        "table.status": 100,
+        "table.tenantName": 250,
+        "table.title": 300,
+        "table.updatedAt": 180,
+        "table.username": 100
+      }
+    },
     "data": {
       "storage": {
         "table.createdAt": 180,

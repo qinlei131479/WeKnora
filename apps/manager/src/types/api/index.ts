@@ -3,6 +3,9 @@
  */
 export * from './common';
 
+// 智能体模块
+export * from './agent';
+
 // 登录模块
 export * from './login';
 export * from './menu';

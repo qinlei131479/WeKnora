@@ -682,6 +682,26 @@
     }
   },
   "page": {
+    "agent": {
+      "sessions": {
+        "action.message": "消息",
+        "search.endDatePlaceholder": "创建时间截止",
+        "search.startDatePlaceholder": "创建时间开始",
+        "search.tenantPlaceholder": "输入租户名称查询",
+        "search.titlePlaceholder": "输入标题查询",
+        "search.userPlaceholder": "输入用户名查询",
+        "status.deleted": "已删除",
+        "status.normal": "正常",
+        "table.createdAt": "创建时间",
+        "table.id": "对话 ID",
+        "table.newSession": "新对话",
+        "table.status": "对话状态",
+        "table.tenantName": "所属工作空间（租户）",
+        "table.title": "对话标题",
+        "table.updatedAt": "更新时间",
+        "table.username": "所属用户"
+      }
+    },
     "data": {
       "storage": {
         "detail.config": "配置",

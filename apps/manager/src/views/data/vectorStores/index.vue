@@ -48,22 +48,14 @@ const getTenants = (): Promise<TenantsVO[]> => {
 
 const onSelectTenants = (tenant: TenantsVO) => {
   state.vectorStoresDto.tenantId = tenant.id;
-  state.page.pageNum = 1;
-  getVectorStores();
 };
 
 const onClearTenants = () => {
   delete state.vectorStoresDto.tenantId;
-  state.page.pageNum = 1;
-  getVectorStores();
 };
 
-const onInput = (value: string) => {
-  if (!value) {
-    delete state.vectorStoresDto.tenantId;
-    state.page.pageNum = 1;
-    getVectorStores();
-  }
+const onInput = () => {
+  delete state.vectorStoresDto.tenantId;
 };
 
 const getVectorStores = () => {
@@ -76,6 +68,11 @@ const getVectorStores = () => {
     .catch((error) => {
       console.error('--> --> Error:', error);
     });
+};
+
+const handleQuery = () => {
+  state.page.pageNum = 1;
+  getVectorStores();
 };
 
 const handleDetail = (row: VectorStoresVO) => {
@@ -108,6 +105,7 @@ onMounted(() => {
             @clear="onClearTenants"
             @input="onInput"
           />
+          <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
         </div>
       </template>
 

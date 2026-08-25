@@ -253,7 +253,7 @@ watch(searchPool, (list: SearchItem[]) => {
   line-height: var(--el-component-size);
   padding: 1px 11px;
   cursor: text;
-  border: var(--border);
+  border: var(--el-border-width) var(--el-border-style) var(--el-border-color);
   border-radius: var(--el-border-radius-base);
 
   &__placeholder {

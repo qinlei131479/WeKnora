@@ -13,6 +13,26 @@
   },
 
   "page": {
+    "agent": {
+      "sessions": {
+        "action.message": "Messages",
+        "search.endDatePlaceholder": "Created Time End",
+        "search.startDatePlaceholder": "Created Time Start",
+        "search.tenantPlaceholder": "Enter a tenant name",
+        "search.titlePlaceholder": "Enter a title",
+        "search.userPlaceholder": "Enter a username",
+        "status.deleted": "Deleted",
+        "status.normal": "Normal",
+        "table.createdAt": "Created Time",
+        "table.id": "Conversation ID",
+        "table.newSession": "New session",
+        "table.status": "Session Status",
+        "table.tenantName": "Workspace (Tenant)",
+        "table.title": "Session Title",
+        "table.updatedAt": "Updated Time",
+        "table.username": "User"
+      }
+    },
     "normal": {
       "add": "Add",
       "batchDelete": "Batch Delete",

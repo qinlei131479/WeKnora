@@ -99,7 +99,12 @@
           </el-form>
 
           <el-divider content-position="center">其他登录方式</el-divider>
-          <el-button>钉钉扫码登录</el-button>
+          <el-button>
+            钉钉扫码登录
+            <template #icon>
+              <span style="font-size: 20px; margin-right: 8px">💬</span>
+            </template>
+          </el-button>
           <div class="login-policy">
             <div class="login-policy-text">
               登录即代表您同意
