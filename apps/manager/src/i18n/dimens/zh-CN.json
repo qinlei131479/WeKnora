@@ -32,7 +32,7 @@
       "llmModel": 200,
       "multiModal": 120,
       "name": 220,
-      "operation": 220,
+      "operation": 120,
       "splitStrategy": 120,
       "storageEngine": 120,
       "tenantId": 120,

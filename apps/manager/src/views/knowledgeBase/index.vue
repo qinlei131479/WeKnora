@@ -99,7 +99,7 @@
             :show-overflow-tooltip="true"
           >
             <template #default="scope">
-              <!-- <KnowledgeBaseTypeTag :type="scope.row.type" /> -->
+              <KnowledgeBaseTypeTag :type="scope.row.type" />
             </template>
           </el-table-column>
           <el-table-column
@@ -175,7 +175,11 @@
             prop="multiModal"
             :width="$dim('page.knowledgeBase.multiModal', 120)"
             :show-overflow-tooltip="true"
-          />
+          >
+            <template #default="scope">
+              <span>{{ scope.row.vlmConfig?.enabled ? i18nTexts.enable : i18nTexts.disable }}</span>
+            </template>
+          </el-table-column>
           <el-table-column
             :label="$t('page.knowledgeBase.audioRecognition', '音频语音识别')"
             align="left"
@@ -183,7 +187,11 @@
             prop="audioRecognition"
             :width="$dim('page.knowledgeBase.audioRecognition', 120)"
             :show-overflow-tooltip="true"
-          />
+          >
+            <template #default="scope">
+              <span>{{ scope.row.asrConfig?.enabled ? i18nTexts.enable : i18nTexts.disable }}</span>
+            </template>
+          </el-table-column>
           <el-table-column
             :label="$t('page.knowledgeBase.knowledgeGraphs', '知识图谱')"
             align="left"
@@ -191,7 +199,11 @@
             prop="knowledgeGraphs"
             :width="$dim('page.knowledgeBase.knowledgeGraphs', 120)"
             :show-overflow-tooltip="true"
-          />
+          >
+            <template #default="scope">
+              <span>{{ scope.row.extractConfig?.enabled ? i18nTexts.enable : i18nTexts.disable }}</span>
+            </template>
+          </el-table-column>
           <el-table-column
             :label="$t('page.knowledgeBase.aiQuestionGeneration', 'AI问题生成')"
             align="left"
@@ -199,7 +211,11 @@
             prop="aiQuestionGeneration"
             :width="$dim('page.knowledgeBase.aiQuestionGeneration', 120)"
             :show-overflow-tooltip="true"
-          />
+          >
+            <template #default="scope">
+              <span>{{ scope.row.questionGenerationConfig?.enabled ? i18nTexts.enable : i18nTexts.disable }}</span>
+            </template>
+          </el-table-column>
           <el-table-column
             :label="$t('page.knowledgeBase.autoTagAssociation', '自动关联标签')"
             align="left"
@@ -207,7 +223,11 @@
             prop="autoTagAssociation"
             :width="$dim('page.knowledgeBase.autoTagAssociation', 120)"
             :show-overflow-tooltip="true"
-          />
+          >
+            <template #default="scope">
+              <span>{{ scope.row.autoTagConfig?.enabled ? i18nTexts.enable : i18nTexts.disable }}</span>
+            </template>
+          </el-table-column>
           <el-table-column
             :label="$t('page.knowledgeBase.storageEngine', '存储引擎')"
             align="left"
@@ -215,7 +235,11 @@
             prop="storageEngine"
             :width="$dim('page.knowledgeBase.storageEngine', 120)"
             :show-overflow-tooltip="true"
-          />
+          >
+            <template #default="scope">
+              <span>{{ scope.row.storageBackendId ? i18nTexts.enable : i18nTexts.disable }}</span>
+            </template>
+          </el-table-column>
           <el-table-column
             :label="$t('page.knowledgeBase.tenantId', '关联空间')"
             align="left"
@@ -226,7 +250,7 @@
           >
             <template #default="scope">
               <div class="tenant-cell">
-                <div class="tenant-cell-name">{{ scope.row.tenantName }}</div>
+                <div v-if="scope.row.tenant" class="tenant-cell-name">{{ scope.row.tenant.name }}</div>
                 <div class="tenant-cell-id">{{ scope.row.tenantId }}</div>
               </div>
             </template>
@@ -245,34 +269,22 @@
             :label="$t('page.normal.operation', '操作')"
             prop="operation"
             align="left"
-            :width="$dim('page.normal.operation', 220)"
+            :width="$dim('page.knowledgeBase.operation', 120)"
             fixed="right"
           >
             <template #default="scope">
-              <el-button link class="action-link action-link--primary" @click="handleUpdate(scope.row)" v-hasPermi="['business:knowledge:edit']">
+              <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['business:knowledgeBases:edit']">
                 {{ $t('page.normal.edit') }}
               </el-button>
-              <el-button link class="action-link action-link--danger" @click="handleDelete(scope.row)" v-hasPermi="['business:knowledge:remove']">
+              <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['business:knowledgeBases:remove']">
                 {{ $t('page.normal.remove') }}
               </el-button>
-              <el-button
-                v-if="!scope.row.isActive"
-                link
-                class="action-link action-link--primary"
-                @click="handleEnable(scope.row)"
-                v-hasPermi="['business:knowledge:edit']"
-              >
+              <!-- <el-button v-if="!scope.row.isActive" link type="info" @click="handleEnable(scope.row)" v-hasPermi="['business:knowledgeBases:edit']">
                 {{ $t('page.normal.enable') }}
               </el-button>
-              <el-button
-                v-else
-                link
-                class="action-link action-link--primary"
-                @click="handleDisable(scope.row)"
-                v-hasPermi="['business:knowledge:edit']"
-              >
+              <el-button v-else link type="info" @click="handleDisable(scope.row)" v-hasPermi="['business:knowledgeBases:edit']">
                 {{ $t('page.normal.disable') }}
-              </el-button>
+              </el-button> -->
             </template>
           </el-table-column>
         </el-table>
@@ -283,8 +295,8 @@
       </div>
     </div>
 
-    <!-- <KnowledgeBaseEditorModal v-model:visible="open" :mode="mode" :kbId="kbId" /> -->
     <!-- 添加或修改对话框 -->
+    <!-- <KnowledgeBaseEditorModal v-model:visible="open" :mode="mode" :kbId="kbId" /> -->
   </section>
 </template>
 
@@ -295,7 +307,7 @@ import { useI18n } from 'vue-i18n';
 import { Search } from 'lucide-vue-next';
 
 // import KnowledgeBaseEditorModal from './components/KnowledgeBaseEditorModal.vue'
-// import KnowledgeBaseTypeTag from './components/KnowledgetBaseTypeTag.vue';
+import KnowledgeBaseTypeTag from './components/KnowledgeBaseTypeTag.vue';
 import { deleteKnowledgeBaseSingleApi, getKnowledgeBaseListApi } from '@/api/data/knowledgeBase.js';
 
 import { getKBChunkStrategyOptionLabel } from '@/composables/useKBChunk.js';
@@ -338,6 +350,11 @@ const { proxy } = getCurrentInstance();
 // }
 const { t } = useI18n();
 const $t = t;
+
+const i18nTexts = ref({
+  enable: t('page.normal.enable'),
+  disable: t('page.normal.disable')
+});
 
 const tableData = ref<KnowledgeBaseExtends[]>([]) as { value: KnowledgeBaseExtends[] };
 const tableRef = ref();
@@ -514,5 +531,8 @@ getList();
   .el-tag + .el-tag {
     margin-left: 12px;
   }
+}
+.tenant-cell-name {
+  font-weight: bold;
 }
 </style>
