@@ -8,6 +8,7 @@ import com.iptv.business.domain.vo.KnowledgesVO;
 import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
 import jakarta.annotation.Nonnull;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * <p>
@@ -50,4 +51,11 @@ public interface KnowledgesService extends IService<Knowledges> {
      * @param id 主键
      */
     void deleteById(@Nonnull String id);
+
+    /**
+     * 按 id 预览
+     *
+     * @param id 主键
+     */
+    void previewById(@Nonnull String id, HttpServletResponse response);
 }

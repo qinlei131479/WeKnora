@@ -17,7 +17,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class UsersPageDTO extends PageDTO {
+public class UsersPageDTO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
@@ -28,10 +28,10 @@ public class UsersPageDTO extends PageDTO {
     private String id;
 
     /**
-     * 用户名
+     * 用户名 username 字段和框架header 中的 username 冲突,重命名为name
      */
     @Schema(description = "用户名")
-    private String username;
+    private String name;
 
     /**
      * 登录邮箱

@@ -17,7 +17,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class WebSearchProvidersPageDTO extends PageDTO {
+public class WebSearchProvidersPageDTO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 

@@ -207,4 +207,10 @@ public class KnowledgeBasesVO implements Serializable {
      */
     @Schema(description = "解析后异步关联已有标签的配置")
     private String autoTagConfig;
+
+    /**
+     * 知识库文件数量
+     */
+    @Schema(description = "知识库文件数量")
+    private Long fileCount;
 }

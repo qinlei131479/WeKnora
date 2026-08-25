@@ -5,6 +5,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serializable;
+
 /**
  * <p>
  * 知识条目（文档/FAQ/URL/手工等）：解析状态、文件元数据、目录路径
@@ -15,7 +17,7 @@ import lombok.EqualsAndHashCode;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class KnowledgesPageDTO extends PageDTO {
+public class KnowledgesPageDTO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 

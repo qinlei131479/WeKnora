@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.io.Serial;
+import java.io.Serializable;
 import java.util.Date;
 
 /**
@@ -18,7 +19,7 @@ import java.util.Date;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class StorageBackendsPageDTO extends PageDTO {
+public class StorageBackendsPageDTO implements Serializable {
     @Serial
     private static final long serialVersionUID = -3785203040686094954L;
 

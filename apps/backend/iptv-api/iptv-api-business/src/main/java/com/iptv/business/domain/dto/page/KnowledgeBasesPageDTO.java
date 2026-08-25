@@ -17,7 +17,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class KnowledgeBasesPageDTO extends PageDTO {
+public class KnowledgeBasesPageDTO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 

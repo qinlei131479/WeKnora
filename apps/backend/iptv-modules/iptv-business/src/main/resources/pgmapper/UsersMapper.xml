@@ -34,8 +34,8 @@
             <if test="param.id != null and param.id != ''">
                 AND id ILIKE CONCAT('%', #{param.id}, '%')
             </if>
-            <if test="param.username != null and param.username != ''">
-                AND username ILIKE CONCAT('%', #{param.username}, '%')
+            <if test="param.name != null and param.name != ''">
+                AND username ILIKE CONCAT('%', #{param.name}, '%')
             </if>
             <if test="param.email != null and param.email != ''">
                 AND email ILIKE CONCAT('%', #{param.email}, '%')

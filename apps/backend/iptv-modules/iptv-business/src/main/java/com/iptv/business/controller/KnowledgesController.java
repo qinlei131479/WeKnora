@@ -12,6 +12,7 @@ import com.iptv.common.log.enums.BusinessType;
 import com.iptv.common.security.annotation.RequiresPermissions;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -61,5 +62,11 @@ public class KnowledgesController {
     public R<Void> deleteById(@RequestParam String id) {
         knowledgesService.deleteById(id);
         return R.ok();
+    }
+
+    @Operation(summary = "文件预览", description = "文件预览")
+    @GetMapping("/preview")
+    public void previewById(@RequestParam String id, HttpServletResponse response) {
+        knowledgesService.previewById(id, response);
     }
 }

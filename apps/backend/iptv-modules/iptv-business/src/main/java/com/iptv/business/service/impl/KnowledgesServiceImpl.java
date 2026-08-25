@@ -1,7 +1,10 @@
 package com.iptv.business.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -19,13 +22,19 @@ import com.iptv.common.core.utils.PageUtils;
 import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
 import jakarta.annotation.Nonnull;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.io.*;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 知识条目（文档/FAQ/URL/手工等）：解析状态、文件元数据、目录路径 服务实现类（PostgreSQL）
@@ -58,7 +67,7 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
     public KnowledgesFolderVO queryFolders(String knowledgeBaseId) {
         // 1. 查询每个文件夹路径的文档数量
         List<Map<String, Object>> folderCounts = this.baseMapper.selectFolderCounts(knowledgeBaseId);
-        
+
         // 2. 构建文件夹树
         return buildFolderTree(folderCounts);
     }
@@ -75,7 +84,7 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
         }
 
         // 2. 标记状态为 deleting（防止并发访问）
-        this.baseMapper.update(null,new LambdaUpdateWrapper<Knowledges>()
+        this.baseMapper.update(null, new LambdaUpdateWrapper<Knowledges>()
                 .set(Knowledges::getParseStatus, "deleting")
                 .eq(Knowledges::getId, id));
         log.info("知识条目标记为删除中: {}", id);
@@ -110,6 +119,177 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
         // TODO: 10. 调整租户存储空间
         // 需要实现租户存储调整
         // adjustTenantStorage(knowledge);
+    }
+
+    @Override
+    public void previewById(@Nonnull String id, HttpServletResponse response) {
+        log.info("开始预览知识条目: {}", id);
+
+        // 1. 查找知识条目
+        Knowledges knowledge = this.baseMapper.selectById(id);
+        if (knowledge == null) {
+            throw new ServiceException("知识条目不存在");
+        }
+
+        // 2. 判断是否为 manual 类型（手工录入）
+        if (StrUtil.equals(knowledge.getType(), "manual")) {
+            // 从 metadata 中读取内容
+            String content = extractContentFromMetadata(knowledge.getMetadata());
+            String fileName = extractFileNameFromMetadata(knowledge.getMetadata());
+            if (StrUtil.isBlank(fileName)) {
+                fileName = "manual_content.md";
+            }
+
+            // 设置响应头
+            response.setContentType("text/markdown; charset=UTF-8");
+            response.setHeader("X-Content-Type-Options", "nosniff");
+            response.setHeader("Content-Disposition", "inline; filename=\"" + fileName + "\"");
+            response.setHeader("Cache-Control", "private, max-age=3600");
+
+            // 写入内容
+            try (Writer writer = response.getWriter()) {
+                writer.write(content != null ? content : "");
+                writer.flush();
+            } catch (IOException e) {
+                log.error("写入预览内容失败", e);
+                throw new ServiceException("预览失败");
+            }
+            return;
+        }
+
+        // 3. 非 manual 类型，读取物理文件
+        String filePath = knowledge.getFilePath();
+        if (StrUtil.isBlank(filePath)) {
+            throw new ServiceException("文件路径为空");
+        }
+
+        File file = new File(filePath);
+        if (!file.exists()) {
+            throw new ServiceException("文件不存在");
+        }
+
+        String fileName = file.getName();
+        String contentType = getContentType(fileName);
+        boolean isInline = isInlineContentType(contentType);
+
+        // 设置响应头
+        response.setContentType(contentType);
+        response.setHeader("X-Content-Type-Options", "nosniff");
+        String disposition = isInline ? "inline" : "attachment";
+        try {
+            String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name());
+            response.setHeader("Content-Disposition", disposition + "; filename=\"" + encodedFileName + "\"");
+        } catch (Exception e) {
+            response.setHeader("Content-Disposition", disposition + "; filename=\"" + fileName + "\"");
+        }
+        response.setHeader("Cache-Control", "private, max-age=3600");
+        response.setContentLengthLong(file.length());
+
+        // 流式传输文件内容
+        try (InputStream inputStream = new FileInputStream(file);
+             OutputStream outputStream = response.getOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+            outputStream.flush();
+        } catch (IOException e) {
+            log.error("流式传输文件失败", e);
+            throw new ServiceException("预览失败");
+        }
+    }
+
+    /**
+     * 从 metadata JSON 中提取 content 字段
+     */
+    private String extractContentFromMetadata(String metadata) {
+        if (StrUtil.isBlank(metadata)) {
+            return null;
+        }
+        try {
+            JSONObject json = JSONUtil.parseObj(metadata);
+            return json.getStr("content");
+        } catch (Exception e) {
+            log.warn("解析 metadata 失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 从 metadata JSON 中提取 file_name 字段
+     */
+    private String extractFileNameFromMetadata(String metadata) {
+        if (StrUtil.isBlank(metadata)) {
+            return null;
+        }
+        try {
+            JSONObject json = JSONUtil.parseObj(metadata);
+            return json.getStr("file_name");
+        } catch (Exception e) {
+            log.warn("解析 metadata 失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 根据文件名获取 Content-Type
+     */
+    private String getContentType(String fileName) {
+        if (StrUtil.isBlank(fileName)) {
+            return "application/octet-stream";
+        }
+
+        String extension = FileUtil.extName(fileName);
+        if (StrUtil.isBlank(extension)) {
+            return "application/octet-stream";
+        }
+
+        switch (extension.toLowerCase()) {
+            case "pdf":
+                return "application/pdf";
+            case "jpg":
+            case "jpeg":
+                return "image/jpeg";
+            case "png":
+                return "image/png";
+            case "gif":
+                return "image/gif";
+            case "txt":
+                return "text/plain";
+            case "md":
+                return "text/markdown";
+            case "doc":
+                return "application/msword";
+            case "docx":
+                return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "xls":
+                return "application/vnd.ms-excel";
+            case "xlsx":
+                return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case "ppt":
+                return "application/vnd.ms-powerpoint";
+            case "pptx":
+                return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            case "html":
+            case "htm":
+                return "application/octet-stream"; // HTML 作为下载处理，防止 XSS
+            default:
+                return "application/octet-stream";
+        }
+    }
+
+    /**
+     * 判断 Content-Type 是否支持内联显示
+     */
+    private boolean isInlineContentType(String contentType) {
+        if (StrUtil.isBlank(contentType)) {
+            return false;
+        }
+        // 文本、图片、PDF 等支持内联显示
+        return contentType.startsWith("text/")
+                || contentType.startsWith("image/")
+                || contentType.equals("application/pdf");
     }
 
     /**
@@ -151,12 +331,12 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
         for (Map<String, Object> count : folderCounts) {
             String folderPath = (String) count.get("folderPath");
             int docCount = ((Number) count.get("count")).intValue();
-            
+
             result.setTotalDocumentCount(result.getTotalDocumentCount() + docCount);
 
             // 规范化路径
             String normalizedPath = normalizeFolderPath(folderPath);
-            
+
             // 根目录文档
             if (StrUtil.isBlank(normalizedPath)) {
                 result.setRootDocumentCount(result.getRootDocumentCount() + docCount);
@@ -183,7 +363,7 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
         for (String path : paths) {
             KnowledgesFolderVO.FolderNode node = nodes.get(path);
             node.setTotalCount(node.getDocumentCount());
-            
+
             String parent = getFolderParent(path);
             if (StrUtil.isNotBlank(parent) && nodes.containsKey(parent)) {
                 nodes.get(parent).setTotalCount(nodes.get(parent).getTotalCount() + node.getTotalCount());
@@ -213,9 +393,9 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
     /**
      * 确保文件夹节点存在
      */
-    private KnowledgesFolderVO.FolderNode ensureNode(String path, 
-            Map<String, KnowledgesFolderVO.FolderNode> nodes,
-            Map<String, List<KnowledgesFolderVO.FolderNode>> children) {
+    private KnowledgesFolderVO.FolderNode ensureNode(String path,
+                                                     Map<String, KnowledgesFolderVO.FolderNode> nodes,
+                                                     Map<String, List<KnowledgesFolderVO.FolderNode>> children) {
         if (nodes.containsKey(path)) {
             return nodes.get(path);
         }

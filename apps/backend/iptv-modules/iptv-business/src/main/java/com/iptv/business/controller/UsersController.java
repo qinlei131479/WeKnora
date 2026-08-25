@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import com.iptv.common.core.domain.R;
@@ -48,7 +49,7 @@ public class UsersController {
 
     @Operation(summary = "分页查询", description = "按条件分页查询")
     @GetMapping("/list")
-    public TableDataInfo<UsersVO> list(UsersPageDTO dto, PageDTO pg) {
+    public TableDataInfo<UsersVO> list(@ModelAttribute UsersPageDTO dto, PageDTO pg) {
         return usersService.queryPage(dto, pg);
     }
 

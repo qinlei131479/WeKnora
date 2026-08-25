@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.io.Serializable;
 import java.util.Date;
 
 /**
@@ -16,8 +17,8 @@ import java.util.Date;
  * @since 2026-08-10
  */
 @Data
-@EqualsAndHashCode(callSuper = true)
-public class McpServicesPageDTO extends PageDTO {
+@EqualsAndHashCode(callSuper = false)
+public class McpServicesPageDTO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 

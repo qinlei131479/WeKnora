@@ -60,6 +60,11 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
     public KnowledgeBasesVO queryById(@Nonnull String id) {
         KnowledgeBases entity = this.baseMapper.selectById(id);
         KnowledgeBasesVO vo = BeanUtil.copyProperties(entity, KnowledgeBasesVO.class);
+        // 查询知识库文件数量
+        long fileCount = knowledgesMapper.selectCount(new LambdaQueryWrapper<Knowledges>()
+                .eq(Knowledges::getKnowledgeBaseId, id)
+                .isNull(Knowledges::getDeletedAt));
+        vo.setFileCount(fileCount);
         queryTenants(List.of(vo));
         queryModel(List.of(vo));
         queryVector(List.of(vo));

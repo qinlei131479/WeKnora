@@ -9,7 +9,7 @@ import ${pkg};
 </#list>
 <#if entityLombokModel>
 import lombok.Data;
-import com.iptv.common.core.web.page.PageDTO;
+import java.io.Serializable;
 import lombok.EqualsAndHashCode;
 </#if>
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -24,16 +24,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 <#if entityLombokModel>
 @Data
-<#if superEntityClass??>
-@EqualsAndHashCode(callSuper = true)
-<#else>
+</#if>
 @EqualsAndHashCode(callSuper = false)
-</#if>
-</#if>
 <#if table.convert>
 @TableName("${table.name}")
 </#if>
-public class ${entity}PageDTO extends PageDTO {
+public class ${entity}PageDTO implements Serializable { {
 
 <#if entitySerialVersionUID>
     private static final long serialVersionUID = 1L;
