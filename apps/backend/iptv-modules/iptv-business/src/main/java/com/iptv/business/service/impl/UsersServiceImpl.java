@@ -153,7 +153,7 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         String hashedPassword = BCrypt.hashpw(dto.getPassword(), BCrypt.gensalt());
 
         List<Tenants> defaultTenantsList = new ArrayList<>();
-        if (CollUtil.isEmpty(dto.getBindTenants())) {
+        if (CollUtil.isEmpty(dto.getTenants())) {
             // 创建默认工作空间
             Tenants defaultTenant = new Tenants();
             defaultTenant.setName(dto.getUsername() + "'s Workspace");
@@ -169,7 +169,7 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         } else {
             // 检查工作空间是否存在
             defaultTenantsList = tenantsMapper.selectList(new LambdaQueryWrapper<Tenants>()
-                    .in(Tenants::getId, dto.getBindTenants()
+                    .in(Tenants::getId, dto.getTenants()
                             .stream()
                             .map(UsersDTO.BindTenantDTO::getTenantId)
                             .collect(Collectors.toList()))
@@ -196,8 +196,8 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         // 8. 创建默认租户成员
         List<TenantMembers> tenantMembersList = new ArrayList<>();
         defaultTenantsList.forEach(tenant -> {
-            String role = dto.getBindTenants().stream()
-                    .filter(b -> b.getTenantId().equals(tenant.getId()))
+            String role = dto.getTenants().stream()
+                    .filter(b -> ObjectUtil.equal(b.getTenantId(), tenant.getId()))
                     .map(UsersDTO.BindTenantDTO::getRole)
                     .findFirst()
                     .orElse(TenantMemberRoleEnum.OWNER.getCode());
@@ -242,20 +242,19 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         if (BeanUtil.isEmpty(entity)) {
             throw new ServiceException("用户不存在");
         }
-        if(CollUtil.isNotEmpty(dto.getBindTenants())){
+        if (CollUtil.isNotEmpty(dto.getTenants())) {
             // 先删除以前的租户成员关系
-            tenantMembersMapper.delete(new LambdaQueryWrapper<TenantMembers>()
-                    .eq(TenantMembers::getUserId, dto.getId()));
+            tenantMembersMapper.deleteByUserId(dto.getId());
             // 加入新的
             List<Tenants> defaultTenantsList = tenantsMapper.selectList(new LambdaQueryWrapper<Tenants>()
-                    .in(Tenants::getId, dto.getBindTenants()
+                    .in(Tenants::getId, dto.getTenants()
                             .stream()
                             .map(UsersDTO.BindTenantDTO::getTenantId)
                             .collect(Collectors.toSet())));
             if (CollUtil.isNotEmpty(defaultTenantsList)) {
                 List<TenantMembers> tenantMembersList = new ArrayList<>();
                 defaultTenantsList.forEach(b -> {
-                    String role = dto.getBindTenants().stream()
+                    String role = dto.getTenants().stream()
                             .filter(t -> ObjectUtil.equal(t.getTenantId(), b.getId()))
                             .map(UsersDTO.BindTenantDTO::getRole)
                             .findFirst()
@@ -325,7 +324,7 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         if (BeanUtil.isEmpty(user)) {
             throw new ServiceException("用户不存在");
         }
-        this.baseMapper.update(null,new LambdaUpdateWrapper<Users>()
+        this.baseMapper.update(null, new LambdaUpdateWrapper<Users>()
                 .set(Users::getIsActive, true)
                 .eq(Users::getId, userId));
     }
@@ -337,7 +336,7 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         if (BeanUtil.isEmpty(user)) {
             throw new ServiceException("用户不存在");
         }
-        this.baseMapper.update(null,new LambdaUpdateWrapper<Users>()
+        this.baseMapper.update(null, new LambdaUpdateWrapper<Users>()
                 .set(Users::getIsActive, false)
                 .eq(Users::getId, userId));
     }

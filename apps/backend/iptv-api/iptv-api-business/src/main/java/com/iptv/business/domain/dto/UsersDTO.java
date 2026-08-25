@@ -58,12 +58,12 @@ public class UsersDTO implements Serializable {
      * 绑定租户列表
      */
     @Schema(description = "绑定租户列表")
-    private List<BindTenantDTO> bindTenants;
+    private List<BindTenantDTO> tenants;
 
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    public class BindTenantDTO {
+    public static class BindTenantDTO {
         /**
          * 租户 ID
          */

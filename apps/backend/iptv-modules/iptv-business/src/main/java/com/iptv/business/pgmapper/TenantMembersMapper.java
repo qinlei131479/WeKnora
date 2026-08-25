@@ -13,4 +13,11 @@ import com.iptv.business.domain.TenantMembers;
  */
 public interface TenantMembersMapper extends BaseMapper<TenantMembers> {
 
+    /**
+     * 根据user_id物理删除用户-租户关联关系
+     * @param userId
+     */
+    void deleteByUserId(String userId);
+
+    void deleteByTenantId(Integer tenantId);
 }

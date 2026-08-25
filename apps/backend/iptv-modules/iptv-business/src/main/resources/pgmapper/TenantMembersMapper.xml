@@ -20,4 +20,12 @@
     <sql id="Base_Column_List">
         id, user_id, tenant_id, role, status, invited_by, joined_at, created_at, updated_at, deleted_at
     </sql>
+    
+    <delete id="deleteByUserId">
+        delete from tenant_members where user_id = #{userId}
+    </delete>
+
+    <delete id="deleteByTenantId">
+        delete from tenant_members where tenant_id = #{tenantId}
+    </delete>
 </mapper>
