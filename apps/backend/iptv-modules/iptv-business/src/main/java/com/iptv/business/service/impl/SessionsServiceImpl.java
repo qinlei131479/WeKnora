@@ -60,7 +60,7 @@ public class SessionsServiceImpl extends ServiceImpl<SessionsMapper, Sessions> i
                 userList.stream()
                         .filter(u -> ObjectUtil.equal(u.getId(), vo.getUserId()))
                         .findFirst()
-                        .ifPresent(u -> vo.setTenantName(u.getUsername()));
+                        .ifPresent(u -> vo.setUsername(u.getUsername()));
             });
         }
 
@@ -93,7 +93,7 @@ public class SessionsServiceImpl extends ServiceImpl<SessionsMapper, Sessions> i
             throw new ServiceException("租户不存在");
         }
         Users user = usersMapper.selectByIdIncludingDeleted(dto.getUserId());
-        if (user != null) {
+        if (user == null) {
             throw new ServiceException("用户不存在");
         }
 
@@ -103,6 +103,7 @@ public class SessionsServiceImpl extends ServiceImpl<SessionsMapper, Sessions> i
         this.baseMapper.insert(entity);
         SessionsVO vo = BeanUtil.copyProperties(entity, SessionsVO.class);
         vo.setTenantName(tenant.getName());
+        vo.setUsername(user.getUsername());
         return vo;
     }
 
