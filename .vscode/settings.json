@@ -39,5 +39,6 @@
     "*.log": true
   },
   "vue.format.scriptInitialIndent": false,
-  "vue.format.styleInitialIndent": false
+  "vue.format.styleInitialIndent": false,
+  "java.compile.nullAnalysis.mode": "disabled"
 }

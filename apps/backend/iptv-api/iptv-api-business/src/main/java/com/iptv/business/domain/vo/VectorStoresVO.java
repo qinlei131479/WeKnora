@@ -52,4 +52,10 @@ public class VectorStoresVO implements Serializable {
 
     @Schema(description = "软删除时间；非空表示已删除")
     private Date deletedAt;
+
+    @Schema(description = "来源（env/user）")
+    private String source;
+
+    @Schema(description = "状态")
+    private String status;
 }

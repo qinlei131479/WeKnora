@@ -5,6 +5,7 @@ import java.util.Date;
 import java.io.Serializable;
 
 import com.iptv.business.domain.Models;
+import com.iptv.business.domain.StorageBackends;
 import com.iptv.business.domain.Tenants;
 import com.iptv.business.domain.VectorStores;
 import lombok.Data;
@@ -176,13 +177,19 @@ public class KnowledgeBasesVO implements Serializable {
     private String vectorStoreId;
 
     @Schema(description = "向量库实例")
-    private VectorStores vectorStore;
+    private VectorStoresVO vectorStore;
 
     /**
      * Wiki 类型知识库配置
      */
     @Schema(description = "Wiki 类型知识库配置")
     private String wikiConfig;
+
+    /**
+     * Wiki合成模型
+     */
+    @Schema(description = "Wiki合成模型")
+    private Models wikiSynthesisModel;
 
     /**
      * 索引管线开关（向量/关键词/Wiki/知识图谱等）
@@ -201,6 +208,9 @@ public class KnowledgeBasesVO implements Serializable {
      */
     @Schema(description = "绑定的存储后端实例 ID")
     private String storageBackendId;
+
+    @Schema(description = "绑定的存储后端实例")
+    private StorageBackends storageBackend;
 
     /**
      * 解析后异步关联已有标签的配置

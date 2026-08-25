@@ -9,6 +9,7 @@ import com.iptv.business.domain.dto.OllamaCheckModelsDTO;
 import com.iptv.business.domain.dto.OllamaCheckRemoteModelDTO;
 import com.iptv.business.domain.vo.*;
 import com.iptv.business.service.OllamaService;
+import com.iptv.business.util.EnvUtil;
 import com.iptv.common.core.exception.ServiceException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,11 +35,9 @@ public class OllamaServiceImpl implements OllamaService {
     private String ollamaEndpoint;
 
     public OllamaServiceImpl() {
-        String envUrl = System.getenv("OLLAMA_BASE_URL");
+        String envUrl = EnvUtil.get("OLLAMA_BASE_URL","http://192.168.170.71:11434");
         log.info("OLLAMA_BASE_URL from env: [{}]", envUrl);
-        this.ollamaEndpoint = (envUrl != null && !envUrl.isEmpty()) 
-                ? envUrl 
-                : "http://192.168.170.71:11434";
+        this.ollamaEndpoint = envUrl;
     }
 
     // 存储下载任务

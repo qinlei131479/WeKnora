@@ -72,7 +72,7 @@ public class SkillServiceImpl implements SkillService {
         log.debug("获取预装技能列表, 目录: {}", skillConfig.getPath());
 
         List<SkillVO> skills = new ArrayList<>();
-        Path skillsDir = Paths.get("D:\\projects\\Agent-Middle-Platform\\skills\\preloaded");
+        Path skillsDir = Paths.get(skillConfig.getPath());
 
         if (!Files.exists(skillsDir) || !Files.isDirectory(skillsDir)) {
             log.warn("技能目录不存在: {}", skillsDir);

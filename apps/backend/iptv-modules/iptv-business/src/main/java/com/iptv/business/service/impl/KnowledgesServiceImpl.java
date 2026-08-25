@@ -10,13 +10,18 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.iptv.business.domain.Chunks;
+import com.iptv.business.domain.KnowledgeBases;
 import com.iptv.business.domain.Knowledges;
+import com.iptv.business.domain.StorageBackends;
 import com.iptv.business.domain.dto.page.KnowledgesPageDTO;
 import com.iptv.business.domain.vo.KnowledgesFolderVO;
 import com.iptv.business.domain.vo.KnowledgesVO;
 import com.iptv.business.pgmapper.ChunksMapper;
+import com.iptv.business.pgmapper.KnowledgeBasesMapper;
 import com.iptv.business.pgmapper.KnowledgesMapper;
+import com.iptv.business.pgmapper.StorageBackendsMapper;
 import com.iptv.business.service.KnowledgesService;
+import com.iptv.business.service.StorageBackendFileServiceFactory;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
 import com.iptv.common.core.web.page.PageDTO;
@@ -48,6 +53,9 @@ import java.util.Map;
 public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowledges> implements KnowledgesService {
 
     private final ChunksMapper chunksMapper;
+    private final KnowledgeBasesMapper knowledgeBasesMapper;
+    private final StorageBackendsMapper storageBackendsMapper;
+    private final StorageBackendFileServiceFactory storageBackendFileServiceFactory;
 
     @Override
     public TableDataInfo<KnowledgesVO> queryPage(KnowledgesPageDTO dto, PageDTO pg) {
@@ -157,37 +165,48 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
             return;
         }
 
-        // 3. 非 manual 类型，读取物理文件
+        // 3. 非 manual 类型，根据知识库的存储后端获取文件
         String filePath = knowledge.getFilePath();
         if (StrUtil.isBlank(filePath)) {
             throw new ServiceException("文件路径为空");
         }
 
-        File file = new File(filePath);
-        if (!file.exists()) {
-            throw new ServiceException("文件不存在");
+        // 获取知识库信息
+        KnowledgeBases knowledgeBase = knowledgeBasesMapper.selectById(knowledge.getKnowledgeBaseId());
+        if (knowledgeBase == null) {
+            throw new ServiceException("知识库不存在");
         }
 
-        String fileName = file.getName();
-        String contentType = getContentType(fileName);
-        boolean isInline = isInlineContentType(contentType);
-
-        // 设置响应头
-        response.setContentType(contentType);
-        response.setHeader("X-Content-Type-Options", "nosniff");
-        String disposition = isInline ? "inline" : "attachment";
-        try {
-            String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name());
-            response.setHeader("Content-Disposition", disposition + "; filename=\"" + encodedFileName + "\"");
-        } catch (Exception e) {
-            response.setHeader("Content-Disposition", disposition + "; filename=\"" + fileName + "\"");
+        // 获取存储后端配置
+        StorageBackends storageBackend = null;
+        if (StrUtil.isNotBlank(knowledgeBase.getStorageBackendId())) {
+            storageBackend = storageBackendsMapper.selectById(knowledgeBase.getStorageBackendId());
         }
-        response.setHeader("Cache-Control", "private, max-age=3600");
-        response.setContentLengthLong(file.length());
 
-        // 流式传输文件内容
-        try (InputStream inputStream = new FileInputStream(file);
+        // 使用工厂类根据存储后端获取文件流
+        try (InputStream inputStream = storageBackendFileServiceFactory.getFileStream(storageBackend, filePath);
              OutputStream outputStream = response.getOutputStream()) {
+
+            String fileName = StrUtil.isNotBlank(knowledge.getFileName()) 
+                    ? knowledge.getFileName() 
+                    : filePath.substring(filePath.lastIndexOf('/') + 1);
+            
+            String contentType = getContentType(fileName);
+            boolean isInline = isInlineContentType(contentType);
+
+            // 设置响应头
+            response.setContentType(contentType);
+            response.setHeader("X-Content-Type-Options", "nosniff");
+            String disposition = isInline ? "inline" : "attachment";
+            try {
+                String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name());
+                response.setHeader("Content-Disposition", disposition + "; filename=\"" + encodedFileName + "\"");
+            } catch (Exception e) {
+                response.setHeader("Content-Disposition", disposition + "; filename=\"" + fileName + "\"");
+            }
+            response.setHeader("Cache-Control", "private, max-age=3600");
+
+            // 流式传输文件内容
             byte[] buffer = new byte[8192];
             int bytesRead;
             while ((bytesRead = inputStream.read(buffer)) != -1) {
@@ -197,6 +216,9 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
         } catch (IOException e) {
             log.error("流式传输文件失败", e);
             throw new ServiceException("预览失败");
+        } catch (Exception e) {
+            log.error("获取文件失败", e);
+            throw new ServiceException("获取文件失败: " + e.getMessage());
         }
     }
 

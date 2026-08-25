@@ -8,6 +8,7 @@ import com.alibaba.nacos.common.utils.IoUtils;
 import com.iptv.common.core.utils.StringUtils;
 import com.iptv.file.config.MinioConfig;
 import com.iptv.file.utils.FileUploadUtils;
+import io.minio.GetObjectArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
@@ -77,6 +78,30 @@ public class MinioSysFileServiceImpl implements ISysFileService
         catch (Exception e)
         {
             throw new RuntimeException("Minio Failed to delete file", e);
+        }
+    }
+
+    /**
+     * 获取文件流
+     *
+     * @param filePath 文件路径
+     * @return 文件输入流
+     * @throws Exception
+     */
+    @Override
+    public InputStream getFile(String filePath) throws Exception
+    {
+        try
+        {
+            GetObjectArgs args = GetObjectArgs.builder()
+                    .bucket(minioConfig.getBucketName())
+                    .object(filePath)
+                    .build();
+            return client.getObject(args);
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException("Minio Failed to get file", e);
         }
     }
 }

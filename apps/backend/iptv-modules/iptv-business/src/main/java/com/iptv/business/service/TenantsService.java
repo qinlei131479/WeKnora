@@ -1,7 +1,9 @@
 package com.iptv.business.service;
 
+import com.iptv.business.domain.dto.ParserEngineCheckDTO;
 import com.iptv.business.domain.dto.TenantBindUsersDTO;
 import com.iptv.business.domain.dto.UserBindTenantsDTO;
+import com.iptv.business.domain.vo.ParserEnginesVO;
 import com.iptv.business.domain.vo.UsersVO;
 import jakarta.annotation.Nonnull;
 import com.iptv.business.domain.Tenants;
@@ -93,4 +95,19 @@ public interface TenantsService extends IService<Tenants> {
      * @param tenantId 租户 ID
      */
     void disable(Integer tenantId);
+
+    /**
+     * 列出当前租户可用的文档解析引擎
+     *
+     * @return 解析引擎列表及 DocReader 连接状态
+     */
+    ParserEnginesVO listParserEngines();
+
+    /**
+     * 使用给定配置参数检测解析引擎可用性（不保存）
+     *
+     * @param dto 解析引擎配置
+     * @return 解析引擎列表及 DocReader 连接状态
+     */
+    ParserEnginesVO checkParserEngines(@Nonnull ParserEngineCheckDTO dto);
 }

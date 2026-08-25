@@ -3,12 +3,15 @@ package com.iptv.business.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.iptv.business.domain.*;
 import com.iptv.business.domain.dto.page.KnowledgeBasesPageDTO;
 import com.iptv.business.domain.vo.KnowledgeBasesVO;
+import com.iptv.business.domain.vo.VectorStoresVO;
 import com.iptv.business.pgmapper.*;
 import com.iptv.business.service.ChunksService;
 import com.iptv.business.service.KnowledgeBasesService;
@@ -44,15 +47,14 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
     private final VectorStoresMapper vectorStoresMapper;
     private final TenantsMapper tenantsMapper;
     private final ChunksMapper chunksMapper;
+    private final StorageBackendsMapper storageBackendsMapper;
 
     @Override
     public TableDataInfo<KnowledgeBasesVO> queryPage(KnowledgeBasesPageDTO dto, PageDTO pg) {
         Page<KnowledgeBasesVO> page = PageUtils.toPage(pg);
         List<KnowledgeBases> list = this.baseMapper.queryPage(dto, page);
         List<KnowledgeBasesVO> voList = BeanUtil.copyToList(list, KnowledgeBasesVO.class);
-        queryTenants(voList);
-        queryModel(voList);
-        queryVector(voList);
+        buildVO(voList);
         return PageUtils.getDataTable(voList, page);
     }
 
@@ -65,10 +67,14 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
                 .eq(Knowledges::getKnowledgeBaseId, id)
                 .isNull(Knowledges::getDeletedAt));
         vo.setFileCount(fileCount);
-        queryTenants(List.of(vo));
-        queryModel(List.of(vo));
-        queryVector(List.of(vo));
+        buildVO(List.of(vo));
         return vo;
+    }
+    private void buildVO(List<KnowledgeBasesVO> voList){
+        queryTenants(voList);
+        queryModel(voList);
+        queryVector(voList);
+        queryStorageBackend(voList);
     }
 
     @Override
@@ -138,6 +144,19 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
         log.info("知识条目删除完成: {}", knowledgeBaseId);
     }
 
+    private void queryStorageBackend(List<KnowledgeBasesVO> voList){
+        List<StorageBackends> storageBackendsList = storageBackendsMapper.selectList(new LambdaQueryWrapper<StorageBackends>()
+                .isNull(StorageBackends::getDeletedAt));
+        voList.forEach(vo -> {
+            if(StrUtil.isNotBlank(vo.getStorageBackendId())){
+                vo.setStorageBackend(storageBackendsList.stream()
+                        .filter(storageBackend -> StrUtil.equals(storageBackend.getId(), vo.getStorageBackendId()))
+                        .findFirst()
+                        .orElse(null));
+            }
+        });
+    }
+
     private void queryModel(List<KnowledgeBasesVO> voList) {
         List<Models> modelList = modelsMapper.selectAllModels();
         voList.forEach(vo -> {
@@ -153,19 +172,41 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
                         .findFirst()
                         .orElse(null));
             }
+            if(StrUtil.isNotBlank(vo.getWikiConfig())){
+                JSONObject wikiConfig = JSONUtil.parseObj(vo.getWikiConfig());
+                if(wikiConfig.containsKey("synthesis_model_id") && StrUtil.isNotBlank(wikiConfig.getStr("synthesis_model_id"))){
+                    vo.setWikiSynthesisModel(modelList.stream()
+                        .filter(model -> StrUtil.equals(model.getId(), wikiConfig.getStr("synthesis_model_id")))
+                        .findFirst()
+                        .orElse(null));
+                }
+            }
         });
     }
 
     private void queryVector(List<KnowledgeBasesVO> voList) {
         List<VectorStores> vectorLibraryList = vectorStoresMapper.selectList(new LambdaQueryWrapper<VectorStores>()
                 .isNull(VectorStores::getDeletedAt));
+        List<VectorStoresVO> vectorList = BeanUtil.copyToList(vectorLibraryList,VectorStoresVO.class);
         voList.forEach(vo -> {
+            VectorStoresVO vectorStores = null;
             if(StrUtil.isNotBlank(vo.getVectorStoreId())){
-                vo.setVectorStore(vectorLibraryList.stream()
+                vectorStores = vectorList.stream()
                         .filter(vectorLibrary -> StrUtil.equals(vectorLibrary.getId(), vo.getVectorStoreId()))
                         .findFirst()
-                        .orElse(null));
+                        .orElse(null);
+
             }
+            if(BeanUtil.isNotEmpty(vectorStores)){
+                vectorStores.setSource("user");
+                vectorStores.setStatus("available");
+            }else{
+                vectorStores = new VectorStoresVO();
+                vectorStores.setName("System default");
+                vectorStores.setSource("env");
+                vectorStores.setStatus("available");
+            }
+            vo.setVectorStore(vectorStores);
         });
     }
 

@@ -164,6 +164,13 @@ pipeline {
                                         echo '已备份旧 .env'
                                     fi
                                     cp /usr/local/spring-boot/Agent-Middle-Platform/.env.kjsc.example .env
+
+                                    cd ${env.DEPLOY_BASE}/${service}
+                                    if [ -f .env ]; then
+                                        cp .env .env.bak.\$(date +%Y%m%d%H%M%S)
+                                        echo '已备份旧 .env'
+                                    fi
+                                    cp /usr/local/spring-boot/Agent-Middle-Platform/.env.kjsc.example .env
                                     echo '已从 .env.kjsc.example 更新 .env'
                                 "
                             """

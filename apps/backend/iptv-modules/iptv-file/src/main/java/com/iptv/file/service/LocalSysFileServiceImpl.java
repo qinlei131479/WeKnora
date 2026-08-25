@@ -8,6 +8,9 @@ import com.iptv.common.core.utils.StringUtils;
 import com.iptv.common.core.utils.file.FileUtils;
 import com.iptv.file.utils.FileUploadUtils;
 
+import java.io.FileInputStream;
+import java.io.InputStream;
+
 /**
  * 本地文件存储
  * 
@@ -62,5 +65,18 @@ public class LocalSysFileServiceImpl implements ISysFileService
     {
         String localFile = StringUtils.substringAfter(fileUrl, localFilePrefix);
         FileUtils.deleteFile(localFilePath + localFile);
+    }
+
+    /**
+     * 获取文件流
+     *
+     * @param filePath 文件路径
+     * @return 文件输入流
+     * @throws Exception
+     */
+    @Override
+    public InputStream getFile(String filePath) throws Exception
+    {
+        return new FileInputStream(filePath);
     }
 }
