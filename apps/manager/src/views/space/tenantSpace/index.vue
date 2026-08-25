@@ -1,7 +1,9 @@
 <template>
   <section>
     <page-name>
-      <el-button type="success" icon="Plus" @click="handleAdd" v-hasPermi="['business:tenants:add']">{{ $t('page.tenantSpace.add', '添加空间') }}</el-button>
+      <el-button type="success" icon="Plus" @click="handleAdd" v-hasPermi="['business:tenants:add']">{{
+        $t('page.tenantSpace.add', '添加空间')
+      }}</el-button>
     </page-name>
 
     <page-content>
@@ -11,7 +13,7 @@
             <el-input
               v-model="queryParams.name"
               class="search-bar__input"
-              :suffix-icon="Search"
+              :prefix-icon="Search"
               clearable
               :placeholder="$t('page.tenantSpace.searchPlaceholder', '搜索空间名称')"
               @keyup.enter="handleQuery"
@@ -41,9 +43,7 @@
           <el-button :disabled="ids.length === 0" v-hasPermi="['business:tenants:edit']" @click="handleDisable()">
             {{ $t('page.normal.batchDisable', '批量停用') }}
           </el-button>
-          <el-text class="selected-text">
-            {{ $t('page.normal.selected', '共选中') }} {{ ids.length }} {{ $t('page.normal.items', '条') }}
-          </el-text>
+          <el-text class="selected-text"> {{ $t('page.normal.selected', '共选中') }} {{ ids.length }} {{ $t('page.normal.items', '条') }} </el-text>
         </div>
       </template>
 
@@ -59,8 +59,14 @@
           <kjsc-empty />
         </template>
         <el-table-column type="selection" width="50" align="center" />
-        <el-table-column :label="$t('page.tenantSpace.id', '空间id')" align="left" key="id" prop="id" 
-          :width="$dim('page.tenantSpace.id', 100)" :show-overflow-tooltip="true" />
+        <el-table-column
+          :label="$t('page.tenantSpace.id', '空间id')"
+          align="left"
+          key="id"
+          prop="id"
+          :width="$dim('page.tenantSpace.id', 100)"
+          :show-overflow-tooltip="true"
+        />
         <el-table-column
           :label="$t('page.tenantSpace.name', '空间名称')"
           align="left"
@@ -145,14 +151,24 @@
             </template>
           </el-table-column>
           -->
-        <el-table-column :label="$t('page.tenantSpace.createdAt', '空间创建时间')" align="left" prop="createdAt"
-          :width="$dim('page.tenantSpace.createdAt', 180)" v-if="columns.createdAt.visible">
+        <el-table-column
+          :label="$t('page.tenantSpace.createdAt', '空间创建时间')"
+          align="left"
+          prop="createdAt"
+          :width="$dim('page.tenantSpace.createdAt', 180)"
+          v-if="columns.createdAt.visible"
+        >
           <template #default="scope">
             <span>{{ parseTime(scope.row.createdAt) }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="$t('page.normal.operation', '操作')" prop="operation" align="left"
-          :width="$dim('page.tenantSpace.operation', 200)" fixed="right">
+        <el-table-column
+          :label="$t('page.normal.operation', '操作')"
+          prop="operation"
+          align="left"
+          :width="$dim('page.tenantSpace.operation', 200)"
+          fixed="right"
+        >
           <template #default="scope">
             <el-button link type="primary" @click.stop="handleUpdate(scope.row)" v-hasPermi="['business:tenants:edit']">
               {{ $t('page.normal.edit') }}
@@ -266,7 +282,7 @@
 <script setup lang="ts" name="Models">
 // import { ElMessage } from 'element-plus'
 // import { Close, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
-import { useI18n } from 'vue-i18n'
+import { useI18n } from 'vue-i18n';
 import { isEmpty } from '@/utils/common.js';
 import { formatSize } from '@/utils';
 import { AjaxResult, McpEntity, TableShowColumns, TenantSpaceEntity, TenantSpaceListReq } from '@/types';
