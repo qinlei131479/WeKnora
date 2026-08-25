@@ -1,4 +1,4 @@
-.PHONY: help build run test clean docker-build-app docker-build-docreader docker-build-frontend docker-build-all docker-run migrate-up migrate-down docker-restart docker-stop start-all stop-all start-ollama stop-ollama build-images build-images-app build-images-docreader build-images-frontend clean-images check-env list-containers pull-images show-platform dev-start dev-stop dev-restart dev-logs dev-status dev-app dev-frontend docs install-swagger build-lite run-lite package-lite harness-up harness-down harness-api harness-worker harness-web harness-init harness-seed harness-logs harness-up-lite
+.PHONY: help harness-db-init build run test clean docker-build-app docker-build-docreader docker-build-frontend docker-build-all docker-run migrate-up migrate-down docker-restart docker-stop start-all stop-all start-ollama stop-ollama build-images build-images-app build-images-docreader build-images-frontend clean-images check-env list-containers pull-images show-platform dev-start dev-stop dev-restart dev-logs dev-status dev-app dev-frontend docs install-swagger build-lite run-lite package-lite harness-up harness-down harness-api harness-worker harness-web harness-init harness-seed harness-logs harness-up-lite
 
 # Show help
 help:
@@ -60,12 +60,13 @@ help:
 	@echo ""
 	@echo "Agent-Harness:"
 	@echo "  harness-init      补齐 .env 中 JWT/Sandbox Token，并拉取 harness 构建镜像"
+	@echo "  harness-db-init   幂等创建 agent_harness 库（现网请用 docker compose，见目标注释）"
 	@echo "  harness-api       仅启动 harness api，不拉起其它服务（含 milvus）"
 	@echo "  harness-worker    仅启动 harness worker，不拉起其它服务"
-	@echo "  harness-web       仅启动 harness web，不拉起其它服务"
-	@echo "  harness-up        启动 api + worker + web + sandbox-provisioner（不含 milvus）"
-	@echo "  harness-up-lite   同上，LITE_MODE=true（跳过知识库/图谱重依赖）"
-	@echo "  harness-down      仅停止上述 harness 容器，不动 postgres/app/frontend"
+	@echo "  harness-web       单独启动 harness web（需 apps/agent-web；不并入 harness-up）"
+	@echo "  harness-up        启动 api + worker + sandbox-provisioner（不含 web）"
+	@echo "  harness-up-lite   同上，LITE_MODE=true；会 up postgres/redis/minio，复用现网基础设施时禁用"
+	@echo "  harness-down      仅停止 harness 容器（含 web），不动 postgres/app/frontend"
 	@echo "  harness-logs      跟踪 api/worker/web/sandbox-provisioner 日志"
 	@echo "  harness-seed      在已启动的 api 中写入演示用户"
 	@echo "                    COMPOSE_FILE=docker-compose-kjsc.yml 可换 kjsc 编排"
@@ -87,7 +88,8 @@ DOCKER_TAG=latest
 # Agent-Harness（不要对整份 compose 做 down / --remove-orphans）
 COMPOSE_FILE ?= docker-compose-mac.yml
 HARNESS_PROFILES := --profile harness --profile minio --profile neo4j
-HARNESS_SERVICES := api worker web sandbox-provisioner
+# web 单独启动（make harness-web），不并入默认 harness-up。
+HARNESS_SERVICES ?= api worker sandbox-provisioner
 HARNESS_INFRA := postgres redis minio neo4j
 
 # Platform detection
@@ -365,16 +367,27 @@ endef
 harness-init:
 	./scripts/init_agent_harness.sh
 
+# 幂等创建 harness 独立库；harness-up 不含此步骤，首次部署需单独执行。
+# 现网推荐直接 docker（必须带 minio profile，否则 api 的 depends_on 校验失败）：
+#   docker compose -f docker-compose-kjsc.yml --profile harness --profile minio --profile neo4j \
+#     up --no-deps --exit-code-from harness-db-init harness-db-init
+harness-db-init:
+	docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) up --no-deps --exit-code-from harness-db-init harness-db-init
+
 harness-api:
 	$(call harness-up-one,api)
 
 harness-worker:
 	$(call harness-up-one,worker)
 
+# 单独启动 harness-web。现网等价命令：
+#   docker compose -f docker-compose-kjsc.yml --profile harness --profile minio --profile neo4j \
+#     up -d --no-deps --build web
 harness-web:
 	@test -f .env || { echo "缺少 .env，请先 make harness-init"; exit 1; }
+	@test -f apps/agent-web/Dockerfile || { echo "缺少 apps/agent-web，无法构建 harness-web"; exit 1; }
 	@VERSION=$$(tr -d '\n\r' < VERSION); \
-	AGENT_HARNESS_VERSION="$$VERSION" docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) up -d --no-deps web
+	AGENT_HARNESS_VERSION="$$VERSION" docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) up -d --no-deps --build web
 
 harness-up:
 	$(call harness-up-one,$(HARNESS_SERVICES))
@@ -390,7 +403,7 @@ harness-up-lite:
 	  docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) up -d postgres redis minio $(HARNESS_SERVICES)
 
 harness-down:
-	docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) stop $(HARNESS_SERVICES)
+	docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) stop $(HARNESS_SERVICES) web
 
 harness-logs:
 	docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) logs --tail=50 -f harness-db-init api worker web sandbox-provisioner

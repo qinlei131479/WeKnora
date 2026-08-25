@@ -559,11 +559,13 @@ services:
     restart: unless-stopped
 
   # 修改的PostgreSQL配置
+  # container_name 与现网测试机一致；服务名仍为 postgres，供 DB_HOST=postgres / DNS 使用。
+  # 现网已在跑时不要对本服务执行 up（会抢名字或重建）；Harness 请用 --no-deps。
   postgres:
     #image: paradedb/paradedb:v0.22.2-pg17
     # 这个版本是兼容x86架构的，上面的版本不支持x86架构，导致数据库无法启动
     image: paradedb/paradedb:v0.22.6-pg17
-    container_name: agent-middle-postgres
+    container_name: postgres17
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -575,7 +577,9 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
-      - agent-middle-network
+      agent-middle-network:
+        aliases:
+          - postgres
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
       interval: 10s # 增加时间间隔
@@ -588,7 +592,7 @@ services:
 
   redis:
     image: redis:7.0-alpine
-    container_name: agent-middle-redis
+    container_name: redis7
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
     restart: always
     ports:
@@ -596,7 +600,9 @@ services:
     volumes:
       - redis-data:/data
     networks:
-      - agent-middle-network
+      agent-middle-network:
+        aliases:
+          - redis
 
   # One-shot init: copy the read-only template settings.yml into a named volume
   # before searxng starts. Necessary because the searxng entrypoint sed-replaces
@@ -652,7 +658,7 @@ services:
 
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    container_name: agent-middle-minio
+    container_name: minio2025
     ports:
       - "${MINIO_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
@@ -668,14 +674,16 @@ services:
       timeout: 20s
       retries: 3
     networks:
-      - agent-middle-network
+      agent-middle-network:
+        aliases:
+          - minio
     profiles:
       - minio
       - full
 
   neo4j:
     image: neo4j:2025.10.1
-    container_name: agent-middle-neo4j
+    container_name: neo4j
     volumes:
       - neo4j-data:/data
       - neo4j-logs:/logs
@@ -693,6 +701,7 @@ services:
       agent-middle-network:
         aliases:
           - graph
+          - neo4j
     profiles:
       - neo4j
       - full
@@ -701,7 +710,7 @@ services:
   # 默认关闭 xpack 安全，与 qdrant/milvus/weaviate 一致便于内网联调；生产请自行开启认证。
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.17.3
-    container_name: agent-middle-elasticsearch
+    container_name: elasticsearch8
     environment:
       - discovery.type=single-node
       - cluster.name=agent-middle-es
@@ -724,21 +733,25 @@ services:
       retries: 5
       start_period: 90s
     networks:
-      - agent-middle-network
+      agent-middle-network:
+        aliases:
+          - elasticsearch
     restart: unless-stopped
     profiles:
       - elasticsearch
 
   qdrant:
     image: qdrant/qdrant:v1.16.2
-    container_name: agent-middle-qdrant
+    container_name: qdrant
     ports:
       - "${QDRANT_REST_PORT:-6333}:6333"
       - "${QDRANT_PORT:-6334}:6334"
     volumes:
       - qdrant_data:/qdrant/storage
     networks:
-      - agent-middle-network
+      agent-middle-network:
+        aliases:
+          - qdrant
     restart: unless-stopped
     profiles:
       - qdrant
@@ -746,7 +759,7 @@ services:
 
   milvus:
     image: milvusdb/milvus:v2.6.11
-    container_name: agent-middle-milvus
+    container_name: milvus2.6
     security_opt:
       - seccomp:unconfined
     command: ["milvus", "run", "standalone"]
@@ -767,14 +780,16 @@ services:
     volumes:
       - milvus_data:/var/lib/milvus
     networks:
-      - agent-middle-network
+      agent-middle-network:
+        aliases:
+          - milvus
     restart: unless-stopped
     profiles:
       - milvus
 
   weaviate:
     image: semitechnologies/weaviate:1.28.4
-    container_name: agent-middle-weaviate
+    container_name: weaviate
     environment:
       - PERSISTENCE_DATA_PATH=/var/lib/weaviate
       - CLUSTER_HOSTNAME=node1
@@ -791,7 +806,9 @@ services:
     volumes:
       - weaviate_data:/var/lib/weaviate
     networks:
-      - agent-middle-network
+      agent-middle-network:
+        aliases:
+          - weaviate
     restart: unless-stopped
     profiles:
       - weaviate
@@ -867,8 +884,8 @@ services:
   # Langfuse 自建可观测栈 (opt-in via `--profile langfuse`)
   #
   # 为了最小化资源占用，Langfuse 会复用 WeKnora 已有的 postgres 和 redis：
-  #   - postgres：在 agent-middle-postgres 中创建独立的 "langfuse" 数据库
-  #   - redis  ：复用 agent-middle-redis 的 DB 1（WeKnora 自己用 DB 0）
+  #   - postgres：在 postgres17 中创建独立的 "langfuse" 数据库
+  #   - redis  ：复用 redis7 的 DB 1（WeKnora 自己用 DB 0）
   # 需要新增的只有 Langfuse 应用自身 + ClickHouse（OLAP）+ 专用 MinIO（事件/媒体 S3）。
   #
   # 启用方式：
@@ -881,8 +898,8 @@ services:
   # 相关默认密码已写成占位符，生产部署务必用 openssl rand 重新生成！
   # ---------------------------------------------------------------------------
 
-  # 一次性初始化脚本：在已有的 agent-middle-postgres 里创建 langfuse 数据库（幂等，数据库已存在则跳过）
-  # 复用 agent-middle-postgres 的 ParadeDB 镜像，避免多拉一个 postgres 镜像
+  # 一次性初始化脚本：在已有的 postgres17 里创建 langfuse 数据库（幂等，数据库已存在则跳过）
+  # 复用 postgres17 的 ParadeDB 镜像，避免多拉一个 postgres 镜像
   langfuse-db-init:
     image: paradedb/paradedb:v0.22.2-pg17
     container_name: agent-middle-langfuse-db-init
@@ -897,7 +914,7 @@ services:
     command:
       - |
         set -e
-        echo "[langfuse-db-init] ensuring database '${LANGFUSE_DB_NAME:-langfuse}' exists in agent-middle-postgres..."
+        echo "[langfuse-db-init] ensuring database '${LANGFUSE_DB_NAME:-langfuse}' exists in postgres17..."
         # 先刷新现有库的 collation（镜像 ICU 2.36 与宿主 2.41 不匹配时必须做），否则 CREATE DATABASE 会失败
         psql -h postgres -U ${DB_USER} -d postgres -v ON_ERROR_STOP=0 -c "ALTER DATABASE template1 REFRESH COLLATION VERSION;" >/dev/null 2>&1 || true
         psql -h postgres -U ${DB_USER} -d postgres -v ON_ERROR_STOP=0 -c "ALTER DATABASE postgres REFRESH COLLATION VERSION;" >/dev/null 2>&1 || true
@@ -1111,9 +1128,12 @@ services:
 
   # =====================================================================
   # Agent-Harness（profile: harness；OCR：profile all）
-  # postgres/minio/neo4j/milvus 仍用本文件原定义（含 ParadeDB 版本与容器名），此处不覆盖。
+  # postgres/minio/neo4j/milvus 仍用本文件原定义（现网容器名 postgres17/minio2025/neo4j/milvus2.6），此处不覆盖。
   # =====================================================================
   # 幂等创建独立数据库；仅操作数据库 catalog，不改动 postgres-data 卷。
+  # 现网（postgres17 已在跑）必须 --no-deps，且要带 minio profile 才能通过 compose 校验：
+  #   docker compose -f docker-compose-kjsc.yml --profile harness --profile minio --profile neo4j \
+  #     up --no-deps --exit-code-from harness-db-init harness-db-init
   harness-db-init:
     profiles:
       - harness
@@ -1261,9 +1281,9 @@ services:
       - HTTP_PROXY=${SANDBOX_HTTP_PROXY:-}
       - HTTPS_PROXY=${SANDBOX_HTTPS_PROXY:-}
       - NO_PROXY=localhost,127.0.0.1,host.docker.internal
-      - DOCKER_NETWORK_PREFIX=${SANDBOX_DOCKER_NETWORK_PREFIX:-agent-middle-sandbox}
+      - DOCKER_NETWORK_PREFIX=${SANDBOX_DOCKER_NETWORK_PREFIX:-sandbox-provisioner}
       - DOCKER_THREADS_HOST_PATH=${SANDBOX_DOCKER_THREADS_HOST_PATH:-}
-      - DOCKER_SANDBOX_PREFIX=${SANDBOX_DOCKER_SANDBOX_PREFIX:-agent-middle-sandbox}
+      - DOCKER_SANDBOX_PREFIX=${SANDBOX_DOCKER_SANDBOX_PREFIX:-sandbox-provisioner}
       - K8S_NAMESPACE=${SANDBOX_K8S_NAMESPACE:-agent-middle}
       - NODE_HOST=${SANDBOX_NODE_HOST:-host.docker.internal}
       - KUBECONFIG_PATH=${KUBECONFIG_PATH:-}
@@ -1280,6 +1300,9 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # 与 api/worker 分开启动：
+  #   docker compose -f docker-compose-kjsc.yml --profile harness --profile minio --profile neo4j \
+  #     up -d --no-deps --build web
   web:
     profiles:
       - harness
