@@ -2742,14 +2742,15 @@ async function createNewSession(value: string): Promise<void> {
 .knowledge-layout {
   display: flex;
   flex-direction: column;
-  margin: 0 16px 0 4px;
+  margin: 0;
   gap: 20px;
   height: 100%;
   flex: 1;
   width: 100%;
   min-width: 0;
-  padding: 24px 32px 0px;
+  padding: 24px 48px 0 36px;
   box-sizing: border-box;
+  background: var(--gray-25, #f8fafa);
 }
 
 // Breadcrumb tab switch (文档/Wiki in breadcrumb)

@@ -1037,6 +1037,7 @@ onBeforeRouteUpdate((to, from, next) => {
     padding: 0 0 20px 20px;
     box-sizing: border-box;
     flex: 1;
+    background: var(--gray-25, #f8fafa);
     // The parent .platform-route-outlet is a flex column with min-height:0
     // and overflow:hidden — we also need min-height:0 here so that our
     // own flex:1 child (.chat_scroll_box) can shrink below its content
@@ -1066,6 +1067,7 @@ onBeforeRouteUpdate((to, from, next) => {
         min-width: 100%;
         padding: 0;
         overflow-x: hidden;
+        background: transparent;
     }
 
     &:not(.is-embedded) {

@@ -3406,6 +3406,16 @@ watch(currentChatId, (threadId, oldThreadId) => {
       pointer-events: auto;
     }
 
+    /* Empty-state switcher uses the same 12px offset as creatChat.vue */
+    &:not(.has-active-thread) {
+      min-height: 56px;
+
+      .header__center {
+        top: 12px;
+        transform: translateX(-50%);
+      }
+    }
+
     .switch-icon {
       color: var(--gray-500);
       transition: all 0.2s ease;

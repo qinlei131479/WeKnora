@@ -1835,6 +1835,7 @@ const handleUploadFinishedEvent = (event: Event) => {
   display: flex;
   position: relative;
   min-height: 0;
+  background: var(--gray-25, #f8fafa);
 }
 
 .kb-list-content {
@@ -1903,7 +1904,7 @@ const handleUploadFinishedEvent = (event: Event) => {
   justify-content: center;
   min-height: 200px;
   padding: 12px;
-  background: var(--td-bg-color-container);
+  background: var(--gray-25, #f8fafa);
 }
 
 .surface-embed {
@@ -2263,13 +2264,13 @@ const handleUploadFinishedEvent = (event: Event) => {
   position: sticky;
   top: 0;
   z-index: 5;
-  background: var(--td-bg-color-container);
+  background: var(--gray-25, #f8fafa);
   // 用 box-shadow 把背景再往上"延伸"8px，封掉 sticky 与容器顶之间任何
   // subpixel 残缝（border-radius 的圆角三角、滚动时浏览器子像素渲染等
   // 都会让卡片从这里漏出 1-2px）。第二条 shadow 在下方也再补一点，避免
   // grid-gap 区域里卡片穿插过来。
-  box-shadow: 0 -8px 0 0 var(--td-bg-color-container),
-    0 4px 0 0 var(--td-bg-color-container);
+  box-shadow: 0 -8px 0 0 var(--gray-25, #f8fafa),
+    0 4px 0 0 var(--gray-25, #f8fafa);
   padding: 6px 4px 6px 0;
   color: var(--td-text-color-secondary);
   font-family: var(--app-font-family);

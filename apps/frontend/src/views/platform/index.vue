@@ -392,6 +392,7 @@ onUnmounted(() => {
     overflow: hidden;
     position: relative;
     z-index: 0;
+    background: var(--gray-25);
 }
 
 .upload-mask {

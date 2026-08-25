@@ -1631,6 +1631,7 @@ defineExpose({
   display: flex;
   position: relative;
   min-height: 0;
+  background: var(--gray-25, #f8fafa);
 }
 
 .agent-list-content {
@@ -1659,7 +1660,7 @@ defineExpose({
   justify-content: center;
   min-height: 200px;
   padding: 12px;
-  background: var(--td-bg-color-container);
+  background: var(--gray-25, #f8fafa);
 }
 
 .surface-embed {
@@ -1912,9 +1913,9 @@ defineExpose({
   position: sticky;
   top: 0;
   z-index: 5;
-  background: var(--td-bg-color-container);
-  box-shadow: 0 -8px 0 0 var(--td-bg-color-container),
-    0 4px 0 0 var(--td-bg-color-container);
+  background: var(--gray-25, #f8fafa);
+  box-shadow: 0 -8px 0 0 var(--gray-25, #f8fafa),
+    0 4px 0 0 var(--gray-25, #f8fafa);
   padding: 6px 4px 6px 0;
   color: var(--td-text-color-secondary);
   font-family: var(--app-font-family);

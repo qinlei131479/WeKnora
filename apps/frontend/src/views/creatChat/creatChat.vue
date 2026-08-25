@@ -257,6 +257,7 @@ const handleKBEditorSuccess = (kbId: string) => {
     justify-content: center;
     align-items: center;
     position: relative;
+    background: var(--gray-25, #f8fafa);
 }
 
 .dialogue-answers {
