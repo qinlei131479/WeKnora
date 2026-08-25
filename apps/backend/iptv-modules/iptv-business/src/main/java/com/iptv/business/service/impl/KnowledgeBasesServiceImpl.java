@@ -13,7 +13,6 @@ import com.iptv.business.domain.dto.page.KnowledgeBasesPageDTO;
 import com.iptv.business.domain.vo.KnowledgeBasesVO;
 import com.iptv.business.domain.vo.VectorStoresVO;
 import com.iptv.business.pgmapper.*;
-import com.iptv.business.service.ChunksService;
 import com.iptv.business.service.KnowledgeBasesService;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
@@ -48,6 +47,7 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
     private final TenantsMapper tenantsMapper;
     private final ChunksMapper chunksMapper;
     private final StorageBackendsMapper storageBackendsMapper;
+    private final AuditLogsMapper auditLogsMapper;
 
     @Override
     public TableDataInfo<KnowledgeBasesVO> queryPage(KnowledgeBasesPageDTO dto, PageDTO pg) {
@@ -70,7 +70,8 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
         buildVO(List.of(vo));
         return vo;
     }
-    private void buildVO(List<KnowledgeBasesVO> voList){
+
+    private void buildVO(List<KnowledgeBasesVO> voList) {
         queryTenants(voList);
         queryModel(voList);
         queryVector(voList);
@@ -105,6 +106,13 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
         // deletePhysicalFiles(id);
 
         log.info("知识库删除完成: {}", id);
+    }
+
+    @Override
+    public TableDataInfo<AuditLogs> listActivity(String knowledgeBaseId, PageDTO pg) {
+        Page<AuditLogs> page = PageUtils.toPage(pg);
+        List<AuditLogs> knowledgeBase = auditLogsMapper.selectByKnowledgeBaseId(knowledgeBaseId, page);
+        return PageUtils.getDataTable(knowledgeBase, page);
     }
 
     /**
@@ -144,11 +152,11 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
         log.info("知识条目删除完成: {}", knowledgeBaseId);
     }
 
-    private void queryStorageBackend(List<KnowledgeBasesVO> voList){
+    private void queryStorageBackend(List<KnowledgeBasesVO> voList) {
         List<StorageBackends> storageBackendsList = storageBackendsMapper.selectList(new LambdaQueryWrapper<StorageBackends>()
                 .isNull(StorageBackends::getDeletedAt));
         voList.forEach(vo -> {
-            if(StrUtil.isNotBlank(vo.getStorageBackendId())){
+            if (StrUtil.isNotBlank(vo.getStorageBackendId())) {
                 vo.setStorageBackend(storageBackendsList.stream()
                         .filter(storageBackend -> StrUtil.equals(storageBackend.getId(), vo.getStorageBackendId()))
                         .findFirst()
@@ -160,25 +168,25 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
     private void queryModel(List<KnowledgeBasesVO> voList) {
         List<Models> modelList = modelsMapper.selectAllModels();
         voList.forEach(vo -> {
-            if(StrUtil.isNotBlank(vo.getEmbeddingModelId())){
+            if (StrUtil.isNotBlank(vo.getEmbeddingModelId())) {
                 vo.setEmbeddingModel(modelList.stream()
                         .filter(model -> StrUtil.equals(model.getId(), vo.getEmbeddingModelId()))
                         .findFirst()
                         .orElse(null));
             }
-            if(StrUtil.isNotBlank(vo.getSummaryModelId())){
+            if (StrUtil.isNotBlank(vo.getSummaryModelId())) {
                 vo.setSummaryModel(modelList.stream()
                         .filter(model -> StrUtil.equals(model.getId(), vo.getSummaryModelId()))
                         .findFirst()
                         .orElse(null));
             }
-            if(StrUtil.isNotBlank(vo.getWikiConfig())){
+            if (StrUtil.isNotBlank(vo.getWikiConfig())) {
                 JSONObject wikiConfig = JSONUtil.parseObj(vo.getWikiConfig());
-                if(wikiConfig.containsKey("synthesis_model_id") && StrUtil.isNotBlank(wikiConfig.getStr("synthesis_model_id"))){
+                if (wikiConfig.containsKey("synthesis_model_id") && StrUtil.isNotBlank(wikiConfig.getStr("synthesis_model_id"))) {
                     vo.setWikiSynthesisModel(modelList.stream()
-                        .filter(model -> StrUtil.equals(model.getId(), wikiConfig.getStr("synthesis_model_id")))
-                        .findFirst()
-                        .orElse(null));
+                            .filter(model -> StrUtil.equals(model.getId(), wikiConfig.getStr("synthesis_model_id")))
+                            .findFirst()
+                            .orElse(null));
                 }
             }
         });
@@ -187,20 +195,20 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
     private void queryVector(List<KnowledgeBasesVO> voList) {
         List<VectorStores> vectorLibraryList = vectorStoresMapper.selectList(new LambdaQueryWrapper<VectorStores>()
                 .isNull(VectorStores::getDeletedAt));
-        List<VectorStoresVO> vectorList = BeanUtil.copyToList(vectorLibraryList,VectorStoresVO.class);
+        List<VectorStoresVO> vectorList = BeanUtil.copyToList(vectorLibraryList, VectorStoresVO.class);
         voList.forEach(vo -> {
             VectorStoresVO vectorStores = null;
-            if(StrUtil.isNotBlank(vo.getVectorStoreId())){
+            if (StrUtil.isNotBlank(vo.getVectorStoreId())) {
                 vectorStores = vectorList.stream()
                         .filter(vectorLibrary -> StrUtil.equals(vectorLibrary.getId(), vo.getVectorStoreId()))
                         .findFirst()
                         .orElse(null);
 
             }
-            if(BeanUtil.isNotEmpty(vectorStores)){
+            if (BeanUtil.isNotEmpty(vectorStores)) {
                 vectorStores.setSource("user");
                 vectorStores.setStatus("available");
-            }else{
+            } else {
                 vectorStores = new VectorStoresVO();
                 vectorStores.setName("System default");
                 vectorStores.setSource("env");
@@ -214,7 +222,7 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
         List<Tenants> tenantList = tenantsMapper.selectList(new LambdaQueryWrapper<Tenants>()
                 .isNull(Tenants::getDeletedAt));
         voList.forEach(vo -> {
-            if(ObjectUtil.isNotEmpty(vo.getTenantId())){
+            if (ObjectUtil.isNotEmpty(vo.getTenantId())) {
                 vo.setTenant(tenantList.stream()
                         .filter(tenant -> ObjectUtil.equals(tenant.getId(), vo.getTenantId()))
                         .findFirst()

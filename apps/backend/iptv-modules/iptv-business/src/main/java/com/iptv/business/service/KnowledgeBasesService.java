@@ -1,6 +1,7 @@
 package com.iptv.business.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.iptv.business.domain.AuditLogs;
 import com.iptv.business.domain.KnowledgeBases;
 import com.iptv.business.domain.dto.page.KnowledgeBasesPageDTO;
 import com.iptv.business.domain.vo.KnowledgeBasesVO;
@@ -49,4 +50,13 @@ public interface KnowledgeBasesService extends IService<KnowledgeBases> {
      * @param id 知识库ID
      */
     void deleteById(@Nonnull String id);
+
+    /**
+     * 查询知识库活动记录
+     *
+     * @param knowledgeBaseId 知识库ID
+     * @param pg            分页参数
+     * @return 分页结果
+     */
+    TableDataInfo<AuditLogs> listActivity(String knowledgeBaseId, PageDTO pg);
 }

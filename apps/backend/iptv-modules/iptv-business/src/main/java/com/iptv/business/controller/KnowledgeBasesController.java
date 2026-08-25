@@ -1,5 +1,6 @@
 package com.iptv.business.controller;
 
+import com.iptv.business.domain.AuditLogs;
 import com.iptv.business.domain.dto.page.KnowledgeBasesPageDTO;
 import com.iptv.business.domain.vo.KnowledgeBasesVO;
 import com.iptv.business.service.KnowledgeBasesService;
@@ -50,5 +51,12 @@ public class KnowledgeBasesController {
     public R<Void> deleteById(@RequestParam String id) {
         knowledgeBasesService.deleteById(id);
         return R.ok();
+    }
+
+    @Operation(summary = "查询知识库活动记录", description = "查询知识库活动记录")
+    @GetMapping("/activity/list")
+    @RequiresPermissions("business:knowledgeBases:query")
+    public TableDataInfo<AuditLogs> activity(String knowledgeBaseId, PageDTO pg) {
+        return knowledgeBasesService.listActivity(knowledgeBaseId, pg);
     }
 }

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.AuditLogsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.AuditLogs">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="actor_user_id" property="actorUserId"/>
+        <result column="actor_role" property="actorRole"/>
+        <result column="action" property="action"/>
+        <result column="target_type" property="targetType"/>
+        <result column="target_id" property="targetId"/>
+        <result column="target_user_id" property="targetUserId"/>
+        <result column="request_path" property="requestPath"/>
+        <result column="request_method" property="requestMethod"/>
+        <result column="outcome" property="outcome"/>
+        <result column="details" property="details"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="scope_type" property="scopeType"/>
+        <result column="scope_id" property="scopeId"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, tenant_id, actor_user_id, actor_role, action, target_type, target_id, target_user_id, request_path,
+        request_method, outcome, details, created_at, scope_type, scope_id
+    </sql>
+
+    <!-- 分页查询知识库关联的审计日志 -->
+    <select id="selectByKnowledgeBaseId" resultMap="BaseResultMap">
+        select
+        <include refid="Base_Column_List"/>
+        from audit_logs
+        where scope_type = 'knowledge_base'
+        and scope_id = #{knowledgeBaseId}
+    </select>
+
+</mapper>
