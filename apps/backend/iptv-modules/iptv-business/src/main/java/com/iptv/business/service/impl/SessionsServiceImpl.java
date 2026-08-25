@@ -8,12 +8,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.iptv.business.domain.Sessions;
 import com.iptv.business.domain.Tenants;
+import com.iptv.business.domain.Users;
 import com.iptv.business.domain.dto.SessionsDTO;
 import com.iptv.business.domain.dto.page.SessionsPageDTO;
 import com.iptv.business.domain.vo.SessionsVO;
-import com.iptv.business.domain.vo.VectorStoresVO;
 import com.iptv.business.pgmapper.SessionsMapper;
 import com.iptv.business.pgmapper.TenantsMapper;
+import com.iptv.business.pgmapper.UsersMapper;
 import com.iptv.business.service.SessionsService;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
@@ -38,6 +39,8 @@ import java.util.List;
 public class SessionsServiceImpl extends ServiceImpl<SessionsMapper, Sessions> implements SessionsService {
     @Resource
     private TenantsMapper tenantsMapper;
+    @Resource
+    private UsersMapper usersMapper;
 
 
     @Override
@@ -48,12 +51,17 @@ public class SessionsServiceImpl extends ServiceImpl<SessionsMapper, Sessions> i
 
         if (CollUtil.isNotEmpty(voList)) {
             List<Tenants> tenantList = tenantsMapper.selectListByIdsIncludingDeleted(voList.stream().map(SessionsVO::getTenantId).toArray(Integer[]::new));
-            voList.forEach(vo ->
-                    tenantList.stream()
-                            .filter(t -> ObjectUtil.equal(t.getId(), vo.getTenantId()))
-                            .findFirst()
-                            .ifPresent(t -> vo.setTenantName(t.getName()))
-            );
+            List<Users> userList = usersMapper.selectListByIdsIncludingDeleted(voList.stream().map(SessionsVO::getUserId).toArray(String[]::new));
+            voList.forEach(vo -> {
+                tenantList.stream()
+                        .filter(t -> ObjectUtil.equal(t.getId(), vo.getTenantId()))
+                        .findFirst()
+                        .ifPresent(t -> vo.setTenantName(t.getName()));
+                userList.stream()
+                        .filter(u -> ObjectUtil.equal(u.getId(), vo.getUserId()))
+                        .findFirst()
+                        .ifPresent(u -> vo.setTenantName(u.getUsername()));
+            });
         }
 
         return PageUtils.getDataTable(voList, page);
@@ -65,9 +73,13 @@ public class SessionsServiceImpl extends ServiceImpl<SessionsMapper, Sessions> i
         Sessions entity = this.baseMapper.selectById(id);
         if (entity != null) {
             vo = BeanUtil.copyProperties(entity, SessionsVO.class);
-            Tenants tenants = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
-            if (tenants != null) {
-                vo.setTenantName(tenants.getName());
+            Tenants tenant = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
+            if (tenant != null) {
+                vo.setTenantName(tenant.getName());
+            }
+            Users user = usersMapper.selectByIdIncludingDeleted(entity.getUserId());
+            if (user != null) {
+                vo.setUsername(user.getUsername());
             }
         }
         return vo;
@@ -76,9 +88,13 @@ public class SessionsServiceImpl extends ServiceImpl<SessionsMapper, Sessions> i
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SessionsVO insert(@Nonnull SessionsDTO dto) {
-        Tenants tenants = tenantsMapper.selectByIdIncludingDeleted(dto.getTenantId());
-        if (tenants == null) {
+        Tenants tenant = tenantsMapper.selectByIdIncludingDeleted(dto.getTenantId());
+        if (tenant == null) {
             throw new ServiceException("租户不存在");
+        }
+        Users user = usersMapper.selectByIdIncludingDeleted(dto.getUserId());
+        if (user != null) {
+            throw new ServiceException("用户不存在");
         }
 
         Sessions entity = BeanUtil.copyProperties(dto, Sessions.class);
@@ -86,7 +102,7 @@ public class SessionsServiceImpl extends ServiceImpl<SessionsMapper, Sessions> i
 
         this.baseMapper.insert(entity);
         SessionsVO vo = BeanUtil.copyProperties(entity, SessionsVO.class);
-        vo.setTenantName(tenants.getName());
+        vo.setTenantName(tenant.getName());
         return vo;
     }
 
@@ -99,14 +115,19 @@ public class SessionsServiceImpl extends ServiceImpl<SessionsMapper, Sessions> i
         }
 
         dto.setTenantId(entity.getTenantId()); // 不允许修改租户ID
+        dto.setUserId(entity.getUserId());
 
         BeanUtil.copyProperties(dto, entity);
 
         this.baseMapper.updateById(entity);
         SessionsVO vo = BeanUtil.copyProperties(entity, SessionsVO.class);
-        Tenants tenants = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
-        if (tenants != null) {
-            vo.setTenantName(tenants.getName());
+        Tenants tenant = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
+        if (tenant != null) {
+            vo.setTenantName(tenant.getName());
+        }
+        Users user = usersMapper.selectByIdIncludingDeleted(dto.getUserId());
+        if (user != null) {
+            vo.setUsername(user.getUsername());
         }
         return vo;
     }

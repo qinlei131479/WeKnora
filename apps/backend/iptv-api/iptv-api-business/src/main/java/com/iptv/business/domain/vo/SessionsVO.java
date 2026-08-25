@@ -94,11 +94,11 @@ public class SessionsVO implements Serializable {
     @Schema(description = "智能体 ID")
     private String agentId;
 
-    @Schema(description = "智能体 ID")
-    private String agentName;
-
     @Schema(description = "会话归属主体（WeKnora 用户 UUID、API 外部用户或嵌入访客等）")
     private String userId;
+
+    @Schema(description = "会话归属主体（WeKnora 用户 UUID、API 外部用户或嵌入访客等）用户名")
+    private String username;
 
     @Schema(description = "is pinned")
     private Boolean isPinned;

@@ -72,10 +72,10 @@ public class StorageBackendsServiceImpl extends ServiceImpl<StorageBackendsMappe
         StorageBackends entity = this.baseMapper.selectById(id);
         if (entity != null) {
             vo = BeanUtil.copyProperties(entity, StorageBackendsVO.class);
-            Tenants tenants = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
-            if (tenants != null) {
-                vo.setTenantName(tenants.getName());
-                vo.setIsDefault(ObjectUtil.equal(vo.getId(), tenants.getDefaultStorageBackendId()));
+            Tenants tenant = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
+            if (tenant != null) {
+                vo.setTenantName(tenant.getName());
+                vo.setIsDefault(ObjectUtil.equal(vo.getId(), tenant.getDefaultStorageBackendId()));
             }
         }
         return vo;
@@ -84,8 +84,8 @@ public class StorageBackendsServiceImpl extends ServiceImpl<StorageBackendsMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public StorageBackendsVO insert(@Nonnull StorageBackendsDTO dto) {
-        Tenants tenants = tenantsMapper.selectByIdIncludingDeleted(dto.getTenantId());
-        if (tenants == null) {
+        Tenants tenant = tenantsMapper.selectByIdIncludingDeleted(dto.getTenantId());
+        if (tenant == null) {
             throw new ServiceException("租户不存在");
         }
 
@@ -98,8 +98,8 @@ public class StorageBackendsServiceImpl extends ServiceImpl<StorageBackendsMappe
 
         this.baseMapper.insert(entity);
         StorageBackendsVO vo = BeanUtil.copyProperties(entity, StorageBackendsVO.class);
-        vo.setTenantName(tenants.getName());
-        vo.setIsDefault(ObjectUtil.equal(vo.getId(), tenants.getDefaultStorageBackendId()));
+        vo.setTenantName(tenant.getName());
+        vo.setIsDefault(ObjectUtil.equal(vo.getId(), tenant.getDefaultStorageBackendId()));
         return vo;
     }
 
@@ -117,10 +117,10 @@ public class StorageBackendsServiceImpl extends ServiceImpl<StorageBackendsMappe
 
         this.baseMapper.updateById(entity);
         StorageBackendsVO vo = BeanUtil.copyProperties(entity, StorageBackendsVO.class);
-        Tenants tenants = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
-        if (tenants != null) {
-            vo.setTenantName(tenants.getName());
-            vo.setIsDefault(ObjectUtil.equal(vo.getId(), tenants.getDefaultStorageBackendId()));
+        Tenants tenant = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
+        if (tenant != null) {
+            vo.setTenantName(tenant.getName());
+            vo.setIsDefault(ObjectUtil.equal(vo.getId(), tenant.getDefaultStorageBackendId()));
         }
         return vo;
     }

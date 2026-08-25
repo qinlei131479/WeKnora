@@ -64,9 +64,9 @@ public class VectorStoresServiceImpl extends ServiceImpl<VectorStoresMapper, Vec
         VectorStores entity = this.baseMapper.selectById(id);
         if (entity != null) {
             vo = BeanUtil.copyProperties(entity, VectorStoresVO.class);
-            Tenants tenants = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
-            if (tenants != null) {
-                vo.setTenantName(tenants.getName());
+            Tenants tenant = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
+            if (tenant != null) {
+                vo.setTenantName(tenant.getName());
             }
         }
         return vo;
@@ -75,8 +75,8 @@ public class VectorStoresServiceImpl extends ServiceImpl<VectorStoresMapper, Vec
     @Override
     @Transactional(rollbackFor = Exception.class)
     public VectorStoresVO insert(@Nonnull VectorStoresDTO dto) {
-        Tenants tenants = tenantsMapper.selectByIdIncludingDeleted(dto.getTenantId());
-        if (tenants == null) {
+        Tenants tenant = tenantsMapper.selectByIdIncludingDeleted(dto.getTenantId());
+        if (tenant == null) {
             throw new ServiceException("租户不存在");
         }
 
@@ -85,7 +85,7 @@ public class VectorStoresServiceImpl extends ServiceImpl<VectorStoresMapper, Vec
 
         this.baseMapper.insert(entity);
         VectorStoresVO vo = BeanUtil.copyProperties(entity, VectorStoresVO.class);
-        vo.setTenantName(tenants.getName());
+        vo.setTenantName(tenant.getName());
         return vo;
     }
 
@@ -102,9 +102,9 @@ public class VectorStoresServiceImpl extends ServiceImpl<VectorStoresMapper, Vec
 
         this.baseMapper.updateById(entity);
         VectorStoresVO vo = BeanUtil.copyProperties(entity, VectorStoresVO.class);
-        Tenants tenants = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
-        if (tenants != null) {
-            vo.setTenantName(tenants.getName());
+        Tenants tenant = tenantsMapper.selectByIdIncludingDeleted(entity.getTenantId());
+        if (tenant != null) {
+            vo.setTenantName(tenant.getName());
         }
         return vo;
     }

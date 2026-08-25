@@ -1,10 +1,11 @@
 package com.iptv.business.pgmapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.iptv.business.domain.Users;
 import com.iptv.business.domain.dto.page.UsersPageDTO;
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Param;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.jspecify.annotations.NonNull;
 
 import java.util.List;
 
@@ -26,4 +27,20 @@ public interface UsersMapper extends BaseMapper<Users> {
      * @return 数据列表
      */
     List<Users> queryPage(@Param("param") UsersPageDTO param, Page page);
+
+    /**
+     * 按 id 数组查询包含逻辑删除的数据列表
+     *
+     * @param ids id 数组（length 为 0 表示查所有数据）
+     * @return 数据列表
+     */
+    List<Users> selectListByIdsIncludingDeleted(@Param("ids") String... ids);
+
+    /**
+     * 按 id 查询包含逻辑删除的数据
+     *
+     * @param id id
+     * @return 数据
+     */
+    Users selectByIdIncludingDeleted(@NonNull @Param("id") String id);
 }

@@ -74,4 +74,28 @@
         ORDER BY id DESC
     </select>
 
+    <!-- 按 id 数组查询包含逻辑删除的数据列表 -->
+    <select id="selectListByIdsIncludingDeleted" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM users
+        <where>
+            <if test="ids.length > 0">
+                id IN
+                <foreach collection="ids" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+            </if>
+        </where>
+        ORDER BY id ASC
+    </select>
+
+    <!-- 按 id 查询包含逻辑删除的数据 -->
+    <select id="selectByIdIncludingDeleted" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM users
+        WHERE id = #{id}
+    </select>
+
 </mapper>
