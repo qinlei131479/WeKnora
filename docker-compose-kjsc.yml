@@ -1180,7 +1180,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - nltk_data:/root/nltk_data
     ports:
-      - "${AGENT_HARNESS_BIND:-127.0.0.1}:${AGENT_HARNESS_PORT:-5050}:5050"
+      - "${AGENT_HARNESS_BIND:-0.0.0.0}:${AGENT_HARNESS_PORT:-5050}:5050"
     networks:
       agent-middle-network:
         aliases:
@@ -1318,7 +1318,7 @@ services:
       - ./apps/agent-web/index.html:/app/index.html
       - ./apps/agent-web/vite.config.js:/app/vite.config.js
     ports:
-      - "${AGENT_WEB_BIND:-127.0.0.1}:${AGENT_WEB_PORT:-5174}:5173"
+      - "${AGENT_WEB_BIND:-0.0.0.0}:${AGENT_WEB_PORT:-5174}:5173"
     depends_on:
       api:
         condition: service_healthy
