@@ -12,6 +12,7 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useThemeStore } from '@harness/stores/theme'
 import { renderMarkdown } from '@harness/utils/markdown_preview'
 import { HTML_PREVIEW_MAX_HEIGHT, HTML_PREVIEW_MIN_HEIGHT } from '@harness/utils/htmlPreviewRenderer'
@@ -32,6 +33,7 @@ const props = defineProps({
   }
 })
 
+const { t } = useI18n()
 const themeStore = useThemeStore()
 const shikiTheme = computed(() => (themeStore.isDark ? 'github-dark' : 'github-light'))
 const previewRef = ref(null)
@@ -276,9 +278,9 @@ const enhanceCodeBlocks = () => {
     const button = document.createElement('button')
     button.type = 'button'
     button.className = 'markdown-code-copy-btn'
-    button.textContent = '复制'
-    button.setAttribute('aria-label', '复制代码')
-    button.setAttribute('title', '复制代码')
+    button.textContent = t('harness.chat.copyCode')
+    button.setAttribute('aria-label', t('harness.chat.copyCode'))
+    button.setAttribute('title', t('harness.chat.copyCode'))
     wrapper.appendChild(button)
   })
 }
@@ -297,7 +299,7 @@ const enhanceHtmlPreviews = () => {
         : `${Date.now()}-${Math.random()}`
     }`
     iframe.className = 'html-preview-frame'
-    iframe.title = 'HTML 预览'
+    iframe.title = t('harness.chat.htmlPreview')
     iframe.setAttribute('sandbox', 'allow-scripts')
     iframe.setAttribute('loading', 'lazy')
     iframe.setAttribute('referrerpolicy', 'no-referrer')
@@ -492,7 +494,7 @@ const showCopiedFeedback = (btn) => {
   const originalText = btn.dataset.originalText || btn.textContent
   btn.dataset.originalText = originalText
   btn.classList.add('is-copied')
-  btn.textContent = '已复制'
+  btn.textContent = t('harness.chat.copied')
   const existingTimer = copiedTimers.get(btn)
   if (existingTimer) window.clearTimeout(existingTimer)
 

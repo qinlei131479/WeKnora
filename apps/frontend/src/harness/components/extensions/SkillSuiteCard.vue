@@ -10,7 +10,7 @@
 
     <p class="suite-card-description">{{ suite.description }}</p>
 
-    <div class="suite-card-members" aria-label="套件成员">
+    <div class="suite-card-members" :aria-label="t('knowledgeList.extensions.skills.suite.membersAria')">
       <span v-for="skill in visibleSkills" :key="skill.slug" class="suite-member-tag">
         {{ skill.name }}
       </span>
@@ -20,7 +20,11 @@
     <div class="suite-card-footer">
       <span class="suite-card-status">{{ statusText }}</span>
       <span class="suite-card-action">
-        {{ installedCount === suite.skills.length ? '查看套件' : '查看并安装' }}
+        {{
+          installedCount === suite.skills.length
+            ? t('knowledgeList.extensions.skills.suite.viewSuite')
+            : t('knowledgeList.extensions.skills.suite.viewAndInstall')
+        }}
         <ChevronRight :size="15" />
       </span>
     </div>
@@ -29,6 +33,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Boxes, ChevronRight } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -37,6 +42,8 @@ const props = defineProps({
 })
 
 defineEmits(['open'])
+
+const { t } = useI18n()
 
 const installedSet = computed(
   () => new Set(props.installedSlugs.map((slug) => String(slug).toLowerCase()))
@@ -50,9 +57,18 @@ const hiddenCount = computed(() =>
   Math.max(0, props.suite.skills.length - visibleSkills.value.length)
 )
 const statusText = computed(() => {
-  if (installedCount.value === props.suite.skills.length) return '已全部安装'
-  if (installedCount.value > 0) return `已安装 ${installedCount.value}/${props.suite.skills.length}`
-  return `${props.suite.skills.length} 个可安装`
+  if (installedCount.value === props.suite.skills.length) {
+    return t('knowledgeList.extensions.skills.suite.allInstalled')
+  }
+  if (installedCount.value > 0) {
+    return t('knowledgeList.extensions.skills.suite.partialInstalled', {
+      installed: installedCount.value,
+      total: props.suite.skills.length
+    })
+  }
+  return t('knowledgeList.extensions.skills.suite.installable', {
+    count: props.suite.skills.length
+  })
 })
 </script>
 
@@ -70,12 +86,14 @@ const statusText = computed(() => {
   text-align: left;
   cursor: pointer;
   transition:
-    border-color 0.18s ease,
-    background-color 0.18s ease;
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
 
   &:hover {
-    border-color: var(--gray-300);
-    background: var(--gray-10);
+    border-color: var(--td-brand-color, var(--main-color));
+    background: var(--td-bg-color-container, var(--gray-0));
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--td-brand-color, var(--main-color)) 12%, transparent);
   }
 
   &:focus-visible {

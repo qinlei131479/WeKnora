@@ -6,7 +6,7 @@
     <div class="detail-top-bar">
       <button class="detail-back-btn" @click="goBack">
         <ArrowLeft :size="16" />
-        <span>返回</span>
+        <span>{{ t('knowledgeList.extensions.skills.detail.back') }}</span>
       </button>
       <div class="detail-title-area">
         <div class="detail-icon">
@@ -26,7 +26,7 @@
             class="lucide-icon-btn extension-panel-action extension-panel-action-secondary"
           >
             <Download :size="14" />
-            <span>导出</span>
+            <span>{{ t('knowledgeList.extensions.skills.detail.export') }}</span>
           </button>
           <button
             v-if="isInstalledSkill && canManageCurrentSkill && !isBuiltinInstalledSkill"
@@ -35,7 +35,7 @@
             class="lucide-icon-btn extension-panel-action extension-panel-action-danger"
           >
             <Trash2 :size="14" />
-            <span>删除</span>
+            <span>{{ t('knowledgeList.extensions.skills.detail.delete') }}</span>
           </button>
         </a-space>
       </div>
@@ -44,25 +44,25 @@
     <div class="detail-content-wrapper">
       <div v-if="currentSkill" class="detail-content-inner">
         <div v-if="isReadOnlySkill" class="readonly-scope-hint readonly-detail-hint">
-          你可以查看并使用此 Skill，但没有管理权限。
+          {{ t('knowledgeList.extensions.skills.detail.readonlyHint') }}
         </div>
         <a-tabs v-if="isInstalledSkill" v-model:activeKey="activeTab" class="minimal-tabs">
           <a-tab-pane key="editor">
             <template #tab>
-              <span class="tab-title"><FileText :size="14" />代码管理</span>
+              <span class="tab-title"><FileText :size="14" />{{ t('knowledgeList.extensions.skills.detail.tabCode') }}</span>
             </template>
             <div class="workspace">
               <div class="tree-container">
                 <div class="tree-header">
-                  <span class="label">项目结构</span>
+                  <span class="label">{{ t('knowledgeList.extensions.skills.detail.projectStructure') }}</span>
                   <div class="tree-actions">
-                    <a-tooltip v-if="canEditSkillFiles" title="新建文件"
+                    <a-tooltip v-if="canEditSkillFiles" :title="t('knowledgeList.extensions.skills.detail.newFile')"
                       ><button @click="openCreateModal(false)"><FilePlus :size="14" /></button
                     ></a-tooltip>
-                    <a-tooltip v-if="canEditSkillFiles" title="新建目录"
+                    <a-tooltip v-if="canEditSkillFiles" :title="t('knowledgeList.extensions.skills.detail.newDir')"
                       ><button @click="openCreateModal(true)"><FolderPlus :size="14" /></button
                     ></a-tooltip>
-                    <a-tooltip title="刷新"
+                    <a-tooltip :title="t('knowledgeList.extensions.skills.detail.refresh')"
                       ><button @click="reloadTree"><RotateCw :size="14" /></button
                     ></a-tooltip>
                   </div>
@@ -80,7 +80,7 @@
                 <div class="editor-main">
                   <a-empty
                     v-if="!selectedPath || selectedIsDir"
-                    description="选择文件以开始编辑"
+                    :description="t('knowledgeList.extensions.skills.detail.pickFile')"
                     class="mt-40"
                   />
                   <template v-else>
@@ -105,13 +105,13 @@
 
           <a-tab-pane key="settings">
             <template #tab>
-              <span class="tab-title"><Settings :size="14" />生效范围</span>
+              <span class="tab-title"><Settings :size="14" />{{ t('knowledgeList.extensions.skills.detail.tabScope') }}</span>
             </template>
             <div class="config-view">
               <div class="config-header">
                 <div class="text">
-                  <h3>共享与启用状态</h3>
-                  <p>控制此 Skill 是否可用，以及哪些用户可以选择和运行它。</p>
+                  <h3>{{ t('knowledgeList.extensions.skills.detail.shareTitle') }}</h3>
+                  <p>{{ t('knowledgeList.extensions.skills.detail.shareDesc') }}</p>
                 </div>
                 <a-button
                   v-if="canManageCurrentSkill"
@@ -121,20 +121,20 @@
                   class="lucide-icon-btn"
                 >
                   <Save :size="14" />
-                  <span>保存设置</span>
+                  <span>{{ t('knowledgeList.extensions.skills.detail.saveSettings') }}</span>
                 </a-button>
               </div>
               <div class="settings-stack">
                 <section class="settings-card">
                   <div class="settings-card-main">
-                    <div class="settings-card-title">启用状态</div>
+                    <div class="settings-card-title">{{ t('knowledgeList.extensions.skills.detail.enabledTitle') }}</div>
                     <div class="settings-card-desc">
-                      禁用后此 Skill 不会出现在可选资源中，也不会参与 Agent 运行时加载。
+                      {{ t('knowledgeList.extensions.skills.detail.enabledDesc') }}
                     </div>
                   </div>
                   <div class="settings-card-action">
                     <span class="status-pill" :class="enabledForm ? 'enabled' : 'disabled'">
-                      {{ enabledForm ? '已启用' : '已禁用' }}
+                      {{ enabledForm ? t('knowledgeList.extensions.skills.detail.enabled') : t('knowledgeList.extensions.skills.detail.disabled') }}
                     </span>
                     <a-switch v-model:checked="enabledForm" :disabled="!canManageCurrentSkill" />
                   </div>
@@ -142,16 +142,16 @@
 
                 <section class="settings-card scope-card">
                   <div class="settings-card-main">
-                    <div class="settings-card-title">生效范围</div>
+                    <div class="settings-card-title">{{ t('knowledgeList.extensions.skills.detail.scopeTitle') }}</div>
                     <div class="settings-card-desc">
-                      控制哪些用户可以选择并在运行时使用此 Skill。
+                      {{ t('knowledgeList.extensions.skills.detail.scopeDesc') }}
                     </div>
                   </div>
                   <div v-if="isBuiltinInstalledSkill" class="readonly-scope-hint">
-                    内置 Skill 固定为全局生效范围，可通过启用状态控制是否参与运行时。
+                    {{ t('knowledgeList.extensions.skills.detail.builtinScopeHint') }}
                   </div>
                   <div v-else-if="isReadOnlySkill" class="readonly-scope-hint">
-                    当前 Skill 对你只读，不能修改生效范围。
+                    {{ t('knowledgeList.extensions.skills.detail.readonlyScopeHint') }}
                   </div>
                   <ShareConfigForm
                     v-else
@@ -167,13 +167,13 @@
 
           <a-tab-pane key="dependencies">
             <template #tab>
-              <span class="tab-title"><Layers :size="14" />依赖管理</span>
+              <span class="tab-title"><Layers :size="14" />{{ t('knowledgeList.extensions.skills.detail.tabDeps') }}</span>
             </template>
             <div class="config-view">
               <div class="config-header">
                 <div class="text">
-                  <h3>依赖声明</h3>
-                  <p>配置此 Skill 所需的工具、MCP 及其他 Skill 依赖。</p>
+                  <h3>{{ t('knowledgeList.extensions.skills.detail.depsTitle') }}</h3>
+                  <p>{{ t('knowledgeList.extensions.skills.detail.depsDesc') }}</p>
                 </div>
                 <a-button
                   v-if="canEditSkillDependencies"
@@ -183,7 +183,7 @@
                   class="lucide-icon-btn"
                 >
                   <Save :size="14" />
-                  <span>更新依赖</span>
+                  <span>{{ t('knowledgeList.extensions.skills.detail.updateDeps') }}</span>
                 </a-button>
               </div>
               <div class="dependency-groups">
@@ -198,7 +198,7 @@
                       <div class="dependency-title-row">
                         <h4>{{ group.title }}</h4>
                         <span class="dependency-count"
-                          >已选择 {{ getDependencyValues(group).length }} 项</span
+                          >{{ t('knowledgeList.extensions.skills.detail.selectedCount', { count: getDependencyValues(group).length }) }}</span
                         >
                       </div>
                       <p>{{ group.description }}</p>
@@ -211,7 +211,7 @@
                     >
                       <a-button size="small" class="dependency-action-btn dependency-select-btn">
                         <Plus :size="13" />
-                        <span>选择依赖</span>
+                        <span>{{ t('knowledgeList.extensions.skills.detail.pickDeps') }}</span>
                         <ChevronDown :size="12" class="dependency-select-chevron" />
                       </a-button>
                       <template #overlay>
@@ -225,7 +225,7 @@
                             size="small"
                             allow-clear
                             class="selection-search"
-                            :placeholder="`搜索${group.shortTitle}`"
+                            :placeholder="t('knowledgeList.extensions.skills.detail.searchDeps', { name: group.shortTitle })"
                             @mousedown.stop
                             @click.stop
                           />
@@ -277,13 +277,13 @@
                             </div>
                           </div>
                           <div v-else class="selection-empty">
-                            {{ group.options.length ? '没有匹配的依赖' : '暂无可选依赖' }}
+                            {{ group.options.length ? t('knowledgeList.extensions.skills.detail.noMatchDeps') : t('knowledgeList.extensions.skills.detail.noDeps') }}
                           </div>
                         </div>
                       </template>
                     </a-dropdown>
                     <a-button v-else size="small" disabled class="dependency-action-btn">
-                      {{ isBuiltinInstalledSkill ? '系统维护' : '只读' }}
+                      {{ isBuiltinInstalledSkill ? t('knowledgeList.extensions.skills.detail.systemMaintained') : t('knowledgeList.extensions.skills.detail.readonly') }}
                     </a-button>
                   </div>
 
@@ -299,7 +299,7 @@
                         v-if="canEditSkillDependencies"
                         type="button"
                         class="dependency-chip-remove"
-                        :aria-label="`移除 ${getDependencyOptionLabel(group, value)}`"
+                        :aria-label="t('knowledgeList.extensions.skills.detail.removeAria', { name: getDependencyOptionLabel(group, value) })"
                         @click="removeDependency(group, value)"
                       >
                         <X :size="12" />
@@ -314,22 +314,24 @@
         </a-tabs>
       </div>
       <div v-else-if="!loading" class="detail-empty">
-        <a-empty description="未找到 Skill" />
+        <a-empty :description="t('knowledgeList.extensions.skills.detail.notFound')" />
       </div>
     </div>
 
     <a-modal
       v-model:open="createModalVisible"
-      :title="createForm.isDir ? '新建目录' : '新建文件'"
+      :title="createForm.isDir ? t('knowledgeList.extensions.skills.detail.newDir') : t('knowledgeList.extensions.skills.detail.newFile')"
+      :ok-text="t('common.confirm')"
+      :cancel-text="t('knowledgeList.extensions.cancel')"
       @ok="handleCreateNode"
       :confirm-loading="creatingNode"
       width="400px"
     >
       <a-form layout="vertical" class="pt-12">
-        <a-form-item label="路径 (相对于根目录)" required>
+        <a-form-item :label="t('knowledgeList.extensions.skills.detail.pathRelative')" required>
           <a-input v-model:value="createForm.path" placeholder="src/main.py" />
         </a-form-item>
-        <a-form-item v-if="!createForm.isDir" label="内容">
+        <a-form-item v-if="!createForm.isDir" :label="t('knowledgeList.extensions.skills.detail.content')">
           <a-textarea v-model:value="createForm.content" :rows="5" />
         </a-form-item>
       </a-form>
@@ -339,6 +341,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
 import {
@@ -362,6 +365,7 @@ import AgentFilePreview from '@harness/components/AgentFilePreview.vue'
 import FileTreeComponent from '@harness/components/FileTreeComponent.vue'
 import ShareConfigForm from '@harness/components/ShareConfigForm.vue'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const slug = computed(() => decodeURIComponent(route.params.slug))
@@ -414,15 +418,19 @@ const canEditSkillDependencies = computed(
 )
 
 const sourceTypeLabel = (sourceType) => {
-  if (sourceType === 'builtin') return '内置'
-  if (sourceType === 'remote') return '远程添加'
-  return '上传'
+  if (sourceType === 'builtin') return t('knowledgeList.extensions.skills.detail.sourceBuiltin')
+  if (sourceType === 'remote') return t('knowledgeList.extensions.skills.detail.sourceRemote')
+  return t('knowledgeList.extensions.skills.detail.sourceUpload')
 }
 
 const currentSkillStatusLabel = computed(() => {
   const skill = currentSkill.value
   if (!skill) return ''
-  if (skill.enabled === false) return `${sourceTypeLabel(skill.source_type)} · 已禁用`
+  if (skill.enabled === false) {
+    return t('knowledgeList.extensions.skills.detail.statusDisabled', {
+      source: sourceTypeLabel(skill.source_type)
+    })
+  }
   return sourceTypeLabel(skill.source_type)
 })
 
@@ -452,31 +460,31 @@ const dependencyGroups = computed(() => [
   {
     key: 'tools',
     formKey: 'tool_dependencies',
-    title: '工具依赖',
-    shortTitle: '工具',
-    description: '声明此 Skill 运行时需要调用的工具能力。',
-    dropdownHint: '选择后 Agent 运行时会同时加载这些工具。',
-    emptyText: '未声明工具依赖',
+    title: t('knowledgeList.extensions.skills.detail.depToolsTitle'),
+    shortTitle: t('knowledgeList.extensions.skills.detail.depToolsShort'),
+    description: t('knowledgeList.extensions.skills.detail.depToolsDesc'),
+    dropdownHint: t('knowledgeList.extensions.skills.detail.depToolsHint'),
+    emptyText: t('knowledgeList.extensions.skills.detail.depToolsEmpty'),
     options: toolDependencyOptions.value
   },
   {
     key: 'mcps',
     formKey: 'mcp_dependencies',
-    title: 'MCP 依赖',
+    title: t('knowledgeList.extensions.skills.detail.depMcpTitle'),
     shortTitle: 'MCP',
-    description: '声明此 Skill 依赖的 MCP 服务。',
-    dropdownHint: '选择此 Skill 运行时需要的 MCP 服务。',
-    emptyText: '未声明 MCP 依赖',
+    description: t('knowledgeList.extensions.skills.detail.depMcpDesc'),
+    dropdownHint: t('knowledgeList.extensions.skills.detail.depMcpHint'),
+    emptyText: t('knowledgeList.extensions.skills.detail.depMcpEmpty'),
     options: mcpDependencyOptions.value
   },
   {
     key: 'skills',
     formKey: 'skill_dependencies',
-    title: 'Skill 依赖',
+    title: t('knowledgeList.extensions.skills.detail.depSkillTitle'),
     shortTitle: 'Skill',
-    description: '声明需要一起加载的其他 Skill。',
-    dropdownHint: '依赖 Skill 会随当前 Skill 一起进入运行时可读范围。',
-    emptyText: '未声明 Skill 依赖',
+    description: t('knowledgeList.extensions.skills.detail.depSkillDesc'),
+    dropdownHint: t('knowledgeList.extensions.skills.detail.depSkillHint'),
+    emptyText: t('knowledgeList.extensions.skills.detail.depSkillEmpty'),
     options: skillDependencyOptions.value
   }
 ])
@@ -568,7 +576,7 @@ const fetchSkillDetail = async () => {
     }
     await fetchDependencyOptions(currentSkill.value?.slug)
   } catch {
-    message.error('加载失败')
+    message.error(t('knowledgeList.extensions.skills.detail.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -622,7 +630,7 @@ const reloadTree = async () => {
     treeData.value = normalized
     expandedKeys.value = expandAllKeys(normalized)
   } catch {
-    message.error('加载目录树失败')
+    message.error(t('knowledgeList.extensions.skills.detail.treeFailed'))
   } finally {
     loading.value = false
   }
@@ -661,7 +669,7 @@ const handleTreeSelect = async (keys, info) => {
     const content = result?.data?.content || ''
     fileContent.value = content
   } catch {
-    message.error('文件读取失败')
+    message.error(t('knowledgeList.extensions.skills.detail.readFailed'))
   }
 }
 
@@ -675,10 +683,10 @@ const saveCurrentFile = async (content = fileContent.value) => {
       content
     })
     fileContent.value = content
-    message.success('已保存')
+    message.success(t('knowledgeList.extensions.skills.detail.saved'))
     if (selectedPath.value === 'SKILL.md') await fetchSkillDetail()
   } catch {
-    message.error('保存失败')
+    message.error(t('knowledgeList.extensions.skills.detail.saveFailed'))
   } finally {
     savingFile.value = false
   }
@@ -687,20 +695,19 @@ const saveCurrentFile = async (content = fileContent.value) => {
 const confirmDeleteSkill = () => {
   const target = currentSkill.value
   if (!target || !canManageCurrentSkill.value || isBuiltinInstalledSkill.value) return
-  const actionText = '删除'
   Modal.confirm({
-    title: `确认${actionText}技能「${target.slug}」？`,
-    content: '删除后无法恢复，所有文件和配置将永久消失。',
-    okText: `确认${actionText}`,
+    title: t('knowledgeList.extensions.skills.detail.confirmDeleteTitle', { name: target.slug }),
+    content: t('knowledgeList.extensions.skills.detail.confirmDeleteContent'),
+    okText: t('knowledgeList.extensions.skills.detail.confirmDeleteOk'),
     okType: 'danger',
-    cancelText: '取消',
+    cancelText: t('knowledgeList.extensions.cancel'),
     onOk: async () => {
       try {
         await skillApi.deleteSkill(target.slug)
-        message.success(`已${actionText}`)
+        message.success(t('knowledgeList.extensions.skills.detail.deleted'))
         router.push({ path: '/platform/knowledge-bases', query: { surface: 'skills' } })
       } catch {
-        message.error(`${actionText}失败`)
+        message.error(t('knowledgeList.extensions.skills.detail.deleteFailed'))
       }
     }
   })
@@ -718,7 +725,7 @@ const handleExport = async () => {
     link.click()
     URL.revokeObjectURL(url)
   } catch {
-    message.error('导出失败')
+    message.error(t('knowledgeList.extensions.skills.detail.exportFailed'))
   }
 }
 
@@ -741,9 +748,9 @@ const handleCreateNode = async () => {
     })
     createModalVisible.value = false
     await reloadTree()
-    message.success('创建成功')
+    message.success(t('knowledgeList.extensions.skills.detail.created'))
   } catch {
-    message.error('创建失败')
+    message.error(t('knowledgeList.extensions.skills.detail.createFailed'))
   } finally {
     creatingNode.value = false
   }
@@ -754,7 +761,7 @@ const saveShareConfig = async () => {
   if (!isBuiltinInstalledSkill.value) {
     const validation = shareConfigFormRef.value?.validate?.()
     if (validation && !validation.valid) {
-      message.warning(validation.message || '请完善 Skill 生效范围')
+      message.warning(validation.message || t('knowledgeList.extensions.skills.detail.needScope'))
       return
     }
   }
@@ -769,9 +776,9 @@ const saveShareConfig = async () => {
       currentSkill.value = result.data
       syncShareConfigFromSkill(result.data)
     }
-    message.success('设置已保存')
-  } catch (error) {
-    message.error(error?.response?.data?.detail || error.message || '保存设置失败')
+    message.success(t('knowledgeList.extensions.skills.detail.settingsSaved'))
+  } catch {
+    message.error(t('knowledgeList.extensions.skills.detail.settingsSaveFailed'))
   } finally {
     savingShareConfig.value = false
   }
@@ -792,9 +799,9 @@ const saveDependencies = async () => {
       syncDependencyFormFromSkill(updated)
     }
     await fetchSkillDetail()
-    message.success('依赖已更新')
+    message.success(t('knowledgeList.extensions.skills.detail.depsUpdated'))
   } catch {
-    message.error('更新失败')
+    message.error(t('knowledgeList.extensions.skills.detail.depsUpdateFailed'))
   } finally {
     savingDependencies.value = false
   }

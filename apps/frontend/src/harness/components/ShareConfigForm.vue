@@ -4,7 +4,7 @@
       v-if="hasManageScopeViolation"
       type="warning"
       show-icon
-      message="当前管理权限范围大于读取权限范围，请调整后再保存。"
+      :message="t('knowledgeList.extensions.share.form.manageWider')"
     />
 
     <section v-for="scope in scopeOptions" :key="scope.key" class="permission-scope-section">
@@ -21,8 +21,8 @@
         <a-switch
           v-if="scope.key !== 'read_scope' || !requireReadScope"
           :checked="Boolean(scopes[scope.key])"
-          checked-children="开启"
-          un-checked-children="关闭"
+          :checked-children="t('knowledgeList.extensions.share.form.on')"
+          :un-checked-children="t('knowledgeList.extensions.share.form.off')"
           :disabled="disabled || (scope.key === 'read_scope' && requireReadScope)"
           @change="(enabled) => toggleScope(scope.key, enabled)"
         />
@@ -67,7 +67,7 @@
                     <a-button
                       size="small"
                       class="select-action lucide-icon-btn"
-                      :aria-label="option.value === 'department' ? '选择部门' : '选择用户'"
+                      :aria-label="option.value === 'department' ? t('knowledgeList.extensions.share.form.pickDept') : t('knowledgeList.extensions.share.form.pickUser')"
                       :disabled="disabled"
                     >
                       <UserPlus class="select-action-icon" :size="14" />
@@ -79,8 +79,8 @@
                       <div class="selection-dropdown" @mousedown.stop @click.stop>
                         <div class="selection-dropdown-header">
                           <div class="selection-dropdown-title">
-                            {{ scope.key === 'manage_scope' ? '可管理' : '可读取'
-                            }}{{ option.value === 'department' ? '部门' : '用户' }}
+                            {{ scope.key === 'manage_scope' ? t('knowledgeList.extensions.share.form.manageable') : t('knowledgeList.extensions.share.form.readable')
+                            }}{{ option.value === 'department' ? t('knowledgeList.extensions.share.form.dept') : t('knowledgeList.extensions.share.form.users') }}
                           </div>
                           <div class="selection-dropdown-subtitle">
                             {{ getAccessSummary(scope.key, option.value) }}
@@ -91,7 +91,7 @@
                           size="small"
                           allow-clear
                           class="selection-search"
-                          :placeholder="option.value === 'department' ? '搜索部门' : '搜索用户'"
+                          :placeholder="option.value === 'department' ? t('knowledgeList.extensions.share.form.searchDept') : t('knowledgeList.extensions.share.form.searchUser')"
                           @mousedown.stop
                           @click.stop
                         />
@@ -150,7 +150,7 @@
                             </span>
                           </div>
                         </div>
-                        <div v-else class="selection-empty">暂无可选项</div>
+                        <div v-else class="selection-empty">{{ t('knowledgeList.extensions.share.form.emptyOptions') }}</div>
                       </div>
                     </template>
                   </a-dropdown>
@@ -165,9 +165,9 @@
         {{
           scope.key === 'read_scope'
             ? scopes.manage_scope
-              ? '未设置额外只读范围；管理范围内用户同时拥有读取权限。'
-              : '未设置读取范围。'
-            : '未设置管理范围，读取用户只能查看和使用。'
+              ? t('knowledgeList.extensions.share.form.noExtraRead')
+              : t('knowledgeList.extensions.share.form.noRead')
+            : t('knowledgeList.extensions.share.form.noManage')
         }}
       </p>
     </section>
@@ -184,11 +184,13 @@
 
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Building2, Globe, Users, UserPlus } from 'lucide-vue-next'
 import { useUserStore } from '@harness/stores/user'
 import { authApi } from '@harness/apis/auth_api'
 import { departmentApi } from '@harness/apis/department_api'
 
+const { t } = useI18n()
 const userStore = useUserStore()
 const departments = ref([])
 const users = ref([])
@@ -216,29 +218,39 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 
-const scopeOptions = [
+const scopeOptions = computed(() => [
   {
     key: 'read_scope',
-    title: '读取权限',
-    description: '这些用户可以浏览、预览、下载和使用资源。'
+    title: t('knowledgeList.extensions.share.form.readTitle'),
+    description: t('knowledgeList.extensions.share.form.readDesc')
   },
   {
     key: 'manage_scope',
-    title: '共享管理权限（包含读取权限）',
-    description: '拥有管理权限的用户同时拥有读取权限；管理范围必须包含在读取范围内。'
+    title: t('knowledgeList.extensions.share.form.manageTitle'),
+    description: t('knowledgeList.extensions.share.form.manageDesc')
   }
-]
+])
 
-const baseShareModeOptions = [
-  { value: 'global', title: '全局共享', description: '所有用户都可以访问', icon: Globe },
+const baseShareModeOptions = computed(() => [
+  {
+    value: 'global',
+    title: t('knowledgeList.extensions.share.form.globalTitle'),
+    description: t('knowledgeList.extensions.share.form.globalDesc'),
+    icon: Globe
+  },
   {
     value: 'department',
-    title: '部门共享',
-    description: '选中的部门成员可以访问',
+    title: t('knowledgeList.extensions.share.form.deptTitle'),
+    description: t('knowledgeList.extensions.share.form.deptDesc'),
     icon: Building2
   },
-  { value: 'user', title: '指定人', description: '选中的用户可以访问', icon: Users }
-]
+  {
+    value: 'user',
+    title: t('knowledgeList.extensions.share.form.userTitle'),
+    description: t('knowledgeList.extensions.share.form.userDesc'),
+    icon: Users
+  }
+])
 
 const scopes = reactive({ read_scope: null, manage_scope: null })
 const selectionSearch = reactive({
@@ -257,7 +269,7 @@ const normalizedAllowedAccessLevels = computed(() => {
   return allowed.length ? allowed : ['global']
 })
 const shareModeOptions = computed(() =>
-  baseShareModeOptions.filter((option) =>
+  baseShareModeOptions.value.filter((option) =>
     normalizedAllowedAccessLevels.value.includes(option.value)
   )
 )
@@ -372,7 +384,12 @@ const departmentOptions = computed(() =>
 )
 const userOptions = computed(() =>
   users.value.map((user) => ({
-    label: user.department_name ? `${user.username}（${user.department_name}）` : user.username,
+    label: user.department_name
+      ? t('knowledgeList.extensions.share.form.userWithDept', {
+          name: user.username,
+          dept: user.department_name
+        })
+      : user.username,
     value: user.uid,
     department_id: user.department_id
   }))
@@ -386,9 +403,13 @@ const getAccessCount = (scopeKey, accessLevel) => {
 }
 const getAccessSummary = (scopeKey, accessLevel) => {
   const scope = scopes[scopeKey]
-  if (accessLevel === 'global') return '所有用户可访问'
-  if (accessLevel === 'department') return `${scope?.department_ids.length || 0} 个部门可访问`
-  return `${scope?.user_uids.length || 0} 个用户可访问`
+  if (accessLevel === 'global') return t('knowledgeList.extensions.share.form.allUsers')
+  if (accessLevel === 'department') {
+    return t('knowledgeList.extensions.share.form.deptCount', {
+      count: scope?.department_ids.length || 0
+    })
+  }
+  return t('knowledgeList.extensions.share.form.userCount', { count: scope?.user_uids.length || 0 })
 }
 const getSelectionOptions = (scopeKey, accessLevel) => {
   let options = accessLevel === 'department' ? departmentOptions.value : userOptions.value
@@ -454,21 +475,21 @@ watch(
 const validateScope = (scope, title) => {
   if (!scope || scope.access_level === 'global') return { valid: true, message: '' }
   if (scope.access_level === 'department' && !scope.department_ids.length) {
-    return { valid: false, message: `${title}至少需要选择一个部门` }
+    return { valid: false, message: t('knowledgeList.extensions.share.form.needDept', { title }) }
   }
   if (scope.access_level === 'user' && !scope.user_uids.length) {
-    return { valid: false, message: `${title}至少需要选择一个用户` }
+    return { valid: false, message: t('knowledgeList.extensions.share.form.needUser', { title }) }
   }
   return { valid: true, message: '' }
 }
 
 const validate = () => {
-  const readResult = validateScope(scopes.read_scope, '读取权限')
+  const readResult = validateScope(scopes.read_scope, t('knowledgeList.extensions.share.form.readTitle'))
   if (!readResult.valid) return readResult
-  const manageResult = validateScope(scopes.manage_scope, '管理权限')
+  const manageResult = validateScope(scopes.manage_scope, t('knowledgeList.extensions.share.form.manageTitleShort'))
   if (!manageResult.valid) return manageResult
   if (!isManageScopeWithinRead(scopes.manage_scope)) {
-    return { valid: false, message: '管理权限必须包含在读取权限范围内' }
+    return { valid: false, message: t('knowledgeList.extensions.share.form.manageMustSubset') }
   }
   return manageResult
 }

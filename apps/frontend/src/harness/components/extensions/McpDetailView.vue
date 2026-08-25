@@ -6,7 +6,7 @@
     <div class="detail-top-bar">
       <button class="detail-back-btn" @click="goBack">
         <ArrowLeft :size="16" />
-        <span>返回</span>
+        <span>{{ t('knowledgeList.extensions.mcp.detail.back') }}</span>
       </button>
       <div class="detail-title-area">
         <span class="detail-icon">{{ server?.icon || '🔌' }}</span>
@@ -21,21 +21,21 @@
             type="button"
             @click="handleTestServer"
             :disabled="testLoading || server?.requires_migration"
-            :title="server?.requires_migration ? '请先迁移为远程 MCP' : ''"
+            :title="server?.requires_migration ? t('knowledgeList.extensions.mcp.detail.migrateFirst') : ''"
             class="lucide-icon-btn extension-panel-action extension-panel-action-secondary"
           >
             <Zap :size="14" v-if="!testLoading" />
-            <span>测试</span>
+            <span>{{ t('knowledgeList.extensions.mcp.detail.test') }}</span>
           </button>
           <button
             type="button"
             @click="startEdit"
             :disabled="isEditing || !server || server.is_builtin"
-            :title="server?.is_builtin ? '系统内置 MCP 的连接配置由代码管理' : ''"
+            :title="server?.is_builtin ? t('knowledgeList.extensions.mcp.detail.builtinConfigHint') : ''"
             class="lucide-icon-btn extension-panel-action extension-panel-action-secondary"
           >
             <Pencil :size="14" />
-            <span>编辑</span>
+            <span>{{ t('knowledgeList.extensions.mcp.detail.edit') }}</span>
           </button>
           <button
             type="button"
@@ -63,39 +63,39 @@
             v-if="server.requires_migration"
             type="warning"
             show-icon
-            message="此 stdio MCP 已禁用，请编辑为 SSE 或 Streamable HTTP，或直接删除。"
+            :message="t('knowledgeList.extensions.mcp.detail.migrateAlert')"
           />
           <a-tabs v-model:activeKey="detailTab" class="detail-tabs">
             <a-tab-pane key="general">
               <template #tab>
-                <span class="tab-title"><Settings2 :size="14" />信息</span>
+                <span class="tab-title"><Settings2 :size="14" />{{ t('knowledgeList.extensions.mcp.detail.tabInfo') }}</span>
               </template>
               <div class="tab-content">
                 <div v-if="isEditing" class="edit-panel">
                   <div class="edit-panel-header">
                     <div>
-                      <h3>编辑 MCP</h3>
-                      <p>修改后保存会立即更新当前 MCP 配置。</p>
+                      <h3>{{ t('knowledgeList.extensions.mcp.detail.editHeading') }}</h3>
+                      <p>{{ t('knowledgeList.extensions.mcp.detail.editHint') }}</p>
                     </div>
                   </div>
 
                   <a-form layout="vertical" class="extension-form inline-edit-form">
                     <section class="form-section">
                       <div class="form-section-title">
-                        <span>基础信息</span>
-                        <small>定义 MCP 的名称、描述与展示方式。</small>
+                        <span>{{ t('knowledgeList.extensions.mcp.detail.basicTitle') }}</span>
+                        <small>{{ t('knowledgeList.extensions.mcp.detail.basicHint') }}</small>
                       </div>
                       <div class="form-grid form-grid-three">
-                        <a-form-item label="MCP 标识" required class="form-item">
+                        <a-form-item :label="t('knowledgeList.extensions.mcp.form.slug')" required class="form-item">
                           <a-input v-model:value="editForm.slug" disabled />
                         </a-form-item>
-                        <a-form-item label="MCP 名称" required class="form-item">
+                        <a-form-item :label="t('knowledgeList.extensions.mcp.form.name')" required class="form-item">
                           <a-input
                             v-model:value="editForm.name"
-                            placeholder="请输入 MCP 展示名称"
+                            :placeholder="t('knowledgeList.extensions.mcp.form.namePlaceholder')"
                           />
                         </a-form-item>
-                        <a-form-item label="传输类型" required class="form-item">
+                        <a-form-item :label="t('knowledgeList.extensions.mcp.form.transport')" required class="form-item">
                           <a-select v-model:value="editForm.transport">
                             <a-select-option value="streamable_http"
                               >streamable_http</a-select-option
@@ -103,18 +103,18 @@
                             <a-select-option value="sse">sse</a-select-option>
                           </a-select>
                         </a-form-item>
-                        <a-form-item label="图标" class="form-item">
+                        <a-form-item :label="t('knowledgeList.extensions.mcp.form.icon')" class="form-item">
                           <a-input
                             v-model:value="editForm.icon"
-                            placeholder="输入 emoji，如 🧠"
+                            :placeholder="t('knowledgeList.extensions.mcp.form.iconPlaceholder')"
                             :maxlength="2"
                           />
                         </a-form-item>
                       </div>
-                      <a-form-item label="描述" class="form-item form-item-full">
+                      <a-form-item :label="t('knowledgeList.extensions.mcp.form.description')" class="form-item form-item-full">
                         <a-textarea
                           v-model:value="editForm.description"
-                          placeholder="请输入 MCP 描述"
+                          :placeholder="t('knowledgeList.extensions.mcp.form.descPlaceholder')"
                           :rows="2"
                         />
                       </a-form-item>
@@ -122,22 +122,22 @@
 
                     <section class="form-section">
                       <div class="form-section-title">
-                        <span>连接配置</span>
-                        <small>配置当前传输方式需要的连接参数。</small>
+                        <span>{{ t('knowledgeList.extensions.mcp.detail.connTitle') }}</span>
+                        <small>{{ t('knowledgeList.extensions.mcp.detail.connHint') }}</small>
                       </div>
                       <template
                         v-if="
                           editForm.transport === 'streamable_http' || editForm.transport === 'sse'
                         "
                       >
-                        <a-form-item label="MCP URL" required class="form-item form-item-full">
+                        <a-form-item :label="t('knowledgeList.extensions.mcp.form.url')" required class="form-item form-item-full">
                           <a-input
                             v-model:value="editForm.url"
                             placeholder="https://example.com/mcp"
                           />
                         </a-form-item>
                         <div class="form-grid">
-                          <a-form-item label="HTTP 超时（秒）" class="form-item">
+                          <a-form-item :label="t('knowledgeList.extensions.mcp.form.httpTimeout')" class="form-item">
                             <a-input-number
                               v-model:value="editForm.timeout"
                               :min="1"
@@ -145,7 +145,7 @@
                               style="width: 100%"
                             />
                           </a-form-item>
-                          <a-form-item label="SSE 读取超时（秒）" class="form-item">
+                          <a-form-item :label="t('knowledgeList.extensions.mcp.form.sseTimeout')" class="form-item">
                             <a-input-number
                               v-model:value="editForm.sse_read_timeout"
                               :min="1"
@@ -155,11 +155,11 @@
                           </a-form-item>
                         </div>
                       </template>
-                      <a-form-item label="标签" class="form-item form-item-full">
+                      <a-form-item :label="t('knowledgeList.extensions.mcp.form.tags')" class="form-item form-item-full">
                         <a-select
                           v-model:value="editForm.tags"
                           mode="tags"
-                          placeholder="输入标签后回车添加"
+                          :placeholder="t('knowledgeList.extensions.mcp.form.tagsPlaceholder')"
                           style="width: 100%"
                         />
                       </a-form-item>
@@ -167,23 +167,23 @@
 
                     <section class="form-section">
                       <div class="form-section-title">
-                        <span>高级配置</span>
-                        <small>请求头会直接影响 MCP 连接。</small>
+                        <span>{{ t('knowledgeList.extensions.mcp.detail.advancedTitle') }}</span>
+                        <small>{{ t('knowledgeList.extensions.mcp.detail.advancedHint') }}</small>
                       </div>
                       <template
                         v-if="
                           editForm.transport === 'streamable_http' || editForm.transport === 'sse'
                         "
                       >
-                        <a-form-item label="HTTP 请求头" class="form-item form-item-full">
+                        <a-form-item :label="t('knowledgeList.extensions.mcp.form.headers')" class="form-item form-item-full">
                           <a-textarea
                             v-model:value="editForm.headersText"
-                            placeholder='JSON 格式，如：{"Authorization": "Bearer xxx"}'
+                            :placeholder="t('knowledgeList.extensions.mcp.form.headersPlaceholder')"
                             :rows="4"
                             class="config-textarea"
                           />
                           <div class="form-helper">
-                            请输入合法 JSON 对象，留空表示不发送额外请求头。
+                            {{ t('knowledgeList.extensions.mcp.detail.headersHelp') }}
                           </div>
                         </a-form-item>
                       </template>
@@ -193,7 +193,7 @@
                   <div class="edit-panel-actions">
                     <a-button @click="cancelEdit" :disabled="editLoading" class="lucide-icon-btn">
                       <template #icon><X :size="14" /></template>
-                      取消
+                      {{ t('knowledgeList.extensions.mcp.detail.cancel') }}
                     </a-button>
                     <a-button
                       type="primary"
@@ -202,18 +202,18 @@
                       class="lucide-icon-btn"
                     >
                       <template #icon><Save :size="14" /></template>
-                      保存
+                      {{ t('knowledgeList.extensions.mcp.detail.save') }}
                     </a-button>
                   </div>
                 </div>
 
                 <div v-else class="info-grid">
                   <div class="info-item" v-if="server.description">
-                    <label>描述</label>
+                    <label>{{ t('knowledgeList.extensions.mcp.form.description') }}</label>
                     <span>{{ server.description }}</span>
                   </div>
                   <div class="info-item">
-                    <label>传输类型</label>
+                    <label>{{ t('knowledgeList.extensions.mcp.form.transport') }}</label>
                     <span>
                       <a-tag :color="getTransportColor(server.transport)">{{
                         server.transport
@@ -224,7 +224,7 @@
                     class="info-item"
                     v-if="Array.isArray(server.tags) && server.tags.length > 0"
                   >
-                    <label>标签</label>
+                    <label>{{ t('knowledgeList.extensions.mcp.form.tags') }}</label>
                     <span>
                       <a-tag v-for="tag in server.tags" :key="tag">{{ tag }}</a-tag>
                     </span>
@@ -233,32 +233,32 @@
                     v-if="server.transport === 'streamable_http' || server.transport === 'sse'"
                   >
                     <div class="info-item" v-if="server.url">
-                      <label>MCP URL</label>
+                      <label>{{ t('knowledgeList.extensions.mcp.form.url') }}</label>
                       <span class="code-inline text-break-all">{{ server.url }}</span>
                     </div>
                     <div
                       class="info-item"
                       v-if="server.headers && Object.keys(server.headers).length > 0"
                     >
-                      <label>请求头</label>
+                      <label>{{ t('knowledgeList.extensions.mcp.form.headers') }}</label>
                       <pre class="code-pre">{{ JSON.stringify(server.headers, null, 2) }}</pre>
                     </div>
                     <div class="info-item" v-if="server.timeout">
-                      <label>HTTP 超时</label>
-                      <span>{{ server.timeout }} 秒</span>
+                      <label>{{ t('knowledgeList.extensions.mcp.form.httpTimeout') }}</label>
+                      <span>{{ t('knowledgeList.extensions.mcp.detail.seconds', { count: server.timeout }) }}</span>
                     </div>
                     <div class="info-item" v-if="server.sse_read_timeout">
-                      <label>SSE 读取超时</label>
-                      <span>{{ server.sse_read_timeout }} 秒</span>
+                      <label>{{ t('knowledgeList.extensions.mcp.form.sseTimeout') }}</label>
+                      <span>{{ t('knowledgeList.extensions.mcp.detail.seconds', { count: server.sse_read_timeout }) }}</span>
                     </div>
                   </template>
                   <template v-if="server.transport === 'stdio'">
                     <div class="info-item" v-if="server.command">
-                      <label>命令</label>
+                      <label>{{ t('knowledgeList.extensions.mcp.detail.command') }}</label>
                       <span class="code-inline">{{ server.command }}</span>
                     </div>
                     <div class="info-item" v-if="server.args && server.args.length > 0">
-                      <label>参数</label>
+                      <label>{{ t('knowledgeList.extensions.mcp.detail.args') }}</label>
                       <span>
                         <a-tag v-for="(arg, index) in server.args" :key="index" size="small">{{
                           arg
@@ -266,20 +266,20 @@
                       </span>
                     </div>
                     <div class="info-item" v-if="server.env && Object.keys(server.env).length > 0">
-                      <label>环境变量</label>
+                      <label>{{ t('knowledgeList.extensions.mcp.detail.env') }}</label>
                       <pre class="code-pre">{{ JSON.stringify(server.env, null, 2) }}</pre>
                     </div>
                   </template>
                   <div class="info-item">
-                    <label>创建时间</label>
+                    <label>{{ t('knowledgeList.extensions.mcp.detail.createdAt') }}</label>
                     <span>{{ formatTime(server.created_at) }}</span>
                   </div>
                   <div class="info-item">
-                    <label>更新时间</label>
+                    <label>{{ t('knowledgeList.extensions.mcp.detail.updatedAt') }}</label>
                     <span>{{ formatTime(server.updated_at) }}</span>
                   </div>
                   <div class="info-item">
-                    <label>创建人</label>
+                    <label>{{ t('knowledgeList.extensions.mcp.detail.creator') }}</label>
                     <span>{{ server.created_by }}</span>
                   </div>
                 </div>
@@ -288,24 +288,24 @@
 
             <a-tab-pane v-if="!server.requires_migration" key="tools">
               <template #tab>
-                <span class="tab-title"><Wrench :size="14" />工具 ({{ tools.length }})</span>
+                <span class="tab-title"><Wrench :size="14" />{{ t('knowledgeList.extensions.mcp.detail.tabTools', { count: tools.length }) }}</span>
               </template>
               <div class="tab-content tools-tab">
                 <div class="tools-toolbar">
                   <a-input-search
                     v-model:value="toolSearchText"
-                    placeholder="搜索工具..."
+                    :placeholder="t('knowledgeList.extensions.mcp.detail.searchTools')"
                     style="width: 200px"
                     allowClear
                   />
                   <a-button @click="fetchTools" :loading="toolsLoading" class="lucide-icon-btn">
                     <RotateCw :size="14" />
-                    <span>刷新</span>
+                    <span>{{ t('knowledgeList.extensions.mcp.detail.refresh') }}</span>
                   </a-button>
                 </div>
                 <a-spin :spinning="toolsLoading">
                   <div v-if="filteredTools.length === 0" class="empty-tools">
-                    <a-empty :description="toolsError || '暂无工具'" />
+                    <a-empty :description="toolsError || t('knowledgeList.extensions.mcp.detail.noTools')" />
                   </div>
                   <div v-else class="tools-list">
                     <div
@@ -328,7 +328,7 @@
                             :loading="toggleToolLoading === tool.name"
                             size="small"
                           />
-                          <a-tooltip title="复制工具名称">
+                          <a-tooltip :title="t('knowledgeList.extensions.mcp.detail.copyToolName')">
                             <a-button
                               type="text"
                               size="small"
@@ -347,7 +347,7 @@
                         v-if="tool.parameters && Object.keys(tool.parameters).length > 0"
                         ghost
                       >
-                        <a-collapse-panel key="params" header="参数">
+                        <a-collapse-panel key="params" :header="t('knowledgeList.extensions.mcp.detail.params')">
                           <div class="params-list">
                             <div
                               v-for="(param, paramName) in tool.parameters"
@@ -359,7 +359,7 @@
                                 <span
                                   class="param-required"
                                   v-if="tool.required?.includes(paramName)"
-                                  >必填</span
+                                  >{{ t('knowledgeList.extensions.mcp.detail.required') }}</span
                                 >
                                 <span class="param-type">{{ param.type || 'any' }}</span>
                               </div>
@@ -378,7 +378,7 @@
           </a-tabs>
         </div>
         <div v-else-if="!loading" class="detail-empty">
-          <a-empty description="未找到 MCP 服务器" />
+          <a-empty :description="t('knowledgeList.extensions.mcp.detail.notFound')" />
         </div>
       </a-spin>
     </div>
@@ -387,6 +387,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
 import {
@@ -406,6 +407,7 @@ import {
 import { mcpApi } from '@harness/apis/mcp_api'
 import { formatFullDateTime } from '@harness/utils/time'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const slug = computed(() => decodeURIComponent(route.params.slug ?? route.params.name))
@@ -438,9 +440,11 @@ const editForm = reactive({
 })
 
 const actionLabel = computed(() => {
-  if (server.value?.requires_migration) return '删除'
-  if (server.value?.enabled === false) return '添加'
-  return server.value?.is_builtin ? '移除' : '删除'
+  if (server.value?.requires_migration) return t('knowledgeList.extensions.mcp.detail.delete')
+  if (server.value?.enabled === false) return t('knowledgeList.extensions.mcp.detail.add')
+  return server.value?.is_builtin
+    ? t('knowledgeList.extensions.mcp.detail.remove')
+    : t('knowledgeList.extensions.mcp.detail.delete')
 })
 
 const filteredTools = computed(() => {
@@ -497,7 +501,7 @@ const buildEditPayload = () => {
     try {
       headers = JSON.parse(editForm.headersText)
     } catch {
-      message.error('请求头 JSON 格式错误')
+      message.error(t('knowledgeList.extensions.mcp.form.badHeaders'))
       return null
     }
   }
@@ -517,15 +521,15 @@ const buildEditPayload = () => {
 
 const validateEditPayload = (data) => {
   if (!data.name?.trim()) {
-    message.error('MCP 名称不能为空')
+    message.error(t('knowledgeList.extensions.mcp.form.nameRequired'))
     return false
   }
   if (!data.transport) {
-    message.error('请选择传输类型')
+    message.error(t('knowledgeList.extensions.mcp.form.transportRequired'))
     return false
   }
   if (['sse', 'streamable_http'].includes(data.transport) && !data.url?.trim()) {
-    message.error('HTTP 类型必须填写 MCP URL')
+    message.error(t('knowledgeList.extensions.mcp.form.urlRequired'))
     return false
   }
   return true
@@ -540,14 +544,14 @@ const handleSaveEdit = async () => {
     editLoading.value = true
     const result = await mcpApi.updateMcpServer(server.value.slug, data)
     if (result.success) {
-      message.success('MCP 更新成功')
+      message.success(t('knowledgeList.extensions.mcp.form.updated'))
       isEditing.value = false
       await fetchServer()
     } else {
-      message.error(result.message || '更新失败')
+      message.error(t('knowledgeList.extensions.mcp.form.updateFailed'))
     }
-  } catch (err) {
-    message.error(err.message || '更新失败')
+  } catch {
+    message.error(t('knowledgeList.extensions.mcp.form.updateFailed'))
   } finally {
     editLoading.value = false
   }
@@ -560,16 +564,16 @@ const fetchServer = async () => {
     if (result.success) {
       if (result.data?.enabled === false && !result.data?.requires_migration) {
         server.value = null
-        message.info('请先添加 MCP 后再查看详情')
+        message.info(t('knowledgeList.extensions.mcp.detail.addFirst'))
         router.replace({ path: '/platform/knowledge-bases', query: { surface: 'mcp' } })
         return
       }
       server.value = result.data
     } else {
-      message.error(result.message || '获取 MCP 详情失败')
+      message.error(t('knowledgeList.extensions.mcp.detail.fetchFailed'))
     }
-  } catch (err) {
-    message.error(err.message || '获取 MCP 详情失败')
+  } catch {
+    message.error(t('knowledgeList.extensions.mcp.detail.fetchFailed'))
   } finally {
     loading.value = false
   }
@@ -584,11 +588,11 @@ const fetchTools = async () => {
     if (result.success) {
       tools.value = result.data || []
     } else {
-      toolsError.value = result.message || '获取工具列表失败'
+      toolsError.value = t('knowledgeList.extensions.mcp.detail.fetchToolsFailed')
       tools.value = []
     }
-  } catch (err) {
-    toolsError.value = err.message || '获取工具列表失败'
+  } catch {
+    toolsError.value = t('knowledgeList.extensions.mcp.detail.fetchToolsFailed')
     tools.value = []
   } finally {
     toolsLoading.value = false
@@ -601,14 +605,21 @@ const handleToggleTool = async (tool) => {
     toggleToolLoading.value = tool.name
     const result = await mcpApi.toggleMcpServerTool(server.value.slug, tool.name)
     if (result.success) {
-      message.success(result.message)
+      message.success(
+        t(
+          result.enabled
+            ? 'knowledgeList.extensions.mcp.detail.toolEnabled'
+            : 'knowledgeList.extensions.mcp.detail.toolDisabled',
+          { name: tool.name }
+        )
+      )
       const targetTool = tools.value.find((t) => t.name === tool.name)
       if (targetTool) targetTool.enabled = result.enabled
     } else {
-      message.error(result.message || '操作失败')
+      message.error(t('knowledgeList.extensions.mcp.form.actionFailed'))
     }
-  } catch (err) {
-    message.error(err.message || '操作失败')
+  } catch {
+    message.error(t('knowledgeList.extensions.mcp.form.actionFailed'))
   } finally {
     toggleToolLoading.value = null
   }
@@ -617,9 +628,9 @@ const handleToggleTool = async (tool) => {
 const copyToolName = async (toolName) => {
   try {
     await navigator.clipboard.writeText(toolName)
-    message.success('已复制到剪贴板')
+    message.success(t('knowledgeList.extensions.mcp.detail.copied'))
   } catch {
-    message.error('复制失败')
+    message.error(t('knowledgeList.extensions.mcp.detail.copyFailed'))
   }
 }
 
@@ -629,12 +640,14 @@ const handleTestServer = async () => {
     testLoading.value = server.value.name
     const result = await mcpApi.testMcpServer(server.value.slug)
     if (result.success) {
-      message.success(result.message)
+      message.success(
+        t('knowledgeList.extensions.mcp.detail.testOk', { count: result.tool_count ?? 0 })
+      )
     } else {
-      message.warning(result.message || '连接失败')
+      message.warning(t('knowledgeList.extensions.mcp.detail.connectFailed'))
     }
-  } catch (err) {
-    message.error(err.message || '测试失败')
+  } catch {
+    message.error(t('knowledgeList.extensions.mcp.detail.testFailed'))
   } finally {
     testLoading.value = null
   }
@@ -661,34 +674,36 @@ const handleSetServerEnabled = async (srv, enabled) => {
   try {
     const result = await mcpApi.updateMcpServerStatus(srv.slug, enabled)
     if (result.success) {
-      message.success(result.message || `MCP 已${enabled ? '添加' : '移除'}`)
+      message.success(
+        t(enabled ? 'knowledgeList.extensions.mcp.detail.added' : 'knowledgeList.extensions.mcp.detail.removed')
+      )
       await fetchServer()
     } else {
-      message.error(result.message || '操作失败')
+      message.error(t('knowledgeList.extensions.mcp.form.actionFailed'))
     }
-  } catch (err) {
-    message.error(err.message || '操作失败')
+  } catch {
+    message.error(t('knowledgeList.extensions.mcp.form.actionFailed'))
   }
 }
 
 const confirmDeleteServer = (srv) => {
   Modal.confirm({
-    title: '确认删除 MCP',
-    content: `确定要删除 MCP "${srv.name}" 吗？此操作不可撤销。`,
-    okText: '删除',
+    title: t('knowledgeList.extensions.mcp.deleteTitle'),
+    content: t('knowledgeList.extensions.mcp.deleteContent', { name: srv.name }),
+    okText: t('knowledgeList.extensions.mcp.delete'),
     okType: 'danger',
-    cancelText: '取消',
+    cancelText: t('knowledgeList.extensions.cancel'),
     async onOk() {
       try {
         const result = await mcpApi.deleteMcpServer(srv.slug)
         if (result.success) {
-          message.success('MCP 删除成功')
+          message.success(t('knowledgeList.extensions.mcp.deleted'))
           router.push({ path: '/platform/knowledge-bases', query: { surface: 'mcp' } })
         } else {
-          message.error(result.message || '删除失败')
+          message.error(t('knowledgeList.extensions.mcp.deleteFailed'))
         }
-      } catch (err) {
-        message.error(err.message || '删除失败')
+      } catch {
+        message.error(t('knowledgeList.extensions.mcp.deleteFailed'))
       }
     }
   })

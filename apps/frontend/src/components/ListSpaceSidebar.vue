@@ -10,7 +10,7 @@
             <div class="icon-item-labeled" :class="{ active: surfaceValue === item.value }"
               @click="selectSurface(item.value)">
               <t-icon :name="item.icon" size="16px" />
-              <span class="icon-label">{{ truncateLabel(item.label) }}</span>
+              <span class="icon-label">{{ item.shortLabel || item.label }}</span>
             </div>
           </t-tooltip>
           <div v-if="showScopeNav" class="icon-strip-divider" />
@@ -187,6 +187,8 @@ const SNAP_THRESHOLD = 120
 export type ListSurfaceNavItem = {
   value: string
   label: string
+  /** Collapsed-strip text. Falls back to `label` when omitted. */
+  shortLabel?: string
   icon: string
 }
 
@@ -443,12 +445,14 @@ onBeforeUnmount(() => {
 
 .icon-label {
   font-size: 11px;
-  line-height: 1.25;
+  line-height: 1.2;
   color: var(--td-text-color-secondary);
   max-width: 52px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  word-break: break-word;
   text-align: center;
   transition: color 0.15s ease;
 }

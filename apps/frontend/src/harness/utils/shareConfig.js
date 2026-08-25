@@ -1,15 +1,27 @@
-export function getShareConfigLabel(shareConfig) {
+export function getShareConfigLabel(shareConfig, t) {
+  const translate = typeof t === 'function' ? t : (key) => key
   const config = shareConfig || {}
   const readScope = config.version === 2 ? config.read_scope : config
   const manageScope = config.manage_scope
-  if (config.version === 2 && !config.read_scope && !manageScope) return '仅所有者'
+  if (config.version === 2 && !config.read_scope && !manageScope) {
+    return translate('knowledgeList.extensions.share.ownerOnly')
+  }
   const scopeLabel = (scope) => {
-    if (!scope) return '无'
-    if (scope.access_level === 'global') return '全局'
-    if (scope.access_level === 'department') return `部门(${scope.department_ids?.length || 0})`
-    return `用户(${scope.user_uids?.length || 0})`
+    if (!scope) return translate('knowledgeList.extensions.share.none')
+    if (scope.access_level === 'global') return translate('knowledgeList.extensions.share.global')
+    if (scope.access_level === 'department') {
+      return translate('knowledgeList.extensions.share.department', {
+        count: scope.department_ids?.length || 0
+      })
+    }
+    return translate('knowledgeList.extensions.share.user', {
+      count: scope.user_uids?.length || 0
+    })
   }
   return manageScope
-    ? `读${scopeLabel(readScope)} · 管${scopeLabel(manageScope)}`
-    : `只读${scopeLabel(readScope)}`
+    ? translate('knowledgeList.extensions.share.readManage', {
+        read: scopeLabel(readScope),
+        manage: scopeLabel(manageScope)
+      })
+    : translate('knowledgeList.extensions.share.readonly', { scope: scopeLabel(readScope) })
 }

@@ -85,7 +85,7 @@
 
           <div class="form-section compact-section">
             <div class="chunk-preset-title-row">
-              <h3 class="section-title">分块策略</h3>
+              <h3 class="section-title">{{ t('runtimeKnowledge.chunkStrategy') }}</h3>
               <a-tooltip :title="selectedPresetDescription">
                 <QuestionCircleOutlined class="chunk-preset-help-icon" />
               </a-tooltip>
@@ -142,9 +142,9 @@
         </div>
 
         <div class="form-section">
-          <h3 class="section-title">知识库描述</h3>
+          <h3 class="section-title">{{ t('runtimeKnowledge.description') }}</h3>
           <p class="field-hint description-hint">
-            在智能体流程中，这里的描述会作为工具的描述。智能体会根据知识库的标题和描述来选择合适的工具。所以这里描述的越详细，智能体越容易选择到合适的工具。
+            {{ t('runtimeKnowledge.descriptionHint') }}
           </p>
           <AiTextarea
             v-model="newDatabase.description"
@@ -156,7 +156,7 @@
 
         <!-- 共享配置 -->
         <div class="form-section compact-section">
-          <h3 class="section-title">共享设置</h3>
+          <h3 class="section-title">{{ t('runtimeKnowledge.shareSettings') }}</h3>
           <ShareConfigForm
             ref="shareConfigFormRef"
             v-model="shareConfig"
@@ -164,7 +164,7 @@
             :require-read-scope="true"
           >
             <template #manage-description>
-              知识库<strong>仅管理员</strong>可以管理知识库；普通用户无法管理。
+              {{ t('runtimeKnowledge.shareManageHint') }}
             </template>
           </ShareConfigForm>
         </div>
@@ -182,6 +182,7 @@
       </template>
     </a-modal>
 
+    <div class="extension-page-body">
     <!-- 加载状态 -->
     <div v-if="dbState.listLoading" class="loading-container">
       <a-spin size="large" />
@@ -218,7 +219,7 @@
         :key="database.kb_id"
         :title="database.name"
         :subtitle="cardSubtitle(database)"
-        :description="database.description || '暂无描述'"
+        :description="database.description || t('runtimeKnowledge.noDescription')"
         :tags="cardTags(database)"
         @click="navigateToDatabase(database)"
       >
@@ -230,26 +231,27 @@
             <a-menu-item key="copy">
               <span class="lucide-menu-item">
                 <Copy :size="15" />
-                <span>复制 ID</span>
+                <span>{{ t('runtimeKnowledge.copyId') }}</span>
               </span>
             </a-menu-item>
             <a-menu-item v-if="database.can_manage" key="edit">
               <span class="lucide-menu-item">
                 <Pencil :size="15" />
-                <span>编辑知识库</span>
+                <span>{{ t('runtimeKnowledge.editKb') }}</span>
               </span>
             </a-menu-item>
             <a-menu-divider />
             <a-menu-item v-if="database.can_manage" key="delete" danger>
               <span class="lucide-menu-item">
                 <Trash2 :size="15" />
-                <span>删除知识库</span>
+                <span>{{ t('runtimeKnowledge.deleteKb') }}</span>
               </span>
             </a-menu-item>
           </a-menu>
         </template>
       </InfoCard>
     </ExtensionCardGrid>
+    </div>
   </div>
 </template>
 
@@ -388,7 +390,7 @@ const loadSupportedKbTypes = async () => {
     supportedKbTypes.value = {}
     newDatabase.kb_type = ''
     resetCreateParamValues()
-    message.error('加载知识库类型失败，请稍后重试')
+    message.error(t('runtimeKnowledge.loadTypesFailed'))
   }
 }
 
@@ -415,24 +417,24 @@ const formatCreatedTime = (createdAt) => {
   const diffInDays = today.diff(createdDay, 'day')
 
   if (diffInDays === 0) {
-    return '今天创建'
+    return t('runtimeKnowledge.createdToday')
   }
   if (diffInDays === 1) {
-    return '昨天创建'
+    return t('runtimeKnowledge.createdYesterday')
   }
   if (diffInDays < 7) {
-    return `${diffInDays} 天前创建`
+    return t('runtimeKnowledge.createdDaysAgo', { count: diffInDays })
   }
   if (diffInDays < 30) {
     const weeks = Math.floor(diffInDays / 7)
-    return `${weeks} 周前创建`
+    return t('runtimeKnowledge.createdWeeksAgo', { count: weeks })
   }
   if (diffInDays < 365) {
     const months = Math.floor(diffInDays / 30)
-    return `${months} 个月前创建`
+    return t('runtimeKnowledge.createdMonthsAgo', { count: months })
   }
   const years = Math.floor(diffInDays / 365)
-  return `${years} 年前创建`
+  return t('runtimeKnowledge.createdYearsAgo', { count: years })
 }
 
 // 处理知识库类型改变
@@ -479,7 +481,7 @@ const buildRequestData = () => {
 // 创建按钮处理
 const handleCreateDatabase = async () => {
   if (!selectedKbTypeInfo.value) {
-    message.error('知识库类型加载失败，无法创建知识库')
+    message.error(t('runtimeKnowledge.typesLoadFailedCreate'))
     return
   }
 
@@ -487,7 +489,7 @@ const handleCreateDatabase = async () => {
     if (!field.required) continue
     const value = newDatabase.additional_params[field.key]
     if (value === undefined || value === null || (typeof value === 'string' && !value.trim())) {
-      message.error(`请填写${field.label || field.key}`)
+      message.error(t('runtimeKnowledge.fillField', { label: field.label || field.key }))
       return
     }
   }
@@ -516,7 +518,7 @@ const cardSubtitle = (database) => {
     parts.push(formatCreatedTime(database.created_at))
   }
   if (!kbUtils.isReadOnlyDatabase(database)) {
-    parts.push(`${database.row_count || 0} 文件`)
+    parts.push(t('runtimeKnowledge.fileCount', { count: database.row_count || 0 }))
   }
   return parts.join(' · ')
 }
@@ -528,7 +530,7 @@ const cardTags = (database) => {
       color: getKbTypeColor(database.kb_type || 'milvus')
     },
     {
-      name: getShareConfigLabel(database.share_config),
+      name: getShareConfigLabel(database.share_config, t),
       color: 'gray'
     }
   ]
@@ -556,23 +558,23 @@ const copyDatabaseId = async (database) => {
     document.execCommand('copy')
     document.body.removeChild(textArea)
   }
-  message.success('知识库 ID 已复制')
+  message.success(t('runtimeKnowledge.idCopied'))
 }
 
 const deleteDatabase = (database) => {
   Modal.confirm({
-    title: '删除知识库',
-    content: `确定要删除知识库“${database.name}”吗？此操作不可撤销。`,
-    okText: '删除',
+    title: t('runtimeKnowledge.deleteTitle'),
+    content: t('runtimeKnowledge.deleteContent', { name: database.name }),
+    okText: t('runtimeKnowledge.deleteOk'),
     okType: 'danger',
-    cancelText: '取消',
+    cancelText: t('runtimeKnowledge.cancel'),
     onOk: async () => {
       try {
         await databaseApi.deleteDatabase(database.kb_id)
-        message.success('知识库已删除')
+        message.success(t('runtimeKnowledge.deleted'))
         await databaseStore.loadDatabases()
       } catch (error) {
-        message.error(error.message || '删除失败')
+        message.error(error.message || t('runtimeKnowledge.deleteFailed'))
         throw error
       }
     }
@@ -840,6 +842,18 @@ defineExpose({
 
 .database-container {
   padding: 0;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: transparent;
+}
+
+.extension-page-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .loading-container {

@@ -1,6 +1,6 @@
 <template>
   <div class="skill-cards-page extension-page-root">
-    <PageShoulder search-placeholder="搜索技能..." v-model:search="searchQuery">
+    <PageShoulder :search-placeholder="t('knowledgeList.extensions.skills.searchPlaceholder')" v-model:search="searchQuery">
       <template #actions>
         <template v-if="!isBatchDeleteMode">
           <a-button
@@ -8,7 +8,7 @@
             :disabled="loading || importing || filteredDeletableSkills.length === 0"
             class="lucide-icon-btn"
           >
-            <span>批量管理</span>
+            <span>{{ t('knowledgeList.extensions.skills.batchManage') }}</span>
           </a-button>
           <a-button
             @click="handleOpenRemoteInstall"
@@ -16,7 +16,7 @@
             class="lucide-icon-btn"
           >
             <Computer :size="14" />
-            <span>远程安装</span>
+            <span>{{ t('knowledgeList.extensions.skills.remoteInstall') }}</span>
           </a-button>
           <a-upload
             accept=".zip,.md"
@@ -27,12 +27,12 @@
           >
             <a-button type="primary" :loading="importing" class="lucide-icon-btn">
               <Upload :size="14" />
-              <span>上传 Skill</span>
+              <span>{{ t('knowledgeList.extensions.skills.upload') }}</span>
             </a-button>
           </a-upload>
           <a-button
             class="lucide-icon-btn"
-            aria-label="刷新 Skills"
+            :aria-label="t('knowledgeList.extensions.skills.refreshAria')"
             :disabled="loading"
             @click="fetchSkills({ refreshPersonal: true })"
           >
@@ -40,9 +40,9 @@
           </a-button>
         </template>
         <template v-else>
-          <a-button size="small" type="link" @click="handleBatchSelectAll">全选</a-button>
-          <a-button size="small" type="link" @click="handleBatchSelectInvert">反选</a-button>
-          <a-button size="small" type="link" @click="handleBatchSelectNone">清空</a-button>
+          <a-button size="small" type="link" @click="handleBatchSelectAll">{{ t('knowledgeList.extensions.skills.selectAll') }}</a-button>
+          <a-button size="small" type="link" @click="handleBatchSelectInvert">{{ t('knowledgeList.extensions.skills.invert') }}</a-button>
+          <a-button size="small" type="link" @click="handleBatchSelectNone">{{ t('knowledgeList.extensions.skills.clear') }}</a-button>
           <a-button
             type="primary"
             danger
@@ -50,38 +50,50 @@
             :loading="loading"
             @click="handleBatchDelete"
           >
-            批量删除 ({{ selectedCardSlugs.length }})
+            {{ t('knowledgeList.extensions.skills.batchDelete', { count: selectedCardSlugs.length }) }}
           </a-button>
-          <a-button :disabled="loading" @click="exitBatchDeleteMode">退出管理</a-button>
+          <a-button :disabled="loading" @click="exitBatchDeleteMode">{{ t('knowledgeList.extensions.skills.exitManage') }}</a-button>
         </template>
       </template>
     </PageShoulder>
 
     <div
       v-if="visibleSkillGroups.length === 0"
-      class="extension-card-grid-empty-state skill-empty-state"
+      class="extension-page-body extension-card-grid-empty-state skill-empty-state"
     >
       <div class="skill-empty-card">
         <div class="skill-empty-icon">
           <WandSparkles :size="22" />
         </div>
         <div class="skill-empty-title">
-          {{ searchQuery ? '没有匹配的 Skill' : '还没有添加 Skill' }}
+          {{ searchQuery ? t('knowledgeList.extensions.skills.emptySearchTitle') : t('knowledgeList.extensions.skills.emptyTitle') }}
         </div>
         <div class="skill-empty-desc">
           {{
             searchQuery
-              ? '换个关键词试试，或清空搜索条件。'
-              : '可以从远程仓库安装，或上传本地 Skill 文件。'
+              ? t('knowledgeList.extensions.skills.emptySearchDesc')
+              : t('knowledgeList.extensions.skills.emptyDesc')
           }}
         </div>
       </div>
     </div>
 
-    <template v-else>
+    <div v-else class="extension-page-body">
       <template v-for="group in visibleSkillGroups" :key="group.key">
-        <div class="extension-section-header">{{ group.title }}</div>
-        <ExtensionCardGrid :min-width="280">
+        <div
+          class="extension-section-header is-toggle"
+          role="button"
+          tabindex="0"
+          @click="toggleSkillSection(group.key)"
+          @keydown.enter.prevent="toggleSkillSection(group.key)"
+          @keydown.space.prevent="toggleSkillSection(group.key)"
+        >
+          <span>{{ group.title }}</span>
+          <span class="section-count">{{ group.skills.length }}</span>
+          <ChevronRight v-if="isSkillSectionCollapsed(group.key)" :size="14" class="section-toggle" />
+          <ChevronDown v-else :size="14" class="section-toggle" />
+        </div>
+        <ExtensionCardGrid v-show="!isSkillSectionCollapsed(group.key)" :min-width="280">
           <div
             v-for="skill in group.skills"
             :key="`${group.key}:${skill.slug || skill.id}`"
@@ -113,7 +125,7 @@
                 variant="default"
                 :title="formatExtensionCardTitle(skill.name)"
                 :subtitle="skill.slug"
-                :description="skill.description || '暂无描述'"
+                :description="skill.description || t('knowledgeList.extensions.noDescription')"
                 :tags="skillCardTags(skill)"
                 :default-icon="getSkillIcon(skill.slug)"
                 @click="handleCardClick(skill)"
@@ -126,7 +138,7 @@
                     class="skill-enabled-action"
                     :class="{ enabled: skill.enabled !== false }"
                     :disabled="!canManageSkill(skill) || isSkillToggling(skill.slug)"
-                    :aria-label="skill.enabled === false ? '启用 Skill' : '禁用 Skill'"
+                    :aria-label="skill.enabled === false ? t('knowledgeList.extensions.skills.enable') : t('knowledgeList.extensions.skills.disable')"
                     @click.stop="handleToggleSkillEnabled(skill)"
                   >
                     <Plus v-if="skill.enabled === false" :size="15" class="action-icon" />
@@ -141,7 +153,7 @@
           </div>
         </ExtensionCardGrid>
       </template>
-    </template>
+    </div>
 
     <a-modal
       v-model:open="skillPreviewVisible"
@@ -163,14 +175,11 @@
                 {{ formatExtensionCardTitle(previewSkill.name) }}
               </div>
               <div class="skill-preview-meta">
-                <span
-                  >{{
-                    sourceTypeLabel(previewSkill.sourceType || previewSkill.source_type)
-                  }}
-                  Skill</span
-                >
+                <span>{{
+                  sourceTypeLabel(previewSkill.sourceType || previewSkill.source_type)
+                }}</span>
                 <span v-if="previewSkill.enabled === false" class="skill-preview-disabled-tag">
-                  已禁用
+                  {{ t('knowledgeList.extensions.skills.disabled') }}
                 </span>
               </div>
             </div>
@@ -196,7 +205,7 @@
             :content="skillPreviewMarkdown"
             :compact="true"
           />
-          <a-empty v-else :description="skillPreviewError || '未读取到 SKILL.md'" />
+          <a-empty v-else :description="skillPreviewError || t('knowledgeList.extensions.skills.noSkillMd')" />
         </div>
 
         <div class="skill-preview-footer">
@@ -207,18 +216,18 @@
               :loading="deletingPreviewSkill"
               @click="confirmDeletePreviewSkill"
             >
-              卸载
+              {{ t('knowledgeList.extensions.skills.uninstall') }}
             </a-button>
           </div>
           <div class="skill-preview-footer-right">
-            <a-button @click="closeSkillPreview">关闭</a-button>
+            <a-button @click="closeSkillPreview">{{ t('knowledgeList.extensions.close') }}</a-button>
             <a-button
               v-if="previewSkill.sourceScope !== 'personal'"
               type="primary"
               class="lucide-icon-btn"
               @click="goToPreviewSkillManagement"
             >
-              <span>去管理</span>
+              <span>{{ t('knowledgeList.extensions.skills.manage') }}</span>
             </a-button>
           </div>
         </div>
@@ -235,14 +244,14 @@
         <div class="remote-install-panel">
           <a-tabs v-model:activeKey="activeTab" class="install-tabs">
             <!-- Tab 1: 按仓库拉取 -->
-            <a-tab-pane key="repo" tab="按仓库拉取">
+            <a-tab-pane key="repo" :tab="t('knowledgeList.extensions.skills.pullTab')">
               <div class="tab-content-wrapper">
                 <a-form layout="vertical" class="remote-install-form">
                   <div class="repo-input-row">
                     <div class="repo-input-field">
                       <a-input
                         v-model:value="remoteInstallForm.source"
-                        placeholder="来源仓库，如 anthropics/skills 或 GitHub URL"
+                        :placeholder="t('knowledgeList.extensions.skills.repoPlaceholder')"
                       >
                         <template #suffix>
                           <a-dropdown
@@ -251,7 +260,7 @@
                             overlay-class-name="history-dropdown-menu"
                           >
                             <div class="history-trigger-wrapper">
-                              <a-tooltip title="历史仓库">
+                              <a-tooltip :title="t('knowledgeList.extensions.skills.repoHistory')">
                                 <History
                                   :size="14"
                                   class="history-icon-trigger"
@@ -262,7 +271,7 @@
                             <template #overlay>
                               <a-menu @click="handleSelectHistory">
                                 <a-menu-item v-if="repoHistory.length === 0" disabled>
-                                  <span class="history-empty-text">暂无使用历史</span>
+                                  <span class="history-empty-text">{{ t('knowledgeList.extensions.skills.noHistory') }}</span>
                                 </a-menu-item>
                                 <template v-else>
                                   <a-menu-item v-for="item in repoHistory" :key="item">
@@ -285,7 +294,7 @@
                                   >
                                     <div class="clear-history-btn-content">
                                       <Trash2 :size="12" class="clear-icon" />
-                                      <span>清空历史记录</span>
+                                      <span>{{ t('knowledgeList.extensions.skills.clearHistory') }}</span>
                                     </div>
                                   </a-menu-item>
                                 </template>
@@ -300,21 +309,19 @@
                       :loading="listingRemoteSkills"
                       @click="handleListRemoteSkills"
                     >
-                      拉取技能
+                      {{ t('knowledgeList.extensions.skills.pullSkills') }}
                     </a-button>
                   </div>
                   <div class="repo-hint-text">
-                    支持 `owner/repo` 或 GitHub URL。可前往
+                    {{ t('knowledgeList.extensions.skills.repoHintBefore') }}
                     <a href="https://skills.sh/" target="_blank" rel="noopener noreferrer"
                       >skills.sh</a
                     >
-                    查询开源 skills。 也支持 ModelScope 单个 Skill
-                    地址，每次仅限安装一个：`https://modelscope.cn/skills/&lt;skill-id&gt;`。 Skill
-                    ID 可在
-                    <a href="https://modelscope.cn/skills" target="_blank" rel="noopener noreferrer"
-                      >ModelScope Skill 市场</a
-                    >
-                    进入详情后从地址栏获取。
+                    {{ t('knowledgeList.extensions.skills.repoHintAfterLink') }}
+                    <a href="https://modelscope.cn/skills" target="_blank" rel="noopener noreferrer">{{
+                      t('knowledgeList.extensions.skills.repoHintMarket')
+                    }}</a>
+                    {{ t('knowledgeList.extensions.skills.repoHintAfterMarket') }}
                   </div>
 
                   <!-- 仓库技能多选列表 -->
@@ -323,7 +330,7 @@
                       <div class="single-remote-skill-card">
                         <div class="single-remote-skill-name">{{ singleRepoSkill.name }}</div>
                         <div class="single-remote-skill-meta">
-                          {{ singleRepoSkill.description || '暂无描述' }}
+                          {{ singleRepoSkill.description || t('knowledgeList.extensions.noDescription') }}
                         </div>
                       </div>
                     </template>
@@ -331,18 +338,18 @@
                       <div class="list-operations-bar">
                         <div class="op-buttons">
                           <a-button size="small" type="link" @click="handleRepoSelectAll"
-                            >全选</a-button
+                            >{{ t('knowledgeList.extensions.skills.selectAll') }}</a-button
                           >
                           <a-button size="small" type="link" @click="handleRepoSelectInvert"
-                            >反选</a-button
+                            >{{ t('knowledgeList.extensions.skills.invert') }}</a-button
                           >
                           <a-button size="small" type="link" @click="handleRepoSelectNone"
-                            >清空</a-button
+                            >{{ t('knowledgeList.extensions.skills.clear') }}</a-button
                           >
                         </div>
                         <a-input
                           v-model:value="repoFilterKeyword"
-                          placeholder="本地过滤检索..."
+                          :placeholder="t('knowledgeList.extensions.skills.localFilter')"
                           size="small"
                           style="width: 180px"
                           allow-clear
@@ -371,7 +378,7 @@
                             <div class="remote-skill-row-content">
                               <span class="skill-item-name">{{ item.name }}</span>
                               <span class="skill-item-desc">{{
-                                item.description || '暂无描述'
+                                item.description || t('knowledgeList.extensions.noDescription')
                               }}</span>
                             </div>
                           </div>
@@ -384,14 +391,14 @@
             </a-tab-pane>
 
             <!-- Tab 2: 全局搜索发现 -->
-            <a-tab-pane key="search" tab="全局搜索发现">
+            <a-tab-pane key="search" :tab="t('knowledgeList.extensions.skills.searchTab')">
               <div class="tab-content-wrapper">
                 <a-form layout="vertical" class="remote-install-form">
                   <div class="repo-input-row">
                     <div class="repo-input-field">
                       <a-input
                         v-model:value="searchKeyword"
-                        placeholder="输入 web、python 等关键字进行全局查找"
+                        :placeholder="t('knowledgeList.extensions.skills.searchPlaceholderRemote')"
                         @pressEnter="handleSearchRemoteSkills"
                       />
                     </div>
@@ -400,11 +407,11 @@
                       :loading="searchingRemoteSkills"
                       @click="handleSearchRemoteSkills"
                     >
-                      查找技能
+                      {{ t('knowledgeList.extensions.skills.findSkills') }}
                     </a-button>
                   </div>
                   <div class="repo-hint-text">
-                    直接输入关键字检索 skills.sh 上的开源 Skills 并批量拉取安装。
+                    {{ t('knowledgeList.extensions.skills.searchHint') }}
                   </div>
 
                   <!-- 搜索结果列表 -->
@@ -428,13 +435,13 @@
                       <div class="list-operations-bar">
                         <div class="op-buttons">
                           <a-button size="small" type="link" @click="handleSearchSelectAll"
-                            >全选</a-button
+                            >{{ t('knowledgeList.extensions.skills.selectAll') }}</a-button
                           >
                           <a-button size="small" type="link" @click="handleSearchSelectInvert"
-                            >反选</a-button
+                            >{{ t('knowledgeList.extensions.skills.invert') }}</a-button
                           >
                           <a-button size="small" type="link" @click="handleSearchSelectNone"
-                            >清空</a-button
+                            >{{ t('knowledgeList.extensions.skills.clear') }}</a-button
                           >
                         </div>
                       </div>
@@ -480,7 +487,7 @@
       <template #selection-footer>
         <span class="modal-footer-summary">{{ remoteSelectionSummary }}</span>
         <div class="modal-footer-buttons">
-          <a-button @click="closeInstallFlow">取消</a-button>
+          <a-button @click="closeInstallFlow">{{ t('knowledgeList.extensions.cancel') }}</a-button>
           <a-button
             type="primary"
             :disabled="
@@ -490,7 +497,7 @@
             "
             @click="startInstallRemoteSkills"
           >
-            解析并确认
+            {{ t('knowledgeList.extensions.skills.confirmParse') }}
           </a-button>
         </div>
       </template>
@@ -500,6 +507,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
 import {
@@ -511,7 +519,9 @@ import {
   Trash2,
   Check,
   Plus,
-  Minus
+  Minus,
+  ChevronDown,
+  ChevronRight
 } from 'lucide-vue-next'
 import { skillApi } from '@harness/apis/skill_api'
 import ExtensionCardGrid from './ExtensionCardGrid.vue'
@@ -524,39 +534,39 @@ import { formatExtensionCardTitle } from '@harness/utils/extensionDisplayName'
 import { getShareConfigLabel } from '@harness/utils/shareConfig'
 import { getSkillIcon } from '@harness/utils/skill_icon_utils'
 
-const RECOMMENDED_SUITES = [
+const { t } = useI18n()
+
+const recommendedSuites = computed(() => [
   {
     id: 'anthropic-documents',
-    name: 'Anthropic 文档处理套件',
+    name: t('knowledgeList.extensions.skills.suite.anthropicName'),
     provider: 'Anthropic',
-    description:
-      'Anthropic 官方文档处理 Skills，覆盖 PDF、Word、电子表格与演示文稿的读取、创建和编辑。',
+    description: t('knowledgeList.extensions.skills.suite.anthropicDesc'),
     source: 'anthropics/skills',
     skills: [
       {
         slug: 'pdf',
         name: 'PDF',
-        description: '提取文本与表格，支持合并拆分、旋转水印、表单、加解密、图片提取和 OCR。'
+        description: t('knowledgeList.extensions.skills.suite.pdfDesc')
       },
       {
         slug: 'docx',
         name: 'Docs',
-        description: '创建和编辑 Word 文档，处理目录、页码、图片、查找替换、修订与批注。'
+        description: t('knowledgeList.extensions.skills.suite.docxDesc')
       },
       {
         slug: 'xlsx',
         name: 'XLSX',
-        description: '创建和编辑电子表格，支持公式、格式、图表、数据清洗、表格重构与格式转换。'
+        description: t('knowledgeList.extensions.skills.suite.xlsxDesc')
       },
       {
         slug: 'pptx',
         name: 'PPTX',
-        description: '创建和编辑演示文稿，支持文本提取、模板版式、备注批注以及合并拆分。'
+        description: t('knowledgeList.extensions.skills.suite.pptxDesc')
       }
     ]
   }
-]
-
+])
 const router = useRouter()
 
 const loading = ref(false)
@@ -599,12 +609,18 @@ const hasSingleSearchedSkill = computed(() => searchedSkills.value.length === 1)
 const singleSearchedSkill = computed(() => searchedSkills.value[0] || null)
 const remoteSelectionSummary = computed(() => {
   if (activeTab.value === 'repo') {
-    if (!remoteSkillOptions.value.length) return '请先拉取仓库中的 Skill'
-    return `已选 ${selectedRepoSkills.value.length} / 共发现 ${remoteSkillOptions.value.length} 个 Skill`
+    if (!remoteSkillOptions.value.length) return t('knowledgeList.extensions.skills.pickRepoFirst')
+    return t('knowledgeList.extensions.skills.repoSelected', {
+      selected: selectedRepoSkills.value.length,
+      total: remoteSkillOptions.value.length
+    })
   }
 
-  if (!searchedSkills.value.length) return '请输入关键词查找 Skill'
-  return `已选 ${selectedSearchSkills.value.length} / 共找到 ${searchedSkills.value.length} 个 Skill`
+  if (!searchedSkills.value.length) return t('knowledgeList.extensions.skills.typeKeywordFirst')
+  return t('knowledgeList.extensions.skills.searchSelected', {
+    selected: selectedSearchSkills.value.length,
+    total: searchedSkills.value.length
+  })
 })
 
 const repoHistory = ref([])
@@ -645,37 +661,45 @@ const installedPersonalSkillKeys = computed(() => {
 })
 
 const recommendedSuiteCards = computed(() =>
-  RECOMMENDED_SUITES.map((suite) => ({ ...suite, isSuite: true }))
+  recommendedSuites.value.map((suite) => ({ ...suite, isSuite: true }))
 )
 
 const filteredInstalledSkills = computed(() => installedSkillCards.value.filter(matchesSearch))
 const skillGroups = computed(() => [
   {
     key: 'recommended',
-    title: '推荐',
+    title: t('knowledgeList.extensions.skills.groupRecommended'),
     skills: isBatchDeleteMode.value ? [] : recommendedSuiteCards.value.filter(matchesSearch)
   },
   {
     key: 'personal',
-    title: '个人技能',
+    title: t('knowledgeList.extensions.skills.groupPersonal'),
     skills: isBatchDeleteMode.value
       ? []
       : filteredInstalledSkills.value.filter((skill) => skill.sourceScope === 'personal')
   },
   {
     key: 'builtin',
-    title: '内置',
+    title: t('knowledgeList.extensions.skills.groupBuiltin'),
     skills: filteredInstalledSkills.value.filter((skill) => skill.sourceType === 'builtin')
   },
   {
     key: 'uploaded',
-    title: '共享',
+    title: t('knowledgeList.extensions.skills.groupShared'),
     skills: filteredInstalledSkills.value.filter(
       (skill) => skill.sourceType !== 'builtin' && skill.sourceScope !== 'personal'
     )
   }
 ])
 const visibleSkillGroups = computed(() => skillGroups.value.filter((group) => group.skills.length))
+const collapsedSkillSections = ref(new Set())
+const isSkillSectionCollapsed = (key) => collapsedSkillSections.value.has(key)
+const toggleSkillSection = (key) => {
+  const next = new Set(collapsedSkillSections.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  collapsedSkillSections.value = next
+}
 const filteredDeletableSkills = computed(() =>
   filteredInstalledSkills.value.filter(
     (skill) =>
@@ -776,25 +800,25 @@ const toggleSearchSkillFromRow = (item) => {
 }
 
 const sourceTypeLabel = (sourceType) => {
-  if (sourceType === 'personal') return '个人技能'
-  if (sourceType === 'builtin') return '内置'
-  if (sourceType === 'remote') return '远程'
-  return '上传'
+  if (sourceType === 'personal') return t('knowledgeList.extensions.skills.sourcePersonal')
+  if (sourceType === 'builtin') return t('knowledgeList.extensions.skills.sourceBuiltin')
+  if (sourceType === 'remote') return t('knowledgeList.extensions.skills.sourceRemote')
+  return t('knowledgeList.extensions.skills.sourceUpload')
 }
 
 /** 返回 Skill 共享范围的简短展示文案。 */
-const getSkillShareLabel = (skill) => getShareConfigLabel(skill?.share_config)
+const getSkillShareLabel = (skill) => getShareConfigLabel(skill?.share_config, t)
 
 const skillCardTags = (skill) => {
   if (skill.sourceScope === 'personal') {
     return [
-      { name: '个人技能', color: 'gray' },
-      ...(skill.overrides_shared ? [{ name: '覆盖共享版本', color: 'orange' }] : [])
+      { name: t('knowledgeList.extensions.skills.sourcePersonal'), color: 'gray' },
+      ...(skill.overrides_shared ? [{ name: t('knowledgeList.extensions.skills.tagOverrideShared'), color: 'orange' }] : [])
     ]
   }
   return [
     { name: getSkillShareLabel(skill), color: 'gray' },
-    ...(skill.shadowed_by_personal ? [{ name: '已被个人版本覆盖', color: 'orange' }] : [])
+    ...(skill.shadowed_by_personal ? [{ name: t('knowledgeList.extensions.skills.tagShadowed'), color: 'orange' }] : [])
   ]
 }
 
@@ -826,7 +850,7 @@ const openSkillPreview = async (skill) => {
     skillPreviewMarkdown.value = result?.data?.content || ''
   } catch (error) {
     if (requestSeq !== previewRequestSeq || previewSkill.value?.slug !== skill.slug) return
-    skillPreviewError.value = error?.response?.data?.detail || error.message || '读取 SKILL.md 失败'
+    skillPreviewError.value = error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.readFailed')
   } finally {
     if (requestSeq === previewRequestSeq) skillPreviewLoading.value = false
   }
@@ -879,9 +903,9 @@ const handleToggleSkillEnabled = async (skill) => {
         ? { ...updatedSkill, sourceType: updatedSkill.source_type || 'upload' }
         : { ...previewSkill.value, enabled }
     }
-    message.success(`Skill 已${enabled ? '启用' : '禁用'}`)
+    message.success(t(enabled ? 'knowledgeList.extensions.skills.enabled' : 'knowledgeList.extensions.skills.disabledOk'))
   } catch (error) {
-    message.error(error?.response?.data?.detail || error.message || '更新 Skill 启用状态失败')
+    message.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.toggleFailed'))
   } finally {
     togglingSkillSlugs.value = togglingSkillSlugs.value.filter((slug) => slug !== skill.slug)
   }
@@ -897,14 +921,14 @@ const confirmDeletePreviewSkill = () => {
   if (!target || !canDeletePreviewSkill.value || deletingPreviewSkill.value) return
 
   Modal.confirm({
-    title: `卸载 ${target.name || target.slug}`,
+    title: t('knowledgeList.extensions.skills.uninstallTitle', { name: target.name || target.slug }),
     content:
       target.sourceScope === 'personal'
-        ? '卸载后会删除个人工作区中的 Skill；如有同名共享版本，Agent 将恢复使用共享版本。'
-        : '卸载后会删除该 Skill 的数据库记录和本地文件，操作不可恢复。',
-    okText: '卸载',
+        ? t('knowledgeList.extensions.skills.uninstallPersonalHint')
+        : t('knowledgeList.extensions.skills.uninstallSharedHint'),
+    okText: t('knowledgeList.extensions.skills.uninstall'),
     okType: 'danger',
-    cancelText: '取消',
+    cancelText: t('knowledgeList.extensions.cancel'),
     async onOk() {
       deletingPreviewSkill.value = true
       try {
@@ -913,12 +937,12 @@ const confirmDeletePreviewSkill = () => {
         } else {
           await skillApi.deleteSkill(target.slug)
         }
-        message.success('Skill 已卸载')
+        message.success(t('knowledgeList.extensions.skills.uninstalled'))
         closeSkillPreview()
         previewSkill.value = null
         await fetchSkills()
       } catch (error) {
-        message.error(error?.response?.data?.detail || error.message || '卸载 Skill 失败')
+        message.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.uninstallFailed'))
       } finally {
         deletingPreviewSkill.value = false
       }
@@ -960,11 +984,11 @@ const handleBatchDelete = () => {
   if (deletableSlugs.length === 0) return
 
   Modal.confirm({
-    title: '确定要批量删除选中的技能吗？',
-    content: `您已选中了 ${deletableSlugs.length} 个技能。该操作将从数据库和物理磁盘中彻底删除这些技能包，且不可恢复！`,
-    okText: '确定删除',
+    title: t('knowledgeList.extensions.skills.batchDeleteTitle'),
+    content: t('knowledgeList.extensions.skills.batchDeleteContent', { count: deletableSlugs.length }),
+    okText: t('knowledgeList.extensions.skills.batchDeleteOk'),
     okType: 'danger',
-    cancelText: '取消',
+    cancelText: t('knowledgeList.extensions.cancel'),
     onOk: async () => {
       loading.value = true
       try {
@@ -974,15 +998,15 @@ const handleBatchDelete = () => {
         const failList = results.filter((r) => !r.success)
 
         if (failList.length === 0) {
-          message.success(`批量删除成功，已删除 ${successList.length} 个技能`)
+          message.success(t('knowledgeList.extensions.skills.batchDeleteSuccess', { count: successList.length }))
         } else {
-          message.warning(`批量删除完成：成功 ${successList.length} 个，失败 ${failList.length} 个`)
+          message.warning(t('knowledgeList.extensions.skills.batchDeletePartial', { success: successList.length, fail: failList.length }))
         }
 
         exitBatchDeleteMode()
         await fetchSkills()
       } catch (error) {
-        message.error(error?.response?.data?.detail || error.message || '批量删除失败')
+        message.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.batchDeleteFailed'))
       } finally {
         loading.value = false
       }
@@ -996,7 +1020,7 @@ const fetchSkills = async ({ refreshPersonal = false } = {}) => {
     const skillResult = await skillApi.listSkillCards({ refreshPersonal })
     skills.value = skillResult?.data || []
   } catch {
-    message.error('加载失败')
+    message.error(t('knowledgeList.extensions.skills.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -1005,7 +1029,7 @@ const fetchSkills = async ({ refreshPersonal = false } = {}) => {
 const beforeSkillUpload = (file) => {
   const lower = file.name.toLowerCase()
   if (!lower.endsWith('.zip') && lower !== 'skill.md') {
-    message.error('仅支持上传 .zip 文件或 SKILL.md 文件')
+    message.error(t('knowledgeList.extensions.skills.uploadType'))
     return false
   }
   return true
@@ -1041,8 +1065,8 @@ const openRecommendedSuite = (suite) => {
 }
 
 const handleInstallFlowCompleted = async ({ success, failed }) => {
-  if (failed === 0) message.success(`已添加 ${success} 个 Skill`)
-  else message.warning(`安装完成：成功 ${success} 个，失败 ${failed} 个`)
+  if (failed === 0) message.success(t('knowledgeList.extensions.skills.addedCount', { count: success }))
+  else message.warning(t('knowledgeList.extensions.skills.installPartial', { success, failed }))
   await fetchSkills()
 }
 
@@ -1052,13 +1076,13 @@ const handleImportUpload = async ({ file, onSuccess, onError }) => {
     const result = await skillApi.prepareSkillUpload(file)
     openInstallFlow({
       kind: 'draft',
-      title: `安装 ${file.name}`,
-      description: '检查 Skill 依赖与生效范围，然后完成安装。',
+      title: t('knowledgeList.extensions.skills.installFile', { name: file.name }),
+      description: t('knowledgeList.extensions.skills.installFileDesc'),
       drafts: [result?.data]
     })
     onSuccess?.(result)
   } catch (e) {
-    message.error(e?.response?.data?.detail || e.message || '解析 Skill 失败')
+    message.error(e?.response?.data?.detail || e.message || t('knowledgeList.extensions.skills.parseFailed'))
     onError?.(e)
   } finally {
     importing.value = false
@@ -1069,8 +1093,8 @@ const handleOpenRemoteInstall = () => {
   resetRemoteSelection()
   openInstallFlow({
     kind: 'remote',
-    title: '远程安装 Skill',
-    description: '按仓库拉取或全局搜索，选择需要安装的 Skill。'
+    title: t('knowledgeList.extensions.skills.remoteTitle'),
+    description: t('knowledgeList.extensions.skills.remoteDesc')
   })
 }
 
@@ -1088,7 +1112,7 @@ const rememberRemoteSource = (source) => {
 const handleListRemoteSkills = async () => {
   const source = remoteInstallForm.source.trim()
   if (!source) {
-    message.warning('请输入来源仓库')
+    message.warning(t('knowledgeList.extensions.skills.remoteNeedSource'))
     return
   }
   listingRemoteSkills.value = true
@@ -1098,18 +1122,18 @@ const handleListRemoteSkills = async () => {
     selectedRepoSkills.value =
       remoteSkillOptions.value.length === 1 ? [remoteSkillOptions.value[0].name] : []
     if (!remoteSkillOptions.value.length) {
-      message.warning('未发现可安装的 Skills')
+      message.warning(t('knowledgeList.extensions.skills.remoteNone'))
       return
     }
     if (remoteSkillOptions.value.length === 1) {
-      message.success('已发现 1 个 Skill，已自动选中')
+      message.success(t('knowledgeList.extensions.skills.remoteFoundOne'))
     } else {
-      message.success(`已发现 ${remoteSkillOptions.value.length} 个 Skills`)
+      message.success(t('knowledgeList.extensions.skills.remoteFoundMany', { count: remoteSkillOptions.value.length }))
     }
 
     rememberRemoteSource(source)
   } catch (error) {
-    message.error(error?.response?.data?.detail || error.message || '获取远程 Skills 失败')
+    message.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.remoteFetchFailed'))
   } finally {
     listingRemoteSkills.value = false
   }
@@ -1134,7 +1158,7 @@ const deleteHistoryItem = (item) => {
 const clearAllHistory = () => {
   repoHistory.value = []
   localStorage.removeItem('yuxi_remote_repo_history')
-  message.success('历史记录已清空')
+  message.success(t('knowledgeList.extensions.skills.historyCleared'))
 }
 
 const handleSelectHistory = ({ key }) => {
@@ -1148,7 +1172,7 @@ const handleSelectHistory = ({ key }) => {
 const handleSearchRemoteSkills = async () => {
   const query = searchKeyword.value.trim()
   if (!query) {
-    message.warning('请输入搜索关键字')
+    message.warning(t('knowledgeList.extensions.skills.needKeyword'))
     return
   }
   searchingRemoteSkills.value = true
@@ -1157,14 +1181,14 @@ const handleSearchRemoteSkills = async () => {
     searchedSkills.value = result?.data || []
     selectedSearchSkills.value = searchedSkills.value.length === 1 ? [...searchedSkills.value] : []
     if (!searchedSkills.value.length) {
-      message.warning('未搜索到相关的 Skills')
+      message.warning(t('knowledgeList.extensions.skills.searchNone'))
     } else if (searchedSkills.value.length === 1) {
-      message.success('搜索到 1 个 Skill，已自动选中')
+      message.success(t('knowledgeList.extensions.skills.searchFoundOne'))
     } else {
-      message.success(`搜索到 ${searchedSkills.value.length} 个 Skills`)
+      message.success(t('knowledgeList.extensions.skills.searchFoundMany', { count: searchedSkills.value.length }))
     }
   } catch (error) {
-    message.error(error?.response?.data?.detail || error.message || '搜索远程 Skills 失败')
+    message.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.searchFailed'))
   } finally {
     searchingRemoteSkills.value = false
   }
@@ -1197,8 +1221,11 @@ const startInstallRemoteSkills = () => {
 
   openInstallFlow({
     kind: 'remote',
-    title: '远程安装 Skill',
-    description: `${requests.length} 个来源 · ${requests.reduce((total, item) => total + item.skills.length, 0)} 个 Skill`,
+    title: t('knowledgeList.extensions.skills.remoteTitle'),
+    description: t('knowledgeList.extensions.skills.remoteSummary', {
+      sources: requests.length,
+      count: requests.reduce((total, item) => total + item.skills.length, 0)
+    }),
     requests
   })
 }

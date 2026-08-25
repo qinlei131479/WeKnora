@@ -858,11 +858,11 @@ const { surface } = useListSurface<KbSurface>(
   'platform',
 )
 const surfaceNavItems = computed(() => [
-  { value: 'platform', label: t('knowledgeList.tabs.platform'), icon: 'folder' },
-  { value: 'runtime', label: t('knowledgeList.tabs.runtime'), icon: 'server' },
-  { value: 'skills', label: t('knowledgeList.tabs.skills'), icon: 'app' },
-  { value: 'tools', label: t('knowledgeList.tabs.tools'), icon: 'tools' },
-  { value: 'mcp', label: t('knowledgeList.tabs.mcp'), icon: 'link' },
+  { value: 'platform', label: t('knowledgeList.tabs.platform'), shortLabel: t('knowledgeList.tabs.short.platform'), icon: 'folder' },
+  { value: 'runtime', label: t('knowledgeList.tabs.runtime'), shortLabel: t('knowledgeList.tabs.short.runtime'), icon: 'server' },
+  { value: 'skills', label: t('knowledgeList.tabs.skills'), shortLabel: t('knowledgeList.tabs.short.skills'), icon: 'app' },
+  { value: 'tools', label: t('knowledgeList.tabs.tools'), shortLabel: t('knowledgeList.tabs.short.tools'), icon: 'tools' },
+  { value: 'mcp', label: t('knowledgeList.tabs.mcp'), shortLabel: t('knowledgeList.tabs.short.mcp'), icon: 'link' },
 ])
 
 // Per-user favorites + recents (localStorage-backed). isFavorite & touchRecent
@@ -1911,6 +1911,13 @@ const handleUploadFinishedEvent = (event: Event) => {
   flex: 1;
   min-height: 0;
   margin-right: 0;
+  padding-right: 28px;
+
+  // class="surface-embed" lands on .harness-shell; --page-padding is
+  // redefined on the inner .harness-root (22px / 30px at ≥1440px).
+  :deep(.harness-root) {
+    --page-padding: 0;
+  }
 }
 
 .shared-by-me-badge {

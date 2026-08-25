@@ -9,8 +9,15 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background-color: var(--gray-0);
+  overflow: hidden;
+  background-color: transparent;
   position: relative;
+}
+
+.extension-page-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .layout-wrapper {
@@ -799,11 +806,50 @@
 }
 
 .extension-section-header {
-  padding: 12px var(--page-padding) 0;
-  color: var(--gray-500);
-  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px var(--page-padding);
+  color: var(--td-text-color-secondary, var(--gray-600));
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: 0.4px;
+  line-height: 20px;
+  user-select: none;
+
+  &.is-toggle {
+    cursor: pointer;
+    outline: none;
+
+    &:hover {
+      color: var(--td-text-color-primary, var(--gray-800));
+    }
+
+    &:focus-visible {
+      box-shadow: 0 0 0 2px var(--td-brand-color-focus, rgba(0, 82, 217, 0.2));
+    }
+
+    &:hover .section-toggle {
+      opacity: 1;
+    }
+  }
+
+  .section-count {
+    margin-left: 2px;
+    padding: 0 6px;
+    border-radius: 8px;
+    background: var(--td-bg-color-secondarycontainer, var(--gray-50));
+    color: var(--td-text-color-secondary, var(--gray-600));
+    font-size: 11px;
+    line-height: 16px;
+    font-weight: 500;
+  }
+
+  .section-toggle {
+    margin-left: 2px;
+    flex-shrink: 0;
+    opacity: 0.7;
+    transition: opacity 0.15s ease;
+  }
 }
 
 .extension-card-grid-empty-state {

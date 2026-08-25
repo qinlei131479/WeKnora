@@ -1,7 +1,9 @@
 <template>
   <a-modal
     v-model:open="visible"
-    :title="editMode ? '编辑 MCP' : '添加 MCP'"
+    :title="editMode ? t('knowledgeList.extensions.mcp.form.editTitle') : t('knowledgeList.extensions.mcp.form.addTitle')"
+    :ok-text="editMode ? t('knowledgeList.extensions.mcp.detail.save') : t('knowledgeList.extensions.mcp.add')"
+    :cancel-text="t('knowledgeList.extensions.cancel')"
     @ok="handleFormSubmit"
     :confirmLoading="formLoading"
     @cancel="visible = false"
@@ -10,22 +12,22 @@
     class="server-modal"
   >
     <a-form layout="vertical" class="extension-form">
-      <a-form-item label="MCP 标识" required class="form-item">
+      <a-form-item :label="t('knowledgeList.extensions.mcp.form.slug')" required class="form-item">
         <a-input
           v-model:value="form.slug"
-          placeholder="请输入 MCP 稳定标识，如 my-mcp"
+          :placeholder="t('knowledgeList.extensions.mcp.form.slugPlaceholder')"
           :disabled="editMode"
         />
       </a-form-item>
-      <a-form-item label="MCP 名称" required class="form-item">
-        <a-input v-model:value="form.name" placeholder="请输入 MCP 展示名称" />
+      <a-form-item :label="t('knowledgeList.extensions.mcp.form.name')" required class="form-item">
+        <a-input v-model:value="form.name" :placeholder="t('knowledgeList.extensions.mcp.form.namePlaceholder')" />
       </a-form-item>
-      <a-form-item label="描述" class="form-item">
-        <a-input v-model:value="form.description" placeholder="请输入 MCP 描述" />
+      <a-form-item :label="t('knowledgeList.extensions.mcp.form.description')" class="form-item">
+        <a-input v-model:value="form.description" :placeholder="t('knowledgeList.extensions.mcp.form.descPlaceholder')" />
       </a-form-item>
       <a-row :gutter="16">
         <a-col :span="12">
-          <a-form-item label="传输类型" required class="form-item">
+          <a-form-item :label="t('knowledgeList.extensions.mcp.form.transport')" required class="form-item">
             <a-select v-model:value="form.transport">
               <a-select-option value="streamable_http">streamable_http</a-select-option>
               <a-select-option value="sse">sse</a-select-option>
@@ -33,25 +35,25 @@
           </a-form-item>
         </a-col>
         <a-col :span="12">
-          <a-form-item label="图标" class="form-item">
-            <a-input v-model:value="form.icon" placeholder="输入 emoji，如 🧠" :maxlength="2" />
+          <a-form-item :label="t('knowledgeList.extensions.mcp.form.icon')" class="form-item">
+            <a-input v-model:value="form.icon" :placeholder="t('knowledgeList.extensions.mcp.form.iconPlaceholder')" :maxlength="2" />
           </a-form-item>
         </a-col>
       </a-row>
       <template v-if="form.transport === 'streamable_http' || form.transport === 'sse'">
-        <a-form-item label="MCP URL" required class="form-item">
+        <a-form-item :label="t('knowledgeList.extensions.mcp.form.url')" required class="form-item">
           <a-input v-model:value="form.url" placeholder="https://example.com/mcp" />
         </a-form-item>
-        <a-form-item label="HTTP 请求头" class="form-item">
+        <a-form-item :label="t('knowledgeList.extensions.mcp.form.headers')" class="form-item">
           <a-textarea
             v-model:value="form.headersText"
-            placeholder='JSON 格式，如：{"Authorization": "Bearer xxx"}'
+            :placeholder="t('knowledgeList.extensions.mcp.form.headersPlaceholder')"
             :rows="3"
           />
         </a-form-item>
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item label="HTTP 超时（秒）" class="form-item">
+            <a-form-item :label="t('knowledgeList.extensions.mcp.form.httpTimeout')" class="form-item">
               <a-input-number
                 v-model:value="form.timeout"
                 :min="1"
@@ -61,7 +63,7 @@
             </a-form-item>
           </a-col>
           <a-col :span="12">
-            <a-form-item label="SSE 读取超时（秒）" class="form-item">
+            <a-form-item :label="t('knowledgeList.extensions.mcp.form.sseTimeout')" class="form-item">
               <a-input-number
                 v-model:value="form.sse_read_timeout"
                 :min="1"
@@ -72,11 +74,11 @@
           </a-col>
         </a-row>
       </template>
-      <a-form-item label="标签" class="form-item">
+      <a-form-item :label="t('knowledgeList.extensions.mcp.form.tags')" class="form-item">
         <a-select
           v-model:value="form.tags"
           mode="tags"
-          placeholder="输入标签后回车添加"
+          :placeholder="t('knowledgeList.extensions.mcp.form.tagsPlaceholder')"
           style="width: 100%"
         />
       </a-form-item>
@@ -86,9 +88,11 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { message } from 'ant-design-vue'
 import { mcpApi } from '@harness/apis/mcp_api'
 
+const { t } = useI18n()
 const props = defineProps({
   open: { type: Boolean, default: false },
   editMode: { type: Boolean, default: false },
@@ -159,7 +163,7 @@ const handleFormSubmit = async () => {
       try {
         headers = JSON.parse(form.headersText)
       } catch {
-        message.error('请求头 JSON 格式错误')
+        message.error(t('knowledgeList.extensions.mcp.form.badHeaders'))
         return
       }
     }
@@ -176,20 +180,20 @@ const handleFormSubmit = async () => {
       icon: form.icon || null
     }
     if (!data.slug?.trim()) {
-      message.error('MCP 标识不能为空')
+      message.error(t('knowledgeList.extensions.mcp.form.slugRequired'))
       return
     }
     if (!data.name?.trim()) {
-      message.error('MCP 名称不能为空')
+      message.error(t('knowledgeList.extensions.mcp.form.nameRequired'))
       return
     }
     if (!data.transport) {
-      message.error('请选择传输类型')
+      message.error(t('knowledgeList.extensions.mcp.form.transportRequired'))
       return
     }
     if (['sse', 'streamable_http'].includes(data.transport)) {
       if (!data.url?.trim()) {
-        message.error('HTTP 类型必须填写 MCP URL')
+        message.error(t('knowledgeList.extensions.mcp.form.urlRequired'))
         return
       }
     }
@@ -197,24 +201,24 @@ const handleFormSubmit = async () => {
       const { slug, ...updateData } = data
       const result = await mcpApi.updateMcpServer(props.editData?.slug || slug, updateData)
       if (result.success) {
-        message.success('MCP 更新成功')
+        message.success(t('knowledgeList.extensions.mcp.form.updated'))
       } else {
-        message.error(result.message || '更新失败')
+        message.error(t('knowledgeList.extensions.mcp.form.updateFailed'))
         return
       }
     } else {
       const result = await mcpApi.createMcpServer(data)
       if (result.success) {
-        message.success('MCP 创建成功')
+        message.success(t('knowledgeList.extensions.mcp.form.created'))
       } else {
-        message.error(result.message || '创建失败')
+        message.error(t('knowledgeList.extensions.mcp.form.createFailed'))
         return
       }
     }
     visible.value = false
     emit('submitted')
-  } catch (err) {
-    message.error(err.message || '操作失败')
+  } catch {
+    message.error(t('knowledgeList.extensions.mcp.form.actionFailed'))
   } finally {
     formLoading.value = false
   }

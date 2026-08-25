@@ -1667,6 +1667,10 @@ defineExpose({
   flex: 1;
   min-height: 0;
   margin-right: 0;
+
+  :deep(.harness-root) {
+    --page-padding: 0;
+  }
 }
 
 .shared-by-me-badge {

@@ -1,12 +1,12 @@
 <template>
   <div class="mcp-cards-page extension-page-root">
-    <PageShoulder search-placeholder="搜索 MCP..." v-model:search="searchQuery">
+    <PageShoulder :search-placeholder="t('knowledgeList.extensions.mcp.searchPlaceholder')" v-model:search="searchQuery">
       <template #actions>
         <a-button type="primary" @click="handleMcpAdd" class="lucide-icon-btn">
           <Plus :size="14" />
-          <span>添加 MCP</span>
+          <span>{{ t('knowledgeList.extensions.mcp.add') }}</span>
         </a-button>
-        <a-tooltip title="刷新 MCP" placement="bottom">
+        <a-tooltip :title="t('knowledgeList.extensions.mcp.refresh')" placement="bottom">
           <a-button class="lucide-icon-btn" :disabled="loading" @click="fetchServers">
             <RefreshCw :size="14" />
           </a-button>
@@ -14,25 +14,43 @@
       </template>
     </PageShoulder>
 
+    <div class="extension-page-body">
     <div
       v-if="filteredEnabledServers.length === 0 && filteredDisabledServers.length === 0"
       class="extension-card-grid-empty-state"
     >
       <a-empty
         :image="false"
-        :description="searchQuery ? '无匹配 MCP' : '暂无 MCP，点击上方按钮添加'"
+        :description="searchQuery ? t('knowledgeList.extensions.mcp.emptySearch') : t('knowledgeList.extensions.mcp.empty')"
       />
     </div>
 
     <template v-else>
-      <div v-if="filteredEnabledServers.length" class="extension-section-header">已添加</div>
-      <ExtensionCardGrid v-if="filteredEnabledServers.length" :min-width="300">
+      <div
+        v-if="filteredEnabledServers.length"
+        class="extension-section-header is-toggle"
+        role="button"
+        tabindex="0"
+        @click="toggleMcpSection('added')"
+        @keydown.enter.prevent="toggleMcpSection('added')"
+        @keydown.space.prevent="toggleMcpSection('added')"
+      >
+        <span>{{ t('knowledgeList.extensions.mcp.added') }}</span>
+        <span class="section-count">{{ filteredEnabledServers.length }}</span>
+        <ChevronRight v-if="isMcpSectionCollapsed('added')" :size="14" class="section-toggle" />
+        <ChevronDown v-else :size="14" class="section-toggle" />
+      </div>
+      <ExtensionCardGrid
+        v-if="filteredEnabledServers.length"
+        v-show="!isMcpSectionCollapsed('added')"
+        :min-width="300"
+      >
         <InfoCard
           v-for="server in filteredEnabledServers"
           :key="server.slug"
           variant="mini"
           :title="formatExtensionCardTitle(server.name)"
-          :description="server.description || '暂无描述'"
+          :description="server.description || t('knowledgeList.extensions.noDescription')"
           @click="handleCardClick(server)"
         >
           <template #icon>
@@ -43,7 +61,7 @@
               type="button"
               class="mcp-card-action mcp-card-action-danger"
               :disabled="isActionLoading(server)"
-              :aria-label="server.is_builtin ? '移除 MCP' : '删除 MCP'"
+              :aria-label="server.is_builtin ? t('knowledgeList.extensions.mcp.remove') : t('knowledgeList.extensions.mcp.delete')"
               @click.stop="handleRemoveServer(server)"
             >
               <Check :size="15" class="action-icon action-icon-check" />
@@ -53,14 +71,31 @@
         </InfoCard>
       </ExtensionCardGrid>
 
-      <div v-if="filteredDisabledServers.length" class="extension-section-header">可添加</div>
-      <ExtensionCardGrid v-if="filteredDisabledServers.length" :min-width="300">
+      <div
+        v-if="filteredDisabledServers.length"
+        class="extension-section-header is-toggle"
+        role="button"
+        tabindex="0"
+        @click="toggleMcpSection('available')"
+        @keydown.enter.prevent="toggleMcpSection('available')"
+        @keydown.space.prevent="toggleMcpSection('available')"
+      >
+        <span>{{ t('knowledgeList.extensions.mcp.available') }}</span>
+        <span class="section-count">{{ filteredDisabledServers.length }}</span>
+        <ChevronRight v-if="isMcpSectionCollapsed('available')" :size="14" class="section-toggle" />
+        <ChevronDown v-else :size="14" class="section-toggle" />
+      </div>
+      <ExtensionCardGrid
+        v-if="filteredDisabledServers.length"
+        v-show="!isMcpSectionCollapsed('available')"
+        :min-width="300"
+      >
         <InfoCard
           v-for="server in filteredDisabledServers"
           :key="server.slug"
           variant="mini"
           :title="formatExtensionCardTitle(server.name)"
-          :description="server.requires_migration ? '需要迁移为远程 MCP' : server.description || '暂无描述'"
+          :description="server.requires_migration ? t('knowledgeList.extensions.mcp.needsMigration') : server.description || t('knowledgeList.extensions.noDescription')"
           @click="handleCardClick(server)"
         >
           <template #icon>
@@ -74,7 +109,7 @@
                 { 'mcp-card-action-danger': server.requires_migration }
               ]"
               :disabled="isActionLoading(server)"
-              :aria-label="server.requires_migration ? '删除 MCP' : '添加 MCP'"
+              :aria-label="server.requires_migration ? t('knowledgeList.extensions.mcp.delete') : t('knowledgeList.extensions.mcp.add')"
               @click.stop="
                 server.requires_migration
                   ? handleRemoveServer(server)
@@ -88,6 +123,7 @@
         </InfoCard>
       </ExtensionCardGrid>
     </template>
+    </div>
 
     <a-modal
       v-model:open="basicInfoVisible"
@@ -107,9 +143,9 @@
               {{ formatExtensionCardTitle(previewServer.name) }}
             </div>
             <div class="mcp-basic-info-meta">
-              <span>{{ previewServer.transport || '未知传输类型' }}</span>
+              <span>{{ previewServer.transport || t('knowledgeList.extensions.mcp.unknownTransport') }}</span>
               <span v-if="previewServer.is_builtin" class="mcp-basic-info-tag">
-                内置
+                {{ t('knowledgeList.extensions.mcp.builtin') }}
               </span>
             </div>
           </div>
@@ -117,30 +153,30 @@
 
         <div class="mcp-basic-info-body">
           <div class="mcp-basic-info-row">
-            <label>描述</label>
-            <span>{{ previewServer.description || '暂无描述' }}</span>
+            <label>{{ t('knowledgeList.extensions.mcp.description') }}</label>
+            <span>{{ previewServer.description || t('knowledgeList.extensions.noDescription') }}</span>
           </div>
           <div class="mcp-basic-info-row">
-            <label>传输类型</label>
+            <label>{{ t('knowledgeList.extensions.mcp.transport') }}</label>
             <span>{{ previewServer.transport || '-' }}</span>
           </div>
           <div
             v-if="Array.isArray(previewServer.tags) && previewServer.tags.length > 0"
             class="mcp-basic-info-row"
           >
-            <label>标签</label>
+            <label>{{ t('knowledgeList.extensions.mcp.tags') }}</label>
             <span class="mcp-basic-info-tags">
               <a-tag v-for="tag in previewServer.tags" :key="tag">{{ tag }}</a-tag>
             </span>
           </div>
           <div class="mcp-basic-info-row">
-            <label>创建人</label>
+            <label>{{ t('knowledgeList.extensions.mcp.creator') }}</label>
             <span>{{ previewServer.created_by || '-' }}</span>
           </div>
         </div>
 
         <div class="mcp-basic-info-footer">
-          <a-button @click="closeBasicInfo">关闭</a-button>
+          <a-button @click="closeBasicInfo">{{ t('knowledgeList.extensions.close') }}</a-button>
           <a-button
             type="primary"
             class="lucide-icon-btn"
@@ -148,7 +184,7 @@
             @click="handleSetServerEnabled(previewServer, true)"
           >
             <template #icon><Plus :size="14" /></template>
-            添加
+            {{ t('knowledgeList.extensions.mcp.add') }}
           </a-button>
         </div>
       </div>
@@ -164,9 +200,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
-import { Check, Plus, RefreshCw, Trash2 } from 'lucide-vue-next'
+import { Check, ChevronDown, ChevronRight, Plus, RefreshCw, Trash2 } from 'lucide-vue-next'
 import { mcpApi } from '@harness/apis/mcp_api'
 import ExtensionCardGrid from './ExtensionCardGrid.vue'
 import InfoCard from '@harness/components/shared/InfoCard.vue'
@@ -174,6 +211,7 @@ import PageShoulder from '@harness/components/shared/PageShoulder.vue'
 import McpFormModal from './McpFormModal.vue'
 import { formatExtensionCardTitle } from '@harness/utils/extensionDisplayName'
 
+const { t } = useI18n()
 const router = useRouter()
 
 const loading = ref(false)
@@ -204,6 +242,14 @@ const filteredEnabledServers = computed(() =>
 const filteredDisabledServers = computed(() =>
   filteredServers.value.filter((item) => !item.enabled)
 )
+const collapsedMcpSections = ref(new Set())
+const isMcpSectionCollapsed = (key) => collapsedMcpSections.value.has(key)
+const toggleMcpSection = (key) => {
+  const next = new Set(collapsedMcpSections.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  collapsedMcpSections.value = next
+}
 
 const navigateToDetail = (server) => {
   router.push({ path: `/platform/harness/extensions/mcp/${encodeURIComponent(server.slug)}` })
@@ -243,14 +289,14 @@ const handleSetServerEnabled = async (server, enabled) => {
     actionLoadingSlug.value = server.slug
     const result = await mcpApi.updateMcpServerStatus(server.slug, enabled)
     if (result.success) {
-      message.success(result.message || `MCP 已${enabled ? '添加' : '移除'}`)
+      message.success(t(enabled ? 'knowledgeList.extensions.mcp.addedOk' : 'knowledgeList.extensions.mcp.removedOk'))
       if (enabled) closeBasicInfo()
       await fetchServers()
     } else {
-      message.error(result.message || '操作失败')
+      message.error(t('knowledgeList.extensions.mcp.actionFailed'))
     }
-  } catch (err) {
-    message.error(err.message || '操作失败')
+  } catch {
+    message.error(t('knowledgeList.extensions.mcp.actionFailed'))
   } finally {
     actionLoadingSlug.value = ''
   }
@@ -266,23 +312,23 @@ const handleRemoveServer = (server) => {
 
 const confirmDeleteServer = (server) => {
   Modal.confirm({
-    title: '确认删除 MCP',
-    content: `确定要删除 MCP "${server.name}" 吗？此操作不可撤销。`,
-    okText: '删除',
+    title: t('knowledgeList.extensions.mcp.deleteTitle'),
+    content: t('knowledgeList.extensions.mcp.deleteContent', { name: server.name }),
+    okText: t('knowledgeList.extensions.mcp.delete'),
     okType: 'danger',
-    cancelText: '取消',
+    cancelText: t('knowledgeList.extensions.cancel'),
     async onOk() {
       try {
         actionLoadingSlug.value = server.slug
         const result = await mcpApi.deleteMcpServer(server.slug)
         if (result.success) {
-          message.success('MCP 删除成功')
+          message.success(t('knowledgeList.extensions.mcp.deleted'))
           await fetchServers()
         } else {
-          message.error(result.message || '删除失败')
+          message.error(t('knowledgeList.extensions.mcp.deleteFailed'))
         }
-      } catch (err) {
-        message.error(err.message || '删除失败')
+      } catch {
+        message.error(t('knowledgeList.extensions.mcp.deleteFailed'))
       } finally {
         actionLoadingSlug.value = ''
       }
@@ -297,8 +343,8 @@ const fetchServers = async () => {
     if (result.success) {
       servers.value = result.data || []
     }
-  } catch (err) {
-    message.error(err.message || '获取 MCP 列表失败')
+  } catch {
+    message.error(t('knowledgeList.extensions.mcp.loadFailed'))
   } finally {
     loading.value = false
   }
