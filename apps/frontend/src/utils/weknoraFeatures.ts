@@ -59,6 +59,8 @@ const HIDDEN_SETTINGS_SECTIONS = new Set([
   'weknoracloud',
   'chathistory',
   'system',
+  'ollama',
+  'mcp',
   'integration-chrome',
   'integration-claw',
 ])
