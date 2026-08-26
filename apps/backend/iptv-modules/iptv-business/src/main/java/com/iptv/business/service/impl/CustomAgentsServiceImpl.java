@@ -52,11 +52,24 @@ public class CustomAgentsServiceImpl extends ServiceImpl<CustomAgentsMapper, Cus
     }
 
     @Override
-    public CustomAgentsVO queryById(@Nonnull String id) {
-        CustomAgents entity = this.baseMapper.selectById(id);
+    public CustomAgentsVO queryById(@Nonnull String id,Integer tenantId) {
+        CustomAgents entity = this.baseMapper.selectOne(new LambdaQueryWrapper<CustomAgents>()
+                .eq(CustomAgents::getId, id)
+                .eq(CustomAgents::getTenantId, tenantId)
+                .isNull(CustomAgents::getDeletedAt)
+                .orderByDesc(CustomAgents::getCreatedAt)
+                .last("limit 1"));
         CustomAgentsVO vo = BeanUtil.copyProperties(entity, CustomAgentsVO.class);
-        buildVO(List.of(vo));
         return vo;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deleteById(@Nonnull String id) {
+        CustomAgents entity = this.baseMapper.selectById(id);
+        if (BeanUtil.isNotEmpty(entity)) {
+            this.baseMapper.deleteById(id);
+        }
     }
 
     private void buildVO(List<CustomAgentsVO> voList) {
@@ -143,14 +156,5 @@ public class CustomAgentsServiceImpl extends ServiceImpl<CustomAgentsMapper, Cus
                 }
             }
         });
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void deleteById(@Nonnull String id) {
-        CustomAgents entity = this.baseMapper.selectById(id);
-        if (BeanUtil.isNotEmpty(entity)) {
-            this.baseMapper.deleteById(id);
-        }
     }
 }

@@ -36,8 +36,8 @@ public class CustomAgentsController {
     @Operation(summary = "按 id 查询", description = "按 id 查询")
     @GetMapping("/single")
     @RequiresPermissions("business:customAgents:query")
-    public R<CustomAgentsVO> queryById(String id) {
-        return R.ok(customAgentsService.queryById(id));
+    public R<CustomAgentsVO> queryById(String id,Integer tenantId) {
+        return R.ok(customAgentsService.queryById(id,tenantId));
     }
 
     @Operation(summary = "分页查询", description = "按条件分页查询")

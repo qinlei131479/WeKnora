@@ -34,9 +34,10 @@ public interface CustomAgentsService extends IService<CustomAgents> {
      * 按 id 查询
      *
      * @param id 主键
+     * @param tenantId 租户 ID
      * @return 实体
      */
-    CustomAgentsVO queryById(@Nonnull String id);
+    CustomAgentsVO queryById(@Nonnull String id,Integer tenantId);
 
     /**
      * 按 id 删除
