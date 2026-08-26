@@ -3,6 +3,12 @@ package com.iptv.business.domain.vo;
 import java.io.Serializable;
 import java.util.Date;
 import java.io.Serializable;
+import java.util.List;
+
+import com.iptv.business.domain.KnowledgeBases;
+import com.iptv.business.domain.McpServices;
+import com.iptv.business.domain.Models;
+import com.iptv.business.domain.Tenants;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -92,4 +98,26 @@ public class CustomAgentsVO implements Serializable {
      */
     @Schema(description = "只读共享权限下是否允许运行该智能体")
     private Boolean runnableByViewer;
+
+    @Schema(description = "租户空间信息")
+    private Tenants tenant;
+
+    @Schema(description = "智能体使用的大语言模型")
+    private Models model;
+
+    @Schema(description = "智能体的语音识别模型")
+    private Models asrModel;
+
+    @Schema(description = "智能体的vlm模型")
+    private Models vlmModel;
+
+    @Schema(description = "智能体的重新排序模型")
+    private Models reRankModel;
+
+    @Schema(description = "关联的知识库列表")
+    private List<KnowledgeBases> knowledgeBasesList;
+
+    @Schema(description = "关联的MCP服务列表")
+    private List<McpServices> mcpServicesList;
+
 }
