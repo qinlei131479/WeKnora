@@ -18,13 +18,13 @@ public class ResourcesConfig implements WebMvcConfigurer
     /**
      * 上传文件存储在本地的根路径
      */
-    @Value("${file.path}")
+    @Value("${local.path}")
     private String localFilePath;
 
     /**
      * 资源映射路径 前缀
      */
-    @Value("${file.prefix}")
+    @Value("${local.prefix}")
     public String localFilePrefix;
 
     @Override
