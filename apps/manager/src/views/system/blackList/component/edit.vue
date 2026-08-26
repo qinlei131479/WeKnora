@@ -13,7 +13,7 @@
 </template>
 
 <script setup name="blackListEdit">
-import { ref, reactive, defineProps, defineEmits, watch, watchEffect } from 'vue';
+import { ref, reactive, watch, watchEffect } from 'vue';
 import cache from '@/plugins/cache';
 import KJSCDialogV2 from '@/components/KJSCCmpt/KJSCDialogV2.vue';
 import { whiteAdd, whiteEdit } from '@/api/system/white';

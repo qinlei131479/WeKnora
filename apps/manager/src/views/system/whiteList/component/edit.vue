@@ -1,12 +1,5 @@
 <template>
-  <KJSCDialogV2
-    v-model="state.visible"
-    :title="state.title + '白名单'"
-    width="600px"
-    show-subit-btn
-    @submit-click="submitClick"
-    @close="closeClick"
-  >
+  <KJSCDialogV2 v-model="state.visible" :title="state.title + '白名单'" width="600px" show-subit-btn @submit-click="submitClick" @close="closeClick">
     <el-form ref="saveForm" :model="state.saveInfo" :rules="state.rules" label-width="120px" label-position="left">
       <el-row>
         <el-col :span="24">
@@ -20,12 +13,10 @@
 </template>
 
 <script setup name="whiteListEdit">
-import cache from '@/plugins/cache'
-import { ref, reactive, defineProps, defineEmits, watch, watchEffect } from 'vue';
-import KJSCDialogV2 from "@/components/KJSCCmpt/KJSCDialogV2.vue";
-import { whiteAdd,whiteEdit} from "@/api/system/white";
-import { ElMessage } from 'element-plus';
-import store from '@/store';
+import cache from '@/plugins/cache';
+import { ref, reactive, watch, watchEffect } from 'vue';
+import KJSCDialogV2 from '@/components/KJSCCmpt/KJSCDialogV2.vue';
+import { whiteAdd, whiteEdit } from '@/api/system/white';
 
 const props = defineProps({
   modelValue: {
@@ -44,8 +35,7 @@ const state = reactive({
   title: '添加',
   activeName: 'menu',
   sortInfo: { orderByColumn: 'createTime', isAsc: 'desc' }, // 排序
-  saveInfo: {
-  }, // 表单数据
+  saveInfo: {}, // 表单数据
   props: {
     label: 'label',
     value: 'id',
@@ -72,17 +62,17 @@ const submitClick = async () => {
       if (state.dataId) {
         // 编辑
         const res = await whiteEdit(params);
-        if(res.code==200){
+        if (res.code == 200) {
           proxy.$modal.msgSuccess('编辑成功');
-        }else{
+        } else {
           proxy.$modal.msgError(res.msg);
         }
       } else {
         // 新增
-        const res = await whiteAdd(params)
-        if(res.code==200){
+        const res = await whiteAdd(params);
+        if (res.code == 200) {
           proxy.$modal.msgSuccess('新增成功');
-        }else{
+        } else {
           proxy.$modal.msgError(res.msg);
         }
       }
