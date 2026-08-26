@@ -21,7 +21,7 @@
                         <FontSizeSelect v-if="!hideFontSize" />
                     </div>
                     <GlobalInvitationBell />
-                    <ThemeToggle />
+                    <ThemeToggle v-if="SHOW_THEME_TOGGLE" />
                     <t-tooltip :content="t('general.settings')" placement="bottom">
                         <div class="platform-topbar-icon" data-guide="settings-btn"
                             :aria-label="t('general.settings')" @click="openSettings">
@@ -75,6 +75,8 @@ const uiStore = useUIStore();
 let ismask = ref(false)
 const { t } = useI18n();
 const hideFontSize = shouldHideFontSize()
+// Hide the topbar dark/light toggle. Settings still has a theme picker.
+const SHOW_THEME_TOGGLE = false
 const isMacLike = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform || '');
 const cmdModKeyLabel = isMacLike ? '⌘' : 'Ctrl';
 

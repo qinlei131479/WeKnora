@@ -167,7 +167,7 @@
           <div class="form-header">
             <h2 class="form-title">{{ $t('auth.login') }}</h2>
             <p class="form-welcome">{{ $t('auth.subtitle') }}</p>
-            <p v-if="registrationEnabled" class="form-hint">{{ $t('auth.loginHint') }}</p>
+            <p v-if="SHOW_REGISTER_CTA && registrationEnabled" class="form-hint">{{ $t('auth.loginHint') }}</p>
           </div>
 
           <div class="form-content">
@@ -187,7 +187,7 @@
                 {{ loading ? $t('auth.loggingIn') : $t('auth.login') }}
               </t-button>
 
-              <div class="register-cta" v-if="registrationEnabled">
+              <div class="register-cta" v-if="SHOW_REGISTER_CTA && registrationEnabled">
                 <div class="register-cta__divider">
                   <span>{{ $t('auth.firstTime') }}</span>
                 </div>
@@ -389,6 +389,9 @@ const oidcLoading = ref(false)
 const isRegisterMode = ref(false)
 const oidcEnabled = ref(false)
 const oidcProviderName = ref('')
+// Hide the login-page self-serve register hint + "Create account" CTA.
+// Invite-link register (?token=) is unaffected. Flip to true to restore.
+const SHOW_REGISTER_CTA = false
 // registrationEnabled defaults to true so that on first paint the Register
 // link is visible; the actual mode is fetched from /auth/config in onMounted.
 // In invite_only mode the link/card are hidden.

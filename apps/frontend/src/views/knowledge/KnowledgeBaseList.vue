@@ -211,7 +211,7 @@
               @click="handleCardClick(kb)">
               <!-- 收藏按钮：右上角浮动；通过 .card-header 的 padding-right
                    给「更多」按钮腾出空间，避免两个按钮叠在一起。 -->
-              <button type="button" class="kb-favorite-star" :class="{ 'is-favorited': isKbFavorited(kb.id) }"
+              <button v-if="SHOW_KB_FAVORITE_STAR" type="button" class="kb-favorite-star" :class="{ 'is-favorited': isKbFavorited(kb.id) }"
                 @click.stop="toggleFavoriteKb(kb.id, $event)">
                 <t-icon :name="isKbFavorited(kb.id) ? 'star-filled' : 'star'" size="14px" />
               </button>
@@ -315,7 +315,7 @@
               'kb-type-document': (kb.type || 'document') === 'document',
               'kb-type-faq': kb.type === 'faq'
             }" @click="handleSharedKbClickFromAll(kb)">
-              <button type="button" class="kb-favorite-star" :class="{ 'is-favorited': isKbFavorited(kb.id) }"
+              <button v-if="SHOW_KB_FAVORITE_STAR" type="button" class="kb-favorite-star" :class="{ 'is-favorited': isKbFavorited(kb.id) }"
                 @click.stop="toggleFavoriteKb(kb.id, $event)">
                 <t-icon :name="isKbFavorited(kb.id) ? 'star-filled' : 'star'" size="14px" />
               </button>
@@ -446,7 +446,7 @@
             }"
               :ref="el => { if (highlightedKbId !== null && highlightedKbId === kb.id && el) highlightedCardRef = el as HTMLElement }"
               @click="handleCardClick(kb)">
-              <button type="button" class="kb-favorite-star" :class="{ 'is-favorited': isKbFavorited(kb.id) }"
+              <button v-if="SHOW_KB_FAVORITE_STAR" type="button" class="kb-favorite-star" :class="{ 'is-favorited': isKbFavorited(kb.id) }"
                 @click.stop="toggleFavoriteKb(kb.id, $event)">
                 <t-icon :name="isKbFavorited(kb.id) ? 'star-filled' : 'star'" size="14px" />
               </button>
@@ -837,6 +837,7 @@ const chatResources = useChatResourcesStore()
 const { t } = useI18n()
 
 const SHOW_SCOPE_NAV = false
+const SHOW_KB_FAVORITE_STAR = false
 // 左侧空间选择：默认根据当前角色决定。
 // Viewer 在该空间里通常 0 KB owned，"我的"会显示空状态、又把共享 KB 藏起来，
 // 体验非常误导；所以 Viewer 默认落到 "all"（我的 + 共享给我都显示）。
