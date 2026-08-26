@@ -680,10 +680,10 @@ import { Search } from 'lucide-vue-next';
 // import DataSourceSettings from './settings/DataSourceSettings.vue';
 // import KnowledgeBaseActivitySettings from './settings/KnowledgeBaseActivitySettings.vue';
 // import VectorStoreBadge from '@/components/business/VectorStoreBadge.vue';
-// import KBParserDetail from './settings/KBParserDetail.vue';
-// import KnowledgeBaseActivityDetail from './settings/KnowledgeBaseActivityDetail.vue';
+import KBParserDetail from './settings/KBParserDetail.vue';
+import KnowledgeBaseActivityDetail from './settings/KnowledgeBaseActivityDetail.vue';
 
-// import { getKnowledgeBaseSingleApi } from '@/api/data/knowledgeBase.js';
+import { getKnowledgeBaseSingleApi } from '@/api/data/knowledgeBase.js';
 
 import { getKBChunkStrategyOptions } from '@/composables/useKBChunk';
 import { parseEntity } from '@/composables/useKnowledge.js';
@@ -817,7 +817,7 @@ const loadKBData = async (kbIdOverride?: string) => {
 
   loading.value = true;
   try {
-    const reslut = undefined as any; //await getKnowledgeBaseSingleApi(kbId);
+    const reslut = await getKnowledgeBaseSingleApi(kbId);
     if (!reslut || !reslut.data) {
       throw new Error(t('component.knowledgeEditor.messages.notFound'));
     }
