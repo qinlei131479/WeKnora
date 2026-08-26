@@ -101,7 +101,7 @@ public interface TenantsService extends IService<Tenants> {
      *
      * @return 解析引擎列表及 DocReader 连接状态
      */
-    ParserEnginesVO listParserEngines();
+    ParserEnginesVO listParserEngines(Integer tenantId);
 
     /**
      * 使用给定配置参数检测解析引擎可用性（不保存）

@@ -11,6 +11,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.iptv.business.domain.AmpParserEngines;
 import com.iptv.business.domain.StorageBackends;
 import com.iptv.business.domain.TenantMembers;
 import com.iptv.business.domain.Tenants;
@@ -24,13 +25,14 @@ import com.iptv.business.domain.vo.ParserEnginesVO;
 import com.iptv.business.domain.vo.TenantsVO;
 import com.iptv.business.domain.vo.UsersVO;
 import com.iptv.business.enums.BusinessStatusEnum;
+import com.iptv.business.pgmapper.AmpParserEnginesMapper;
 import com.iptv.business.pgmapper.StorageBackendsMapper;
 import com.iptv.business.pgmapper.TenantMembersMapper;
 import com.iptv.business.pgmapper.TenantsMapper;
 import com.iptv.business.pgmapper.UsersMapper;
+import com.iptv.business.service.DocReaderGrpcService;
 import com.iptv.business.service.TenantMembersService;
 import com.iptv.business.service.TenantsService;
-import com.iptv.business.util.EnvUtil;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
 import com.iptv.common.core.web.page.PageDTO;
@@ -68,6 +70,12 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
 
     @Autowired
     private StorageBackendsMapper storageBackendsMapper;
+
+    @Autowired
+    private AmpParserEnginesMapper ampParserEnginesMapper;
+
+    @Autowired
+    private DocReaderGrpcService docReaderGrpcService;
 
     // 默认存储配额：10GB
     private static final Long DEFAULT_STORAGE_QUOTA = 10L * 1024 * 1024 * 1024;
@@ -210,9 +218,8 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
     private static final String REDACTED_PLACEHOLDER = "***";
 
     @Override
-    public ParserEnginesVO listParserEngines() {
-        Long tenantId = SecurityUtils.getTenantId();
-        Tenants tenant = this.baseMapper.selectById(tenantId.intValue());
+    public ParserEnginesVO listParserEngines(Integer tenantId) {
+        Tenants tenant = this.baseMapper.selectById(tenantId);
         Map<String, String> overrides = buildOverridesFromTenant(tenant);
         return doListParserEngines(overrides);
     }
@@ -321,76 +328,31 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
     }
 
     /**
-     * 核心逻辑：合并本地引擎 + 远程引擎，返回完整列表
+     * 核心逻辑：合并本地引擎（DB）+ 远程引擎（gRPC），返回完整列表
      */
     private ParserEnginesVO doListParserEngines(Map<String, String> overrides) {
-        String docreaderAddr = StrUtil.trimToEmpty(EnvUtil.get("DOCREADER_ADDR",""));
-        String docreaderTransport = StrUtil.trimToEmpty(EnvUtil.get("DOCREADER_TRANSPORT",""));
-        if (StrUtil.isBlank(docreaderTransport)) {
-            docreaderTransport = "grpc";
-        }
+        String docreaderAddr = docReaderGrpcService.getAddr();
+        boolean connected = docReaderGrpcService.isConnected();
 
-        boolean connected = StrUtil.isNotBlank(docreaderAddr);
-        List<ParserEngineInfoVO> remoteEngines = fetchRemoteEngines(docreaderAddr, overrides);
+        // 通过 gRPC 直连 docreader 获取远程引擎
+        List<ParserEngineInfoVO> remoteEngines = docReaderGrpcService.listRemoteEngines(overrides);
 
         List<ParserEngineInfoVO> engines = mergeEngines(connected, overrides, remoteEngines);
 
         ParserEnginesVO vo = new ParserEnginesVO();
         vo.setEngines(engines);
-        vo.setDocreaderAddr(docreaderAddr);
-        vo.setDocreaderTransport(docreaderTransport.toLowerCase());
+        vo.setDocreaderAddr(StrUtil.trimToEmpty(docreaderAddr));
+        vo.setDocreaderTransport("grpc");
         vo.setConnected(connected);
         return vo;
     }
 
     /**
-     * 从远程 docreader 获取引擎列表
-     */
-    private List<ParserEngineInfoVO> fetchRemoteEngines(String docreaderAddr, Map<String, String> overrides) {
-        if (StrUtil.isBlank(docreaderAddr)) {
-            return Collections.emptyList();
-        }
-        try {
-            String url = StrUtil.removeSuffix(docreaderAddr, "/") + "/list-engines";
-            JSONObject body = new JSONObject();
-            if (!overrides.isEmpty()) {
-                body.set("config_overrides", overrides);
-            }
-            HttpResponse resp = HttpRequest.post(url)
-                    .header("Content-Type", "application/json")
-                    .body(body.toString())
-                    .timeout(10000)
-                    .execute();
-            if (resp.getStatus() != 200) {
-                log.warn("docreader list-engines 返回状态: {}", resp.getStatus());
-                return Collections.emptyList();
-            }
-            JSONObject result = JSONUtil.parseObj(resp.body());
-            cn.hutool.json.JSONArray enginesArr = result.getJSONArray("engines");
-            if (enginesArr == null) {
-                return Collections.emptyList();
-            }
-            List<ParserEngineInfoVO> list = new ArrayList<>();
-            for (int i = 0; i < enginesArr.size(); i++) {
-                JSONObject e = enginesArr.getJSONObject(i);
-                ParserEngineInfoVO info = new ParserEngineInfoVO();
-                info.setName(e.getStr("name"));
-                info.setDescription(e.getStr("description"));
-                cn.hutool.json.JSONArray ftArr = e.getJSONArray("file_types");
-                info.setFileTypes(ftArr != null ? ftArr.toList(String.class) : Collections.emptyList());
-                info.setAvailable(e.getBool("available", false));
-                info.setUnavailableReason(e.getStr("unavailable_reason"));
-                list.add(info);
-            }
-            return list;
-        } catch (Exception e) {
-            log.warn("获取远程解析引擎失败: {}", e.getMessage());
-            return Collections.emptyList();
-        }
-    }
-
-    /**
-     * 合并本地注册引擎与远程发现引擎
+     * 合并本地引擎（来自 amp_parser_engines 表）与远程发现引擎
+     * 合并规则与 Go ListAllEngines 一致：
+     * - 本地引擎始终包含，按 check_type 进行可用性检测
+     * - 远程同名引擎覆盖 file_types 和 description
+     * - 远程独有引擎追加到末尾
      */
     private List<ParserEngineInfoVO> mergeEngines(boolean docreaderConnected, Map<String, String> overrides, List<ParserEngineInfoVO> remoteEngines) {
         Map<String, ParserEngineInfoVO> remoteMap = new LinkedHashMap<>();
@@ -398,80 +360,43 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
             remoteMap.put(re.getName(), re);
         }
 
+        // 从数据库加载已启用的本地引擎，按排序序号排列
+        List<AmpParserEngines> localEngines = ampParserEnginesMapper.selectList(
+                new LambdaQueryWrapper<AmpParserEngines>()
+                        .eq(AmpParserEngines::getEnabled, true)
+                        .orderByAsc(AmpParserEngines::getSortOrder));
+
         List<ParserEngineInfoVO> result = new ArrayList<>();
         Set<String> seen = new HashSet<>();
 
-        // 本地引擎列表
-        result.add(buildLocalEngine("builtin", "DocReader built-in parser engine",
-                Arrays.asList("docx", "doc", "pdf", "md", "markdown", "xlsx", "xls", "epub", "html", "htm", "mhtml", "jpg", "jpeg", "png", "gif", "bmp", "tiff", "webp", "mp3", "wav", "m4a", "flac", "ogg"),
-                docreaderConnected, "", seen, remoteMap));
+        for (AmpParserEngines engine : localEngines) {
+            seen.add(engine.getName());
 
-        result.add(buildLocalEngine("simple", "Simple format & image parsing (no external service required)",
-                Arrays.asList("md", "markdown", "txt", "csv", "json", "jpg", "jpeg", "png", "gif", "bmp", "tiff", "webp", "mp3", "wav", "m4a", "flac", "ogg"),
-                true, "", seen, remoteMap));
+            List<String> fileTypes = parseFileTypes(engine.getFileTypes());
+            String description = engine.getDescription();
 
-        // weknoracloud
-        boolean weknoraAvailable = StrUtil.isNotBlank(overrides.get("weknoracloud_app_id"));
-        String weknoraReason = weknoraAvailable ? "" : "WeKnora Cloud credentials not configured. Go to Settings → WeKnora Cloud to set up.";
-        result.add(buildLocalEngine("weknoracloud", "WeKnoraCloud document reader",
-                Arrays.asList("docx", "doc", "pdf", "md", "markdown", "xlsx", "xls", "pptx", "ppt"),
-                weknoraAvailable, weknoraReason, seen, remoteMap));
+            // 远程同名引擎覆盖描述和文件类型
+            ParserEngineInfoVO remote = remoteMap.get(engine.getName());
+            if (remote != null) {
+                if (CollUtil.isNotEmpty(remote.getFileTypes())) {
+                    fileTypes = remote.getFileTypes();
+                }
+                if (StrUtil.isNotBlank(remote.getDescription())) {
+                    description = remote.getDescription();
+                }
+            }
 
-        // mineru
-        String mineruEndpoint = StrUtil.trimToEmpty(overrides.get("mineru_endpoint"));
-        boolean mineruAvailable;
-        String mineruReason;
-        if (StrUtil.isBlank(mineruEndpoint)) {
-            mineruAvailable = false;
-            mineruReason = "MinerU service not configured";
-        } else {
-            String[] pingResult = pingMinerU(mineruEndpoint);
-            mineruAvailable = "true".equals(pingResult[0]);
-            mineruReason = pingResult[1];
+            // 按 check_type 检测可用性
+            String[] checkResult = checkAvailability(engine, docreaderConnected, overrides);
+
+            ParserEngineInfoVO info = new ParserEngineInfoVO();
+            info.setName(engine.getName());
+            info.setDescription(description);
+            info.setFileTypes(fileTypes);
+            info.setAvailable("true".equals(checkResult[0]));
+            info.setUnavailableReason(checkResult[1]);
+            result.add(info);
         }
-        result.add(buildLocalEngine("mineru", "MinerU self-hosted service",
-                Arrays.asList("pdf", "jpg", "jpeg", "png", "bmp", "tiff", "doc", "docx", "ppt", "pptx"),
-                mineruAvailable, mineruReason, seen, remoteMap));
-
-        // mineru_cloud
-        String mineruApiKey = StrUtil.trimToEmpty(overrides.get("mineru_api_key"));
-        boolean mineruCloudAvailable;
-        String mineruCloudReason;
-        if (StrUtil.isBlank(mineruApiKey)) {
-            mineruCloudAvailable = false;
-            mineruCloudReason = "MinerU API Key not configured";
-        } else {
-            String[] pingResult = pingMinerUCloud(mineruApiKey);
-            mineruCloudAvailable = "true".equals(pingResult[0]);
-            mineruCloudReason = pingResult[1];
-        }
-        result.add(buildLocalEngine("mineru_cloud", "MinerU Cloud API",
-                Arrays.asList("pdf", "jpg", "jpeg", "png", "bmp", "tiff", "doc", "docx", "ppt", "pptx"),
-                mineruCloudAvailable, mineruCloudReason, seen, remoteMap));
-
-        // paddleocr_vl
-        String paddleEndpoint = StrUtil.trimToEmpty(overrides.get("paddleocr_vl_endpoint"));
-        boolean paddleAvailable;
-        String paddleReason;
-        if (StrUtil.isBlank(paddleEndpoint)) {
-            paddleAvailable = false;
-            paddleReason = "PaddleOCR-VL service not configured";
-        } else {
-            String[] pingResult = pingPaddleOCRVL(paddleEndpoint);
-            paddleAvailable = "true".equals(pingResult[0]);
-            paddleReason = pingResult[1];
-        }
-        result.add(buildLocalEngine("paddleocr_vl", "PaddleOCR-VL self-hosted service",
-                Arrays.asList("pdf", "jpg", "jpeg", "png", "bmp", "tiff"),
-                paddleAvailable, paddleReason, seen, remoteMap));
-
-        // paddleocr_vl_cloud
-        String paddleToken = StrUtil.trimToEmpty(overrides.get("paddleocr_vl_cloud_token"));
-        boolean paddleCloudAvailable = StrUtil.isNotBlank(paddleToken);
-        String paddleCloudReason = paddleCloudAvailable ? "" : "PaddleOCR-VL Cloud Token not configured";
-        result.add(buildLocalEngine("paddleocr_vl_cloud", "PaddleOCR-VL Cloud API",
-                Arrays.asList("pdf", "jpg", "jpeg", "png", "bmp", "tiff"),
-                paddleCloudAvailable, paddleCloudReason, seen, remoteMap));
 
         // 追加远程独有引擎
         for (ParserEngineInfoVO re : remoteEngines) {
@@ -482,27 +407,71 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
         return result;
     }
 
-    private ParserEngineInfoVO buildLocalEngine(String name, String description, List<String> fileTypes,
-                                                 boolean available, String reason, Set<String> seen,
-                                                 Map<String, ParserEngineInfoVO> remoteMap) {
-        seen.add(name);
-        ParserEngineInfoVO info = new ParserEngineInfoVO();
-        info.setName(name);
-        info.setDescription(description);
-        info.setFileTypes(fileTypes);
-        info.setAvailable(available);
-        info.setUnavailableReason(reason);
-        // 远程引擎覆盖描述和文件类型
-        ParserEngineInfoVO remote = remoteMap.get(name);
-        if (remote != null) {
-            if (CollUtil.isNotEmpty(remote.getFileTypes())) {
-                info.setFileTypes(remote.getFileTypes());
-            }
-            if (StrUtil.isNotBlank(remote.getDescription())) {
-                info.setDescription(remote.getDescription());
-            }
+    /**
+     * 解析 file_types JSONB 字段为字符串列表
+     */
+    private List<String> parseFileTypes(String fileTypesJson) {
+        if (StrUtil.isBlank(fileTypesJson)) {
+            return Collections.emptyList();
         }
-        return info;
+        try {
+            return JSONUtil.parseArray(fileTypesJson).toList(String.class);
+        } catch (Exception e) {
+            log.warn("解析 file_types 失败: {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 根据引擎的 check_type 检测可用性
+     *
+     * @return [available("true"/"false"), unavailableReason]
+     */
+    private String[] checkAvailability(AmpParserEngines engine, boolean docreaderConnected, Map<String, String> overrides) {
+        String checkType = StrUtil.trimToEmpty(engine.getCheckType());
+        String configKey = StrUtil.trimToEmpty(engine.getConfigKey());
+        switch (checkType) {
+            case "none":
+                // 无需检测，始终可用
+                return new String[]{"true", ""};
+            case "docreader":
+                // 依赖 DocReader 连接
+                if (docreaderConnected) {
+                    return new String[]{"true", ""};
+                }
+                return new String[]{"false", "DocReader service not connected"};
+            case "config":
+                // 仅检查配置项是否存在
+                if (StrUtil.isNotBlank(overrides.get(configKey))) {
+                    return new String[]{"true", ""};
+                }
+                return new String[]{"false", engine.getDescription() + " 未配置"};
+            case "http_ping":
+                // HTTP 探测
+                return pingByEngineName(engine.getName(), overrides.get(configKey));
+            default:
+                return new String[]{"true", ""};
+        }
+    }
+
+    /**
+     * 根据引擎名称执行对应的 HTTP 探测
+     */
+    private String[] pingByEngineName(String engineName, String configValue) {
+        if (StrUtil.isBlank(configValue)) {
+            return new String[]{"false", engineName + " 未配置"};
+        }
+        switch (engineName) {
+            case "mineru":
+                return pingMinerU(configValue);
+            case "mineru_cloud":
+                return pingMinerUCloud(configValue);
+            case "paddleocr_vl":
+                return pingPaddleOCRVL(configValue);
+            default:
+                // 其他 http_ping 引擎仅检查配置存在
+                return new String[]{"true", ""};
+        }
     }
 
     /**
