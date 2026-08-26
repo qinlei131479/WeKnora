@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.CustomAgentsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.CustomAgents">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="avatar" property="avatar"/>
+        <result column="is_builtin" property="isBuiltin"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="created_by" property="createdBy"/>
+        <result column="config" property="config"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted_at" property="deletedAt"/>
+        <result column="runnable_by_viewer" property="runnableByViewer"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, name, description, avatar, is_builtin, tenant_id, created_by, config, created_at, updated_at, deleted_at, runnable_by_viewer
+    </sql>
+
+    <!-- 分页查询（PostgreSQL：字符串使用 ILIKE 大小写不敏感模糊查询） -->
+    <select id="queryPage" resultMap="BaseResultMap" parameterType="com.iptv.business.domain.dto.page.CustomAgentsPageDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM custom_agents
+        <where>
+            <if test="param.id != null and param.id != ''">
+                AND id ILIKE CONCAT('%', #{param.id}, '%')
+            </if>
+            <if test="param.name != null and param.name != ''">
+                AND name ILIKE CONCAT('%', #{param.name}, '%')
+            </if>
+            <if test="param.description != null and param.description != ''">
+                AND description ILIKE CONCAT('%', #{param.description}, '%')
+            </if>
+            <if test="param.avatar != null and param.avatar != ''">
+                AND avatar ILIKE CONCAT('%', #{param.avatar}, '%')
+            </if>
+            <if test="param.isBuiltin != null">
+                AND is_builtin = #{param.isBuiltin}
+            </if>
+            <if test="param.tenantId != null">
+                AND tenant_id = #{param.tenantId}
+            </if>
+            <if test="param.createdBy != null and param.createdBy != ''">
+                AND created_by ILIKE CONCAT('%', #{param.createdBy}, '%')
+            </if>
+            <if test="param.config != null and param.config != ''">
+                AND config ILIKE CONCAT('%', #{param.config}, '%')
+            </if>
+            <if test="param.createdAt != null">
+                AND created_at = #{param.createdAt}
+            </if>
+            <if test="param.updatedAt != null">
+                AND updated_at = #{param.updatedAt}
+            </if>
+            <if test="param.deletedAt != null">
+                AND deleted_at = #{param.deletedAt}
+            </if>
+            <if test="param.runnableByViewer != null">
+                AND runnable_by_viewer = #{param.runnableByViewer}
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+</mapper>
