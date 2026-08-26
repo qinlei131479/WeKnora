@@ -14,6 +14,10 @@
   --page-name-height: 60px;
 }
 
+body {
+  font-size: var(--el-font-size-base);
+}
+
 // 菜单当前项
 #app .sidebar-container {
   .el-menu:not(.el-menu--collapse) {

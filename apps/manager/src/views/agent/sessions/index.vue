@@ -4,6 +4,7 @@ import type { PageDomain, SessionsPageDTO, SessionsVO } from '@/types';
 import type { TenantsPageDTO, TenantsVO } from '@/types/api/data/tenants';
 import type { UsersPageDTO, UsersVO } from '@/types/api/data/users';
 import { Search } from 'lucide-vue-next';
+import MessagesDrawer from './components/MessagesDrawer.vue';
 
 const state = reactive({
   userKeyword: '',
@@ -16,6 +17,8 @@ const state = reactive({
   page: { pageNum: 1, pageSize: 10, orderByColumn: 'createdAt', isAsc: 'desc' } as PageDomain,
   dateRange: [] as string[],
   sessionsVOs: [] as SessionsVO[],
+  messagesDrawerVisible: false,
+  selectedSession: {} as SessionsVO,
   loading: false,
   total: 0
 });
@@ -111,6 +114,11 @@ const getSessions = () => {
 const handleQuery = () => {
   state.page.pageNum = 1;
   getSessions();
+};
+
+const showMessages = (row: SessionsVO) => {
+  state.selectedSession = row;
+  state.messagesDrawerVisible = true;
 };
 
 onMounted(() => {
@@ -235,23 +243,19 @@ onMounted(() => {
           fixed="right"
           :min-width="$dim('page.agent.sessions.table.operation', 140)"
         >
-          <template #default>
+          <template #default="{ row }">
             <el-button link type="primary">{{ $t('page.normal.detail', '详情') }}</el-button>
-            <el-button link type="primary">{{ $t('page.agent.sessions.action.message', '消息') }}</el-button>
+            <el-button link type="primary" @click="showMessages(row)">{{ $t('page.agent.sessions.action.message', '消息') }}</el-button>
           </template>
         </el-table-column>
       </el-table>
 
       <template #footer>
-        <pagination
-          v-show="state.total > 0"
-          v-model:page="state.page.pageNum"
-          v-model:limit="state.page.pageSize"
-          :total="state.total"
-          @pagination="getSessions"
-        />
+        <pagination v-model:page="state.page.pageNum" v-model:limit="state.page.pageSize" :total="state.total" @pagination="getSessions" />
       </template>
     </page-content>
+
+    <MessagesDrawer v-model="state.messagesDrawerVisible" :session="state.selectedSession" />
   </section>
 </template>
 
