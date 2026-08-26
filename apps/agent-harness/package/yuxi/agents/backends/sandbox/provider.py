@@ -8,6 +8,7 @@ import time
 from dataclasses import dataclass
 
 from yuxi.utils.logging_config import logger
+from yuxi.storage.postgres.naming import ht
 
 from .paths import workspace_uid_dirname
 from .provisioner_client import ProvisionerClient, SandboxRecord
@@ -55,7 +56,7 @@ def load_user_agent_env(uid: str) -> dict[str, str]:
 
         with psycopg.connect(conninfo, connect_timeout=3) as conn:
             with conn.cursor() as cursor:
-                cursor.execute("SELECT env FROM agent_envs WHERE uid = %s", (uid,))
+                cursor.execute(f"SELECT env FROM {ht('agent_envs')} WHERE uid = %s", (uid,))
                 row = cursor.fetchone()
     except Exception as exc:
         raise RuntimeError(f"failed to load agent env for uid {uid}: {exc}") from exc

@@ -23,7 +23,9 @@ def main() -> None:
 
     db_user = os.environ.get("DB_USER", "postgres")
     db_password = os.environ.get("DB_PASSWORD", "postgres")
-    db_name = os.environ.get("AGENT_HARNESS_DB_NAME", "agent_harness")
+    # Share WeKnora's database; harness tables live under the h_ prefix.
+    # AGENT_HARNESS_DB_NAME is legacy (separate DB) and must not win over DB_NAME.
+    db_name = os.environ.get("DB_NAME") or os.environ.get("AGENT_HARNESS_DB_NAME") or "agent-middle"
     _set_if_empty(
         "POSTGRES_URL",
         f"postgresql+asyncpg://{_quote(db_user)}:{_quote(db_password)}@postgres:5432/{db_name}",

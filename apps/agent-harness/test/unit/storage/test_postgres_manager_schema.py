@@ -110,7 +110,7 @@ async def test_ensure_business_schema_creates_user_config_table():
 
     statements = "\n".join(connection.statements)
 
-    assert "CREATE TABLE IF NOT EXISTS user_config" in statements
+    assert "CREATE TABLE IF NOT EXISTS h_user_config" in statements
     assert "enable_memory BOOLEAN NOT NULL DEFAULT FALSE" in statements
 
 
@@ -131,7 +131,7 @@ async def test_ensure_business_schema_creates_generic_config_options_table():
 
     statements = "\n".join(connection.statements)
 
-    assert "CREATE TABLE IF NOT EXISTS config_options" in statements
+    assert "CREATE TABLE IF NOT EXISTS h_config_options" in statements
     assert "params JSONB NOT NULL" in statements
     assert "value JSONB NOT NULL" in statements
     assert "CREATE UNIQUE INDEX IF NOT EXISTS ix_config_options_key" in statements
@@ -179,12 +179,12 @@ async def test_ensure_business_schema_removes_unbound_api_keys_before_requiring_
 
     statements = "\n".join(connection.statements)
 
-    assert "UPDATE cli_auth_sessions" in statements
-    assert "DELETE FROM api_keys WHERE user_id IS NULL" in statements
-    assert "ALTER TABLE IF EXISTS api_keys ALTER COLUMN user_id SET NOT NULL" in statements
-    assert statements.index("UPDATE cli_auth_sessions") < statements.index("DELETE FROM api_keys WHERE user_id IS NULL")
-    assert statements.index("DELETE FROM api_keys WHERE user_id IS NULL") < statements.index(
-        "ALTER TABLE IF EXISTS api_keys ALTER COLUMN user_id SET NOT NULL"
+    assert "UPDATE h_cli_auth_sessions" in statements
+    assert "DELETE FROM h_api_keys WHERE user_id IS NULL" in statements
+    assert "ALTER TABLE IF EXISTS h_api_keys ALTER COLUMN user_id SET NOT NULL" in statements
+    assert statements.index("UPDATE h_cli_auth_sessions") < statements.index("DELETE FROM h_api_keys WHERE user_id IS NULL")
+    assert statements.index("DELETE FROM h_api_keys WHERE user_id IS NULL") < statements.index(
+        "ALTER TABLE IF EXISTS h_api_keys ALTER COLUMN user_id SET NOT NULL"
     )
 
 
@@ -206,21 +206,21 @@ async def test_share_config_migration_wraps_legacy_scopes_as_read_only():
         manager.async_engine = original_engine
 
     statements = "\n".join(connection.statements)
-    assert "UPDATE agents SET share_config = jsonb_build_object" in statements
-    assert "UPDATE skills SET share_config = jsonb_build_object" in statements
-    assert "UPDATE knowledge_bases SET share_config = jsonb_build_object" in statements
+    assert "UPDATE h_agents SET share_config = jsonb_build_object" in statements
+    assert "UPDATE h_skills SET share_config = jsonb_build_object" in statements
+    assert "UPDATE h_knowledge_bases SET share_config = jsonb_build_object" in statements
     assert "'read_scope'" in statements
     assert "'manage_scope', NULL" in statements
-    assert "ALTER TABLE IF EXISTS agents ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb" in statements
-    assert "ALTER TABLE IF EXISTS skills ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb" in statements
+    assert "ALTER TABLE IF EXISTS h_agents ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb" in statements
+    assert "ALTER TABLE IF EXISTS h_skills ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb" in statements
     assert statements.index(
-        "ALTER TABLE IF EXISTS agents ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb"
-    ) < statements.index("UPDATE agents SET share_config = jsonb_build_object")
+        "ALTER TABLE IF EXISTS h_agents ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb"
+    ) < statements.index("UPDATE h_agents SET share_config = jsonb_build_object")
     assert statements.index(
-        "ALTER TABLE IF EXISTS skills ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb"
-    ) < statements.index("UPDATE skills SET share_config = jsonb_build_object")
-    assert "ALTER TABLE IF EXISTS agents ALTER COLUMN share_config DROP DEFAULT" in statements
-    assert "ALTER TABLE IF EXISTS skills ALTER COLUMN share_config DROP DEFAULT" in statements
+        "ALTER TABLE IF EXISTS h_skills ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb"
+    ) < statements.index("UPDATE h_skills SET share_config = jsonb_build_object")
+    assert "ALTER TABLE IF EXISTS h_agents ALTER COLUMN share_config DROP DEFAULT" in statements
+    assert "ALTER TABLE IF EXISTS h_skills ALTER COLUMN share_config DROP DEFAULT" in statements
 
 
 @pytest.mark.asyncio
@@ -241,7 +241,7 @@ async def test_ensure_knowledge_schema_rebuilds_vectors_for_incomplete_legacy_ch
     statements = "\n".join(connection.statements)
 
     assert (
-        "UPDATE knowledge_chunks SET graph_structure_indexed = TRUE "
+        "UPDATE h_knowledge_chunks SET graph_structure_indexed = TRUE "
         "WHERE graph_indexed IS TRUE AND graph_structure_indexed IS NOT TRUE"
     ) in statements
     assert "mention.entity_id = entity.entity_id AND chunk.graph_indexed IS NOT TRUE" in statements

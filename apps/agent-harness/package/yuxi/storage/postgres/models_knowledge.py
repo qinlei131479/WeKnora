@@ -17,6 +17,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from yuxi.storage.postgres.models_business import Base
 from yuxi.utils.datetime_utils import utc_now_naive
+from yuxi.storage.postgres.naming import ht
 
 JSON_VALUE = JSON().with_variant(JSONB, "postgresql")
 
@@ -24,7 +25,7 @@ JSON_VALUE = JSON().with_variant(JSONB, "postgresql")
 class KnowledgeBase(Base):
     """知识库模型"""
 
-    __tablename__ = "knowledge_bases"
+    __tablename__ = ht("knowledge_bases")
     __table_args__ = (UniqueConstraint("kb_id", name="uq_knowledge_bases_kb_id"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -49,13 +50,13 @@ class KnowledgeBase(Base):
 class KnowledgeFile(Base):
     """知识文件模型"""
 
-    __tablename__ = "knowledge_files"
+    __tablename__ = ht("knowledge_files")
     __table_args__ = (UniqueConstraint("file_id", name="uq_knowledge_files_file_id"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     file_id = Column(String(64), unique=True, nullable=False, index=True)
-    kb_id = Column(String(80), ForeignKey("knowledge_bases.kb_id", ondelete="CASCADE"), nullable=False, index=True)
-    parent_id = Column(String(64), ForeignKey("knowledge_files.file_id", ondelete="SET NULL"), index=True)
+    kb_id = Column(String(80), ForeignKey(f"{ht('knowledge_bases')}.kb_id", ondelete="CASCADE"), nullable=False, index=True)
+    parent_id = Column(String(64), ForeignKey(f"{ht('knowledge_files')}.file_id", ondelete="SET NULL"), index=True)
     filename = Column(String(512), nullable=False)
     original_filename = Column(String(512))
     file_type = Column(String(64))
@@ -80,7 +81,7 @@ class KnowledgeFile(Base):
 class KnowledgeChunk(Base):
     """知识库 Chunk 模型"""
 
-    __tablename__ = "knowledge_chunks"
+    __tablename__ = ht("knowledge_chunks")
     __table_args__ = (
         UniqueConstraint("chunk_id", name="uq_knowledge_chunks_chunk_id"),
         Index("ix_knowledge_chunks_file_id", "file_id"),
@@ -91,8 +92,8 @@ class KnowledgeChunk(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     chunk_id = Column(String(128), nullable=False)
-    file_id = Column(String(64), ForeignKey("knowledge_files.file_id", ondelete="CASCADE"), nullable=False)
-    kb_id = Column(String(80), ForeignKey("knowledge_bases.kb_id", ondelete="CASCADE"), nullable=False)
+    file_id = Column(String(64), ForeignKey(f"{ht('knowledge_files')}.file_id", ondelete="CASCADE"), nullable=False)
+    kb_id = Column(String(80), ForeignKey(f"{ht('knowledge_bases')}.kb_id", ondelete="CASCADE"), nullable=False)
     chunk_index = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
     start_char_pos = Column(Integer)
@@ -116,7 +117,7 @@ class KnowledgeChunk(Base):
 class KnowledgeGraphEntity(Base):
     """知识图谱实体"""
 
-    __tablename__ = "knowledge_graph_entities"
+    __tablename__ = ht("knowledge_graph_entities")
     __table_args__ = (
         UniqueConstraint("entity_id", name="uq_knowledge_graph_entities_entity_id"),
         UniqueConstraint("kb_id", "normalized_name", "label", name="uq_knowledge_graph_entities_identity"),
@@ -126,7 +127,7 @@ class KnowledgeGraphEntity(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     entity_id = Column(String(64), nullable=False)
-    kb_id = Column(String(80), ForeignKey("knowledge_bases.kb_id", ondelete="CASCADE"), nullable=False)
+    kb_id = Column(String(80), ForeignKey(f"{ht('knowledge_bases')}.kb_id", ondelete="CASCADE"), nullable=False)
     normalized_name = Column(String(512), nullable=False)
     label = Column(String(128), nullable=False)
     name = Column(String(512), nullable=False)
@@ -144,7 +145,7 @@ class KnowledgeGraphEntity(Base):
 class KnowledgeGraphEntityMention(Base):
     """知识图谱实体在 chunk 中的引用"""
 
-    __tablename__ = "knowledge_graph_entity_mentions"
+    __tablename__ = ht("knowledge_graph_entity_mentions")
     __table_args__ = (
         UniqueConstraint("entity_id", "chunk_id", name="uq_knowledge_graph_entity_mentions_entity_chunk"),
         Index("ix_knowledge_graph_entity_mentions_kb_id", "kb_id"),
@@ -153,17 +154,17 @@ class KnowledgeGraphEntityMention(Base):
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    entity_id = Column(String(64), ForeignKey("knowledge_graph_entities.entity_id", ondelete="CASCADE"), nullable=False)
-    kb_id = Column(String(80), ForeignKey("knowledge_bases.kb_id", ondelete="CASCADE"), nullable=False)
-    file_id = Column(String(64), ForeignKey("knowledge_files.file_id", ondelete="CASCADE"), nullable=False)
-    chunk_id = Column(String(128), ForeignKey("knowledge_chunks.chunk_id", ondelete="CASCADE"), nullable=False)
+    entity_id = Column(String(64), ForeignKey(f"{ht('knowledge_graph_entities')}.entity_id", ondelete="CASCADE"), nullable=False)
+    kb_id = Column(String(80), ForeignKey(f"{ht('knowledge_bases')}.kb_id", ondelete="CASCADE"), nullable=False)
+    file_id = Column(String(64), ForeignKey(f"{ht('knowledge_files')}.file_id", ondelete="CASCADE"), nullable=False)
+    chunk_id = Column(String(128), ForeignKey(f"{ht('knowledge_chunks')}.chunk_id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime(timezone=True), default=utc_now_naive)
 
 
 class KnowledgeGraphTriple(Base):
     """知识图谱三元组"""
 
-    __tablename__ = "knowledge_graph_triples"
+    __tablename__ = ht("knowledge_graph_triples")
     __table_args__ = (
         UniqueConstraint("triple_id", name="uq_knowledge_graph_triples_triple_id"),
         Index("ix_knowledge_graph_triples_kb_id", "kb_id"),
@@ -172,12 +173,12 @@ class KnowledgeGraphTriple(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     triple_id = Column(String(64), nullable=False)
-    kb_id = Column(String(80), ForeignKey("knowledge_bases.kb_id", ondelete="CASCADE"), nullable=False)
+    kb_id = Column(String(80), ForeignKey(f"{ht('knowledge_bases')}.kb_id", ondelete="CASCADE"), nullable=False)
     source_entity_id = Column(
-        String(64), ForeignKey("knowledge_graph_entities.entity_id", ondelete="CASCADE"), nullable=False
+        String(64), ForeignKey(f"{ht('knowledge_graph_entities')}.entity_id", ondelete="CASCADE"), nullable=False
     )
     target_entity_id = Column(
-        String(64), ForeignKey("knowledge_graph_entities.entity_id", ondelete="CASCADE"), nullable=False
+        String(64), ForeignKey(f"{ht('knowledge_graph_entities')}.entity_id", ondelete="CASCADE"), nullable=False
     )
     relation_type = Column(String(256), nullable=False)
     content = Column(Text, nullable=False)
@@ -194,7 +195,7 @@ class KnowledgeGraphTriple(Base):
 class KnowledgeGraphTripleMention(Base):
     """知识图谱三元组在 chunk 中的引用"""
 
-    __tablename__ = "knowledge_graph_triple_mentions"
+    __tablename__ = ht("knowledge_graph_triple_mentions")
     __table_args__ = (
         UniqueConstraint("triple_id", "chunk_id", name="uq_knowledge_graph_triple_mentions_triple_chunk"),
         Index("ix_knowledge_graph_triple_mentions_kb_id", "kb_id"),
@@ -203,10 +204,10 @@ class KnowledgeGraphTripleMention(Base):
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    triple_id = Column(String(64), ForeignKey("knowledge_graph_triples.triple_id", ondelete="CASCADE"), nullable=False)
-    kb_id = Column(String(80), ForeignKey("knowledge_bases.kb_id", ondelete="CASCADE"), nullable=False)
-    file_id = Column(String(64), ForeignKey("knowledge_files.file_id", ondelete="CASCADE"), nullable=False)
-    chunk_id = Column(String(128), ForeignKey("knowledge_chunks.chunk_id", ondelete="CASCADE"), nullable=False)
+    triple_id = Column(String(64), ForeignKey(f"{ht('knowledge_graph_triples')}.triple_id", ondelete="CASCADE"), nullable=False)
+    kb_id = Column(String(80), ForeignKey(f"{ht('knowledge_bases')}.kb_id", ondelete="CASCADE"), nullable=False)
+    file_id = Column(String(64), ForeignKey(f"{ht('knowledge_files')}.file_id", ondelete="CASCADE"), nullable=False)
+    chunk_id = Column(String(128), ForeignKey(f"{ht('knowledge_chunks')}.chunk_id", ondelete="CASCADE"), nullable=False)
     text = Column(Text)
     extractor_type = Column(String(128))
     created_at = Column(DateTime(timezone=True), default=utc_now_naive)
@@ -215,12 +216,12 @@ class KnowledgeGraphTripleMention(Base):
 class EvaluationDataset(Base):
     """评估数据集模型"""
 
-    __tablename__ = "evaluation_datasets"
+    __tablename__ = ht("evaluation_datasets")
     __table_args__ = (UniqueConstraint("dataset_id", name="uq_evaluation_datasets_dataset_id"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     dataset_id = Column(String(64), unique=True, nullable=False, index=True)
-    kb_id = Column(String(80), ForeignKey("knowledge_bases.kb_id", ondelete="CASCADE"), nullable=False, index=True)
+    kb_id = Column(String(80), ForeignKey(f"{ht('knowledge_bases')}.kb_id", ondelete="CASCADE"), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text)
     item_count = Column(Integer, default=0)
@@ -235,7 +236,7 @@ class EvaluationDataset(Base):
 class EvaluationDatasetItem(Base):
     """评估数据集题目模型"""
 
-    __tablename__ = "evaluation_dataset_items"
+    __tablename__ = ht("evaluation_dataset_items")
     __table_args__ = (
         UniqueConstraint("item_id", name="uq_evaluation_dataset_items_item_id"),
         UniqueConstraint("dataset_id", "item_index", name="uq_evaluation_dataset_items_dataset_index"),
@@ -246,11 +247,11 @@ class EvaluationDatasetItem(Base):
     item_id = Column(String(64), unique=True, nullable=False, index=True)
     dataset_id = Column(
         String(64),
-        ForeignKey("evaluation_datasets.dataset_id", ondelete="CASCADE"),
+        ForeignKey(f"{ht('evaluation_datasets')}.dataset_id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    kb_id = Column(String(80), ForeignKey("knowledge_bases.kb_id", ondelete="CASCADE"), nullable=False, index=True)
+    kb_id = Column(String(80), ForeignKey(f"{ht('knowledge_bases')}.kb_id", ondelete="CASCADE"), nullable=False, index=True)
     item_index = Column(Integer, nullable=False)
     query_text = Column(Text, nullable=False)
     gold_chunk_ids = Column(JSON_VALUE)
@@ -261,16 +262,16 @@ class EvaluationDatasetItem(Base):
 class EvaluationRun(Base):
     """评估运行模型"""
 
-    __tablename__ = "evaluation_runs"
+    __tablename__ = ht("evaluation_runs")
     __table_args__ = (UniqueConstraint("run_id", name="uq_evaluation_runs_run_id"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     run_id = Column(String(64), unique=True, nullable=False, index=True)
     name = Column(String(255), nullable=False)
-    kb_id = Column(String(80), ForeignKey("knowledge_bases.kb_id", ondelete="CASCADE"), nullable=False, index=True)
+    kb_id = Column(String(80), ForeignKey(f"{ht('knowledge_bases')}.kb_id", ondelete="CASCADE"), nullable=False, index=True)
     dataset_id = Column(
         String(64),
-        ForeignKey("evaluation_datasets.dataset_id", ondelete="SET NULL"),
+        ForeignKey(f"{ht('evaluation_datasets')}.dataset_id", ondelete="SET NULL"),
         index=True,
     )
     status = Column(String(32), default="running", index=True)
@@ -287,7 +288,7 @@ class EvaluationRun(Base):
 class EvaluationRunItem(Base):
     """评估逐题结果模型"""
 
-    __tablename__ = "evaluation_run_items"
+    __tablename__ = ht("evaluation_run_items")
     __table_args__ = (
         UniqueConstraint("run_id", "item_index", name="uq_evaluation_run_items_run_index"),
         Index("ix_evaluation_run_items_run_index", "run_id", "item_index"),
@@ -296,12 +297,12 @@ class EvaluationRunItem(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     run_id = Column(
         String(64),
-        ForeignKey("evaluation_runs.run_id", ondelete="CASCADE"),
+        ForeignKey(f"{ht('evaluation_runs')}.run_id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     dataset_item_id = Column(
-        String(64), ForeignKey("evaluation_dataset_items.item_id", ondelete="SET NULL"), index=True
+        String(64), ForeignKey(f"{ht('evaluation_dataset_items')}.item_id", ondelete="SET NULL"), index=True
     )
     item_index = Column(Integer, nullable=False)
     query_text = Column(Text, nullable=False)
