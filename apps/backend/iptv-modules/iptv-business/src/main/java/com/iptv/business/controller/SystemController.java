@@ -27,14 +27,12 @@ public class SystemController {
 
     @Operation(summary = "列出可用的文档解析引擎", description = "返回当前租户可用的解析引擎列表及 DocReader 连接状态")
     @GetMapping("/parser-engines")
-    @RequiresPermissions("business:tenants:query")
     public R<ParserEnginesVO> listParserEngines(Integer tenantId) {
         return R.ok(tenantsService.listParserEngines(tenantId));
     }
 
     @Operation(summary = "使用当前参数检测解析引擎可用性", description = "使用给定配置参数检测解析引擎可用性（不保存）")
     @PostMapping("/parser-engines/check")
-    @RequiresPermissions("business:tenants:edit")
     public R<ParserEnginesVO> checkParserEngines(@RequestBody ParserEngineCheckDTO dto) {
         return R.ok(tenantsService.checkParserEngines(dto));
     }
