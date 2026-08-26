@@ -1,4 +1,9 @@
 import { ModelEntity } from '../model';
+import { StorageBackendsVO } from './storage';
+import { VectorStoresDTO } from './vectorStores';
+
+export type VectorStoreSource = 'env' | 'user' | 'shared' | 'unavailable';
+export type VectorStoreStatus = 'available' | 'unavailable';
 
 interface KnowledgeBaseSimple {
   /**
@@ -21,7 +26,6 @@ interface KnowledgeBaseSimple {
    */
   tenantId?: number;
 
-
   /**
    * 嵌入模型 ID
    */
@@ -37,6 +41,8 @@ interface KnowledgeBaseSimple {
 
   // 摘要模型
   summaryModel?: ModelEntity;
+
+  wikiSynthesisModel?: ModelEntity;
 
   /**
    * 创建时间
@@ -79,7 +85,10 @@ interface KnowledgeBaseSimple {
   vectorStoreId?: string;
 
   // 向量库实例
-  vectorStore?: ModelEntity;
+  vectorStore?: VectorStoresDTO;
+
+  vectorStoreSource?: VectorStoreSource;
+  vectorStoreStatus?: VectorStoreStatus;
 
   /**
    * 创建者用户 ID
@@ -90,10 +99,13 @@ interface KnowledgeBaseSimple {
    * 绑定的存储后端实例 ID
    */
   storageBackendId?: string;
+  /**
+   * 绑定的存储后端实例名称
+   */
+  storageBackend?: StorageBackendsVO;
 }
 
 interface KnowledgeBaseBase extends KnowledgeBaseSimple {
-  
   /**
    * 分块配置
    */
@@ -103,6 +115,11 @@ interface KnowledgeBaseBase extends KnowledgeBaseSimple {
    * 图片处理配置
    */
   imageProcessingConfig?: string;
+
+  /**
+   * 语音识别配置
+   */
+  asrConfig?: string;
 
   // 遗留存储配置列（JSON）；兼容旧数据，新逻辑优先 storage_backend_id
   cosConfig?: string;
@@ -145,6 +162,9 @@ interface KnowledgeBaseBase extends KnowledgeBaseSimple {
    * 解析后异步关联已有标签的配置
    */
   autoTagConfig?: string;
+
+  // 文件数量, 修改时需要
+  fileCount?: number;
 }
 
 export interface KnowledgeBaseEntity extends KnowledgeBaseBase {}
@@ -178,7 +198,6 @@ export interface KnowledgeBaseChunkingConfig {
   // tokenLimit?: number;
   // languages?: string[];
   // tableMetadataInstructions?: string;
-
 
   child_chunk_size?: number;
   chunk_overlap?: number;
@@ -290,6 +309,11 @@ export interface KnowledgeBaseExtends extends KnowledgeBaseSimple {
    */
   imageProcessingConfig?: KnowledgeBaseImageProcessingConfig;
 
+  /**
+   * 语音识别配置
+   */
+  asrConfig?: KnowledgeBaseAsrConfig;
+
   // 遗留存储配置列（JSON）；兼容旧数据，新逻辑优先 storage_backend_id
   cosConfig?: KnowledgeBaseCosConfig;
   /**
@@ -316,6 +340,7 @@ export interface KnowledgeBaseExtends extends KnowledgeBaseSimple {
    * 知识库存储提供商选择；凭证来自租户 StorageEngineConfig
    */
   storageProviderConfig?: KnowledgeBaseStorageProviderConfig;
+  storageConfig?: any;
 
   /**
    * Wiki 类型知识库配置
@@ -331,5 +356,94 @@ export interface KnowledgeBaseExtends extends KnowledgeBaseSimple {
    * 解析后异步关联已有标签的配置
    */
   autoTagConfig?: KnowledgeBaseAutoTagConfig;
+}
 
+export interface KnowledgeBaseActivityEntity {
+  /**
+   * 主键 ID
+   */
+  id?: number;
+
+  /**
+   * 所属工作空间（租户）ID
+   */
+  tenantId?: number;
+
+  /**
+   * 操作者用户 ID
+   */
+
+  actorUserId?: string;
+
+  /**
+   * 操作者角色
+   */
+
+  actorRole?: string;
+
+  /**
+   * 审计动作名（点分命名空间）
+   */
+
+  action?: string;
+
+  /**
+   * 目标对象类型
+   */
+
+  targetType?: string;
+
+  /**
+   * 目标对象 ID
+   */
+
+  targetId?: string;
+
+  /**
+   * 目标用户 ID
+   */
+
+  targetUserId?: string;
+
+  /**
+   * HTTP 请求路径
+   */
+
+  requestPath?: string;
+
+  /**
+   * HTTP 方法
+   */
+
+  requestMethod?: string;
+
+  /**
+   * 结果（success/failure 等）
+   */
+
+  outcome?: string;
+
+  /**
+   * 详情（JSONB）
+   */
+
+  details?: string;
+
+  /**
+   * 创建时间
+   */
+
+  createdAt?: string;
+
+  /**
+   * Key 作用域类型（tenant/platform）
+   */
+
+  scopeType?: string;
+
+  /**
+   * scope id
+   */
+
+  scopeId?: string;
 }

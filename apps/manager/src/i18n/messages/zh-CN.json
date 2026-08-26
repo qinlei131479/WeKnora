@@ -6,6 +6,114 @@
     "title_short": "智能体中台"
   },
   "component": {
+    "language": {
+      "zhCN": "简体中文",
+      "enUS": "English",
+      "ruRU": "Русский",
+      "koKR": "한국어",
+      "selectLanguage": "选择语言",
+      "language": "语言",
+      "languageDescription": "选择界面显示语言",
+      "languageSaved": "语言设置已保存"
+    },
+    "models": {
+      "builtinTag": "内置",
+      "defaultTag": "默认",
+      "selectModelPlaceholder": "请选择模型",
+      "loadFailed": "加载模型失败",
+      "addModelInSettings": "去添加模型"
+    },
+    "vectorStoreBadge": {
+      "systemDefault": "系统默认",
+      "sharedFromOrg": "来自其他组织的共享",
+      "unknownStore": "未知存储",
+      "unavailable": "不可用"
+    },
+    "kbSettings": {
+      "parser": {
+        "title": "解析引擎",
+        "description": "为不同文件类型选择文档解析引擎。未配置的文件类型将使用内置解析引擎。",
+        "loading": "加载中...",
+        "noEngineAvailable": "暂无可用解析引擎，或文档解析服务未配置。",
+        "default": "默认",
+        "goConfig": "前往配置 →",
+        "noEngine": "无可用引擎",
+        "fileTypePdf": "PDF 文档",
+        "fileTypeWord": "Word 文档",
+        "fileTypePpt": "演示文稿",
+        "fileTypeExcel": "Excel 表格",
+        "xlsxFirstRowAsHeader": "将首行作为列标题，并保留在每行上下文中",
+        "fileTypeEbook": "电子书",
+        "fileTypeWebArchive": "网页归档",
+        "fileTypeCsv": "CSV 文件",
+        "fileTypeText": "纯文本",
+        "fileTypeJson": "JSON 文件",
+        "fileTypeImage": "图片",
+        "fileTypeAudiovisual": "音频",
+        "engines": {
+          "opendataloader": {
+            "name": "OpenDataLoader",
+            "desc": "OpenDataLoader PDF 解析引擎（版面分析，需 Java 11+ 与 opendataloader-pdf）"
+          },
+          "markitdown": {
+            "name": "MarkItDown",
+            "desc": "Microsoft MarkItDown 文档转换工具（支持 PDF/Office/HTML 等）"
+          },
+          "weknoracloud": {
+            "name": "WeKnora Cloud",
+            "desc": "使用 WeKnora Cloud 进行文档解析"
+          },
+          "paddleocr_vl_cloud": {
+            "name": "PaddleOCR-VL Cloud",
+            "desc": "PaddleOCR-VL 云 API"
+          },
+          "paddleocr_vl": {
+            "name": "PaddleOCR-VL",
+            "desc": "PaddleOCR-VL 自部署服务"
+          },
+          "mineru_cloud": {
+            "name": "MinerU Cloud",
+            "desc": "MinerU Cloud API"
+          },
+          "mineru": {
+            "name": "MinerU",
+            "desc": "MinerU 自部署服务"
+          },
+          "simple": {
+            "name": "Simple",
+            "desc": "简单格式 & 图片解析（无需外部服务）"
+          },
+          "builtin": {
+            "name": "内置",
+            "desc": "DocReader 内置解析引擎（docx/pdf/xlsx 等复杂格式）"
+          }
+        }
+      },
+      "storage": {
+        "title": "存储引擎",
+        "selectDescription": "选择此知识库绑定的具体存储实例。",
+        "defaultTag": "默认",
+        "instanceLabel": "存储实例",
+        "instanceDesc": "同一种存储类型可以配置多个不同 Endpoint、Bucket 或凭据的实例。",
+        "migrateHint": "知识库中已有文件，需通过存储迁移流程才能更换实例。",
+        "manageInstances": "管理存储实例",
+        "localStorage": "本地存储",
+        "loading": "加载中..."
+      },
+      "vectorStore": {
+        "title": "向量存储",
+        "description": "选择此知识库要写入的向量存储。绑定不可更改 — 如需将现有 KB 迁移到其他存储，请创建新 KB 并重新索引。",
+        "loading": "正在加载向量存储列表...",
+        "engineLabel": "向量存储",
+        "engineDesc": "从全局向量存储配置中选择，或保持系统默认以使用租户的 RETRIEVE_DRIVER 引擎。",
+        "boundLabel": "已绑定的向量存储",
+        "systemDefault": "系统默认",
+        "immutableHint": "创建后不可更改。如需迁移，请创建一个绑定到目标存储的新 KB 并重新索引。",
+        "immutableEdit": "向量存储绑定在创建后无法更改。",
+        "unavailableHint": "绑定的向量存储当前不可用，请在设置 → 向量存储中检查其连接配置。",
+        "goGlobalSettings": "前往向量存储设置"
+      }
+    },
     "headerSearch": {
       "input.placeholder": "搜索全局资源"
     },
@@ -483,12 +591,14 @@
         "graph": "知识图谱",
         "models": "模型配置",
         "multimodal": "图像处理",
+        "parserEngine": "解析引擎",
         "share": "共享管理",
         "storage": "存储引擎",
         "vectorStore": "向量存储"
       },
       "titleCreate": "新建知识库",
       "titleEdit": "知识库设置",
+      "titleDetail": "知识库详情",
       "wiki": {
         "contentInstructionsLabel": "Wiki 内容生成要求",
         "contentInstructionsPlaceholder": "例如：使用法务审阅口吻，优先展示责任主体、时间线和风险提示…",
@@ -678,6 +788,91 @@
         "viewList": "列表视图",
         "viewModeToggle": "切换目录视图",
         "viewTree": "树形视图"
+      }
+    },
+    "graphSettings": {
+      "title": "知识图谱配置",
+      "description": "配置实体-关系提取功能，自动从文本中抽取实体和关系构建知识图谱（注意：这与 Wiki 知识库中的「页面链接图谱」是两回事——前者是基于 LLM 的实体-关系图，后者是 Wiki 页面之间的引用关系图）",
+      "enableLabel": "启用实体关系提取",
+      "enableDescription": "开启后将自动从文本中提取实体和关系",
+      "tagsLabel": "关系类型",
+      "tagsDescription": "定义要提取的关系类型标签，多个标签用逗号分隔",
+      "tagsPlaceholder": "输入关系类型，如：工作于、同事、朋友等",
+      "generateRandomTags": "生成随机标签",
+      "sampleTextLabel": "示例文本",
+      "sampleTextDescription": "用于测试实体关系提取的示例文本",
+      "sampleTextPlaceholder": "输入一段包含实体和关系的文本...",
+      "customInstructionsLabel": "额外提取要求",
+      "customInstructionsDescription": "补充领域范围、实体筛选和属性提取要求；系统仍负责结构化输出协议",
+      "customInstructionsPlaceholder": "例如：重点提取合同主体、金额、履约期限和违约责任…",
+      "generateRandomText": "生成随机文本",
+      "entityListLabel": "实体列表",
+      "entityListDescription": "从文本中提取的实体及其属性",
+      "nodeNamePlaceholder": "输入实体名称",
+      "attributePlaceholder": "输入属性值",
+      "addAttribute": "添加属性",
+      "manageEntitiesLabel": "管理实体",
+      "manageEntitiesDescription": "添加或删除实体节点",
+      "addEntity": "添加实体",
+      "relationListLabel": "关系列表",
+      "relationListDescription": "定义实体之间的关系连接",
+      "selectEntity": "选择实体",
+      "selectRelationType": "选择关系类型",
+      "manageRelationsLabel": "管理关系",
+      "manageRelationsDescription": "添加或删除实体间的关系",
+      "addRelation": "添加关系",
+      "extractActionsLabel": "提取操作",
+      "extractActionsDescription": "执行实体关系提取或管理示例数据",
+      "startExtraction": "开始提取",
+      "extracting": "提取中...",
+      "defaultExample": "默认示例",
+      "clearExample": "清除示例",
+      "completeModelConfig": "请先完成模型配置",
+      "tagsGenerated": "标签生成成功",
+      "tagsGenerateFailed": "标签生成失败",
+      "textGenerated": "文本生成成功",
+      "textGenerateFailed": "文本生成失败",
+      "pleaseInputText": "请先输入示例文本",
+      "extractSuccess": "实体关系提取成功",
+      "extractFailed": "实体关系提取失败",
+      "exampleLoaded": "示例已加载",
+      "exampleCleared": "示例已清除",
+      "disabledWarning": "知识图谱数据库未启用，实体关系提取功能将无法使用",
+      "howToEnable": "如何启用知识图谱？"
+    },
+    "system": {
+      "globalSettings": {
+        "audit": {
+          "action": {
+            "system.setting_changed": "系统设置变更",
+            "system.admin_promoted": "授予系统管理员",
+            "system.api_key_created": "创建平台 API Key",
+            "system.api_key_revoked": "吊销平台 API Key",
+            "system.admin_revoked": "回收系统管理员",
+            "system.user_password_reset": "重置用户密码",
+            "system.queue_task_retried": "重新执行失败任务",
+            "system.queue_task_deleted": "清除失败任务记录",
+            "system.queue_task_run_now": "立即执行队列任务",
+            "system.queue_task_cancelled": "终止队列任务",
+            "system.queue_archived_purged": "清除全部失败任务"
+          }
+        }
+      }
+    },
+    "tenantMember": {
+      "audit": {
+        "action": {
+          "rbac.member_added": "新增成员",
+          "rbac.member_removed": "移除成员",
+          "rbac.member_role_changed": "角色变更",
+          "rbac.member_left": "成员退出",
+          "rbac.access_denied": "访问被拒",
+          "rbac.invitation_sent": "发出邀请",
+          "rbac.invitation_accepted": "接受邀请",
+          "rbac.invitation_declined": "拒绝邀请",
+          "rbac.invitation_revoked": "撤销邀请",
+          "rbac.invitation_expired": "邀请过期"
+        }
       }
     }
   },

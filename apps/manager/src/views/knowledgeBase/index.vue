@@ -1,37 +1,39 @@
 <template>
-  <section class="manage-page member-manage-page">
-    <page-name class="page-name">
+  <section class="knowledge-base-manage-page">
+    <page-name>
       <!-- <el-button class="add-btn" type="primary" round v-hasPermi="['business:knowledgeBases:add']" @click="handleAdd" icon="plus">{{
         $t('page.knowledgeBase.add', '添加知识库')
       }}</el-button> -->
     </page-name>
 
     <page-content>
-      <div class="search-bar">
-        <div class="search-bar__keyword">
-          <el-input
-            v-model="queryParams.username"
-            class="search-bar__input"
-            clearable
-            :prefix-icon="Search"
-            :placeholder="$t('page.knowledgeBase.searchPlaceholder', '搜索知识库名称')"
-            @keyup.enter="handleQuery"
-          />
-          <!-- <button type="button" class="search-bar__icon-btn" @click="handleQuery">
-            <svg-icon icon-class="search" class="search-bar__icon" />
-          </button> -->
+      <template #header>
+        <div class="search-bar">
+          <div class="search-bar__keyword">
+            <el-input
+              v-model="queryParams.name"
+              class="search-bar__input"
+              clearable
+              :prefix-icon="Search"
+              :placeholder="$t('page.knowledgeBase.searchPlaceholder', '搜索知识库名称')"
+              @keyup.enter="handleQuery"
+            />
+            <!-- <button type="button" class="search-bar__icon-btn" @click="handleQuery">
+              <svg-icon icon-class="search" class="search-bar__icon" />
+            </button> -->
+          </div>
+
+          <!-- <div class="search-bar__date-wrap">
+            <el-date-picker v-model="dateRange" class="search-bar__date" value-format="YYYY-MM-DD" type="daterange"
+              :range-separator="$t('page.mcp.range_separator')"
+              :start-placeholder="$t('page.mcp.start_date.placeholder')"
+              :end-placeholder="$t('page.mcp.end_date.placeholder')" />
+          </div> -->
+
+          <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
+          <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
         </div>
-
-        <!-- <div class="search-bar__date-wrap">
-          <el-date-picker v-model="dateRange" class="search-bar__date" value-format="YYYY-MM-DD" type="daterange"
-            :range-separator="$t('page.mcp.range_separator')"
-            :start-placeholder="$t('page.mcp.start_date.placeholder')"
-            :end-placeholder="$t('page.mcp.end_date.placeholder')" />
-        </div> -->
-
-        <el-button type="button" class="search-bar__reset" @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
-        <el-button type="button" class="search-bar__submit" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
-      </div>
+      </template>
 
       <div class="action-toolbar" style="display: none">
         <div class="action-toolbar__left">
@@ -294,7 +296,8 @@
 
     <!-- 添加或修改对话框 -->
     <!-- <KnowledgeBaseEditorModal v-model:visible="open" :mode="mode" :kbId="kbId" /> -->
-    <!-- <KnowledgeBaseDetailDrawer v-model:visible="open" :kbId="kbId" /> -->
+    <!-- 详情抽屉 -->
+    <KnowledgeBaseDetailDrawer v-model:visible="open" :kbId="kbId" />
   </section>
 </template>
 
@@ -306,7 +309,7 @@ import { useI18n } from 'vue-i18n';
 import { Search } from 'lucide-vue-next';
 
 // import KnowledgeBaseEditorModal from './components/KnowledgeBaseEditorModal.vue';
-// import KnowledgeBaseDetailDrawer from './components/KnowledgeBaseDetailDrawer.vue';
+import KnowledgeBaseDetailDrawer from './components/KnowledgeBaseDetailDrawer.vue';
 import KnowledgeBaseTypeTag from './components/KnowledgeBaseTypeTag.vue';
 import { deleteKnowledgeBaseSingleApi, getKnowledgeBaseListApi } from '@/api/data/knowledgeBase.js';
 

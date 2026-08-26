@@ -6,8 +6,7 @@ export interface KBChunkStrategyOption {
   tooltip: string;
 }
 
-export function getKBChunkStrategyOptions(): KBChunkStrategyOption[] {
-  const { t } = useI18n();
+export function getKBChunkStrategyOptions(t: any): KBChunkStrategyOption[] {
   return [
     {
       label: t('component.knowledgeEditor.chunking.strategies.auto.label'),

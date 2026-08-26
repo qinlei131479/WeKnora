@@ -7,6 +7,8 @@ export interface VectorStoresDTO {
   tenantId?: number;
   createdAt?: string;
   updatedAt?: string;
+  status?: string;
+  source?: string;
 }
 
 export interface VectorStoresPageDTO extends VectorStoresDTO {
