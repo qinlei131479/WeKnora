@@ -1,7 +1,7 @@
 package com.iptv.file.service;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Primary;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import com.iptv.common.core.utils.StringUtils;
@@ -16,26 +16,26 @@ import java.io.InputStream;
  * 
  * @author ruoyi
  */
-@Primary
+@ConditionalOnProperty(name = "file.storageType", havingValue = "local", matchIfMissing = true)
 @Service
 public class LocalSysFileServiceImpl implements ISysFileService
 {
     /**
      * 资源映射路径 前缀
      */
-    @Value("${file.prefix}")
+    @Value("${local.prefix}")
     public String localFilePrefix;
 
     /**
      * 域名或本机访问地址
      */
-    @Value("${file.domain}")
+    @Value("${local.domain}")
     public String domain;
     
     /**
      * 上传文件存储在本地的根路径
      */
-    @Value("${file.path}")
+    @Value("${local.path}")
     private String localFilePath;
 
     /**

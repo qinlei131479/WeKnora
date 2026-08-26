@@ -19,6 +19,7 @@ import com.iptv.business.domain.vo.KnowledgesVO;
 import com.iptv.business.pgmapper.ChunksMapper;
 import com.iptv.business.pgmapper.KnowledgeBasesMapper;
 import com.iptv.business.pgmapper.KnowledgesMapper;
+import com.iptv.business.pgmapper.ResourcesMapper;
 import com.iptv.business.pgmapper.StorageBackendsMapper;
 import com.iptv.business.service.KnowledgesService;
 import com.iptv.business.service.StorageBackendFileServiceFactory;
@@ -55,6 +56,7 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
     private final ChunksMapper chunksMapper;
     private final KnowledgeBasesMapper knowledgeBasesMapper;
     private final StorageBackendsMapper storageBackendsMapper;
+    private final ResourcesMapper resourcesMapper;
     private final StorageBackendFileServiceFactory storageBackendFileServiceFactory;
 
     @Override
@@ -171,20 +173,63 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
             throw new ServiceException("文件路径为空");
         }
 
-        // 获取知识库信息
-        KnowledgeBases knowledgeBase = knowledgeBasesMapper.selectById(knowledge.getKnowledgeBaseId());
-        if (knowledgeBase == null) {
-            throw new ServiceException("知识库不存在");
-        }
-
-        // 获取存储后端配置
-        StorageBackends storageBackend = null;
-        if (StrUtil.isNotBlank(knowledgeBase.getStorageBackendId())) {
-            storageBackend = storageBackendsMapper.selectById(knowledgeBase.getStorageBackendId());
+        // 解析 resource:// 路径格式
+        StorageBackends storageBackend;
+        String actualFilePath;
+        
+        if (filePath.startsWith("resource://")) {
+            // 从 resource:// 路径解析实际文件信息
+            String handle = filePath.substring("resource://".length());
+            com.iptv.business.domain.Resources resource = resourcesMapper.selectOne(
+                new LambdaQueryWrapper<com.iptv.business.domain.Resources>()
+                    .eq(com.iptv.business.domain.Resources::getHandle, handle)
+            );
+            if (resource == null) {
+                throw new ServiceException("资源不存在: " + handle);
+            }
+            
+            // 获取存储后端配置
+            storageBackend = storageBackendsMapper.selectById(resource.getStorageBackendId());
+            if (storageBackend == null) {
+                throw new ServiceException("存储后端不存在: " + resource.getStorageBackendId());
+            }
+            
+            // 解析 physical_path 格式: storage://backendId/provider://actualPath
+            String physicalPath = resource.getPhysicalPath();
+            if (physicalPath.startsWith("storage://")) {
+                // 去掉 storage://backendId/ 前缀
+                String afterStorage = physicalPath.substring("storage://".length());
+                int slashIndex = afterStorage.indexOf('/');
+                if (slashIndex > 0) {
+                    actualFilePath = afterStorage.substring(slashIndex + 1);
+                    // 去掉 provider:// 前缀（如 local://, minio://）
+                    int providerSlashIndex = actualFilePath.indexOf("://");
+                    if (providerSlashIndex > 0) {
+                        actualFilePath = actualFilePath.substring(providerSlashIndex + 3);
+                    }
+                } else {
+                    actualFilePath = afterStorage;
+                }
+            } else {
+                actualFilePath = physicalPath;
+            }
+        } else {
+            // 获取知识库信息
+            KnowledgeBases knowledgeBase = knowledgeBasesMapper.selectById(knowledge.getKnowledgeBaseId());
+            if (knowledgeBase == null) {
+                throw new ServiceException("知识库不存在");
+            }
+            
+            // 获取存储后端配置
+            storageBackend = null;
+            if (StrUtil.isNotBlank(knowledgeBase.getStorageBackendId())) {
+                storageBackend = storageBackendsMapper.selectById(knowledgeBase.getStorageBackendId());
+            }
+            actualFilePath = filePath;
         }
 
         // 使用工厂类根据存储后端获取文件流
-        try (InputStream inputStream = storageBackendFileServiceFactory.getFileStream(storageBackend, filePath);
+        try (InputStream inputStream = storageBackendFileServiceFactory.getFileStream(storageBackend, actualFilePath);
              OutputStream outputStream = response.getOutputStream()) {
 
             String fileName = StrUtil.isNotBlank(knowledge.getFileName()) 

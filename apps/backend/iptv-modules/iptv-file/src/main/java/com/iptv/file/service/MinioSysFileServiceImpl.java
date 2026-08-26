@@ -2,6 +2,7 @@ package com.iptv.file.service;
 
 import java.io.InputStream;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import com.alibaba.nacos.common.utils.IoUtils;
@@ -18,6 +19,7 @@ import io.minio.RemoveObjectArgs;
  *
  * @author ruoyi
  */
+@ConditionalOnProperty(name = "file.storageType", havingValue = "minio")
 @Service
 public class MinioSysFileServiceImpl implements ISysFileService
 {

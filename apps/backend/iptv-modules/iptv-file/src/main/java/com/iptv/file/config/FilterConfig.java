@@ -21,7 +21,7 @@ public class FilterConfig
     /**
      * 资源映射路径 前缀
      */
-    @Value("${file.prefix}")
+    @Value("${local.prefix}")
     public String localFilePrefix;
     
     @Value("${referer.allowed-domains}")
