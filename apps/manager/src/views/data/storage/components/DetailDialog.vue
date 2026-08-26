@@ -86,10 +86,9 @@
 <script setup lang="ts">
 import KJSCDialogV2 from '@/components/KJSCCmpt/KJSCDialogV2.vue';
 import type { StorageBackendsVO } from '@/types';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 
 const { proxy } = getCurrentInstance();
-const { t } = useI18n();
 
 const props = defineProps<{
   visible: boolean;

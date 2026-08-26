@@ -26,7 +26,7 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits, computed, useAttrs, reactive, watchEffect } from 'vue';
+import { computed, useAttrs, reactive, watchEffect } from 'vue';
 
 const props = defineProps({
   modelValue: {
