@@ -29,7 +29,6 @@
         <include refid="Base_Column_List"/>
         FROM custom_agents
         <where>
-            deleted_at IS NULL
             <if test="param.id != null and param.id != ''">
                 AND id ILIKE CONCAT('%', #{param.id}, '%')
             </if>
