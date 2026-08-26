@@ -150,22 +150,6 @@ onMounted(() => {
           />
 
           <el-autocomplete
-            v-model="state.userKeyword"
-            style="max-width: 300px"
-            class="search-bar__input"
-            value-key="username"
-            clearable
-            hide-loading
-            :suffix-icon="Search"
-            :trigger-on-focus="false"
-            :placeholder="$t('page.agent.sessions.search.userPlaceholder', '输入用户名查询')"
-            :fetch-suggestions="getUsers"
-            @select="onSelectUser"
-            @clear="onUserInput"
-            @input="onUserInput"
-          />
-
-          <el-autocomplete
             v-model="state.tenantKeyword"
             class="search-bar__input"
             style="max-width: 300px"
@@ -179,6 +163,22 @@ onMounted(() => {
             @select="onSelectTenant"
             @clear="onTenantInput"
             @input="onTenantInput"
+          />
+
+          <el-autocomplete
+            v-model="state.userKeyword"
+            style="max-width: 300px"
+            class="search-bar__input"
+            value-key="username"
+            clearable
+            hide-loading
+            :suffix-icon="Search"
+            :trigger-on-focus="false"
+            :placeholder="$t('page.agent.sessions.search.userPlaceholder', '输入用户名查询')"
+            :fetch-suggestions="getUsers"
+            @select="onSelectUser"
+            @clear="onUserInput"
+            @input="onUserInput"
           />
 
           <el-date-picker

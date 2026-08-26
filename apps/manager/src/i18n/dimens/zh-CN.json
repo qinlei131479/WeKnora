@@ -2,6 +2,15 @@
   "component": {},
   "page": {
     "agent": {
+      "list": {
+        "table.createdAt": 180,
+        "table.description": 360,
+        "table.name": 260,
+        "table.operation": 100,
+        "table.status": 100,
+        "table.tenantName": 250,
+        "table.updatedAt": 180
+      },
       "sessions": {
         "table.createdAt": 180,
         "table.id": 300,

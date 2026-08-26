@@ -878,6 +878,19 @@
   },
   "page": {
     "agent": {
+      "list": {
+        "search.namePlaceholder": "输入智能体名称查询",
+        "search.tenantPlaceholder": "输入租户名称查询",
+        "status.deleted": "已删除",
+        "status.normal": "正常",
+        "table.createdAt": "创建时间",
+        "table.description": "智能体说明",
+        "table.name": "智能体名称",
+        "table.status": "状态",
+        "table.tenantName": "所属工作空间（租户）",
+        "table.updatedAt": "更新时间",
+        "tag.builtin": "内置"
+      },
       "sessions": {
         "action.message": "消息",
         "detail.agentConfig": "智能体配置",

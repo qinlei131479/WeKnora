@@ -14,6 +14,19 @@
 
   "page": {
     "agent": {
+      "list": {
+        "search.namePlaceholder": "Enter an agent name",
+        "search.tenantPlaceholder": "Enter a tenant name",
+        "status.deleted": "Deleted",
+        "status.normal": "Normal",
+        "table.createdAt": "Created Time",
+        "table.description": "Agent Description",
+        "table.name": "Agent Name",
+        "table.status": "Status",
+        "table.tenantName": "Workspace (Tenant)",
+        "table.updatedAt": "Updated Time",
+        "tag.builtin": "Built-in"
+      },
       "sessions": {
         "action.message": "Messages",
         "detail.agentConfig": "Agent Configuration",
