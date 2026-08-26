@@ -29,7 +29,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 <#if table.convert>
 @TableName("${table.name}")
 </#if>
-public class ${entity}PageDTO implements Serializable { {
+public class ${entity}PageDTO implements Serializable {
 
 <#if entitySerialVersionUID>
     private static final long serialVersionUID = 1L;

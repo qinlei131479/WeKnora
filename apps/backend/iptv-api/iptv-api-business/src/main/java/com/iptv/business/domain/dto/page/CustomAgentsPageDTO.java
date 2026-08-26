@@ -1,11 +1,11 @@
 package com.iptv.business.domain.dto.page;
 
-import java.util.Date;
-import java.io.Serializable;
-import lombok.Data;
-import java.io.Serializable;
-import lombok.EqualsAndHashCode;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.io.Serializable;
+import java.util.Date;
 
 /**
  * <p>
@@ -17,7 +17,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
-public class CustomAgentsPageDTO implements Serializable { {
+public class CustomAgentsPageDTO implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
