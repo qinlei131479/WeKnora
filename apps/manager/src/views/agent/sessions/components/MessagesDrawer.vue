@@ -10,16 +10,7 @@ interface MessageView extends MessagesVO {
   contentHtml: string;
 }
 
-interface KnowledgeBaseCitation extends Record<string, unknown> {
-  doc: string;
-  chunkId: string;
-  kbId: string;
-}
-
 const PAGE_SIZE = 30;
-const KNOWLEDGE_BASE_TAG_MAX_LENGTH = 4096;
-const KNOWLEDGE_BASE_DOC_MAX_LENGTH = 1024;
-const KNOWLEDGE_BASE_ID_MAX_LENGTH = 256;
 
 const props = withDefaults(
   defineProps<{
@@ -36,96 +27,17 @@ const emit = defineEmits<{
   (event: 'update:modelValue', value: boolean): void;
 }>();
 
-// 转义 HTML 特殊字符，避免引用内容破坏 HTML 结构
-const escapeHtml = (value: string): string => {
-  const entities: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;'
-  };
-  return value.replace(/[&<>"']/g, (character) => entities[character]);
-};
+// 将 <kb> 知识库引用转换为 Markdown 标签，并还原 doc 属性中的 HTML 转义字符
+const convertKnowledgeBaseCitationToMarkdown = (content: string): string => {
+  const decoder = document.createElement('textarea');
 
-// 文本过长时保留首尾并在中间省略
-const truncateMiddle = (value: string, maxLength = 13): string => {
-  const characters = Array.from(value);
-  if (characters.length <= maxLength) return value;
+  return content.replace(/<kb(?=\s)([^>]*)\/\s*>/gi, (tag, attributes: string) => {
+    const docMatch = attributes.match(/(?:^|\s)doc\s*=\s*(["'])(.*?)\1(?=\s|$)/i);
+    if (!docMatch) return tag;
 
-  const half = Math.floor((maxLength - 3) / 2);
-  const start = characters.slice(0, half + ((maxLength - 3) % 2)).join('');
-  return `${start}...${characters.slice(-half).join('')}`;
-};
-
-// 解析 <kb> 标签并提取知识库引用属性
-const parseKnowledgeBaseCitation = (source: string, start: number): { citation: KnowledgeBaseCitation; length: number } | undefined => {
-  if (source.slice(start, start + 3).toLowerCase() !== '<kb' || !/\s/.test(source[start + 3] || '')) return;
-
-  let quote = '';
-  let end = -1;
-  const maxEnd = Math.min(source.length, start + KNOWLEDGE_BASE_TAG_MAX_LENGTH);
-
-  for (let index = start + 3; index < maxEnd; index += 1) {
-    const character = source[index];
-    if (quote) {
-      if (character === quote) quote = '';
-      continue;
-    }
-    if (character === '"' || character === "'") {
-      quote = character;
-    } else if (character === '>') {
-      end = index;
-      break;
-    }
-  }
-
-  if (end < 0 || quote) return;
-
-  const tag = source.slice(start, end + 1);
-  if (!/\/\s*>$/.test(tag)) return;
-
-  const attributeSource = tag.slice(3).replace(/\/\s*>$/, '');
-  if (/\r|\n/.test(attributeSource)) return;
-
-  const attributePattern = /([A-Za-z_][\w-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
-  const attributes = Object.create(null) as Record<string, string>;
-  let cursor = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = attributePattern.exec(attributeSource)) !== null) {
-    if (!/^\s+$/.test(attributeSource.slice(cursor, match.index))) return;
-
-    const name = match[1].toLowerCase();
-    if (Object.prototype.hasOwnProperty.call(attributes, name)) return;
-    attributes[name] = match[2] ?? match[3] ?? '';
-    cursor = attributePattern.lastIndex;
-  }
-
-  if (attributeSource.slice(cursor).trim()) return;
-
-  const doc = attributes.doc;
-  const chunkId = attributes.chunk_id || attributes.chunkid;
-  const kbId = attributes.kb_id || attributes.kbid;
-  if (!doc || !chunkId || !kbId) return;
-  if (doc.length > KNOWLEDGE_BASE_DOC_MAX_LENGTH || chunkId.length > KNOWLEDGE_BASE_ID_MAX_LENGTH || kbId.length > KNOWLEDGE_BASE_ID_MAX_LENGTH) {
-    return;
-  }
-
-  return {
-    citation: { doc, chunkId, kbId },
-    length: tag.length
-  };
-};
-
-// <kb> 知识库引用转 html 展示
-const renderKnowledgeBaseCitation = (citation: KnowledgeBaseCitation): string => {
-  const doc = escapeHtml(citation.doc);
-  const chunkId = escapeHtml(citation.chunkId);
-  const kbId = escapeHtml(citation.kbId);
-  const displayDoc = escapeHtml(truncateMiddle(citation.doc));
-
-  return `<span class="message-citation message-citation--kb" data-kb-id="${kbId}" data-chunk-id="${chunkId}" data-doc="${doc}"><span class="message-citation__icon message-citation__icon--book" aria-hidden="true"></span><span class="message-citation__text">${displayDoc}</span></span>`;
+    decoder.innerHTML = docMatch[2];
+    return t('page.agent.sessions.message.knowledgeBaseCitation', { doc: decoder.value }, '[[知识库] {doc}](#)');
+  });
 };
 
 const markdown = new MarkdownIt({
@@ -133,22 +45,6 @@ const markdown = new MarkdownIt({
   linkify: true,
   breaks: true
 });
-
-markdown.inline.ruler.before('text', 'knowledge_base_citation', (inlineState, silent) => {
-  const result = parseKnowledgeBaseCitation(inlineState.src, inlineState.pos);
-  if (!result) return false;
-
-  if (!silent) {
-    const token = inlineState.push('knowledge_base_citation', 'span', 0);
-    token.meta = result.citation;
-  }
-  inlineState.pos += result.length;
-  return true;
-});
-
-markdown.renderer.rules.knowledge_base_citation = (tokens, index) => {
-  return renderKnowledgeBaseCitation(tokens[index].meta as KnowledgeBaseCitation);
-};
 
 const messagesContentRef = ref<HTMLElement>();
 const scrollContainerRef = ref<HTMLElement>();
@@ -190,7 +86,7 @@ const createMessageViews = (rows: MessagesVO[]): MessageView[] => {
     .reverse()
     .map((message) => ({
       ...message,
-      contentHtml: markdown.render(message.content || '')
+      contentHtml: markdown.render(convertKnowledgeBaseCitationToMarkdown(message.content || ''))
     }));
 };
 
@@ -287,7 +183,7 @@ onBeforeUnmount(resetMessages);
     v-model="visible"
     :size="860"
     :title="drawerTitle"
-    cancel-text="关闭"
+    :show-cancel="false"
     :show-confirm="false"
     @opened="loadInitialMessages"
     @closed="resetMessages"
@@ -556,58 +452,6 @@ onBeforeUnmount(resetMessages);
 
   :deep(tbody tr:last-child td) {
     border-bottom: 0;
-  }
-
-  :deep(.message-citation) {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    box-sizing: border-box;
-    margin: 0 0.06em;
-    padding: 0 5px;
-    font-size: 0.72em;
-    line-height: 1.45;
-    vertical-align: baseline;
-    background-clip: padding-box;
-    border-radius: 999px;
-    transform: translateY(-0.04em);
-  }
-
-  :deep(.message-citation--kb) {
-    position: relative;
-    color: var(--el-text-color-primary);
-    white-space: nowrap;
-    background-color: color-mix(in srgb, var(--el-text-color-primary) 4%, transparent);
-    border: 0;
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--el-text-color-primary) 10%, transparent);
-  }
-
-  :deep(.message-citation__icon) {
-    display: inline-block;
-    flex-shrink: 0;
-    width: 1em;
-    height: 1em;
-    background-color: currentcolor;
-    opacity: 0.68;
-    mask-repeat: no-repeat;
-    mask-position: center;
-    mask-size: contain;
-    -webkit-mask-repeat: no-repeat;
-    -webkit-mask-position: center;
-    -webkit-mask-size: contain;
-  }
-
-  :deep(.message-citation__icon--book) {
-    mask-image: url('@/assets/icons/svg/book.svg');
-    -webkit-mask-image: url('@/assets/icons/svg/book.svg');
-  }
-
-  :deep(.message-citation__text) {
-    max-width: 180px;
-    overflow: hidden;
-    line-height: 1.45;
-    white-space: nowrap;
-    text-overflow: ellipsis;
   }
 
   :deep(th[align='center']),

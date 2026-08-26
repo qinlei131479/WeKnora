@@ -4,6 +4,7 @@ import type { PageDomain, SessionsPageDTO, SessionsVO } from '@/types';
 import type { TenantsPageDTO, TenantsVO } from '@/types/api/data/tenants';
 import type { UsersPageDTO, UsersVO } from '@/types/api/data/users';
 import { Search } from 'lucide-vue-next';
+import DetailDrawer from './components/DetailDrawer.vue';
 import MessagesDrawer from './components/MessagesDrawer.vue';
 
 const state = reactive({
@@ -17,6 +18,7 @@ const state = reactive({
   page: { pageNum: 1, pageSize: 10, orderByColumn: 'createdAt', isAsc: 'desc' } as PageDomain,
   dateRange: [] as string[],
   sessionsVOs: [] as SessionsVO[],
+  detailDrawerVisible: false,
   messagesDrawerVisible: false,
   selectedSession: {} as SessionsVO,
   loading: false,
@@ -114,6 +116,11 @@ const getSessions = () => {
 const handleQuery = () => {
   state.page.pageNum = 1;
   getSessions();
+};
+
+const showDetail = (row: SessionsVO) => {
+  state.selectedSession = row;
+  state.detailDrawerVisible = true;
 };
 
 const showMessages = (row: SessionsVO) => {
@@ -244,7 +251,7 @@ onMounted(() => {
           :min-width="$dim('page.agent.sessions.table.operation', 140)"
         >
           <template #default="{ row }">
-            <el-button link type="primary">{{ $t('page.normal.detail', '详情') }}</el-button>
+            <el-button link type="primary" @click="showDetail(row)">{{ $t('page.normal.detail', '详情') }}</el-button>
             <el-button link type="primary" @click="showMessages(row)">{{ $t('page.agent.sessions.action.message', '消息') }}</el-button>
           </template>
         </el-table-column>
@@ -255,6 +262,7 @@ onMounted(() => {
       </template>
     </page-content>
 
+    <DetailDrawer v-model="state.detailDrawerVisible" :session="state.selectedSession" />
     <MessagesDrawer v-model="state.messagesDrawerVisible" :session="state.selectedSession" />
   </section>
 </template>

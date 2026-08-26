@@ -3,27 +3,21 @@
     v-model="visible"
     v-bind="$attrs"
     direction="rtl"
-    :title="props.title"
     :close-on-click-modal="false"
-    :show-close="true"
-    :data-kjsc-drawer-id="drawerId"
-    @open="handleOpen"
+    :modal-class="$style['modal']"
+    :header-class="$style['header']"
+    :body-class="bodyClass"
+    :data-kjsc-rtl-drawer-id="drawerId"
     @opened="handleOpened"
-    @close="handleClose"
     @closed="handleClosed"
-    @open-auto-focus="handleOpenAutoFocus"
-    @close-auto-focus="handleCloseAutoFocus"
-    @resize-start="handleResizeStart"
-    @resize="handleResize"
-    @resize-end="handleResizeEnd"
   >
-    <template v-if="$slots.header" #header="headerProps">
+    <template v-if="$slots['header'] && $attrs['with-header'] !== false" #header="headerProps">
       <slot name="header" v-bind="headerProps" />
     </template>
 
     <slot />
 
-    <template v-if="$slots.footer || props.showCancel || props.showConfirm" #footer>
+    <template v-if="$slots['footer'] || props.showCancel || props.showConfirm" #footer>
       <slot name="footer">
         <el-button v-if="props.showCancel" @click="handleCancel">
           {{ props.cancelText }}
@@ -47,7 +41,6 @@ defineOptions({
 const props = withDefaults(
   defineProps<{
     modelValue?: boolean;
-    title?: string;
     showCancel?: boolean;
     cancelText?: string;
     showConfirm?: boolean;
@@ -56,7 +49,6 @@ const props = withDefaults(
   }>(),
   {
     modelValue: false,
-    title: '',
     showCancel: true,
     cancelText: '取消',
     showConfirm: true,
@@ -67,21 +59,23 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: boolean): void;
-  (event: 'open'): void;
-  (event: 'opened'): void;
-  (event: 'close'): void;
-  (event: 'closed'): void;
-  (event: 'open-auto-focus'): void;
-  (event: 'close-auto-focus'): void;
-  (event: 'resize-start', mouseEvent: MouseEvent, size: number): void;
-  (event: 'resize', mouseEvent: MouseEvent, size: number): void;
-  (event: 'resize-end', mouseEvent: MouseEvent, size: number): void;
   (event: 'cancel'): void;
   (event: 'confirm'): void;
 }>();
 
 const drawerId = useId();
+const attrs = useAttrs();
+const slots = useSlots();
+const styles = useCssModule();
 let loadingInstance: ReturnType<typeof ElLoading.service> | undefined;
+
+const bodyClass = computed(() => {
+  return [
+    styles.body,
+    (!slots['header'] || attrs['with-header'] === false) && styles['body__no-header'],
+    !slots['footer'] && styles['body__no-footer']
+  ];
+});
 
 const visible = computed({
   get: () => props.modelValue,
@@ -101,7 +95,7 @@ const syncLoading = () => {
 
   if (loadingInstance) return;
 
-  const target = document.querySelector<HTMLElement>(`[data-kjsc-drawer-id="${drawerId}"]`);
+  const target = document.querySelector<HTMLElement>(`[data-kjsc-rtl-drawer-id="${drawerId}"]`);
   if (!target) return;
 
   loadingInstance = ElLoading.service({
@@ -110,42 +104,12 @@ const syncLoading = () => {
   });
 };
 
-const handleOpen = () => {
-  emit('open');
-};
-
 const handleOpened = () => {
-  emit('opened');
   syncLoading();
-};
-
-const handleClose = () => {
-  emit('close');
 };
 
 const handleClosed = () => {
   closeLoading();
-  emit('closed');
-};
-
-const handleOpenAutoFocus = () => {
-  emit('open-auto-focus');
-};
-
-const handleCloseAutoFocus = () => {
-  emit('close-auto-focus');
-};
-
-const handleResizeStart = (mouseEvent: MouseEvent, size: number) => {
-  emit('resize-start', mouseEvent, size);
-};
-
-const handleResize = (mouseEvent: MouseEvent, size: number) => {
-  emit('resize', mouseEvent, size);
-};
-
-const handleResizeEnd = (mouseEvent: MouseEvent, size: number) => {
-  emit('resize-end', mouseEvent, size);
 };
 
 const handleCancel = () => {
@@ -167,3 +131,27 @@ watch(
 
 onBeforeUnmount(closeLoading);
 </script>
+
+<style lang="scss" module>
+.modal {
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.body {
+  padding: 0 20px;
+
+  &__no-header {
+    margin-top: 20px;
+  }
+
+  &__no-footer {
+    margin-bottom: 20px;
+  }
+}
+</style>

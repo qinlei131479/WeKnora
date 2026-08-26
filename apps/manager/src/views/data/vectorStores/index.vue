@@ -3,7 +3,7 @@ import { API } from '@/api';
 import type { PageDomain, VectorStoresPageDTO, VectorStoresVO } from '@/types';
 import type { TenantsPageDTO, TenantsVO } from '@/types/api/data/tenants';
 import { Search } from 'lucide-vue-next';
-import DetailDialog from './components/DetailDialog.vue';
+import DetailDrawer from './components/DetailDrawer.vue';
 
 const state = reactive({
   keyword: '',
@@ -158,7 +158,7 @@ onMounted(() => {
       </template>
     </page-content>
 
-    <DetailDialog v-model:visible="state.detailVisible" :row="state.detail" />
+    <DetailDrawer v-model="state.detailVisible" :row="state.detail" />
   </section>
 </template>
 
