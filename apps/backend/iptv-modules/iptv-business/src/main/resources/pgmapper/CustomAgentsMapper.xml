@@ -29,6 +29,7 @@
         <include refid="Base_Column_List"/>
         FROM custom_agents
         <where>
+            deleted_at IS NULL
             <if test="param.id != null and param.id != ''">
                 AND id ILIKE CONCAT('%', #{param.id}, '%')
             </if>
@@ -56,8 +57,12 @@
             <if test="param.createdAt != null">
                 AND created_at = #{param.createdAt}
             </if>
-            <if test="param.updatedAt != null">
-                AND updated_at = #{param.updatedAt}
+
+            <if test="param.createdAtStart != null">
+                AND created_at &gt;= #{param.createdAtStart}
+            </if>
+            <if test="param.updatedAtEnd != null">
+                AND updated_at &lt;= #{param.updatedAtEnd}
             </if>
             <if test="param.deletedAt != null">
                 AND deleted_at = #{param.deletedAt}
