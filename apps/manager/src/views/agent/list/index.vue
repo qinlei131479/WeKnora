@@ -84,6 +84,17 @@ const handleQuery = () => {
   getCustomAgents();
 };
 
+const resetQuery = () => {
+  state.tenantKeyword = '';
+  state.dateRange = [];
+  state.tenantsVOs.length = 0;
+  delete state.tenantsDto.name;
+  delete state.customAgentsDto.name;
+  delete state.customAgentsDto.tenantId;
+  delete state.customAgentsDto.createdAtStart;
+  delete state.customAgentsDto.createdAtEnd;
+};
+
 const showDetail = (row: CustomAgentsVO) => {
   state.selectedAgent = row;
   state.detailDrawerVisible = true;
@@ -137,6 +148,7 @@ onMounted(() => {
             :end-placeholder="$t('page.agent.list.search.endDatePlaceholder', '创建时间截止')"
           />
 
+          <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
           <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
         </div>
       </template>

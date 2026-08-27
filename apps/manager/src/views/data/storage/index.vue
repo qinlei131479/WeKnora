@@ -73,6 +73,13 @@ const handleQuery = () => {
   getBackends();
 };
 
+const resetQuery = () => {
+  state.keyword = '';
+  state.tenantsVOs.length = 0;
+  delete state.tenantsDto.name;
+  delete state.backendsDto.tenantId;
+};
+
 const detailOpen = ref(false);
 const detailRow = ref<StorageBackendsVO>({});
 
@@ -106,6 +113,7 @@ onMounted(() => {
             @clear="onClearTenants"
             @input="onInput"
           />
+          <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
           <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
         </div>
       </template>

@@ -118,6 +118,21 @@ const handleQuery = () => {
   getSessions();
 };
 
+const resetQuery = () => {
+  state.userKeyword = '';
+  state.tenantKeyword = '';
+  state.dateRange = [];
+  state.usersVOs.length = 0;
+  state.tenantsVOs.length = 0;
+  delete state.usersDto.name;
+  delete state.tenantsDto.name;
+  delete state.sessionsDto.title;
+  delete state.sessionsDto.userId;
+  delete state.sessionsDto.tenantId;
+  delete state.sessionsDto.createdAtStart;
+  delete state.sessionsDto.createdAtEnd;
+};
+
 const showDetail = (row: SessionsVO) => {
   state.selectedSession = row;
   state.detailDrawerVisible = true;
@@ -192,6 +207,7 @@ onMounted(() => {
             :end-placeholder="$t('page.agent.sessions.search.endDatePlaceholder', '创建时间截止')"
           />
 
+          <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
           <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
         </div>
       </template>
