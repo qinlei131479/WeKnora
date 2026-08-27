@@ -99,6 +99,12 @@ public class KnowledgeBasesVO implements Serializable {
     private String vlmConfig;
 
     /**
+     * 视觉语言模型
+     */
+    @Schema(description = "视觉语言模型")
+    private Models vlmModel;
+
+    /**
      * 信息抽取配置
      */
     @Schema(description = "信息抽取配置")
@@ -169,6 +175,12 @@ public class KnowledgeBasesVO implements Serializable {
      */
     @Schema(description = "语音识别（ASR）配置")
     private String asrConfig;
+
+    /**
+     * 语音识别（ASR）模型
+     */
+    @Schema(description = "语音识别（ASR）模型")
+    private Models asrModel;
 
     /**
      * 绑定的向量库实例 ID（创建后通常不可改）
