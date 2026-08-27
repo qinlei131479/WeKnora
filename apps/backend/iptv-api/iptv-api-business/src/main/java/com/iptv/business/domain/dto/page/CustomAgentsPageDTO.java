@@ -75,6 +75,12 @@ public class CustomAgentsPageDTO implements Serializable {
     @Schema(description = "创建时间")
     private Date createdAt;
 
+    @Schema(description = "创建时间 start")
+    private Date createdAtStart;
+
+    @Schema(description = "创建时间 end")
+    private Date createdAtEnd;
+
     /**
      * 最后更新时间
      */
