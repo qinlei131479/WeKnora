@@ -83,15 +83,17 @@ const apiKeyLabel = computed(() =>
     : t('page.data.webSearch.form.apiKeyOptional', 'API Key（可选）')
 );
 
+/** 密钥框有新值，或编辑态库里已经配过密钥 */
+const hasUsableApiKey = computed(() => !!form.apiKey || (isEdit.value && apiKeyConfigured.value));
+
 /**
- * 编辑模式可以直接用库里已存的凭证测试；
- * 新增模式必须先把必填项填完，否则请求发过去必然失败，白跑一趟。
+ * 必填项没填完就禁掉测试，避免请求发出去必然失败。
+ * 编辑态可以用已保存的密钥，不必再填一遍。
  */
 const canTest = computed(() => {
   const type = selectedProviderType.value;
   if (!type) return false;
-  if (isEdit.value) return true;
-  if (type.requiresApiKey && !form.apiKey) return false;
+  if (type.requiresApiKey && !hasUsableApiKey.value) return false;
   if (type.requiresEngineId && !form.engineId) return false;
   if (type.requiresBaseUrl && !form.baseUrl) return false;
 
@@ -101,34 +103,60 @@ const canTest = computed(() => {
   return !missingConfigField;
 });
 
+type FormRule = { required: boolean; message: string; trigger: string };
+
 /** API Key 只在「新增 + 该提供商强制要求」时参与必填校验 */
-const rules = computed(() => ({
-  name: [{ required: true, message: t('page.data.webSearch.form.namePlaceholder', '请输入配置名称'), trigger: 'blur' }],
-  provider: [
-    { required: true, message: t('page.data.webSearch.form.providerPlaceholder', '请选择提供商'), trigger: 'change' }
-  ],
-  apiKey: [
-    {
-      required: !isEdit.value && !!selectedProviderType.value?.requiresApiKey,
-      message: t('page.data.webSearch.form.apiKeyPlaceholder', '请输入 API Key'),
-      trigger: 'blur'
-    }
-  ],
-  engineId: [
-    {
-      required: !!selectedProviderType.value?.requiresEngineId,
-      message: t('page.data.webSearch.form.engineIdPlaceholder', '请输入 Engine ID'),
-      trigger: 'blur'
-    }
-  ],
-  baseUrl: [
-    {
-      required: !!selectedProviderType.value?.requiresBaseUrl,
-      message: t('page.data.webSearch.form.baseUrlPlaceholder', '请输入 Base URL'),
-      trigger: 'blur'
-    }
-  ]
-}));
+const rules = computed(() => {
+  const result: Record<string, FormRule[]> = {
+    name: [
+      { required: true, message: t('page.data.webSearch.form.namePlaceholder', '请输入配置名称'), trigger: 'blur' }
+    ],
+    provider: [
+      { required: true, message: t('page.data.webSearch.form.providerPlaceholder', '请选择提供商'), trigger: 'change' }
+    ],
+    apiKey: [
+      {
+        required: !isEdit.value && !!selectedProviderType.value?.requiresApiKey,
+        message: t('page.data.webSearch.form.apiKeyPlaceholder', '请输入 API Key'),
+        trigger: 'blur'
+      }
+    ],
+    engineId: [
+      {
+        required: !!selectedProviderType.value?.requiresEngineId,
+        message: t('page.data.webSearch.form.engineIdPlaceholder', '请输入 Engine ID'),
+        trigger: 'blur'
+      }
+    ],
+    baseUrl: [
+      {
+        required: !!selectedProviderType.value?.requiresBaseUrl,
+        message: t('page.data.webSearch.form.baseUrlPlaceholder', '请输入 Base URL'),
+        trigger: 'blur'
+      }
+    ]
+  };
+
+  // configFields 是后端下发的动态字段，必填项要挂到 extraConfig.<key> 上才能被表单拦住
+  (selectedProviderType.value?.configFields ?? []).forEach((field: WebSearchProviderConfigFieldVO) => {
+    if (!field.key || !field.required) return;
+
+    const isSelect = field.type === 'select';
+    const label = field.label ?? field.key;
+
+    result[`extraConfig.${field.key}`] = [
+      {
+        required: true,
+        message: isSelect
+          ? t('page.data.webSearch.form.configFieldSelectRequired', { label }, `请选择${label}`)
+          : t('page.data.webSearch.form.configFieldInputRequired', { label }, `请输入${label}`),
+        trigger: isSelect ? 'change' : 'blur'
+      }
+    ];
+  });
+
+  return result;
+});
 
 const resetForm = () => {
   form.id = undefined;
@@ -269,6 +297,24 @@ watch(
   }
 );
 
+/**
+ * 更新接口不处理凭证，编辑时填了新密钥必须再走一次凭证接口，否则会被静默丢弃。
+ * 返回 false 表示密钥没存上，此时基本信息已保存，应保留弹窗让用户重试。
+ */
+const saveApiKeyIfFilled = async () => {
+  if (!form.id || !form.apiKey) return true;
+
+  try {
+    await API.WebSearchProviders.updateOrQueryCredentials({ id: form.id, apiKey: form.apiKey });
+    apiKeyConfigured.value = true;
+    form.apiKey = '';
+    return true;
+  } catch (error) {
+    console.error('[WebSearch] save credential failed:', error);
+    return false;
+  }
+};
+
 const handleSave = async () => {
   try {
     await saveFormRef.value?.validate?.();
@@ -289,32 +335,41 @@ const handleSave = async () => {
     parameters: buildParameters(!isEdit.value)
   };
 
-  const request = isEdit.value ? API.WebSearchProviders.update(payload) : API.WebSearchProviders.insert(payload);
+  try {
+    if (isEdit.value) {
+      await API.WebSearchProviders.update(payload);
 
-  request
-    .then(() => {
-      proxy?.$modal?.msgSuccess(
-        isEdit.value
-          ? t('page.normal.confirmInfo.updateSuccess', '修改成功')
-          : t('page.normal.confirmInfo.addSuccess', '新增成功')
-      );
-      emit('success');
-      dialogVisible.value = false;
-    })
-    .catch((error) => {
-      console.error('[WebSearch] save failed:', error);
-    })
-    .finally(() => {
-      saving.value = false;
-    });
+      if (!(await saveApiKeyIfFilled())) {
+        // 基本信息已落库，先刷新列表，弹窗留着让用户重试密钥
+        emit('success');
+        return;
+      }
+    } else {
+      await API.WebSearchProviders.insert(payload);
+    }
+
+    proxy?.$modal?.msgSuccess(
+      isEdit.value
+        ? t('page.normal.confirmInfo.updateSuccess', '修改成功')
+        : t('page.normal.confirmInfo.addSuccess', '新增成功')
+    );
+    emit('success');
+    dialogVisible.value = false;
+  } catch (error) {
+    console.error('[WebSearch] save failed:', error);
+  } finally {
+    saving.value = false;
+  }
 };
 
 const handleTest = () => {
   testing.value = true;
   testResult.value = null;
 
+  // 密钥框有新值时走 testRaw，把当前表单（含未保存密钥）一起测；
+  // 否则编辑态用库里已存凭证，测不到未保存的参数改动。
   const request =
-    isEdit.value && form.id
+    isEdit.value && form.id && !form.apiKey
       ? API.WebSearchProviders.testById(form.id)
       : API.WebSearchProviders.testRaw({
           provider: form.provider,
@@ -497,7 +552,9 @@ const handleRemoveApiKey = () => {
             type="password"
             show-password
             autocomplete="new-password"
-            :placeholder="$t('page.data.webSearch.form.apiKeyReplacePlaceholder', '输入新的 API Key 后点击「更新密钥」')"
+            :placeholder="
+              $t('page.data.webSearch.form.apiKeyReplacePlaceholder', '输入新的 API Key，点击「更新密钥」或直接保存均可生效')
+            "
           />
 
           <div class="credential-actions">
@@ -553,7 +610,12 @@ const handleRemoveApiKey = () => {
 
       <!-- configFields 由后端下发，字段数量和类型都不固定，只能循环渲染 -->
       <template v-if="selectedProviderType?.configFields?.length">
-        <el-form-item v-for="field in selectedProviderType.configFields" :key="field.key" :label="field.label">
+        <el-form-item
+          v-for="field in selectedProviderType.configFields"
+          :key="field.key"
+          :label="field.label"
+          :prop="field.key ? `extraConfig.${field.key}` : undefined"
+        >
           <el-select
             v-if="field.type === 'select'"
             v-model="form.extraConfig[field.key!]"
