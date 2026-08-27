@@ -9,6 +9,7 @@ from typing import Any
 import asyncpg
 import httpx
 import pytest
+from yuxi.storage.postgres.naming import prefix_sql
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.e2e, pytest.mark.slow]
 
@@ -178,7 +179,8 @@ async def _assert_run_persisted(
     conn = await asyncpg.connect(_postgres_dsn())
     try:
         row = await conn.fetchrow(
-            """
+            prefix_sql(
+                """
             SELECT
                 ar.id,
                 ar.request_id,
@@ -201,7 +203,8 @@ async def _assert_run_persisted(
             LEFT JOIN messages input_msg ON input_msg.id = ar.input_message_id
             LEFT JOIN messages output_msg ON output_msg.id = ar.output_message_id
             WHERE ar.id = $1
-            """,
+            """
+            ),
             run_id,
         )
         assert row, f"agent_runs row missing for {run_id}"

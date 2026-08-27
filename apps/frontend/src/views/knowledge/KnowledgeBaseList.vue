@@ -826,6 +826,7 @@ import { isContextualGuideDone, markContextualGuideDone } from '@/config/context
 import { useTenantModelReadiness } from '@/composables/useTenantModelReadiness'
 import { useI18n } from 'vue-i18n'
 import { useResourcePins } from '@/composables/useResourcePins'
+import { isHiddenKbSurface } from '@/utils/weknoraFeatures'
 
 const router = useRouter()
 const route = useRoute()
@@ -854,8 +855,9 @@ const { scope: spaceSelection, creator: creatorFilter } = useListUrlState({
   defaultCreator: 'all',
 })
 type KbSurface = 'platform' | 'runtime' | 'skills' | 'tools' | 'mcp'
+const KB_SURFACES: KbSurface[] = ['platform', 'runtime', 'skills', 'tools', 'mcp']
 const { surface } = useListSurface<KbSurface>(
-  () => ['platform', 'runtime', 'skills', 'tools', 'mcp'],
+  () => KB_SURFACES.filter((item) => !isHiddenKbSurface(item)),
   'platform',
 )
 const surfaceNavItems = computed(() => [
@@ -864,7 +866,7 @@ const surfaceNavItems = computed(() => [
   { value: 'skills', label: t('knowledgeList.tabs.skills'), shortLabel: t('knowledgeList.tabs.short.skills'), icon: 'app' },
   { value: 'tools', label: t('knowledgeList.tabs.tools'), shortLabel: t('knowledgeList.tabs.short.tools'), icon: 'tools' },
   { value: 'mcp', label: t('knowledgeList.tabs.mcp'), shortLabel: t('knowledgeList.tabs.short.mcp'), icon: 'link' },
-])
+].filter((item) => !isHiddenKbSurface(item.value)))
 
 // Per-user favorites + recents (localStorage-backed). isFavorite & touchRecent
 // are wired into card render and click handlers below.

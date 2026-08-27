@@ -20,6 +20,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from yuxi.storage.minio.client import normalize_public_minio_url
 from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive
+from yuxi.storage.postgres.naming import ht
 
 Base = declarative_base()
 
@@ -33,7 +34,7 @@ AGENT_RUN_TERMINAL_STATUSES = ("completed", "failed", "cancelled", "interrupted"
 class Department(Base):
     """部门模型"""
 
-    __tablename__ = "departments"
+    __tablename__ = ht("departments")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(50), nullable=False, unique=True, index=True)
@@ -55,7 +56,7 @@ class Department(Base):
 class User(Base):
     """用户模型"""
 
-    __tablename__ = "users"
+    __tablename__ = ht("users")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     username = Column(String, nullable=False, unique=True, index=True)  # 显示名称
@@ -64,7 +65,7 @@ class User(Base):
     avatar = Column(String, nullable=True)  # 头像URL
     password_hash = Column(String, nullable=False)
     role = Column(String, nullable=False, default="user")  # 角色: superadmin, admin, user
-    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True)  # 部门ID
+    department_id = Column(Integer, ForeignKey(f"{ht('departments')}.id"), nullable=True)  # 部门ID
     created_at = Column(DateTime, default=utc_now_naive)
     last_login = Column(DateTime, nullable=True)
 
@@ -140,10 +141,10 @@ class User(Base):
 class AgentEnv(Base):
     """用户级 Agent 沙盒环境变量"""
 
-    __tablename__ = "agent_envs"
+    __tablename__ = ht("agent_envs")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    uid = Column(String, ForeignKey("users.uid"), nullable=False, unique=True, index=True)
+    uid = Column(String, ForeignKey(f"{ht('users')}.uid"), nullable=False, unique=True, index=True)
     env = Column(JSON, nullable=False, default=dict)
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
@@ -162,10 +163,10 @@ class AgentEnv(Base):
 class UserConfig(Base):
     """用户级配置"""
 
-    __tablename__ = "user_config"
+    __tablename__ = ht("user_config")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    uid = Column(String, ForeignKey("users.uid"), nullable=False, unique=True, index=True)
+    uid = Column(String, ForeignKey(f"{ht('users')}.uid"), nullable=False, unique=True, index=True)
     enable_memory = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
@@ -184,7 +185,7 @@ class UserConfig(Base):
 class Agent(Base):
     """用户可管理、可授权、可切换的智能体。"""
 
-    __tablename__ = "agents"
+    __tablename__ = ht("agents")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     slug = Column(String(80), nullable=False, unique=True, index=True)
@@ -232,7 +233,7 @@ class Agent(Base):
 class Skill(Base):
     """Skill 元数据模型（内容存文件系统，索引存数据库）"""
 
-    __tablename__ = "skills"
+    __tablename__ = ht("skills")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     slug = Column(String(128), nullable=False, unique=True, index=True, comment="技能唯一标识（目录名）")
@@ -279,7 +280,7 @@ class Skill(Base):
 class Conversation(Base):
     """Conversation table - 对话表"""
 
-    __tablename__ = "conversations"
+    __tablename__ = ht("conversations")
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment="Primary key")
     thread_id = Column(String(64), unique=True, index=True, nullable=False, comment="Thread ID (UUID)")
@@ -318,16 +319,16 @@ class Conversation(Base):
 class SubagentThread(Base):
     """SubagentThread table - 子智能体长期线程归属关系表"""
 
-    __tablename__ = "subagent_threads"
+    __tablename__ = ht("subagent_threads")
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment="Primary key")
     uid = Column(String(64), index=True, nullable=False, comment="UID")
     parent_conversation_id = Column(
-        Integer, ForeignKey("conversations.id"), nullable=False, index=True, comment="Parent conversation ID"
+        Integer, ForeignKey(f"{ht('conversations')}.id"), nullable=False, index=True, comment="Parent conversation ID"
     )
     child_conversation_id = Column(
         Integer,
-        ForeignKey("conversations.id"),
+        ForeignKey(f"{ht('conversations')}.id"),
         nullable=False,
         unique=True,
         index=True,
@@ -356,11 +357,11 @@ class SubagentThread(Base):
 class Message(Base):
     """Message table - 消息表"""
 
-    __tablename__ = "messages"
+    __tablename__ = ht("messages")
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment="Primary key")
     conversation_id = Column(
-        Integer, ForeignKey("conversations.id"), nullable=False, index=True, comment="Conversation ID"
+        Integer, ForeignKey(f"{ht('conversations')}.id"), nullable=False, index=True, comment="Conversation ID"
     )
     role = Column(String(20), nullable=False, comment="Message role: user/assistant/system/tool")
     content = Column(Text, nullable=False, comment="Message content")
@@ -369,7 +370,7 @@ class Message(Base):
     token_count = Column(Integer, nullable=True, comment="Token count (optional)")
     extra_metadata = Column(JSON, nullable=True, comment="Additional metadata (complete message dump)")
     image_content = Column(Text, nullable=True, comment="Base64 encoded image content for multimodal messages")
-    run_id = Column(String(64), ForeignKey("agent_runs.id"), nullable=True, index=True, comment="Agent run ID")
+    run_id = Column(String(64), ForeignKey(f"{ht('agent_runs')}.id"), nullable=True, index=True, comment="Agent run ID")
     request_id = Column(String(64), nullable=True, index=True, comment="Request ID for idempotency")
     delivery_status = Column(String(32), nullable=False, default="complete", comment="Message status")
 
@@ -405,10 +406,10 @@ class Message(Base):
 class ToolCall(Base):
     """ToolCall table - 工具调用表"""
 
-    __tablename__ = "tool_calls"
+    __tablename__ = ht("tool_calls")
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment="Primary key")
-    message_id = Column(Integer, ForeignKey("messages.id"), nullable=False, index=True, comment="Message ID")
+    message_id = Column(Integer, ForeignKey(f"{ht('messages')}.id"), nullable=False, index=True, comment="Message ID")
     langgraph_tool_call_id = Column(String(100), nullable=True, index=True, comment="LangGraph tool_call_id")
     tool_name = Column(String(100), nullable=False, comment="Tool name")
     tool_input = Column(JSON, nullable=True, comment="Tool input parameters")
@@ -437,11 +438,11 @@ class ToolCall(Base):
 class ConversationStats(Base):
     """ConversationStats table - 对话统计表"""
 
-    __tablename__ = "conversation_stats"
+    __tablename__ = ht("conversation_stats")
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment="Primary key")
     conversation_id = Column(
-        Integer, ForeignKey("conversations.id"), unique=True, nullable=False, comment="Conversation ID"
+        Integer, ForeignKey(f"{ht('conversations')}.id"), unique=True, nullable=False, comment="Conversation ID"
     )
     message_count = Column(Integer, default=0, comment="Total message count")
     total_tokens = Column(Integer, default=0, comment="Total tokens used")
@@ -469,10 +470,10 @@ class ConversationStats(Base):
 class OperationLog(Base):
     """操作日志模型"""
 
-    __tablename__ = "operation_logs"
+    __tablename__ = ht("operation_logs")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey(f"{ht('users')}.id"), nullable=False)
     operation = Column(String, nullable=False)
     details = Column(Text, nullable=True)
     ip_address = Column(String, nullable=True)
@@ -495,11 +496,11 @@ class OperationLog(Base):
 class MessageFeedback(Base):
     """Message feedback table - 消息反馈表"""
 
-    __tablename__ = "message_feedbacks"
+    __tablename__ = ht("message_feedbacks")
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment="Primary key")
     message_id = Column(
-        Integer, ForeignKey("messages.id"), nullable=False, index=True, comment="Message ID being rated"
+        Integer, ForeignKey(f"{ht('messages')}.id"), nullable=False, index=True, comment="Message ID being rated"
     )
     uid = Column(String(64), nullable=False, index=True, comment="UID who provided feedback")
     rating = Column(String(10), nullable=False, comment="Feedback rating: like or dislike")
@@ -523,7 +524,7 @@ class MessageFeedback(Base):
 class MCPServer(Base):
     """MCP 服务器配置模型"""
 
-    __tablename__ = "mcp_servers"
+    __tablename__ = ht("mcp_servers")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     slug = Column(String(100), nullable=False, unique=True, index=True, comment="稳定标识")
@@ -626,7 +627,7 @@ class MCPServer(Base):
 class ModelProvider(Base):
     """模型供应商配置，存储 provider 基础信息、模型端点和可用模型。"""
 
-    __tablename__ = "model_providers"
+    __tablename__ = ht("model_providers")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     provider_id = Column(String(100), nullable=False, unique=True, index=True, comment="供应商稳定标识")
@@ -687,7 +688,7 @@ class ModelProvider(Base):
 class ConfigOption(Base):
     """系统定义、管理员维护值的通用配置项。"""
 
-    __tablename__ = "config_options"
+    __tablename__ = ht("config_options")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     key = Column(String(100), nullable=False, unique=True, index=True)
@@ -702,7 +703,7 @@ class ConfigOption(Base):
 
 
 class TaskRecord(Base):
-    __tablename__ = "tasks"
+    __tablename__ = ht("tasks")
 
     id = Column(String(32), primary_key=True)
     name = Column(String(255), nullable=False)
@@ -747,15 +748,15 @@ class TaskRecord(Base):
 class APIKey(Base):
     """API Key 模型"""
 
-    __tablename__ = "api_keys"
+    __tablename__ = ht("api_keys")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     key_hash = Column(String(64), nullable=False, unique=True, index=True)
     key_prefix = Column(String(16), nullable=False)
     name = Column(String(100), nullable=False)
 
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    department_id = Column(Integer, ForeignKey("departments.id"), nullable=True, index=True)
+    user_id = Column(Integer, ForeignKey(f"{ht('users')}.id"), nullable=False, index=True)
+    department_id = Column(Integer, ForeignKey(f"{ht('departments')}.id"), nullable=True, index=True)
 
     expires_at = Column(DateTime, nullable=True)
     is_enabled = Column(Boolean, nullable=False, default=True)
@@ -794,7 +795,7 @@ class APIKey(Base):
 class CLIAuthSession(Base):
     """CLI 浏览器授权会话。"""
 
-    __tablename__ = "cli_auth_sessions"
+    __tablename__ = ht("cli_auth_sessions")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     device_code_hash = Column(String(64), nullable=False, unique=True, index=True)
@@ -802,8 +803,8 @@ class CLIAuthSession(Base):
     status = Column(String(32), nullable=False, default="pending", index=True)
     key_name = Column(String(100), nullable=False)
 
-    approved_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
-    api_key_id = Column(Integer, ForeignKey("api_keys.id"), nullable=True, index=True)
+    approved_user_id = Column(Integer, ForeignKey(f"{ht('users')}.id"), nullable=True, index=True)
+    api_key_id = Column(Integer, ForeignKey(f"{ht('api_keys')}.id"), nullable=True, index=True)
 
     created_at = Column(DateTime, default=utc_now_naive, nullable=False)
     expires_at = Column(DateTime, nullable=False)
@@ -831,7 +832,7 @@ class CLIAuthSession(Base):
 class AgentRun(Base):
     """AgentRun table - 运行任务表"""
 
-    __tablename__ = "agent_runs"
+    __tablename__ = ht("agent_runs")
 
     id = Column(String(64), primary_key=True, comment="Run ID (UUID)")
     conversation_thread_id = Column(String(64), index=True, nullable=False, comment="Conversation thread ID snapshot")
@@ -850,12 +851,12 @@ class AgentRun(Base):
     external_id = Column(String(128), nullable=True, index=True, comment="Source-specific external ID snapshot")
     origin_metadata = Column(JSON, nullable=False, default=dict, comment="Immutable origin metadata snapshot")
     conversation_id = Column(
-        Integer, ForeignKey("conversations.id"), nullable=True, index=True, comment="Conversation ID"
+        Integer, ForeignKey(f"{ht('conversations')}.id"), nullable=True, index=True, comment="Conversation ID"
     )
     created_by_run_id = Column(String(64), nullable=True, index=True, comment="Run that created this run")
     subagent_thread_relation_id = Column(
         Integer,
-        ForeignKey("subagent_threads.id"),
+        ForeignKey(f"{ht('subagent_threads')}.id"),
         nullable=True,
         index=True,
         comment="Subagent thread relation record ID",
@@ -924,7 +925,7 @@ class AgentRunRequest(Base):
     外部统一以 request_id 作为幂等键引用；id 为自增主键，仅用于 FIFO 排序。
     """
 
-    __tablename__ = "agent_run_requests"
+    __tablename__ = ht("agent_run_requests")
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment="Primary key")
     request_id = Column(String(64), unique=True, index=True, nullable=False, comment="幂等请求 ID")
@@ -947,8 +948,8 @@ class AgentRunRequest(Base):
         default="queued",
         comment="请求状态: queued/dispatched/cancelled/rejected/failed",
     )
-    input_message_id = Column(Integer, ForeignKey("messages.id"), nullable=False, comment="关联输入消息 ID")
-    dispatched_run_id = Column(String(64), ForeignKey("agent_runs.id"), nullable=True, comment="已派发的 AgentRun ID")
+    input_message_id = Column(Integer, ForeignKey(f"{ht('messages')}.id"), nullable=False, comment="关联输入消息 ID")
+    dispatched_run_id = Column(String(64), ForeignKey(f"{ht('agent_runs')}.id"), nullable=True, comment="已派发的 AgentRun ID")
     input_payload = Column(JSON, nullable=False, default=dict, comment="原始输入载荷快照")
     error_message = Column(Text, nullable=True, comment="rejected/failed 时的错误信息")
     created_at = Column(DateTime, nullable=False, default=utc_now_naive, comment="创建时间")

@@ -4,6 +4,7 @@ import { VectorStoresDTO } from './vectorStores';
 
 export type VectorStoreSource = 'env' | 'user' | 'shared' | 'unavailable';
 export type VectorStoreStatus = 'available' | 'unavailable';
+export type KnowledgeBaseType = 'document' | 'faq' | 'wiki';
 
 interface KnowledgeBaseSimple {
   /**
@@ -67,7 +68,7 @@ interface KnowledgeBaseSimple {
   /**
    * 知识库类型（document/faq/wiki 等）
    */
-  type?: string;
+  type?: KnowledgeBaseType;
 
   /**
    * 是否置顶

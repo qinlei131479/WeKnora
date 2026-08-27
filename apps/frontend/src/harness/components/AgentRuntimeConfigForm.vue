@@ -399,6 +399,7 @@ import {
   isSingleSelectAgentConfig
 } from '@harness/utils/agentConfigUtils'
 import { storeToRefs } from 'pinia'
+import { knowledgeBasesLocation } from '@/utils/weknoraFeatures'
 
 const props = defineProps({
   segment: {
@@ -501,16 +502,16 @@ const navigateToConfigPage = (kind) => {
   setTimeout(() => {
     switch (kind) {
       case 'knowledges':
-        router.push({ path: '/platform/knowledge-bases', query: { surface: 'runtime' } })
+        router.push(knowledgeBasesLocation('runtime'))
         break
       case 'tools':
-        router.push({ path: '/platform/knowledge-bases', query: { surface: 'tools' } })
+        router.push(knowledgeBasesLocation('tools'))
         break
       case 'mcps':
-        router.push({ path: '/platform/knowledge-bases', query: { surface: 'mcp' } })
+        router.push(knowledgeBasesLocation('mcp'))
         break
       case 'skills':
-        router.push({ path: '/platform/knowledge-bases', query: { surface: 'skills' } })
+        router.push(knowledgeBasesLocation('skills'))
         break
       case 'subagents':
         router.push({ path: '/platform/harness/agents', query: { tab: 'agents' } })

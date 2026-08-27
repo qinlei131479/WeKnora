@@ -6,8 +6,8 @@ x-api-worker-env: &api-worker-env
   LITE_MODE: ${LITE_MODE:-false}
   RUNNING_IN_DOCKER: "true"
   YUXI_ENV: development
-  # 密码含 @/# 时必须百分号编码。留空则由 apps/agent-harness/scripts/docker-env.py 按
-  # AGENT_HARNESS_DB_NAME / AGENT_HARNESS_REDIS_DB 自动拼接，切勿用未编码的 ${DB_PASSWORD} 内插。
+  # 留空则由 docker-env.py 按 DB_NAME（WeKnora 库）/ AGENT_HARNESS_REDIS_DB 拼接。
+  # harness 业务表使用 h_ 前缀，与 WeKnora 表隔离；旧库 agent_harness 不会被删除。
   POSTGRES_URL: ${POSTGRES_URL:-}
   REDIS_URL: ${REDIS_URL:-}
   NEO4J_URI: ${NEO4J_URI:-bolt://graph:7687}

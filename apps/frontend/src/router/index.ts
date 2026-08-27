@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { autoSetup, getCurrentUser, userInfoFromApi } from '@/api/auth'
-import { getFeatureFlags } from '@/utils/weknoraFeatures'
+import { getFeatureFlags, isHiddenKbSurface, isHiddenMenuPath } from '@/utils/weknoraFeatures'
 
 /** Lite /桌面 WebView 硬刷新时可能只打开 `/`，用 session 记住上次页面以便恢复 */
 const LITE_LAST_PATH_KEY = 'weknora_lite_last_path'
@@ -202,7 +202,11 @@ const router = createRouter({
           component: () => import("@harness/HarnessRoot.vue"),
           meta: { requiresInit: true, requiresAuth: true },
           children: [
-            { path: "", redirect: "/platform/harness/workspace" },
+            { path: "", redirect: () => (
+              isHiddenMenuPath('harness/workspace')
+                ? '/platform/creatChat'
+                : '/platform/harness/workspace'
+            ) },
             {
               path: "chat",
               name: "harnessCreatChat",
@@ -239,13 +243,16 @@ const router = createRouter({
                   path: "",
                   name: "harnessExtensions",
                   redirect: (to) => {
-                    const tab = String(to.query.tab || "skills")
-                    const surface = tab === "knowledge"
-                      ? "runtime"
-                      : (tab === "platform"
-                        ? "platform"
-                        : (tab === "tools" || tab === "mcp" ? tab : "skills"))
-                    return { path: "/platform/knowledge-bases", query: { surface } }
+                    const hideExtensions = isHiddenKbSurface('skills')
+                    const tab = String(to.query.tab || (hideExtensions ? 'platform' : 'skills'))
+                    const surface = tab === 'knowledge'
+                      ? 'runtime'
+                      : (tab === 'platform'
+                        ? 'platform'
+                        : (tab === 'tools' || tab === 'mcp' || tab === 'skills'
+                          ? (isHiddenKbSurface(tab) ? 'platform' : tab)
+                          : (hideExtensions ? 'platform' : 'skills')))
+                    return { path: '/platform/knowledge-bases', query: { surface } }
                   }
                 },
                 {
@@ -485,6 +492,21 @@ router.beforeEach(async (to, from, next) => {
       next('/platform/knowledge-bases')
       return
     }
+  }
+
+  if (isHiddenMenuPath('harness/workspace') && to.path.startsWith('/platform/harness/workspace')) {
+    next('/platform/creatChat')
+    return
+  }
+  if (isHiddenMenuPath('harness/dashboard') && to.path.startsWith('/platform/harness/dashboard')) {
+    next('/platform/creatChat')
+    return
+  }
+  if (to.path === '/platform/knowledge-bases' && isHiddenKbSurface(String(to.query.surface || ''))) {
+    const query = { ...to.query }
+    delete query.surface
+    next({ path: '/platform/knowledge-bases', query, replace: true })
+    return
   }
 
   next()

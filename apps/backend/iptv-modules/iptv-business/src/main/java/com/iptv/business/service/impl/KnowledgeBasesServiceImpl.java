@@ -90,8 +90,7 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
         }
 
         // 2. 软删除知识库记录（设置 deleted_at）
-        knowledgeBase.setDeletedAt(new Date());
-        this.baseMapper.updateById(knowledgeBase);
+        this.baseMapper.deleteById(id);
         log.info("知识库软删除完成: {}", id);
 
         // 3. 删除关联的知识条目和分块数据

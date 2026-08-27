@@ -406,6 +406,7 @@ import {
 } from 'lucide-vue-next'
 import { mcpApi } from '@harness/apis/mcp_api'
 import { formatFullDateTime } from '@harness/utils/time'
+import { knowledgeBasesLocation } from '@/utils/weknoraFeatures'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -458,7 +459,7 @@ const filteredTools = computed(() => {
 })
 
 const goBack = () => {
-  router.push({ path: '/platform/knowledge-bases', query: { surface: 'mcp' } })
+  router.push(knowledgeBasesLocation('mcp'))
 }
 
 const formatTime = (timeStr) => formatFullDateTime(timeStr)
@@ -565,7 +566,7 @@ const fetchServer = async () => {
       if (result.data?.enabled === false && !result.data?.requires_migration) {
         server.value = null
         message.info(t('knowledgeList.extensions.mcp.detail.addFirst'))
-        router.replace({ path: '/platform/knowledge-bases', query: { surface: 'mcp' } })
+        router.replace(knowledgeBasesLocation('mcp'))
         return
       }
       server.value = result.data
@@ -698,7 +699,7 @@ const confirmDeleteServer = (srv) => {
         const result = await mcpApi.deleteMcpServer(srv.slug)
         if (result.success) {
           message.success(t('knowledgeList.extensions.mcp.deleted'))
-          router.push({ path: '/platform/knowledge-bases', query: { surface: 'mcp' } })
+          router.push(knowledgeBasesLocation('mcp'))
         } else {
           message.error(t('knowledgeList.extensions.mcp.deleteFailed'))
         }
