@@ -9,10 +9,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.iptv.business.domain.Chunks;
-import com.iptv.business.domain.KnowledgeBases;
-import com.iptv.business.domain.Knowledges;
-import com.iptv.business.domain.StorageBackends;
+import com.iptv.business.domain.*;
 import com.iptv.business.domain.dto.page.KnowledgesPageDTO;
 import com.iptv.business.domain.vo.KnowledgesFolderVO;
 import com.iptv.business.domain.vo.KnowledgesVO;
@@ -180,9 +177,9 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
         if (filePath.startsWith("resource://")) {
             // 从 resource:// 路径解析实际文件信息
             String handle = filePath.substring("resource://".length());
-            com.iptv.business.domain.Resources resource = resourcesMapper.selectOne(
-                new LambdaQueryWrapper<com.iptv.business.domain.Resources>()
-                    .eq(com.iptv.business.domain.Resources::getHandle, handle)
+            Resources resource = resourcesMapper.selectOne(
+                new LambdaQueryWrapper<Resources>()
+                    .eq(Resources::getHandle, handle)
             );
             if (resource == null) {
                 throw new ServiceException("资源不存在: " + handle);

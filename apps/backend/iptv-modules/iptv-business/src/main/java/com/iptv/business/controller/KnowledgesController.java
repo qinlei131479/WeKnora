@@ -51,8 +51,8 @@ public class KnowledgesController {
 
     @Operation(summary = "文件夹查询", description = "文档知识库文件夹查询")
     @GetMapping("/folders")
-    public KnowledgesFolderVO folders(@NotBlank(message = "知识库id不能为空") String knowledgeBaseId) {
-        return knowledgesService.queryFolders(knowledgeBaseId);
+    public R<KnowledgesFolderVO> folders(@NotBlank(message = "知识库id不能为空") String knowledgeBaseId) {
+        return R.ok(knowledgesService.queryFolders(knowledgeBaseId));
     }
 
     @Log(title = "删除知识条目", businessType = BusinessType.DELETE)
