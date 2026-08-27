@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.iptv.business.domain.StorageBackends;
+import com.iptv.business.util.CryptoUtils;
 import com.iptv.common.core.exception.ServiceException;
 import io.minio.MinioClient;
 import lombok.extern.slf4j.Slf4j;
@@ -87,15 +88,18 @@ public class StorageBackendFileServiceFactory {
         }
 
         JSONObject jsonConfig = JSONUtil.parseObj(config);
-        String endpoint = jsonConfig.getStr("endpoint");
-        String accessKey = jsonConfig.getStr("accessKey");
-        String secretKey = jsonConfig.getStr("secretKey");
-        String bucketName = jsonConfig.getStr("bucketName");
+        String endpoint = "http://192.168.180.238:9000";//jsonConfig.getStr("endpoint");
+        String accessKey = CryptoUtils.decryptStrict(jsonConfig.getStr("access_key_id"));
+        String secretKey = CryptoUtils.decryptStrict(jsonConfig.getStr("secret_access_key"));
+        String bucketName = jsonConfig.getStr("bucket_name");
         Boolean useSSL = jsonConfig.getBool("useSSL", false);
 
         if (StrUtil.isBlank(endpoint) || StrUtil.isBlank(accessKey) || 
             StrUtil.isBlank(secretKey) || StrUtil.isBlank(bucketName)) {
             throw new ServiceException("MinIO配置不完整");
+        }
+        if(StrUtil.startWith(filePath,bucketName)){
+            filePath = filePath.substring(bucketName.length() + 1);
         }
 
         MinioClient minioClient = MinioClient.builder()
