@@ -93,7 +93,7 @@ const formatValue = (value: unknown): string => {
 
 const formatModel = (model: ModelEntity | undefined, modelId: string | undefined): string => {
   const name = model?.displayName || model?.name;
-  if (name && modelId) return `${name}（${modelId}）`;
+  if (name && modelId) return `${name} (${modelId})`;
   return name || modelId || '';
 };
 
@@ -174,7 +174,7 @@ const formatMcpServices = (ids: string[] | undefined): string => {
   return (ids || [])
     .map((id) => {
       const service = props.agent.mcpServicesList?.find((item: McpEntity) => item.id === id);
-      return service?.name ? `${service.name}（${id}）` : id;
+      return service?.name ? `${service.name} (${id})` : id;
     })
     .join('\n');
 };
@@ -188,7 +188,7 @@ const detailSections = computed<DetailSection[]>(() => {
     { key: 'id', label: t('page.agent.list.detail.id', '智能体 ID'), value: props.agent.id },
     { key: 'name', label: t('page.agent.list.detail.name', '智能体名称'), value: props.agent.name },
     { key: 'description', label: t('page.agent.list.detail.description', '智能体说明'), value: props.agent.description },
-    { key: 'avatar', label: t('page.agent.list.detail.avatar', '头像'), value: props.agent.avatar },
+    // { key: 'avatar', label: t('page.agent.list.detail.avatar', '头像'), value: props.agent.avatar },
     { key: 'isBuiltin', label: t('page.agent.list.detail.isBuiltin', '是否内置'), value: props.agent.isBuiltin },
     { key: 'agentMode', label: t('page.agent.list.detail.agentMode', '运行模式'), value: formatAgentMode(current.agent_mode) }
   ];
@@ -201,8 +201,8 @@ const detailSections = computed<DetailSection[]>(() => {
     { key: 'createdBy', label: t('page.agent.list.detail.createdBy', '创建用户 ID'), value: props.agent.createdBy },
     { key: 'runnableByViewer', label: t('page.agent.list.detail.runnableByViewer', '只读成员是否可运行'), value: props.agent.runnableByViewer },
     { key: 'createdAt', label: t('page.agent.list.detail.createdAt', '创建时间'), value: props.agent.createdAt },
-    { key: 'updatedAt', label: t('page.agent.list.detail.updatedAt', '更新时间'), value: props.agent.updatedAt },
-    { key: 'deletedAt', label: t('page.agent.list.detail.deletedAt', '删除时间'), value: props.agent.deletedAt }
+    { key: 'updatedAt', label: t('page.agent.list.detail.updatedAt', '更新时间'), value: props.agent.updatedAt }
+    // { key: 'deletedAt', label: t('page.agent.list.detail.deletedAt', '删除时间'), value: props.agent.deletedAt }
   );
 
   const modelItems: DetailItem[] = [
@@ -582,7 +582,7 @@ watch(visible, (value: boolean) => {
 </script>
 
 <template>
-  <KjscRtlDrawer v-model="visible" :size="900" :title="drawerTitle" :show-cancel="false" :show-confirm="false">
+  <KjscRtlDrawer v-model="visible" :size="1000" :title="drawerTitle" :show-cancel="false" :show-confirm="false">
     <template #header>
       <el-text>{{ drawerTitle }}</el-text>
     </template>

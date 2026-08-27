@@ -11,7 +11,7 @@ const state = reactive({
   tenantsVOs: [] as TenantsVO[],
   customAgentsDto: {} as CustomAgentsPageDTO,
   page: { pageNum: 1, pageSize: 10, orderByColumn: 'createdAt', isAsc: 'desc' } as PageDomain,
-  dateRange: [] as string[],
+  dateRange: [] as string[] | null,
   customAgentsVOs: [] as CustomAgentsVO[],
   detailDrawerVisible: false,
   selectedAgent: {} as CustomAgentsVO,
@@ -57,16 +57,16 @@ const onTenantInput = () => {
 };
 
 const getCustomAgents = () => {
-  const dto = { ...state.customAgentsDto };
-  if (state.dateRange.length === 2) {
-    dto.createdAtStart = `${state.dateRange[0]} 00:00:00`;
-    dto.createdAtEnd = `${state.dateRange[1]} 23:59:59`;
+  delete state.customAgentsDto.createdAtStart;
+  delete state.customAgentsDto.createdAtEnd;
+  if (state.dateRange?.length === 2) {
+    state.customAgentsDto.createdAtStart = `${state.dateRange[0]} 00:00:00`;
+    state.customAgentsDto.createdAtEnd = `${state.dateRange[1]} 23:59:59`;
   }
 
   state.loading = true;
   state.customAgentsVOs.length = 0;
-  state.total = 0;
-  API.CustomAgents.list(dto, state.page)
+  API.CustomAgents.list(state.customAgentsDto, state.page)
     .then((res) => {
       state.customAgentsVOs.push(...res.rows);
       state.total = res.total;
