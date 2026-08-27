@@ -1,6 +1,6 @@
 export default {
   brand: {
-    name: '智问智办'
+    name: '智能体中台2.0'
   },
   platformApiKeys: {
     title: '平台 API Key',

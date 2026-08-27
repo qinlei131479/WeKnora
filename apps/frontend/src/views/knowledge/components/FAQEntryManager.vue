@@ -2457,10 +2457,10 @@ const downloadExampleOptions = computed(() => [
 // 示例数据
 const exampleData: FAQEntryPayload[] = [
   {
-    standard_question: '什么是智问智办？',
-    answers: ['智问智办是一个智能知识库管理系统', '它支持多种知识库类型和导入方式'],
-    similar_questions: ['智问智办是什么？', '介绍一下智问智办'],
-    negative_questions: ['这不是智问智办', '与智问智办无关'],
+    standard_question: '什么是智能体中台2.0？',
+    answers: ['智能体中台2.0是一个智能知识库管理系统', '它支持多种知识库类型和导入方式'],
+    similar_questions: ['智能体中台2.0是什么？', '介绍一下智能体中台2.0'],
+    negative_questions: ['这不是智能体中台2.0', '与智能体中台2.0无关'],
     tag_name: '产品介绍',
   },
   {

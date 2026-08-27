@@ -1,6 +1,6 @@
 export default {
   brand: {
-    name: 'ZhiWen'
+    name: '智能体中台2.0'
   },
   platformApiKeys: {
     title: 'Платформенные API-ключи',

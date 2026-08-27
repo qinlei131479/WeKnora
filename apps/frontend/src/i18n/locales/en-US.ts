@@ -1,6 +1,6 @@
 export default {
   brand: {
-    name: 'ZhiWen'
+    name: '智能体中台2.0'
   },
   dashboard: {
     subtitle: 'View platform usage at a glance, including conversations, agents, tool calls, and knowledge bases',
