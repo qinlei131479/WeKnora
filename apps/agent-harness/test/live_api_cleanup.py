@@ -9,6 +9,7 @@ from pathlib import Path
 import asyncpg
 import httpx
 from yuxi import config as conf
+from yuxi.storage.postgres.naming import prefix_sql
 
 PYTEST_RESOURCE_PREFIXES = ("pytest", "py_test")
 E2E_THREAD_TEST_MARKERS = frozenset(
@@ -109,7 +110,7 @@ async def _list_e2e_thread_statuses(owner_uid: str) -> dict[str, str]:
     conn = await asyncpg.connect(postgres_url.replace("+asyncpg", ""))
     try:
         rows = await conn.fetch(
-            "SELECT id, thread_id, status, extra_metadata FROM conversations WHERE uid = $1",
+            prefix_sql("SELECT id, thread_id, status, extra_metadata FROM conversations WHERE uid = $1"),
             owner_uid,
         )
         marked_parent_ids: list[int] = []
@@ -128,12 +129,14 @@ async def _list_e2e_thread_statuses(owner_uid: str) -> dict[str, str]:
 
         if marked_parent_ids:
             child_rows = await conn.fetch(
-                """
+                prefix_sql(
+                    """
                 SELECT st.child_thread_id, child.status
                 FROM subagent_threads st
                 JOIN conversations child ON child.id = st.child_conversation_id
                 WHERE st.parent_conversation_id = ANY($1::int[])
-                """,
+                """
+                ),
                 marked_parent_ids,
             )
             statuses.update({str(row["child_thread_id"]): str(row["status"] or "") for row in child_rows})

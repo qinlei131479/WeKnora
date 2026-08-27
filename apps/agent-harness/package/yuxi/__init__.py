@@ -1,6 +1,8 @@
 from dotenv import load_dotenv
 
-load_dotenv(".env", override=True)
+# Do not override container/docker-env.py values. An empty POSTGRES_URL=
+# in a bind-mounted .env would otherwise wipe the filled connection string.
+load_dotenv(".env", override=False)
 
 from concurrent.futures import ThreadPoolExecutor  # noqa: E402
 

@@ -43,6 +43,12 @@ export type FeatureFlags = {
   hideDatasource: boolean
   /** 隐藏智能体 / 知识库编辑页「共享管理」 */
   hideShareManagement: boolean
+  /** 隐藏侧栏「工作区」 */
+  hideHarnessWorkspace: boolean
+  /** 隐藏侧栏「数据总览」 */
+  hideHarnessDashboard: boolean
+  /** 隐藏知识库右侧栏「技能 / 工具 / MCP」 */
+  hideKbSkillsToolsMcp: boolean
   /** 限制语言 / IM / 向量库 / 存储 / 搜索等白名单选项 */
   restrictProviderOptions: boolean
 }
@@ -64,6 +70,16 @@ const HIDDEN_SETTINGS_SECTIONS = new Set([
   'integration-chrome',
   'integration-claw',
 ])
+
+/** 主侧栏在 hide 模式下要藏的 path（与 menu.ts 的 item.path 对齐） */
+const HIDDEN_MENU_PATHS = new Set([
+  'organizations',
+  'harness/workspace',
+  'harness/dashboard',
+])
+
+/** 知识库页右侧 surface 在 hide 模式下要藏的值 */
+const HIDDEN_KB_SURFACES = new Set(['skills', 'tools', 'mcp'])
 
 const ALLOWED_LOCALES = new Set(['zh-CN', 'en-US'])
 const ALLOWED_IM_PLATFORMS = new Set(['dingtalk', 'wecom', 'feishu'])
@@ -161,6 +177,9 @@ export function getFeatureFlags(): FeatureFlags {
     hideKnowledgeGraph: hide,
     hideDatasource: hide,
     hideShareManagement: hide,
+    hideHarnessWorkspace: hide,
+    hideHarnessDashboard: hide,
+    hideKbSkillsToolsMcp: hide,
     restrictProviderOptions: hide,
   }
 }
@@ -191,7 +210,20 @@ export function isHiddenSettingsSection(key: string): boolean {
 
 /** 主侧栏菜单 path 是否应隐藏 */
 export function isHiddenMenuPath(path: string): boolean {
-  return readHide() && path === 'organizations'
+  return readHide() && HIDDEN_MENU_PATHS.has(path)
+}
+
+/** 知识库右侧栏 surface 是否应隐藏 */
+export function isHiddenKbSurface(surface: string): boolean {
+  return readHide() && HIDDEN_KB_SURFACES.has(surface)
+}
+
+/** 跳转知识库列表；hide 模式下不带 skills/tools/mcp surface */
+export function knowledgeBasesLocation(surface?: string): { path: string; query?: Record<string, string> } {
+  if (!surface || surface === 'platform' || isHiddenKbSurface(surface)) {
+    return { path: '/platform/knowledge-bases' }
+  }
+  return { path: '/platform/knowledge-bases', query: { surface } }
 }
 
 /** 是否隐藏界面字体 / 代码字体选择 */
