@@ -159,7 +159,7 @@
       </div>
     </div>
 
-    <SettingDrawer
+    <!-- <SettingDrawer
       v-model:visible="detailVisible"
       class="kb-activity-detail-drawer"
       :title="detailTitle"
@@ -215,14 +215,14 @@
           <pre class="audit-detail-json mono">{{ detailsJSON(selectedEntry) }}</pre>
         </section>
       </template>
-    </SettingDrawer>
+    </SettingDrawer> -->
   </div>
 </template>
 
 <script setup lang="ts">
 // import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n';
-import SettingDrawer from '@/components/business/settings/SettingDrawer.vue';
+// import SettingDrawer from '@/components/business/settings/SettingDrawer.vue';
 import { AUDIT_ACTION_I18N_ROOTS } from '@/i18n/auditActionRegistry';
 import { auditActionLabel } from '@/i18n/auditActionLabel';
 import { getKnowledgeBaseActivityListApi } from '@/api/data/knowledgeBase';
