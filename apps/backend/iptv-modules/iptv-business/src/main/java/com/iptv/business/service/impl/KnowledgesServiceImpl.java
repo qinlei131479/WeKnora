@@ -16,11 +16,7 @@ import com.iptv.business.domain.dto.page.KnowledgesPageDTO;
 import com.iptv.business.domain.vo.FAQEntryVO;
 import com.iptv.business.domain.vo.KnowledgesFolderVO;
 import com.iptv.business.domain.vo.KnowledgesVO;
-import com.iptv.business.pgmapper.ChunksMapper;
-import com.iptv.business.pgmapper.KnowledgeBasesMapper;
-import com.iptv.business.pgmapper.KnowledgesMapper;
-import com.iptv.business.pgmapper.ResourcesMapper;
-import com.iptv.business.pgmapper.StorageBackendsMapper;
+import com.iptv.business.pgmapper.*;
 import com.iptv.business.service.KnowledgesService;
 import com.iptv.business.service.StorageBackendFileServiceFactory;
 import com.iptv.common.core.exception.ServiceException;
@@ -34,10 +30,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Writer;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -55,6 +57,7 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
     private final KnowledgeBasesMapper knowledgeBasesMapper;
     private final StorageBackendsMapper storageBackendsMapper;
     private final ResourcesMapper resourcesMapper;
+    private final KnowledgeTagsMapper knowledgeTagsMapper;
     private final StorageBackendFileServiceFactory storageBackendFileServiceFactory;
 
     @Override
@@ -130,6 +133,14 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
     }
 
     @Override
+    public List<KnowledgeTags> listTags(String knowledgeBaseId) {
+        List<KnowledgeTags> knowledgeTags = knowledgeTagsMapper.selectList(new LambdaQueryWrapper<KnowledgeTags>()
+                .isNull(KnowledgeTags::getDeletedAt)
+                .eq(KnowledgeTags::getKnowledgeBaseId, knowledgeBaseId));
+        return knowledgeTags;
+    }
+
+    @Override
     public void previewById(@Nonnull String id, HttpServletResponse response) {
         log.info("开始预览知识条目: {}", id);
 
@@ -174,24 +185,24 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
         // 解析 resource:// 路径格式
         StorageBackends storageBackend;
         String actualFilePath;
-        
+
         if (filePath.startsWith("resource://")) {
             // 从 resource:// 路径解析实际文件信息
             String handle = filePath.substring("resource://".length());
             Resources resource = resourcesMapper.selectOne(
-                new LambdaQueryWrapper<Resources>()
-                    .eq(Resources::getHandle, handle)
+                    new LambdaQueryWrapper<Resources>()
+                            .eq(Resources::getHandle, handle)
             );
             if (resource == null) {
                 throw new ServiceException("资源不存在: " + handle);
             }
-            
+
             // 获取存储后端配置
             storageBackend = storageBackendsMapper.selectById(resource.getStorageBackendId());
             if (storageBackend == null) {
                 throw new ServiceException("存储后端不存在: " + resource.getStorageBackendId());
             }
-            
+
             // 解析 physical_path 格式: storage://backendId/provider://actualPath
             String physicalPath = resource.getPhysicalPath();
             if (physicalPath.startsWith("storage://")) {
@@ -217,7 +228,7 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
             if (knowledgeBase == null) {
                 throw new ServiceException("知识库不存在");
             }
-            
+
             // 获取存储后端配置
             storageBackend = null;
             if (StrUtil.isNotBlank(knowledgeBase.getStorageBackendId())) {
@@ -230,10 +241,10 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
         try (InputStream inputStream = storageBackendFileServiceFactory.getFileStream(storageBackend, actualFilePath);
              OutputStream outputStream = response.getOutputStream()) {
 
-            String fileName = StrUtil.isNotBlank(knowledge.getFileName()) 
-                    ? knowledge.getFileName() 
+            String fileName = StrUtil.isNotBlank(knowledge.getFileName())
+                    ? knowledge.getFileName()
                     : filePath.substring(filePath.lastIndexOf('/') + 1);
-            
+
             String contentType = getContentType(fileName);
             boolean isInline = isInlineContentType(contentType);
 
@@ -276,7 +287,7 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
             throw new ServiceException("该知识库不是FAQ类型");
         }
         Page page = PageUtils.toPage(pg);
-        List<Chunks> chunks = chunksMapper.selectFAQEntries(dto,page);
+        List<Chunks> chunks = chunksMapper.selectFAQEntries(dto, page);
 
         // 7. 转换为VO
         List<FAQEntryVO> voList = chunks.stream()
