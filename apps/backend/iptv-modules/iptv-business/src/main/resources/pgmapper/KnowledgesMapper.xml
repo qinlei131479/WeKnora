@@ -65,7 +65,7 @@
             </if>
             <choose>
                 <when test="param.folderPath != null and param.folderPath != ''">
-                    AND folder_path ILIKE CONCAT('%', #{param.folderPath}, '%')
+                    AND folder_path=#{param.folderPath}
                 </when>
                 <otherwise>
                     AND (folder_path IS NULL OR folder_path = '')

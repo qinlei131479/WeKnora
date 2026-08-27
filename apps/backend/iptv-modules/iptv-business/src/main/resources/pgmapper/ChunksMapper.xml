@@ -56,4 +56,29 @@
           AND deleted_at IS NULL
     </update>
 
+    <!-- 分页查询FAQ条目 -->
+    <select id="selectFAQEntries" resultType="com.iptv.business.domain.Chunks" parameterType="com.iptv.business.domain.dto.FAQEntryQueryDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM chunks
+        <where>
+            deleted_at IS NULL
+            <if test="param.knowledgeBaseId != null and param.knowledgeBaseId != ''">
+                AND knowledge_base_id = #{param.knowledgeBaseId}
+            </if>
+            <if test="param.tagIds != null and param.tagIds.size() > 0">
+                AND tag_id IN
+                <foreach collection="param.tagIds" item="tagId" open="(" separator="," close=")">
+                    #{tagId}
+                </foreach>
+            </if>
+            <if test="param.keyword != null and param.keyword != ''">
+                AND (
+                    metadata ->> 'answers' ILIKE concat('%', #{param.keyword}, '%')
+                    OR content LIKE concat('%', #{param.keyword}, '%')
+                )
+            </if>
+        </where>
+    </select>
+
 </mapper>
