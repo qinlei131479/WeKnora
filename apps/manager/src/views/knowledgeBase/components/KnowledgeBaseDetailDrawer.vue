@@ -1,5 +1,12 @@
 <template>
-  <el-drawer :model-value="visible" @update:model-value="$emit('update:visible', $event)" :title="modelTitle" size="60%">
+  <KjscRtlDrawer
+    :model-value="visible"
+    @update:model-value="$emit('update:visible', $event)"
+    :title="modelTitle"
+    size="60%"
+    :show-confirm="false"
+    :cancelText="$t('page.normal.close', '关闭')"
+  >
     <div class="model-body">
       <el-tabs v-model="currentSection">
         <el-tab-pane v-for="item in navTabs" :key="item.key" :label="item.label" :name="item.key"></el-tab-pane>
@@ -634,14 +641,14 @@
         </div>
       </div>
     </div>
-    <template #footer>
+    <!-- <template #footer>
       <div style="flex: auto">
         <el-button @click="handleClose">
           {{ $t('page.normal.close', '关闭') }}
         </el-button>
       </div>
-    </template>
-  </el-drawer>
+    </template> -->
+  </KjscRtlDrawer>
 </template>
 
 <script setup lang="ts">
@@ -665,6 +672,7 @@ import {
   Share,
   Paperclip
 } from '@element-plus/icons-vue';
+import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { useI18n } from 'vue-i18n';
 import { Search } from 'lucide-vue-next';
 
@@ -680,8 +688,8 @@ import { Search } from 'lucide-vue-next';
 // import DataSourceSettings from './settings/DataSourceSettings.vue';
 // import KnowledgeBaseActivitySettings from './settings/KnowledgeBaseActivitySettings.vue';
 // import VectorStoreBadge from '@/components/business/VectorStoreBadge.vue';
-import KBParserDetail from './settings/KBParserDetail.vue';
-import KnowledgeBaseActivityDetail from './settings/KnowledgeBaseActivityDetail.vue';
+import KBParserDetail from './KBParserDetail.vue';
+import KnowledgeBaseActivityDetail from './KnowledgeBaseActivityDetail.vue';
 
 import { getKnowledgeBaseSingleApi } from '@/api/data/knowledgeBase.js';
 
@@ -691,7 +699,7 @@ import { KnowledgeBaseExtends } from '@/types';
 import { getModelListApi } from '@/api/model/model.js';
 
 const { t } = useI18n();
-const $t = t;
+// const $t = t;
 
 // 功能开关（manager 项目默认启用）
 const hideDatasource = false;
