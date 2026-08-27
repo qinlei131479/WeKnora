@@ -200,7 +200,6 @@ onMounted(() => {
         <template #empty>
           <kjsc-empty />
         </template>
-        <el-table-column prop="id" :label="$t('page.agent.sessions.table.id', '对话 ID')" :min-width="$dim('page.agent.sessions.table.id', 300)" />
         <el-table-column
           prop="title"
           :label="$t('page.agent.sessions.table.title', '对话标题')"
