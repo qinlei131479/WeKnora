@@ -1,5 +1,6 @@
 package com.iptv.business.controller;
 
+import com.iptv.business.domain.KnowledgeTags;
 import com.iptv.business.domain.dto.FAQEntryQueryDTO;
 import com.iptv.business.domain.dto.page.KnowledgesPageDTO;
 import com.iptv.business.domain.vo.FAQEntryVO;
@@ -72,11 +73,10 @@ public class KnowledgesController {
     }
 
     @Operation(summary = "查询标签信息", description = "根据知识库ID查询所有标签")
-    @PostMapping("/tags")
+    @GetMapping("/tags")
     @RequiresPermissions("business:knowledges:query")
-    public R<List<FAQEntryVO>> listTags(@RequestBody FAQEntryQueryDTO dto) {
-//        return knowledgesService.listTags(dto);
-        return R.ok();
+    public R<List<KnowledgeTags>> listTags(String knowledgeBaseId) {
+       return R.ok(knowledgesService.listTags(knowledgeBaseId));
     }
 
     @Operation(summary = "分页查询FAQ条目", description = "根据知识库ID分页查询FAQ条目列表，支持按标签、关键词过滤")
