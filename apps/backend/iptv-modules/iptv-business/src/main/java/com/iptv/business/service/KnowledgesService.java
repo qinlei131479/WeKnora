@@ -2,7 +2,9 @@ package com.iptv.business.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.iptv.business.domain.Knowledges;
+import com.iptv.business.domain.dto.FAQEntryQueryDTO;
 import com.iptv.business.domain.dto.page.KnowledgesPageDTO;
+import com.iptv.business.domain.vo.FAQEntryVO;
 import com.iptv.business.domain.vo.KnowledgesFolderVO;
 import com.iptv.business.domain.vo.KnowledgesVO;
 import com.iptv.common.core.web.page.PageDTO;
@@ -58,4 +60,12 @@ public interface KnowledgesService extends IService<Knowledges> {
      * @param id 主键
      */
     void previewById(@Nonnull String id, HttpServletResponse response);
+
+    /**
+     * 分页查询FAQ条目列表
+     *
+     * @param dto 查询参数
+     * @return 分页结果
+     */
+    TableDataInfo<FAQEntryVO> listFAQEntries(FAQEntryQueryDTO dto, PageDTO pg);
 }

@@ -3,6 +3,7 @@ package com.iptv.business.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -10,7 +11,9 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.iptv.business.domain.*;
+import com.iptv.business.domain.dto.FAQEntryQueryDTO;
 import com.iptv.business.domain.dto.page.KnowledgesPageDTO;
+import com.iptv.business.domain.vo.FAQEntryVO;
 import com.iptv.business.domain.vo.KnowledgesFolderVO;
 import com.iptv.business.domain.vo.KnowledgesVO;
 import com.iptv.business.pgmapper.ChunksMapper;
@@ -34,10 +37,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 知识条目（文档/FAQ/URL/手工等）：解析状态、文件元数据、目录路径 服务实现类（PostgreSQL）
@@ -262,6 +263,73 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
             log.error("获取文件失败", e);
             throw new ServiceException("获取文件失败: " + e.getMessage());
         }
+    }
+
+    @Override
+    public TableDataInfo<FAQEntryVO> listFAQEntries(FAQEntryQueryDTO dto, PageDTO pg) {
+        // 1. 验证知识库是否存在且为FAQ类型
+        KnowledgeBases kb = knowledgeBasesMapper.selectById(dto.getKnowledgeBaseId());
+        if (BeanUtil.isEmpty(kb)) {
+            throw new ServiceException("知识库不存在");
+        }
+        if (!StrUtil.equals(kb.getType(), "faq")) {
+            throw new ServiceException("该知识库不是FAQ类型");
+        }
+        Page page = PageUtils.toPage(pg);
+        List<Chunks> chunks = chunksMapper.selectFAQEntries(dto,page);
+
+        // 7. 转换为VO
+        List<FAQEntryVO> voList = chunks.stream()
+                .map(this::convertToVO)
+                .collect(Collectors.toList());
+
+        return PageUtils.getDataTable(voList, page);
+    }
+
+    /**
+     * 将Chunks转换为FAQEntryVO
+     */
+    private FAQEntryVO convertToVO(Chunks chunk) {
+        FAQEntryVO vo = new FAQEntryVO();
+        vo.setId(chunk.getId());
+        vo.setTagId(chunk.getTagId());
+        vo.setCreatedAt(chunk.getCreatedAt());
+        vo.setUpdatedAt(chunk.getUpdatedAt());
+
+        // 解析metadata中的FAQ字段
+        if (StrUtil.isNotBlank(chunk.getMetadata())) {
+            try {
+                JSONObject metadata = JSONUtil.parseObj(chunk.getMetadata());
+
+                // 标准问题
+                vo.setStandardQuestion(metadata.getStr("standard_question"));
+
+                // 相似问题列表
+                JSONArray similarQuestions = metadata.getJSONArray("similar_questions");
+                if (similarQuestions != null) {
+                    vo.setSimilarQuestions(similarQuestions.toList(String.class));
+                } else {
+                    vo.setSimilarQuestions(new ArrayList<>());
+                }
+
+                // 答案列表
+                JSONArray answers = metadata.getJSONArray("answers");
+                if (answers != null) {
+                    vo.setAnswers(answers.toList(String.class));
+                } else {
+                    vo.setAnswers(new ArrayList<>());
+                }
+            } catch (Exception e) {
+                log.warn("解析FAQ metadata失败: {}", chunk.getId(), e);
+                vo.setSimilarQuestions(new ArrayList<>());
+                vo.setAnswers(new ArrayList<>());
+            }
+        } else {
+            vo.setSimilarQuestions(new ArrayList<>());
+            vo.setAnswers(new ArrayList<>());
+        }
+
+        return vo;
     }
 
     /**
