@@ -42,7 +42,7 @@
 
     <main class="login-main">
       <div class="login-main-title">
-        <div class="login-main-title-text">欢迎回来</div>
+        <div class="login-main-title-text">智能体中台 2.0</div>
         <div class="login-main-title-desc">请登录你的管理员账号</div>
       </div>
 
@@ -127,7 +127,6 @@
 </template>
 
 <script setup>
-import { LockKeyhole, ShieldCheck, User } from 'lucide-vue-next';
 import { getCodeImg, checkLogin, getQrCode } from '@/api/login';
 import Cookies from 'js-cookie';
 import { encrypt, decrypt } from '@/utils/jsencrypt';
@@ -375,7 +374,7 @@ getCookie();
   padding: 0;
   overflow: hidden;
   color: #ffffff;
-  background: #12412f url('../../assets/images/login/login_bg_left.png') center / cover no-repeat;
+  background: #00ab6b url('../../assets/images/login/login_bg_left.png') center / cover no-repeat;
 }
 
 .login-brand__content {
@@ -392,15 +391,16 @@ getCookie();
 }
 
 .login-brand__name {
+  color: #fff;
   margin-top: 26px;
-  font-size: 30px;
-  font-weight: 700;
-  line-height: 42px;
+  font-size: 40px;
+  font-weight: bold;
+  line-height: 40px;
 }
 
 .login-brand__subtitle {
+  color: #ccc;
   margin-top: 8px;
-  color: #89a097;
   font-size: 16px;
   line-height: 24px;
 }
@@ -429,7 +429,7 @@ getCookie();
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.3);
 
   img {
     display: block;
@@ -446,7 +446,7 @@ getCookie();
 
 .login-feature__description {
   margin-top: 2px;
-  color: #89a097;
+  color: #ccc;
   font-size: 13px;
   line-height: 18px;
 }
@@ -456,7 +456,7 @@ getCookie();
   right: 32px;
   bottom: 54px;
   left: 32px;
-  color: rgba(255, 255, 255, 0.28);
+  color: #fff;
   font-size: 12px;
   line-height: 18px;
   text-align: center;
@@ -540,8 +540,7 @@ getCookie();
   overflow: hidden;
   border-radius: 8px;
   background: #fff;
-  border: var(--el-border);
-  box-shadow: 0 0 0 1px #e6e8e5 inset;
+  border: var(--el-border-width) var(--el-border-style) var(--el-border-color);
 
   img {
     position: absolute;
@@ -583,8 +582,8 @@ getCookie();
   margin-bottom: 0;
 
   :deep(.el-button) {
-    --el-button-bg-color: #1b4332;
-    --el-button-hover-bg-color: #2d6a4f;
+    --el-button-bg-color: #00ab6b;
+    --el-button-hover-bg-color: #008251;
     font-size: 15px;
     font-weight: 600;
     color: #fff;
@@ -640,8 +639,8 @@ getCookie();
     :deep(.el-link) {
       font-size: 12px;
       font-weight: normal;
-      --el-link-text-color: #40916c;
-      --el-link-hover-text-color: var(--el-color-success);
+      --el-link-text-color: #00ab6b;
+      --el-link-hover-text-color: #008251;
     }
   }
 }
