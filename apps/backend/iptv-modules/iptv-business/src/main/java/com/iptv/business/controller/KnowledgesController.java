@@ -1,6 +1,9 @@
 package com.iptv.business.controller;
 
+import com.iptv.business.domain.KnowledgeTags;
+import com.iptv.business.domain.dto.FAQEntryQueryDTO;
 import com.iptv.business.domain.dto.page.KnowledgesPageDTO;
+import com.iptv.business.domain.vo.FAQEntryVO;
 import com.iptv.business.domain.vo.KnowledgesFolderVO;
 import com.iptv.business.domain.vo.KnowledgesVO;
 import com.iptv.business.service.KnowledgesService;
@@ -15,10 +18,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * <p>
@@ -51,8 +53,8 @@ public class KnowledgesController {
 
     @Operation(summary = "文件夹查询", description = "文档知识库文件夹查询")
     @GetMapping("/folders")
-    public KnowledgesFolderVO folders(@NotBlank(message = "知识库id不能为空") String knowledgeBaseId) {
-        return knowledgesService.queryFolders(knowledgeBaseId);
+    public R<KnowledgesFolderVO> folders(@NotBlank(message = "知识库id不能为空") String knowledgeBaseId) {
+        return R.ok(knowledgesService.queryFolders(knowledgeBaseId));
     }
 
     @Log(title = "删除知识条目", businessType = BusinessType.DELETE)
@@ -68,5 +70,19 @@ public class KnowledgesController {
     @GetMapping("/preview")
     public void previewById(@RequestParam String id, HttpServletResponse response) {
         knowledgesService.previewById(id, response);
+    }
+
+    @Operation(summary = "查询标签信息", description = "根据知识库ID查询所有标签")
+    @GetMapping("/tags")
+    @RequiresPermissions("business:knowledges:query")
+    public R<List<KnowledgeTags>> listTags(String knowledgeBaseId) {
+       return R.ok(knowledgesService.listTags(knowledgeBaseId));
+    }
+
+    @Operation(summary = "分页查询FAQ条目", description = "根据知识库ID分页查询FAQ条目列表，支持按标签、关键词过滤")
+    @PostMapping("/faq/entries")
+    @RequiresPermissions("business:knowledges:query")
+    public TableDataInfo<FAQEntryVO> listFAQEntries(@RequestBody FAQEntryQueryDTO dto, PageDTO pg) {
+        return knowledgesService.listFAQEntries(dto, pg);
     }
 }

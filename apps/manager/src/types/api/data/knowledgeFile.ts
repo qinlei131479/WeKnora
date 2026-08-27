@@ -122,6 +122,10 @@ export interface KnowledgeFileListReq {
 }
 
 export interface KnowledgeFileFoldersNode {
+  // 前端临时生成的ID
+  id?: string;
+  // 前端临时生成的层级
+  level?: number;
   /**
    * 文件夹名称
    */
@@ -162,4 +166,22 @@ export interface KnowledgeFileFoldersResp {
    * 文件夹列表
    */
   folders?: KnowledgeFileFoldersNode[];
+}
+
+export interface KnowledgeFaqListReq {
+  knowledgeBaseId?: string; // 知识库ID
+  tagIds?: string[]; // 标签ID列表
+  keyword?: string; // 搜索关键词
+  searchField?: string; // 搜索字段：standard_question/similar_questions/answers
+}
+
+export interface KnowledgeFaqEntity {
+  id?: string; // 分块ID
+  standardQuestion?: string; // 标准问题
+  similarQuestions?: string[]; // 相似问题列表
+  answers?: string[]; // 答案列表
+  tagId?: string; // 标签ID
+  tagName?: string; // 标签名称
+  createdAt?: string; // 创建时间
+  updatedAt?: string; // 更新时间
 }

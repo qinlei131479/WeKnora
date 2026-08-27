@@ -1,14 +1,19 @@
 package com.iptv.business.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.iptv.business.domain.KnowledgeTags;
 import com.iptv.business.domain.Knowledges;
+import com.iptv.business.domain.dto.FAQEntryQueryDTO;
 import com.iptv.business.domain.dto.page.KnowledgesPageDTO;
+import com.iptv.business.domain.vo.FAQEntryVO;
 import com.iptv.business.domain.vo.KnowledgesFolderVO;
 import com.iptv.business.domain.vo.KnowledgesVO;
 import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
 import jakarta.annotation.Nonnull;
 import jakarta.servlet.http.HttpServletResponse;
+
+import java.util.List;
 
 /**
  * <p>
@@ -58,4 +63,20 @@ public interface KnowledgesService extends IService<Knowledges> {
      * @param id 主键
      */
     void previewById(@Nonnull String id, HttpServletResponse response);
+
+    /**
+     * 查询标签信息
+     *
+     * @param knowledgeBaseId 文档知识库 ID
+     * @return 标签信息列表
+     */
+    List<KnowledgeTags> listTags(String knowledgeBaseId);
+
+    /**
+     * 分页查询FAQ条目列表
+     *
+     * @param dto 查询参数
+     * @return 分页结果
+     */
+    TableDataInfo<FAQEntryVO> listFAQEntries(FAQEntryQueryDTO dto, PageDTO pg);
 }

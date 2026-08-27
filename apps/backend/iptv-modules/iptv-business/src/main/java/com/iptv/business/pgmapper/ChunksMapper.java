@@ -1,7 +1,9 @@
 package com.iptv.business.pgmapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.iptv.business.domain.Chunks;
+import com.iptv.business.domain.dto.FAQEntryQueryDTO;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
@@ -23,4 +25,11 @@ public interface ChunksMapper extends BaseMapper<Chunks> {
      * @return 删除的记录数
      */
     int deleteByKnowledgeIds(@Param("knowledgeIds") List<String> knowledgeIds);
+
+    /**
+     * 分页查询FAQ条目
+     *
+     * @return FAQ分块列表
+     */
+    List<Chunks> selectFAQEntries(@Param("param") FAQEntryQueryDTO dto, Page page);
 }

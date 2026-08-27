@@ -364,6 +364,7 @@ import { skillApi } from '@harness/apis/skill_api'
 import AgentFilePreview from '@harness/components/AgentFilePreview.vue'
 import FileTreeComponent from '@harness/components/FileTreeComponent.vue'
 import ShareConfigForm from '@harness/components/ShareConfigForm.vue'
+import { knowledgeBasesLocation } from '@/utils/weknoraFeatures'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -525,7 +526,7 @@ const removeDependency = (group, value) => {
 }
 
 const goBack = () => {
-  router.push({ path: '/platform/knowledge-bases', query: { surface: 'skills' } })
+  router.push(knowledgeBasesLocation('skills'))
 }
 
 const cloneShareConfig = (config) => ({
@@ -705,7 +706,7 @@ const confirmDeleteSkill = () => {
       try {
         await skillApi.deleteSkill(target.slug)
         message.success(t('knowledgeList.extensions.skills.detail.deleted'))
-        router.push({ path: '/platform/knowledge-bases', query: { surface: 'skills' } })
+        router.push(knowledgeBasesLocation('skills'))
       } catch {
         message.error(t('knowledgeList.extensions.skills.detail.deleteFailed'))
       }

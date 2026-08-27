@@ -75,6 +75,13 @@ const handleQuery = () => {
   getVectorStores();
 };
 
+const resetQuery = () => {
+  state.keyword = '';
+  state.tenantsVOs.length = 0;
+  delete state.tenantsDto.name;
+  delete state.vectorStoresDto.tenantId;
+};
+
 const handleDetail = (row: VectorStoresVO) => {
   state.detail = row;
   state.detailVisible = true;
@@ -105,6 +112,7 @@ onMounted(() => {
             @clear="onClearTenants"
             @input="onInput"
           />
+          <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
           <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
         </div>
       </template>

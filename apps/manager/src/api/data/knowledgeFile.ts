@@ -13,13 +13,13 @@ export function getKnowledgeFileListApi(req: KnowledgeFileListReq, page: PageDom
 //   return request.post(`${API}/knowledges/update/single`, req)
 // }
 export function deleteKnowledgeFileSingleApi(req: number | string): Promise<AjaxResult> {
-  return request.post(`${API}/knowledges/delete/single?id=${req}`);
+  return request.get(`${API}/knowledges/delete/single?id=${req}`);
 }
 export function getKnowledgeFileSingleApi(req: number | string): Promise<AjaxResult<KnowledgeFileEntity>> {
   return request.get(`${API}/knowledges/single?id=${req}`);
 }
 
-export function getKnowledgeFilefoldersApi(knowledgeBaseId: number | string): Promise<AjaxResult<KnowledgeFileFoldersResp>> {
+export function getKnowledgeFileFoldersApi(knowledgeBaseId: number | string): Promise<AjaxResult<KnowledgeFileFoldersResp>> {
   return request.get(`${API}/knowledges/folders?knowledgeBaseId=${knowledgeBaseId}`);
 }
 

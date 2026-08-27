@@ -11,6 +11,7 @@ const state = reactive({
   tenantsVOs: [] as TenantsVO[],
   customAgentsDto: {} as CustomAgentsPageDTO,
   page: { pageNum: 1, pageSize: 10, orderByColumn: 'createdAt', isAsc: 'desc' } as PageDomain,
+  dateRange: [] as string[] | null,
   customAgentsVOs: [] as CustomAgentsVO[],
   detailDrawerVisible: false,
   selectedAgent: {} as CustomAgentsVO,
@@ -56,9 +57,15 @@ const onTenantInput = () => {
 };
 
 const getCustomAgents = () => {
+  delete state.customAgentsDto.createdAtStart;
+  delete state.customAgentsDto.createdAtEnd;
+  if (state.dateRange?.length === 2) {
+    state.customAgentsDto.createdAtStart = `${state.dateRange[0]} 00:00:00`;
+    state.customAgentsDto.createdAtEnd = `${state.dateRange[1]} 23:59:59`;
+  }
+
   state.loading = true;
   state.customAgentsVOs.length = 0;
-  state.total = 0;
   API.CustomAgents.list(state.customAgentsDto, state.page)
     .then((res) => {
       state.customAgentsVOs.push(...res.rows);
@@ -75,6 +82,17 @@ const getCustomAgents = () => {
 const handleQuery = () => {
   state.page.pageNum = 1;
   getCustomAgents();
+};
+
+const resetQuery = () => {
+  state.tenantKeyword = '';
+  state.dateRange = [];
+  state.tenantsVOs.length = 0;
+  delete state.tenantsDto.name;
+  delete state.customAgentsDto.name;
+  delete state.customAgentsDto.tenantId;
+  delete state.customAgentsDto.createdAtStart;
+  delete state.customAgentsDto.createdAtEnd;
 };
 
 const showDetail = (row: CustomAgentsVO) => {
@@ -119,6 +137,18 @@ onMounted(() => {
             @input="onTenantInput"
           />
 
+          <el-date-picker
+            v-model="state.dateRange"
+            class="search-bar__date"
+            style="max-width: 300px"
+            value-format="YYYY-MM-DD"
+            type="daterange"
+            :start-placeholder="$t('page.agent.list.search.startDatePlaceholder', '创建时间开始')"
+            range-separator="-"
+            :end-placeholder="$t('page.agent.list.search.endDatePlaceholder', '创建时间截止')"
+          />
+
+          <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
           <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
         </div>
       </template>
@@ -140,17 +170,6 @@ onMounted(() => {
           :label="$t('page.agent.list.table.description', '智能体说明')"
           :min-width="$dim('page.agent.list.table.description', 360)"
         />
-        <el-table-column
-          prop="deletedAt"
-          :label="$t('page.agent.list.table.status', '状态')"
-          align="center"
-          :min-width="$dim('page.agent.list.table.status', 100)"
-        >
-          <template #default="{ row }">
-            <el-tag v-if="!row.deletedAt" type="success">{{ $t('page.agent.list.status.normal', '正常') }}</el-tag>
-            <el-tag v-else type="warning">{{ $t('page.agent.list.status.deleted', '已删除') }}</el-tag>
-          </template>
-        </el-table-column>
         <el-table-column
           prop="tenant.name"
           :label="$t('page.agent.list.table.tenantName', '所属工作空间（租户）')"

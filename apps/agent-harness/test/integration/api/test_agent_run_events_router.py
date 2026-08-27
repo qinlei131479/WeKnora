@@ -7,6 +7,7 @@ import uuid
 import asyncpg
 import pytest
 from yuxi.services.run_queue_service import append_run_stream_event, get_redis_client
+from yuxi.storage.postgres.naming import prefix_sql
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
@@ -54,11 +55,13 @@ async def test_run_events_verbose_false_returns_compact_payload(test_client, sta
     conn = await asyncpg.connect(_postgres_dsn())
     try:
         await conn.execute(
-            """
+            prefix_sql(
+                """
             INSERT INTO agent_runs
                 (id, conversation_thread_id, agent_slug, uid, request_id, input_payload, status, run_type)
             VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8)
-            """,
+            """
+            ),
             run_id,
             thread_id,
             "deep-research",
@@ -178,6 +181,6 @@ async def test_run_events_verbose_false_returns_compact_payload(test_client, sta
         await redis.delete(f"run:events:{run_id}")
         conn = await asyncpg.connect(_postgres_dsn())
         try:
-            await conn.execute("DELETE FROM agent_runs WHERE id = $1", run_id)
+            await conn.execute(prefix_sql("DELETE FROM agent_runs WHERE id = $1"), run_id)
         finally:
             await conn.close()

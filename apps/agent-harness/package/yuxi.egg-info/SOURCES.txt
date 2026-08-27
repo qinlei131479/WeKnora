@@ -194,6 +194,7 @@ yuxi/storage/neo4j/manager.py
 yuxi/storage/postgres/manager.py
 yuxi/storage/postgres/models_business.py
 yuxi/storage/postgres/models_knowledge.py
+yuxi/storage/postgres/naming.py
 yuxi/storage/redis/__init__.py
 yuxi/storage/redis/manager.py
 yuxi/utils/__init__.py

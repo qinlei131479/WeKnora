@@ -180,6 +180,27 @@ public class KnowledgeBasesServiceImpl extends ServiceImpl<KnowledgeBasesMapper,
                         .findFirst()
                         .orElse(null));
             }
+
+            if (StrUtil.isNotBlank(vo.getVlmConfig())) {
+                JSONObject vlmConfig = JSONUtil.parseObj(vo.getVlmConfig());
+                if (vlmConfig.containsKey("model_id") && StrUtil.isNotBlank(vlmConfig.getStr("model_id"))) {
+                    vo.setVlmModel(modelList.stream()
+                            .filter(model -> StrUtil.equals(model.getId(), vlmConfig.getStr("model_id")))
+                            .findFirst()
+                            .orElse(null));
+                }
+            }
+
+            if (StrUtil.isNotBlank(vo.getAsrConfig())) {
+                JSONObject asrConfig = JSONUtil.parseObj(vo.getAsrConfig());
+                if (asrConfig.containsKey("model_id") && StrUtil.isNotBlank(asrConfig.getStr("model_id"))) {
+                    vo.setAsrModel(modelList.stream()
+                            .filter(model -> StrUtil.equals(model.getId(), asrConfig.getStr("model_id")))
+                            .findFirst()
+                            .orElse(null));
+                }
+            }
+
             if (StrUtil.isNotBlank(vo.getWikiConfig())) {
                 JSONObject wikiConfig = JSONUtil.parseObj(vo.getWikiConfig());
                 if (wikiConfig.containsKey("synthesis_model_id") && StrUtil.isNotBlank(wikiConfig.getStr("synthesis_model_id"))) {

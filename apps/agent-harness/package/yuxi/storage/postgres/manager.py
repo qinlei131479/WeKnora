@@ -11,6 +11,7 @@ from sqlalchemy.orm import declarative_base
 from yuxi.storage.postgres.models_business import AGENT_RUN_TERMINAL_STATUSES
 from yuxi.storage.postgres.models_business import Base as BusinessBase
 from yuxi.storage.postgres.models_knowledge import Base as KnowledgeBase
+from yuxi.storage.postgres.naming import prefix_sql
 from yuxi.utils import logger
 from yuxi.utils.singleton import SingletonMeta
 
@@ -481,7 +482,7 @@ class PostgresManager(metaclass=SingletonMeta):
 
         async with self.async_engine.begin() as conn:
             for stmt in stmts:
-                await conn.execute(text(stmt))
+                await conn.execute(text(prefix_sql(stmt)))
 
     async def ensure_business_schema(self):
         """确保业务 schema 包含后续新增字段（运行时 schema 演进）。"""
@@ -902,7 +903,9 @@ class PostgresManager(metaclass=SingletonMeta):
             # 历史未绑定用户的 API Key 会在下方迁移语句里被静默删除，先计数告警
             # 便于运维凭据失效时回溯；DELETE 之后无法再查询这些 Key。
             try:
-                unbound_keys_result = await conn.execute(text("SELECT count(*) FROM api_keys WHERE user_id IS NULL"))
+                unbound_keys_result = await conn.execute(
+                    text(prefix_sql("SELECT count(*) FROM api_keys WHERE user_id IS NULL"))
+                )
                 unbound_keys_count = int(unbound_keys_result.scalar() or 0)
                 if unbound_keys_count > 0:
                     logger.warning(
@@ -914,7 +917,7 @@ class PostgresManager(metaclass=SingletonMeta):
                 logger.warning(f"Failed to count unbound api_keys before migration: {exc}")
 
             for stmt in stmts:
-                await conn.execute(text(stmt))
+                await conn.execute(text(prefix_sql(stmt)))
 
     @property
     def is_postgresql(self) -> bool:
