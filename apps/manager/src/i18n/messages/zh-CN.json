@@ -1117,6 +1117,17 @@
       "types": {
         "document": "文档",
         "faq": "问答"
+      },
+      "deleteConfirm": "是否确认删除知识库文件 {fileName} 数据项？",
+      "deleteFaqConfirm": "是否确认删除问答库 {name} 数据项？",
+      "statuss": {
+        "statusProcessing": "解析中",
+        "generatingSummary": "生成摘要中...",
+        "statusFinalizing": "优化中",
+        "statusFailed": "失败",
+        "statusCancelled": "已取消",
+        "statusDraft": "草稿",
+        "statusCompleted": "已完成"
       }
     },
     "knowledgeFile": {},
@@ -1161,6 +1172,7 @@
       "operation": "操作",
       "remove": "删除",
       "reset": "重置",
+      "root": "根目录",
       "save": "保存",
       "search": "搜索",
       "selected": "共选中",

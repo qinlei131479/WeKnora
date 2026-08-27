@@ -21,7 +21,7 @@ export function getKnowledgeBaseListApi(req: KnowledgeBaseListReq, page: PageDom
 //   return request.post(`${API}/knowledgeBases/update/single`, req)
 // }
 export function deleteKnowledgeBaseSingleApi(req: number | string): Promise<AjaxResult> {
-  return request.post(`${API}/knowledgeBases/delete/single?id=${req}`);
+  return request.get(`${API}/knowledgeBases/delete/single?id=${req}`);
 }
 export function getKnowledgeBaseSingleApi(req: number | string): Promise<AjaxResult<KnowledgeBaseEntity>> {
   return request.get(`${API}/knowledgeBases/single?id=${req}`);
