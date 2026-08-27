@@ -16,7 +16,7 @@ const state = reactive({
   tenantsVOs: [] as TenantsVO[],
   sessionsDto: {} as SessionsPageDTO,
   page: { pageNum: 1, pageSize: 10, orderByColumn: 'createdAt', isAsc: 'desc' } as PageDomain,
-  dateRange: [] as string[],
+  dateRange: [] as string[] | null,
   sessionsVOs: [] as SessionsVO[],
   detailDrawerVisible: false,
   messagesDrawerVisible: false,
@@ -91,16 +91,16 @@ const onTenantInput = () => {
 };
 
 const getSessions = () => {
-  const dto = { ...state.sessionsDto };
-  if (state.dateRange.length === 2) {
-    dto.createdAtStart = `${state.dateRange[0]} 00:00:00`;
-    dto.createdAtEnd = `${state.dateRange[1]} 23:59:59`;
+  delete state.sessionsDto.createdAtStart;
+  delete state.sessionsDto.createdAtEnd;
+  if (state.dateRange?.length === 2) {
+    state.sessionsDto.createdAtStart = `${state.dateRange[0]} 00:00:00`;
+    state.sessionsDto.createdAtEnd = `${state.dateRange[1]} 23:59:59`;
   }
 
   state.loading = true;
   state.sessionsVOs.length = 0;
-  state.total = 0;
-  API.Sessions.list(dto, state.page)
+  API.Sessions.list(state.sessionsDto, state.page)
     .then((res) => {
       state.sessionsVOs.push(...res.rows);
       state.total = res.total;
@@ -116,6 +116,21 @@ const getSessions = () => {
 const handleQuery = () => {
   state.page.pageNum = 1;
   getSessions();
+};
+
+const resetQuery = () => {
+  state.userKeyword = '';
+  state.tenantKeyword = '';
+  state.dateRange = [];
+  state.usersVOs.length = 0;
+  state.tenantsVOs.length = 0;
+  delete state.usersDto.name;
+  delete state.tenantsDto.name;
+  delete state.sessionsDto.title;
+  delete state.sessionsDto.userId;
+  delete state.sessionsDto.tenantId;
+  delete state.sessionsDto.createdAtStart;
+  delete state.sessionsDto.createdAtEnd;
 };
 
 const showDetail = (row: SessionsVO) => {
@@ -192,6 +207,7 @@ onMounted(() => {
             :end-placeholder="$t('page.agent.sessions.search.endDatePlaceholder', '创建时间截止')"
           />
 
+          <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
           <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
         </div>
       </template>
