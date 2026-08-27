@@ -5,6 +5,8 @@ import { Storage } from './data/storage';
 import { Tenants } from './tenants/tenants';
 import { Users } from './users/users';
 import { VectorStores } from './data/vectorStores';
+import { Skills } from './data/skill';
+import { WebSearchProviders } from './data/webSearchProviders';
 
 export const API = {
   CustomAgents,
@@ -13,5 +15,7 @@ export const API = {
   Storage,
   Tenants,
   Users,
-  VectorStores
+  VectorStores,
+  Skills,
+  WebSearchProviders
 };

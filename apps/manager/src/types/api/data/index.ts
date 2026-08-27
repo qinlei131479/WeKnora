@@ -4,3 +4,5 @@ export * from './vectorStores';
 // export * from './mcpServices';
 export * from './knowledgeBase';
 export * from './knowledgeFile';
+export * from './skill';
+export * from './webSearchProviders';

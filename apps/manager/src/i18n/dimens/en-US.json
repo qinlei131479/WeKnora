@@ -24,6 +24,10 @@
       }
     },
     "data": {
+      "skill": {
+        "table.description": 360,
+        "table.name": 220
+      },
       "storage": {
         "table.createdAt": 180,
         "table.isDefault": 120,
@@ -41,6 +45,16 @@
         "table.name": 220,
         "table.operation": 100,
         "table.tenantName": 300,
+        "table.updatedAt": 180
+      },
+      "webSearch": {
+        "table.createdAt": 180,
+        "table.credentialStatus": 120,
+        "table.description": 220,
+        "table.isDefault": 120,
+        "table.name": 180,
+        "table.operation": 220,
+        "table.provider": 140,
         "table.updatedAt": 180
       }
     },
