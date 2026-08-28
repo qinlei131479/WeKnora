@@ -1,25 +1,25 @@
-import { KnowledgeFaqTag } from '@/types';
-import { getKnowledgeFaqTagsApi } from '@/api/data/knowledgeFaq';
+import { KnowledgeTag } from '@/types';
+import { getKnowledgeTagsApi } from '@/api/data/knowledgeFaq';
 
 export default function useFaqTag() {
-  const tagList = ref<KnowledgeFaqTag[]>([]) as { value: KnowledgeFaqTag[] };
+  const tagList = ref<KnowledgeTag[]>([]) as { value: KnowledgeTag[] };
 
-  const tagMap = computed<Record<string, KnowledgeFaqTag>>(() => {
-    const map: Record<string, KnowledgeFaqTag> = {};
+  const tagMap = computed<Record<string, KnowledgeTag>>(() => {
+    const map: Record<string, KnowledgeTag> = {};
     tagList.value.forEach((tag) => {
       map[tag.id] = tag;
     });
     return map;
-  }) as { value: Record<string, KnowledgeFaqTag> };
+  }) as { value: Record<string, KnowledgeTag> };
 
   // tagMapBySeqId uses seq_id as key for looking up by entry.tag_id
-  const tagMapBySeqId = computed<Record<string, KnowledgeFaqTag>>(() => {
-    const map: Record<string, KnowledgeFaqTag> = {};
+  const tagMapBySeqId = computed<Record<string, KnowledgeTag>>(() => {
+    const map: Record<string, KnowledgeTag> = {};
     tagList.value.forEach((tag) => {
       map[tag.seqId] = tag;
     });
     return map;
-  }) as { value: Record<string, KnowledgeFaqTag> };
+  }) as { value: Record<string, KnowledgeTag> };
 
   const getTagName = (tagId?: number | string, defaultValue?: string) => {
     if (!tagId) return defaultValue;
@@ -31,7 +31,7 @@ export default function useFaqTag() {
   };
   const tagOptionsWithId = computed(() => tagList.value.map((tag) => ({ label: tag.name, value: tag.id })));
   const loadTags = (knowledgeBaseId: number | string) => {
-    return getKnowledgeFaqTagsApi(knowledgeBaseId).then((res) => {
+    return getKnowledgeTagsApi(knowledgeBaseId).then((res) => {
       tagList.value = res?.data || [];
       return tagList.value;
     });

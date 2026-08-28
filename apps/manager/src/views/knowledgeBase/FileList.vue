@@ -192,7 +192,7 @@
     </page-content>
 
     <!-- 详情抽屉 -->
-    <!-- <KnowledgeBaseDetailDrawer v-model:visible="open" :kbId="kbId" /> -->
+    <FileDetail v-model:visible="detailVisible" :entity="detailEntity" />
   </section>
 </template>
 
@@ -210,6 +210,8 @@ import { getKnowledgeBaseSingleApi } from '@/api/data/knowledgeBase.js';
 import { formatSize } from '@/utils';
 import folderUse from './fileList/folderUse';
 import filesQueryUse from './fileList/filesQueryUse';
+
+import FileDetail from './components/FileDetail.vue';
 
 const { proxy } = getCurrentInstance();
 const emit = defineEmits(['back']);
@@ -241,17 +243,6 @@ const libName = computed(() => libInfo.value.name || libInfo.value.id);
 const { folderTreeData, folderTreeProps, folderTreeIds, loadFolderTreeData } = folderUse({ t }, props.libId);
 
 const { pageParams, queryParams, tableData, loading, total, loadTableData, resetQuerySearch, resetParams, handleDelete } = filesQueryUse(props.libId);
-
-// const folderDefaultExpandedKeys = ref<string[]>([]);
-// watch(
-//   () => folderTreeData,
-//   (newVal: KnowledgeFileFoldersNode[]) => {
-//     console.log('folderTreeData', newVal);
-//   },
-//   {
-//     immediate: true
-//   }
-// );
 
 const loadLibInfo = () => {
   getKnowledgeBaseSingleApi(props.libId).then((res) => {
@@ -323,7 +314,12 @@ function handleRowClick(row: KnowledgeFileEntity, column: any) {
   }
   // showFiles(row);
 }
-function handleDetail(row: KnowledgeFileEntity) {}
+const detailVisible = ref<boolean>(false);
+const detailEntity = ref<KnowledgeFileEntity>({});
+function handleDetail(row: KnowledgeFileEntity) {
+  detailVisible.value = true;
+  detailEntity.value = row;
+}
 
 interface StatusInfo {
   label: string;

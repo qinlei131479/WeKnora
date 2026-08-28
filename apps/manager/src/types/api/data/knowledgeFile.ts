@@ -48,7 +48,7 @@ interface KnowledgeFileBase {
   storageSize?: number;
 
   // 元数据（JSON）
-  metadata?: string;
+  metadata?: any;
 
   // 创建时间
   createdAt?: string;
@@ -85,6 +85,14 @@ interface KnowledgeFileBase {
 }
 
 export interface KnowledgeFileEntity extends KnowledgeFileBase {}
+
+export interface KnowledgeFileDetail extends KnowledgeFileEntity {
+  time?: string;
+  md?: Array<any>;
+  total?: number;
+  chunkLoading?: boolean;
+  chunkLoadError?: string;
+}
 
 export interface KnowledgeFileListReq {
   // 知识库 ID
@@ -187,7 +195,7 @@ export interface KnowledgeFaqEntity {
   updatedAt?: string; // 更新时间
 }
 
-export interface KnowledgeFaqTag {
+export interface KnowledgeTag {
   id: string;
   tenantId: number;
   knowledgeBaseId: string;
