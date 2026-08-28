@@ -25,6 +25,9 @@ public class FAQEntryVO {
     @Schema(description = "相似问题列表")
     private List<String> similarQuestions;
 
+    @Schema(description = "反例子问题列表")
+    private List<String> negativeQuestions;
+
     @Schema(description = "答案列表")
     private List<String> answers;
 

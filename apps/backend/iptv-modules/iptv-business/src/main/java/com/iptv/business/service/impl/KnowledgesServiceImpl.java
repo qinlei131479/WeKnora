@@ -323,6 +323,14 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
                     vo.setSimilarQuestions(new ArrayList<>());
                 }
 
+                // 反例子问题列表
+                JSONArray negativeQuestions = metadata.getJSONArray("negative_questions");
+                if (negativeQuestions != null) {
+                    vo.setNegativeQuestions(negativeQuestions.toList(String.class));
+                } else {
+                    vo.setNegativeQuestions(new ArrayList<>());
+                }
+
                 // 答案列表
                 JSONArray answers = metadata.getJSONArray("answers");
                 if (answers != null) {
