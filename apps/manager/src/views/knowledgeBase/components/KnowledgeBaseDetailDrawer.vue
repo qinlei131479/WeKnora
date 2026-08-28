@@ -642,13 +642,6 @@
         </div>
       </div>
     </div>
-    <!-- <template #footer>
-      <div style="flex: auto">
-        <el-button @click="handleClose">
-          {{ $t('page.normal.close', '关闭') }}
-        </el-button>
-      </div>
-    </template> -->
   </KjscRtlDrawer>
 </template>
 

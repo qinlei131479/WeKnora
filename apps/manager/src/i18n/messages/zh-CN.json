@@ -1196,6 +1196,18 @@
       }
     },
     "knowledgeFile": {
+      "searchPlaceholder": "搜索文档",
+      "fileTypePlaceholder": "文件类型",
+      "fileName": "文件名",
+      "fileType": "文件类型",
+      "fileSize": "文件大小",
+      "parseStatus": "解析状态",
+      "channel": "来源渠道",
+      "createdAt": "创建时间",
+      "deleteConfirm": "是否确认删除知识库文件名为 {fileName} 的数据项？",
+      "titleDetail": "文档详情"
+    },
+    "KnowledgeFaq": {
       "searchPlaceholder": "搜索问答",
       "tagPlaceholder": "请选择标签",
       "qaId": "问答ID",
@@ -1207,7 +1219,6 @@
       "deleteConfirm": "是否确认删除标准问题为 {name} 的数据项？",
       "titleDetail": "问答详情"
     },
-    "KnowledgeFaq": {},
     "mcp": {},
     "models": {},
     "normal": {
