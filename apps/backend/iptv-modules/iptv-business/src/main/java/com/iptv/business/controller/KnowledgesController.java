@@ -85,4 +85,12 @@ public class KnowledgesController {
     public TableDataInfo<FAQEntryVO> listFAQEntries(@RequestBody FAQEntryQueryDTO dto, PageDTO pg) {
         return knowledgesService.listFAQEntries(dto, pg);
     }
+    @Log(title = "删除faq", businessType = BusinessType.DELETE)
+    @Operation(summary = "删除faq", description = "删除faq")
+    @GetMapping("/faq/delete")
+    @RequiresPermissions("business:knowledges:remove")
+    public R<Void> deleteFAQById(@RequestParam String id) {
+        knowledgesService.deleteFAQById(id);
+        return R.ok();
+    }
 }

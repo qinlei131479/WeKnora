@@ -79,4 +79,11 @@ public interface KnowledgesService extends IService<Knowledges> {
      * @return 分页结果
      */
     TableDataInfo<FAQEntryVO> listFAQEntries(FAQEntryQueryDTO dto, PageDTO pg);
+
+    /**
+     * 按 id 删除FAQ条目
+     *
+     * @param id 主键
+     */
+    void deleteFAQById(@Nonnull String id);
 }

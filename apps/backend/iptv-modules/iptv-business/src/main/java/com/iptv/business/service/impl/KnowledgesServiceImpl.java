@@ -297,6 +297,11 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
         return PageUtils.getDataTable(voList, page);
     }
 
+    @Override
+    public void deleteFAQById(@Nonnull String id) {
+        chunksMapper.deleteById(id);
+    }
+
     /**
      * 将Chunks转换为FAQEntryVO
      */
