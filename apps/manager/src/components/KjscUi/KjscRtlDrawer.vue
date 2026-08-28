@@ -1,9 +1,9 @@
 <template>
   <el-drawer
     v-model="visible"
-    v-bind="$attrs"
     direction="rtl"
     :close-on-click-modal="false"
+    v-bind="$attrs"
     :modal-class="$style['modal']"
     :header-class="$style['header']"
     :body-class="bodyClass"
