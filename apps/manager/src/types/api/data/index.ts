@@ -6,3 +6,4 @@ export * from './knowledgeBase';
 export * from './knowledgeFile';
 export * from './skill';
 export * from './webSearchProviders';
+export * from './parserEngines';

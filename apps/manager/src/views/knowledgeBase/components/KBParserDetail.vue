@@ -32,14 +32,14 @@
               <el-option v-for="opt in getEngineOptions(group.extensions)" :key="opt.value" :value="opt.value" :label="opt.selectLabel" />
             </el-select> -->
             <span> {{ getDefaultEngineLabel(group.extensions) }}</span>
-            <el-checkbox
+            <!-- <el-checkbox
               v-if="group.extensions.includes('xlsx') && getEngineForGroup(group.extensions) === 'builtin'"
               class="xlsx-header-option"
               :checked="getXLSXFirstRowAsHeader(group.extensions)"
               disabled
             >
               {{ $t('component.kbSettings.parser.xlsxFirstRowAsHeader') }}
-            </el-checkbox>
+            </el-checkbox> -->
           </div>
         </div>
       </div>
@@ -49,6 +49,8 @@
 
 <script setup lang="ts">
 // import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
+import { getParserEngineListApi } from '@/api/data/system';
+import { ParserEngineEntity } from '@/types';
 import { useI18n } from 'vue-i18n';
 // import { type ParserEngineInfo } from '@/api/system'
 // import { useEditorResourcesStore } from '@/stores/editorResources'
@@ -101,14 +103,14 @@ const emit = defineEmits<{
 }>();
 
 // const uiStore = useUIStore()
-const localEngineRules = ref<ParserEngineRule[]>([...props.parserEngineRules]);
-const parserEngines = ref<ParserEngineInfo[]>([]);
+const localEngineRules = ref<ParserEngineRule[]>([...props.parserEngineRules]) as { value: ParserEngineRule[] };
+const parserEngines = ref<ParserEngineEntity[]>([]) as { value: ParserEngineEntity[] };
 const loading = ref(true);
 
 const allFileTypes = computed(() => {
   const s = new Set<string>();
   for (const engine of parserEngines.value) {
-    for (const ft of engine.FileTypes || []) {
+    for (const ft of engine.fileTypes || []) {
       s.add(ft);
     }
   }
@@ -174,14 +176,14 @@ const fileTypeGroups = computed(() => {
 function getEngineOptions(extensions: string[]): EngineOption[] {
   const raw: { name: string; desc: string; fileTypes: string[]; available: boolean; reason: string }[] = [];
   for (const engine of parserEngines.value) {
-    const supports = extensions.some((ext) => (engine.FileTypes || []).includes(ext));
+    const supports = extensions.some((ext) => (engine.fileTypes || []).includes(ext));
     if (supports) {
       raw.push({
-        name: engine.Name,
-        desc: engine.Description || engine.Name,
-        fileTypes: engine.FileTypes || [],
-        available: engine.Available !== false,
-        reason: engine.UnavailableReason || ''
+        name: engine.name,
+        desc: engine.description || engine.name,
+        fileTypes: engine.fileTypes || [],
+        available: engine.available !== false,
+        reason: engine.unavailableReason || ''
       });
     }
   }
@@ -275,6 +277,8 @@ async function loadEngines(force = false) {
   try {
     // await editorResources.ensureParserEngines(force);
     // parserEngines.value = editorResources.parserEngines as ParserEngineInfo[];
+    const res = await getParserEngineListApi();
+    parserEngines.value = res.data?.engines || [];
   } catch {
     parserEngines.value = [];
   } finally {
@@ -284,6 +288,7 @@ async function loadEngines(force = false) {
 }
 
 function ensureCompleteRules() {
+  // console.log('ensureCompleteRules');
   if (!parserEngines.value.length) return;
   const complete = buildCompleteRules();
   if (complete.length && complete.length > localEngineRules.value.length) {
@@ -349,13 +354,17 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 0;
+
+  border: 1px solid #e3d6d6;
+  border-radius: 12px;
+  padding: 0 20px;
 }
 
 .setting-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 16px 0;
+  padding: 10px 0;
   border-bottom: 1px solid var(--el-border-color);
 
   &:last-child {
@@ -364,14 +373,20 @@ watch(
 }
 
 .setting-info {
-  flex: 0 0 40%;
-  max-width: 40%;
+  flex: 0 0 65%;
+  max-width: 65%;
   padding-right: 24px;
 
+  display: flex;
+  align-items: center;
+  gap: 20px;
+
   .group-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    // display: flex;
+    // align-items: center;
+    // gap: 6px;
+    width: 100px;
+    text-align: center;
   }
 
   .group-icon {
@@ -392,7 +407,7 @@ watch(
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-top: 6px;
+    // margin-top: 6px;
   }
 
   .ext-tag {
@@ -415,8 +430,8 @@ watch(
 }
 
 .setting-control {
-  flex: 0 0 55%;
-  max-width: 55%;
+  flex: 0 0 30%;
+  max-width: 30%;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
