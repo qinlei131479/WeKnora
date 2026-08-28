@@ -25,6 +25,7 @@ function isLiteSpaDefaultEntry(to: RouteLocationNormalized) {
     to.path === '/' ||
     to.path === '/platform' ||
     to.path === '/platform/knowledge-bases' ||
+    to.path === '/platform/creatChat' ||
     to.name === 'knowledgeBaseList'
   )
 }
@@ -44,7 +45,7 @@ const router = createRouter({
   routes: [
     {
       path: "/",
-      redirect: "/platform/knowledge-bases",
+      redirect: "/platform/creatChat",
     },
     {
       path: "/login",
@@ -92,7 +93,7 @@ const router = createRouter({
     {
       path: "/platform",
       name: "Platform",
-      redirect: "/platform/knowledge-bases",
+      redirect: "/platform/creatChat",
       component: () => import("../views/platform/index.vue"),
       meta: { requiresInit: true, requiresAuth: true },
       children: [
@@ -413,7 +414,7 @@ router.beforeEach(async (to, from, next) => {
       }
     }
     if (authStore.hasValidTenant) {
-      next('/platform/knowledge-bases')
+      next('/platform/creatChat')
     } else {
       next()
     }
@@ -422,9 +423,9 @@ router.beforeEach(async (to, from, next) => {
 
   // 如果访问的是登录页面或初始化页面，直接放行
   if (to.meta.requiresAuth === false || to.meta.requiresInit === false) {
-    // 如果已登录用户访问登录页面，重定向到知识库列表页面
+    // 如果已登录用户访问登录页面，重定向到新建对话页
     if (to.path === '/login' && authStore.isLoggedIn) {
-      next(authStore.hasValidTenant ? '/platform/knowledge-bases' : '/onboarding/workspace')
+      next(authStore.hasValidTenant ? '/platform/creatChat' : '/onboarding/workspace')
       return
     }
     next()

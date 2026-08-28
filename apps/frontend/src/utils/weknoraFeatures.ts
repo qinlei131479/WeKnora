@@ -74,8 +74,8 @@ const HIDDEN_SETTINGS_SECTIONS = new Set([
 /** 主侧栏在 hide 模式下要藏的 path（与 menu.ts 的 item.path 对齐） */
 const HIDDEN_MENU_PATHS = new Set([
   'organizations',
-  'harness/workspace',
-  'harness/dashboard',
+//   'harness/workspace',
+//   'harness/dashboard',
 ])
 
 /** 知识库页右侧 surface 在 hide 模式下要藏的值 */
@@ -177,8 +177,8 @@ export function getFeatureFlags(): FeatureFlags {
     hideKnowledgeGraph: hide,
     hideDatasource: hide,
     hideShareManagement: hide,
-    hideHarnessWorkspace: hide,
-    hideHarnessDashboard: hide,
+    hideHarnessWorkspace: false,
+    hideHarnessDashboard: false,
     hideKbSkillsToolsMcp: hide,
     restrictProviderOptions: hide,
   }

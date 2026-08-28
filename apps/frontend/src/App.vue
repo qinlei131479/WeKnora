@@ -143,7 +143,7 @@ const persistOIDCLoginResponse = async (response: any) => {
   await syncOIDCUserContext()
 
   await nextTick()
-  router.replace(authStore.hasValidTenant ? '/platform/knowledge-bases' : '/onboarding/workspace')
+  router.replace(authStore.hasValidTenant ? '/platform/creatChat' : '/onboarding/workspace')
 }
 
 const handleGlobalOIDCCallback = async () => {
