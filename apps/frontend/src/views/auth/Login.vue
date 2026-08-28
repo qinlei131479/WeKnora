@@ -98,9 +98,11 @@
     <!-- Logo - Top Left（hideGithub 时不跳转 GitHub） -->
     <a v-if="!featureFlags.hideGithub" href="https://github.com/Tencent/WeKnora" target="_blank" class="header-logo"
       :title="$t('brand.name')">
+      <img class="header-logo-img" :src="brandLogo" alt="" />
       <span class="logo-text">{{ $t('brand.name') }}</span>
     </a>
     <div v-else class="header-logo">
+      <img class="header-logo-img" :src="brandLogo" alt="" />
       <span class="logo-text">{{ $t('brand.name') }}</span>
     </div>
 
@@ -336,6 +338,7 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 import { getFeatureFlags } from '@/utils/weknoraFeatures'
+import brandLogo from '@/assets/img/logo@1x.png'
 import LanguageSwitch from '@/components/LanguageSwitch.vue'
 
 const featureFlags = getFeatureFlags()
@@ -537,7 +540,7 @@ const persistLoginResponse = async (response: any) => {
   // briefly when the deployment is invitation-only.
   await authStore.refreshFromAuthMe()
   await nextTick()
-  router.replace(authStore.hasValidTenant ? '/platform/knowledge-bases' : '/onboarding/workspace')
+  router.replace(authStore.hasValidTenant ? '/platform/creatChat' : '/onboarding/workspace')
 }
 
 const getBackendOIDCRedirectURI = () => `${window.location.origin}/api/v1/auth/oidc/callback`
@@ -708,7 +711,7 @@ onMounted(async () => {
   }
 
   if (authStore.isLoggedIn) {
-    router.replace('/platform/knowledge-bases')
+    router.replace('/platform/creatChat')
     return
   }
 
@@ -1101,13 +1104,25 @@ onMounted(async () => {
   left: 50px;
   z-index: 100;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+
+  .header-logo-img {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    display: block;
+    border-radius: 4px;
+  }
 
   .logo-text {
     font-size: 22px;
     font-weight: 700;
     letter-spacing: 0.08em;
     line-height: 1.2;
-    color: var(--td-text-color-primary, #1a365d);
+    color: #fff;
     white-space: nowrap;
   }
 }
@@ -1483,6 +1498,11 @@ onMounted(async () => {
     top: 26px;
     left: 40px;
 
+    .header-logo-img {
+      width: 28px;
+      height: 28px;
+    }
+
     .logo-text {
       font-size: 20px;
     }
@@ -1530,6 +1550,11 @@ onMounted(async () => {
   .header-logo {
     top: 22px;
     left: 30px;
+
+    .header-logo-img {
+      width: 24px;
+      height: 24px;
+    }
 
     .logo-text {
       font-size: 18px;
@@ -1590,6 +1615,11 @@ onMounted(async () => {
   .header-logo {
     top: 18px;
     left: 20px;
+
+    .header-logo-img {
+      width: 20px;
+      height: 20px;
+    }
 
     .logo-text {
       font-size: 16px;
@@ -1661,7 +1691,7 @@ html[theme-mode="dark"] {
   }
 
   .header-logo .logo-text {
-    color: #f5f7fa;
+    color: #fff;
   }
 
   .header-link {

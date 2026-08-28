@@ -169,7 +169,7 @@ export default withMermaid(
     },
 
     head: [
-      ['link', { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' }],
+      ['link', { rel: 'icon', href: '/docs/favicon.ico' }],
       ['meta', { name: 'theme-color', content: '#ffffff' }],
       ['meta', { property: 'og:type', content: 'website' }],
       ['meta', { property: 'og:title', content: '智能体中台2.0' }],
@@ -196,7 +196,7 @@ export default withMermaid(
     },
 
     themeConfig: {
-      logo: { light: '/logo-mark.svg', dark: '/logo-mark-dark.svg', alt: '智能体中台2.0' },
+      logo: { src: '/logo@1x.png', alt: '智能体中台2.0' },
       siteTitle: '智能体中台2.0',
 
       nav: landingNav,

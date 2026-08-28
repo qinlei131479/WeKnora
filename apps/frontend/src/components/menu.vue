@@ -3,6 +3,7 @@
         <!-- 展开时：Logo + 折叠按钮同行 -->
         <div class="logo_row" v-if="!uiStore.sidebarCollapsed">
             <div class="logo_box" @click="router.push('/platform/knowledge-bases')" style="cursor: pointer;">
+                <img class="logo_img" :src="brandLogo" alt="" />
                 <span class="logo-text">{{ t('brand.name') }}</span>
                 <sup v-if="isLiteEdition" class="lite-badge">Lite</sup>
             </div>
@@ -255,6 +256,7 @@ import { useI18n } from 'vue-i18n';
 import { getSystemInfo } from '@/api/system';
 import { useChatEngineNav } from '@/composables/useChatEngineNav';
 import { useTheme } from '@/composables/useTheme';
+import brandLogo from '@/assets/img/logo@1x.png';
 
 const chatResources = useChatResourcesStore();
 // Platform logos reused from IMChannelsOverviewPanel — keeps the session list
@@ -1277,9 +1279,9 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
     .logo_box {
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         width: 100%;
-        padding: 0 36px;
+        padding: 0 36px 0 4px;
         box-sizing: border-box;
         min-width: 0;
         overflow: hidden;
@@ -1308,10 +1310,12 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
     }
 
     .logo_img {
-        margin-left: 24px;
         width: 30px;
         height: 30px;
-        margin-right: 7.25px;
+        margin-right: 8px;
+        flex-shrink: 0;
+        display: block;
+        border-radius: 4px;
     }
 
     .logo_txt {
