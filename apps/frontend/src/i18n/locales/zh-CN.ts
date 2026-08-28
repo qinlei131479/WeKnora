@@ -4608,7 +4608,7 @@ export default {
     }
   },
   createChat: {
-    title: 'Hi，我是 @:{\'brand.name\'}，让你的知识触手可及',
+    title: 'Hi，我是 @:{\'brand.name\'}',
     newSessionTitle: '新会话',
     messages: {
       createFailed: '创建会话失败',

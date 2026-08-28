@@ -2163,7 +2163,7 @@ export default {
     goToAgentSettings: 'Go to agent settings'
   },
   createChat: {
-    title: 'Hi, I am @:{\'brand.name\'} — your knowledge, within reach',
+    title: 'Hi, I am @:{\'brand.name\'}',
     newSessionTitle: 'New Session',
     messages: {
       createFailed: 'Failed to create session',

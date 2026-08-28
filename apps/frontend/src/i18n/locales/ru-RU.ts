@@ -4608,7 +4608,7 @@ export default {
     }
   },
   createChat: {
-    title: 'Привет, я @:{\'brand.name\'} — ваши знания всегда под рукой',
+    title: 'Привет, я @:{\'brand.name\'}',
     newSessionTitle: 'Новая сессия',
     messages: {
       createFailed: 'Не удалось создать сессию',
