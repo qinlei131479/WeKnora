@@ -1,6 +1,7 @@
 package com.iptv.business.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONArray;
@@ -36,11 +37,9 @@ import java.io.OutputStream;
 import java.io.Writer;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 知识条目（文档/FAQ/URL/手工等）：解析状态、文件元数据、目录路径 服务实现类（PostgreSQL）
@@ -58,6 +57,7 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
     private final StorageBackendsMapper storageBackendsMapper;
     private final ResourcesMapper resourcesMapper;
     private final KnowledgeTagsMapper knowledgeTagsMapper;
+    private final KnowledgeTagRelationsMapper knowledgeTagRelationsMapper;
     private final StorageBackendFileServiceFactory storageBackendFileServiceFactory;
 
     @Override
@@ -65,13 +65,52 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
         Page<KnowledgesVO> page = PageUtils.toPage(pg);
         List<Knowledges> list = this.baseMapper.queryPage(dto, page);
         List<KnowledgesVO> voList = BeanUtil.copyToList(list, KnowledgesVO.class);
+        buildVO(voList);
         return PageUtils.getDataTable(voList, page);
     }
 
     @Override
     public KnowledgesVO queryById(@Nonnull String id) {
         Knowledges entity = this.baseMapper.selectById(id);
-        return BeanUtil.copyProperties(entity, KnowledgesVO.class);
+        KnowledgesVO vo = BeanUtil.copyProperties(entity, KnowledgesVO.class);
+        buildVO(List.of(vo));
+        return vo;
+    }
+
+    private void buildVO(List<KnowledgesVO> voList) {
+        queryTags(voList);
+    }
+
+    private void queryTags(List<KnowledgesVO> voList){
+        Set<String> knowledgeIds = voList.stream().map(KnowledgesVO::getId).collect(Collectors.toSet());
+        if(CollUtil.isEmpty(knowledgeIds)){
+            return;
+        }
+        List<KnowledgeTagRelations> tags = knowledgeTagRelationsMapper.selectList(new LambdaQueryWrapper<KnowledgeTagRelations>()
+                .in(KnowledgeTagRelations::getKnowledgeId, knowledgeIds));
+
+        Map<String, List<KnowledgeTagRelations>> tagMap = tags.stream()
+                .collect(Collectors.groupingBy(KnowledgeTagRelations::getKnowledgeId, Collectors.toList()));
+
+        Set<String> tagIds = tags.stream().map(KnowledgeTagRelations::getTagId).collect(Collectors.toSet());
+
+        if(CollUtil.isEmpty(tagIds)){
+            return;
+        }
+        List<KnowledgeTags> tagList = knowledgeTagsMapper.selectList(new LambdaQueryWrapper<KnowledgeTags>()
+                .in(KnowledgeTags::getId, tagIds));
+
+        voList.forEach(vo ->{
+            List<KnowledgeTagRelations> vTagsRelations = tagMap.get(vo.getId());
+            List<KnowledgeTags> knowledgeTags = Collections.emptyList();
+            if(CollUtil.isNotEmpty(vTagsRelations)){
+                knowledgeTags = tagList.stream().filter(t -> CollUtil.contains(
+                         vTagsRelations.stream().map(KnowledgeTagRelations::getTagId).collect(Collectors.toSet()),
+                        t.getId()
+                )).toList();
+            }
+            vo.setTags(knowledgeTags);
+        });
     }
 
     @Override
