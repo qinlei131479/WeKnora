@@ -2,6 +2,7 @@
   <el-drawer
     v-model="visible"
     direction="rtl"
+    :close-on-press-escape="false"
     :close-on-click-modal="false"
     v-bind="$attrs"
     :modal-class="$style['modal']"
