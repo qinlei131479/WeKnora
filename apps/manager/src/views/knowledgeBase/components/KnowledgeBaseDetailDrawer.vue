@@ -2,6 +2,7 @@
   <KjscRtlDrawer
     :model-value="visible"
     @update:model-value="$emit('update:visible', $event)"
+    close-on-click-modal
     :title="modelTitle"
     size="60%"
     :show-confirm="false"

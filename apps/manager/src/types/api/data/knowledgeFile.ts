@@ -172,16 +172,27 @@ export interface KnowledgeFaqListReq {
   knowledgeBaseId?: string; // 知识库ID
   tagIds?: string[]; // 标签ID列表
   keyword?: string; // 搜索关键词
-  searchField?: string; // 搜索字段：standard_question/similar_questions/answers
+  // searchField?: string; // 搜索字段：standard_question/similar_questions/answers
 }
 
 export interface KnowledgeFaqEntity {
   id?: string; // 分块ID
   standardQuestion?: string; // 标准问题
-  similarQuestions?: string[]; // 相似问题列表
-  answers?: string[]; // 答案列表
+  similarQuestions?: string[]; // 相似问题
+  negativeQuestions?: string[]; // 反例问题
+  answers?: string[]; // 答案
   tagId?: string; // 标签ID
   tagName?: string; // 标签名称
   createdAt?: string; // 创建时间
   updatedAt?: string; // 更新时间
+}
+
+export interface KnowledgeFaqTag {
+  id: string;
+  tenantId: number;
+  knowledgeBaseId: string;
+  name: string; // 标签名称（知识库内唯一）
+  color: string; // 标签颜色
+  sortOrder: number; // 同级排序权重
+  seqId: number; // 对外自增序号（API 友好）
 }

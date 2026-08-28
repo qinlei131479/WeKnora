@@ -35,21 +35,50 @@
           </el-tree-v2>
         </div>
         <div class="knowledge-file-list-right">
-          <div class="search-area">
-            <el-input v-model="queryParams.keyword" placeholder="搜索文档" clearable prefix-icon="Search" />
-            <el-select v-model="queryParams.fileType" placeholder="文件类型" clearable>
+          <div class="search-bar">
+            <div class="search-bar__keyword">
+              <el-input
+                v-model="queryParams.keyword"
+                class="search-bar__input"
+                placeholder="搜索文档"
+                clearable
+                :prefix-icon="Search"
+                @keyup.enter="loadTableData"
+                @clear="loadTableData"
+              />
+            </div>
+            <!-- <el-select v-model="queryParams.fileType" style="max-width: 300px" placeholder="文件类型" clearable @clear="loadTableData">
               <el-option label="所有" value="" />
               <el-option label="文本" value="text" />
               <el-option label="图片" value="image" />
               <el-option label="视频" value="video" />
               <el-option label="音频" value="audio" />
-            </el-select>
+            </el-select> -->
+            <el-autocomplete
+              v-model="queryParams.fileType"
+              style="max-width: 300px"
+              value-key="name"
+              placeholder="文件类型"
+              clearable
+              hide-loading
+              :suffix-icon="Search"
+              :trigger-on-focus="false"
+              :fetch-suggestions="getFileTypeSuggestions"
+              @keyup.enter="loadTableData"
+              @clear="loadTableData"
+            />
+            <el-button @click="resetQuerySearch">
+              {{ $t('page.normal.reset', '重置') }}
+            </el-button>
+            <el-button type="primary" @click="loadTableData">
+              {{ $t('page.normal.search', '查询') }}
+            </el-button>
           </div>
           <div class="table-area">
             <el-table
               ref="tableRef"
-              v-loading="filesTableLoading"
-              :data="filesTableData"
+              v-loading="loading"
+              :data="tableData"
               height="100%"
               @row-click="handleRowClick"
               @selection-change="handleSelectionChange"
@@ -144,7 +173,7 @@
                   <el-button link type="primary" @click="handleDetail(scope.row)" v-hasPermi="['business:knowledgeBases:query']">
                     {{ $t('page.normal.detail') }}
                   </el-button>
-                  <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['business:knowledgeBases:remove']">
+                  <el-button link type="danger" @click="handleDelete(scope.row.id, scope.row)" v-hasPermi="['business:knowledgeBases:remove']">
                     {{ $t('page.normal.remove') }}
                   </el-button>
                   <!-- <el-button v-if="!scope.row.isActive" link type="info" @click="handleEnable(scope.row)" v-hasPermi="['business:knowledgeBases:edit']">
@@ -159,11 +188,11 @@
           </div>
           <pagination
             class="pagination-area"
-            v-show="filesTableTotal > 0"
-            :total="filesTableTotal"
+            v-show="total > 0"
+            :total="total"
             v-model:page="pageParams.pageNum"
             v-model:limit="pageParams.pageSize"
-            @pagination="loadFilesTableData"
+            @pagination="loadTableData"
           />
         </div>
       </div>
@@ -230,10 +259,9 @@ const goBack = () => {
 const libInfo: Ref<KnowledgeBaseEntity> = ref({});
 const libName = computed(() => libInfo.value.name || libInfo.value.id);
 
-const { folderTreeData, folderTreeProps, showFolderTree, folderTreeLoading, folderTreeIds, loadFolderTreeData } = folderUse({ t }, props.libId);
-const { pageParams, queryParams, filesTableData, filesTableLoading, filesTableTotal, loadFilesTableData, resetFilesQuery } = filesQueryUse(
-  props.libId
-);
+const { folderTreeData, folderTreeProps, folderTreeIds, loadFolderTreeData } = folderUse({ t }, props.libId);
+
+const { pageParams, queryParams, tableData, loading, total, loadTableData, resetQuerySearch, resetParams, handleDelete } = filesQueryUse(props.libId);
 
 // const folderDefaultExpandedKeys = ref<string[]>([]);
 // watch(
@@ -262,11 +290,50 @@ onMounted(() => {
 
 /** 树节点点击事件 */
 function handleTreeCurrentChange(data: KnowledgeFileFoldersNode, node: any) {
-  console.log('handleTreeCurrentChange', data, node);
+  // console.log('handleTreeCurrentChange', data, node);
+  resetParams();
   const queryParamsValue: KnowledgeFileListReq = queryParams.value;
   queryParamsValue.folderPath = data.path;
-  pageParams.value.pageNum = 1;
-  loadFilesTableData();
+  // pageParams.value.pageNum = 1;
+  loadTableData();
+}
+
+const allSuggestionFileTypes = [
+  'pdf',
+  'doc',
+  'docx',
+  'xls',
+  'xlsx',
+  'ppt',
+  'pptx',
+  'txt',
+  'md',
+  'markdown',
+  'json',
+  'log',
+  'yaml',
+  'yml',
+  'xml',
+  'html',
+  'png',
+  'jpg',
+  'jpeg',
+  'gif',
+  'webp',
+  'bmp',
+  'mp3',
+  'wav',
+  'm4a',
+  'flac',
+  'ogg',
+  'aac'
+];
+function getFileTypeSuggestions(queryString: string, cb: any) {
+  let fileTypes = allSuggestionFileTypes;
+  if (queryString) {
+    fileTypes = fileTypes.filter((item) => item.includes(queryString));
+  }
+  cb(fileTypes.map((item) => ({ name: item })));
 }
 
 /** 选择条数  */
@@ -278,27 +345,6 @@ function handleRowClick(row: KnowledgeFileEntity, column: any) {
   // showFiles(row);
 }
 function handleDetail(row: KnowledgeFileEntity) {}
-function handleDelete(row: KnowledgeFileEntity) {
-  const id = row.id!;
-  const message = t('page.knowledgeBase.deleteConfirm', { fileName: row.fileName }, `是否确认删除知识库文件 ${row.fileName} 数据项？`);
-  proxy.$modal.confirm(message).then(
-    function () {
-      return doDelete(id);
-    },
-    () => {}
-  );
-}
-function doDelete(id: number | string) {
-  deleteKnowledgeFileSingleApi(id).then((res) => {
-    if (res.code === 200) {
-      proxy.$message.success(t('page.normal.deleteSuccess'));
-      if (filesTableData.value.length === 1 && pageParams.value.pageNum > 1) {
-        pageParams.value.pageNum--;
-      }
-      loadFilesTableData();
-    }
-  });
-}
 
 interface StatusInfo {
   label: string;
@@ -345,7 +391,7 @@ const computeStatus = (item: KnowledgeFileEntity): StatusInfo => {
 
 const statusByRow = computed(() => {
   const map = new Map<string, StatusInfo>();
-  for (const item of filesTableData.value) map.set(item.id, computeStatus(item));
+  for (const item of tableData.value) map.set(item.id, computeStatus(item));
   return map;
 });
 
@@ -354,7 +400,7 @@ watch(
   (newVal: string) => {
     if (newVal) {
       loadFolderTreeData();
-      loadFilesTableData();
+      loadTableData();
       if (props.lib) {
         libInfo.value = props.lib;
       } else {

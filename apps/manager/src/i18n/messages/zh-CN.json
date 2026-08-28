@@ -1195,7 +1195,19 @@
         "statusCompleted": "已完成"
       }
     },
-    "knowledgeFile": {},
+    "knowledgeFile": {
+      "searchPlaceholder": "搜索问答",
+      "tagPlaceholder": "请选择标签",
+      "qaId": "问答ID",
+      "standardQuestion": "问题",
+      "similarQuestions": "相似问题",
+      "negativeQuestions": "反例问题",
+      "answers": "答案",
+      "tagName": "标签名称",
+      "deleteConfirm": "是否确认删除标准问题为 {name} 的数据项？",
+      "titleDetail": "问答详情"
+    },
+    "KnowledgeFaq": {},
     "mcp": {},
     "models": {},
     "normal": {

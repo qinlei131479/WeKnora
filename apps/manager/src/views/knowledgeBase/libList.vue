@@ -13,6 +13,7 @@
               :prefix-icon="Search"
               :placeholder="$t('page.knowledgeBase.searchPlaceholder', '搜索知识库名称')"
               @keyup.enter="handleQuery"
+              @clear="handleQuery"
             />
             <!-- <button type="button" class="search-bar__icon-btn" @click="handleQuery">
               <svg-icon icon-class="search" class="search-bar__icon" />
