@@ -74,12 +74,16 @@ const HIDDEN_SETTINGS_SECTIONS = new Set([
 /** 主侧栏在 hide 模式下要藏的 path（与 menu.ts 的 item.path 对齐） */
 const HIDDEN_MENU_PATHS = new Set([
   'organizations',
-  'harness/workspace',
-  'harness/dashboard',
+//   'harness/workspace',
+//   'harness/dashboard',
 ])
 
 /** 知识库页右侧 surface 在 hide 模式下要藏的值 */
-const HIDDEN_KB_SURFACES = new Set(['skills', 'tools', 'mcp'])
+const HIDDEN_KB_SURFACES = new Set([
+  // 'skills',
+  // 'tools',
+  // 'mcp',
+])
 
 const ALLOWED_LOCALES = new Set(['zh-CN', 'en-US'])
 const ALLOWED_IM_PLATFORMS = new Set(['dingtalk', 'wecom', 'feishu'])
@@ -179,7 +183,7 @@ export function getFeatureFlags(): FeatureFlags {
     hideShareManagement: hide,
     hideHarnessWorkspace: false,
     hideHarnessDashboard: false,
-    hideKbSkillsToolsMcp: hide,
+    hideKbSkillsToolsMcp: false,
     restrictProviderOptions: hide,
   }
 }
@@ -218,7 +222,7 @@ export function isHiddenKbSurface(surface: string): boolean {
   return readHide() && HIDDEN_KB_SURFACES.has(surface)
 }
 
-/** 跳转知识库列表；hide 模式下不带 skills/tools/mcp surface */
+/** 跳转知识库列表；被隐藏的 surface 不带 query */
 export function knowledgeBasesLocation(surface?: string): { path: string; query?: Record<string, string> } {
   if (!surface || surface === 'platform' || isHiddenKbSurface(surface)) {
     return { path: '/platform/knowledge-bases' }
