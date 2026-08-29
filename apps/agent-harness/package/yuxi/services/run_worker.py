@@ -306,6 +306,21 @@ async def _consume_stream_with_cancel(agen, run_ctx: RunContext):
 
 
 async def process_agent_run(ctx, run_id: str):
+    """执行队列中的 AgentRun；开关打开时绑定并在结束时删除临时 JWT。"""
+    from yuxi.p0.flags import is_run_token_store_enabled
+    from yuxi.p0.request_token import bind_request_access_token
+    from yuxi.p0.run_token_store import delete_run_access_token
+
+    bind_request_access_token(None)
+    try:
+        await _process_agent_run(ctx, run_id)
+    finally:
+        bind_request_access_token(None)
+        if is_run_token_store_enabled():
+            await delete_run_access_token(run_id)
+
+
+async def _process_agent_run(ctx, run_id: str):
     """执行队列中的 AgentRun，并只从 run 列和输入消息恢复运行参数。"""
     run = await _get_run(run_id)
     if not run:
@@ -355,6 +370,25 @@ async def process_agent_run(ctx, run_id: str):
     if not user:
         await mark_run_terminal(run_id, "failed", "user_not_found", f"user {uid} not found")
         return
+
+    from yuxi.p0.flags import is_auth_token_db_check_enabled, is_run_token_store_enabled
+    from yuxi.p0.request_token import bind_request_access_token
+    from yuxi.p0.run_token_store import validate_stored_run_token
+    from yuxi.utils.weknora_auth import WeKnoraTokenError
+
+    if is_run_token_store_enabled():
+        try:
+            if is_auth_token_db_check_enabled():
+                async with pg_manager.get_async_session_context() as token_db:
+                    stored_token = await validate_stored_run_token(run_id, token_db)
+            else:
+                stored_token = await validate_stored_run_token(run_id)
+        except WeKnoraTokenError as exc:
+            await mark_run_terminal(run_id, "failed", "weknora_token_invalid", str(exc))
+            return
+        if stored_token:
+            bind_request_access_token(stored_token)
+            logger.info(f"Run bound WeKnora access token: {run_id}")
 
     resume_input = None
     if run_type == "resume":

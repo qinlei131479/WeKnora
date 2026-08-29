@@ -785,6 +785,15 @@ async def prepare_agent_run_creation_scope(
 
 async def enqueue_agent_run(run_id: str) -> None:
     """把已持久化的 run 投递到后台 worker 队列。"""
+    from yuxi.p0.flags import is_run_token_store_enabled
+    from yuxi.p0.request_token import get_request_access_token
+    from yuxi.p0.run_token_store import save_run_access_token
+
+    if is_run_token_store_enabled():
+        token = get_request_access_token()
+        if token:
+            await save_run_access_token(run_id, token)
+
     queue = await get_arq_pool()
     await queue.enqueue_job("process_agent_run", run_id, _job_id=f"run:{run_id}")
 

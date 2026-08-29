@@ -8,6 +8,8 @@ from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_business import APIKey, User
 from yuxi.utils.datetime_utils import utc_now_naive
 
+from yuxi.p0.flags import is_run_token_store_enabled
+from yuxi.p0.request_token import bind_request_access_token
 from yuxi.utils.auth_utils import AuthUtils
 
 # 定义OAuth2密码承载器，指定token URL
@@ -58,6 +60,9 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
+    if is_run_token_store_enabled():
+        bind_request_access_token(None)
+
     if authorization is None:
         return None
 
@@ -78,6 +83,8 @@ async def get_current_user(
         return user
 
     # JWT Token 认证
+    if is_run_token_store_enabled() and not token.startswith("yxkey_"):
+        bind_request_access_token(token)
     try:
         payload = AuthUtils.verify_access_token(token)
         user_id = payload.get("sub")
