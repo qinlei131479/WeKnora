@@ -47,7 +47,7 @@ function embedHtmlDevFallback(): Plugin {
     }
   };
 }
-const DEV_PROXY_TARGET = process.env.VITE_DEV_PROXY_TARGET || process.env.FRONTEND_BACKEND_URL || "http://localhost:8080";
+const DEV_PROXY_TARGET = process.env.VITE_DEV_PROXY_TARGET || process.env.FRONTEND_BACKEND_URL || "http://localhost:9980";
 const HARNESS_PROXY_TARGET = process.env.VITE_HARNESS_PROXY_TARGET || "http://127.0.0.1:5050";
 
 const harnessProxy = {
@@ -70,7 +70,7 @@ function resolveVueOfficePptxEntry(): string {
   }
 }
 
-const DEV_PORT = (process.env.VITE_DEV_PORT && Number(process.env.VITE_DEV_PORT)) || 5173;
+const DEV_PORT = Number(process.env.VITE_DEV_PORT) || 9988;
 const PREVIEW_PORT = (process.env.VITE_PREVIEW_PORT && Number(process.env.VITE_PREVIEW_PORT)) || 4173;
 
 export default defineConfig({

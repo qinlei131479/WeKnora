@@ -499,6 +499,24 @@ func ConfigDir() string {
 	return "./config"
 }
 
+// expandEnvRefs replaces ${VAR} and ${VAR:-default} in config text.
+func expandEnvRefs(content string) string {
+	re := regexp.MustCompile(`\$\{([^}:]+)(?::-([^}]*))?\}`)
+	return re.ReplaceAllStringFunc(content, func(match string) string {
+		parts := re.FindStringSubmatch(match)
+		if len(parts) < 2 {
+			return match
+		}
+		if value := os.Getenv(parts[1]); value != "" {
+			return value
+		}
+		if len(parts) >= 3 && parts[2] != "" {
+			return parts[2]
+		}
+		return match
+	})
+}
+
 // LoadConfig 从配置文件加载配置
 func LoadConfig() (*Config, error) {
 	// 设置配置文件名和路径
@@ -524,17 +542,7 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("error reading config file content: %w", err)
 	}
 
-	// 替换${ENV_VAR}格式的环境变量引用
-	re := regexp.MustCompile(`\${([^}]+)}`)
-	result := re.ReplaceAllStringFunc(string(configFileContent), func(match string) string {
-		// 提取环境变量名称（去掉${}部分）
-		envVar := match[2 : len(match)-1]
-		// 获取环境变量值，如果不存在则保持原样
-		if value := os.Getenv(envVar); value != "" {
-			return value
-		}
-		return match
-	})
+	result := expandEnvRefs(string(configFileContent))
 
 	// 使用处理后的配置内容
 	viper.ReadConfig(strings.NewReader(result))

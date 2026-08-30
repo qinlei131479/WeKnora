@@ -132,6 +132,8 @@ services:
       # LLM 调试日志：true 写 LOG_PATH 同目录 llm_debug.log，或指定路径；留空关闭
       - LLM_DEBUG_LOG=${LLM_DEBUG_LOG:-false}
       # ========== 运行时基础 ==========
+      # 容器内固定听 8080（healthcheck / app:8080 / nginx）。env_file 的 APP_PORT 只用于宿主机映射。
+      - APP_PORT=8080
       # gin mod
       # 可选值: debug(开发模式，有详细日志), release(生产模式，禁用Swagger文档)
       - GIN_MODE=${GIN_MODE:-release}

@@ -118,7 +118,7 @@ flowchart TB
 | `HARNESS_P0_RUN_TOKEN_STORE` / `HARNESS_P0_CHECK_AUTH_TOKENS` | 不使用 | 默认关 | Worker 透传 JWT；P3 调 KB 前再开 |
 | `HARNESS_LOCAL_LOGIN_ENABLED` | 不使用 | 代码默认开；本机 `.env` / compose 关 | P1.7 已实现。false 时密码/OIDC/初始化/用户增删改 404 |
 | 前端 Token | `localStorage.weknora_token` | 每次现读 `weknora_token` | P1.6 已切。不再读 `harness_user_token` / `VITE_HARNESS_TOKEN` |
-| 前端代理 | Vite `:9988` → `APP_PORT`/`APP_LISTEN_PORT`（kjsc 9980） | `VITE_HARNESS_PROXY_TARGET` → `:5050` | 与 `.env.kjsc.example` 的 `APP_PORT=9980` 对齐。Docker 容器内仍听 8080 |
+| 前端代理 | Vite `:9988` → `APP_PORT`（kjsc 9980） | `VITE_HARNESS_PROXY_TARGET` → `:5050` | 与 `.env.kjsc.example` 的 `APP_PORT=9980` 对齐。Docker 容器内仍听 8080 |
 | 模型密钥 | 只留在 WeKnora（`SYSTEM_AES_KEY` 加密） | 不读明文 | P7 内部代理；P0 已冻结协议 |
 
 改 `.env` 后：本机 `dev-app` / `dev-frontend` 需重启进程；harness 需 recreate `api`/`worker`。只改一边会导致“一边 200、一边 401”。
