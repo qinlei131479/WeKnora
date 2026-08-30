@@ -2,28 +2,22 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { harnessUrl } from '../apis/prefix'
 
-const TOKEN_KEY = 'harness_user_token'
+const HARNESS_TOKEN_KEY = 'harness_user_token'
+const WEKNORA_TOKEN_KEY = 'weknora_token'
+const TOKEN_KEY = HARNESS_TOKEN_KEY
 export { TOKEN_KEY }
 
 function readHarnessToken() {
-  const stored = localStorage.getItem(TOKEN_KEY) || ''
-  if (stored) return stored
-  const fromAgentWeb = localStorage.getItem('user_token') || ''
-  if (fromAgentWeb) {
-    localStorage.setItem(TOKEN_KEY, fromAgentWeb)
-    return fromAgentWeb
-  }
-  const fromEnv = import.meta.env.VITE_HARNESS_TOKEN || ''
-  if (fromEnv) {
-    localStorage.setItem(TOKEN_KEY, fromEnv)
-    return fromEnv
-  }
-  return ''
+  if (typeof localStorage === 'undefined') return ''
+  return localStorage.getItem(HARNESS_TOKEN_KEY) || localStorage.getItem(WEKNORA_TOKEN_KEY) || ''
 }
 
 export const useUserStore = defineStore('harness-user', () => {
-  // 状态：从 agent-web 的 user_token 复制到 harness_user_token
-  const token = ref(readHarnessToken())
+  const tokenTick = ref(0)
+  const token = computed(() => {
+    tokenTick.value
+    return readHarnessToken()
+  })
   const userId = ref(null)
   const username = ref('')
   const uid = ref('')
@@ -33,64 +27,51 @@ export const useUserStore = defineStore('harness-user', () => {
   const departmentId = ref(null)
   const departmentName = ref('')
 
-  // 计算属性
   const isLoggedIn = computed(() => !!token.value)
   const isAdmin = computed(() => userRole.value === 'admin' || userRole.value === 'superadmin')
   const isSuperAdmin = computed(() => userRole.value === 'superadmin')
 
-  // 动作
+  function syncToken() {
+    tokenTick.value += 1
+    return token.value
+  }
+
   async function login(credentials) {
-    try {
-      const formData = new FormData()
-      // 支持uid或phone_number登录
-      formData.append('username', credentials.loginId) // 使用loginId作为通用登录标识
-      formData.append('password', credentials.password)
+    const formData = new FormData()
+    formData.append('username', credentials.loginId)
+    formData.append('password', credentials.password)
 
-      const response = await fetch(harnessUrl('/api/auth/token'), {
-        method: 'POST',
-        body: formData
-      })
+    const response = await fetch(harnessUrl('/api/auth/token'), {
+      method: 'POST',
+      body: formData
+    })
 
-      if (!response.ok) {
-        const error = await response.json()
-
-        // 如果是423锁定状态码，抛出包含状态码的错误
-        if (response.status === 423) {
-          const lockError = new Error(error.detail || '账户被锁定')
-          lockError.status = 423
-          lockError.headers = response.headers
-          throw lockError
-        }
-
-        throw new Error(error.detail || '登录失败')
+    if (!response.ok) {
+      const error = await response.json()
+      if (response.status === 423) {
+        const lockError = new Error(error.detail || '账户被锁定')
+        lockError.status = 423
+        lockError.headers = response.headers
+        throw lockError
       }
-
-      const data = await response.json()
-
-      // 更新状态
-      token.value = data.access_token
-      userId.value = data.user_id
-      username.value = data.username
-      uid.value = data.uid
-      phoneNumber.value = data.phone_number || ''
-      avatar.value = data.avatar || ''
-      userRole.value = data.role
-      departmentId.value = data.department_id || null
-      departmentName.value = data.department_name || ''
-
-      // 只保存 token 到本地存储
-      localStorage.setItem(TOKEN_KEY, data.access_token)
-
-      return true
-    } catch (error) {
-      console.error('登录错误:', error)
-      throw error
+      throw new Error(error.detail || '登录失败')
     }
+
+    const data = await response.json()
+    localStorage.setItem(HARNESS_TOKEN_KEY, data.access_token)
+    syncToken()
+    userId.value = data.user_id
+    username.value = data.username
+    uid.value = data.uid
+    phoneNumber.value = data.phone_number || ''
+    avatar.value = data.avatar || ''
+    userRole.value = data.role
+    departmentId.value = data.department_id || null
+    departmentName.value = data.department_name || ''
+    return true
   }
 
   function logout() {
-    // 清除状态
-    token.value = ''
     userId.value = null
     username.value = ''
     uid.value = ''
@@ -99,52 +80,36 @@ export const useUserStore = defineStore('harness-user', () => {
     userRole.value = ''
     departmentId.value = null
     departmentName.value = ''
+    localStorage.removeItem(HARNESS_TOKEN_KEY)
+    syncToken()
 
-    // 清除 agentStore 状态，确保重新登录时能正确加载数据
     import('./agent').then(({ useAgentStore }) => {
       useAgentStore().reset()
     }).catch(() => {})
-
-    // 只清除 token
-    localStorage.removeItem(TOKEN_KEY)
   }
 
   async function initialize(admin) {
-    try {
-      const response = await fetch(harnessUrl('/api/auth/initialize'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(admin)
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || '初始化管理员失败')
-      }
-
-      const data = await response.json()
-
-      // 更新状态
-      token.value = data.access_token
-      userId.value = data.user_id
-      username.value = data.username
-      uid.value = data.uid
-      phoneNumber.value = data.phone_number || ''
-      avatar.value = data.avatar || ''
-      userRole.value = data.role
-      departmentId.value = data.department_id || null
-      departmentName.value = data.department_name || ''
-
-      // 只保存 token 到本地存储
-      localStorage.setItem(TOKEN_KEY, data.access_token)
-
-      return true
-    } catch (error) {
-      console.error('初始化管理员错误:', error)
-      throw error
+    const response = await fetch(harnessUrl('/api/auth/initialize'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(admin)
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || '初始化管理员失败')
     }
+    const data = await response.json()
+    localStorage.setItem(HARNESS_TOKEN_KEY, data.access_token)
+    syncToken()
+    userId.value = data.user_id
+    username.value = data.username
+    uid.value = data.uid
+    phoneNumber.value = data.phone_number || ''
+    avatar.value = data.avatar || ''
+    userRole.value = data.role
+    departmentId.value = data.department_id || null
+    departmentName.value = data.department_name || ''
+    return true
   }
 
   async function checkFirstRun() {
@@ -158,14 +123,12 @@ export const useUserStore = defineStore('harness-user', () => {
     }
   }
 
-  // 用于API请求的授权头
   function getAuthHeaders() {
     return {
-      Authorization: `Bearer ${token.value}`
+      Authorization: `Bearer ${syncToken()}`
     }
   }
 
-  // 用户管理功能
   async function getUsers({ pageSize = 100 } = {}) {
     try {
       const users = []
@@ -204,97 +167,56 @@ export const useUserStore = defineStore('harness-user', () => {
   }
 
   async function createUser(userData) {
-    try {
-      const response = await fetch(harnessUrl('/api/auth/users'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
-        },
-        body: JSON.stringify(userData)
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || '创建用户失败')
-      }
-
-      return await response.json()
-    } catch (error) {
-      console.error('创建用户错误:', error)
-      throw error
+    const response = await fetch(harnessUrl('/api/auth/users'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(userData)
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || '创建用户失败')
     }
+    return await response.json()
   }
 
-  async function updateUser(userId, userData) {
-    try {
-      const response = await fetch(harnessUrl(`/api/auth/users/${userId}`), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
-        },
-        body: JSON.stringify(userData)
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || '更新用户失败')
-      }
-
-      return await response.json()
-    } catch (error) {
-      console.error('更新用户错误:', error)
-      throw error
+  async function updateUser(id, userData) {
+    const response = await fetch(harnessUrl(`/api/auth/users/${id}`), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify(userData)
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || '更新用户失败')
     }
+    return await response.json()
   }
 
-  async function deleteUser(userId) {
-    try {
-      const response = await fetch(harnessUrl(`/api/auth/users/${userId}`), {
-        method: 'DELETE',
-        headers: {
-          ...getAuthHeaders()
-        }
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || '删除用户失败')
-      }
-
-      return await response.json()
-    } catch (error) {
-      console.error('删除用户错误:', error)
-      throw error
+  async function deleteUser(id) {
+    const response = await fetch(harnessUrl(`/api/auth/users/${id}`), {
+      method: 'DELETE',
+      headers: { ...getAuthHeaders() }
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || '删除用户失败')
     }
+    return await response.json()
   }
 
-  // 验证用户名并生成uid
-  async function validateUsernameAndGenerateUid(username) {
-    try {
-      const response = await fetch(harnessUrl('/api/auth/validate-username'), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders()
-        },
-        body: JSON.stringify({ username })
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.detail || '用户名验证失败')
-      }
-
-      return await response.json()
-    } catch (error) {
-      console.error('用户名验证错误:', error)
-      throw error
+  async function validateUsernameAndGenerateUid(usernameValue) {
+    const response = await fetch(harnessUrl('/api/auth/validate-username'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+      body: JSON.stringify({ username: usernameValue })
+    })
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.detail || '用户名验证失败')
     }
+    return await response.json()
   }
 
-  // 上传头像
   async function uploadAvatar(file) {
     try {
       const formData = new FormData()
@@ -315,7 +237,6 @@ export const useUserStore = defineStore('harness-user', () => {
 
       const data = await response.json()
 
-      // 更新本地头像状态
       avatar.value = data.avatar_url
 
       return data
@@ -325,7 +246,6 @@ export const useUserStore = defineStore('harness-user', () => {
     }
   }
 
-  // 获取当前用户信息
   async function getCurrentUser() {
     try {
       const response = await fetch(harnessUrl('/api/auth/me'), {
@@ -340,7 +260,6 @@ export const useUserStore = defineStore('harness-user', () => {
 
       const userData = await response.json()
 
-      // 更新本地状态
       userId.value = userData.id
       username.value = userData.username
       uid.value = userData.uid
@@ -357,7 +276,6 @@ export const useUserStore = defineStore('harness-user', () => {
     }
   }
 
-  // 更新个人资料
   async function updateProfile(profileData) {
     try {
       const response = await fetch(harnessUrl('/api/auth/profile'), {
@@ -376,7 +294,6 @@ export const useUserStore = defineStore('harness-user', () => {
 
       const userData = await response.json()
 
-      // 更新本地状态
       if (typeof userData.username === 'string') {
         username.value = userData.username
       }
@@ -392,7 +309,6 @@ export const useUserStore = defineStore('harness-user', () => {
   }
 
   return {
-    // 状态
     token,
     userId,
     username,
@@ -403,14 +319,13 @@ export const useUserStore = defineStore('harness-user', () => {
     departmentId,
     departmentName,
 
-    // 计算属性
     isLoggedIn,
     isAdmin,
     isSuperAdmin,
 
-    // 方法
     login,
     logout,
+    syncToken,
     initialize,
     checkFirstRun,
     getAuthHeaders,
@@ -425,7 +340,6 @@ export const useUserStore = defineStore('harness-user', () => {
   }
 })
 
-// 检查当前用户是否有管理员权限
 export const checkAdminPermission = () => {
   const userStore = useUserStore()
   if (!userStore.isAdmin) {
@@ -434,7 +348,6 @@ export const checkAdminPermission = () => {
   return true
 }
 
-// 检查当前用户是否有超级管理员权限
 export const checkSuperAdminPermission = () => {
   const userStore = useUserStore()
   return userStore.isSuperAdmin

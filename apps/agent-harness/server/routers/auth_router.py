@@ -32,6 +32,7 @@ from yuxi.services.auth_service import (
 )
 from yuxi.storage.minio import upload_image_to_minio
 from yuxi.storage.minio.client import normalize_public_minio_url
+from yuxi.p1.flags import is_local_login_enabled
 from yuxi.utils.datetime_utils import utc_now_naive
 
 # OIDC 认证相关导入
@@ -44,6 +45,19 @@ from yuxi.services.oidc_service import (
 
 # 创建路由器
 auth = APIRouter(prefix="/auth", tags=["authentication"])
+
+
+def reject_if_local_login_disabled() -> None:
+    if not is_local_login_enabled():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="harness 本地登录已关闭，请使用 WeKnora 账号登录",
+        )
+
+
+async def get_db_if_local_login(_: None = Depends(reject_if_local_login_disabled)):
+    async with pg_manager.get_async_session_context() as db:
+        yield db
 
 
 # 请求和响应模型
@@ -199,7 +213,10 @@ def _raise_cli_auth_error(exc: CLIAuthError) -> None:
 
 
 @auth.post("/token", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+async def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db_if_local_login),
+):
     # 查找用户 - 支持user_id和phone_number登录
     login_identifier = form_data.username  # OAuth2表单中的username字段作为登录标识符
 
@@ -346,14 +363,17 @@ async def exchange_cli_session_token(data: CLIAuthTokenRequest, db: AsyncSession
 
 # 路由：校验是否需要初始化管理员
 @auth.get("/check-first-run")
-async def check_first_run():
+async def check_first_run(_: None = Depends(reject_if_local_login_disabled)):
     is_first_run = await pg_manager.async_check_first_run()
     return {"first_run": is_first_run}
 
 
 # 路由：初始化管理员账户
 @auth.post("/initialize", response_model=Token)
-async def initialize_admin(admin_data: InitializeAdmin, db: AsyncSession = Depends(get_db)):
+async def initialize_admin(
+    admin_data: InitializeAdmin,
+    db: AsyncSession = Depends(get_db_if_local_login),
+):
     # 检查是否是首次运行
     if not await pg_manager.async_check_first_run():
         raise HTTPException(
@@ -519,6 +539,7 @@ async def create_user(
     request: Request,
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(reject_if_local_login_disabled),
 ):
     """创建新用户（管理员权限）"""
     user_repo = UserRepository()
@@ -695,6 +716,7 @@ async def update_user(
     request: Request,
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(reject_if_local_login_disabled),
 ):
     result = await db.execute(select(User).filter(User.id == user_id, User.is_deleted == 0))
     user = result.scalar_one_or_none()
@@ -780,7 +802,11 @@ async def update_user(
 # 路由：删除用户（管理员权限）
 @auth.delete("/users/{user_id}", response_model=dict)
 async def delete_user(
-    user_id: int, request: Request, current_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)
+    user_id: int,
+    request: Request,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(reject_if_local_login_disabled),
 ):
     result = await db.execute(select(User).filter(User.id == user_id, User.is_deleted == 0))
     user = result.scalar_one_or_none()
@@ -859,6 +885,7 @@ async def validate_username_and_generate_uid(
     validation_data: UsernameValidation,
     current_user: User = Depends(get_admin_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(reject_if_local_login_disabled),
 ):
     """验证用户名格式并生成可用的user_id"""
     # 验证用户名格式
@@ -889,7 +916,10 @@ async def validate_username_and_generate_uid(
 # 路由：检查 uid 是否可用
 @auth.get("/check-uid/{uid}")
 async def check_uid_availability(
-    uid: str, current_user: User = Depends(get_admin_user), db: AsyncSession = Depends(get_db)
+    uid: str,
+    current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(reject_if_local_login_disabled),
 ):
     """检查 uid 是否可用"""
     result = await db.execute(select(User).filter(User.uid == uid))
@@ -930,6 +960,7 @@ async def impersonate_user(
     request: Request,
     current_user: User = Depends(get_superadmin_user),
     db: AsyncSession = Depends(get_db),
+    _: None = Depends(reject_if_local_login_disabled),
 ):
     """超级管理员模拟其他用户登录"""
     # 查找目标用户
@@ -984,24 +1015,32 @@ async def impersonate_user(
 
 
 @auth.get("/oidc/config", response_model=OIDCConfigResponse)
-async def get_oidc_config():
+async def get_oidc_config(_: None = Depends(reject_if_local_login_disabled)):
     """获取 OIDC 配置（供前端使用）"""
     return await get_oidc_config_handler()
 
 
 @auth.get("/oidc/login-url")
-async def get_oidc_login_url(redirect_path: str = "/"):
+async def get_oidc_login_url(redirect_path: str = "/", _: None = Depends(reject_if_local_login_disabled)):
     """获取 OIDC 登录 URL"""
     return await oidc_login_url_handler(redirect_path)
 
 
 @auth.get("/oidc/callback", response_class=RedirectResponse)
-async def oidc_callback(request: Request, code: str, state: str, db: AsyncSession = Depends(get_db)):
+async def oidc_callback(
+    request: Request,
+    code: str,
+    state: str,
+    db: AsyncSession = Depends(get_db_if_local_login),
+):
     """处理 OIDC 回调 - 重定向到前端 Vue 路由"""
     return await oidc_callback_handler(code, state, db, request)
 
 
 @auth.post("/oidc/exchange-code", response_model=OIDCLoginResponse)
-async def oidc_exchange_code(code: str = Body(..., embed=True)):
+async def oidc_exchange_code(
+    code: str = Body(..., embed=True),
+    _: None = Depends(reject_if_local_login_disabled),
+):
     """使用一次性 code 交换 OIDC 登录数据"""
     return await oidc_exchange_code_handler(code)

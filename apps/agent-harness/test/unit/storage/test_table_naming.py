@@ -4,6 +4,7 @@ from yuxi.storage.postgres.naming import HARNESS_TABLES, LANGGRAPH_CHECKPOINT_TA
 def test_ht_prefixes_logical_names():
     assert ht("users") == "h_users"
     assert ht("knowledge_bases") == "h_knowledge_bases"
+    assert ht("user_identity_map") == "h_user_identity_map"
     assert ht("h_users") == "h_users"
 
 

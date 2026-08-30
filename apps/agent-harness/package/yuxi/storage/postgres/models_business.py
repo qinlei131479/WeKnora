@@ -138,6 +138,22 @@ class User(Base):
         self.login_locked_until = None
 
 
+class UserIdentityMap(Base):
+    """P1 人工确认的旧 h_users → WeKnora UUID 映射。P1 完成后仍保留。"""
+
+    __tablename__ = ht("user_identity_map")
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    h_user_id = Column(Integer, nullable=False, index=True)
+    old_uid = Column(String(64), nullable=False)
+    new_uid = Column(String(64), nullable=False)
+    weknora_user_id = Column(String(36), nullable=False, unique=True, index=True)
+    confirmed_by = Column(String(64), nullable=True)
+    confirmed_at = Column(DateTime, nullable=True)
+    batch_id = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+
+
 class AgentEnv(Base):
     """用户级 Agent 沙盒环境变量"""
 

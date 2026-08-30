@@ -45,6 +45,7 @@ HARNESS_TABLES: tuple[str, ...] = (
     "operation_logs",
     "conversations",
     "departments",
+    "user_identity_map",
     "agent_envs",
     "user_config",
     "mcp_servers",

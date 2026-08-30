@@ -6623,8 +6623,8 @@ export default {
       description: '登录沿用当前 @:{\'brand.name\'} 账号。工作智能体 API 需要单独的 Token：打开正在运行的 agent-web，把 localStorage.user_token 复制到这里。',
       placeholder: '粘贴 agent-web 的 user_token',
       save: '保存并加载',
-      sidebarHint: '接入 Token 后即可查看工作对话。',
-      sidebarAction: '去接入'
+      sidebarHint: '请先登录后再查看工作对话。',
+      sidebarAction: '去登录'
     },
     chat: {
       viewState: '查看状态',

@@ -6623,8 +6623,8 @@ export default {
       description: 'Вход выполняется через текущую учётную запись @:{\'brand.name\'}. Рабочим агентам нужен отдельный токен: скопируйте localStorage.user_token из запущенного agent-web и вставьте его сюда.',
       placeholder: 'Вставьте user_token из agent-web',
       save: 'Сохранить и загрузить',
-      sidebarHint: 'Подключите токен, чтобы увидеть рабочие диалоги.',
-      sidebarAction: 'Подключить'
+      sidebarHint: 'Войдите, чтобы увидеть рабочие диалоги.',
+      sidebarAction: 'Войти'
     },
     chat: {
       viewState: 'Статус',

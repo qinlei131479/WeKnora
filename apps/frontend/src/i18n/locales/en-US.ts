@@ -237,8 +237,8 @@ export default {
       description: 'Sign-in uses your @:{\'brand.name\'} account. Work agents need their own API token: copy localStorage.user_token from a running agent-web instance and paste it here.',
       placeholder: 'Paste the agent-web user_token',
       save: 'Save and load',
-      sidebarHint: 'Paste a token to load work conversations.',
-      sidebarAction: 'Connect'
+      sidebarHint: 'Sign in to load work conversations.',
+      sidebarAction: 'Sign in'
     },
     chat: {
       viewState: 'View status',

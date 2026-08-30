@@ -5,9 +5,19 @@
 > **收尾约定**：P0–P9 全部完成且门禁通过后，**删除本文件**（`WEKNORA_YUXI_INTEGRATION_PLAN.md`），不要作为长期文档留在仓库。协议与实现以代码和正式文档为准。
 >
 > 环境：本机（[docker-compose-mac.yml](docker-compose-mac.yml)），Postgres 容器 `postgres17`，业务库 `WeKnora`。
-> harness 相关服务在 `harness` profile 下：`api`（容器 `agent-middle-harness-api`）、`worker`（容器 `agent-middle-harness-worker`）、`sandbox-provisioner`、`web`。
-> 启动命令参考文件头部注释：`docker compose -f docker-compose-mac.yml --profile harness --profile minio --profile neo4j up -d`
-> 前置状态：harness 业务表已以 `h_` 前缀合入 `WeKnora` 库（迁移 `000082_harness_tables`），`schema_migrations.version = 82`。
+>
+> **本机进程拓扑（以实际开发方式为准，不要按全 Docker 验收）**
+>
+> | 进程 | 启动方式 | 说明 |
+> | --- | --- | --- |
+> | WeKnora 后端 | PyCharm / `make dev-app`（`scripts/dev.sh app`） | **不是** `agent-middle-app` 容器。从仓库根 `.env`（可被 `.env.local` 覆盖）加载 `JWT_SECRET` |
+> | WeKnora 前端 | PyCharm / `make dev-frontend` | **不是** `agent-middle-frontend` / `agent-middle-UI` 容器。Vite `:9988` 代理到本机 app `:9980` 与 harness `:5050` |
+> | harness API / Worker | Docker `harness` profile | 容器 `agent-middle-harness-api` / `agent-middle-harness-worker`，同一份 `.env` 注入 `JWT_SECRET` |
+> | 基础设施 | Docker（postgres / redis / minio 等） | `make dev-start` 或 compose |
+>
+> 前置状态：harness 业务表已以 `h_` 前缀合入 `WeKnora` 库（迁移 `000082_harness_tables`）。本机 `schema_migrations.version` 可能为 82 或遗留 83。
+>
+> **本机身份数据**：`h_users` 当前只有 1 个用户（`id=1`，`uid=admin`），就是为能力融合准备的，**不按多用户迁移设计**。P1.8 只处理这一行。
 
 ---
 
@@ -89,7 +99,29 @@ flowchart TB
 | 模型供应商 | **统一到 WeKnora**，yuxi 通过内部模型代理调用，不读取明文密钥 |
 | 下载权限 | **接受限制**（Viewer 用户的智能体无法下载原件） |
 | yuxi 调 WeKnora 凭证 | **透传用户 JWT** |
-| 验证环境 | 本机开发、测试、验证 |
+| 验证环境 | 本机开发、测试、验证：WeKnora app/UI 用 `make dev-app` / `make dev-frontend`，harness 用 Docker |
+| 本机用户范围 | `h_users` 仅 1 人，按单用户融合处理，不展开多用户匹配流程 |
+
+### 0.4 两套系统的配置必须显式对齐
+
+融合是逐步的，两边继续各自读配置。**同一语义的参数必须来自同一份仓库根 `.env`，禁止各写各的、禁止把 WeKnora 密钥写进 yuxi 的 fallback。** 打开下一阶段开关前，先核对本表。
+
+| 参数 | WeKnora（`make dev-app` / 前端） | yuxi / harness | 融合约定 |
+| --- | --- | --- | --- |
+| `JWT_SECRET` | 签发与验签 WeKnora access/refresh | 验 WeKnora JWT（P1 主路径） | **必须相同且非空**。`docker-env.py` 与 `weknora_auth.py` 空则失败，不随机生成 |
+| `JWT_SECRET_KEY` | 不使用 | yuxi 旧 JWT（`AuthUtils`） | **过渡期保留、不得改成 `JWT_SECRET`**。P1.7 后关闭 legacy |
+| `DB_NAME` / `DB_USER` / `DB_PASSWORD` | 业务库 `WeKnora` | 同一库，表加 `h_` | 已同库。不要再指向旧 `agent_harness` |
+| `HARNESS_TABLE_PREFIX` | 不使用 | 默认 `h_` | 保持 `h_`，不要改 |
+| Redis | WeKnora 自己的 DB 号 | `AGENT_HARNESS_REDIS_DB`（默认 2） | 可分库；P0/P1 缓存键带前缀即可 |
+| `HARNESS_WEKNORA_IDENTITY` | 不使用 | 默认关 | 打开后 harness 接受 WeKnora JWT 并投影 |
+| `HARNESS_LEGACY_JWT_ENABLED` | 不使用 | 默认开 | P1 期间保持开；门禁后再关 |
+| `HARNESS_P0_RUN_TOKEN_STORE` / `HARNESS_P0_CHECK_AUTH_TOKENS` | 不使用 | 默认关 | Worker 透传 JWT；P3 调 KB 前再开 |
+| `HARNESS_LOCAL_LOGIN_ENABLED` | 不使用 | 代码默认开；本机 `.env` / compose 关 | P1.7 已实现。false 时密码/OIDC/初始化/用户增删改 404 |
+| 前端 Token | `localStorage.weknora_token` | 每次现读 `weknora_token` | P1.6 已切。不再读 `harness_user_token` / `VITE_HARNESS_TOKEN` |
+| 前端代理 | Vite `:9988` → `APP_PORT`/`APP_LISTEN_PORT`（kjsc 9980） | `VITE_HARNESS_PROXY_TARGET` → `:5050` | 与 `.env.kjsc.example` 的 `APP_PORT=9980` 对齐。Docker 容器内仍听 8080 |
+| 模型密钥 | 只留在 WeKnora（`SYSTEM_AES_KEY` 加密） | 不读明文 | P7 内部代理；P0 已冻结协议 |
+
+改 `.env` 后：本机 `dev-app` / `dev-frontend` 需重启进程；harness 需 recreate `api`/`worker`。只改一边会导致“一边 200、一边 401”。
 
 ---
 
@@ -391,17 +423,29 @@ WeKnora 后端服务 `app` 已有该变量，无需改动：
 
 需要给 harness profile 下的 **`api`** 与 **`worker`** 两个服务补上同一行（服务名是 `api` / `worker`，容器名分别是 `agent-middle-harness-api` / `agent-middle-harness-worker`）。
 
-**验证**
+**验证（本机：dev-app + harness 容器，不要查 `agent-middle-app`）**
 
 ```bash
-# 不打印密钥明文；比较三个容器中 JWT_SECRET 的 SHA-256，结果必须相同且非空
-for container in agent-middle-app agent-middle-harness-api agent-middle-harness-worker; do
+# 不打印密钥明文。三方必须相同且非空：
+# 1) 仓库根 .env 的 JWT_SECRET（make dev-app 实际使用的值）
+# 2) agent-middle-harness-api
+# 3) agent-middle-harness-worker
+python3 -c "
+from pathlib import Path
+import hashlib
+for line in Path('.env').read_text().splitlines():
+    if line.startswith('JWT_SECRET=') and not line.startswith('JWT_SECRET_KEY'):
+        v = line.split('=',1)[1].strip().strip('\"').strip(\"'\")
+        print('host.env', hashlib.sha256(v.encode()).hexdigest() if v else 'EMPTY')
+        break
+"
+for container in agent-middle-harness-api agent-middle-harness-worker; do
   docker exec "$container" sh -c \
     'test -n "$JWT_SECRET" && printf %s "$JWT_SECRET" | sha256sum'
 done
 ```
 
-重启 harness：
+`JWT_SECRET` 与 `JWT_SECRET_KEY` 不得互相覆盖。重启 harness（不影响本机 `dev-app`）：
 
 ```bash
 docker compose -f docker-compose-mac.yml --profile harness up -d api worker
@@ -515,7 +559,7 @@ KNOWLEDGE_BASE_PERMISSION_POLICY = ResourcePermissionPolicy(
 - [apps/frontend/src/harness/HarnessTokenGate.vue](apps/frontend/src/harness/HarnessTokenGate.vue) 文件留到 P9 一起删
 - `getCurrentUser()` 调的 `/api/auth/me` 返回投影行，前端无需改动
 
-**前端是 Docker 镜像（`agent-middle-frontend`），改完必须重新构建才能看到效果。**
+本机前端走 Vite（`make dev-frontend`），改完热更新即可，不必重建 `agent-middle-frontend`。若用 Docker 前端镜像，改完必须重新构建才能看到效果。
 
 ### P1.7 关闭 harness 自有登录
 
@@ -545,7 +589,11 @@ docker exec postgres17 pg_dump -U <user> -d WeKnora -t 'h_*' > h_tables_backup.s
 
 **第 1 步：生成映射**
 
-综合 `h_users.uid`、username、手机号与 WeKnora username/email 产出 `旧 h_users.id + 旧 uid → WeKnora UUID` 映射表。匹配仅用于生成候选，**每一行必须人工确认**；未匹配和多匹配行进入阻断清单，不允许自动跳过。
+本机融合环境 `h_users` **只有 1 行**，不跑多用户对账。候选即：
+
+`h_users.id=1` / `old_uid=admin` → WeKnora `users.id=7b4f08b5-9cbe-417e-8736-f864b0e60448`（username=admin）。
+
+仍须人工确认这一行后再写 `h_user_identity_map`。未确认不得 remap。若以后出现第二行 `h_users`，再启用多用户候选脚本。
 
 映射表必须保留 `old_uid`、`new_uid`、`h_user_id`、确认人、确认时间和迁移批次，不得在 P1 后删除；同一份映射用于生成正向和反向 SQL。
 
@@ -598,10 +646,32 @@ def global_user_data_dir(uid: str) -> Path:
 
 ### P1.10 回滚预案
 
-- 代码层：`HARNESS_LEGACY_JWT_ENABLED=true` + 前端回退读 `harness_user_token`
+- 代码层：`HARNESS_LEGACY_JWT_ENABLED=true` + `HARNESS_LOCAL_LOGIN_ENABLED=true` + 前端回退读 `harness_user_token`
 - 数据层：优先使用保留的 uid 映射执行反向 remap；异常时使用已验证的 `h_tables_backup.sql` 恢复 + 工作区目录改回
 
 **所有代码改动必须带开关，这是能在本机现网安全迭代的前提。**
+
+### P1 执行记录（2026-08-29 / 2026-08-30）
+
+2026-08-30 已确认：本机拓扑（`make dev-app` / `make dev-frontend` + harness Docker）、单用户映射、§0.4 配置表。随后完成密钥核对、备份、隔离演练与正向 remap。
+
+| 项 | 状态 | 说明 |
+| --- | --- | --- |
+| P1.1 密钥 | **通过** | `.env` / harness-api / harness-worker 的 `JWT_SECRET` SHA-256 一致（`bd2e4fc3…c4988`）。不查 `agent-middle-app` 容器。 |
+| P1.2–P1.5 | **代码已落地，开关已开** | `HARNESS_WEKNORA_IDENTITY=true`，`HARNESS_LEGACY_JWT_ENABLED=true`。harness `/api/system/health` 正常。 |
+| P1.6 前端 | **已落地** | `user.js` 每次读 `weknora_token`；去掉 Island Token Gate，无 token 跳转 `/login`；401 走统一登录。`HarnessTokenGate.vue` 留到 P9。 |
+| P1.7 关登录 | **比对期重新打开** | `HARNESS_LOCAL_LOGIN_ENABLED=true`，独立登录/OIDC/用户写接口可用来对照 WeKnora JWT 路径。关比对后改回 false。 |
+| P1.8 remap | **正向已完成** | `h_users.id` 仍为 1；`uid` 已从 `admin` 改为 `7b4f08b5-9cbe-417e-8736-f864b0e60448`。A/B 组计数与 remap 前一致（conv=3, runs=8, reqs=8, skills_cb=4），`admin` 残留 0。C 组 `h_api_keys.user_id=1` 未动。映射写入 `h_user_identity_map`。工作区 `threads/shared/admin` → `…/7b4f08b5-…`（13 项）。 |
+
+备份（勿提交仓库）：`.local-data/p1-backup-20260830/`（`h_tables.sql` SHA-256 `59e5694b…056a740b`，工作区副本）。隔离库 `weknora_p1_drill_20260830` 已正向+反向演练后删除。反向脚本：`apps/agent-harness/scripts/p1_uid_remap_reverse.sql`。
+
+回滚：关 `HARNESS_WEKNORA_IDENTITY`；需要时在隔离验证后再跑反向 SQL，并把工作区目录改回 `admin`。
+
+**下一步**
+
+1. P1.9 剩余门禁：WeKnora 登录后进智能体页不再出 Token Gate；刷新 token 后 harness 跟上；登出后 ≤30s 401；刷新 JWT 401。
+2. 门禁过后再关 `HARNESS_LEGACY_JWT_ENABLED`。
+3. 不要开始 P2。
 
 ---
 

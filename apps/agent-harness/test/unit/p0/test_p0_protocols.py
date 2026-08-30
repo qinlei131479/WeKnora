@@ -46,7 +46,7 @@ def _access_token(monkeypatch: pytest.MonkeyPatch, **overrides) -> str:
     monkeypatch.setenv("JWT_SECRET", secret)
     now = int(time.time())
     payload = {
-        "user_id": "user-1",
+        "user_id": "11111111-1111-1111-1111-111111111111",
         "email": "u@example.com",
         "tenant_id": 7,
         "exp": now + 3600,
@@ -71,7 +71,7 @@ def test_weknora_auth_rejects_yxkey_and_refresh(monkeypatch: pytest.MonkeyPatch)
     with pytest.raises(WeKnoraTokenError, match="type=access"):
         verify_weknora_access_token(refresh)
     claims = verify_weknora_access_token(token)
-    assert claims["user_id"] == "user-1"
+    assert claims["user_id"] == "11111111-1111-1111-1111-111111111111"
     assert claims["tenant_id"] == 7
 
 

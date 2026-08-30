@@ -892,6 +892,21 @@ class PostgresManager(metaclass=SingletonMeta):
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
             """,
+            """
+            CREATE TABLE IF NOT EXISTS user_identity_map (
+                id SERIAL PRIMARY KEY,
+                h_user_id INTEGER NOT NULL,
+                old_uid VARCHAR(64) NOT NULL,
+                new_uid VARCHAR(64) NOT NULL,
+                weknora_user_id VARCHAR(36) NOT NULL,
+                confirmed_by VARCHAR(64),
+                confirmed_at TIMESTAMPTZ,
+                batch_id VARCHAR(64),
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+            """,
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_user_identity_map_weknora_user_id ON user_identity_map(weknora_user_id)",
+            "CREATE INDEX IF NOT EXISTS ix_user_identity_map_h_user_id ON user_identity_map(h_user_id)",
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_agent_run_requests_request_id ON agent_run_requests(request_id)",
             """
             CREATE INDEX IF NOT EXISTS ix_agent_run_requests_queue

@@ -10,7 +10,11 @@ from yuxi.utils.datetime_utils import utc_now_naive
 
 from yuxi.p0.flags import is_run_token_store_enabled
 from yuxi.p0.request_token import bind_request_access_token
+from yuxi.p1.auth_token_status import is_weknora_access_token_active
+from yuxi.p1.flags import is_legacy_jwt_enabled, is_weknora_identity_enabled
+from yuxi.services.weknora_identity_service import WeKnoraIdentityError, ensure_projected_user
 from yuxi.utils.auth_utils import AuthUtils
+from yuxi.utils.weknora_auth import WeKnoraTokenError, verify_weknora_access_token
 
 # 定义OAuth2密码承载器，指定token URL
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token", auto_error=False)
@@ -82,7 +86,35 @@ async def get_current_user(
             await db.commit()
         return user
 
-    # JWT Token 认证
+    if is_weknora_identity_enabled():
+        try:
+            claims = verify_weknora_access_token(token)
+        except WeKnoraTokenError:
+            claims = None
+        if claims is not None:
+            if is_run_token_store_enabled():
+                bind_request_access_token(token)
+            try:
+                if not await is_weknora_access_token_active(token, db):
+                    raise credentials_exception
+                user = await ensure_projected_user(db, claims)
+            except WeKnoraIdentityError as exc:
+                raise HTTPException(
+                    status_code=exc.status_code,
+                    detail=str(exc),
+                    headers={"WWW-Authenticate": "Bearer"},
+                ) from exc
+            if user.is_login_locked():
+                raise HTTPException(
+                    status_code=status.HTTP_423_LOCKED,
+                    detail="登录被锁定，请稍后重试",
+                    headers={"X-Lock-Remaining": str(user.get_remaining_lock_time())},
+                )
+            return user
+        if not is_legacy_jwt_enabled():
+            raise credentials_exception
+
+    # JWT Token 认证（yuxi legacy）
     if is_run_token_store_enabled() and not token.startswith("yxkey_"):
         bind_request_access_token(token)
     try:

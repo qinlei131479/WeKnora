@@ -66,20 +66,22 @@ onUnmounted(() => {
 
 onMounted(async () => {
   try {
-    if (userStore.token) {
-      await userStore.getCurrentUser()
-      await Promise.all([
-        infoStore.loadInfoConfig().catch(() => {}),
-        databaseStore.loadDatabases().catch(() => {}),
-        configStore.refreshConfig().catch(() => {})
-      ])
-      if (!agentStore.isInitialized) {
-        await agentStore.initialize().catch(() => {})
-      }
-      await chatThreadsStore.loadThreads().catch(() => {})
-      if (userStore.isAdmin) {
-        taskerStore.loadTasks()
-      }
+    userStore.syncToken()
+    if (!userStore.token) {
+      return
+    }
+    await userStore.getCurrentUser()
+    await Promise.all([
+      infoStore.loadInfoConfig().catch(() => {}),
+      databaseStore.loadDatabases().catch(() => {}),
+      configStore.refreshConfig().catch(() => {})
+    ])
+    if (!agentStore.isInitialized) {
+      await agentStore.initialize().catch(() => {})
+    }
+    await chatThreadsStore.loadThreads().catch(() => {})
+    if (userStore.isAdmin) {
+      taskerStore.loadTasks()
     }
   } finally {
     booting.value = false

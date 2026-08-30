@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import uuid
 from typing import Any
 
 import jwt
@@ -61,6 +62,10 @@ def verify_weknora_access_token(token: str) -> dict[str, Any]:
     user_id = str(payload.get("user_id") or "").strip()
     if not user_id:
         raise WeKnoraTokenError("令牌缺少 user_id")
+    try:
+        user_id = str(uuid.UUID(user_id))
+    except ValueError as exc:
+        raise WeKnoraTokenError("令牌 user_id 不是合法 UUID") from exc
 
     tenant_raw = payload.get("tenant_id")
     try:

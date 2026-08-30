@@ -17,9 +17,16 @@ def _quote(value: str) -> str:
     return urllib.parse.quote_plus(value or "")
 
 
+def require_jwt_secret() -> None:
+    if not (os.environ.get("JWT_SECRET") or "").strip():
+        raise SystemExit("JWT_SECRET is required and must be non-empty")
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         raise SystemExit("usage: docker-env.py <command> [args...]")
+
+    require_jwt_secret()
 
     db_user = os.environ.get("DB_USER", "postgres")
     db_password = os.environ.get("DB_PASSWORD", "postgres")

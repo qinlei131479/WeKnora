@@ -1,5 +1,4 @@
 import { useUserStore, checkAdminPermission, checkSuperAdminPermission } from '@harness/stores/user'
-import { message } from 'ant-design-vue'
 import { harnessUrl } from './prefix'
 
 /**
@@ -90,23 +89,10 @@ export async function apiRequest(url, options = {}, requiresAuth = true, respons
       }
 
       if (response.status === 401) {
-        // 如果是认证失败，可能需要重新登录
         const userStore = useUserStore()
-
-        // 检查是否是token过期（errorMessage 已统一为字符串，避免对对象 detail 调用 includes 抛错）
-        const isTokenExpired =
-          errorMessage?.includes('令牌已过期') || errorMessage?.includes('token expired')
-
-        message.error(
-          isTokenExpired
-            ? 'Harness Token 已过期，请重新复制 agent-web 的 user_token 到 localStorage.harness_user_token'
-            : 'Harness 认证失败，请检查 harness_user_token'
-        )
-
         if (userStore.isLoggedIn) {
           userStore.logout()
         }
-
         throw error
       } else if (response.status === 403) {
         error.message = '没有权限执行此操作'

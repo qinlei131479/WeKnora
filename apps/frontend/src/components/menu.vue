@@ -301,9 +301,10 @@ const {
 } = useChatEngineNav();
 const { isDark: themeIsDark } = useTheme();
 watch(() => route.fullPath, syncFromRoute, { immediate: true });
-const hasHarnessToken = computed(() =>
-    !!(localStorage.getItem('harness_user_token') || localStorage.getItem('user_token') || import.meta.env.VITE_HARNESS_TOKEN)
-);
+const hasHarnessToken = computed(() => {
+    route.fullPath;
+    return !!(localStorage.getItem('weknora_token') || localStorage.getItem('harness_user_token'));
+});
 const currentpath = ref('');
 const total = ref(0);
 const sessionBuckets = ref<Record<string, SidebarSessionBucket>>({});

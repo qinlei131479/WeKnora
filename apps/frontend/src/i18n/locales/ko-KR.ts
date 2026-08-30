@@ -6623,8 +6623,8 @@ export default {
       description: '로그인은 현재 @:{\'brand.name\'} 계정을 사용합니다. 작업 에이전트 API에는 별도의 토큰이 필요합니다. 실행 중인 agent-web에서 localStorage.user_token을 복사해 여기에 붙여넣으세요.',
       placeholder: 'agent-web의 user_token을 붙여넣으세요',
       save: '저장하고 불러오기',
-      sidebarHint: '토큰을 연결하면 작업 대화를 볼 수 있습니다.',
-      sidebarAction: '연결하기'
+      sidebarHint: '로그인하면 작업 대화를 볼 수 있습니다.',
+      sidebarAction: '로그인'
     },
     chat: {
       viewState: '상태 보기',
