@@ -40,8 +40,13 @@ x-api-worker-env: &api-worker-env
   HARNESS_LOCAL_LOGIN_ENABLED: ${HARNESS_LOCAL_LOGIN_ENABLED:-true}
   HARNESS_TENANT_SCOPE: ${HARNESS_TENANT_SCOPE:-}
   HARNESS_DEPARTMENT_ENFORCED: ${HARNESS_DEPARTMENT_ENFORCED:-}
-  NO_PROXY: localhost,127.0.0.1,milvus,graph,neo4j,minio,postgres,redis,mineru,paddlex,sandbox-provisioner,api.siliconflow.cn
-  no_proxy: localhost,127.0.0.1,milvus,graph,neo4j,minio,postgres,redis,mineru,paddlex,sandbox-provisioner,api.siliconflow.cn
+  HARNESS_WEKNORA_KB: ${HARNESS_WEKNORA_KB:-}
+  WEKNORA_BASE_URL: ${WEKNORA_BASE_URL:-http://host.docker.internal:9980/api/v1}
+  HARNESS_P0_RUN_TOKEN_STORE: ${HARNESS_P0_RUN_TOKEN_STORE:-}
+  HARNESS_P0_CHECK_AUTH_TOKENS: ${HARNESS_P0_CHECK_AUTH_TOKENS:-}
+  HARNESS_WEKNORA_KB_MAP: ${HARNESS_WEKNORA_KB_MAP:-}
+  NO_PROXY: localhost,127.0.0.1,host.docker.internal,milvus,graph,neo4j,minio,postgres,redis,mineru,paddlex,sandbox-provisioner,api.siliconflow.cn
+  no_proxy: localhost,127.0.0.1,host.docker.internal,milvus,graph,neo4j,minio,postgres,redis,mineru,paddlex,sandbox-provisioner,api.siliconflow.cn
 
 services:
   frontend:

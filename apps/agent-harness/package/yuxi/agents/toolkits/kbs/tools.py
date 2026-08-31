@@ -117,6 +117,10 @@ async def get_mindmap(kb_name: str, runtime: ToolRuntime) -> str:
         kb = await kb_repo.get_by_kb_id(target_kb_id)
 
         if kb is None:
+            from yuxi.p3.ids import is_weknora_kb_id
+
+            if is_weknora_kb_id(str(target_kb_id)):
+                return f"知识库 {target_info['name']} 由 WeKnora 管理，不提供思维导图。"
             return f"知识库 {target_info['name']} 不存在"
 
         mindmap_data = kb.mindmap

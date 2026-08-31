@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
+from yuxi.p3.flags import is_weknora_kb_enabled
+from yuxi.p3.mapping import remap_knowledge_ids
+
 
 async def resolve_visible_knowledge_bases_for_context(context) -> list[dict[str, Any]]:
     from yuxi.knowledge.runtime import knowledge_base
+    from yuxi.utils import logger
 
     uid = getattr(context, "uid", None)
     if not uid:
@@ -23,8 +27,13 @@ async def resolve_visible_knowledge_bases_for_context(context) -> list[dict[str,
     ]
     enabled_knowledges = getattr(context, "knowledges", None)
     if enabled_knowledges is not None:
-        enabled_ids = {str(value).strip() for value in enabled_knowledges if str(value).strip()}
+        remapped, unmapped = remap_knowledge_ids([str(value) for value in enabled_knowledges])
+        enabled_ids = {item for item in remapped if item}
         databases = [db for db in databases if str(db.get("kb_id") or "").strip() in enabled_ids]
+        if unmapped and is_weknora_kb_enabled():
+            still_missing = [item for item in unmapped if item not in {db.get("kb_id") for db in databases}]
+            if still_missing:
+                logger.warning("P3 旧知识库绑定未映射且当前不可见: %s", still_missing)
 
     setattr(context, "_visible_knowledge_bases", databases)
     return databases

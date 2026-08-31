@@ -130,7 +130,18 @@ class KnowledgeBaseManager:
         Raises:
             KBNotFoundError: 数据库不存在或知识库类型不支持
         """
+        from yuxi.p3.flags import is_weknora_kb_enabled
+        from yuxi.p3.ids import is_weknora_kb_id
         from yuxi.repositories.knowledge_base_repository import KnowledgeBaseRepository
+
+        if is_weknora_kb_enabled() and is_weknora_kb_id(kb_id):
+            from yuxi.p3.errors import WeKnoraKBError
+            from yuxi.p3.virtual import fetch_weknora_config
+
+            try:
+                return await fetch_weknora_config(kb_id)
+            except WeKnoraKBError:
+                raise KBNotFoundError(f"Database {kb_id} not found") from None
 
         snapshot = await get_cached_kb_config(kb_id)
         if snapshot is None:
@@ -335,7 +346,13 @@ class KnowledgeBaseManager:
         if user.get("role") == "superadmin":
             return True
 
+        from yuxi.p3.flags import is_weknora_kb_enabled
+        from yuxi.p3.ids import is_weknora_kb_id
         from yuxi.repositories.knowledge_base_repository import KnowledgeBaseRepository
+
+        if is_weknora_kb_enabled() and is_weknora_kb_id(kb_id):
+            info = await self.get_database_info(kb_id)
+            return info is not None
 
         kb_repo = KnowledgeBaseRepository()
         kb = await kb_repo.get_by_kb_id(kb_id)
@@ -399,7 +416,20 @@ class KnowledgeBaseManager:
         user_dept = user_info.get("department_id")
         logger.info(f"Getting databases for user with role {user_role} and department {user_dept}")
 
-        all_databases = await self.get_databases()
+        from yuxi.p3.flags import is_weknora_kb_enabled
+
+        if is_weknora_kb_enabled():
+            # 接入 WeKnora 时智能体配置 / list_kbs 只暴露 WeKnora 知识库。
+            # 原生 milvus 等查询路径在开关关闭（独立部署）时仍走 get_databases()。
+            try:
+                from yuxi.p3.virtual import fetch_weknora_summaries
+
+                all_databases = await fetch_weknora_summaries()
+            except Exception as exc:
+                logger.warning(f"WeKnora knowledge base list skipped: {exc}")
+                all_databases = []
+        else:
+            all_databases = await self.get_databases()
 
         # 超级管理员可以看到所有知识库
         filtered_databases: list[KnowledgeBaseSummary] = []
@@ -476,6 +506,8 @@ class KnowledgeBaseManager:
         if not KnowledgeBaseFactory.is_type_supported(kb_type):
             available_types = list(KnowledgeBaseFactory.get_available_types().keys())
             raise ValueError(f"Unsupported knowledge base type: {kb_type}. Available types: {available_types}")
+        if kb_type == "weknora":
+            raise ValueError("WeKnora 知识库由 WeKnora 管理，不能在 harness 内创建")
 
         if await self.database_name_exists(database_name):
             raise KBNameConflictError(f"知识库名称 '{database_name}' 已存在，请使用其他名称")
@@ -691,7 +723,18 @@ class KnowledgeBaseManager:
 
     async def get_database_info(self, kb_id: str, include_files: bool = False) -> KnowledgeBaseDetail | None:
         """获取知识库详情。"""
+        from yuxi.p3.flags import is_weknora_kb_enabled
+        from yuxi.p3.ids import is_weknora_kb_id
         from yuxi.repositories.knowledge_base_repository import KnowledgeBaseRepository
+
+        if is_weknora_kb_enabled() and is_weknora_kb_id(kb_id):
+            from yuxi.p3.errors import WeKnoraKBError
+            from yuxi.p3.virtual import fetch_weknora_detail
+
+            try:
+                return await fetch_weknora_detail(kb_id)
+            except WeKnoraKBError:
+                return None
 
         kb_repo = KnowledgeBaseRepository()
         kb = await kb_repo.get_by_kb_id(kb_id)
@@ -749,8 +792,24 @@ class KnowledgeBaseManager:
         include_stats: bool = True,
     ) -> dict:
         """按目录和筛选条件分页获取轻量文件列表。"""
+        from yuxi.p3.ids import is_weknora_kb_id
         from yuxi.repositories.knowledge_base_repository import KnowledgeBaseRepository
         from yuxi.repositories.knowledge_file_repository import KnowledgeFileRepository
+
+        if is_weknora_kb_id(kb_id):
+            executor = await self.get_kb_executor(kb_id)
+            tree = await executor.list_file_tree(kb_id)
+            entries = tree.get("entries") if isinstance(tree, dict) else []
+            return {
+                "items": entries or [],
+                "total": len(entries or []),
+                "page": 1,
+                "page_size": len(entries or []),
+                "has_more": False,
+                "parent_id": parent_id,
+                "path_prefix": path_prefix or "",
+                "recursive": False,
+            }
 
         kb = await KnowledgeBaseRepository().get_by_kb_id(kb_id)
         if kb is None:
@@ -816,7 +875,35 @@ class KnowledgeBaseManager:
         include_parent_id: bool = False,
     ) -> dict:
         """按文件名在一组知识库中搜索文件，并返回分页结果。"""
+        from yuxi.p3.ids import is_weknora_kb_id
         from yuxi.repositories.knowledge_file_repository import KnowledgeFileRepository
+
+        weknora_kbs = [kb for kb in knowledge_bases if is_weknora_kb_id(kb.get("kb_id"))]
+        native_kbs = [kb for kb in knowledge_bases if not is_weknora_kb_id(kb.get("kb_id"))]
+
+        weknora_files: list[dict] = []
+        weknora_total = 0
+        if weknora_kbs:
+            executor = self._get_or_create_kb_instance("weknora")
+            for kb in weknora_kbs:
+                result = await executor.search_files(str(kb.get("kb_id")), query, offset=0, limit=limit)
+                files = result.get("files") if isinstance(result, dict) else []
+                weknora_total += int(result.get("total") or len(files or []))
+                for item in files or []:
+                    item["kb_name"] = kb.get("name")
+                    weknora_files.append(item)
+
+        if not native_kbs:
+            sliced = weknora_files[max(offset or 0, 0) : max(offset or 0, 0) + min(max(limit or 300, 1), KB_FILE_SEARCH_SCAN_LIMIT)]
+            return {
+                "files": sliced,
+                "total": weknora_total,
+                "offset": max(offset or 0, 0),
+                "limit": min(max(limit or 300, 1), KB_FILE_SEARCH_SCAN_LIMIT),
+                "has_more": max(offset or 0, 0) + min(max(limit or 300, 1), KB_FILE_SEARCH_SCAN_LIMIT) < weknora_total,
+            }
+
+        knowledge_bases = native_kbs
 
         normalized_offset = max(offset or 0, 0)
         normalized_limit = min(max(limit or 300, 1), KB_FILE_SEARCH_SCAN_LIMIT)
@@ -862,6 +949,11 @@ class KnowledgeBaseManager:
                 if include_parent_id:
                     item["parent_id"] = file.parent_id
                 all_files.append(item)
+
+        if weknora_files:
+            use_sql_pagination = False
+            all_files.extend(weknora_files)
+            total += weknora_total
 
         if not use_sql_pagination:
             # 多库才需要跨库按更新时间归并；单库结果已由 DB 按 updated_at desc, file_id asc 排好序。

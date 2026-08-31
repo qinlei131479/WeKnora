@@ -10,5 +10,6 @@ from .dify import DifyKB
 from .milvus import MilvusKB
 from .notion import NotionKB
 from .read_only_connectors import ReadOnlyConnectors
+from .weknora import WeKnoraKB
 
-__all__ = ["MilvusKB", "DifyKB", "NotionKB", "ReadOnlyConnectors"]
+__all__ = ["MilvusKB", "DifyKB", "NotionKB", "ReadOnlyConnectors", "WeKnoraKB"]

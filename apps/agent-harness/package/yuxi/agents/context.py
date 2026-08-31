@@ -342,6 +342,16 @@ class BaseContext:
                     if callable(options):
                         options = options()
 
+                    description = f.metadata.get("description", "")
+                    if f.name == "knowledges":
+                        from yuxi.p3.flags import is_weknora_kb_enabled
+
+                        if is_weknora_kb_enabled():
+                            description = (
+                                "知识库列表来自 WeKnora，请在左侧知识库页面创建。"
+                                "默认选择当前用户可访问的全部 WeKnora 知识库。"
+                            )
+
                     configurable_items[f.name] = {
                         "type": f.metadata.get("type", type_name),
                         "name": f.metadata.get("name", f.name),
@@ -351,7 +361,7 @@ class BaseContext:
                         else f.default_factory()
                         if f.default_factory is not MISSING
                         else None,
-                        "description": f.metadata.get("description", ""),
+                        "description": description,
                         "kind": f.metadata.get("kind", ""),
                     }
 
@@ -494,6 +504,11 @@ async def normalize_agent_context_config(
     raw_context = dict(context) if isinstance(context, dict) else {}
     filtered = filter_config_by_role({"context": raw_context}, getattr(user, "role", None), schema)
     normalized = dict(filtered.get("context") or {})
+    if "knowledges" in normalized and normalized.get("knowledges") is not None:
+        from yuxi.p3.mapping import remap_knowledge_ids
+
+        remapped, _unmapped = remap_knowledge_ids([str(value) for value in normalized.get("knowledges") or []])
+        normalized["knowledges"] = remapped
     field_names = {item.name for item in fields(schema)}
     resource_fields = _AGENT_RESOURCE_FIELDS & field_names
     if not resource_fields:
