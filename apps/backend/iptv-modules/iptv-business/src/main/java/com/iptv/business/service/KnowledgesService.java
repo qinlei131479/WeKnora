@@ -96,4 +96,12 @@ public interface KnowledgesService extends IService<Knowledges> {
      * @return Span树响应
      */
     KnowledgeSpansVO querySpansByKnowledgeId(@Nonnull String id, Integer attempt);
+
+    /**
+     * 查询分块图片
+     *
+     * @param file_path 文件路径
+     * @param response  响应对象
+     */
+    void queryFileByPath(@Nonnull String file_path, HttpServletResponse response);
 }

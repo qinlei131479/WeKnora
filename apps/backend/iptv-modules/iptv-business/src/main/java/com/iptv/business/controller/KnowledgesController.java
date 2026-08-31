@@ -114,4 +114,10 @@ public class KnowledgesController {
     public R<KnowledgeSpansVO> querySpansByKnowledgeId(@RequestParam String knowledgeId, @RequestParam(required = false) Integer attempt) {
         return R.ok(knowledgesService.querySpansByKnowledgeId(knowledgeId, attempt));
     }
+
+    @Operation(summary = "查看分块图片", description = "查看分块图片")
+    @GetMapping("/files")
+    public void queryFileByPath(@RequestParam String file_path, HttpServletResponse response) {
+        knowledgesService.queryFileByPath(file_path, response);
+    }
 }

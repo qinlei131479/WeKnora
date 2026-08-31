@@ -224,11 +224,12 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
             throw new ServiceException("文件路径为空");
         }
 
-        // 解析 resource:// 路径格式
+        // 解析存储后端和实际文件路径
         StorageBackends storageBackend;
         String actualFilePath;
 
         if (filePath.startsWith("resource://")) {
+
             // 从 resource:// 路径解析实际文件信息
             String handle = filePath.substring("resource://".length());
             Resources resource = resourcesMapper.selectOne(
@@ -241,7 +242,7 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
 
             // 获取存储后端配置
             storageBackend = storageBackendsMapper.selectById(resource.getStorageBackendId());
-            if (storageBackend == null) {
+            if (BeanUtil.isEmpty(storageBackend)) {
                 throw new ServiceException("存储后端不存在: " + resource.getStorageBackendId());
             }
 
@@ -267,7 +268,7 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
         } else {
             // 获取知识库信息
             KnowledgeBases knowledgeBase = knowledgeBasesMapper.selectById(knowledge.getKnowledgeBaseId());
-            if (knowledgeBase == null) {
+            if (BeanUtil.isEmpty(knowledgeBase)) {
                 throw new ServiceException("知识库不存在");
             }
 
@@ -279,43 +280,11 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
             actualFilePath = filePath;
         }
 
-        // 使用工厂类根据存储后端获取文件流
-        try (InputStream inputStream = storageBackendFileServiceFactory.getFileStream(storageBackend, actualFilePath);
-             OutputStream outputStream = response.getOutputStream()) {
+        String fileName = StrUtil.isNotBlank(knowledge.getFileName())
+                ? knowledge.getFileName()
+                : filePath.substring(filePath.lastIndexOf('/') + 1);
 
-            String fileName = StrUtil.isNotBlank(knowledge.getFileName())
-                    ? knowledge.getFileName()
-                    : filePath.substring(filePath.lastIndexOf('/') + 1);
-
-            String contentType = getContentType(fileName);
-            boolean isInline = isInlineContentType(contentType);
-
-            // 设置响应头
-            response.setContentType(contentType);
-            response.setHeader("X-Content-Type-Options", "nosniff");
-            String disposition = isInline ? "inline" : "attachment";
-            try {
-                String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8.name());
-                response.setHeader("Content-Disposition", disposition + "; filename=\"" + encodedFileName + "\"");
-            } catch (Exception e) {
-                response.setHeader("Content-Disposition", disposition + "; filename=\"" + fileName + "\"");
-            }
-            response.setHeader("Cache-Control", "private, max-age=3600");
-
-            // 流式传输文件内容
-            byte[] buffer = new byte[8192];
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, bytesRead);
-            }
-            outputStream.flush();
-        } catch (IOException e) {
-            log.error("流式传输文件失败", e);
-            throw new ServiceException("预览失败");
-        } catch (Exception e) {
-            log.error("获取文件失败", e);
-            throw new ServiceException("获取文件失败: " + e.getMessage());
-        }
+        streamFileToResponse(storageBackend, actualFilePath, fileName, response);
     }
 
     @Override
@@ -342,6 +311,109 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
     @Override
     public void deleteFAQById(@Nonnull String id) {
         chunksMapper.deleteById(id);
+    }
+
+    @Override
+    public void queryFileByPath(@Nonnull String file_path, HttpServletResponse response) {
+        log.info("开始根据路径查询文件: {}", file_path);
+
+        if (StrUtil.isBlank(file_path)) {
+            throw new ServiceException("文件路径为空");
+        }
+
+        // 解析 resource:// 路径格式
+        StorageBackends storageBackend;
+        String actualFilePath;
+
+        if (file_path.startsWith("resource://")) {
+            // 从 resource:// 路径解析实际文件信息
+            String handle = file_path.substring("resource://".length());
+            Resources resource = resourcesMapper.selectOne(
+                    new LambdaQueryWrapper<Resources>()
+                            .eq(Resources::getHandle, handle)
+            );
+            if (resource == null) {
+                throw new ServiceException("资源不存在: " + handle);
+            }
+
+            // 获取存储后端配置
+            storageBackend = storageBackendsMapper.selectById(resource.getStorageBackendId());
+            if (BeanUtil.isEmpty(storageBackend)) {
+                throw new ServiceException("存储后端不存在: " + resource.getStorageBackendId());
+            }
+
+            // 解析 physical_path 格式: storage://backendId/provider://actualPath
+            String physicalPath = resource.getPhysicalPath();
+            if (physicalPath.startsWith("storage://")) {
+                // 去掉 storage://backendId/ 前缀
+                String afterStorage = physicalPath.substring("storage://".length());
+                int slashIndex = afterStorage.indexOf('/');
+                if (slashIndex > 0) {
+                    actualFilePath = afterStorage.substring(slashIndex + 1);
+                    // 去掉 provider:// 前缀（如 local://, minio://）
+                    int providerSlashIndex = actualFilePath.indexOf("://");
+                    if (providerSlashIndex > 0) {
+                        actualFilePath = actualFilePath.substring(providerSlashIndex + 3);
+                    }
+                } else {
+                    actualFilePath = afterStorage;
+                }
+            } else {
+                actualFilePath = physicalPath;
+            }
+        } else {
+            throw new ServiceException("仅支持 resource:// 格式的文件路径");
+        }
+
+        // 从路径中提取文件名
+        String fileName = actualFilePath.substring(actualFilePath.lastIndexOf('/') + 1);
+
+        streamFileToResponse(storageBackend, actualFilePath, fileName, response);
+    }
+
+    /**
+     * 通用方法：根据存储后端和文件路径流式传输文件到响应
+     *
+     * @param storageBackend 存储后端实体（可为null）
+     * @param actualFilePath 实际文件路径
+     * @param fileName       文件名
+     * @param response       HTTP响应对象
+     */
+    private void streamFileToResponse(StorageBackends storageBackend, String actualFilePath,
+                                      String fileName, HttpServletResponse response) {
+        // 使用工厂类根据存储后端获取文件流
+        try (InputStream inputStream = storageBackendFileServiceFactory.getFileStream(storageBackend, actualFilePath);
+             OutputStream outputStream = response.getOutputStream()) {
+
+            String contentType = getContentType(fileName);
+            boolean isInline = isInlineContentType(contentType);
+
+            // 设置响应头
+            response.setContentType(contentType);
+            response.setHeader("X-Content-Type-Options", "nosniff");
+            String disposition = isInline ? "inline" : "attachment";
+            try {
+                String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8);
+                response.setHeader("Content-Disposition", disposition + "; filename=\"" + encodedFileName + "\"");
+            } catch (Exception e) {
+                response.setHeader("Content-Disposition", disposition + "; filename=\"" + fileName + "\"");
+            }
+            response.setHeader("Cache-Control", "private, max-age=3600");
+
+            // 流式传输文件内容
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+            outputStream.flush();
+        } catch (IOException e) {
+            log.error("流式传输文件失败", e);
+            throw new ServiceException("预览失败");
+        } catch (Exception e) {
+            log.error("获取文件失败", e);
+            throw new ServiceException("获取文件失败: " + e.getMessage());
+        }
     }
 
     @Override
