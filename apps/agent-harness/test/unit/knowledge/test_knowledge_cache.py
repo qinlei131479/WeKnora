@@ -21,8 +21,9 @@ class _FakeRedis:
         self.data[key] = value
         self.expires = (key, ex)
 
-    async def delete(self, key: str):
-        self.data.pop(key, None)
+    async def delete(self, *keys: str):
+        for key in keys:
+            self.data.pop(key, None)
 
     def lock(self, key: str, *, timeout: int, blocking_timeout: int):
         self.locks.append((key, timeout, blocking_timeout))
@@ -68,12 +69,44 @@ async def test_cache_round_trip(monkeypatch):
         "embedding_model_spec",
         "query_params",
         "additional_params",
+        "tenant_id",
     }
+    assert snapshot["tenant_id"] is None
     assert snapshot["query_params"] == {"options": {"top_k": 5}}
     assert "stats" not in snapshot["additional_params"]
     key = f"{cache_module.KNOWLEDGE_BASE_CACHE_KEY_PREFIX}kb_1"
     assert json.loads(redis.data[key])["kb_type"] == "milvus"
     assert redis.expires == (key, cache_module.KNOWLEDGE_BASE_CACHE_TTL_SECONDS)
+
+
+@pytest.mark.asyncio
+async def test_cache_key_is_tenant_prefixed_and_isolated(monkeypatch):
+    from yuxi.p2.context import TenantPrincipal, bind_tenant_principal
+
+    redis = _FakeRedis()
+    monkeypatch.setattr(cache_module, "get_async_redis_client", lambda: _async_value(redis))
+    monkeypatch.setenv("HARNESS_TENANT_SCOPE", "true")
+    row = _row()
+    row.tenant_id = 10000
+
+    bind_tenant_principal(TenantPrincipal(uid="user-a", tenant_id=10000, role="user"))
+    try:
+        await cache_module.cache_kb_config(row)
+        own = await cache_module.get_cached_kb_config("kb_1")
+    finally:
+        bind_tenant_principal(None)
+
+    bind_tenant_principal(TenantPrincipal(uid="user-b", tenant_id=20000, role="user"))
+    try:
+        other = await cache_module.get_cached_kb_config("kb_1")
+    finally:
+        bind_tenant_principal(None)
+
+    key = f"{cache_module.KNOWLEDGE_BASE_CACHE_KEY_PREFIX}t10000:kb_1"
+    assert key in redis.data
+    assert f"{cache_module.KNOWLEDGE_BASE_CACHE_KEY_PREFIX}kb_1" not in redis.data
+    assert own is not None and own["tenant_id"] == 10000
+    assert other is None
 
 
 @pytest.mark.asyncio

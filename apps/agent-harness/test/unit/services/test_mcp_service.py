@@ -381,3 +381,58 @@ async def test_get_mcp_tools_sets_handle_tool_error(monkeypatch):
     assert tools[0].handle_tool_error is True
 
     mcp_service.clear_mcp_cache()
+
+
+async def test_get_mcp_server_filters_to_token_tenant(mcp_session, monkeypatch: pytest.MonkeyPatch):
+    from yuxi.p2.context import TenantPrincipal, bind_tenant_principal
+
+    mcp_session.add_all(
+        [
+            MCPServer(
+                slug="builtin-chart",
+                name="内置",
+                transport="streamable_http",
+                url="https://example.com/builtin",
+                enabled=1,
+                created_by="system",
+                updated_by="system",
+                tenant_id=None,
+            ),
+            MCPServer(
+                slug="tenant-a",
+                name="空间 A",
+                transport="streamable_http",
+                url="https://example.com/a",
+                enabled=1,
+                created_by="user-a",
+                updated_by="user-a",
+                tenant_id=10000,
+            ),
+            MCPServer(
+                slug="tenant-b",
+                name="空间 B",
+                transport="streamable_http",
+                url="https://example.com/b",
+                enabled=1,
+                created_by="user-b",
+                updated_by="user-b",
+                tenant_id=20000,
+            ),
+        ]
+    )
+    await mcp_session.commit()
+
+    monkeypatch.setenv("HARNESS_TENANT_SCOPE", "true")
+    bind_tenant_principal(TenantPrincipal(uid="user-a", tenant_id=10000, role="user"))
+    try:
+        visible = await mcp_service.get_all_mcp_servers(mcp_session)
+        own = await mcp_service.get_mcp_server(mcp_session, "tenant-a")
+        other = await mcp_service.get_mcp_server(mcp_session, "tenant-b")
+        builtin = await mcp_service.get_mcp_server(mcp_session, "builtin-chart")
+    finally:
+        bind_tenant_principal(None)
+
+    assert {server.slug for server in visible} == {"builtin-chart", "tenant-a"}
+    assert own is not None and own.slug == "tenant-a"
+    assert other is None
+    assert builtin is not None and builtin.slug == "builtin-chart"

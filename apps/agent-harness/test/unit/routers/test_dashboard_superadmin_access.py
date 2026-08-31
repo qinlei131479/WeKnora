@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pytest
 import pytest_asyncio
-from fastapi import HTTPException
 from fastapi.routing import APIRoute
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -13,7 +12,8 @@ from server.routers.dashboard_router import (
     get_tool_call_stats,
     get_user_activity_stats,
 )
-from server.utils.auth_middleware import get_superadmin_user
+from server.utils.auth_middleware import get_required_user
+from yuxi.p2.context import TenantPrincipal, bind_tenant_principal
 from yuxi.storage.postgres.models_business import Base, Conversation, Department, Message, ToolCall, User
 from yuxi.utils.datetime_utils import utc_now_naive
 
@@ -73,6 +73,7 @@ async def dashboard_session():
             status="active",
             created_at=now,
             updated_at=now,
+            tenant_id=10000,
         )
         conversation_b = Conversation(
             thread_id="thread-b",
@@ -82,6 +83,7 @@ async def dashboard_session():
             status="active",
             created_at=now,
             updated_at=now,
+            tenant_id=20000,
         )
         message_a = Message(conversation=conversation_a, role="assistant", content="A", created_at=now)
         message_b = Message(conversation=conversation_b, role="assistant", content="B", created_at=now)
@@ -117,33 +119,31 @@ async def dashboard_session():
             conversation_b,
         ]:
             await db.refresh(item)
-        yield {"db": db, "superadmin": superadmin, "admin_a": admin_a}
+        yield {"db": db, "superadmin": superadmin, "admin_a": admin_a, "user_a": user_a}
     await engine.dispose()
 
 
-async def test_dashboard_routes_require_superadmin_dependency():
+async def test_dashboard_routes_require_logged_in_user():
     dashboard_routes = [route for route in dashboard.routes if isinstance(route, APIRoute)]
 
     assert dashboard_routes
     for route in dashboard_routes:
         dependency_calls = {dependency.call for dependency in route.dependant.dependencies}
-        assert get_superadmin_user in dependency_calls
+        assert get_required_user in dependency_calls
 
 
-async def test_dashboard_dependency_rejects_department_admin(dashboard_session):
-    with pytest.raises(HTTPException) as exc:
-        await get_superadmin_user(dashboard_session["admin_a"])
-
-    assert exc.value.status_code == 403
+async def test_dashboard_allows_department_admin(dashboard_session):
+    user = await get_required_user(dashboard_session["admin_a"])
+    assert user.uid == "admin_a"
 
 
-async def test_conversation_list_superadmin_sees_all_departments(dashboard_session):
+async def test_conversation_list_without_tenant_scope_sees_all(dashboard_session):
     response = await get_all_conversations(db=dashboard_session["db"], current_user=dashboard_session["superadmin"])
 
     assert {item["thread_id"] for item in response} == {"thread-a", "thread-b"}
 
 
-async def test_conversation_detail_superadmin_can_view_other_department(dashboard_session):
+async def test_conversation_detail_without_tenant_scope_can_view_other(dashboard_session):
     response = await get_conversation_detail(
         "thread-b",
         db=dashboard_session["db"],
@@ -153,7 +153,7 @@ async def test_conversation_detail_superadmin_can_view_other_department(dashboar
     assert response["thread_id"] == "thread-b"
 
 
-async def test_user_activity_stats_superadmin_include_all_departments(dashboard_session):
+async def test_user_activity_stats_without_tenant_scope_include_all(dashboard_session):
     stats = await get_user_activity_stats(db=dashboard_session["db"], current_user=dashboard_session["superadmin"])
 
     assert stats.total_users == 5
@@ -161,9 +161,30 @@ async def test_user_activity_stats_superadmin_include_all_departments(dashboard_
     assert stats.active_users_30d == 2
 
 
-async def test_tool_stats_superadmin_include_all_departments(dashboard_session):
+async def test_tool_stats_without_tenant_scope_include_all(dashboard_session):
     stats = await get_tool_call_stats(db=dashboard_session["db"], current_user=dashboard_session["superadmin"])
 
     assert stats.total_calls == 2
     assert stats.successful_calls == 2
     assert {tool["tool_name"] for tool in stats.most_used_tools} == {"dept_a_tool", "dept_b_tool"}
+
+
+async def test_dashboard_filters_to_token_tenant(dashboard_session, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("HARNESS_TENANT_SCOPE", "true")
+    bind_tenant_principal(TenantPrincipal(uid="superadmin", tenant_id=10000, role="superadmin"))
+    try:
+        conversations = await get_all_conversations(
+            db=dashboard_session["db"], current_user=dashboard_session["superadmin"]
+        )
+        stats = await get_user_activity_stats(
+            db=dashboard_session["db"], current_user=dashboard_session["superadmin"]
+        )
+        tools = await get_tool_call_stats(db=dashboard_session["db"], current_user=dashboard_session["superadmin"])
+    finally:
+        bind_tenant_principal(None)
+
+    assert {item["thread_id"] for item in conversations} == {"thread-a"}
+    assert stats.total_users == 1
+    assert stats.active_users_24h == 1
+    assert tools.total_calls == 1
+    assert {tool["tool_name"] for tool in tools.most_used_tools} == {"dept_a_tool"}

@@ -66,7 +66,7 @@ async def test_update_invalidates_cache_before_database_commit(monkeypatch):
     _patch_session(monkeypatch, session)
     _patch_cache_lock(monkeypatch, events)
 
-    async def fake_delete_cached(_kb_id: str):
+    async def fake_delete_cached(_kb_id: str, _tenant_id=None):
         events.append("cache_invalidated")
 
     monkeypatch.setattr(repository_module, "delete_cached_kb_config", fake_delete_cached)
@@ -77,8 +77,8 @@ async def test_update_invalidates_cache_before_database_commit(monkeypatch):
     assert row.name == "New"
     assert events == [
         "lock_acquired",
-        "cache_invalidated",
         "transaction_open",
+        "cache_invalidated",
         "transaction_commit",
         "lock_released",
     ]
@@ -92,7 +92,7 @@ async def test_cache_invalidation_failure_aborts_before_database_update(monkeypa
     _patch_session(monkeypatch, session)
     _patch_cache_lock(monkeypatch, events)
 
-    async def fail_delete_cached(_kb_id: str):
+    async def fail_delete_cached(_kb_id: str, _tenant_id=None):
         raise ConnectionError("redis unavailable")
 
     monkeypatch.setattr(repository_module, "delete_cached_kb_config", fail_delete_cached)
@@ -101,7 +101,7 @@ async def test_cache_invalidation_failure_aborts_before_database_update(monkeypa
         await KnowledgeBaseRepository().update("kb_1", {"name": "New"})
 
     assert row.name == "Old"
-    assert events == ["lock_acquired"]
+    assert events == ["lock_acquired", "transaction_open"]
 
 
 @pytest.mark.asyncio
@@ -112,7 +112,7 @@ async def test_delete_holds_cache_lock_through_database_commit(monkeypatch):
     _patch_session(monkeypatch, session)
     _patch_cache_lock(monkeypatch, events)
 
-    async def fake_delete_cached(_kb_id: str):
+    async def fake_delete_cached(_kb_id: str, _tenant_id=None):
         events.append("cache_invalidated")
 
     monkeypatch.setattr(repository_module, "delete_cached_kb_config", fake_delete_cached)
@@ -122,8 +122,8 @@ async def test_delete_holds_cache_lock_through_database_commit(monkeypatch):
     assert session.deleted == [row]
     assert events == [
         "lock_acquired",
-        "cache_invalidated",
         "transaction_open",
+        "cache_invalidated",
         "transaction_commit",
         "lock_released",
     ]
@@ -147,7 +147,7 @@ async def test_merge_query_params_options_preserves_concurrent_partial_updates(m
         async with lock:
             yield
 
-    async def fake_delete_cached(_kb_id: str):
+    async def fake_delete_cached(_kb_id: str, _tenant_id=None):
         return None
 
     monkeypatch.setattr(repository_module.pg_manager, "get_async_session_context", fake_session_context)

@@ -1189,6 +1189,9 @@ async def test_init_builtin_skills_create_missing(tmp_path: Path, monkeypatch: p
             assert slug == "reporter"
             return None
 
+        async def get_by_slug_unscoped(self, slug: str):
+            return await self.get_by_slug(slug)
+
         async def create(self, **kwargs) -> Skill:
             self.__class__.created_payload = kwargs
             return Skill(**kwargs, updated_by=kwargs["created_by"])
@@ -1274,6 +1277,9 @@ async def test_init_builtin_skills_updates_existing_record_and_preserves_disable
         async def get_by_slug(self, slug: str):
             assert slug == "reporter"
             return existing_item
+
+        async def get_by_slug_unscoped(self, slug: str):
+            return await self.get_by_slug(slug)
 
         async def update_metadata(self, item: Skill, *, name: str, description: str, updated_by: str | None) -> Skill:
             item.name = name
@@ -1374,6 +1380,9 @@ async def test_init_builtin_skills_rejects_non_builtin_conflict(tmp_path: Path, 
 
         async def get_by_slug(self, slug: str):
             return Skill(slug=slug, name=slug, description="uploaded", dir_path=f"skills/{slug}", source_type="upload")
+
+        async def get_by_slug_unscoped(self, slug: str):
+            return await self.get_by_slug(slug)
 
     monkeypatch.setattr(svc, "SkillRepository", FakeRepo)
 

@@ -37,7 +37,7 @@ async def test_ensure_default_agent_creates_description(monkeypatch):
     async def get_by_slug(_slug):
         return None
 
-    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
+    monkeypatch.setattr(repo, "get_by_slug_unscoped", get_by_slug)
 
     agent = await repo.ensure_default_agent()
 
@@ -63,7 +63,7 @@ async def test_ensure_default_agent_backfills_missing_description(monkeypatch):
     async def get_by_slug(_slug):
         return agent
 
-    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
+    monkeypatch.setattr(repo, "get_by_slug_unscoped", get_by_slug)
 
     result = await repo.ensure_default_agent(created_by="admin")
 
@@ -82,7 +82,7 @@ async def test_ensure_general_purpose_subagent_creates_empty_config_subagent(mon
     async def get_by_slug(_slug):
         return None
 
-    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
+    monkeypatch.setattr(repo, "get_by_slug_unscoped", get_by_slug)
 
     agent = await repo.ensure_general_purpose_subagent(created_by="system")
 
@@ -109,7 +109,7 @@ async def test_ensure_general_purpose_subagent_is_idempotent(monkeypatch):
     async def get_by_slug(_slug):
         return existing
 
-    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
+    monkeypatch.setattr(repo, "get_by_slug_unscoped", get_by_slug)
 
     agent = await repo.ensure_general_purpose_subagent()
 

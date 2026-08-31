@@ -33,7 +33,7 @@ async def test_ensure_deep_research_agents_creates_orchestrator_and_subagents(mo
     async def get_by_slug(_slug):
         return None
 
-    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
+    monkeypatch.setattr(repo, "get_by_slug_unscoped", get_by_slug)
 
     await repo.ensure_deep_research_agents()
 
@@ -67,7 +67,7 @@ async def test_ensure_deep_research_agents_is_idempotent(monkeypatch):
     async def get_by_slug(slug):
         return SimpleNamespace(slug=slug)
 
-    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
+    monkeypatch.setattr(repo, "get_by_slug_unscoped", get_by_slug)
 
     await repo.ensure_deep_research_agents()
 
