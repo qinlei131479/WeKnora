@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.iptv.business.domain.Chunks;
 import com.iptv.business.domain.dto.FAQEntryQueryDTO;
+import com.iptv.business.domain.dto.page.ChunksPageDTO;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
@@ -32,4 +33,13 @@ public interface ChunksMapper extends BaseMapper<Chunks> {
      * @return FAQ分块列表
      */
     List<Chunks> selectFAQEntries(@Param("param") FAQEntryQueryDTO dto, Page page);
+
+    /**
+     * 分页查询知识分块
+     *
+     * @param param 查询条件
+     * @param page  分页参数
+     * @return 分块列表
+     */
+    List<Chunks> queryPage(@Param("param") ChunksPageDTO param, Page page);
 }
