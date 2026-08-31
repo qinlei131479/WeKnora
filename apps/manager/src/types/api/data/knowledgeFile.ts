@@ -204,3 +204,68 @@ export interface KnowledgeTag {
   sortOrder: number; // 同级排序权重
   seqId: number; // 对外自增序号（API 友好）
 }
+
+export interface KnowledgeFileChunk {
+  /** 分块ID */
+  id?: string;
+  /** 租户ID */
+  tenantId?: number;
+  /** 知识库ID */
+  knowledgeBaseId?: string;
+  /** 知识条目ID */
+  knowledgeId?: string;
+  /** 分块内容 */
+  content?: string;
+  /** 分块索引 */
+  chunkIndex?: number;
+  /** 是否启用 */
+  isEnabled?: boolean;
+  /** 起始位置 */
+  startAt?: number;
+  /** 结束位置 */
+  endAt?: number;
+  /** 前一个分块ID */
+  preChunkId?: string;
+  /** 后一个分块ID */
+  nextChunkId?: string;
+  /** 分块类型 */
+  chunkType?: string;
+  /** 父分块ID */
+  parentChunkId?: string;
+  /** 图片信息 */
+  imageInfo?: string;
+  /** 关联分块 */
+  relationChunks?: string;
+  /** 间接关联分块 */
+  indirectRelationChunks?: string;
+  /** 创建时间 */
+  createdAt?: string;
+  /** 更新时间 */
+  updatedAt?: string;
+  /** 删除时间 */
+  deletedAt?: string;
+  /** 元数据 */
+  metadata?: string;
+  /** 标签ID */
+  tagId?: string;
+  /** 状态 */
+  status?: number;
+  /** 内容哈希 */
+  contentHash?: string;
+  /** 标志位 */
+  flags?: number;
+  /** 序列号 */
+  seqId?: number;
+  /** 视频信息 */
+  videoInfo?: string;
+  /** 源内容 */
+  sourceContent?: string;
+  /** 内容修订版本 */
+  contentRevision?: number;
+  /** 索引状态 */
+  indexStatus?: string;
+  /** 最后编辑者ID */
+  lastEditorId?: string;
+  /** 上下文标题 */
+  contextHeader?: string;
+}
