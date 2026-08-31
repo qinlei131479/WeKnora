@@ -514,6 +514,10 @@ async def get_request(*, db: AsyncSession, request_id: str, uid: str) -> dict | 
     request = await repo.get_by_request_id(request_id)
     if not request or request.uid != str(uid):
         return None
+    from yuxi.p2.tenant_query import row_in_tenant
+
+    if not row_in_tenant(request):
+        return None
     return request.to_dict()
 
 
@@ -755,11 +759,14 @@ async def _get_thread_conversation(
 
 def _conversation_matches(conversation, *, uid: str, agent_slug: str) -> bool:
     """线程归属校验：存在、未删除、归属当前用户与 agent。"""
+    from yuxi.p2.tenant_query import row_in_tenant
+
     return (
         conversation is not None
         and conversation.uid == str(uid)
         and conversation.status != "deleted"
         and conversation.agent_id == agent_slug
+        and row_in_tenant(conversation)
     )
 
 

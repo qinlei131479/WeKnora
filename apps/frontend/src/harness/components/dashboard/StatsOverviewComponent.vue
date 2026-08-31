@@ -46,7 +46,7 @@
         </div>
       </div>
 
-      <div class="stat-card secondary clickable" @click="handleFeedbackClick">
+      <div class="stat-card secondary">
         <div class="stat-icon">
           <BarChart3 class="icon" />
         </div>
@@ -89,15 +89,6 @@ const props = defineProps({
   }
 })
 
-// Emits
-const emit = defineEmits(['open-feedback'])
-
-// Methods
-const handleFeedbackClick = () => {
-  emit('open-feedback')
-}
-
-// Methods
 const getSatisfactionClass = () => {
   const rate = props.basicStats?.feedback_stats?.satisfaction_rate || 0
   if (rate >= 80) return 'satisfaction-high'

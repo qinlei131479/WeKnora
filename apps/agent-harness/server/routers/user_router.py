@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.utils.auth_middleware import get_current_user, get_db, get_required_user
 from yuxi.config import UserConfig, UserConfigSchema
+from yuxi.p2.context import stamp_tenant_id
 from yuxi.storage.minio import upload_image_to_minio
 from yuxi.storage.postgres.models_business import APIKey, AgentEnv, User
 from yuxi.utils.auth_utils import AuthUtils
@@ -293,7 +294,7 @@ async def update_agent_env(
     now = utc_now_naive()
     stmt = (
         pg_insert(AgentEnv)
-        .values(uid=current_user.uid, env=env, updated_at=now)
+        .values(uid=current_user.uid, env=env, updated_at=now, tenant_id=stamp_tenant_id())
         .on_conflict_do_update(
             index_elements=[AgentEnv.uid],
             set_={"env": env, "updated_at": now},

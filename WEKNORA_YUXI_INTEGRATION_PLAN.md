@@ -89,8 +89,9 @@ flowchart TB
 
 | 议题 | 决策 |
 | --- | --- |
-| 用户体系 | 统一用 WeKnora `users`；yuxi 做兼容 |
-| Token | 统一用 WeKnora JWT，yuxi 侧解析 |
+| 用户体系 | 统一用 WeKnora `users`；yuxi 做兼容投影 |
+| Token | WeKnora JWT 为主路径；**harness 独立登录长期保留**，其签发的 yuxi JWT 继续有效 |
+| harness 独立登录 | **保留**（密码 / OIDC / 用户管理）。不关 `HARNESS_LOCAL_LOGIN_ENABLED`，也不关 `HARNESS_LEGACY_JWT_ENABLED` |
 | WeKnora Agent | **长期并存**，与 yuxi 智能体共存，用户可选 |
 | 知识库适配深度 | **全能力**（检索 + 打开文档 + 文件内定位 + 下载 + 文件列表） |
 | yuxi 知识库注册表 | **不保留**，`list_kbs` 实时透传 WeKnora |
@@ -109,15 +110,15 @@ flowchart TB
 | 参数 | WeKnora（`make dev-app` / 前端） | yuxi / harness | 融合约定 |
 | --- | --- | --- | --- |
 | `JWT_SECRET` | 签发与验签 WeKnora access/refresh | 验 WeKnora JWT（P1 主路径） | **必须相同且非空**。`docker-env.py` 与 `weknora_auth.py` 空则失败，不随机生成 |
-| `JWT_SECRET_KEY` | 不使用 | yuxi 旧 JWT（`AuthUtils`） | **过渡期保留、不得改成 `JWT_SECRET`**。P1.7 后关闭 legacy |
+| `JWT_SECRET_KEY` | 不使用 | yuxi 独立登录签发/验签（`AuthUtils`） | **长期保留、不得改成 `JWT_SECRET`**。独立登录依赖此密钥 |
 | `DB_NAME` / `DB_USER` / `DB_PASSWORD` | 业务库 `WeKnora` | 同一库，表加 `h_` | 已同库。不要再指向旧 `agent_harness` |
 | `HARNESS_TABLE_PREFIX` | 不使用 | 默认 `h_` | 保持 `h_`，不要改 |
 | Redis | WeKnora 自己的 DB 号 | `AGENT_HARNESS_REDIS_DB`（默认 2） | 可分库；P0/P1 缓存键带前缀即可 |
 | `HARNESS_WEKNORA_IDENTITY` | 不使用 | 默认关 | 打开后 harness 接受 WeKnora JWT 并投影 |
-| `HARNESS_LEGACY_JWT_ENABLED` | 不使用 | 默认开 | P1 期间保持开；门禁后再关 |
+| `HARNESS_LEGACY_JWT_ENABLED` | 不使用 | 默认开 | **保持开**。独立登录签发的是 yuxi JWT，关掉后本地登录立刻不可用 |
 | `HARNESS_P0_RUN_TOKEN_STORE` / `HARNESS_P0_CHECK_AUTH_TOKENS` | 不使用 | 默认关 | Worker 透传 JWT；P3 调 KB 前再开 |
-| `HARNESS_LOCAL_LOGIN_ENABLED` | 不使用 | 代码默认开；本机 `.env` / compose 关 | P1.7 已实现。false 时密码/OIDC/初始化/用户增删改 404 |
-| 前端 Token | `localStorage.weknora_token` | 每次现读 `weknora_token` | P1.6 已切。不再读 `harness_user_token` / `VITE_HARNESS_TOKEN` |
+| `HARNESS_LOCAL_LOGIN_ENABLED` | 不使用 | 默认开；本机已开 | **保持开**。false 时密码/OIDC/初始化/用户增删改 404。本计划不再要求关闭 |
+| 前端 Token | `weknora_token` | 只读 `weknora_token`；启动/登出/切空间会清掉遗留的 `harness_user_token` | 不再双 token。独立登录若写入，也写 `weknora_token`，避免遮蔽 WeKnora JWT |
 | 前端代理 | Vite `:9988` → `APP_PORT`（kjsc 9980） | `VITE_HARNESS_PROXY_TARGET` → `:5050` | 与 `.env.kjsc.example` 的 `APP_PORT=9980` 对齐。Docker 容器内仍听 8080 |
 | 模型密钥 | 只留在 WeKnora（`SYSTEM_AES_KEY` 加密） | 不读明文 | P7 内部代理；P0 已冻结协议 |
 
@@ -281,7 +282,7 @@ Agent 侧 7 个知识库工具全部经由 `yuxi.knowledge.runtime.knowledge_bas
 | JWT 载荷 | `user_id` + `email` + `tenant_id` + `type=access`，**无** `sub`/`iss`/`aud` | 强制 `sub`/`iss`/`aud=yuxi-know-api` |
 | 有效期 | access 24h / refresh 7d | 7d |
 | 角色 | 空间 membership + `is_system_admin` | `superadmin` / `admin` / `user` + **必须** `department_id` |
-| 前端存储 | `localStorage.weknora_token` | `localStorage.harness_user_token` |
+| 前端存储 | `localStorage.weknora_token` | 不再使用 `harness_user_token`（遗留键会被清掉） |
 
 yuxi 现有验票逻辑（要改的地方）：
 
@@ -376,7 +377,7 @@ WeKnora 签发逻辑（**不改**），见 [internal/application/service/user.go
 **要点 1：两个密钥并存，职责不同（过渡期）**
 
 - `JWT_SECRET`（来自 WeKnora）→ 验证 WeKnora 令牌，**新主路径**
-- `JWT_SECRET_KEY`（yuxi 自有）→ 仅兼容旧令牌，P1 末尾关闭
+- `JWT_SECRET_KEY`（yuxi 自有）→ harness 独立登录签发/验签，**长期保留**
 
 **不要互相覆盖。** 原因是现有代码在密钥缺失时会**静默自造随机密钥**，导致"全部 401 但看不出原因"，且每次重启密钥都变：
 
@@ -402,8 +403,8 @@ WeKnora 路径必须**缺失即启动失败**，绝不复用这个 fallback。`a
 2. 停止 harness API/Worker，备份数据库与工作区目录，并在隔离库实际完成一次恢复演练。
 3. 执行 P1.8 用户映射、FK 安全的 uid remap 和目录迁移。
 4. 启动后端，用 WeKnora JWT 验证投影复用原 `h_users.id`，同时验证旧 API Key/CLI；再执行一次反向 remap 演练，确认可恢复旧 uid。
-5. 执行 P1.6 前端 token 切换。
-6. 全部门禁通过后才执行 P1.7 关闭本地登录/OIDC，并最终关闭 legacy JWT。
+5. 执行 P1.6 前端：WeKnora token 与 harness 独立登录 token 双读。
+6. P1.7 保留独立登录：`HARNESS_LOCAL_LOGIN_ENABLED=true`，`HARNESS_LEGACY_JWT_ENABLED=true`。不关密码/OIDC/用户写接口。
 
 禁止在 uid remap 完成前让 JIT 为已有用户创建第二行投影。
 
@@ -517,7 +518,7 @@ KNOWLEDGE_BASE_PERMISSION_POLICY = ResourcePermissionPolicy(
 
 1. `yxkey_` 前缀 → API Key 路径（**保持不变**）
 2. 尝试 WeKnora 令牌 → 成功则 `ensure_projected_user` 返回 `User` 行
-3. 失败则回落旧 yuxi 令牌（开关 `HARNESS_LEGACY_JWT_ENABLED`，P1 期间开，验收后关）
+3. 失败则回落 yuxi 独立登录令牌（开关 `HARNESS_LEGACY_JWT_ENABLED`，**保持开**）
 
 要删除的整型假设就是这一行：
 
@@ -537,44 +538,38 @@ KNOWLEDGE_BASE_PERMISSION_POLICY = ResourcePermissionPolicy(
 
 **改 [apps/frontend/src/harness/stores/user.js](apps/frontend/src/harness/stores/user.js)**
 
-- `readHarnessToken()` 改为读 `weknora_token`
-- `getAuthHeaders()` 改为**每次现读 localStorage**，这样 WeKnora 刷新令牌后 harness 自动跟上
-  （[apps/frontend/src/utils/request.ts](apps/frontend/src/utils/request.ts) 刷新时会写回 `weknora_token`）
-- `login` / `initialize` / `checkFirstRun` 停用
+- `readHarnessToken()` **只读** `weknora_token`，并清掉遗留的 `harness_user_token`
+- `getAuthHeaders()` **每次现读 localStorage**，WeKnora 刷新 `weknora_token` 后 harness 自动跟上
+- `login` / `initialize` / `checkFirstRun` **保留**，供 harness 独立登录；写入也走 `weknora_token`
 
 **改 [apps/frontend/src/harness/HarnessIsland.vue](apps/frontend/src/harness/HarnessIsland.vue)**
 
-去掉 Token Gate 分支，改为跳转 WeKnora 登录页：
-
-```99:99:apps/frontend/src/harness/HarnessIsland.vue
-        <HarnessTokenGate v-else-if="!userStore.token" />
-```
+无任一 token 时保留 Token Gate（独立登录入口）。已有 `weknora_token` 时不得再要求粘贴 harness token。
 
 **改 [apps/frontend/src/harness/apis/base.js](apps/frontend/src/harness/apis/base.js)**
 
-401 文案不再提示"粘贴 agent-web 的 user_token"，改为触发统一登录流程。
+401 不再提示「粘贴 agent-web 的 user_token」。有 WeKnora 会话则走统一登录；遗留 `harness_user_token` 一律清掉。
 
-**保留不动**
+本机前端走 Vite（`make dev-frontend`），改完热更新即可。
 
-- [apps/frontend/src/harness/HarnessTokenGate.vue](apps/frontend/src/harness/HarnessTokenGate.vue) 文件留到 P9 一起删
-- `getCurrentUser()` 调的 `/api/auth/me` 返回投影行，前端无需改动
+### P1.7 保留 harness 独立登录
 
-本机前端走 Vite（`make dev-frontend`），改完热更新即可，不必重建 `agent-middle-frontend`。若用 Docker 前端镜像，改完必须重新构建才能看到效果。
+**决策（2026-08-30）：独立登录长期保留，本阶段不关闭。**
 
-### P1.7 关闭 harness 自有登录
+开关保持：
 
-**改 [apps/agent-harness/server/routers/auth_router.py](apps/agent-harness/server/routers/auth_router.py)**
+- `HARNESS_LOCAL_LOGIN_ENABLED=true`（已开）
+- `HARNESS_LEGACY_JWT_ENABLED=true`（独立登录签发 yuxi JWT，必须开）
 
-用开关 `HARNESS_LOCAL_LOGIN_ENABLED=false` 关掉：
+下列路由继续可用，由开关保护以便紧急关闭，**默认不关**：
 
 - `/auth/token`（密码登录）
-- `/auth/initialize`、`/auth/check-first-run`（首管初始化）
+- `/auth/initialize`、`/auth/check-first-run`
 - `/auth/impersonate/*`
-- OIDC 那组路由
+- OIDC
+- `/auth/users` 增删改
 
-其中 OIDC 尤其重要：[apps/agent-harness/package/yuxi/services/oidc_service.py](apps/agent-harness/package/yuxi/services/oidc_service.py) 会自行在 `h_users` 建号，不关就会绕过统一身份。
-
-用户管理类接口（`/auth/users` 增删改）也应停写——用户由 WeKnora 统一管理。
+OIDC 仍可能在 `h_users` 建号。与 WeKnora 投影并存时：已 remap 的那一行必须走映射复用 `id=1`，禁止 JIT 再插第二行。新独立账号与 WeKnora 用户的对齐不在 P1 做。
 
 ### P1.8 历史数据迁移
 
@@ -626,27 +621,29 @@ def global_user_data_dir(uid: str) -> Path:
 
 ### P1.9 验收门禁
 
-| # | 用例 | 期望 |
-| --- | --- | --- |
-| 1 | 只登录 WeKnora，进入智能体页 | 不出现 Token Gate，功能全可用 |
-| 2 | 令牌自动刷新后继续操作 | harness 不掉线 |
-| 3 | WeKnora 登出后调 harness 接口 | 30 秒缓存窗口后必须 401 |
-| 4 | 旧会话 / 旧智能体 / 旧技能 | 原归属人可见且可管理 |
-| 5 | 工作区文件 | 迁移前后一致 |
-| 6 | 用 refresh 令牌打 harness | 401 |
-| 7 | 密钥不一致的伪造令牌 | 401 |
-| 8 | `JWT_SECRET` 置空重启 | **启动直接失败**，不是静默 401 |
-| 9 | 关掉 `HARNESS_LEGACY_JWT_ENABLED` 后用旧 yuxi 令牌 | 401 |
-| 10 | `yxkey_` API Key 与 CLI | 行为不回归 |
-| 11 | harness 自有登录 / 注册 / OIDC 入口 | 全部不可达 |
-| 12 | 普通用户与管理员权限边界 | 与改造前一致，**无越权也无降权** |
-| 13 | JIT 用户唯一字段冲突、禁用用户、非 active membership | 不产生 500，不允许登录 |
-| 14 | Worker 排队、重试、重启、token 过期/吊销 | 不泄漏 JWT，行为符合 P0 协议 |
-| 15 | 备份恢复与反向 remap | 已在隔离库成功恢复，记录数、FK 和目录一致 |
+> 2026-08-30 调整：独立登录与 legacy JWT **不再关闭**。#9 / 原 #11「入口不可达」取消。未执行项等人工确认后再跑。
+
+| # | 用例 | 期望 | 状态 |
+| --- | --- | --- | --- |
+| 1 | 只登录 WeKnora，进入智能体页 | 有 `weknora_token` 即可用，不要求再贴 harness token | **已通过**（2026-08-30：`/me` 200 且 `id=1`；Chrome 打开 `/platform/harness/chat`、`/agents`、`/workspace` 无 Token Gate 元素） |
+| 2 | 令牌自动刷新后继续操作 | harness 不掉线 | **已通过**（换发第二条 access 后 `/me` 仍 200） |
+| 3 | WeKnora 登出后调 harness 接口 | 30 秒缓存窗口后必须 401（WeKnora JWT 路径） | **已通过**（吊销后 ≤32s 401；另一条未吊销会话仍 200） |
+| 4 | 旧会话 / 旧智能体 / 旧技能 | 原归属人可见且可管理 | **已通过**（threads 2 条 active，第 3 条 `deleted`；agents 2；skills 9 含 remap 的 4 个用户技能；UI 见工作区/智能体/「问候」） |
+| 5 | 工作区文件 | 迁移前后一致 | **已通过**（UUID 目录 13 项，`admin` 目录已无） |
+| 6 | 用 refresh 令牌打 harness | 401 | **已通过**（接口抽查） |
+| 7 | 密钥不一致的伪造令牌 | 401 | **已通过**（接口抽查） |
+| 8 | `JWT_SECRET` 置空重启 harness | **启动直接失败**，不是静默 401 | **已通过**（recreate 后 `restarting exit=1`，日志 `JWT_SECRET is required and must be non-empty`；已恢复） |
+| 9 | （已取消）关掉 legacy 后旧 yuxi 令牌 401 | 独立登录依赖 legacy，**保持开启，不再测关闭** | **取消** |
+| 10 | `yxkey_` API Key 与 CLI | 行为不回归 | **本次跳过**（本机 `h_api_keys=0`，按确认不测） |
+| 11 | harness 独立登录 / 初始化 / OIDC | **必须可达**（非 404）；密码错为 401 | **已通过**（2026-08-30 抽查） |
+| 12 | 普通用户与管理员权限边界 | 与改造前一致，**无越权也无降权** | **已通过**（投影 `role=superadmin` 未降权；`/dashboard/conversations` 与 `/auth/users` 200；角色映射单测覆盖 viewer/admin） |
+| 13 | JIT 唯一字段冲突、禁用用户、非 active membership | 不产生 500，不允许登录 | **已通过**（现场：`is_active=false` / membership `inactive` → 401 非 500，已恢复；单测覆盖冲突与禁用） |
+| 14 | Worker 排队、重试、重启、token 过期/吊销 | 不泄漏 JWT，行为符合 P0 协议 | **已通过**（P0 协议单测 32 passed；`h_agent_runs.input_payload` 无 JWT；48h api/worker 日志无明文 JWT。run-token 开关仍关，P3 再开） |
+| 15 | 备份恢复与反向 remap | 隔离库已演练 | **已通过**（见执行记录） |
 
 ### P1.10 回滚预案
 
-- 代码层：`HARNESS_LEGACY_JWT_ENABLED=true` + `HARNESS_LOCAL_LOGIN_ENABLED=true` + 前端回退读 `harness_user_token`
+- 代码层：关 `HARNESS_WEKNORA_IDENTITY` 即回到仅独立登录；前端只认 `weknora_token`
 - 数据层：优先使用保留的 uid 映射执行反向 remap；异常时使用已验证的 `h_tables_backup.sql` 恢复 + 工作区目录改回
 
 **所有代码改动必须带开关，这是能在本机现网安全迭代的前提。**
@@ -659,8 +656,8 @@ def global_user_data_dir(uid: str) -> Path:
 | --- | --- | --- |
 | P1.1 密钥 | **通过** | `.env` / harness-api / harness-worker 的 `JWT_SECRET` SHA-256 一致（`bd2e4fc3…c4988`）。不查 `agent-middle-app` 容器。 |
 | P1.2–P1.5 | **代码已落地，开关已开** | `HARNESS_WEKNORA_IDENTITY=true`，`HARNESS_LEGACY_JWT_ENABLED=true`。harness `/api/system/health` 正常。 |
-| P1.6 前端 | **已落地** | `user.js` 每次读 `weknora_token`；去掉 Island Token Gate，无 token 跳转 `/login`；401 走统一登录。`HarnessTokenGate.vue` 留到 P9。 |
-| P1.7 关登录 | **比对期重新打开** | `HARNESS_LOCAL_LOGIN_ENABLED=true`，独立登录/OIDC/用户写接口可用来对照 WeKnora JWT 路径。关比对后改回 false。 |
+| P1.6 前端 | **已落地（后收口为单 token）** | 现只读 `weknora_token`；无 token 保留 Token Gate；独立登录接口保留，写入同一 key。 |
+| P1.7 独立登录 | **长期保留，已打开** | `HARNESS_LOCAL_LOGIN_ENABLED=true`，`HARNESS_LEGACY_JWT_ENABLED=true`。不再计划关闭。 |
 | P1.8 remap | **正向已完成** | `h_users.id` 仍为 1；`uid` 已从 `admin` 改为 `7b4f08b5-9cbe-417e-8736-f864b0e60448`。A/B 组计数与 remap 前一致（conv=3, runs=8, reqs=8, skills_cb=4），`admin` 残留 0。C 组 `h_api_keys.user_id=1` 未动。映射写入 `h_user_identity_map`。工作区 `threads/shared/admin` → `…/7b4f08b5-…`（13 项）。 |
 
 备份（勿提交仓库）：`.local-data/p1-backup-20260830/`（`h_tables.sql` SHA-256 `59e5694b…056a740b`，工作区副本）。隔离库 `weknora_p1_drill_20260830` 已正向+反向演练后删除。反向脚本：`apps/agent-harness/scripts/p1_uid_remap_reverse.sql`。
@@ -669,9 +666,12 @@ def global_user_data_dir(uid: str) -> Path:
 
 **下一步**
 
-1. P1.9 剩余门禁：WeKnora 登录后进智能体页不再出 Token Gate；刷新 token 后 harness 跟上；登出后 ≤30s 401；刷新 JWT 401。
-2. 门禁过后再关 `HARNESS_LEGACY_JWT_ENABLED`。
-3. 不要开始 P2。
+P1.9 除 #10（API Key/CLI，按确认跳过）外已于 2026-08-30 复验通过。不关独立登录，不关 legacy JWT。P2 已开始执行。
+
+### P1.9 门禁收口（2026-08-30）
+
+已通过：#1 #2 #3 #4 #5 #6 #7 #8 #11 #12 #13 #14 #15。  
+跳过：#10。取消：#9。
 
 ---
 
@@ -679,7 +679,7 @@ def global_user_data_dir(uid: str) -> Path:
 
 ### P2.1 principal 带上租户
 
-WeKnora JWT 已含 `tenant_id`（P1.2 已取出）。建立明确的 yuxi 请求/运行上下文，把 `uid + tenant_id + role + token_ref` 注入 API、Run submission、ARQ Worker 与工具运行时，供后续查询使用。
+WeKnora JWT 已含 `tenant_id`（P1.2 已取出）。建立明确的 yuxi 请求/运行上下文，把 `uid + tenant_id + role` 注入 API、Run submission、ARQ Worker 与工具运行时，供后续查询使用。
 
 切空间时 WeKnora 会换发新 JWT，但旧 access token 在过期前可能仍有效。harness 除验签和 `auth_tokens` 外，还要确认 token 中的 tenant 对该用户仍是 active membership；所有资源查询必须以 token tenant 为边界，不能根据用户在其他空间的角色推断。
 
@@ -689,7 +689,7 @@ WeKnora JWT 已含 `tenant_id`（P1.2 已取出）。建立明确的 yuxi 请求
 
 - 根资源：`h_conversations`、`h_agents`、`h_skills`、`h_mcp_servers`、`h_agent_runs`
 - 运行链路：`h_agent_run_requests`、`h_subagent_threads`、`h_message_feedbacks`
-- 用户运行配置：`h_agent_envs`、`h_user_config`（明确按用户跨租户共享还是按租户隔离）
+- 用户运行配置：`h_agent_envs`、`h_user_config` **按用户跨租户共享**（`UNIQUE(uid)` 不变）。`tenant_id` 只记录最后一次写入时所在空间，查询仍按 uid，不按空间过滤。切空间不重置记忆开关和沙盒环境变量。
 - 仍处于过渡期的知识库/评测表
 - 队列串行键与唯一约束，加入 `tenant_id`，避免同一 uid 在不同租户互相阻塞
 
@@ -756,11 +756,51 @@ WeKnora 用户没有部门，`scope_matches` 恒为 False，除创建者和超�
 | 3 | 迁移前的旧数据 | 全部归属默认空间且可见 |
 | 4 | 原 department 范围共享的资源 | 仍对原受众可见 |
 | 5 | 普通用户权限 | 无降级（可管理自己的知识库/智能体） |
-| 6 | 超管 | 跨空间可见性符合预期 |
+| 6 | 超管 | **按当前 token 空间过滤**，不看全平台。数据总览同样按 token 空间，不再是平台超管视角。超管看其他空间：切空间换签（或带合法 `X-Tenant-ID`）。平台级 COUNTs 不在 harness dashboard 恢复，留给 P6 WeKnora 表。 |
 | 7 | Run 排队、恢复、子 Agent、反馈、队列串行 | tenant 全链路一致 |
 | 8 | 使用旧空间 token 访问当前空间资源 | 拒绝 |
 | 9 | 无法唯一回填 tenant 的历史记录 | 留在人工清单，不静默归错空间 |
 | 10 | 关闭 tenant 功能开关并回退代码 | 旧查询恢复，新增列和历史数据均保留 |
+
+### P2 执行记录（2026-08-30）
+
+本机拓扑不变：`make dev-app` / `make dev-frontend` + harness Docker（`docker-compose-mac.yml --profile harness --profile minio`）。独立登录与 legacy JWT 保持打开。
+
+| 项 | 状态 | 说明 |
+| --- | --- | --- |
+| P2.1 principal | **已落地** | `TenantPrincipal` ContextVar；WeKnora JWT 用 claims.tenant_id；legacy/API Key 用 `users.tenant_id`；Worker 用 `run.tenant_id`。 |
+| P2.2 影子列 | **已落地并回填** | 可空 `tenant_id` + `h_tenant_backfill_map`。本机：resolved=24 全部 `10000`（会话 3、run 8 等），catalog=12（6 个内置 agent + 5 个 system skill 等保持 NULL），unresolved=0。`user_config` / `agent_envs` 仍 `UNIQUE(uid)`。slug 按空间唯一并入同一条 `000083`。因 version 已是 83，由 harness 启动幂等补齐。down 不删列。 |
+| P2.3 查询过滤 | **已落地** | 列表/详情/写入/队列按 token tenant 过滤；内置 agent/skill/mcp 的 `tenant_id IS NULL` 对所有空间可见。超管写入仍盖当前 token 空间。 |
+| P2.4 部门 | **已下线入口** | `HARNESS_TENANT_SCOPE=true` 时默认 `HARNESS_DEPARTMENT_ENFORCED=false`：不再强制 `department_id`；`department` 共享不匹配；`/api/departments` 返回 404。`h_departments` 保留。本机无 department `share_config`，无需展开 `user_uids`。 |
+| 开关 | **本机已开** | `.env` / compose：`HARNESS_TENANT_SCOPE=true`。关闭后旧查询恢复，影子列与回填结果保留。 |
+
+### P2 执行记录补记（2026-08-31）
+
+对齐手册推荐路径，修掉「切了空间但 harness 数据不变」：
+
+| 项 | 状态 | 说明 |
+| --- | --- | --- |
+| 切空间换签 | **已落地** | 前端所有切空间入口走 `POST /api/v1/auth/switch-tenant`，用返回的 `token` / `refresh_token` / `active_tenant` 覆盖本地会话后再 reload。Harness 只认 JWT `tenant_id`，不再只靠 `X-Tenant-ID`。 |
+| 删除 `harness_user_token` | **已落地** | 前端只认 `weknora_token`。启动、登出、切空间、Token Gate 会清掉遗留 key，避免独立登录 token 遮蔽 WeKnora JWT。后端独立登录开关保持打开。 |
+| 数据总览 | **按 token 空间** | `/api/dashboard/*` 改为登录用户即可，不再要求平台超管。统计、会话、反馈、工具、时间序列一律按当前 token tenant 过滤。`total_users` 在租户开关打开时为该空间内有会话的去重 uid。 |
+| KB 写路径 + 缓存 | **已补漏** | `update` / `merge` / `stats` / `delete` 先 `visible_or_none`；配置缓存 key 带 `t{tenant_id}`，快照校验 `tenant_id`。 |
+| Skill / Agent by-slug | **已补漏** | `get_by_slug` 按当前空间 + 目录 NULL 过滤；`get_by_slug_unscoped` 仅给唯一性/内置对账。 |
+| tenant 解析失败 | **fail-closed** | 开关开着但没有 tenant_id：用户行不可见，目录行仍可见；`stamp_tenant_id()` 抛 `TenantScopeError`，禁止把新行写成 NULL 冒充内置。 |
+| `X-Tenant-ID` | **已对齐** | harness 与 WeKnora 一样：合法且有 active membership（或超管）的 header 覆盖 JWT/家空间。Harness 前端 `getAuthHeaders()` 附带该头。 |
+| slug 唯一 | **per-tenant** | 并入 `000083`（不另开 084）。`UNIQUE(tenant_id, slug)` + 目录 `UNIQUE(slug) WHERE tenant_id IS NULL`。技能文件落在 `skills/t{tenant_id}/{slug}`。内置 slug 仍全局保留。已执行过 83 的库由 `ensure_business_schema` 幂等补索引。 |
+| user_config / agent_envs | **用户级共享** | `UNIQUE(uid)` 不变；tenant_id 仅为最后写入痕迹。 |
+| 回填完整性 | **启动扫描** | NULL 行分成 catalog / user_scoped / unresolved；unresolved 打 warning，单测断言 `assert_backfill_complete`。 |
+| 超管总览 | **不恢复全平台** | 切空间看各空间数字；平台 COUNTs 走 P6。 |
+
+**本机门禁限制**
+
+- #1 #2 双空间互不可见：仓库层已有负向单测（skill/agent/kb by-slug、会话按 tenant 隔离、同 slug 可在另一空间复用）。换签后的 UI 5 步仍建议本机点一次。
+- #4 department 共享：本机扫描为 0 条，视为不适用。
+- #3 旧数据：回填到 `10000`（单用户映射），catalog 行保持 NULL。
+
+**下一步**
+
+不要开始 P3，除非另行确认。
 
 ---
 
@@ -924,6 +964,8 @@ backend=harness -> yuxi Agent -> h_conversations/h_messages/h_agent_runs
 
 ## P6 · 数据总览分系统统计
 
+> yuxi 本侧数据总览已在 P2 定为 **按当前 token 空间过滤**，不再是平台超管全局 COUNTs。P6 只补 WeKnora 表的分系统口径，不再回头改成超管全平台。
+
 ### P6.1 直接跨表统计
 
 两库已同库，yuxi dashboard 可在明确复刻软删除、租户和权限规则的前提下，直接 SQL 统计 WeKnora 的 `users` / `sessions` / `messages` / `knowledge_bases`，无需在 Go 侧新开统计 API。
@@ -1040,9 +1082,9 @@ P8A 全部门禁通过后，再把公共适配层推广到其他 IM 渠道；不
 
 ### P9.2 旧身份与部门
 
-- `h_users` 保留为兼容投影和历史 FK 锚点，只停止本地密码/OIDC/用户管理写入
+- `h_users` 保留为兼容投影、独立登录和历史 FK 锚点。**独立登录不在本计划停用**
 - `h_departments` 及历史关系保留，只隐藏入口并停止新增
-- `HarnessTokenGate.vue`、legacy JWT 和 OIDC 代码可在独立 Git 提交中停用；删除源码前必须保留可恢复 tag/commit，回滚后仍能读取现有数据
+- Token Gate、legacy JWT、OIDC 随独立登录一并保留；不得在本计划内删除
 - CLI/API Key 仍依赖 `h_users.id` 时不得拆 FK
 
 ### P9.3 旧模型配置

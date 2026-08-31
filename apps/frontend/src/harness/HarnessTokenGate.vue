@@ -10,6 +10,7 @@ const saved = ref(false)
 const save = () => {
   const value = draft.value.trim()
   if (!value) return
+  localStorage.removeItem('harness_user_token')
   localStorage.setItem(TOKEN_KEY, value)
   saved.value = true
   window.location.reload()

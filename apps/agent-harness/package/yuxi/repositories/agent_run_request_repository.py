@@ -14,6 +14,8 @@ from __future__ import annotations
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from yuxi.p2.context import stamp_tenant_id
+from yuxi.p2.tenant_query import tenant_clauses, visible_or_none
 from yuxi.storage.postgres.models_business import AgentRunRequest
 from yuxi.utils.datetime_utils import utc_now_naive
 
@@ -24,7 +26,7 @@ class AgentRunRequestRepository:
 
     async def get_by_request_id(self, request_id: str) -> AgentRunRequest | None:
         result = await self.db.execute(select(AgentRunRequest).where(AgentRunRequest.request_id == request_id))
-        return result.scalar_one_or_none()
+        return visible_or_none(result.scalar_one_or_none())
 
     async def lock_by_request_id(self, request_id: str) -> AgentRunRequest | None:
         """``SELECT ... FOR UPDATE`` by request_id; caller decides status branch."""
@@ -52,6 +54,7 @@ class AgentRunRequestRepository:
         request = AgentRunRequest(
             request_id=request_id,
             uid=str(uid),
+            tenant_id=stamp_tenant_id(),
             agent_slug=agent_slug,
             conversation_thread_id=conversation_thread_id,
             source=source,
@@ -82,6 +85,7 @@ class AgentRunRequestRepository:
                 AgentRunRequest.agent_slug == agent_slug,
                 AgentRunRequest.conversation_thread_id == conversation_thread_id,
                 AgentRunRequest.status == "queued",
+                *tenant_clauses(AgentRunRequest.tenant_id),
             )
             .order_by(
                 (AgentRunRequest.queue_policy != "steer").asc(),
@@ -105,6 +109,7 @@ class AgentRunRequestRepository:
                 AgentRunRequest.conversation_thread_id == conversation_thread_id,
                 AgentRunRequest.queue_policy == "steer",
                 AgentRunRequest.status == "queued",
+                *tenant_clauses(AgentRunRequest.tenant_id),
             )
         )
         return result.scalar_one_or_none()
@@ -151,6 +156,7 @@ class AgentRunRequestRepository:
                 AgentRunRequest.agent_slug == request.agent_slug,
                 AgentRunRequest.conversation_thread_id == request.conversation_thread_id,
                 AgentRunRequest.status == "queued",
+                *tenant_clauses(AgentRunRequest.tenant_id),
                 or_(
                     AgentRunRequest.queue_policy == "steer",
                     and_(

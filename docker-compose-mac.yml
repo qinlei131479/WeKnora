@@ -38,6 +38,8 @@ x-api-worker-env: &api-worker-env
   HARNESS_WEKNORA_IDENTITY: ${HARNESS_WEKNORA_IDENTITY:-}
   HARNESS_LEGACY_JWT_ENABLED: ${HARNESS_LEGACY_JWT_ENABLED:-true}
   HARNESS_LOCAL_LOGIN_ENABLED: ${HARNESS_LOCAL_LOGIN_ENABLED:-true}
+  HARNESS_TENANT_SCOPE: ${HARNESS_TENANT_SCOPE:-}
+  HARNESS_DEPARTMENT_ENFORCED: ${HARNESS_DEPARTMENT_ENFORCED:-}
   NO_PROXY: localhost,127.0.0.1,milvus,graph,neo4j,minio,postgres,redis,mineru,paddlex,sandbox-provisioner,api.siliconflow.cn
   no_proxy: localhost,127.0.0.1,milvus,graph,neo4j,minio,postgres,redis,mineru,paddlex,sandbox-provisioner,api.siliconflow.cn
 

@@ -7,6 +7,8 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
+from yuxi.p2.context import current_tenant_id
+from yuxi.p2.flags import is_tenant_scope_enabled
 from yuxi.storage.redis import get_async_redis_client
 from yuxi.utils.logging_config import logger
 
@@ -16,12 +18,34 @@ KNOWLEDGE_BASE_CACHE_LOCK_TIMEOUT_SECONDS = 30
 KNOWLEDGE_BASE_CACHE_LOCK_WAIT_SECONDS = 10
 
 
-def _cache_key(kb_id: str) -> str:
-    return f"{KNOWLEDGE_BASE_CACHE_KEY_PREFIX}{kb_id}"
+def _normalize_tenant_id(value: Any) -> int | None:
+    if value is None:
+        return None
+    return int(value)
+
+
+def _cache_key(kb_id: str, tenant_id: int | None = None) -> str:
+    if tenant_id is None:
+        return f"{KNOWLEDGE_BASE_CACHE_KEY_PREFIX}{kb_id}"
+    return f"{KNOWLEDGE_BASE_CACHE_KEY_PREFIX}t{tenant_id}:{kb_id}"
 
 
 def _cache_lock_key(kb_id: str) -> str:
-    return f"{_cache_key(kb_id)}:lock"
+    return f"{KNOWLEDGE_BASE_CACHE_KEY_PREFIX}{kb_id}:lock"
+
+
+def _read_cache_tenant_id() -> int | None:
+    if not is_tenant_scope_enabled():
+        return None
+    return current_tenant_id()
+
+
+def _cache_keys_to_invalidate(kb_id: str, tenant_id: int | None = None) -> list[str]:
+    keys = {_cache_key(kb_id)}
+    scoped = _normalize_tenant_id(tenant_id) if tenant_id is not None else _read_cache_tenant_id()
+    if scoped is not None:
+        keys.add(_cache_key(kb_id, scoped))
+    return list(keys)
 
 
 @asynccontextmanager
@@ -47,20 +71,28 @@ def serialize_kb_config(row: Any) -> dict[str, Any]:
         "embedding_model_spec": row.embedding_model_spec,
         "query_params": row.query_params,
         "additional_params": additional_params,
+        "tenant_id": _normalize_tenant_id(getattr(row, "tenant_id", None)),
     }
 
 
 async def get_cached_kb_config(kb_id: str) -> dict[str, Any] | None:
     """读取单个知识库缓存；Redis 不可用或缓存非法时返回未命中。"""
     try:
+        tenant_id = _read_cache_tenant_id()
+        if is_tenant_scope_enabled() and tenant_id is None:
+            return None
         redis = await get_async_redis_client()
-        raw = await redis.get(_cache_key(kb_id))
+        raw = await redis.get(_cache_key(kb_id, tenant_id))
         if not raw:
             return None
         snapshot = json.loads(raw)
         if not isinstance(snapshot, dict) or snapshot.get("kb_id") != kb_id:
             logger.warning(f"Invalid knowledge base cache snapshot: kb_id={kb_id}")
             return None
+        if is_tenant_scope_enabled():
+            cached_tid = _normalize_tenant_id(snapshot.get("tenant_id"))
+            if cached_tid is None or cached_tid != tenant_id:
+                return None
         return snapshot
     except Exception as exc:
         logger.warning(f"Failed to read knowledge base cache: kb_id={kb_id}: {exc}")
@@ -72,8 +104,9 @@ async def cache_kb_config(row: Any) -> None:
     try:
         redis = await get_async_redis_client()
         snapshot = serialize_kb_config(row)
+        tenant_id = snapshot["tenant_id"] if is_tenant_scope_enabled() else None
         await redis.set(
-            _cache_key(row.kb_id),
+            _cache_key(row.kb_id, tenant_id),
             json.dumps(snapshot, ensure_ascii=False),
             ex=KNOWLEDGE_BASE_CACHE_TTL_SECONDS,
         )
@@ -81,7 +114,7 @@ async def cache_kb_config(row: Any) -> None:
         logger.warning(f"Failed to write knowledge base cache: kb_id={row.kb_id}: {exc}")
 
 
-async def delete_cached_kb_config(kb_id: str) -> None:
+async def delete_cached_kb_config(kb_id: str, tenant_id: int | None = None) -> None:
     """删除单个知识库运行时快照，失败时由调用方中止写操作。"""
     redis = await get_async_redis_client()
-    await redis.delete(_cache_key(kb_id))
+    await redis.delete(*_cache_keys_to_invalidate(kb_id, tenant_id))

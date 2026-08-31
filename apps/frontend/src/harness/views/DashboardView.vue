@@ -3,7 +3,7 @@
     <PageHeader :title="t('menu.dashboard')" :subtitle="t('dashboard.subtitle')" />
 
     <div class="modern-stats-header">
-      <StatsOverviewComponent :basic-stats="basicStats" @open-feedback="handleOpenFeedback" />
+      <StatsOverviewComponent :basic-stats="basicStats" />
     </div>
 
     <!-- Grid布局的主要内容区域 -->
@@ -48,8 +48,6 @@
       </div>
     </div>
 
-    <!-- 反馈模态框 -->
-    <FeedbackModalComponent ref="feedbackModal" />
   </div>
 </template>
 
@@ -67,12 +65,8 @@ import KnowledgeStatsComponent from '@harness/components/dashboard/KnowledgeStat
 import AgentStatsComponent from '@harness/components/dashboard/AgentStatsComponent.vue'
 import CallStatsComponent from '@harness/components/dashboard/CallStatsComponent.vue'
 import StatsOverviewComponent from '@harness/components/dashboard/StatsOverviewComponent.vue'
-import FeedbackModalComponent from '@harness/components/dashboard/FeedbackModalComponent.vue'
 
 const { t } = useI18n()
-
-// 组件引用
-const feedbackModal = ref(null)
 
 // 统计数据 - 使用新的响应式结构
 const basicStats = ref({})
@@ -129,11 +123,6 @@ const loadAllStats = async () => {
   } finally {
     loading.value = false
   }
-}
-
-// 打开反馈详情弹窗
-const handleOpenFeedback = () => {
-  feedbackModal.value?.show()
 }
 
 // 清理函数 - 清理所有子组件的图表实例

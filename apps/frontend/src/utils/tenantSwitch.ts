@@ -6,7 +6,9 @@
 // 对应数据出现空状态，体验跟跳到固定首页其实差不多——干脆统一跳到 KB 列表，
 // 用一次 full navigation 把所有 store / SSE / 请求都重置一遍。
 
-import { updateMyPreferences } from '@/api/auth'
+import { switchTenant, updateMyPreferences, userInfoFromApi } from '@/api/auth'
+import { useAuthStore } from '@/stores/auth'
+import { MessagePlugin } from 'tdesign-vue-next'
 
 const SAFE_FALLBACK_PATH = '/platform/knowledge-bases'
 
@@ -96,4 +98,65 @@ export function persistLastActiveTenantPreference(
     .catch((err) => {
       console.warn('persistLastActiveTenantPreference: network/serialization error', err)
     })
+}
+
+const LEGACY_HARNESS_TOKEN_KEY = 'harness_user_token'
+
+/**
+ * 切空间必须走 /auth/switch-tenant 换签：Harness 只认 JWT 里的 tenant_id。
+ * 失败时不 reload，避免带着旧 token 进新空间。
+ */
+export async function switchWorkspaceAndReload(params: {
+  tenantId: number
+  tenantName: string
+  role?: string
+  roleEnum?: string
+  isHome?: boolean
+}): Promise<boolean> {
+  const authStore = useAuthStore()
+  const result = await switchTenant({
+    tenant_id: params.tenantId,
+    refresh_token: authStore.refreshToken || undefined,
+  })
+  if (!result.success || !result.token) {
+    MessagePlugin.error(result.message || '切换空间失败')
+    return false
+  }
+
+  const activeTenant = result.active_tenant || result.tenant
+  // user.tenant_id 必须保持 HOME；激活空间走 setTenant / setSelectedTenant。
+  const homeTenantIdRaw = result.user?.tenant_id ?? activeTenant?.id ?? ''
+  if (result.user) {
+    authStore.setUser(userInfoFromApi(result.user, homeTenantIdRaw))
+  }
+  authStore.setToken(result.token)
+  if (result.refresh_token) {
+    authStore.setRefreshToken(result.refresh_token)
+  }
+  if (activeTenant) {
+    authStore.setTenant({
+      id: String(activeTenant.id) || '',
+      name: activeTenant.name || '',
+      owner_id: result.user?.id || '',
+      created_at: activeTenant.created_at || new Date().toISOString(),
+      updated_at: activeTenant.updated_at || new Date().toISOString(),
+    })
+  }
+  if (Array.isArray(result.memberships)) {
+    authStore.setMemberships(result.memberships)
+  }
+  try {
+    localStorage.removeItem(LEGACY_HARNESS_TOKEN_KEY)
+  } catch {
+    // ignore
+  }
+  authStore.setSelectedTenant(params.tenantId, params.tenantName)
+  stashTenantSwitchToast({
+    name: params.tenantName,
+    role: params.role,
+    roleEnum: params.roleEnum,
+  })
+  persistLastActiveTenantPreference(params.isHome ? null : params.tenantId)
+  navigateAfterTenantSwitch()
+  return true
 }

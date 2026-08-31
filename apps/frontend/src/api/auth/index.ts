@@ -220,6 +220,24 @@ export async function login(data: LoginRequest): Promise<LoginResponse> {
 }
 
 /**
+ * 按目标空间重签 JWT。Harness 只认 token 里的 tenant_id，切空间必须换签。
+ */
+export async function switchTenant(data: {
+  tenant_id: number
+  refresh_token?: string
+}): Promise<LoginResponse> {
+  try {
+    const response = await post('/api/v1/auth/switch-tenant', data)
+    return response as unknown as LoginResponse
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error.message || t('error.auth.loginFailed')
+    }
+  }
+}
+
+/**
  * 获取 OIDC 登录跳转地址
  */
 export async function getOIDCAuthorizationURL(redirectURI: string): Promise<OIDCAuthURLResponse> {

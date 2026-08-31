@@ -143,6 +143,10 @@ def scope_matches(user: Any, scope: dict | None) -> bool:
     if access_level == "global":
         return True
     if access_level == "department":
+        from yuxi.p2.flags import is_department_enforced
+
+        if not is_department_enforced():
+            return False
         department_id = _value(user, "department_id")
         try:
             return department_id is not None and int(department_id) in scope.get("department_ids", [])

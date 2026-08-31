@@ -14,12 +14,23 @@ from yuxi.storage.postgres.models_business import APIKey, Department, User
 from yuxi.repositories.department_repository import DepartmentRepository
 from yuxi.repositories.user_repository import UserRepository
 from server.utils.auth_middleware import get_superadmin_user, get_admin_user, get_db
+from yuxi.p2.flags import is_tenant_scope_enabled
 from yuxi.utils.auth_utils import AuthUtils
 from yuxi.services.operation_log_service import log_operation
 from yuxi.services.user_identity_service import is_valid_phone_number
 
+
+def _reject_if_tenant_scope() -> None:
+    if is_tenant_scope_enabled():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="部门接口已下线")
+
+
 # 创建路由器
-department = APIRouter(prefix="/departments", tags=["department"])
+department = APIRouter(
+    prefix="/departments",
+    tags=["department"],
+    dependencies=[Depends(_reject_if_tenant_scope)],
+)
 
 
 # =============================================================================

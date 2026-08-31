@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import flag_modified
 
+from yuxi.p2.context import stamp_tenant_id
+from yuxi.p2.tenant_query import tenant_clauses, visible_or_none
 from yuxi.storage.postgres.models_business import Conversation, ConversationStats, Message, ToolCall
 from yuxi.utils import logger
 from yuxi.utils.datetime_utils import utc_now_naive
@@ -101,6 +103,7 @@ class ConversationRepository:
         conversation = Conversation(
             thread_id=thread_id,
             uid=str(uid),
+            tenant_id=stamp_tenant_id(),
             agent_id=agent_id,
             title=normalized_title or "New Conversation",
             status="active",
@@ -139,18 +142,18 @@ class ConversationRepository:
 
     async def get_conversation_by_thread_id(self, thread_id: str) -> Conversation | None:
         result = await self.db.execute(select(Conversation).where(Conversation.thread_id == thread_id))
-        return result.scalar_one_or_none()
+        return visible_or_none(result.scalar_one_or_none())
 
     async def lock_conversation_by_thread_id(self, thread_id: str) -> Conversation | None:
         """锁定线程根记录，串行化同一对话的调度决策。"""
         result = await self.db.execute(
             select(Conversation).where(Conversation.thread_id == thread_id).with_for_update()
         )
-        return result.scalar_one_or_none()
+        return visible_or_none(result.scalar_one_or_none())
 
     async def get_conversation_by_id(self, conversation_id: int) -> Conversation | None:
         result = await self.db.execute(select(Conversation).where(Conversation.id == conversation_id))
-        return result.scalar_one_or_none()
+        return visible_or_none(result.scalar_one_or_none())
 
     def _ensure_metadata(self, conversation: Conversation) -> dict:
         metadata = dict(conversation.extra_metadata or {})
@@ -315,6 +318,7 @@ class ConversationRepository:
         if agent_id:
             base_conditions.append(Conversation.agent_id == agent_id)
         base_conditions.extend(self._exclude_source_conditions(exclude_sources))
+        base_conditions.extend(tenant_clauses(Conversation.tenant_id))
 
         # First, get all pinned conversations (no limit)
         pinned_query = (
@@ -358,7 +362,11 @@ class ConversationRepository:
         """返回用户全部 active 对话，按最近更新时间排序。"""
         result = await self.db.execute(
             select(Conversation)
-            .where(Conversation.uid == str(uid), Conversation.status == "active")
+            .where(
+                Conversation.uid == str(uid),
+                Conversation.status == "active",
+                *tenant_clauses(Conversation.tenant_id),
+            )
             .order_by(Conversation.updated_at.desc())
         )
         return list(result.scalars().all())
@@ -380,6 +388,7 @@ class ConversationRepository:
         conversation_conditions = [
             Conversation.uid == str(uid),
             Conversation.status == "active",
+            *tenant_clauses(Conversation.tenant_id),
         ]
         if agent_id:
             conversation_conditions.append(Conversation.agent_id == agent_id)

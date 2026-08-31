@@ -311,11 +311,15 @@ async def process_agent_run(ctx, run_id: str):
     from yuxi.p0.request_token import bind_request_access_token
     from yuxi.p0.run_token_store import delete_run_access_token
 
+    from yuxi.p2.context import bind_tenant_principal
+
     bind_request_access_token(None)
+    bind_tenant_principal(None)
     try:
         await _process_agent_run(ctx, run_id)
     finally:
         bind_request_access_token(None)
+        bind_tenant_principal(None)
         if is_run_token_store_enabled():
             await delete_run_access_token(run_id)
 
@@ -370,6 +374,16 @@ async def _process_agent_run(ctx, run_id: str):
     if not user:
         await mark_run_terminal(run_id, "failed", "user_not_found", f"user {uid} not found")
         return
+
+    from yuxi.p2.context import TenantPrincipal, bind_tenant_principal
+
+    bind_tenant_principal(
+        TenantPrincipal(
+            uid=str(getattr(user, "uid", "")),
+            tenant_id=int(run.tenant_id) if getattr(run, "tenant_id", None) is not None else None,
+            role=str(getattr(user, "role", None) or "user"),
+        )
+    )
 
     from yuxi.p0.flags import is_auth_token_db_check_enabled, is_run_token_store_enabled
     from yuxi.p0.request_token import bind_request_access_token

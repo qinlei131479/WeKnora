@@ -75,11 +75,7 @@ import { useAuthStore } from '@/stores/auth'
 import { searchTenants, type TenantInfo } from '@/api/tenant'
 import { useI18n } from 'vue-i18n'
 import { MessagePlugin } from 'tdesign-vue-next'
-import {
-  navigateAfterTenantSwitch,
-  persistLastActiveTenantPreference,
-  stashTenantSwitchToast,
-} from '@/utils/tenantSwitch'
+import { switchWorkspaceAndReload } from '@/utils/tenantSwitch'
 import CreateTenantDialog from '@/components/CreateTenantDialog.vue'
 import { useRoleLabel } from '@/composables/useRoleLabel'
 
@@ -164,44 +160,30 @@ const clearSearch = () => {
   loadTenants()
 }
 
-const selectTenant = (tenantId: number) => {
-  // 找到选中的空间信息
+const selectTenant = async (tenantId: number) => {
+  if (isSelected(tenantId)) {
+    closeDropdown()
+    return
+  }
   const selectedTenant = tenants.value.find(t => t.id === tenantId)
-
-  // 始终写入 override，让 request.ts 永远附 X-Tenant-ID 覆盖 JWT；不要因为
-  // 切到 home 就清空（详见 UserMenu.switchToTenant 同名注释）。服务端持久化
-  // 偏好仍然区分对待——切到 home 时清 last_active，让下次干净重登回到 home。
   const switchingToHome = tenantId === defaultTenantId.value
-  // 切到 home 时，selectedTenant 可能因为分页 / 搜索没把 home 加载进列表，
-  // 退而求其次从 memberships 上挑名字。注意不要回退到 authStore.tenant?.name
-  // —— 那是当前激活空间的名字，在 active != home 的会话里就是 peer 的名字。
   const homeNameFallback = switchingToHome
     ? (authStore.memberships ?? []).find((m) => Number(m.tenant_id) === tenantId)?.tenant_name
       || null
     : null
-  authStore.setSelectedTenant(tenantId, selectedTenant?.name || homeNameFallback || null)
-  closeDropdown()
   const displayName = selectedTenant?.name
     || homeNameFallback
     || `#${tenantId}`
-  // Cross-tenant superusers may not have a membership row in the target
-  // tenant; in that case skip the role line rather than show a misleading
-  // empty/raw value.
   const membership = (authStore.memberships ?? []).find((m) => Number(m.tenant_id) === tenantId)
   const roleLabel = membership ? formatRole(membership.role) : ''
-  // Toast 在 reload 后由 App.vue 弹出（直接在这里弹会被 hard reload 干掉）。
-  stashTenantSwitchToast({
-    name: displayName,
+  closeDropdown()
+  await switchWorkspaceAndReload({
+    tenantId,
+    tenantName: displayName,
     role: roleLabel || undefined,
     roleEnum: membership?.role || undefined,
+    isHome: switchingToHome,
   })
-  // Persist "last active tenant" preference (switching to home clears
-  // it). Fire-and-forget, but race it against the existing 500ms grace
-  // window so most writes finish before the hard reload tears the page
-  // down. 切换空间后跳转到新空间下安全的入口（详见 tenantSwitch.ts 注释）。
-  const persist = persistLastActiveTenantPreference(switchingToHome ? null : tenantId)
-  Promise.race([persist, new Promise((r) => setTimeout(r, 500))])
-    .finally(() => navigateAfterTenantSwitch())
 }
 
 const loadTenants = async (append = false) => {
@@ -283,19 +265,16 @@ const openCreateDialog = () => {
 }
 
 const onTenantCreated = async (newTenant: TenantInfo) => {
-  // 把新空间合并进当前列表并切过去。和 selectTenant 走同一条链路：
-  // setSelectedTenant + navigateAfterTenantSwitch。后端 X-Tenant-ID 中
-  // 间件会查 tenant_members 校验，EnsureOwner 已经在后端写好 owner 行。
   tenants.value = [newTenant, ...tenants.value.filter(t => t.id !== newTenant.id)]
   total.value = total.value + 1
   authStore.setAllTenants(tenants.value)
   await authStore.refreshFromAuthMe()
-  authStore.setSelectedTenant(newTenant.id, newTenant.name)
-  // Newly-created tenant becomes the user's "last active" so re-login
-  // lands here. Race against the existing grace window before reload.
-  const persist = persistLastActiveTenantPreference(newTenant.id)
-  Promise.race([persist, new Promise((r) => setTimeout(r, 300))])
-    .finally(() => navigateAfterTenantSwitch())
+  await switchWorkspaceAndReload({
+    tenantId: newTenant.id,
+    tenantName: newTenant.name,
+    roleEnum: 'owner',
+    isHome: false,
+  })
 }
 
 onMounted(() => {

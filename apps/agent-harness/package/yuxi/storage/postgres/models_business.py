@@ -5,6 +5,7 @@ from typing import Any
 
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     Column,
     DateTime,
@@ -154,6 +155,20 @@ class UserIdentityMap(Base):
     created_at = Column(DateTime, default=utc_now_naive)
 
 
+class TenantBackfillMap(Base):
+    """P2 历史行 → tenant 回填记录。unresolved 行不得静默归空间。"""
+
+    __tablename__ = ht("tenant_backfill_map")
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    table_name = Column(String(64), nullable=False, index=True)
+    row_pk = Column(String(64), nullable=False)
+    tenant_id = Column(BigInteger, nullable=True)
+    source = Column(String(64), nullable=False)
+    batch_id = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=utc_now_naive)
+
+
 class AgentEnv(Base):
     """用户级 Agent 沙盒环境变量"""
 
@@ -161,6 +176,7 @@ class AgentEnv(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     uid = Column(String, ForeignKey(f"{ht('users')}.uid"), nullable=False, unique=True, index=True)
+    tenant_id = Column(BigInteger, nullable=True, index=True)
     env = Column(JSON, nullable=False, default=dict)
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
@@ -183,6 +199,7 @@ class UserConfig(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     uid = Column(String, ForeignKey(f"{ht('users')}.uid"), nullable=False, unique=True, index=True)
+    tenant_id = Column(BigInteger, nullable=True, index=True)
     enable_memory = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
@@ -204,7 +221,7 @@ class Agent(Base):
     __tablename__ = ht("agents")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    slug = Column(String(80), nullable=False, unique=True, index=True)
+    slug = Column(String(80), nullable=False, index=True)
     backend_id = Column(String(64), nullable=False, index=True)
 
     name = Column(String(100), nullable=False)
@@ -220,10 +237,15 @@ class Agent(Base):
 
     created_by = Column(String(64), nullable=True, index=True)
     updated_by = Column(String(64), nullable=True)
+    tenant_id = Column(BigInteger, nullable=True, index=True)
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
 
-    __table_args__ = (Index("uq_agents_default", "is_default", unique=True, postgresql_where=is_default.is_(True)),)
+    __table_args__ = (
+        Index("uq_agents_default", "is_default", unique=True, postgresql_where=is_default.is_(True)),
+        Index("uq_agents_slug_tenant", "tenant_id", "slug", unique=True, postgresql_where=tenant_id.isnot(None)),
+        Index("uq_agents_slug_catalog", "slug", unique=True, postgresql_where=tenant_id.is_(None)),
+    )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -252,7 +274,7 @@ class Skill(Base):
     __tablename__ = ht("skills")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    slug = Column(String(128), nullable=False, unique=True, index=True, comment="技能唯一标识（目录名）")
+    slug = Column(String(128), nullable=False, index=True, comment="技能唯一标识（目录名）")
     name = Column(String(128), nullable=False, comment="技能名称（来自 SKILL.md frontmatter.name）")
     description = Column(Text, nullable=False, comment="技能描述（来自 SKILL.md frontmatter.description）")
     source_type = Column(
@@ -266,10 +288,16 @@ class Skill(Base):
     content_hash = Column(String(128), nullable=True, comment="技能目录内容哈希（内置 skill 安装时计算）")
     share_config = Column(JSON_VALUE, nullable=False, comment="共享权限配置")
     enabled = Column(Boolean, nullable=False, default=True, comment="是否启用")
+    tenant_id = Column(BigInteger, nullable=True, index=True)
     created_by = Column(String(64), nullable=True)
     updated_by = Column(String(64), nullable=True)
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+
+    __table_args__ = (
+        Index("uq_skills_slug_tenant", "tenant_id", "slug", unique=True, postgresql_where=tenant_id.isnot(None)),
+        Index("uq_skills_slug_catalog", "slug", unique=True, postgresql_where=tenant_id.is_(None)),
+    )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -301,6 +329,7 @@ class Conversation(Base):
     id = Column(Integer, primary_key=True, autoincrement=True, comment="Primary key")
     thread_id = Column(String(64), unique=True, index=True, nullable=False, comment="Thread ID (UUID)")
     uid = Column(String(64), index=True, nullable=False, comment="UID")
+    tenant_id = Column(BigInteger, nullable=True, index=True, comment="WeKnora tenant_id")
     # 历史字段名，实际保存的是 Agent.slug。
     agent_id = Column(String(64), index=True, nullable=False, comment="Agent slug (legacy column name: agent_id)")
     title = Column(String(255), nullable=True, comment="Conversation title")
@@ -339,6 +368,7 @@ class SubagentThread(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True, comment="Primary key")
     uid = Column(String(64), index=True, nullable=False, comment="UID")
+    tenant_id = Column(BigInteger, nullable=True, index=True)
     parent_conversation_id = Column(
         Integer, ForeignKey(f"{ht('conversations')}.id"), nullable=False, index=True, comment="Parent conversation ID"
     )
@@ -519,6 +549,7 @@ class MessageFeedback(Base):
         Integer, ForeignKey(f"{ht('messages')}.id"), nullable=False, index=True, comment="Message ID being rated"
     )
     uid = Column(String(64), nullable=False, index=True, comment="UID who provided feedback")
+    tenant_id = Column(BigInteger, nullable=True, index=True)
     rating = Column(String(10), nullable=False, comment="Feedback rating: like or dislike")
     reason = Column(Text, nullable=True, comment="Optional reason for dislike feedback")
     created_at = Column(DateTime, default=utc_now_naive, comment="Feedback creation time")
@@ -543,7 +574,7 @@ class MCPServer(Base):
     __tablename__ = ht("mcp_servers")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    slug = Column(String(100), nullable=False, unique=True, index=True, comment="稳定标识")
+    slug = Column(String(100), nullable=False, index=True, comment="稳定标识")
     name = Column(String(100), nullable=False, comment="展示名称")
     description = Column(String(500), nullable=True, comment="描述")
 
@@ -566,12 +597,18 @@ class MCPServer(Base):
     disabled_tools = Column(JSON, nullable=True, comment="禁用的工具名称列表")
 
     # 用户追踪
+    tenant_id = Column(BigInteger, nullable=True, index=True)
     created_by = Column(String(100), nullable=False, comment="创建人用户名")
     updated_by = Column(String(100), nullable=False, comment="修改人用户名")
 
     # 时间戳
     created_at = Column(DateTime, default=utc_now_naive, comment="创建时间")
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive, comment="更新时间")
+
+    __table_args__ = (
+        Index("uq_mcp_servers_slug_tenant", "tenant_id", "slug", unique=True, postgresql_where=tenant_id.isnot(None)),
+        Index("uq_mcp_servers_slug_catalog", "slug", unique=True, postgresql_where=tenant_id.is_(None)),
+    )
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -854,6 +891,7 @@ class AgentRun(Base):
     conversation_thread_id = Column(String(64), index=True, nullable=False, comment="Conversation thread ID snapshot")
     agent_slug = Column(String(64), index=True, nullable=False, comment="Agent slug")
     uid = Column(String(64), index=True, nullable=False, comment="UID")
+    tenant_id = Column(BigInteger, nullable=True, index=True)
     status = Column(
         String(32),
         index=True,
@@ -946,6 +984,7 @@ class AgentRunRequest(Base):
     id = Column(Integer, primary_key=True, autoincrement=True, comment="Primary key")
     request_id = Column(String(64), unique=True, index=True, nullable=False, comment="幂等请求 ID")
     uid = Column(String(64), nullable=False, comment="UID")
+    tenant_id = Column(BigInteger, nullable=True, index=True)
     agent_slug = Column(String(64), nullable=False, comment="Agent slug")
     conversation_thread_id = Column(String(64), nullable=False, comment="Conversation thread ID")
     source = Column(String(32), nullable=False, default="chat", comment="请求来源: chat/agent_call/eval")

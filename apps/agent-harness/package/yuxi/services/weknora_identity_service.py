@@ -60,7 +60,7 @@ async def fetch_weknora_user(db: AsyncSession, user_id: str) -> dict[str, Any] |
     result = await db.execute(
         text(
             "SELECT id, username, email, avatar, is_active, is_system_admin, "
-            "can_access_all_tenants FROM users "
+            "can_access_all_tenants, tenant_id FROM users "
             "WHERE id = :uid AND deleted_at IS NULL"
         ),
         {"uid": user_id},

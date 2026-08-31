@@ -2,14 +2,19 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { harnessUrl } from '../apis/prefix'
 
-const HARNESS_TOKEN_KEY = 'harness_user_token'
-const WEKNORA_TOKEN_KEY = 'weknora_token'
-const TOKEN_KEY = HARNESS_TOKEN_KEY
+const TOKEN_KEY = 'weknora_token'
+const LEGACY_HARNESS_TOKEN_KEY = 'harness_user_token'
 export { TOKEN_KEY }
+
+function dropLegacyHarnessToken() {
+  if (typeof localStorage === 'undefined') return
+  localStorage.removeItem(LEGACY_HARNESS_TOKEN_KEY)
+}
 
 function readHarnessToken() {
   if (typeof localStorage === 'undefined') return ''
-  return localStorage.getItem(HARNESS_TOKEN_KEY) || localStorage.getItem(WEKNORA_TOKEN_KEY) || ''
+  dropLegacyHarnessToken()
+  return localStorage.getItem(TOKEN_KEY) || ''
 }
 
 export const useUserStore = defineStore('harness-user', () => {
@@ -58,7 +63,8 @@ export const useUserStore = defineStore('harness-user', () => {
     }
 
     const data = await response.json()
-    localStorage.setItem(HARNESS_TOKEN_KEY, data.access_token)
+    dropLegacyHarnessToken()
+    localStorage.setItem(TOKEN_KEY, data.access_token)
     syncToken()
     userId.value = data.user_id
     username.value = data.username
@@ -80,7 +86,10 @@ export const useUserStore = defineStore('harness-user', () => {
     userRole.value = ''
     departmentId.value = null
     departmentName.value = ''
-    localStorage.removeItem(HARNESS_TOKEN_KEY)
+    dropLegacyHarnessToken()
+    if (!localStorage.getItem('weknora_user')) {
+      localStorage.removeItem(TOKEN_KEY)
+    }
     syncToken()
 
     import('./agent').then(({ useAgentStore }) => {
@@ -99,7 +108,8 @@ export const useUserStore = defineStore('harness-user', () => {
       throw new Error(error.detail || '初始化管理员失败')
     }
     const data = await response.json()
-    localStorage.setItem(HARNESS_TOKEN_KEY, data.access_token)
+    dropLegacyHarnessToken()
+    localStorage.setItem(TOKEN_KEY, data.access_token)
     syncToken()
     userId.value = data.user_id
     username.value = data.username
@@ -124,9 +134,16 @@ export const useUserStore = defineStore('harness-user', () => {
   }
 
   function getAuthHeaders() {
-    return {
+    const headers = {
       Authorization: `Bearer ${syncToken()}`
     }
+    if (typeof localStorage !== 'undefined') {
+      const selectedTenantId = localStorage.getItem('weknora_selected_tenant_id')
+      if (selectedTenantId) {
+        headers['X-Tenant-ID'] = selectedTenantId
+      }
+    }
+    return headers
   }
 
   async function getUsers({ pageSize = 100 } = {}) {

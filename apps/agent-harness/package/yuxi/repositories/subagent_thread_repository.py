@@ -5,6 +5,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from yuxi.p2.context import stamp_tenant_id
+from yuxi.p2.tenant_query import tenant_clauses
 from yuxi.storage.postgres.models_business import SubagentThread
 
 
@@ -18,6 +20,7 @@ class SubagentThreadRepository:
             select(SubagentThread).where(
                 SubagentThread.child_thread_id == child_thread_id,
                 SubagentThread.uid == str(uid),
+                *tenant_clauses(SubagentThread.tenant_id),
             )
         )
         return result.scalar_one_or_none()
@@ -28,6 +31,7 @@ class SubagentThreadRepository:
             select(SubagentThread).where(
                 SubagentThread.id == relation_id,
                 SubagentThread.uid == str(uid),
+                *tenant_clauses(SubagentThread.tenant_id),
             )
         )
         return result.scalar_one_or_none()
@@ -38,6 +42,7 @@ class SubagentThreadRepository:
             select(SubagentThread).where(
                 SubagentThread.child_conversation_id == child_conversation_id,
                 SubagentThread.uid == str(uid),
+                *tenant_clauses(SubagentThread.tenant_id),
             )
         )
         return result.scalar_one_or_none()
@@ -55,6 +60,7 @@ class SubagentThreadRepository:
         """创建一条父对话到子对话的线程关系记录。"""
         item = SubagentThread(
             uid=str(uid),
+            tenant_id=stamp_tenant_id(),
             parent_conversation_id=parent_conversation_id,
             child_conversation_id=child_conversation_id,
             child_thread_id=child_thread_id,

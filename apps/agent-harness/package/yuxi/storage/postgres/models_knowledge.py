@@ -42,6 +42,7 @@ class KnowledgeBase(Base):
     mindmap_file_ids = Column(JSON_VALUE)
     mindmap_metadata = Column(JSON_VALUE)
     sample_questions = Column(JSON_VALUE)
+    tenant_id = Column(BigInteger, nullable=True, index=True)
     created_by = Column(String(64))
     created_at = Column(DateTime(timezone=True), default=utc_now_naive)
     updated_at = Column(DateTime(timezone=True), default=utc_now_naive, onupdate=utc_now_naive)

@@ -414,6 +414,7 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('weknora_selected_tenant_name')
     localStorage.removeItem('weknora_memberships')
     localStorage.removeItem('weknora_lite_mode')
+    localStorage.removeItem('harness_user_token')
     isLiteMode.value = false
     try {
       sessionStorage.removeItem('weknora_lite_last_path')
@@ -424,6 +425,11 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   const initFromStorage = () => {
+    try {
+      localStorage.removeItem('harness_user_token')
+    } catch {
+      /* ignore */
+    }
     // 从localStorage恢复状态
     const storedUser = localStorage.getItem('weknora_user')
     const storedTenant = localStorage.getItem('weknora_tenant')

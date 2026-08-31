@@ -18,6 +18,8 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from yuxi.p2.context import stamp_tenant_id
+from yuxi.p2.tenant_query import apply_tenant_filters, slug_taken_clauses
 from yuxi.storage.postgres.models_business import MCPServer
 from yuxi.utils import logger
 
@@ -219,6 +221,7 @@ async def _load_enabled_mcp_server_configs(
         )
         if names:
             stmt = stmt.where(MCPServer.slug.in_(names))
+        stmt = apply_tenant_filters(stmt, MCPServer.tenant_id, catalog_null=True)
         result = await db.execute(stmt)
         servers = result.scalars().all()
         return {server.slug: _to_runtime_mcp_config(server) for server in servers}
@@ -239,9 +242,13 @@ async def get_enabled_mcp_server_slugs(*, db: AsyncSession | None = None) -> lis
     """Get enabled MCP server slugs from the database."""
     if db is not None:
         result = await db.execute(
-            select(MCPServer.slug).where(
-                MCPServer.enabled == 1,
-                or_(MCPServer.transport != "stdio", MCPServer.slug.in_(_BUILTIN_MCP_SERVER_SLUGS)),
+            apply_tenant_filters(
+                select(MCPServer.slug).where(
+                    MCPServer.enabled == 1,
+                    or_(MCPServer.transport != "stdio", MCPServer.slug.in_(_BUILTIN_MCP_SERVER_SLUGS)),
+                ),
+                MCPServer.tenant_id,
+                catalog_null=True,
             )
         )
         return [name for name in result.scalars().all() if isinstance(name, str)]
@@ -399,14 +406,19 @@ def get_mcp_tools_stats(server_slug: str) -> dict[str, int] | None:
 
 
 async def get_mcp_server(db: AsyncSession, slug: str) -> MCPServer | None:
-    """Get single server configuration by slug."""
-    result = await db.execute(select(MCPServer).filter(MCPServer.slug == slug))
+    """按 slug 取当前 token 空间可见的 MCP（含 tenant_id IS NULL 的内置目录）。"""
+    stmt = apply_tenant_filters(
+        select(MCPServer).filter(MCPServer.slug == slug),
+        MCPServer.tenant_id,
+        catalog_null=True,
+    )
+    result = await db.execute(stmt)
     return result.scalar_one_or_none()
 
 
 async def get_all_mcp_servers(db: AsyncSession) -> list[MCPServer]:
     """Get all server configurations."""
-    result = await db.execute(select(MCPServer))
+    result = await db.execute(apply_tenant_filters(select(MCPServer), MCPServer.tenant_id, catalog_null=True))
     return list(result.scalars().all())
 
 
@@ -430,8 +442,10 @@ async def create_mcp_server(
     if transport not in _USER_CONFIGURABLE_TRANSPORTS:
         raise ValueError("用户创建的 MCP 仅支持 sse 或 streamable_http，不允许启动 stdio 本地进程")
 
-    existing = await get_mcp_server(db, slug)
-    if existing:
+    existing = await db.execute(
+        select(MCPServer).where(*slug_taken_clauses(MCPServer.tenant_id, MCPServer.slug, slug))
+    )
+    if existing.scalar_one_or_none():
         raise ValueError(f"Server slug '{slug}' already exists")
 
     server = MCPServer(
@@ -448,6 +462,7 @@ async def create_mcp_server(
         enabled=1,
         created_by=created_by,
         updated_by=created_by,
+        tenant_id=stamp_tenant_id(),
     )
     db.add(server)
     await db.commit()

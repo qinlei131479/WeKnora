@@ -152,11 +152,7 @@ import { MessagePlugin } from 'tdesign-vue-next'
 import { getCurrentUser, logout as logoutApi, userInfoFromApi } from '@/api/auth'
 import { useI18n } from 'vue-i18n'
 import CreateTenantDialog from '@/components/CreateTenantDialog.vue'
-import {
-  navigateAfterTenantSwitch,
-  persistLastActiveTenantPreference,
-  stashTenantSwitchToast,
-} from '@/utils/tenantSwitch'
+import { switchWorkspaceAndReload } from '@/utils/tenantSwitch'
 import type { TenantInfo } from '@/api/tenant'
 import { useRoleLabel, useHomeTenant } from '@/composables/useRoleLabel'
 import { getRootZoom, rectToCssPx, cssViewportSize } from '@/utils/zoom'
@@ -222,9 +218,7 @@ const closeAll = () => {
 
 // ---------- Create new tenant ----------
 // 普通用户在空间子菜单底部点 "+ 创建新工作区" → 弹 CreateTenantDialog →
-// 后端写一行 owner 的 tenant_members → 直接切到新空间。复用 switchToTenant
-// 同款的 setSelectedTenant + navigateAfterTenantSwitch 链路，避免 token
-// 依然指向旧空间带来的 SSE / store 不一致。
+// 后端写一行 owner 的 tenant_members → 走 switch-tenant 换签后再切到新空间。
 const createTenantDialogVisible = ref(false)
 
 const openCreateTenantDialog = () => {
@@ -238,10 +232,12 @@ const openCreateTenantDialog = () => {
 
 const onTenantCreated = async (newTenant: TenantInfo) => {
   await authStore.refreshFromAuthMe()
-  authStore.setSelectedTenant(newTenant.id, newTenant.name)
-  const persist = persistLastActiveTenantPreference(newTenant.id)
-  Promise.race([persist, new Promise((r) => setTimeout(r, 300))])
-    .finally(() => navigateAfterTenantSwitch())
+  await switchWorkspaceAndReload({
+    tenantId: newTenant.id,
+    tenantName: newTenant.name,
+    roleEnum: 'owner',
+    isHome: false,
+  })
 }
 
 // ---------- Tenant switcher submenu ----------
@@ -289,36 +285,21 @@ const tenantInitial = (m: Membership) => {
   return (name.charAt(0) || '?').toUpperCase()
 }
 
-const switchToTenant = (m: Membership) => {
+const switchToTenant = async (m: Membership) => {
   if (isCurrentTenant(m.tenant_id)) {
     closeAll()
     return
   }
-  // 始终把激活空间写进 selectedTenantId，让 request.ts 永远附 X-Tenant-ID。
-  // 历史实现里「切回 home 就清 override」会让请求落回 JWT 编码的空间，
-  // 而 JWT 在 last_active != home 的会话里恰好是 peer 空间（见
-  // userService.resolveLoginTenantID），结果切回 home 反而原地不动。
-  // 服务端持久化偏好仍然按 home/peer 区分：home 时清空 last_active，
-  // 让下次干净重登能正确回到 home。
   const home = homeTenantId.value
   const switchingToHome = home !== null && home === m.tenant_id
-  authStore.setSelectedTenant(m.tenant_id, tenantDisplayName(m))
   closeAll()
-  // Toast 在 reload 后由 App.vue 弹出（直接在这里弹会被 hard reload 干掉）。
-  stashTenantSwitchToast({
-    name: tenantDisplayName(m),
+  await switchWorkspaceAndReload({
+    tenantId: m.tenant_id,
+    tenantName: tenantDisplayName(m),
     role: formatRole(m.role) || undefined,
     roleEnum: m.role || undefined,
+    isHome: switchingToHome,
   })
-  // Persist "last active tenant" preference (switching to home clears
-  // it). Hard reload so every cached store / open SSE stream / in-flight
-  // request gets re-keyed under the new tenant; navigateAfterTenantSwitch
-  // redirects to the platform home so tenant-scoped resource paths don't
-  // white-screen. Race the persist against the existing 400ms grace
-  // window so most writes complete before the page tears down.
-  const persist = persistLastActiveTenantPreference(switchingToHome ? null : m.tenant_id)
-  Promise.race([persist, new Promise((r) => setTimeout(r, 400))])
-    .finally(() => navigateAfterTenantSwitch())
 }
 
 let lastTenantSubmenuMembershipRefresh = 0

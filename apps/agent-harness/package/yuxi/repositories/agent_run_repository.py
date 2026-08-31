@@ -5,6 +5,8 @@ from __future__ import annotations
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from yuxi.p2.context import stamp_tenant_id
+from yuxi.p2.tenant_query import tenant_clauses, visible_or_none
 from yuxi.storage.postgres.models_business import AGENT_RUN_TERMINAL_STATUSES, AgentRun, SubagentThread
 from yuxi.utils.datetime_utils import utc_now_naive
 
@@ -24,8 +26,12 @@ class AgentRunRepository:
         return result.scalar_one_or_none()
 
     async def get_run_for_user(self, run_id: str, uid: str) -> AgentRun | None:
-        result = await self.db.execute(select(AgentRun).where(and_(AgentRun.id == run_id, AgentRun.uid == str(uid))))
-        return result.scalar_one_or_none()
+        result = await self.db.execute(
+            select(AgentRun).where(
+                and_(AgentRun.id == run_id, AgentRun.uid == str(uid), *tenant_clauses(AgentRun.tenant_id))
+            )
+        )
+        return visible_or_none(result.scalar_one_or_none())
 
     async def get_subagent_run_for_creator(
         self,
@@ -52,6 +58,7 @@ class AgentRunRepository:
             select(SubagentThread).where(
                 SubagentThread.id == relation_id,
                 SubagentThread.uid == str(uid),
+                *tenant_clauses(SubagentThread.tenant_id),
             )
         )
         relation = result.scalar_one_or_none()
@@ -71,6 +78,7 @@ class AgentRunRepository:
                 AgentRun.conversation_thread_id == conversation_thread_id,
                 AgentRun.uid == str(uid),
                 AgentRun.run_type == "subagent",
+                *tenant_clauses(AgentRun.tenant_id),
             )
             .order_by(AgentRun.created_at.desc())
             .limit(1)
@@ -85,6 +93,7 @@ class AgentRunRepository:
                 AgentRun.conversation_thread_id == conversation_thread_id,
                 AgentRun.uid == str(uid),
                 AgentRun.run_type.in_(["chat", "resume", "subagent"]),
+                *tenant_clauses(AgentRun.tenant_id),
             )
             .order_by(AgentRun.created_at.desc())
             .limit(1)
@@ -106,6 +115,7 @@ class AgentRunRepository:
                 AgentRun.agent_slug == agent_slug,
                 AgentRun.conversation_thread_id == conversation_thread_id,
                 AgentRun.run_type.in_(["chat", "resume"]),
+                *tenant_clauses(AgentRun.tenant_id),
             )
             .order_by(AgentRun.created_at.desc(), AgentRun.id.desc())
             .limit(1)
@@ -119,6 +129,7 @@ class AgentRunRepository:
             .where(
                 AgentRun.created_by_run_id == created_by_run_id,
                 AgentRun.uid == str(uid),
+                *tenant_clauses(AgentRun.tenant_id),
             )
             .order_by(AgentRun.created_at.asc(), AgentRun.id.asc())
         )
@@ -132,6 +143,7 @@ class AgentRunRepository:
                 AgentRun.created_by_run_id == created_by_run_id,
                 AgentRun.uid == str(uid),
                 AgentRun.status.notin_(TERMINAL_RUN_STATUSES),
+                *tenant_clauses(AgentRun.tenant_id),
             )
             .order_by(AgentRun.created_at.asc(), AgentRun.id.asc())
         )
@@ -152,6 +164,7 @@ class AgentRunRepository:
                 AgentRun.uid == str(uid),
                 AgentRun.conversation_thread_id == conversation_thread_id,
                 AgentRun.status.notin_(TERMINAL_RUN_STATUSES),
+                *tenant_clauses(AgentRun.tenant_id),
             )
             .order_by(AgentRun.created_at.desc())
             .limit(1)
@@ -183,6 +196,7 @@ class AgentRunRepository:
             conversation_thread_id=conversation_thread_id,
             agent_slug=agent_slug,
             uid=str(uid),
+            tenant_id=stamp_tenant_id(),
             request_id=request_id,
             source=source,
             channel=channel,

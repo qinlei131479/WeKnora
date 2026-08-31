@@ -303,7 +303,7 @@ const { isDark: themeIsDark } = useTheme();
 watch(() => route.fullPath, syncFromRoute, { immediate: true });
 const hasHarnessToken = computed(() => {
     route.fullPath;
-    return !!(localStorage.getItem('weknora_token') || localStorage.getItem('harness_user_token'));
+    return !!localStorage.getItem('weknora_token');
 });
 const currentpath = ref('');
 const total = ref(0);

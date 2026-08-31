@@ -8,6 +8,8 @@ from typing import Any, Literal
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from yuxi.p2.context import stamp_tenant_id
+from yuxi.p2.tenant_query import apply_tenant_filters, row_in_tenant, slug_taken_clauses, visible_or_none
 from yuxi.permissions import ResourcePermission, normalize_permission_config, resolve_agent_permission
 from yuxi.storage.postgres.models_business import Agent, User
 from yuxi.utils.datetime_utils import utc_now_naive
@@ -157,7 +159,7 @@ class AgentRepository:
         self.db = db_session
 
     async def ensure_default_agent(self, *, created_by: str | None = None) -> Agent:
-        agent = await self.get_by_slug(DEFAULT_AGENT_SLUG)
+        agent = await self.get_by_slug_unscoped(DEFAULT_AGENT_SLUG)
         if agent:
             needs_update = False
             if agent.share_config != DEFAULT_SHARE_CONFIG:
@@ -200,7 +202,7 @@ class AgentRepository:
         return agent
 
     async def ensure_web_search_subagent(self, *, created_by: str | None = None) -> Agent:
-        agent = await self.get_by_slug(WEB_SEARCH_AGENT_SLUG)
+        agent = await self.get_by_slug_unscoped(WEB_SEARCH_AGENT_SLUG)
         if agent:
             return agent
 
@@ -248,7 +250,7 @@ class AgentRepository:
         created_by: str | None = None,
     ) -> Agent:
         """落库一个内置 Agent；已存在则原样返回，避免覆盖管理员后续修改。"""
-        agent = await self.get_by_slug(slug)
+        agent = await self.get_by_slug_unscoped(slug)
         if agent:
             return agent
 
@@ -312,6 +314,7 @@ class AgentRepository:
         stmt = select(Agent)
         if not include_subagent_definitions:
             stmt = stmt.where(Agent.is_subagent.is_(False))
+        stmt = apply_tenant_filters(stmt, Agent.tenant_id, catalog_null=True)
         result = await self.db.execute(stmt.order_by(Agent.is_default.desc(), Agent.id.asc()))
         agents = list(result.scalars().all())
         if user.role == "superadmin":
@@ -319,27 +322,39 @@ class AgentRepository:
         return [agent for agent in agents if user_can_access_agent(user, agent)]
 
     async def list_visible_subagents(self, *, user: User) -> list[Agent]:
-        result = await self.db.execute(
-            select(Agent).where(Agent.is_subagent.is_(True)).order_by(Agent.name.asc(), Agent.id.asc())
+        stmt = apply_tenant_filters(
+            select(Agent).where(Agent.is_subagent.is_(True)),
+            Agent.tenant_id,
+            catalog_null=True,
         )
+        result = await self.db.execute(stmt.order_by(Agent.name.asc(), Agent.id.asc()))
         agents = list(result.scalars().all())
         if user.role == "superadmin":
             return agents
         return [agent for agent in agents if user_can_access_agent(user, agent)]
 
-    async def get_by_slug(self, slug: str) -> Agent | None:
+    async def get_by_slug_unscoped(self, slug: str) -> Agent | None:
+        """不过滤租户。仅用于内置落库与 slug 全局唯一性。"""
         result = await self.db.execute(select(Agent).where(Agent.slug == slug))
+        return result.scalar_one_or_none()
+
+    async def get_by_slug(self, slug: str) -> Agent | None:
+        stmt = apply_tenant_filters(select(Agent).where(Agent.slug == slug), Agent.tenant_id, catalog_null=True)
+        result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
     async def list_by_slugs(self, slugs: list[str]) -> list[Agent]:
         result = await self.db.execute(select(Agent).where(Agent.slug.in_(slugs)))
-        return list(result.scalars().all())
+        return [agent for agent in result.scalars().all() if row_in_tenant(agent, catalog_null=True)]
 
     async def get_visible_by_slug(
         self, *, slug: str, user: User, kind: Literal["main", "subagent", "any"] = "main"
     ) -> Agent | None:
         """按 slug 读取用户可见智能体，并按入口语义过滤主/子智能体。"""
         agent = await self.get_by_slug(slug)
+        if not agent:
+            return None
+        agent = visible_or_none(agent, catalog_null=True)
         if not agent:
             return None
         if not user_can_access_agent(user, agent):
@@ -376,7 +391,9 @@ class AgentRepository:
         return agent
 
     async def _slug_exists(self, slug: str) -> bool:
-        result = await self.db.execute(select(Agent.id).where(Agent.slug == slug))
+        result = await self.db.execute(
+            select(Agent.id).where(*slug_taken_clauses(Agent.tenant_id, Agent.slug, slug))
+        )
         return result.scalar_one_or_none() is not None
 
     async def _unique_slug(self, desired: str | None, name: str) -> str:
@@ -439,6 +456,7 @@ class AgentRepository:
             is_subagent=resolved_is_subagent,
             created_by=created_by,
             updated_by=created_by,
+            tenant_id=stamp_tenant_id(),
             created_at=utc_now_naive(),
             updated_at=utc_now_naive(),
         )

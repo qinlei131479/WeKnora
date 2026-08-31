@@ -4,6 +4,8 @@ from typing import Any
 
 from sqlalchemy import select
 
+from yuxi.p2.context import stamp_tenant_id
+from yuxi.p2.tenant_query import tenant_clauses, visible_or_none
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_business import MessageFeedback
 
@@ -15,18 +17,25 @@ class MessageFeedbackRepository:
         """根据 ID 获取消息反馈"""
         async with pg_manager.get_async_session_context() as session:
             result = await session.execute(select(MessageFeedback).where(MessageFeedback.id == id))
-            return result.scalar_one_or_none()
+            return visible_or_none(result.scalar_one_or_none())
 
     async def list_by_message(self, message_id: int) -> list[MessageFeedback]:
         """获取消息的反馈列表"""
         async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(select(MessageFeedback).where(MessageFeedback.message_id == message_id))
+            result = await session.execute(
+                select(MessageFeedback).where(
+                    MessageFeedback.message_id == message_id,
+                    *tenant_clauses(MessageFeedback.tenant_id),
+                )
+            )
             return list(result.scalars().all())
 
     async def create(self, data: dict[str, Any]) -> MessageFeedback:
         """创建消息反馈"""
+        payload = dict(data)
+        payload.setdefault("tenant_id", stamp_tenant_id())
         async with pg_manager.get_async_session_context() as session:
-            feedback = MessageFeedback(**data)
+            feedback = MessageFeedback(**payload)
             session.add(feedback)
         return feedback
 
@@ -34,6 +43,10 @@ class MessageFeedbackRepository:
         """检查用户是否已对消息反馈"""
         async with pg_manager.get_async_session_context() as session:
             result = await session.execute(
-                select(MessageFeedback.id).where(MessageFeedback.message_id == message_id, MessageFeedback.uid == uid)
+                select(MessageFeedback.id).where(
+                    MessageFeedback.message_id == message_id,
+                    MessageFeedback.uid == uid,
+                    *tenant_clauses(MessageFeedback.tenant_id),
+                )
             )
             return result.scalar_one_or_none() is not None

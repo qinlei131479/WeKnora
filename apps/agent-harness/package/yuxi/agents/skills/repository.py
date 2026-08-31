@@ -3,6 +3,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from yuxi.p2.context import stamp_tenant_id
+from yuxi.p2.tenant_query import apply_tenant_filters, row_in_tenant, slug_taken_clauses
 from yuxi.storage.postgres.models_business import Skill
 from yuxi.utils.datetime_utils import utc_now_naive
 
@@ -12,13 +14,17 @@ class SkillRepository:
         self.db = db_session
 
     async def list_all(self) -> list[Skill]:
-        result = await self.db.execute(select(Skill).order_by(Skill.updated_at.desc(), Skill.id.desc()))
+        stmt = apply_tenant_filters(select(Skill), Skill.tenant_id, catalog_null=True)
+        result = await self.db.execute(stmt.order_by(Skill.updated_at.desc(), Skill.id.desc()))
         return list(result.scalars().all())
 
     async def list_enabled(self) -> list[Skill]:
-        result = await self.db.execute(
-            select(Skill).where(Skill.enabled.is_(True)).order_by(Skill.updated_at.desc(), Skill.id.desc())
+        stmt = apply_tenant_filters(
+            select(Skill).where(Skill.enabled.is_(True)),
+            Skill.tenant_id,
+            catalog_null=True,
         )
+        result = await self.db.execute(stmt.order_by(Skill.updated_at.desc(), Skill.id.desc()))
         return list(result.scalars().all())
 
     async def list_by_slugs(self, slugs: list[str]) -> list[Skill]:
@@ -26,19 +32,34 @@ class SkillRepository:
         if not normalized:
             return []
         result = await self.db.execute(select(Skill).where(Skill.slug.in_(normalized)))
-        items = list(result.scalars().all())
+        items = [item for item in result.scalars().all() if row_in_tenant(item, catalog_null=True)]
         item_map = {item.slug: item for item in items}
         return [item_map[slug] for slug in normalized if slug in item_map]
 
-    async def get_by_slug(self, slug: str, *, for_update: bool = False) -> Skill | None:
+    async def get_by_slug_unscoped(self, slug: str, *, for_update: bool = False) -> Skill | None:
+        """不过滤租户。仅用于 slug 全局唯一性与内置安装对账。"""
         stmt = select(Skill).where(Skill.slug == slug)
         if for_update:
             stmt = stmt.with_for_update()
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_by_slug(self, slug: str, *, for_update: bool = False) -> Skill | None:
+        stmt = apply_tenant_filters(
+            select(Skill).where(Skill.slug == slug),
+            Skill.tenant_id,
+            catalog_null=True,
+        )
+        if for_update:
+            stmt = stmt.with_for_update()
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def exists_slug(self, slug: str) -> bool:
-        return (await self.get_by_slug(slug)) is not None
+        result = await self.db.execute(
+            select(Skill.id).where(*slug_taken_clauses(Skill.tenant_id, Skill.slug, slug))
+        )
+        return result.scalar_one_or_none() is not None
 
     async def create(
         self,
@@ -73,6 +94,7 @@ class SkillRepository:
             enabled=enabled,
             created_by=created_by,
             updated_by=created_by,
+            tenant_id=stamp_tenant_id(),
             created_at=now,
             updated_at=now,
         )

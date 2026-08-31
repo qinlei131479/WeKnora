@@ -252,11 +252,7 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import { useI18n } from 'vue-i18n'
 import { useRoleLabel, useHomeTenant } from '@/composables/useRoleLabel'
-import {
-  navigateAfterTenantSwitch,
-  persistLastActiveTenantPreference,
-  stashTenantSwitchToast,
-} from '@/utils/tenantSwitch'
+import { switchWorkspaceAndReload } from '@/utils/tenantSwitch'
 
 const { t, locale } = useI18n()
 const { formatRole } = useRoleLabel()
@@ -399,17 +395,13 @@ async function deleteCurrentTenant() {
         const switchingToHome =
           homeTenantId.value !== null && homeTenantId.value === next.tenant_id
         const name = next.tenant_name?.trim() || `#${next.tenant_id}`
-        authStore.setSelectedTenant(next.tenant_id, name)
-        stashTenantSwitchToast({
-          name,
+        await switchWorkspaceAndReload({
+          tenantId: next.tenant_id,
+          tenantName: name,
           role: formatRole(next.role) || undefined,
           roleEnum: next.role || undefined,
+          isHome: switchingToHome,
         })
-        const persist = persistLastActiveTenantPreference(
-          switchingToHome ? null : next.tenant_id,
-        )
-        await Promise.race([persist, new Promise((r) => setTimeout(r, 400))])
-        navigateAfterTenantSwitch()
         return
       }
       authStore.logout()

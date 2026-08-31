@@ -914,6 +914,9 @@ class PostgresManager(metaclass=SingletonMeta):
             """,
             "CREATE INDEX IF NOT EXISTS ix_agent_run_requests_dispatched_run_id ON agent_run_requests(dispatched_run_id)",  # noqa: E501
         ]
+        from yuxi.p2.schema import tenant_scope_ddl_statements
+
+        stmts.extend(tenant_scope_ddl_statements())
         async with self.async_engine.begin() as conn:
             # 历史未绑定用户的 API Key 会在下方迁移语句里被静默删除，先计数告警
             # 便于运维凭据失效时回溯；DELETE 之后无法再查询这些 Key。
@@ -933,6 +936,12 @@ class PostgresManager(metaclass=SingletonMeta):
 
             for stmt in stmts:
                 await conn.execute(text(prefix_sql(stmt)))
+            try:
+                from yuxi.p2.schema import backfill_tenant_scope
+
+                await backfill_tenant_scope(conn)
+            except Exception as exc:
+                logger.warning(f"P2 tenant backfill skipped: {exc}")
 
     @property
     def is_postgresql(self) -> bool:

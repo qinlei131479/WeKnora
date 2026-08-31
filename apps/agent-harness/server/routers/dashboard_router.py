@@ -15,7 +15,10 @@ from pydantic import BaseModel
 from sqlalchemy import Integer, String, cast, distinct, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.utils.auth_middleware import get_db, get_superadmin_user
+from server.utils.auth_middleware import get_db, get_required_user
+from yuxi.p2.context import current_tenant_id
+from yuxi.p2.flags import is_tenant_scope_enabled
+from yuxi.p2.tenant_query import apply_tenant_filters
 from yuxi.repositories.agent_repository import AgentRepository
 from yuxi.repositories.conversation_repository import ConversationRepository
 from yuxi.storage.minio.client import normalize_public_minio_url
@@ -25,6 +28,45 @@ from yuxi.utils.logging_config import logger
 
 
 dashboard = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+
+
+def _scope_conversations(stmt):
+    from yuxi.storage.postgres.models_business import Conversation
+
+    return apply_tenant_filters(stmt, Conversation.tenant_id)
+
+
+def _scope_feedbacks(stmt):
+    from yuxi.storage.postgres.models_business import MessageFeedback
+
+    return apply_tenant_filters(stmt, MessageFeedback.tenant_id)
+
+
+def _join_messages_on_conversation(stmt):
+    from yuxi.storage.postgres.models_business import Conversation, Message
+
+    stmt = stmt.join(Conversation, Message.conversation_id == Conversation.id)
+    return apply_tenant_filters(stmt, Conversation.tenant_id)
+
+
+def _join_tool_calls_on_conversation(stmt):
+    from yuxi.storage.postgres.models_business import Conversation, Message, ToolCall
+
+    stmt = stmt.join(Message, ToolCall.message_id == Message.id).join(
+        Conversation, Message.conversation_id == Conversation.id
+    )
+    return apply_tenant_filters(stmt, Conversation.tenant_id)
+
+
+def _user_count_stmt():
+    from yuxi.storage.postgres.models_business import Conversation
+
+    if is_tenant_scope_enabled() and current_tenant_id() is not None:
+        return apply_tenant_filters(
+            select(func.count(distinct(Conversation.uid))),
+            Conversation.tenant_id,
+        )
+    return select(func.count(User.id)).filter(User.is_deleted == 0)
 
 
 def _get_time_group_format(column, time_range: str) -> Any:
@@ -135,9 +177,9 @@ async def get_all_conversations(
     limit: int = 100,
     offset: int = 0,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_superadmin_user),
+    current_user: User = Depends(get_required_user),
 ):
-    """获取所有对话（超级管理员权限）"""
+    """获取当前 token 空间内的对话"""
     from yuxi.storage.postgres.models_business import Conversation, ConversationStats
 
     try:
@@ -145,6 +187,7 @@ async def get_all_conversations(
         query = select(Conversation, ConversationStats).outerjoin(
             ConversationStats, Conversation.id == ConversationStats.conversation_id
         )
+        query = _scope_conversations(query)
 
         # Apply filters
         if uid:
@@ -183,9 +226,9 @@ async def get_all_conversations(
 async def get_conversation_detail(
     thread_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_superadmin_user),
+    current_user: User = Depends(get_required_user),
 ):
-    """获取指定对话详情（超级管理员权限）"""
+    """获取当前 token 空间内的对话详情"""
     try:
         conv_manager = ConversationRepository(db)
         conversation = await conv_manager.get_conversation_by_thread_id(thread_id)
@@ -244,16 +287,16 @@ async def get_conversation_detail(
 
 
 # =============================================================================
-# 用户活动统计（超级管理员权限）
+# 用户活动统计（当前 token 空间）
 # =============================================================================
 
 
 @dashboard.get("/stats/users", response_model=UserActivityStats)
 async def get_user_activity_stats(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_superadmin_user),
+    current_user: User = Depends(get_required_user),
 ):
-    """获取用户活动统计（超级管理员权限）"""
+    """获取当前 token 空间的用户活动统计"""
     try:
         from yuxi.storage.postgres.models_business import Conversation, User
 
@@ -265,24 +308,27 @@ async def get_user_activity_stats(
         # Join condition accounts for both representations.
         user_join_condition = Conversation.uid == User.uid
 
-        # 基础用户统计（排除已删除用户）
-        total_users_result = await db.execute(select(func.count(User.id)).filter(User.is_deleted == 0))
+        total_users_result = await db.execute(_user_count_stmt())
         total_users = total_users_result.scalar() or 0
 
         # 不同时间段的活跃用户数（基于对话活动，排除已删除用户）
         active_users_24h_result = await db.execute(
-            select(func.count(distinct(User.id)))
-            .select_from(Conversation)
-            .join(User, user_join_condition)
-            .filter(Conversation.updated_at >= naive_now - timedelta(days=1), User.is_deleted == 0)
+            _scope_conversations(
+                select(func.count(distinct(User.id)))
+                .select_from(Conversation)
+                .join(User, user_join_condition)
+                .filter(Conversation.updated_at >= naive_now - timedelta(days=1), User.is_deleted == 0)
+            )
         )
         active_users_24h = active_users_24h_result.scalar() or 0
 
         active_users_30d_result = await db.execute(
-            select(func.count(distinct(User.id)))
-            .select_from(Conversation)
-            .join(User, user_join_condition)
-            .filter(Conversation.updated_at >= naive_now - timedelta(days=30), User.is_deleted == 0)
+            _scope_conversations(
+                select(func.count(distinct(User.id)))
+                .select_from(Conversation)
+                .join(User, user_join_condition)
+                .filter(Conversation.updated_at >= naive_now - timedelta(days=30), User.is_deleted == 0)
+            )
         )
         active_users_30d = active_users_30d_result.scalar() or 0
         # 最近7天每日活跃用户（排除已删除用户）
@@ -292,10 +338,12 @@ async def get_user_activity_stats(
             day_end = naive_now - timedelta(days=i)
 
             active_count_result = await db.execute(
-                select(func.count(distinct(User.id)))
-                .select_from(Conversation)
-                .join(User, user_join_condition)
-                .filter(Conversation.updated_at >= day_start, Conversation.updated_at < day_end, User.is_deleted == 0)
+                _scope_conversations(
+                    select(func.count(distinct(User.id)))
+                    .select_from(Conversation)
+                    .join(User, user_join_condition)
+                    .filter(Conversation.updated_at >= day_start, Conversation.updated_at < day_end, User.is_deleted == 0)
+                )
             )
             active_count = active_count_result.scalar() or 0
 
@@ -322,9 +370,9 @@ async def get_user_activity_stats(
 @dashboard.get("/stats/tools", response_model=ToolCallStats)
 async def get_tool_call_stats(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_superadmin_user),
+    current_user: User = Depends(get_required_user),
 ):
-    """获取工具调用统计（超级管理员权限）"""
+    """获取当前 token 空间的工具调用统计"""
     try:
         from yuxi.storage.postgres.models_business import ToolCall
 
@@ -333,29 +381,35 @@ async def get_tool_call_stats(
         naive_now = now.replace(tzinfo=None)
 
         # 基础工具调用统计
-        total_calls_result = await db.execute(select(func.count(ToolCall.id)))
+        total_calls_result = await db.execute(_join_tool_calls_on_conversation(select(func.count(ToolCall.id))))
         total_calls = total_calls_result.scalar() or 0
 
-        successful_calls_result = await db.execute(select(func.count(ToolCall.id)).filter(ToolCall.status == "success"))
+        successful_calls_result = await db.execute(
+            _join_tool_calls_on_conversation(select(func.count(ToolCall.id)).filter(ToolCall.status == "success"))
+        )
         successful_calls = successful_calls_result.scalar() or 0
         failed_calls = total_calls - successful_calls
         success_rate = round((successful_calls / total_calls * 100), 2) if total_calls > 0 else 0
 
         # 最常用工具
         most_used_tools_result = await db.execute(
-            select(ToolCall.tool_name, func.count(ToolCall.id).label("count"))
-            .group_by(ToolCall.tool_name)
-            .order_by(func.count(ToolCall.id).desc())
-            .limit(10)
+            _join_tool_calls_on_conversation(
+                select(ToolCall.tool_name, func.count(ToolCall.id).label("count"))
+                .group_by(ToolCall.tool_name)
+                .order_by(func.count(ToolCall.id).desc())
+                .limit(10)
+            )
         )
         most_used_tools = most_used_tools_result.all()
         most_used_tools = [{"tool_name": name, "count": count} for name, count in most_used_tools]
 
         # 工具错误分布
         tool_errors_result = await db.execute(
-            select(ToolCall.tool_name, func.count(ToolCall.id).label("error_count"))
-            .filter(ToolCall.status == "error")
-            .group_by(ToolCall.tool_name)
+            _join_tool_calls_on_conversation(
+                select(ToolCall.tool_name, func.count(ToolCall.id).label("error_count"))
+                .filter(ToolCall.status == "error")
+                .group_by(ToolCall.tool_name)
+            )
         )
         tool_errors = tool_errors_result.all()
         tool_error_distribution = {name: count for name, count in tool_errors}
@@ -367,7 +421,11 @@ async def get_tool_call_stats(
             day_end = naive_now - timedelta(days=i)
 
             daily_count_result = await db.execute(
-                select(func.count(ToolCall.id)).filter(ToolCall.created_at >= day_start, ToolCall.created_at < day_end)
+                _join_tool_calls_on_conversation(
+                    select(func.count(ToolCall.id)).filter(
+                        ToolCall.created_at >= day_start, ToolCall.created_at < day_end
+                    )
+                )
             )
             daily_count = daily_count_result.scalar() or 0
 
@@ -390,16 +448,16 @@ async def get_tool_call_stats(
 
 
 # =============================================================================
-# 知识库统计（超级管理员权限）
+# 知识库统计（当前 token 空间）
 # =============================================================================
 
 
 @dashboard.get("/stats/knowledge", response_model=KnowledgeStats)
 async def get_knowledge_stats(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_superadmin_user),
+    current_user: User = Depends(get_required_user),
 ):
-    """获取知识库统计（超级管理员权限）"""
+    """获取当前 token 空间的知识库统计"""
     try:
         from yuxi.repositories.knowledge_base_repository import KnowledgeBaseRepository
         from yuxi.repositories.knowledge_file_repository import KnowledgeFileRepository
@@ -478,23 +536,25 @@ async def get_knowledge_stats(
 
 
 # =============================================================================
-# 智能体分析（超级管理员权限）
+# 智能体分析（当前 token 空间）
 # =============================================================================
 
 
 @dashboard.get("/stats/agents", response_model=AgentAnalytics)
 async def get_agent_analytics(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_superadmin_user),
+    current_user: User = Depends(get_required_user),
 ):
-    """获取智能体分析（超级管理员权限）"""
+    """获取当前 token 空间的智能体分析"""
     try:
         from yuxi.storage.postgres.models_business import Conversation, Message, MessageFeedback, ToolCall
 
         # 获取所有智能体
         agents_result = await db.execute(
-            select(Conversation.agent_id, func.count(Conversation.id).label("conversation_count")).group_by(
-                Conversation.agent_id
+            _scope_conversations(
+                select(Conversation.agent_id, func.count(Conversation.id).label("conversation_count")).group_by(
+                    Conversation.agent_id
+                )
             )
         )
         agents = agents_result.all()
@@ -506,18 +566,22 @@ async def get_agent_analytics(
         agent_satisfaction = []
         for agent_id, _ in agents:
             total_feedbacks_result = await db.execute(
-                select(func.count(MessageFeedback.id))
-                .join(Message, MessageFeedback.message_id == Message.id)
-                .join(Conversation, Message.conversation_id == Conversation.id)
-                .filter(Conversation.agent_id == agent_id)
+                _scope_conversations(
+                    select(func.count(MessageFeedback.id))
+                    .join(Message, MessageFeedback.message_id == Message.id)
+                    .join(Conversation, Message.conversation_id == Conversation.id)
+                    .filter(Conversation.agent_id == agent_id)
+                )
             )
             total_feedbacks = total_feedbacks_result.scalar() or 0
 
             positive_feedbacks_result = await db.execute(
-                select(func.count(MessageFeedback.id))
-                .join(Message, MessageFeedback.message_id == Message.id)
-                .join(Conversation, Message.conversation_id == Conversation.id)
-                .filter(Conversation.agent_id == agent_id, MessageFeedback.rating == "like")
+                _scope_conversations(
+                    select(func.count(MessageFeedback.id))
+                    .join(Message, MessageFeedback.message_id == Message.id)
+                    .join(Conversation, Message.conversation_id == Conversation.id)
+                    .filter(Conversation.agent_id == agent_id, MessageFeedback.rating == "like")
+                )
             )
             positive_feedbacks = positive_feedbacks_result.scalar() or 0
 
@@ -531,10 +595,12 @@ async def get_agent_analytics(
         agent_tool_usage = []
         for agent_id, _ in agents:
             tool_usage_count_result = await db.execute(
-                select(func.count(ToolCall.id))
-                .join(Message, ToolCall.message_id == Message.id)
-                .join(Conversation, Message.conversation_id == Conversation.id)
-                .filter(Conversation.agent_id == agent_id)
+                _scope_conversations(
+                    select(func.count(ToolCall.id))
+                    .join(Message, ToolCall.message_id == Message.id)
+                    .join(Conversation, Message.conversation_id == Conversation.id)
+                    .filter(Conversation.agent_id == agent_id)
+                )
             )
             tool_usage_count = tool_usage_count_result.scalar() or 0
 
@@ -582,40 +648,40 @@ async def get_agent_analytics(
 
 
 # =============================================================================
-# 基础统计（超级管理员权限）
+# 基础统计（当前 token 空间）
 # =============================================================================
 
 
 @dashboard.get("/stats")
 async def get_dashboard_stats(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_superadmin_user),
+    current_user: User = Depends(get_required_user),
 ):
-    """获取基础统计（超级管理员权限）"""
+    """获取当前 token 空间的基础统计"""
     from yuxi.storage.postgres.models_business import Conversation, Message, MessageFeedback
 
     try:
         # Basic counts
-        total_conversations_result = await db.execute(select(func.count(Conversation.id)))
+        total_conversations_result = await db.execute(_scope_conversations(select(func.count(Conversation.id))))
         total_conversations = total_conversations_result.scalar() or 0
 
         active_conversations_result = await db.execute(
-            select(func.count(Conversation.id)).filter(Conversation.status == "active")
+            _scope_conversations(select(func.count(Conversation.id)).filter(Conversation.status == "active"))
         )
         active_conversations = active_conversations_result.scalar() or 0
 
-        total_messages_result = await db.execute(select(func.count(Message.id)))
+        total_messages_result = await db.execute(_join_messages_on_conversation(select(func.count(Message.id))))
         total_messages = total_messages_result.scalar() or 0
 
-        total_users_result = await db.execute(select(func.count(User.id)).filter(User.is_deleted == 0))
+        total_users_result = await db.execute(_user_count_stmt())
         total_users = total_users_result.scalar() or 0
 
         # Feedback statistics
-        total_feedbacks_result = await db.execute(select(func.count(MessageFeedback.id)))
+        total_feedbacks_result = await db.execute(_scope_feedbacks(select(func.count(MessageFeedback.id))))
         total_feedbacks = total_feedbacks_result.scalar() or 0
 
         like_count_result = await db.execute(
-            select(func.count(MessageFeedback.id)).filter(MessageFeedback.rating == "like")
+            _scope_feedbacks(select(func.count(MessageFeedback.id)).filter(MessageFeedback.rating == "like"))
         )
         like_count = like_count_result.scalar() or 0
 
@@ -639,7 +705,7 @@ async def get_dashboard_stats(
 
 
 # =============================================================================
-# 反馈管理（超级管理员权限）
+# 反馈管理（当前 token 空间）
 # =============================================================================
 
 
@@ -663,13 +729,13 @@ async def get_all_feedbacks(
     rating: str | None = None,
     agent_id: str | None = None,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_superadmin_user),
+    current_user: User = Depends(get_required_user),
 ):
-    """获取所有反馈记录（超级管理员权限）"""
+    """获取当前 token 空间的反馈记录"""
     from yuxi.storage.postgres.models_business import Conversation, Message, MessageFeedback, User
 
     try:
-        query = (
+        query = _scope_conversations(
             select(MessageFeedback, Message, Conversation, User)
             .join(Message, MessageFeedback.message_id == Message.id)
             .join(Conversation, Message.conversation_id == Conversation.id)
@@ -715,7 +781,7 @@ async def get_all_feedbacks(
 
 
 # =============================================================================
-# 调用分析时间序列统计（超级管理员权限）
+# 调用分析时间序列统计（当前 token 空间）
 # =============================================================================
 
 
@@ -736,9 +802,9 @@ async def get_call_timeseries_stats(
     type: str = "models",  # models/agents/tokens/tools
     time_range: str = "14days",  # 14hours/14days/14weeks
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_superadmin_user),
+    current_user: User = Depends(get_required_user),
 ):
-    """获取调用分析时间序列统计（超级管理员权限）"""
+    """获取当前 token 空间的调用分析时间序列统计"""
     try:
         from yuxi.storage.postgres.models_business import Conversation, Message, ToolCall
 
@@ -778,15 +844,17 @@ async def get_call_timeseries_stats(
             # 从message的extra_metadata中提取模型信息
             category_expr = cast(Message.extra_metadata["response_metadata"]["model_name"], String)
             query_result = await db.execute(
-                select(
-                    group_format.label("date"),
-                    func.count(Message.id).label("count"),
-                    category_expr.label("category"),
+                _join_messages_on_conversation(
+                    select(
+                        group_format.label("date"),
+                        func.count(Message.id).label("count"),
+                        category_expr.label("category"),
+                    )
+                    .filter(Message.role == "assistant", Message.created_at >= query_start_time)
+                    .filter(Message.extra_metadata.isnot(None))
+                    .group_by(group_format, category_expr)
+                    .order_by(group_format)
                 )
-                .filter(Message.role == "assistant", Message.created_at >= query_start_time)
-                .filter(Message.extra_metadata.isnot(None))
-                .group_by(group_format, category_expr)
-                .order_by(group_format)
             )
             query = query_result.all()
         elif type == "agents":
@@ -795,15 +863,17 @@ async def get_call_timeseries_stats(
             conv_group_format = _get_time_group_format(Conversation.updated_at, time_range)
 
             query_result = await db.execute(
-                select(
-                    conv_group_format.label("date"),
-                    func.count(Conversation.id).label("count"),
-                    Conversation.agent_id.label("category"),
+                _scope_conversations(
+                    select(
+                        conv_group_format.label("date"),
+                        func.count(Conversation.id).label("count"),
+                        Conversation.agent_id.label("category"),
+                    )
+                    .filter(Conversation.updated_at.isnot(None))
+                    .filter(Conversation.updated_at >= query_start_time)
+                    .group_by(conv_group_format, Conversation.agent_id)
+                    .order_by(conv_group_format)
                 )
-                .filter(Conversation.updated_at.isnot(None))
-                .filter(Conversation.updated_at >= query_start_time)
-                .group_by(conv_group_format, Conversation.agent_id)
-                .order_by(conv_group_format)
             )
             query = query_result.all()
         elif type == "tokens":
@@ -812,43 +882,47 @@ async def get_call_timeseries_stats(
             from sqlalchemy import literal
 
             input_query_result = await db.execute(
-                select(
-                    group_format.label("date"),
-                    func.sum(
-                        func.coalesce(
-                            cast(cast(Message.extra_metadata["usage_metadata"]["input_tokens"], String), Integer), 0
-                        )
-                    ).label("count"),
-                    literal("input_tokens").label("category"),
+                _join_messages_on_conversation(
+                    select(
+                        group_format.label("date"),
+                        func.sum(
+                            func.coalesce(
+                                cast(cast(Message.extra_metadata["usage_metadata"]["input_tokens"], String), Integer), 0
+                            )
+                        ).label("count"),
+                        literal("input_tokens").label("category"),
+                    )
+                    .filter(
+                        Message.created_at >= query_start_time,
+                        Message.extra_metadata.isnot(None),
+                        Message.extra_metadata["usage_metadata"].isnot(None),
+                    )
+                    .group_by(group_format)
+                    .order_by(group_format)
                 )
-                .filter(
-                    Message.created_at >= query_start_time,
-                    Message.extra_metadata.isnot(None),
-                    Message.extra_metadata["usage_metadata"].isnot(None),
-                )
-                .group_by(group_format)
-                .order_by(group_format)
             )
             input_query = input_query_result.all()
 
             # 查询output tokens
             output_query_result = await db.execute(
-                select(
-                    group_format.label("date"),
-                    func.sum(
-                        func.coalesce(
-                            cast(cast(Message.extra_metadata["usage_metadata"]["output_tokens"], String), Integer), 0
-                        )
-                    ).label("count"),
-                    literal("output_tokens").label("category"),
+                _join_messages_on_conversation(
+                    select(
+                        group_format.label("date"),
+                        func.sum(
+                            func.coalesce(
+                                cast(cast(Message.extra_metadata["usage_metadata"]["output_tokens"], String), Integer), 0
+                            )
+                        ).label("count"),
+                        literal("output_tokens").label("category"),
+                    )
+                    .filter(
+                        Message.created_at >= query_start_time,
+                        Message.extra_metadata.isnot(None),
+                        Message.extra_metadata["usage_metadata"].isnot(None),
+                    )
+                    .group_by(group_format)
+                    .order_by(group_format)
                 )
-                .filter(
-                    Message.created_at >= query_start_time,
-                    Message.extra_metadata.isnot(None),
-                    Message.extra_metadata["usage_metadata"].isnot(None),
-                )
-                .group_by(group_format)
-                .order_by(group_format)
             )
             output_query = output_query_result.all()
 
@@ -862,14 +936,16 @@ async def get_call_timeseries_stats(
             tool_group_format = _get_time_group_format(ToolCall.created_at, time_range)
 
             query_result = await db.execute(
-                select(
-                    tool_group_format.label("date"),
-                    func.count(ToolCall.id).label("count"),
-                    ToolCall.tool_name.label("category"),
+                _join_tool_calls_on_conversation(
+                    select(
+                        tool_group_format.label("date"),
+                        func.count(ToolCall.id).label("count"),
+                        ToolCall.tool_name.label("category"),
+                    )
+                    .filter(ToolCall.created_at >= query_start_time)
+                    .group_by(tool_group_format, ToolCall.tool_name)
+                    .order_by(tool_group_format)
                 )
-                .filter(ToolCall.created_at >= query_start_time)
-                .group_by(tool_group_format, ToolCall.tool_name)
-                .order_by(tool_group_format)
             )
             query = query_result.all()
         else:
@@ -963,7 +1039,7 @@ async def get_call_timeseries_stats(
             # 对于工具调用，显示所有时间的总数（与ToolStatsComponent保持一致）
             from yuxi.storage.postgres.models_business import ToolCall
 
-            total_count_result = await db.execute(select(func.count(ToolCall.id)))
+            total_count_result = await db.execute(_join_tool_calls_on_conversation(select(func.count(ToolCall.id))))
             total_count = total_count_result.scalar() or 0
         else:
             # 其他类型使用时间序列数据的总和

@@ -36,7 +36,7 @@
       </button>
     </section>
 
-    <section v-if="myDatabases.length" class="sidebar-section">
+    <section class="sidebar-section">
       <div class="section-title">{{ t('workspacePage.myKnowledge') }}</div>
       <button
         v-for="database in myDatabases"
@@ -68,9 +68,6 @@
 
     <section v-if="loadingDatabases" class="sidebar-section">
       <div class="sidebar-muted">{{ t('workspacePage.loadingKnowledge') }}</div>
-    </section>
-    <section v-else-if="!databases.length" class="sidebar-section">
-      <div class="sidebar-muted">{{ t('workspacePage.noKnowledge') }}</div>
     </section>
   </aside>
 </template>

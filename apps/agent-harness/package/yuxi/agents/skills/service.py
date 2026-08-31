@@ -419,6 +419,20 @@ def _build_builtin_skill_dir_path(slug: str) -> str:
     return (Path("skills") / slug).as_posix()
 
 
+def _tenant_skill_relpath(slug: str) -> Path:
+    """租户技能落在 skills/t{tenant_id}/{slug}，避免跨空间同 slug 互相覆盖。"""
+    from yuxi.p2.context import stamp_tenant_id
+
+    tenant_id = stamp_tenant_id()
+    if tenant_id is None:
+        return Path("skills") / slug
+    return Path("skills") / f"t{tenant_id}" / slug
+
+
+def _tenant_skill_absdir(slug: str) -> Path:
+    return (Path(sys_config.save_dir) / _tenant_skill_relpath(slug)).resolve()
+
+
 def _dir_contains_symlink(path: Path) -> bool:
     """检查目录内是否包含任意符号链接子路径。"""
     return any(child.is_symlink() for child in path.rglob("*"))
@@ -760,14 +774,13 @@ def _validate_zip_paths(zip_file: zipfile.ZipFile) -> None:
 
 
 async def _generate_available_slug(repo: SkillRepository, base_slug: str) -> str:
-    root = get_skills_root_dir()
-    if not await repo.exists_slug(base_slug) and not (root / base_slug).exists():
+    if not await repo.exists_slug(base_slug) and not _tenant_skill_absdir(base_slug).exists():
         return base_slug
 
     idx = 2
     while True:
         candidate = f"{base_slug}-v{idx}"
-        if not await repo.exists_slug(candidate) and not (root / candidate).exists():
+        if not await repo.exists_slug(candidate) and not _tenant_skill_absdir(candidate).exists():
             return candidate
         idx += 1
 
@@ -1100,7 +1113,8 @@ async def _import_skill_dir_impl(
             await asyncio.to_thread(shutil.rmtree, temp_target)
         shutil.move(str(stage_dir), str(temp_target))
 
-        final_dir = skills_root / final_slug
+        final_dir = _tenant_skill_absdir(final_slug)
+        final_dir.parent.mkdir(parents=True, exist_ok=True)
         if final_dir.exists():
             await asyncio.to_thread(shutil.rmtree, temp_target, ignore_errors=True)
             raise ValueError(f"技能目录冲突，请重试: {final_slug}")
@@ -1115,7 +1129,7 @@ async def _import_skill_dir_impl(
                 tool_dependencies=parsed["tool_dependencies"],
                 mcp_dependencies=parsed["mcp_dependencies"],
                 skill_dependencies=parsed["skill_dependencies"],
-                dir_path=(Path("skills") / final_slug).as_posix(),
+                dir_path=_tenant_skill_relpath(final_slug).as_posix(),
                 share_config=share_config,
                 enabled=True,
                 created_by=created_by,
@@ -1327,7 +1341,7 @@ async def confirm_skill_install_draft(
             result = {"slug": slug, "success": False, "error": "无效 skill slug"}
             results.append(result)
             continue
-        if await repo.exists_slug(slug) or (skills_root / slug).exists():
+        if await repo.exists_slug(slug) or _tenant_skill_absdir(slug).exists():
             result = {"slug": slug, "success": False, "error": "Skill slug 已被占用，请重新解析安装"}
             results.append(result)
             continue
@@ -1351,7 +1365,8 @@ async def confirm_skill_install_draft(
 
                 temp_target = skills_root / f".{slug}.tmp-{uuid.uuid4().hex[:8]}"
                 shutil.move(str(stage_dir), str(temp_target))
-                final_dir = skills_root / slug
+                final_dir = _tenant_skill_absdir(slug)
+                final_dir.parent.mkdir(parents=True, exist_ok=True)
                 if final_dir.exists():
                     shutil.rmtree(temp_target, ignore_errors=True)
                     result = {"slug": slug, "success": False, "error": "Skill slug 已被占用，请重新解析安装"}
@@ -1368,7 +1383,7 @@ async def confirm_skill_install_draft(
                         tool_dependencies=parsed["tool_dependencies"],
                         mcp_dependencies=parsed["mcp_dependencies"],
                         skill_dependencies=parsed["skill_dependencies"],
-                        dir_path=(Path("skills") / slug).as_posix(),
+                        dir_path=_tenant_skill_relpath(slug).as_posix(),
                         share_config=normalized_share_config,
                         enabled=True,
                         created_by=operator.uid,
@@ -1772,7 +1787,7 @@ async def init_builtin_skills(db: AsyncSession, *, created_by: str = "system") -
 
     for spec in list_builtin_skill_specs():
         slug = spec["slug"]
-        existing = await repo.get_by_slug(slug)
+        existing = await repo.get_by_slug_unscoped(slug)
         if existing and not is_builtin_skill(existing):
             raise ValueError(f"内置 skill '{slug}' 与已存在的非内置 skill 冲突")
 
