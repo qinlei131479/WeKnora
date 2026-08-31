@@ -6647,7 +6647,7 @@ export default {
       steerHint: '当前步骤结束后优先执行这条消息',
       selectModel: '选择模型',
       todos: '待办',
-      files: '附件/文件',
+      files: '文件',
       artifacts: '产物',
       artifactCount: '{count} 个产物',
       openFile: '打开 {name}',

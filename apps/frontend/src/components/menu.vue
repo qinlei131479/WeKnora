@@ -50,7 +50,7 @@
                 v-for="(item, index) in topMenuItems" :key="index">
                 <t-tooltip :content="item.title" placement="right" :disabled="!uiStore.sidebarCollapsed">
                     <div @click="handleMenuClick(item.path)" :data-guide="`nav-${item.path}`"
-                        :class="['menu_item', item.childrenPath && item.childrenPath == currentpath ? 'menu_item_c_active' : isMenuItemActive(item.path) ? 'menu_item_active' : '']">
+                        :class="['menu_item', isMenuItemActive(item.path) ? 'menu_item_active' : '']">
                         <div class="menu_item-box">
                             <div class="menu_icon">
                                 <component
@@ -298,6 +298,7 @@ const {
     goToNewChat,
     setHistoryEngine,
     syncFromRoute,
+    isNewChatRoute,
 } = useChatEngineNav();
 const { isDark: themeIsDark } = useTheme();
 watch(() => route.fullPath, syncFromRoute, { immediate: true });
@@ -415,11 +416,7 @@ const isMenuItemActive = (itemPath: string): boolean => {
         case 'organizations':
             return currentRoute === 'organizationList';
         case 'creatChat':
-            return currentRoute === 'kbCreatChat' ||
-                currentRoute === 'globalCreatChat' ||
-                currentRoute === 'chat' ||
-                currentRoute === 'harnessCreatChat' ||
-                currentRoute === 'harnessChat';
+            return isNewChatRoute.value;
         case 'harness/workspace':
             return currentRoute === 'harnessWorkspace';
         case 'harness/dashboard':

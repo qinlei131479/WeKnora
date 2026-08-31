@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useChatThreadsStore } from '@harness/stores/chatThreads'
@@ -42,12 +42,17 @@ const handleTogglePinChat = async (threadId) => {
 }
 
 const handleLoadMore = () => chatThreadsStore.loadMoreThreads()
+
+const activeChatId = computed(() => {
+  if (route.name !== 'harnessChat') return null
+  return currentThreadId.value || route.params.thread_id || null
+})
 </script>
 
 <template>
   <ConversationNavSection
     :chats-list="threads"
-    :current-chat-id="currentThreadId || route.params.thread_id"
+    :current-chat-id="activeChatId"
     :has-more-chats="hasMoreThreads"
     :is-loading-more="isLoadingMoreThreads"
     :show-history="true"

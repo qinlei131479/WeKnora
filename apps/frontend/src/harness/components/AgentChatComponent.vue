@@ -3381,6 +3381,8 @@ watch(currentChatId, (threadId, oldThreadId) => {
     transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     &.has-active-thread {
+      box-sizing: border-box;
+      height: var(--header-height);
       border-bottom: 1px solid var(--gray-150);
     }
 
@@ -4170,15 +4172,19 @@ watch(currentChatId, (threadId, oldThreadId) => {
 .agent-nav-btn {
   display: flex;
   gap: 5px;
-  padding: 4px 7px;
-  height: 28px;
+  box-sizing: border-box;
+  padding: 0 10px;
+  height: 32px;
+  min-height: 32px;
   justify-content: center;
   align-items: center;
   border-radius: 6px;
   color: var(--gray-900);
   cursor: pointer;
   width: auto;
+  font-family: var(--app-font-family, inherit);
   font-size: 14px;
+  font-weight: 400;
   line-height: 20px;
   transition: background-color 0.3s;
   border: none;
@@ -4209,7 +4215,9 @@ watch(currentChatId, (threadId, oldThreadId) => {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  box-sizing: border-box;
   min-height: var(--header-height);
+  height: var(--header-height);
   padding: 4px 12px;
   background: var(--gray-25);
   border-bottom: 1px solid var(--gray-100);
@@ -4222,10 +4230,12 @@ watch(currentChatId, (threadId, oldThreadId) => {
 }
 
 .state-panel-header {
-  padding: 10px 14px;
-  padding-bottom: 0px;
-  background: transparent;
-  border-bottom: none;
+  box-sizing: border-box;
+  min-height: var(--header-height);
+  height: var(--header-height);
+  padding: 4px 12px;
+  background: var(--gray-25);
+  border-bottom: 1px solid var(--gray-100);
 }
 
 .state-panel-header-actions {
@@ -4264,9 +4274,11 @@ watch(currentChatId, (threadId, oldThreadId) => {
 
 .state-panel-title {
   min-width: 0;
+  font-family: var(--app-font-family, inherit);
   font-size: 14px;
   font-weight: 400;
-  color: var(--gray-500);
+  line-height: 20px;
+  color: var(--gray-900);
 }
 
 .state-section-meta {

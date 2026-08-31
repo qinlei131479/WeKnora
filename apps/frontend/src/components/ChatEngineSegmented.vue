@@ -67,14 +67,19 @@ const onSelect = (value: ChatEngine) => {
 .chat-engine-segmented__item {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 30px;
+  height: 30px;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 0 14px;
   border: 1px solid transparent;
   border-radius: 999px;
   background: transparent;
   color: var(--td-text-color-primary);
   font-family: var(--app-font-family);
   font-size: 13px;
+  font-weight: 500;
   line-height: 18px;
   cursor: pointer;
   white-space: nowrap;
@@ -92,7 +97,6 @@ const onSelect = (value: ChatEngine) => {
     background: color-mix(in srgb, var(--td-brand-color) 12%, var(--td-bg-color-container));
     border-color: color-mix(in srgb, var(--td-brand-color) 45%, transparent);
     color: var(--td-brand-color);
-    font-weight: 600;
   }
 
   &:disabled {
@@ -111,10 +115,13 @@ const onSelect = (value: ChatEngine) => {
   .chat-engine-segmented__item {
     flex: 1;
     min-width: 0;
+    min-height: 28px;
+    height: 28px;
     justify-content: center;
     gap: 4px;
-    padding: 5px 6px;
+    padding: 0 6px;
     font-size: 12px;
+    font-weight: 500;
     line-height: 16px;
 
     span {

@@ -760,8 +760,10 @@ watch(
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  box-sizing: border-box;
   padding: 4px 12px;
   min-height: var(--header-height);
+  height: var(--header-height);
   background: var(--gray-25);
   border-bottom: 1px solid var(--gray-100);
   flex-shrink: 0;
@@ -799,8 +801,10 @@ watch(
   min-width: 0;
   display: flex;
   align-items: center;
-  font-weight: 600;
+  font-family: var(--app-font-family, inherit);
+  font-weight: 400;
   font-size: 14px;
+  line-height: 20px;
   color: var(--gray-900);
 
   > span {
@@ -1031,9 +1035,10 @@ watch(
   align-items: center;
   flex: 1;
   min-width: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--app-font-family, inherit);
   font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
   color: var(--gray-800);
 }
 

@@ -1,6 +1,10 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { type ChatEngine, useChatEngineStore } from '@/stores/chatEngine'
+import { useChatThreadsStore } from '@harness/stores/chatThreads'
+import { isNewChatRouteName } from './chatEngineRoutes'
+
+export { isNewChatRouteName } from './chatEngineRoutes'
 
 export function useChatEngineNav() {
   const store = useChatEngineStore()
@@ -17,6 +21,7 @@ export function useChatEngineNav() {
   })
 
   const isChatSurface = computed(() => isRuntimeChatRoute.value || isPlatformChatRoute.value)
+  const isNewChatRoute = computed(() => isNewChatRouteName(route.name))
 
   const syncFromRoute = () => {
     if (isRuntimeChatRoute.value) {
@@ -38,8 +43,8 @@ export function useChatEngineNav() {
 
   const goToEngine = (engine: ChatEngine) => {
     const alreadyOnEngine = engine === 'runtime' ? isRuntimeChatRoute.value : isPlatformChatRoute.value
-    if (alreadyOnEngine && store.engine === engine) return
     store.setEngine(engine)
+    if (alreadyOnEngine) return
     if (engine === 'runtime') {
       const threadId = store.lastRuntimeThreadId
       if (threadId) {
@@ -54,21 +59,26 @@ export function useChatEngineNav() {
   }
 
   const goToNewChat = () => {
-    if (store.engine === 'runtime') {
+    const useRuntime = isRuntimeChatRoute.value || (!isPlatformChatRoute.value && store.engine === 'runtime')
+    if (useRuntime) {
+      store.setEngine('runtime')
       store.setLastRuntimeThreadId('')
+      useChatThreadsStore().setCurrentThreadId(null)
       void router.push({ name: 'harnessCreatChat' })
       return
     }
+    store.setEngine('platform')
     store.setLastPlatformChatId('')
     void router.push('/platform/creatChat')
   }
 
   const setHistoryEngine = (engine: ChatEngine) => {
-    if (store.engine === engine) return
-    store.setEngine(engine)
     if (isChatSurface.value) {
       goToEngine(engine)
+      return
     }
+    if (store.engine === engine) return
+    store.setEngine(engine)
   }
 
   return {
@@ -77,6 +87,7 @@ export function useChatEngineNav() {
     isChatSurface,
     isRuntimeChatRoute,
     isPlatformChatRoute,
+    isNewChatRoute,
     syncFromRoute,
     goToEngine,
     goToNewChat,
