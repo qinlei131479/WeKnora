@@ -4,6 +4,7 @@ import com.iptv.business.domain.KnowledgeTags;
 import com.iptv.business.domain.dto.FAQEntryQueryDTO;
 import com.iptv.business.domain.dto.page.KnowledgesPageDTO;
 import com.iptv.business.domain.vo.FAQEntryVO;
+import com.iptv.business.domain.vo.KnowledgeSpansVO;
 import com.iptv.business.domain.vo.KnowledgesFolderVO;
 import com.iptv.business.domain.vo.KnowledgesVO;
 import com.iptv.business.service.KnowledgesService;
@@ -92,5 +93,12 @@ public class KnowledgesController {
     public R<Void> deleteFAQById(@RequestParam String id) {
         knowledgesService.deleteFAQById(id);
         return R.ok();
+    }
+
+    @Operation(summary = "查询知识处理Span树", description = "获取知识文档解析的Span树（含历史尝试），支持?attempt=N查看历史尝试")
+    @GetMapping("/spans")
+    @RequiresPermissions("business:knowledges:query")
+    public R<KnowledgeSpansVO> querySpansByKnowledgeId(@RequestParam String knowledgeId, @RequestParam(required = false) Integer attempt) {
+        return R.ok(knowledgesService.querySpansByKnowledgeId(knowledgeId, attempt));
     }
 }

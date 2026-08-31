@@ -3,6 +3,7 @@ package com.iptv.business.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
@@ -15,6 +16,7 @@ import com.iptv.business.domain.*;
 import com.iptv.business.domain.dto.FAQEntryQueryDTO;
 import com.iptv.business.domain.dto.page.KnowledgesPageDTO;
 import com.iptv.business.domain.vo.FAQEntryVO;
+import com.iptv.business.domain.vo.KnowledgeSpansVO;
 import com.iptv.business.domain.vo.KnowledgesFolderVO;
 import com.iptv.business.domain.vo.KnowledgesVO;
 import com.iptv.business.pgmapper.*;
@@ -59,6 +61,7 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
     private final KnowledgeTagsMapper knowledgeTagsMapper;
     private final KnowledgeTagRelationsMapper knowledgeTagRelationsMapper;
     private final StorageBackendFileServiceFactory storageBackendFileServiceFactory;
+    private final KnowledgeProcessingSpansMapper knowledgeProcessingSpansMapper;
 
     @Override
     public TableDataInfo<KnowledgesVO> queryPage(KnowledgesPageDTO dto, PageDTO pg) {
@@ -339,6 +342,287 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
     @Override
     public void deleteFAQById(@Nonnull String id) {
         chunksMapper.deleteById(id);
+    }
+
+    @Override
+    public KnowledgeSpansVO querySpansByKnowledgeId(@Nonnull String id, Integer attempt) {
+        log.info("开始查询知识处理Span树: {}, attempt={}", id, attempt);
+
+        // 1. 查询知识条目
+        Knowledges knowledge = this.baseMapper.selectById(id);
+        if (BeanUtil.isEmpty(knowledge)) {
+            throw new ServiceException("知识条目不存在");
+        }
+
+        // 2. 获取最新尝试号
+        Integer latestAttempt = knowledgeProcessingSpansMapper.selectLatestAttempt(id);
+        if (ObjectUtil.isNull(latestAttempt)) {
+            latestAttempt = 0;
+        }
+
+        // 3. 确定当前尝试号
+        int currentAttempt = (attempt != null && attempt > 0) ? attempt : latestAttempt;
+
+        // 4. 查询Span列表
+        List<KnowledgeProcessingSpans> spanList = Collections.emptyList();
+        if (currentAttempt > 0) {
+            spanList = knowledgeProcessingSpansMapper.selectListByAttempt(id, currentAttempt);
+            if (CollUtil.isEmpty(spanList)) {
+                spanList = Collections.emptyList();
+            }
+        }
+
+        // 5. 构建Span树
+        SpanTreeBuildResult result = buildSpanTree(id, currentAttempt, spanList, knowledge.getParseStatus());
+
+        // 6. 构建响应VO
+        KnowledgeSpansVO vo = new KnowledgeSpansVO();
+        vo.setKnowledgeId(id);
+        vo.setAttempt(currentAttempt);
+        vo.setLatestAttempt(latestAttempt);
+        vo.setParseStatus(knowledge.getParseStatus());
+        vo.setCurrentAttempt(currentAttempt);
+        vo.setCurrentStage(result.currentStage);
+        vo.setTrace(convertToTreeNode(result.root));
+
+        // 7. 构建错误信息
+        KnowledgeSpansVO.SpanErrorVO lastError = buildLastError(
+                currentAttempt,
+                latestAttempt,
+                knowledge.getParseStatus(),
+                knowledge.getErrorMessage(),
+                result.lastFailure
+        );
+        vo.setLastError(lastError);
+
+        log.info("知识处理Span树查询完成: {}, attempt={}", id, currentAttempt);
+        return vo;
+    }
+
+    /**
+     * Span树构建结果
+     */
+    private static class SpanTreeBuildResult {
+        KnowledgeProcessingSpans root;
+        String currentStage;
+        KnowledgeProcessingSpans lastFailure;
+        Map<String, List<KnowledgeProcessingSpans>> childrenMap;
+
+        SpanTreeBuildResult(KnowledgeProcessingSpans root, String currentStage,
+                           KnowledgeProcessingSpans lastFailure,
+                           Map<String, List<KnowledgeProcessingSpans>> childrenMap) {
+            this.root = root;
+            this.currentStage = currentStage;
+            this.lastFailure = lastFailure;
+            this.childrenMap = childrenMap;
+        }
+    }
+
+    /**
+     * 构建Span树（参照Go代码buildSpanTree）
+     */
+    private SpanTreeBuildResult buildSpanTree(String knowledgeId, int attempt,
+                                              List<KnowledgeProcessingSpans> rows,
+                                              String parseStatus) {
+        Date now = new Date();
+
+        // 构建节点查找表，识别根节点
+        Map<String, KnowledgeProcessingSpans> nodes = new HashMap<>();
+        KnowledgeProcessingSpans rootRow = null;
+        Map<String, KnowledgeProcessingSpans> stageRowByName = new HashMap<>();
+        String currentStage = null;
+        KnowledgeProcessingSpans lastFailure = null;
+
+        for (KnowledgeProcessingSpans span : rows) {
+            nodes.put(span.getSpanId(), span);
+
+            // 识别根节点
+            if ("root".equals(span.getKind()) && rootRow == null) {
+                rootRow = span;
+            }
+
+            // 识别阶段节点
+            if ("stage".equals(span.getKind())) {
+                stageRowByName.put(span.getName(), span);
+            }
+
+            // 识别当前运行中的阶段
+            if ("running".equals(span.getStatus()) && "stage".equals(span.getKind()) && currentStage == null) {
+                currentStage = span.getName();
+            }
+
+            // 识别最后一个失败的节点
+            if ("failed".equals(span.getStatus())) {
+                lastFailure = span;
+            }
+        }
+
+        // 根据parse_status确定合成阶段的状态
+        String syntheticStatus = "pending";
+        if ("completed".equals(parseStatus)) {
+            syntheticStatus = "done";
+        } else if ("failed".equals(parseStatus)) {
+            syntheticStatus = "failed";
+        }
+
+        // 如果没有根节点，合成一个
+        if (rootRow == null) {
+            rootRow = new KnowledgeProcessingSpans();
+            rootRow.setKnowledgeId(knowledgeId);
+            rootRow.setAttempt(attempt);
+            rootRow.setSpanId("");
+            rootRow.setName("knowledge_processing");
+            rootRow.setKind("root");
+            rootRow.setStatus(syntheticStatus);
+            rootRow.setCreatedAt(now);
+            rootRow.setUpdatedAt(now);
+        }
+
+        // 构建子节点映射
+        Map<String, List<KnowledgeProcessingSpans>> childrenMap = new HashMap<>();
+
+        // 链接真实子节点到父节点
+        for (KnowledgeProcessingSpans span : rows) {
+            if (span == rootRow) {
+                continue;
+            }
+
+            String parentSpanId = span.getParentSpanId();
+            if (parentSpanId == null || parentSpanId.isEmpty()) {
+                // 没有父节点的顶层节点，附加到根节点
+                childrenMap.computeIfAbsent(rootRow.getSpanId(), k -> new ArrayList<>()).add(span);
+                continue;
+            }
+
+            KnowledgeProcessingSpans parent = nodes.get(parentSpanId);
+            if (parent == null) {
+                // 孤儿节点，附加到根节点
+                childrenMap.computeIfAbsent(rootRow.getSpanId(), k -> new ArrayList<>()).add(span);
+            } else {
+                childrenMap.computeIfAbsent(parentSpanId, k -> new ArrayList<>()).add(span);
+            }
+        }
+
+        // 合成缺失的阶段节点作为根节点的子节点
+        List<String> allStages = Arrays.asList("docreader", "chunking", "embedding", "multimodal", "postprocess");
+        for (String stageName : allStages) {
+            if (stageRowByName.containsKey(stageName)) {
+                continue;
+            }
+
+            KnowledgeProcessingSpans placeholder = new KnowledgeProcessingSpans();
+            placeholder.setKnowledgeId(knowledgeId);
+            placeholder.setAttempt(attempt);
+            placeholder.setName(stageName);
+            placeholder.setKind("stage");
+            placeholder.setStatus(syntheticStatus);
+            placeholder.setCreatedAt(now);
+            placeholder.setUpdatedAt(now);
+
+            childrenMap.computeIfAbsent(rootRow.getSpanId(), k -> new ArrayList<>()).add(placeholder);
+        }
+
+        return new SpanTreeBuildResult(rootRow, currentStage, lastFailure, childrenMap);
+    }
+
+    /**
+     * 将Span实体转换为树节点VO
+     */
+    private KnowledgeSpansVO.SpanTreeNodeVO convertToTreeNode(KnowledgeProcessingSpans span) {
+        return convertToTreeNode(span, new HashMap<>());
+    }
+
+    /**
+     * 递归转换Span树为VO树
+     */
+    private KnowledgeSpansVO.SpanTreeNodeVO convertToTreeNode(KnowledgeProcessingSpans span,
+                                                               Map<String, List<KnowledgeProcessingSpans>> childrenMap) {
+        if (span == null) {
+            return null;
+        }
+
+        KnowledgeSpansVO.SpanTreeNodeVO node = new KnowledgeSpansVO.SpanTreeNodeVO();
+        node.setSpanId(span.getSpanId());
+        node.setParentSpanId(span.getParentSpanId());
+        node.setName(span.getName());
+        node.setKind(span.getKind());
+        node.setStatus(span.getStatus());
+        node.setInput(parseJsonField(span.getInput()));
+        node.setOutput(parseJsonField(span.getOutput()));
+        node.setMetadata(parseJsonField(span.getMetadata()));
+        node.setErrorCode(span.getErrorCode());
+        node.setErrorMessage(span.getErrorMessage());
+        node.setStartedAt(span.getStartedAt());
+        node.setFinishedAt(span.getFinishedAt());
+        node.setDurationMs(span.getDurationMs());
+        node.setCreatedAt(span.getCreatedAt());
+        node.setUpdatedAt(span.getUpdatedAt());
+
+        // 递归转换子节点
+        List<KnowledgeProcessingSpans> children = childrenMap.get(span.getSpanId());
+        if (children != null && !children.isEmpty()) {
+            List<KnowledgeSpansVO.SpanTreeNodeVO> childNodes = new ArrayList<>();
+            for (KnowledgeProcessingSpans child : children) {
+                childNodes.add(convertToTreeNode(child, childrenMap));
+            }
+            node.setChildren(childNodes);
+        }
+
+        return node;
+    }
+
+    /**
+     * 解析JSON字段为Object
+     */
+    private Object parseJsonField(String json) {
+        if (StrUtil.isBlank(json)) {
+            return null;
+        }
+        try {
+            return JSONUtil.parse(json);
+        } catch (Exception e) {
+            log.warn("解析JSON字段失败: {}", e.getMessage());
+            return json;
+        }
+    }
+
+    /**
+     * 构建最后错误信息
+     */
+    private KnowledgeSpansVO.SpanErrorVO buildLastError(int currentAttempt, int latestAttempt,
+                                                         String parseStatus, String errorMessage,
+                                                         KnowledgeProcessingSpans spanFailure) {
+        // 如果有Span失败，优先使用Span的错误信息
+        if (spanFailure != null) {
+            KnowledgeSpansVO.SpanErrorVO error = new KnowledgeSpansVO.SpanErrorVO();
+            error.setStage(spanFailure.getName());
+            error.setCode(spanFailure.getErrorCode());
+            error.setMessage(spanFailure.getErrorMessage());
+            error.setName(spanFailure.getName());
+            error.setErrorCode(spanFailure.getErrorCode());
+            error.setErrorMessage(spanFailure.getErrorMessage());
+            error.setFinishedAt(spanFailure.getFinishedAt());
+            return error;
+        }
+
+        // 否则，如果是最终尝试且parse_status为failed，使用knowledge的错误信息
+        if (currentAttempt != latestAttempt || !"failed".equals(parseStatus) || StrUtil.isBlank(errorMessage)) {
+            return null;
+        }
+
+        String errorCode = "UNKNOWN";
+        if ("Task interrupted due to application restart".equalsIgnoreCase(errorMessage.trim())) {
+            errorCode = "SERVER_RESTART";
+        }
+
+        KnowledgeSpansVO.SpanErrorVO error = new KnowledgeSpansVO.SpanErrorVO();
+        error.setStage("knowledge");
+        error.setCode(errorCode);
+        error.setMessage(errorMessage);
+        error.setName("knowledge");
+        error.setErrorCode(errorCode);
+        error.setErrorMessage(errorMessage);
+        return error;
     }
 
     /**
