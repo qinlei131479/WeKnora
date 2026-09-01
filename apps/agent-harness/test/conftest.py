@@ -27,3 +27,4 @@ def _isolate_p2_machine_flags(monkeypatch: pytest.MonkeyPatch):
     """单测不吃本机 .env 的 tenant 开关，避免部门匹配用例被连带改写。"""
     monkeypatch.delenv("HARNESS_TENANT_SCOPE", raising=False)
     monkeypatch.delenv("HARNESS_DEPARTMENT_ENFORCED", raising=False)
+    monkeypatch.delenv("HARNESS_WEKNORA_KB", raising=False)

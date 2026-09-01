@@ -2,7 +2,9 @@
 
 > 本文档是分阶段执行手册。**每个阶段的验收门禁全绿之前，不进入下一阶段。**
 >
-> **收尾约定**：P0–P9 全部完成且门禁通过后，**删除本文件**（`WEKNORA_YUXI_INTEGRATION_PLAN.md`），不要作为长期文档留在仓库。协议与实现以代码和正式文档为准。
+> **P8 已停止执行**（IM / 网页嵌入 / OpenAPI 不接到 yuxi）。本计划范围为 **P0–P7 与 P9**。
+>
+> **收尾约定**：P0–P7 与 P9 全部完成且门禁通过后，**删除本文件**（`WEKNORA_YUXI_INTEGRATION_PLAN.md`），不要作为长期文档留在仓库。协议与实现以代码和正式文档为准。
 >
 > 环境：本机（[docker-compose-mac.yml](docker-compose-mac.yml)），Postgres 容器 `postgres17`，业务库 `WeKnora`。
 >
@@ -70,13 +72,13 @@ flowchart TB
     Runtime --> Skills
     Runtime --> Sandbox
     Runtime -->|"读模型配置"| Models
-    Channels -->|"后端=harness 时转发"| Runtime
+    Channels --> Sessions
 ```
 
 ### 0.2 改造原则
 
 1. **每次变更力求最小化**，能用现有抽象层就不新造结构。
-2. **WeKnora 非必要不改动**，优先改 yuxi（Python）。确需改 WeKnora 的范围收敛为 P0/P3 的最小全文接口（仅在 chunks 方案失败时）、P7 内部模型代理与 P8 对外入口分流。
+2. **WeKnora 非必要不改动**，优先改 yuxi（Python）。确需改 WeKnora 的范围收敛为 P0/P3 的最小全文接口（仅在 chunks 方案失败时）与 P7 内部模型代理。**不改 IM / 嵌入 / OpenAPI 分流（原 P8 已停止）。**
 3. **所有代码改动带开关**，保证任何阶段都能一键回滚。
 4. **禁止删除或覆盖现有业务数据**：本计划内不得对现有业务表执行 `DROP TABLE`、`TRUNCATE` 或不可逆 `DELETE`；不得删除 MinIO、工作区目录和索引中的历史数据。
 5. 每阶段结束产出一份可重复执行的验收清单。
@@ -96,6 +98,7 @@ flowchart TB
 | 知识库适配深度 | **全能力**（检索 + 打开文档 + 文件内定位 + 下载 + 文件列表） |
 | yuxi 知识库注册表 | **不保留**，`list_kbs` 实时透传 WeKnora |
 | 对话历史 | **不聚合、不迁移，各自独立查询和展示** |
+| 对外入口（IM / 嵌入 / API） | **保持 WeKnora 原路径**，不接到 yuxi。原 P8 停止执行 |
 | 部门概念 | **移除** |
 | 模型供应商 | **统一到 WeKnora**，yuxi 通过内部模型代理调用，不读取明文密钥 |
 | 下载权限 | **接受限制**（Viewer 用户的智能体无法下载原件） |
@@ -116,7 +119,8 @@ flowchart TB
 | Redis | WeKnora 自己的 DB 号 | `AGENT_HARNESS_REDIS_DB`（默认 2） | 可分库；P0/P1 缓存键带前缀即可 |
 | `HARNESS_WEKNORA_IDENTITY` | 不使用 | 默认关 | 打开后 harness 接受 WeKnora JWT 并投影 |
 | `HARNESS_LEGACY_JWT_ENABLED` | 不使用 | 默认开 | **保持开**。独立登录签发的是 yuxi JWT，关掉后本地登录立刻不可用 |
-| `HARNESS_P0_RUN_TOKEN_STORE` / `HARNESS_P0_CHECK_AUTH_TOKENS` | 不使用 | 默认关 | Worker 透传 JWT；P3 调 KB 前再开 |
+| `HARNESS_P0_RUN_TOKEN_STORE` / `HARNESS_P0_CHECK_AUTH_TOKENS` | 不使用 | P3 打开 | Worker 透传 JWT；调 WeKnora KB 必须打开 |
+| `HARNESS_WEKNORA_KB` / `WEKNORA_BASE_URL` | 不使用 | P3 打开 | harness API/Worker 调 `http://host.docker.internal:9980/api/v1`（本机 `make dev-app`）。空 URL 时启动打 error |
 | `HARNESS_LOCAL_LOGIN_ENABLED` | 不使用 | 默认开；本机已开 | **保持开**。false 时密码/OIDC/初始化/用户增删改 404。本计划不再要求关闭 |
 | 前端 Token | `weknora_token` | 只读 `weknora_token`；启动/登出/切空间会清掉遗留的 `harness_user_token` | 不再双 token。独立登录若写入，也写 `weknora_token`，避免遮蔽 WeKnora JWT |
 | 前端代理 | Vite `:9988` → `APP_PORT`（kjsc 9980） | `VITE_HARNESS_PROXY_TARGET` → `:5050` | 与 `.env.kjsc.example` 的 `APP_PORT=9980` 对齐。Docker 容器内仍听 8080 |
@@ -138,10 +142,7 @@ flowchart TB
 | P5 | 会话存储与查询隔离验证 | 两侧，仅验证/修补 | 低 |
 | P6 | 数据总览分系统统计 | yuxi | 中 |
 | P7 | 模型供应商统一到 WeKnora（内部模型代理） | WeKnora + yuxi | 高 |
-| P8A | 单个 IM 渠道接入 yuxi | WeKnora + yuxi | 高 |
-| P8B | 网页嵌入接入 yuxi | WeKnora + yuxi | 高 |
-| P8C | API 接入 yuxi | WeKnora + yuxi | 高 |
-| P8D | 推广到其他 IM 渠道 | WeKnora + yuxi | 中 |
+| P8 | ~~对外入口接入 yuxi~~ **停止执行** | — | — |
 | P9 | 废弃能力停用与数据保留 | 两侧 | 低 |
 
 ---
@@ -213,7 +214,7 @@ IM、嵌入访客和 API external user 不是 `users.id`，不能套用 P1 的�
 | P0.1 JWT 传递 | **通过** | 开关 `HARNESS_P0_RUN_TOKEN_STORE` / `HARNESS_P0_CHECK_AUTH_TOKENS` 默认关。打开后 API 把 Bearer 放入 Redis `p0:run-token:{run_id}`，TTL ≤ JWT 剩余寿命（最长 24h），不写 `input_payload`/日志。Worker 复验；过期/吊销标 `weknora_token_invalid` 并终止；缺失 token 走旧路径。任务结束删键。单测覆盖 enqueue、TTL、吊销、过期失败、缺失放行。 |
 | P0.2 全文 | **通过（方案确定）** | `GET /knowledge/:id` 仍只是元数据。采用分页 `/chunks/:knowledge_id`（`page_size` 上限 100），按 `chunk_index`/`start_at`/`end_at` 重建；偏移全 0 时回退顺序拼接；FAQ=entry、Wiki=page，不拼成一篇文章。本机无 document 样本（0 knowledge / 0 chunk），未新增 WeKnora 全文接口。有文档后重跑 `apps/agent-harness/scripts/p0_verify.py`。 |
 | P0.3 模型 | **通过（协议冻结）** | 内部代理协议：`task ∈ {chat,chat_stream,embedding,rerank}`，只传 `model_id`+`tenant_id`+输入，禁止携带密钥。现网 `POST /api/v1/models/:id/debug` 已能在服务端持钥调用 KnowledgeQA ChatStream / Embed / Rerank，且不写 `sessions/messages`；`GET /models` 经 DTO 剥离 `APIKey`/`AppSecret`。禁止用 `knowledge-chat`/`agent-chat` 当代理。P0 **未**对现网发起 debug 调用。真正的内部代理在 P7 实现。 |
-| P0.4 渠道 | **通过（协议冻结）** | HS256 内部断言：`iss=weknora`，`aud=weknora-harness-internal`，claims=`principal_type/principal_id/tenant_id/backend_agent_id/exp`。`principal_type`：`web_user`/`im_user`/`embed_session`/`embed_visitor`/`api_external_user`。Agent 绑定字段名冻结为 `harness_agent_slug`（P8 再落库）。事件桥：sse/webhook/poll；run 事件 `metadata/chunk/interrupt/error/end`。`stop`/`tool_step`/`approval`/`ask_user_question` 支持；`mcp_oauth` 降级。`backend=harness` 禁止 `resolveSession()`、禁止写 WeKnora `sessions/messages`。未接入现网 IM。 |
+| P0.4 渠道 | **通过（协议冻结）** | HS256 内部断言协议已冻结。**本计划不再落库、不接现网渠道**（P8 已停止）。未接入现网 IM。 |
 | 回滚 | **通过** | 开关未写入 `docker-compose-mac.yml`，默认关闭即恢复验证前行为。Redis 键有 TTL，无业务表 DDL/DML。 |
 
 回滚方法：保持或删除 `HARNESS_P0_RUN_TOKEN_STORE`、`HARNESS_P0_CHECK_AUTH_TOKENS`；无需回滚 SQL。
@@ -239,7 +240,7 @@ Agent 侧 7 个知识库工具全部经由 `yuxi.knowledge.runtime.knowledge_bas
 
 - [apps/agent-harness/package/yuxi/agents/toolkits/kbs/tools.py](apps/agent-harness/package/yuxi/agents/toolkits/kbs/tools.py)
 
-### 2.2 WeKnora sessions 已是用户级（P5 / P8 的基础）
+### 2.2 WeKnora sessions 已是用户级（P5 的基础）
 
 ```84:87:internal/types/session.go
 	TenantID uint64 `json:"tenant_id"   gorm:"index"`
@@ -250,12 +251,12 @@ Agent 侧 7 个知识库工具全部经由 `yuxi.knowledge.runtime.knowledge_bas
 
 注释明确 IM/API 外部用户、嵌入访客都复用这一列。
 
-### 2.3 yuxi 已有统一对外调用层（P8 的基础）
+### 2.3 yuxi 已有统一对外调用层（原 P8 预备，本计划不执行）
 
 - [apps/agent-harness/server/routers/agent_invocation_channel_router.py](apps/agent-harness/server/routers/agent_invocation_channel_router.py) — 纯文本 Channel 入口
 - [apps/agent-harness/server/routers/agent_invocation_call_router.py](apps/agent-harness/server/routers/agent_invocation_call_router.py) — OpenAI 兼容接口
 
-底层统一收敛到 `submit_run_command(RunOrigin, ...)`。P8 不需要在 yuxi 侧从零开发。
+底层统一收敛到 `submit_run_command(RunOrigin, ...)`。IM / 嵌入 / OpenAPI **不在本计划接到 yuxi**；上述入口保持现状，不作 WeKnora 分流改造。
 
 ### 2.4 nginx 直连 harness，Go 不参与鉴权
 
@@ -899,6 +900,37 @@ yuxi 原生知识库（milvus / dify / notion）**保持可用**，作为回滚�
 | 9 | document / FAQ / Wiki | 按类型能力矩阵工作或明确降级 |
 | 10 | API 与 Worker 容器 | 均能通过 `WEKNORA_BASE_URL` 调用且不缓存跨租户 KB 列表 |
 
+### P3 执行记录（2026-08-31 / P3.5 2026-09-01）
+
+| 项 | 状态 | 说明 |
+| --- | --- | --- |
+| P3.1 全文通道 | **按 P0.2 落地** | 分页 `GET /chunks/:knowledge_id`（page_size≤100），`reconstruct_document_text` 重建 document；FAQ=entry、Wiki=page，不拼接。 |
+| P3.2 适配器 | **已落地** | `kb_type=weknora`，继承 `KnowledgeBase` 非 ReadOnlyConnectors。写入抛「由 WeKnora 管理」。JWT 来自 `get_request_access_token()`，Worker 依赖 `HARNESS_P0_RUN_TOKEN_STORE`。 |
+| P3.3 list_kbs | **实时透传，接入模式不合并原生库** | `HARNESS_WEKNORA_KB=true` 时 `get_databases_by_user` **只**拉 WeKnora 列表；UUID `kb_id` 跳过 `h_knowledge_bases`。关开关后仍走 `get_databases()` / `h_knowledge_bases`（独立部署）。旧 `kb_*` 用 `HARNESS_WEKNORA_KB_MAP` 映射，未映射告警。 |
+| P3.4 工具 | **已接通** | list/query/search/open/find/download；`get_mindmap` 对 WeKnora UUID 降级说明。Viewer 下载 403 返回权限提示。 |
+| 开关 | **本机已开** | `.env` / `.env.kjsc.example`：`HARNESS_WEKNORA_KB`、`WEKNORA_BASE_URL=http://host.docker.internal:9980/api/v1`、P0 run-token。API 与 Worker 容器均已注入。 |
+
+回滚：关 `HARNESS_WEKNORA_KB`，list/工具回到 `h_knowledge_bases`。
+
+### P3.5 执行记录（2026-09-01）
+
+现场对 `测试wk`（document，`70c9175f-…`，文件 `智能体中台2.0项目.md`）走适配器 + WeKnora `/api/v1`。单测 `test/unit/p3` + `test/unit/p2`：**37 passed**。
+
+| # | 结果 | 证据 |
+| --- | --- | --- |
+| 1 | **通过** | `aquery("智能体中台")` 5 条命中，`file_id`/`source`/`kb_id` 齐全，可喂 `KbResultGroupedList` → 片段弹窗 / `FileDetailModal` |
+| 2 | **通过** | 租户 10001 JWT 读租户 10000 的 KB → `无权访问该知识库（无权限或跨租户）` |
+| 3 | **通过** | 同上令牌 hybrid-search → 同一权限错误 |
+| 4 | **通过** | list / query / search_file / open（905 字窗口）/ find（windows）/ owner 下载 6935 字节；mindmap 对 UUID 降级 |
+| 5 | **通过** | 注册 Viewer `p35.viewer@local.test` 并加入租户 10000 后下载 → Contributor 权限提示，不是堆栈 |
+| 6 | **通过** | `h_knowledge_bases` 仍有 `kb_a207pwldc4` / milvus /「测试」；单测 `test_get_databases_by_user_standalone_keeps_native` |
+| 7 | **通过** | 过期 JWT → 「令牌无效或已过期」；`ttl_for_access_token` = JWT 剩余秒数（≤24h） |
+| 8 | **通过** | 未映射 `kb_*` 告警并保留；`deep-research` 已绑定 WeKnora UUID |
+| 9 | **通过** | document 走重建正文；空 FAQ/Wiki 库 `P35-FAQ-gate` / `P35-Wiki-gate` 下载明确降级 |
+| 10 | **通过** | API 与 Worker 均 `WEKNORA_BASE_URL=http://host.docker.internal:9980/api/v1`，对 `/health` 200；`fetch_weknora_summaries` 每次实时请求，无跨租户列表缓存 |
+
+验收留下的数据（按计划不删用户/库）：Viewer `p35.viewer@local.test`（租户 10000 只读）；空库 `P35-FAQ-gate`、`P35-Wiki-gate`。临时 `auth_tokens` 已吊销。
+
 ---
 
 ## P4 · 前端收口
@@ -940,14 +972,16 @@ yuxi 原生知识库（milvus / dify / notion）**保持可用**，作为回滚�
 
 ### P5.1 对外入口的数据归属
 
-未来接入 IM、网页嵌入和 API 时，由配置的 `backend` 决定唯一存储：
+IM / 网页嵌入 / OpenAPI **本计划不接到 yuxi**（见 P8 停止执行）。P5 只验证 Web 控制台里两套 Agent 各自写各自的表。
+
+若日后另立需求再接渠道，存储边界仍是：
 
 ```text
-backend=weknora -> WeKnora Agent -> sessions/messages
-backend=harness -> yuxi Agent -> h_conversations/h_messages/h_agent_runs
+WeKnora Agent -> sessions/messages
+yuxi Agent    -> h_conversations/h_messages/h_agent_runs
 ```
 
-`backend=harness` 路径不得调用 WeKnora `resolveSession()`，不得生成 WeKnora 空壳 session。WeKnora 可以保留渠道/嵌入/API 的路由绑定记录，但不保存该路径的会话和消息。
+不得为 yuxi 路径生成 WeKnora 空壳 session。
 
 ### P5.2 验收门禁
 
@@ -1023,55 +1057,23 @@ backend=harness -> yuxi Agent -> h_conversations/h_messages/h_agent_runs
 
 ---
 
-## P8 · 对外入口接入 yuxi（并存且数据独立）
+## P8 · 对外入口接入 yuxi — **停止执行**
 
-> P8 硬依赖 P0 外部协议、P1 身份、P2 租户、P3 知识库、P5 会话隔离和 P7 模型代理全部通过。IM、网页嵌入和 API 是三套不同协议，必须分开实施和验收。
+> **2026-08-31 调整：本阶段从执行手册撤销。不再实施、不再验收、不作为 P9 前置。禁止按原方案开工。**
 
-### P8.0 公共协议
+**现行约定**
 
-- 每个入口配置 `backend = weknora | harness` 与 `backend_agent_id`
-- WeKnora Agent 使用 UUID；harness 使用 yuxi `agent_slug`，不做隐式猜测
-- WeKnora → harness 使用 P0.4 的短时内部身份断言，不能用不存在的外部用户 JWT
-- `backend=harness` 只写 yuxi 会话表；路由分流必须发生在 WeKnora `resolveSession()` 之前
-- 默认 `backend=weknora`，每类入口均有独立功能开关和回滚路径
+- IM、网页嵌入、OpenAPI **继续走 WeKnora 原 Agent**，不增加 `backend=harness` 分流。
+- Web 控制台里的 yuxi 智能体不受影响（P1–P7 / P9 照常）。
+- P0.4 冻结的内部断言 / 事件桥协议仅作技术档案，**不落库、不接现网渠道**。若日后要接，必须另立需求。
 
-### P8A · 单个 IM 渠道
-
-先选择一个渠道，接入 [apps/agent-harness/server/routers/agent_invocation_channel_router.py](apps/agent-harness/server/routers/agent_invocation_channel_router.py)。实现：
-
-- 文本消息提交；
-- yuxi Run SSE/Webhook/轮询到 WeKnora `StreamSender` 的事件桥接；
-- tool step、final answer、error 和 cancel/stop 映射；
-- 文件/图片、审批、`ask_user_question`、MCP OAuth 的支持或清晰降级；
-- 渠道身份映射为 yuxi 外部 principal，不能要求存在 `users`/`h_users` 注册账号。
-
-### P8B · 网页嵌入
-
-独立适配嵌入访客令牌、浏览器流式协议和 session 生命周期。嵌入产生的 harness 会话只保存在 yuxi，不进入 WeKnora `sessions/messages`。
-
-### P8C · API
-
-独立适配 WeKnora API Key / external-user principal 与 yuxi Agent Call。同步、异步和 OpenAI-compatible 协议分别验收；当前 yuxi 不支持的流式模式必须实现后再宣称兼容。
-
-### P8D · 推广渠道
-
-P8A 全部门禁通过后，再把公共适配层推广到其他 IM 渠道；不得复制九份业务逻辑。
-
-### P8 验收门禁
-
-- [ ] `backend=weknora` 原有路径零回归
-- [ ] `backend=harness` 不创建 WeKnora session/message
-- [ ] 外部 principal 不能越租户、不能冒充注册用户
-- [ ] Agent UUID/slug 绑定明确，错误绑定启动或保存时即拒绝
-- [ ] 流式、工具展示、停止、错误符合入口协议
-- [ ] 文件/图片、审批、ask-user、MCP OAuth 有测试或明确降级
-- [ ] IM、嵌入、API 分别有独立门禁，上一类未完成不得开始下一类
+**原方案（归档，勿执行）** 原计划把单个 IM 渠道、网页嵌入、OpenAPI 以及其余 IM 渠道接到 yuxi `agent_invocation_*`，并用 `backend=weknora|harness` 分流。该路径已取消。
 
 ---
 
 ## P9 · 废弃能力停用与数据保留
 
-> **前置条件：P3–P8D 全部稳定运行一段时间。P9 不执行物理删表、不删除历史文件、不清空业务数据。**
+> **前置条件：P3–P7 全部稳定运行一段时间（P8 不在范围内）。P9 不执行物理删表、不删除历史文件、不清空业务数据。**
 
 ### P9.1 yuxi 旧知识库能力
 
@@ -1110,7 +1112,7 @@ P8A 全部门禁通过后，再把公共适配层推广到其他 IM 渠道；不
 
 ### P9.6 计划文档收尾
 
-- [ ] P0–P9 全部门禁通过后，从仓库删除 `WEKNORA_YUXI_INTEGRATION_PLAN.md`（本文件仅为执行手册，完成后不再保留）
+- [ ] P0–P7 与 P9 全部门禁通过后（P8 不在范围内），从仓库删除 `WEKNORA_YUXI_INTEGRATION_PLAN.md`（本文件仅为执行手册，完成后不再保留）
 
 ---
 
