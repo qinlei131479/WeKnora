@@ -9,6 +9,52 @@
   "component": {
     "headerSearch": {
       "input.placeholder": "Search Anything"
+    },
+    "kbSettings": {
+      "parser": {
+        "default": "Default",
+        "engines": {
+          "builtin": {
+            "name": "Built-in"
+          },
+          "markitdown": {
+            "name": "MarkItDown"
+          },
+          "mineru": {
+            "name": "MinerU"
+          },
+          "mineru_cloud": {
+            "name": "MinerU Cloud"
+          },
+          "opendataloader": {
+            "name": "OpenDataLoader"
+          },
+          "paddleocr_vl": {
+            "name": "PaddleOCR-VL"
+          },
+          "paddleocr_vl_cloud": {
+            "name": "PaddleOCR-VL Cloud"
+          },
+          "simple": {
+            "name": "Simple"
+          },
+          "weknoracloud": {
+            "name": "WeKnora Cloud"
+          }
+        },
+        "fileTypeAudiovisual": "Audio",
+        "fileTypeCsv": "CSV Files",
+        "fileTypeEbook": "E-books",
+        "fileTypeExcel": "Excel Spreadsheets",
+        "fileTypeImage": "Images",
+        "fileTypeJson": "JSON Files",
+        "fileTypePdf": "PDF Documents",
+        "fileTypePpt": "Presentations",
+        "fileTypeText": "Plain Text",
+        "fileTypeWebArchive": "Web Archives",
+        "fileTypeWord": "Word Documents",
+        "xlsxFirstRowAsHeader": "Use the first row as column context for every row"
+      }
     }
   },
 
@@ -114,6 +160,26 @@
         "detail.tenantId": "Workspace (Tenant) ID",
         "detail.tenantName": "Workspace (Tenant)",
         "detail.thinking": "Thinking Mode",
+        "detail.tool.dataAnalysis": "Data Analysis",
+        "detail.tool.dataSchema": "View Data Schema",
+        "detail.tool.databaseQuery": "Query Database",
+        "detail.tool.getDocumentInfo": "Get Document Info",
+        "detail.tool.grepChunks": "Keyword Search",
+        "detail.tool.knowledgeSearch": "Semantic Search",
+        "detail.tool.listKnowledgeChunks": "View Document Chunks",
+        "detail.tool.queryKnowledgeGraph": "Query Knowledge Graph",
+        "detail.tool.thinking": "Thinking",
+        "detail.tool.todoWrite": "Plan",
+        "detail.tool.wikiDeletePage": "Delete Wiki Page",
+        "detail.tool.wikiFlagIssue": "Flag Wiki Issue",
+        "detail.tool.wikiReadIssue": "View Wiki Issue",
+        "detail.tool.wikiReadPage": "Read Wiki Page",
+        "detail.tool.wikiReadSourceDoc": "Deep-read Source Doc",
+        "detail.tool.wikiRenamePage": "Rename Wiki Page",
+        "detail.tool.wikiReplaceText": "Replace Text in Wiki",
+        "detail.tool.wikiSearch": "Search Wiki",
+        "detail.tool.wikiUpdateIssue": "Update Wiki Issue",
+        "detail.tool.wikiWritePage": "Create / Overwrite Wiki",
         "detail.type.custom": "Custom",
         "detail.type.dataAnalysis": "Data Analysis",
         "detail.type.hybridRagWiki": "Hybrid Wiki + RAG",

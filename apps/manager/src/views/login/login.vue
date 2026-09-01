@@ -158,8 +158,6 @@ const loginRules = {
   code: [{ required: true, trigger: 'change', message: '请输入验证码' }]
 };
 
-const loginTitle = import.meta.env.VITE_APP_TITLE;
-
 const codeUrl = ref('');
 const qrcodeUrl = ref('');
 const loading = ref(false);
