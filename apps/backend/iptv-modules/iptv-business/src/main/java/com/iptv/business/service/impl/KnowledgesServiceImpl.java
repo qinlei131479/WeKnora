@@ -807,9 +807,9 @@ public class KnowledgesServiceImpl extends ServiceImpl<KnowledgesMapper, Knowled
             case "gif":
                 return "image/gif";
             case "txt":
-                return "text/plain";
+                return "text/plain; charset=UTF-8";
             case "md":
-                return "text/markdown";
+                return "text/markdown; charset=UTF-8";
             case "doc":
                 return "application/msword";
             case "docx":
