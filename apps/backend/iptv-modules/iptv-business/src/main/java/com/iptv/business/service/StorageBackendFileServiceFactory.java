@@ -88,7 +88,10 @@ public class StorageBackendFileServiceFactory {
         }
 
         JSONObject jsonConfig = JSONUtil.parseObj(config);
-        String endpoint = "http://192.168.180.238:9000";//jsonConfig.getStr("endpoint");
+        String endpoint = jsonConfig.getStr("endpoint");
+        if(!StrUtil.startWith(endpoint,"http")){
+            endpoint = StrUtil.format("http://{}",endpoint);
+        }
         String accessKey = CryptoUtils.decryptStrict(jsonConfig.getStr("access_key_id"));
         String secretKey = CryptoUtils.decryptStrict(jsonConfig.getStr("secret_access_key"));
         String bucketName = jsonConfig.getStr("bucket_name");
