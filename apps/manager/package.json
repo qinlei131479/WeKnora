@@ -15,7 +15,6 @@
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
     "@tailwindcss/vite": "^4.3.3",
-    "@types/dompurify": "^3.0.5",
     "@vscode/markdown-it-katex": "^1.1.2",
     "@vue-office/pptx": "^1.0.1",
     "@vueup/vue-quill": "^1.5.5",
@@ -51,6 +50,7 @@
     "xlsx": "file:./packages/xlsx-0.20.2.tgz"
   },
   "devDependencies": {
+    "@types/dompurify": "^3.0.5",
     "@types/lodash": "^4.17.25",
     "@types/markdown-it": "^14.2.0",
     "@vitejs/plugin-vue": "^5.2.4",

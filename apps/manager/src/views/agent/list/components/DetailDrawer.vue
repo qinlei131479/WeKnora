@@ -93,7 +93,7 @@ const formatValue = (value: unknown): string => {
 
 const formatModel = (model: ModelEntity | undefined, modelId: string | undefined): string => {
   const name = model?.displayName || model?.name;
-  if (name && modelId) return `${name} (${modelId})`;
+  if (name && modelId) return `${name}<br/>${modelId}`;
   return name || modelId || '';
 };
 
@@ -165,7 +165,7 @@ const formatKnowledgeBases = (ids: string[] | undefined): string => {
   return (ids || [])
     .map((id) => {
       const knowledgeBase = props.agent.knowledgeBasesList?.find((item: KnowledgeBaseEntity) => item.id === id);
-      return knowledgeBase?.name ? `${knowledgeBase.name}（${id}）` : id;
+      return knowledgeBase?.name ? `${knowledgeBase.name}<br/>${id}` : id;
     })
     .join('\n');
 };
@@ -174,7 +174,7 @@ const formatMcpServices = (ids: string[] | undefined): string => {
   return (ids || [])
     .map((id) => {
       const service = props.agent.mcpServicesList?.find((item: McpEntity) => item.id === id);
-      return service?.name ? `${service.name} (${id})` : id;
+      return service?.name ? `${service.name}<br/>${id}` : id;
     })
     .join('\n');
 };
@@ -582,67 +582,34 @@ watch(visible, (value: boolean) => {
 </script>
 
 <template>
-  <KjscRtlDrawer v-model="visible" :size="1000" :title="drawerTitle" :show-cancel="false" :show-confirm="false">
+  <KjscRtlDrawer v-model="visible" :size="600" :title="drawerTitle" :show-cancel="false" :show-confirm="false">
     <template #header>
       <el-text>{{ drawerTitle }}</el-text>
     </template>
 
-    <el-container class="container">
-      <el-aside class="aside">
-        <el-menu class="menu" :default-active="activeSection" @select="selectSection">
-          <el-menu-item-group v-for="group in menuGroups" :key="group.key">
-            <template #title>{{ group.label }}</template>
-            <el-menu-item v-for="section in group.sections" :key="section.key" :index="section.key">
-              {{ section.label }}
-            </el-menu-item>
-          </el-menu-item-group>
-        </el-menu>
-      </el-aside>
-
-      <el-main class="main">
-        <!-- <el-text size="large">{{ activeDetailSection?.label }}</el-text> -->
-        <el-descriptions :column="1" border>
-          <el-descriptions-item v-for="item in activeDetailSection?.items" :key="item.key" :label="item.label" label-width="200px">
-            <div v-if="item.json && hasValue(item.value)" class="json-content">
-              <el-button size="small" class="json-content__copy" @click="copyText(item.value)">
-                {{ $t('page.normal.copy', '复制') }}
-              </el-button>
-              <pre class="json-content__pre">{{ formatJson(item.value) }}</pre>
-            </div>
-            <span v-else-if="!item.json" class="detail-value">{{ formatValue(item.value) }}</span>
-          </el-descriptions-item>
-        </el-descriptions>
-      </el-main>
-    </el-container>
+    <el-tabs v-model="activeSection" @tab-change="selectSection">
+      <el-tab-pane v-for="group in menuGroups" :label="group.label" :name="group.key">
+        <el-main v-for="section in group.sections">
+          <el-descriptions :title="section.label" :column="1" border>
+            <el-descriptions-item v-for="item in section.items" :key="item.key" :label="item.label" label-width="200px">
+              <div v-if="item.json && hasValue(item.value)" class="json-content">
+                <el-button size="small" class="json-content__copy" @click="copyText(item.value)">
+                  {{ $t('page.normal.copy', '复制') }}
+                </el-button>
+                <pre class="json-content__pre">{{ formatJson(item.value) }}</pre>
+              </div>
+              <span v-else-if="!item.json" class="detail-value" v-html="formatValue(item.value)" />
+            </el-descriptions-item>
+          </el-descriptions>
+        </el-main>
+      </el-tab-pane>
+    </el-tabs>
   </KjscRtlDrawer>
 </template>
 
 <style lang="scss" scoped>
-.container {
-  height: 100%;
-  min-height: 0;
-}
-
-.aside {
-  width: 200px;
-  padding: 1px;
-  margin: 0;
-}
-
-.menu {
-  height: 100%;
-  border-right: 0;
-}
-
-.main {
-  padding: 0 0 0 10px;
-}
-
-:deep(.el-menu-item-group__title) {
-  padding: 7px 0 7px 7px !important;
-  background-color: #eef1f6;
-  font-size: 10px;
-  font-weight: bold;
+:deep(.el-tabs) {
+  width: 100%;
 }
 
 :deep(.el-descriptions__label),
