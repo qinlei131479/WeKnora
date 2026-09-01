@@ -847,6 +847,9 @@ CREATE TABLE IF NOT EXISTS knowledge_bases (
 		storage_backend_id VARCHAR(36),
     wiki_config TEXT,
     indexing_strategy TEXT,
+    mindmap TEXT,
+    mindmap_file_ids TEXT,
+    mindmap_metadata TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     deleted_at DATETIME

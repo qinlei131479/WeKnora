@@ -13,8 +13,12 @@ def resolve_chat_model_spec(model_spec: str | None, *, fallback: str | None = No
 
     这里仅处理模型为空时的优先级：请求或配置值、调用方 fallback、系统默认模型；
     具体模型是否存在、是否为聊天模型仍由 model_cache 校验。
+    融合模式（HARNESS_WEKNORA_KB）下不回落到 yuxi default_model。
     """
-    for candidate in (model_spec, fallback, sys_config.default_model):
+    from yuxi.p3.flags import is_weknora_kb_enabled
+
+    candidates = (model_spec, fallback) if is_weknora_kb_enabled() else (model_spec, fallback, sys_config.default_model)
+    for candidate in candidates:
         if isinstance(candidate, str) and candidate.strip():
             return candidate.strip()
     raise ValueError("model spec 不能为空")
@@ -22,6 +26,31 @@ def resolve_chat_model_spec(model_spec: str | None, *, fallback: str | None = No
 
 def load_chat_model(fully_specified_name: str | None, **kwargs) -> BaseChatModel:
     fully_specified_name = resolve_chat_model_spec(fully_specified_name)
+
+    from yuxi.p3.flags import is_weknora_kb_enabled
+
+    if is_weknora_kb_enabled():
+        from yuxi.models.weknora_proxy import (
+            chat_proxy_base_url,
+            extra_request_headers,
+            request_access_token,
+            resolve_weknora_model,
+        )
+
+        model = resolve_weknora_model(fully_specified_name, "chat")
+        model_id = str(model.get("id") or "")
+        headers = extra_request_headers()
+        logger.debug(f"Loading WeKnora chat model {model_id}")
+        openai_kwargs = dict(kwargs)
+        if headers:
+            openai_kwargs["default_headers"] = {**headers, **dict(openai_kwargs.get("default_headers") or {})}
+        return _ToolCallChunkFixChatOpenAI(
+            model=model_id,
+            api_key=SecretStr(request_access_token()),
+            base_url=chat_proxy_base_url(model_id),
+            stream_usage=True,
+            **openai_kwargs,
+        )
 
     info = model_cache.get_model_info(fully_specified_name)
     if not info:

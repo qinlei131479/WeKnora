@@ -61,6 +61,7 @@
               class="attachment-parse-controls"
             >
               <OCRSelector
+                v-if="!weknoraManaged"
                 :model-value="item.selectedParseMethod"
                 :allowed-engines="item.parseMethods"
                 :disabled="item.status === 'parsing' || confirming"
@@ -86,10 +87,11 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { X } from 'lucide-vue-next'
 import { threadApi } from '@harness/apis'
+import { ocrApi } from '@harness/apis/system_api'
 import { useConfigStore } from '@harness/stores/config'
 import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
 import OCRSelector from '@harness/components/OCRSelector.vue'
@@ -108,8 +110,22 @@ const DEFAULT_OCR_ENGINE = 'rapid_ocr'
 const configStore = useConfigStore()
 const fileItems = ref([])
 const confirming = ref(false)
+const weknoraManaged = ref(false)
 let localIdSeed = 0
 let consumedInitialFilesKey = 0
+
+const loadOcrMode = async () => {
+  try {
+    const data = await ocrApi.getOptions()
+    weknoraManaged.value = Boolean(data?.weknora_managed)
+  } catch (error) {
+    weknoraManaged.value = false
+  }
+}
+
+onMounted(() => {
+  void loadOcrMode()
+})
 
 const busy = computed(() =>
   fileItems.value.some((item) => ['uploading', 'parsing'].includes(item.status))
@@ -134,6 +150,9 @@ const getErrorMessage = (error, fallback = '操作失败') => {
 }
 
 const getDefaultParseMethod = (parseMethods) => {
+  if (weknoraManaged.value) {
+    return 'weknora'
+  }
   if (!Array.isArray(parseMethods) || parseMethods.length === 0) {
     return null
   }

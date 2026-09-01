@@ -229,6 +229,24 @@ class OtherEmbedding(BaseEmbeddingModel):
 
 
 def get_embedding_model_info_by_id(model_id: str) -> dict:
+    from yuxi.p3.flags import is_weknora_kb_enabled
+
+    if is_weknora_kb_enabled():
+        from yuxi.models.weknora_proxy import embeddings_proxy_url, model_dimension, resolve_weknora_model
+
+        resolved = resolve_weknora_model(model_id, "embedding")
+        resolved_id = str(resolved.get("id") or "")
+        logger.info(f"Loaded WeKnora embedding model info for {resolved_id}")
+        return {
+            "name": resolved_id,
+            "display_name": str(resolved.get("display_name") or resolved.get("name") or resolved_id),
+            "dimension": model_dimension(resolved),
+            "base_url": embeddings_proxy_url(resolved_id),
+            "api_key": "",
+            "model_id": resolved_id,
+            "batch_size": 40,
+        }
+
     info = model_cache.get_model_info(model_id)
     if not info:
         raise ValueError(f"Unknown embedding model spec: {model_id}")
@@ -248,6 +266,31 @@ def get_embedding_model_info_by_id(model_id: str) -> dict:
 
 
 def select_embedding_model(model_id: str):
+    from yuxi.p3.flags import is_weknora_kb_enabled
+
+    if is_weknora_kb_enabled():
+        from yuxi.models.weknora_proxy import (
+            embeddings_proxy_url,
+            extra_request_headers,
+            model_dimension,
+            request_access_token,
+            resolve_weknora_model,
+        )
+
+        resolved = resolve_weknora_model(model_id, "embedding")
+        resolved_id = str(resolved.get("id") or "")
+        logger.info(f"Selecting WeKnora embedding model: {resolved_id}")
+        embedder = OtherEmbedding(
+            model=resolved_id,
+            base_url=embeddings_proxy_url(resolved_id),
+            api_key=request_access_token(),
+            dimension=model_dimension(resolved),
+        )
+        extra = extra_request_headers()
+        if extra:
+            embedder.headers.update(extra)
+        return embedder
+
     info = model_cache.get_model_info(model_id)
     if not info:
         raise ValueError(f"Unknown embedding model spec: {model_id}")

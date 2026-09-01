@@ -106,6 +106,9 @@ func (s *processSyncKBService) CopyKnowledgeBase(context.Context, string, string
 func (s *processSyncKBService) DuplicateKnowledgeBase(context.Context, string) (*types.KnowledgeBase, error) {
 	return nil, nil
 }
+func (s *processSyncKBService) SaveMindmap(context.Context, string, []byte, []byte, []byte) error {
+	return nil
+}
 func (s *processSyncKBService) GetRepository() interfaces.KnowledgeBaseRepository { return nil }
 func (s *processSyncKBService) ProcessKBDelete(context.Context, *asynq.Task) error {
 	return nil

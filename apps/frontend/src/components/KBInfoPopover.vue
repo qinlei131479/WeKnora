@@ -381,13 +381,13 @@ const statRows = computed<Array<{ key: string; label: string; value: number | st
   position: relative;
   width: 26px;
   height: 26px;
-  border: none;
   border-radius: 50%;
-  background: transparent;
+  background: var(--td-bg-color-secondarycontainer);
+  border: 1px solid var(--td-component-stroke);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--td-text-color-placeholder);
+  color: var(--td-text-color-primary);
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
   padding: 0;

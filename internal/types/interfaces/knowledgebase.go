@@ -34,6 +34,9 @@ type KnowledgeBaseService interface {
 	//   - Possible errors such as not existing, insufficient permissions, etc.
 	GetKnowledgeBaseByID(ctx context.Context, id string) (*types.KnowledgeBase, error)
 
+	// SaveMindmap stores the generated file-tree mindmap on the knowledge base.
+	SaveMindmap(ctx context.Context, id string, mindmap, fileIDs, metadata []byte) error
+
 	// GetKnowledgeBaseByIDOnly retrieves knowledge base by ID without tenant filter
 	// Used for cross-tenant shared KB access where permission is checked elsewhere
 	// Parameters:

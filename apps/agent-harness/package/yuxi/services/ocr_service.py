@@ -21,9 +21,14 @@ from yuxi.models.providers.service import get_model_provider_by_id, resolve_api_
 
 def get_ocr_options() -> dict[str, Any]:
     from yuxi import config
+    from yuxi.p3.flags import is_weknora_kb_enabled
+
+    if is_weknora_kb_enabled():
+        return {"default_engine": "weknora", "weknora_managed": True, "engines": []}
 
     return {
         "default_engine": config.default_ocr_engine,
+        "weknora_managed": False,
         "engines": [{"engine_id": engine_id, **get_parser_metadata(engine_id)} for engine_id in PROCESSOR_TYPES],
     }
 
@@ -94,6 +99,17 @@ async def parse_document(
         DocumentProcessorException: OCR 或文档解析器执行失败。
         StorageError: MinIO 文件读取失败。
     """
+
+    from yuxi.p3.flags import is_weknora_kb_enabled
+
+    if is_weknora_kb_enabled():
+        from yuxi.models.weknora_proxy import parse_source_via_weknora
+        from yuxi.p3.errors import WeKnoraKBError
+
+        try:
+            return await parse_source_via_weknora(source)
+        except WeKnoraKBError as exc:
+            raise ValueError(str(exc)) from exc
 
     resolved_params = params
     suffix = Path(source.split("?", 1)[0]).suffix.lower()

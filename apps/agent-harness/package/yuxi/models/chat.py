@@ -54,6 +54,24 @@ def select_model(model_spec: str, **kwargs) -> LangChainChatAdapter:
     if not model_spec:
         raise ValueError("model_spec 不能为空")
 
+    from yuxi.p3.flags import is_weknora_kb_enabled
+
+    if is_weknora_kb_enabled():
+        from yuxi.agents.models import resolve_chat_model_spec
+        from yuxi.models.weknora_proxy import chat_proxy_base_url, resolve_weknora_model
+
+        model_spec = resolve_chat_model_spec(model_spec)
+        resolved = resolve_weknora_model(model_spec, "chat")
+        model_id = str(resolved.get("id") or "")
+        logger.info(f"Selecting WeKnora chat model: {model_id}")
+        model = load_chat_model(model_id, **_langchain_kwargs("openai", kwargs))
+        return LangChainChatAdapter(
+            model,
+            model_name=model_id,
+            base_url=chat_proxy_base_url(model_id),
+            info={"provider_type": "openai", "provider_id": str(resolved.get("source") or "remote")},
+        )
+
     info = model_cache.get_model_info(model_spec)
     if not info:
         available = model_cache.get_all_specs("chat")

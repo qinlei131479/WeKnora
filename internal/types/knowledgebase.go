@@ -142,6 +142,10 @@ type KnowledgeBase struct {
 	ProcessingCount int64 `yaml:"processing_count"        json:"processing_count"        gorm:"-"`
 	// ShareCount indicates the number of organizations this knowledge base is shared with (not stored in database)
 	ShareCount int64 `yaml:"share_count"             json:"share_count"             gorm:"-"`
+	// Mindmap is the generated file-tree outline for get_mindmap (not the entity graph).
+	Mindmap json.RawMessage `yaml:"mindmap" json:"mindmap,omitempty" gorm:"type:jsonb"`
+	MindmapFileIDs json.RawMessage `yaml:"mindmap_file_ids" json:"mindmap_file_ids,omitempty" gorm:"type:jsonb"`
+	MindmapMetadata json.RawMessage `yaml:"mindmap_metadata" json:"mindmap_metadata,omitempty" gorm:"type:jsonb"`
 	// CreatorName 是 CreatorID 对应用户的展示名（username / email 等），
 	// 仅在列表场景由 handler 批量回填，不落库；为空表示创建者无法解析（用户已删除、
 	// CreatorID 为空的老数据等）。前端用它在卡片来源徽章上做 mine vs workspace 的二分。

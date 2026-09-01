@@ -18,11 +18,19 @@ from yuxi.models.providers.service import (
     test_model_status_by_spec,
     update_provider_config,
 )
+from yuxi.p3.flags import is_weknora_kb_enabled
 from yuxi.storage.postgres.models_business import User
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.utils import logger
 
 model_providers = APIRouter(prefix="/system/model-providers", tags=["model-providers"])
+
+_WEKNORA_PROVIDER_LOCKED = "模型由 WeKnora 管理，已停止 yuxi 供应商配置"
+
+
+def _reject_yuxi_provider_writes() -> None:
+    if is_weknora_kb_enabled():
+        raise HTTPException(status_code=403, detail=_WEKNORA_PROVIDER_LOCKED)
 
 
 async def _refresh_model_cache() -> None:
@@ -81,6 +89,7 @@ async def create_provider(
     db: AsyncSession = Depends(get_db),
 ):
     """创建独立模型供应商配置。"""
+    _reject_yuxi_provider_writes()
     try:
         provider = await create_provider_config(
             db,
@@ -120,6 +129,7 @@ async def update_provider(
     db: AsyncSession = Depends(get_db),
 ):
     """更新独立模型供应商配置。"""
+    _reject_yuxi_provider_writes()
     try:
         # 获取用户显式设置过的字段（即使值为 None），以便正确处理清空操作
         unset_fields = payload.model_fields_set
@@ -158,6 +168,7 @@ async def delete_provider(
     db: AsyncSession = Depends(get_db),
 ):
     """删除独立模型供应商配置。"""
+    _reject_yuxi_provider_writes()
     deleted = await delete_provider_config(db, provider_id)
     if not deleted:
         raise HTTPException(status_code=404, detail=f"供应商 {provider_id} 不存在")
@@ -173,6 +184,7 @@ async def get_remote_models(
     db: AsyncSession = Depends(get_db),
 ):
     """实时拉取远端 /models，不落库。"""
+    _reject_yuxi_provider_writes()
     provider = await get_model_provider_by_id(db, provider_id)
     if provider is None:
         raise HTTPException(status_code=404, detail=f"供应商 {provider_id} 不存在")
@@ -195,6 +207,7 @@ async def refresh_model_cache(
     current_user: User = Depends(get_admin_user),
 ):
     """强制刷新模型缓存，从数据库重新加载所有供应商配置到 Redis。"""
+    _reject_yuxi_provider_writes()
     await _refresh_model_cache()
     from yuxi.models.providers.cache import model_cache
 
@@ -210,8 +223,23 @@ async def get_v2_models(
     """获取 v2 格式的模型列表，按 provider 分组。
 
     v2 模型 spec 格式: provider_id:model_id（冒号分隔）
+    融合模式下 spec 为 WeKnora 模型 UUID。
     返回数据供前端模型选择器使用。
     """
+    if is_weknora_kb_enabled():
+        from yuxi.models.weknora_proxy import grouped_v2_models, list_weknora_models_async
+        from yuxi.p3.errors import WeKnoraKBError
+
+        try:
+            models = await list_weknora_models_async()
+        except WeKnoraKBError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return {
+            "success": True,
+            "data": grouped_v2_models(models, model_type),
+            "weknora_managed": True,
+        }
+
     from yuxi.models.providers.cache import model_cache
 
     grouped = model_cache.get_specs_grouped_by_provider(model_type)
@@ -237,7 +265,7 @@ async def get_v2_models(
             ]
         }
 
-    return {"success": True, "data": result}
+    return {"success": True, "data": result, "weknora_managed": False}
 
 
 @model_providers.get("/models/status")
@@ -246,6 +274,32 @@ async def get_model_status_by_spec(
     current_user: User = Depends(get_admin_user),
 ):
     """根据 full spec 检查模型状态（自动识别 V1/V2、Chat/Embedding）。"""
+    if is_weknora_kb_enabled():
+        from yuxi.models.weknora_proxy import list_weknora_models, resolve_weknora_model
+        from yuxi.p3.errors import WeKnoraKBError
+
+        try:
+            models = list_weknora_models()
+            last_error = None
+            for model_type in ("chat", "embedding", "rerank"):
+                try:
+                    resolved = resolve_weknora_model(spec, model_type, models)
+                    return {
+                        "success": True,
+                        "data": {
+                            "spec": str(resolved.get("id") or spec),
+                            "status": "available",
+                            "message": "已接入",
+                        },
+                    }
+                except ValueError as exc:
+                    last_error = exc
+            raise last_error or ValueError(f"找不到模型 '{spec}'")
+        except WeKnoraKBError as e:
+            return {"success": False, "data": {"spec": spec, "status": "error", "message": str(e)}}
+        except Exception as e:
+            logger.error(f"测试模型状态失败 {spec}: {e}")
+            return {"success": False, "data": {"spec": spec, "status": "error", "message": str(e)}}
     try:
         result = await test_model_status_by_spec(spec)
         return {"success": True, "data": result}

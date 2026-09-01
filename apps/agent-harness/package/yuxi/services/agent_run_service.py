@@ -100,9 +100,25 @@ def _load_agent_context(agent_item, agent_backend):
 
 
 def resolve_agent_run_model_spec(model_spec: str | None, agent_item, agent_backend, context=None) -> str:
-    """解析本次 run 实际使用的模型：显式覆盖优先，否则配置模型，最后系统默认模型。"""
+    """解析本次 run 实际使用的模型：显式覆盖优先，否则配置模型，最后系统默认模型。
+
+    HARNESS_WEKNORA_KB 打开时，模型选择器传来的 model_spec 是 WeKnora `models.id`（UUID），
+    校验必须走 WeKnora 模型代理，而不是已停用的 yuxi 供应商 model_cache（P6.1）。
+    """
     normalized = model_spec.strip() if isinstance(model_spec, str) else None
     if normalized:
+        from yuxi.p3.flags import is_weknora_kb_enabled
+
+        if is_weknora_kb_enabled():
+            from yuxi.models.weknora_proxy import resolve_weknora_model
+            from yuxi.p3.errors import WeKnoraKBError
+
+            try:
+                resolve_weknora_model(normalized, "chat")
+            except (ValueError, WeKnoraKBError) as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            return normalized
+
         info = model_cache.get_model_info(normalized)
         if not info or info.model_type != "chat":
             raise HTTPException(status_code=422, detail=f"未找到可用聊天模型: '{normalized}'")

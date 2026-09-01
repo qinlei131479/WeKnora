@@ -166,6 +166,24 @@ class DashscopeReranker(BaseReranker):
 
 
 def get_reranker(model_id: str, **kwargs):
+    from yuxi.p3.flags import is_weknora_kb_enabled
+
+    if is_weknora_kb_enabled():
+        from yuxi.models.weknora_proxy import extra_request_headers, request_access_token, rerank_proxy_url, resolve_weknora_model
+
+        resolved = resolve_weknora_model(model_id, "rerank")
+        resolved_id = str(resolved.get("id") or "")
+        reranker = OpenAIReranker(
+            model_name=resolved_id,
+            api_key=request_access_token(),
+            base_url=rerank_proxy_url(resolved_id),
+            **kwargs,
+        )
+        extra = extra_request_headers()
+        if extra:
+            reranker.headers.update(extra)
+        return reranker
+
     info = model_cache.get_model_info(model_id)
     if not info:
         raise ValueError(f"Unknown reranker model spec: {model_id}")

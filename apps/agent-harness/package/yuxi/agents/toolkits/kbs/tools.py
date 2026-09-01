@@ -110,32 +110,46 @@ async def get_mindmap(kb_name: str, runtime: ToolRuntime) -> str:
         return f"知识库 '{kb_name}' 不存在或当前会话未启用"
     target_kb_id = target_info["kb_id"]
 
+    def mindmap_to_text(node, level=0):
+        """递归将思维导图JSON转换为层级文本"""
+        indent = "  " * level
+        text = f"{indent}- {node.get('content', '')}\n"
+        for child in node.get("children", []) or []:
+            if isinstance(child, dict):
+                text += mindmap_to_text(child, level + 1)
+        return text
+
     try:
+        from yuxi.p3.flags import is_weknora_kb_enabled
+        from yuxi.p3.ids import is_weknora_kb_id
+
+        if is_weknora_kb_enabled() and is_weknora_kb_id(str(target_kb_id)):
+            from yuxi.models.weknora_proxy import get_or_generate_mindmap
+            from yuxi.p3.errors import WeKnoraKBError
+
+            try:
+                mindmap_data = await get_or_generate_mindmap(str(target_kb_id))
+            except WeKnoraKBError as exc:
+                return str(exc)
+            mindmap_text = f"知识库 {target_info['name']} 的思维导图结构：\n\n"
+            mindmap_text += mindmap_to_text(mindmap_data)
+            return mindmap_text
+
         from yuxi.repositories.knowledge_base_repository import KnowledgeBaseRepository
 
         kb_repo = KnowledgeBaseRepository()
         kb = await kb_repo.get_by_kb_id(target_kb_id)
 
         if kb is None:
-            from yuxi.p3.ids import is_weknora_kb_id
-
             if is_weknora_kb_id(str(target_kb_id)):
-                return f"知识库 {target_info['name']} 由 WeKnora 管理，不提供思维导图。"
+                # HARNESS_WEKNORA_KB 关闭时无法走 WeKnora 思维导图接口，且该 KB 又不在 yuxi 原生库中。
+                return f"知识库 {target_info['name']} 由 WeKnora 管理，请打开 HARNESS_WEKNORA_KB 后重试。"
             return f"知识库 {target_info['name']} 不存在"
 
         mindmap_data = kb.mindmap
 
         if not mindmap_data:
             return f"知识库 {target_info['name']} 还没有生成思维导图。"
-
-        # 将思维导图数据转换为文本格式
-        def mindmap_to_text(node, level=0):
-            """递归将思维导图JSON转换为层级文本"""
-            indent = "  " * level
-            text = f"{indent}- {node.get('content', '')}\n"
-            for child in node.get("children", []):
-                text += mindmap_to_text(child, level + 1)
-            return text
 
         mindmap_text = f"知识库 {target_info['name']} 的思维导图结构：\n\n"
         mindmap_text += mindmap_to_text(mindmap_data)

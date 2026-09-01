@@ -136,6 +136,14 @@ export function getKnowledgeBaseById(id: string, options?: { agent_id?: string; 
   return get(qs ? `/api/v1/knowledge-bases/${id}?${qs}` : `/api/v1/knowledge-bases/${id}`);
 }
 
+export function getKnowledgeBaseMindmap(id: string) {
+  return get(`/api/v1/knowledge-bases/${id}/mindmap`);
+}
+
+export function generateKnowledgeBaseMindmap(id: string) {
+  return post(`/api/v1/knowledge-bases/${id}/mindmap`, {}, { timeout: 180000 });
+}
+
 export function updateKnowledgeBase(id: string, data: {
   name: string;
   description?: string;

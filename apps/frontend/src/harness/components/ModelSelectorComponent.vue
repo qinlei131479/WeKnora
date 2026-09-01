@@ -108,11 +108,11 @@
           </template>
         </a-menu>
         <div
-          v-if="!modelMetadataNoticeDismissed && (userStore.isAdmin || hasModelMetadata)"
+          v-if="!modelMetadataNoticeDismissed && ((userStore.isAdmin && !weknoraManaged) || hasModelMetadata)"
           class="model-metadata-source"
         >
           <div class="model-metadata-source-content">
-            <template v-if="userStore.isAdmin">
+            <template v-if="userStore.isAdmin && !weknoraManaged">
               没有合适的模型？
               <RouterLink :to="{ path: '/platform/harness/agents', query: { tab: 'providers' } }" @click.stop>
                 配置模型
@@ -143,7 +143,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { modelProviderApi } from '@harness/apis/system_api'
 import { Eye, RefreshCw, X } from 'lucide-vue-next'
@@ -186,6 +186,7 @@ const MODEL_METADATA_NOTICE_DISMISSED_KEY = 'yuxi_model_metadata_notice_dismisse
 
 // v2 模型数据：每次展开下拉时实时从后端拉取
 const v2Models = ref({})
+const weknoraManaged = ref(false)
 const loadingV2Models = ref(false)
 const dropdownOpen = ref(false)
 const modelSearchKeyword = ref('')
@@ -233,6 +234,23 @@ const hasFilteredModels = computed(() => {
 
 const hasModelMetadata = computed(() => Object.keys(modelMetadataBySpec.value).length > 0)
 
+// spec -> 展示名映射。WeKnora 管理模式下 model.spec 是模型 UUID（保证可以精确
+// 解析到唯一模型，见 resolve_weknora_model），不再是可读的 "provider:model"
+// 字符串。UUID 本身不能用来展示，必须回查一次拉到的模型列表拿 display_name，
+// 否则用户选完模型后，输入框里显示的就是一串 UUID（look 一眼完全不知道选的是
+// 什么模型）。
+const specDisplayNameMap = computed(() => {
+  const map = {}
+  for (const providerData of Object.values(v2Models.value)) {
+    for (const model of providerData.models || []) {
+      if (model?.spec) {
+        map[model.spec] = model.display_name || model.model_id || model.spec
+      }
+    }
+  }
+  return map
+})
+
 const getProviderDisplayName = (providerId, providerData = {}) => {
   return (
     providerData.provider_display_name ||
@@ -256,6 +274,7 @@ const fetchV2Models = async () => {
       const response = await modelProviderApi.getV2Models('chat')
       if (response.success) {
         v2Models.value = response.data || {}
+        weknoraManaged.value = Boolean(response.weknora_managed)
         const catalog = await catalogRequest
         modelMetadataBySpec.value = catalog
           ? buildModelMetadataBySpec(v2Models.value, catalog.providers)
@@ -356,6 +375,19 @@ const displayModelText = computed(() => {
   const spec = props.model_spec
   if (!spec) return props.placeholder
 
+  // 优先用已拉取的模型列表把 spec 换成人类可读的 display_name。命中即用，
+  // 不再区分 full/short/mini —— UUID 没有可切分的 "provider:model" 结构，
+  // 展示模式差异只对旧式字符串 spec 有意义（见下面的兜底分支）。
+  const knownName = specDisplayNameMap.value[spec]
+  if (knownName) {
+    if (props.displayName === 'mini') {
+      return knownName.includes('/') ? knownName.split('/').pop() : knownName
+    }
+    return knownName
+  }
+
+  // 兜底：尚未拉到模型列表，或者是遗留的 "provider:model" 风格 spec（非
+  // WeKnora 管理模式）。这种情况下 spec 本身是可读的，按原逻辑裁剪展示。
   const modelName = extractModelName(spec)
   if (props.displayName === 'mini') {
     return modelName.includes('/') ? modelName.split('/').pop() : modelName
@@ -364,7 +396,16 @@ const displayModelText = computed(() => {
   return spec
 })
 
+// 悬浮提示保留原始 spec（UUID 或 provider:model），方便复制/核对，展示文案
+// 走 displayModelText。
 const displayModelTitle = computed(() => props.model_spec || props.placeholder)
+
+// 预取一次模型列表，这样即使用户还没点开下拉框，已保存的 model_spec（如
+// agent 配置里存的 WeKnora UUID）也能立刻显示成可读名称，而不是等到下次
+// 打开下拉框才补上映射。
+onMounted(() => {
+  fetchV2Models()
+})
 
 // 检查当前模型状态
 const checkCurrentModelStatus = async () => {

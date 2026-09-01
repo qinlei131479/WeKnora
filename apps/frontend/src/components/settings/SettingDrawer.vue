@@ -2,13 +2,13 @@
   <teleport to="body">
     <div v-if="drawerVisible && resizable" class="setting-drawer-resize-handle"
       :class="{ 'setting-drawer-resize-handle--active': drawerResizing }"
-      :style="{ right: `${drawerWidthPx}px`, '--setting-drawer-travel': `${drawerWidthPx}px` }"
+      :style="{ right: `${drawerWidthPx}px`, '--setting-drawer-travel': `${drawerWidthPx}px`, zIndex: zIndex + 1 }"
       role="separator" aria-orientation="vertical" @mousedown.prevent="onResizeStart">
       <div class="setting-drawer-resize-line" />
     </div>
   </teleport>
-  <t-drawer v-model:visible="drawerVisible" v-bind="drawerPassthroughAttrs" :size="effectiveWidth" :z-index="2500" placement="right"
-    attach="body" destroy-on-close :footer="!hideFooter"
+  <t-drawer v-model:visible="drawerVisible" v-bind="drawerPassthroughAttrs" :size="effectiveWidth" :z-index="zIndex" placement="right"
+    attach="body" destroy-on-close prevent-scroll-through show-overlay :footer="!hideFooter"
     :class="drawerClass" @before-close="blurActiveElementBeforeClose">
     <!--
       Custom header. We replace TDesign's default header so we can put a leading
@@ -90,6 +90,8 @@ interface Props {
   confirmText?: string
   cancelText?: string
   hideFooter?: boolean
+  /** Overlay/panel z-index. Must sit above the session sidebar (3000) and header. */
+  zIndex?: number
 }
 
 defineOptions({ inheritAttrs: false })
@@ -106,7 +108,8 @@ const props = withDefaults(defineProps<Props>(), {
   confirmDisabled: false,
   confirmText: '',
   cancelText: '',
-  hideFooter: false
+  hideFooter: false,
+  zIndex: 2500
 })
 
 const emit = defineEmits<{
@@ -445,7 +448,6 @@ const handleCancel = () => {
   width: 12px;
   margin-left: -6px;
   cursor: col-resize;
-  z-index: 2501;
   display: flex;
   align-items: center;
   justify-content: center;

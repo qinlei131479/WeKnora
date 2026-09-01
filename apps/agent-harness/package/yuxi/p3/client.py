@@ -19,6 +19,11 @@ DOWNLOAD_PERMISSION_HINT = (
 _TIMEOUT = httpx.Timeout(30.0)
 
 
+def auth_headers(*, accept: str = "application/json") -> dict[str, str]:
+    """当前请求/Worker 绑定的用户 JWT 与租户头。"""
+    return _headers(accept=accept)
+
+
 def _headers(*, accept: str = "application/json") -> dict[str, str]:
     token = get_request_access_token()
     if not token:

@@ -38,6 +38,12 @@ func RegisterModelRoutes(
 		models.PUT("/:id/credentials", g.AdminOrSystemAdmin(), credHandler.Put)
 		models.DELETE("/:id/credentials/:field", g.AdminOrSystemAdmin(), credHandler.DeleteField)
 	}
+	proxy := g.apiKeyGroup(r.Group("/internal/models"), apiKeyManageModels(apiKeyFullAccess()))
+	{
+		proxy.POST("/:id/chat/completions", g.Viewer(), handler.ProxyChatCompletions)
+		proxy.POST("/:id/embeddings", g.Viewer(), handler.ProxyEmbeddings)
+		proxy.POST("/:id/rerank", g.Viewer(), handler.ProxyRerank)
+	}
 }
 
 // RegisterEvaluationRoutes registers evaluation endpoints. Running an

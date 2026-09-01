@@ -51,6 +51,7 @@ import KbFolderTree from './components/KbFolderTree.vue';
 import TagEditDialog from './components/TagEditDialog.vue';
 import BatchTagDialog from './components/BatchTagDialog.vue';
 import KbTagManageDrawer from './components/KbTagManageDrawer.vue';
+import KbMindmapDrawer from './components/KbMindmapDrawer.vue';
 import type { KnowledgeProcessOverrides } from '@/types/knowledgeProcess';
 import { useUploadConfirmStore, type UploadConfirmResult } from '@/stores/uploadConfirm';
 import WikiBrowser from './wiki/WikiBrowser.vue';
@@ -78,6 +79,7 @@ const route = useRoute();
 const { t } = useI18n();
 const kbId = computed(() => (route.params as any).kbId as string || '');
 const kbInfo = ref<any>(null);
+const mindmapDrawerVisible = ref(false);
 const uploadSourceRef = ref<InstanceType<typeof KbUploadSourceDropdown> | null>(null);
 const uploading = ref(false);
 const kbLoading = ref(false);
@@ -2316,6 +2318,11 @@ async function createNewSession(value: string): Promise<void> {
             <div class="kb-title-actions">
               <KBInfoPopover v-if="kbInfo && !authStore.isLiteMode" :kb-info="kbInfo"
                 :supported-file-types="[...supportedFileTypes]" />
+              <t-tooltip :content="$t('knowledgeBase.mindmap')" placement="top">
+                <button type="button" class="kb-settings-button" :disabled="!kbId" @click="mindmapDrawerVisible = true">
+                  <t-icon name="fork" size="16px" />
+                </button>
+              </t-tooltip>
               <t-tooltip v-if="canManage" :content="$t('knowledgeBase.settings')" placement="top">
                 <button type="button" class="kb-settings-button" :disabled="!kbId" @click="handleOpenKBSettings">
                   <t-icon name="setting" size="16px" />
@@ -2693,6 +2700,7 @@ async function createNewSession(value: string): Promise<void> {
     :is-faq="isFAQ"
     @changed="onTagManageChanged"
   />
+  <KbMindmapDrawer v-model:visible="mindmapDrawerVisible" :kb-id="kbId" />
 </template>
 <style>
 /* 下拉菜单容器样式已统一至 @/assets/dropdown-menu.less */
@@ -3595,13 +3603,13 @@ async function createNewSession(value: string): Promise<void> {
 .kb-settings-button {
   width: 30px;
   height: 30px;
-  border: none;
   border-radius: 50%;
   background: var(--td-bg-color-secondarycontainer);
+  border: 1px solid var(--td-component-stroke);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--td-text-color-secondary);
+  color: var(--td-text-color-primary);
   cursor: pointer;
   transition: all 0.2s ease;
   padding: 0;

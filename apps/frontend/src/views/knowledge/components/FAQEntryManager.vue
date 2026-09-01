@@ -3590,13 +3590,13 @@ watch(() => entries.value.map(e => ({
 .kb-settings-button {
   width: 30px;
   height: 30px;
-  border: none;
   border-radius: 50%;
   background: var(--td-bg-color-secondarycontainer);
+  border: 1px solid var(--td-component-stroke);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--td-text-color-secondary);
+  color: var(--td-text-color-primary);
   cursor: pointer;
   transition: all 0.2s ease;
   padding: 0;

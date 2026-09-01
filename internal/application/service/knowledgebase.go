@@ -285,6 +285,20 @@ func (s *knowledgeBaseService) validateVectorStoreBinding(
 	}
 }
 
+func (s *knowledgeBaseService) SaveMindmap(ctx context.Context, id string, mindmap, fileIDs, metadata []byte) error {
+	if id == "" {
+		return errors.New("knowledge base ID cannot be empty")
+	}
+	kb, err := s.repo.GetKnowledgeBaseByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	kb.Mindmap = mindmap
+	kb.MindmapFileIDs = fileIDs
+	kb.MindmapMetadata = metadata
+	return s.repo.UpdateKnowledgeBase(ctx, kb)
+}
+
 // GetKnowledgeBaseByID retrieves a knowledge base by its ID
 func (s *knowledgeBaseService) GetKnowledgeBaseByID(ctx context.Context, id string) (*types.KnowledgeBase, error) {
 	if id == "" {

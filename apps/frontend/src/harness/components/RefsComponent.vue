@@ -8,7 +8,7 @@
         @click="likeThisResponse(msg)"
         :title="feedbackState.hasSubmitted && feedbackState.rating === 'like' ? '已点赞' : '点赞'"
       >
-        <ThumbsUp size="12" :fill="feedbackState.rating === 'like' ? 'currentColor' : 'none'" />
+        <ThumbsUp size="14" :stroke-width="2" :fill="feedbackState.rating === 'like' ? 'currentColor' : 'none'" />
       </span>
       <span
         class="item btn"
@@ -19,7 +19,8 @@
         "
       >
         <ThumbsDown
-          size="12"
+          size="14"
+          :stroke-width="2"
           :fill="feedbackState.rating === 'dislike' ? 'currentColor' : 'none'"
         />
       </span>
@@ -29,8 +30,8 @@
       </span>
       <!-- 复制 -->
       <span v-if="showKey('copy')" class="item btn" @click="copyText(msg.content)" title="复制">
-        <Check v-if="isCopied" size="12" />
-        <Copy v-else size="12" />
+        <Check v-if="isCopied" size="14" :stroke-width="2" />
+        <Copy v-else size="14" :stroke-width="2" />
       </span>
 
       <!-- 重试 -->
@@ -328,13 +329,13 @@ const cancelDislike = () => {
   flex-direction: column;
   margin-bottom: 20px;
   margin-top: 10px;
-  color: var(--gray-500);
+  color: var(--gray-700);
   font-size: 13px;
   gap: 12px;
 
   .item {
     background: var(--gray-50);
-    color: var(--gray-700);
+    color: var(--gray-800);
     padding: 6px 8px;
     border-radius: 8px;
     font-size: 13px;

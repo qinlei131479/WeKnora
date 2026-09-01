@@ -14,7 +14,7 @@
       <a-menu class="scrollable-menu">
         <a-menu-item-group v-for="(providerData, providerId) in v2Models" :key="providerId">
           <template #title>
-            <span>{{ providerId }}</span>
+            <span>{{ providerData.provider_display_name || providerId }}</span>
           </template>
           <a-menu-item
             v-for="model in providerData.models"
@@ -41,7 +41,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { modelProviderApi } from '@harness/apis/system_api'
 import { useModelStatus } from '@harness/composables/useModelStatus'
 
@@ -74,7 +74,25 @@ const emit = defineEmits(['update:value', 'change'])
 const v2Models = ref({})
 const { getStatusIcon, getStatusClass, getStatusTooltip, checkV2Statuses } = useModelStatus()
 
-const displayText = computed(() => props.value || props.placeholder)
+// value 在 WeKnora 管理模式下是模型 UUID（保证 resolve_weknora_model 能唯一
+// 解析），本身不可读；必须回查一次拉到的列表换成 display_name，否则选完之后
+// 输入框里显示的就是一串 UUID。
+const specDisplayNameMap = computed(() => {
+  const map = {}
+  for (const providerData of Object.values(v2Models.value)) {
+    for (const model of providerData.models || []) {
+      if (model?.spec) {
+        map[model.spec] = model.display_name || model.model_id || model.spec
+      }
+    }
+  }
+  return map
+})
+
+const displayText = computed(() => {
+  if (!props.value) return props.placeholder
+  return specDisplayNameMap.value[props.value] || props.value
+})
 const resolvedSize = computed(() => props.size || 'small')
 const modelSelectClasses = computed(() => ({
   'model-select--middle': resolvedSize.value === 'middle',
@@ -108,6 +126,11 @@ const checkV2ModelStatuses = async () => {
     console.error('检查 embedding 模型状态失败:', error)
   }
 }
+
+// 预取一次，让已保存的 value（UUID）在下拉框打开前就能显示成可读名称。
+onMounted(() => {
+  fetchV2Models()
+})
 
 const handleSelect = (value) => {
   emit('update:value', value)
