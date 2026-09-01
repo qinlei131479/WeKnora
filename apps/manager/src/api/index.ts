@@ -2,6 +2,7 @@ import { CustomAgents } from './agent/customAgents';
 import { Messages } from './agent/messages';
 import { Sessions } from './agent/sessions';
 import { Storage } from './data/storage';
+import { Models } from './model/models';
 import { Tenants } from './tenants/tenants';
 import { Users } from './users/users';
 import { VectorStores } from './data/vectorStores';
@@ -11,6 +12,7 @@ import { WebSearchProviders } from './data/webSearchProviders';
 export const API = {
   CustomAgents,
   Messages,
+  Models,
   Sessions,
   Storage,
   Tenants,

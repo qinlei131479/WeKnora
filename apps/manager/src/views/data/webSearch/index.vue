@@ -209,7 +209,7 @@ onMounted(() => {
     <page-content>
       <template #header>
         <div class="search-bar" @keydown.capture="handleAutocompleteKeydown">
-          <el-autocomplete
+          <!-- <el-autocomplete
             v-model="state.keyword"
             value-key="name"
             class="search-bar__input"
@@ -223,7 +223,7 @@ onMounted(() => {
             @select="onSelectTenants"
             @clear="onClearTenants"
             @input="onInput"
-          />
+          /> -->
           <el-input
             v-model="state.providersDto.name"
             class="search-bar__input"
@@ -253,7 +253,7 @@ onMounted(() => {
         </template>
         <el-table-column
           prop="name"
-          :label="$t('page.data.webSearch.table.name', '名称')"
+          :label="$t('page.data.webSearch.table.name', '配置名称')"
           :min-width="$dim('page.data.webSearch.table.name', 180)"
         />
         <el-table-column
