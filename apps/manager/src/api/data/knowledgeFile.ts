@@ -33,5 +33,10 @@ export function getKnowledgeFileFoldersApi(knowledgeBaseId: number | string): Pr
 // }
 
 export function getPreviewKnowledgeFileApi(req: number | string): Promise<Blob> {
+  // const isDev = import.meta.env.DEV;
+  // console.log('isDev', isDev);
+  // if (isDev) {
+  //   return getBlob(`${API}/p3.docx?api=knowledges/preview&id=${req}`, { baseURL: '/mock' });
+  // }
   return getBlob(`${API}/knowledges/preview?id=${req}`);
 }

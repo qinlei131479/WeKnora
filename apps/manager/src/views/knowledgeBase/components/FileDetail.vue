@@ -94,7 +94,9 @@
             <!-- 音频播放器（音频文件时固定显示在内容区顶部） -->
             <div v-if="isAudioFile(details.fileType)" class="audio-player-section">
               <div v-if="audioLoading" class="audio-loading">
-                <el-loading size="small" />
+                <div style="height: 20px; width: 100%">
+                  <div v-loading="audioLoading"></div>
+                </div>
                 <span>{{ $t('page.normal.preview.audioLoading') }}</span>
               </div>
               <audio v-else-if="audioBlobUrl" controls class="audio-player" :src="audioBlobUrl">
@@ -591,10 +593,10 @@ const details = computed(() => {
     customMetadata = {};
   }
   let fileType = entity.fileType;
-  const isDev = import.meta.env.DEV;
-  if (isDev) {
-    fileType = 'mp3';
-  }
+  // const isDev = import.meta.env.DEV;
+  // if (isDev) {
+  //   fileType = 'docx';
+  // }
   return {
     ...entity,
     fileType: fileType,

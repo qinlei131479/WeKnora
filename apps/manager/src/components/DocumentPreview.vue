@@ -3,6 +3,7 @@
 // import { ref, shallowRef, watch, onUnmounted, nextTick, defineAsyncComponent } from 'vue';
 // import { previewKnowledgeFile } from '@/api/knowledge-base/index';
 // import { previewTemporaryAttachment } from '@/api/chat/temporary-attachments';
+import { Expand, Shrink, ShieldAlert, FileQuestion, Volume2 } from 'lucide-vue-next';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css';
 import markedKatex from 'marked-katex-extension';
@@ -444,26 +445,28 @@ onUnmounted(() => {
   <div class="document-preview" :class="{ 'is-fullscreen': isFullscreen, 'fill-height': fillHeight }">
     <!-- Toolbar -->
     <div class="preview-toolbar" v-if="!loading && !error && previewType !== 'unsupported'">
-      <t-space size="small">
-        <t-tooltip :content="isFullscreen ? $t('preview.exitFullscreen') : $t('preview.fullscreen')" placement="bottom">
-          <t-button theme="default" variant="text" shape="square" @click="toggleFullscreen">
-            <template #icon><t-icon :name="isFullscreen ? 'fullscreen-exit' : 'fullscreen'" /></template>
-          </t-button>
-        </t-tooltip>
-      </t-space>
+      <div class="toolbar-item">
+        <el-tooltip :content="isFullscreen ? $t('page.normal.preview.exitFullscreen') : $t('page.normal.preview.fullscreen')" placement="bottom">
+          <el-button text @click="toggleFullscreen">
+            <template #icon><Expand v-if="!isFullscreen" /><Shrink v-else /></template>
+          </el-button>
+        </el-tooltip>
+      </div>
     </div>
 
     <!-- Loading -->
     <div v-if="loading" class="preview-loading">
-      <t-loading size="medium" />
-      <span class="loading-text">{{ $t('preview.loading') }}</span>
+      <div style="height: 20px; width: 100%">
+        <div v-loading="loading"></div>
+      </div>
+      <span class="loading-text">{{ $t('page.normal.preview.loading') }}</span>
     </div>
 
     <!-- Error -->
     <div v-else-if="error" class="preview-error">
-      <t-icon name="error-circle" size="48px" />
+      <el-icon name="error-circle" size="48px"><ShieldAlert /></el-icon>
       <p>{{ error }}</p>
-      <t-button
+      <el-button
         theme="primary"
         size="small"
         @click="
@@ -471,15 +474,15 @@ onUnmounted(() => {
           loadPreview();
         "
       >
-        {{ $t('preview.retry') }}
-      </t-button>
+        {{ $t('page.normal.preview.retry') }}
+      </el-button>
     </div>
 
     <!-- Unsupported -->
     <div v-else-if="previewType === 'unsupported'" class="preview-unsupported">
-      <t-icon name="file-unknown" size="48px" />
-      <p>{{ $t('preview.unsupported') }}</p>
-      <p class="unsupported-hint">{{ $t('preview.unsupportedHint') }}</p>
+      <el-icon name="file-unknown" size="48px"><FileQuestion /></el-icon>
+      <p>{{ $t('page.normal.preview.unsupported') }}</p>
+      <p class="unsupported-hint">{{ $t('page.normal.preview.unsupportedHint') }}</p>
     </div>
 
     <!-- PDF -->
@@ -507,7 +510,7 @@ onUnmounted(() => {
         @rendered="() => {}"
         @error="
           (e: any) => {
-            error = e?.message || $t('preview.loadFailed');
+            error = e?.message || $t('page.normal.preview.loadFailed');
           }
         "
       />
@@ -531,10 +534,10 @@ onUnmounted(() => {
     <!-- Audio -->
     <div v-else-if="previewType === 'audio' && blobUrl" class="preview-audio">
       <div class="audio-wrapper">
-        <t-icon name="sound" size="48px" />
+        <el-icon name="sound" size="48px"><Volume2 /></el-icon>
         <p class="audio-filename">{{ fileName }}</p>
         <audio controls :src="blobUrl" class="audio-element">
-          {{ $t('preview.audioNotSupported') }}
+          {{ $t('page.normal.preview.audioNotSupported') }}
         </audio>
       </div>
     </div>
@@ -717,6 +720,12 @@ onUnmounted(() => {
 
   &:hover {
     opacity: 1;
+  }
+
+  .el-button {
+    --el-fill-color-light: #f5f7fa85;
+    color: #fff;
+    border-radius: 5px;
   }
 }
 
