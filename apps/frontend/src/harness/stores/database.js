@@ -7,6 +7,7 @@ import { useUserStore } from '@harness/stores/user'
 import { useRouter } from 'vue-router'
 import { parseToShanghai } from '@harness/utils/time'
 import { canSelectFile, isProcessingFile } from '@harness/utils/knowledge_file_policy'
+import { knowledgeBasesLocation } from '@/utils/weknoraFeatures'
 
 export const useDatabaseStore = defineStore('database', () => {
   const router = useRouter()
@@ -189,7 +190,7 @@ export const useDatabaseStore = defineStore('database', () => {
         try {
           const data = await databaseApi.deleteDatabase(kbId.value)
           message.success(data.message || '删除成功')
-          router.push({ path: '/platform/knowledge-bases', query: { surface: 'runtime' } })
+          router.push(knowledgeBasesLocation('runtime'))
         } catch (error) {
           console.error(error)
           message.error(error.message || '删除失败')

@@ -405,6 +405,7 @@ import { departmentApi } from '@harness/apis/department_api'
 import { authApi } from '@harness/apis/auth_api'
 import { useChunkPresetOptions } from '@harness/composables/useChunkPresetOptions'
 import { DEFAULT_CHUNK_PRESET_ID } from '@harness/utils/chunkUtils'
+import { knowledgeBasesLocation } from '@/utils/weknoraFeatures'
 import { formatFileSize } from '@harness/utils/file_utils'
 import { getKbTypeIcon, getKbTypeLabel, kbUtils } from '@harness/utils/kb_utils'
 
@@ -697,7 +698,7 @@ watch(
 )
 
 const backToDatabase = () => {
-  router.push({ path: '/platform/knowledge-bases', query: { surface: 'runtime' } })
+  router.push(knowledgeBasesLocation('runtime'))
 }
 
 const copyDatabaseId = async () => {

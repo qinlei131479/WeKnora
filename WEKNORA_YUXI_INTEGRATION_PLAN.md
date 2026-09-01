@@ -957,6 +957,18 @@ yuxi 原生知识库（milvus / dify / notion）**保持可用**，作为回滚�
 | 2 | 智能体选知识库 | 列表与 WeKnora 一致 |
 | 3 | 旧 yuxi 知识库页深链 | 优雅重定向，不白屏 |
 
+### P4 执行记录（2026-09-01）
+
+复用 `WeKnora_hide_features`（默认隐藏）。`localStorage.WeKnora_hide_features=false` 可回滚，重新露出 yuxi 知识库管理面。
+
+| 项 | 状态 | 说明 |
+| --- | --- | --- |
+| P4.1 | **工作区保持原浏览** | 「我的知识库」仍在工作区内展开目录，不跳转 WeKnora 页。知识库菜单 / 旧 yuxi 管理深链才收口到 WeKnora |
+| P4.2 | **已落地** | `HIDDEN_KB_SURFACES` 加入 `runtime`；知识库页不再出现 yuxi 管理 tab；`/knowledge-bases?surface=runtime` 与 `/harness/extensions/knowledgebase/:id` 深链重定向 |
+| P4.3 #2 | **P3 已满足** | 接入模式 `getAccessibleDatabases` 只返回 WeKnora 库 |
+
+回滚：浏览器设 `WeKnora_hide_features=false` 后刷新。不删 `h_knowledge_bases` 与 yuxi 页面代码。
+
 ---
 
 ## P5 · 会话存储与查询隔离

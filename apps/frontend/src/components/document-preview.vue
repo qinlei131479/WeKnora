@@ -369,6 +369,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <Teleport to="body" :disabled="!isFullscreen">
   <div class="document-preview" :class="{ 'is-fullscreen': isFullscreen, 'fill-height': fillHeight }">
     <!-- Toolbar -->
     <div class="preview-toolbar" v-if="!loading && !error && previewType !== 'unsupported'">
@@ -454,6 +455,7 @@ onUnmounted(() => {
       </div>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <style scoped lang="less">
@@ -552,11 +554,8 @@ onUnmounted(() => {
 
 .is-fullscreen {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2001;
+  inset: 0;
+  z-index: 5600;
   background: var(--td-bg-color-container);
   padding: 0;
   overflow-y: auto;
@@ -565,7 +564,7 @@ onUnmounted(() => {
     position: fixed;
     top: 12px;
     right: 32px;
-    z-index: 2002;
+    z-index: 5601;
   }
 
   /* Children use height: 100% rather than 100vh because <html> carries a

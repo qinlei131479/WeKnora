@@ -2,13 +2,25 @@
 
 from __future__ import annotations
 
+from pathlib import PurePosixPath
 from typing import Any
 
 from yuxi.knowledge.base import KnowledgeBase
 from yuxi.knowledge.read_models import KnowledgeBaseConfig
 from yuxi.p0.kb_fulltext import CHUNKS_PAGE_SIZE_MAX, capability_for_kb_type, reconstruct_document_text
 from yuxi.p3.client import WeKnoraKBClient
-from yuxi.p3.errors import WeKnoraKBError
+from yuxi.p3.errors import WeKnoraKBError, WeKnoraKBPermissionError
+from yuxi.services.file_preview import (
+    MAX_BINARY_PREVIEW_SIZE_BYTES,
+    OfficePreviewConversionError,
+    convert_office_to_pdf,
+    detect_media_type,
+    detect_preview_type,
+    is_binary_preview_type,
+    is_office_pdf_preview_file,
+    render_preview_payload,
+    render_preview_too_large_payload,
+)
 
 _MANAGED = "该知识库由 WeKnora 管理，请在 WeKnora 知识库页面操作"
 
@@ -61,8 +73,94 @@ class WeKnoraKB(KnowledgeBase):
         return {"skipped": True, "reason": _MANAGED}
 
     async def read_file_preview(self, kb_id: str, file_id: str) -> dict:
-        window = await self.open_file_content(kb_id, file_id, offset=0, limit=80)
-        return {"preview": window.get("content"), "readonly": True}
+        if str(file_id).startswith("__virtual_folder__:"):
+            raise ValueError("Cannot preview a folder")
+
+        basic = await self.get_file_basic_info(kb_id, file_id)
+        filename = str(basic.get("filename") or file_id)
+        response = {
+            "source": "knowledge",
+            "kb_id": kb_id,
+            "file_id": file_id,
+            "filename": filename,
+            "readonly": True,
+        }
+
+        kind, _supported, _message = detect_preview_type(filename, b"")
+        wants_original = is_binary_preview_type(kind) or is_office_pdf_preview_file(filename)
+        if wants_original:
+            original = await self._preview_from_original(filename, file_id)
+            if original is not None:
+                return {**response, **original}
+
+        content_type = await self._kb_content_type(kb_id)
+        text, _chunks = await self._load_unit_text(kb_id, file_id, content_type)
+        if text.strip():
+            return {**response, **self._text_preview_payload(filename, text)}
+
+        if not wants_original:
+            original = await self._preview_from_original(filename, file_id)
+            if original is not None:
+                return {**response, **original}
+
+        return {
+            **response,
+            "content": None,
+            "preview_type": "unsupported",
+            "supported": False,
+            "message": self._empty_unit_hint(content_type),
+        }
+
+    async def _preview_from_original(self, filename: str, file_id: str) -> dict[str, Any] | None:
+        try:
+            downloaded = await self._client.download_knowledge(file_id)
+        except (WeKnoraKBPermissionError, WeKnoraKBError):
+            return None
+        raw = downloaded.get("content") if isinstance(downloaded, dict) else None
+        if not isinstance(raw, (bytes, bytearray)):
+            return None
+        raw = bytes(raw)
+        if len(raw) > MAX_BINARY_PREVIEW_SIZE_BYTES:
+            return render_preview_too_large_payload()
+
+        if is_office_pdf_preview_file(filename):
+            try:
+                pdf = await convert_office_to_pdf(filename, raw)
+            except OfficePreviewConversionError:
+                return None
+            stem = PurePosixPath(filename).stem or file_id
+            return {
+                "content": pdf,
+                "filename": f"{stem}.pdf",
+                "media_type": "application/pdf",
+                "preview_type": "pdf",
+                "supported": True,
+                "message": None,
+                "binary": True,
+            }
+
+        payload = render_preview_payload(filename, raw)
+        if is_binary_preview_type(payload["preview_type"]) and payload["supported"]:
+            return {
+                "content": raw,
+                "media_type": detect_media_type(filename, raw),
+                "preview_type": payload["preview_type"],
+                "supported": True,
+                "message": None,
+                "binary": True,
+            }
+        if payload.get("supported"):
+            return payload
+        return None
+
+    @staticmethod
+    def _text_preview_payload(filename: str, text: str) -> dict[str, Any]:
+        kind, supported, _message = detect_preview_type(filename, text.encode("utf-8"))
+        preview_name = filename
+        if not supported or kind not in {"text", "markdown", "html"}:
+            stem = PurePosixPath(filename).stem or filename
+            preview_name = f"{stem}.md"
+        return render_preview_payload(preview_name, text.encode("utf-8"))
 
     def _content_type(self, config: KnowledgeBaseConfig | None) -> str:
         extra = (config.additional_params if config else {}) or {}
@@ -215,11 +313,47 @@ class WeKnoraKB(KnowledgeBase):
         parent_id: str | None = None,
         recursive: bool = False,
         files_only: bool = False,
+        path_prefix: str | None = None,
+        page: int = 1,
+        page_size: int = 100,
     ) -> dict:
-        del parent_id, recursive, files_only
-        items, _total = await self._list_all_knowledge(kb_id)
-        entries = [self._knowledge_as_file(item, kb_id) for item in items]
-        return {"entries": entries, "readonly": True}
+        del parent_id
+        folder_path = self._normalize_folder_path(path_prefix)
+        if recursive:
+            items, total = await self._list_all_knowledge(kb_id, folder_path=folder_path or None, folder_recursive=True)
+            entries = [self._knowledge_as_file(item, kb_id) for item in items]
+            return {"entries": entries, "total": total, "page": 1, "page_size": len(entries), "readonly": True}
+
+        normalized_page = max(int(page or 1), 1)
+        normalized_page_size = min(max(int(page_size or 100), 1), 500)
+        folders: list[dict[str, Any]] = []
+        if not files_only:
+            tree = await self._client.list_knowledge_folders(kb_id)
+            for node in self._folders_at_path(tree, folder_path):
+                folders.append(self._folder_as_entry(node, kb_id))
+
+        items, file_total = await self._client.list_knowledge(
+            kb_id,
+            page=normalized_page,
+            page_size=normalized_page_size,
+            folder_path=folder_path,
+            folder_recursive=False,
+        )
+        files = [self._knowledge_as_file(item, kb_id) for item in items]
+        if normalized_page <= 1:
+            entries = folders + files
+        else:
+            entries = files
+        total = len(folders) + int(file_total)
+        return {
+            "entries": entries,
+            "total": total,
+            "page": normalized_page,
+            "page_size": normalized_page_size,
+            "has_more": normalized_page * normalized_page_size < int(file_total),
+            "readonly": True,
+            "path_prefix": f"{folder_path}/" if folder_path else "",
+        }
 
     async def get_file_download(self, kb_id: str, file_id: str, variant: str = "original") -> dict:
         del variant
@@ -251,12 +385,24 @@ class WeKnoraKB(KnowledgeBase):
                 matched.append(str(item.get("id")))
         return matched
 
-    async def _list_all_knowledge(self, kb_id: str) -> tuple[list[dict[str, Any]], int]:
+    async def _list_all_knowledge(
+        self,
+        kb_id: str,
+        *,
+        folder_path: str | None = None,
+        folder_recursive: bool | None = None,
+    ) -> tuple[list[dict[str, Any]], int]:
         page = 1
         items: list[dict[str, Any]] = []
         total = 0
         while page <= 50:
-            batch, total = await self._client.list_knowledge(kb_id, page=page, page_size=100)
+            batch, total = await self._client.list_knowledge(
+                kb_id,
+                page=page,
+                page_size=100,
+                folder_path=folder_path,
+                folder_recursive=folder_recursive,
+            )
             items.extend(batch)
             if len(batch) < 100 or len(items) >= total:
                 break
@@ -302,6 +448,66 @@ class WeKnoraKB(KnowledgeBase):
         return "未能从 chunks 重建文档正文"
 
     @staticmethod
+    def _normalize_folder_path(raw: str | None) -> str:
+        if not raw:
+            return ""
+        path = str(raw).replace("\\", "/").strip()
+        return path.strip("/")
+
+    @classmethod
+    def _folders_at_path(cls, tree: dict[str, Any] | None, folder_path: str) -> list[dict[str, Any]]:
+        folders = (tree or {}).get("folders")
+        if not isinstance(folders, list):
+            return []
+        if not folder_path:
+            return [node for node in folders if isinstance(node, dict)]
+        node = cls._find_folder_node(folders, folder_path)
+        children = (node or {}).get("children") if isinstance(node, dict) else None
+        if not isinstance(children, list):
+            return []
+        return [child for child in children if isinstance(child, dict)]
+
+    @classmethod
+    def _find_folder_node(cls, folders: list[Any], folder_path: str) -> dict[str, Any] | None:
+        for node in folders:
+            if not isinstance(node, dict):
+                continue
+            if str(node.get("path") or "") == folder_path:
+                return node
+            children = node.get("children")
+            if isinstance(children, list):
+                found = cls._find_folder_node(children, folder_path)
+                if found is not None:
+                    return found
+        return None
+
+    @classmethod
+    def _folder_as_entry(cls, node: dict[str, Any], kb_id: str) -> dict[str, Any]:
+        path = cls._normalize_folder_path(str(node.get("path") or ""))
+        name = str(node.get("name") or path.rsplit("/", 1)[-1] or path)
+        prefix = f"{path}/" if path else ""
+        children = node.get("children") if isinstance(node.get("children"), list) else []
+        child_count = int(node.get("total_count") or node.get("document_count") or 0) + len(children)
+        return {
+            "kb_id": kb_id,
+            "file_id": f"__virtual_folder__:{kb_id}:{prefix}",
+            "filename": name,
+            "file_type": "folder",
+            "status": "done",
+            "file_size": 0,
+            "created_at": None,
+            "updated_at": None,
+            "is_folder": True,
+            "parent_id": None,
+            "is_virtual_folder": True,
+            "path_prefix": prefix,
+            "has_children": child_count > 0,
+            "children_count": child_count,
+            "has_original_file": False,
+            "has_parsed_markdown": False,
+        }
+
+    @staticmethod
     def _knowledge_as_file(item: dict[str, Any], kb_id: str) -> dict[str, Any]:
         return {
             "kb_id": kb_id,
@@ -314,4 +520,6 @@ class WeKnoraKB(KnowledgeBase):
             "updated_at": str(item.get("updated_at") or "") or None,
             "is_folder": False,
             "parent_id": None,
+            "is_virtual_folder": False,
+            "path_prefix": None,
         }

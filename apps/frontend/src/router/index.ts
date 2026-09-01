@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { autoSetup, getCurrentUser, userInfoFromApi } from '@/api/auth'
-import { getFeatureFlags, isHiddenKbSurface, isHiddenMenuPath } from '@/utils/weknoraFeatures'
+import { getFeatureFlags, isHiddenKbSurface, isHiddenMenuPath, shouldHideYuxiKnowledgeAdmin, weknoraKnowledgeBaseLocation } from '@/utils/weknoraFeatures'
 
 /** Lite /桌面 WebView 硬刷新时可能只打开 `/`，用 session 记住上次页面以便恢复 */
 const LITE_LAST_PATH_KEY = 'weknora_lite_last_path'
@@ -507,6 +507,11 @@ router.beforeEach(async (to, from, next) => {
     const query = { ...to.query }
     delete query.surface
     next({ path: '/platform/knowledge-bases', query, replace: true })
+    return
+  }
+  if (shouldHideYuxiKnowledgeAdmin() && to.path.startsWith('/platform/harness/extensions/knowledgebase/')) {
+    const kbId = String(to.params.kbId || to.path.split('/').pop() || '')
+    next({ ...weknoraKnowledgeBaseLocation(kbId), replace: true })
     return
   }
 

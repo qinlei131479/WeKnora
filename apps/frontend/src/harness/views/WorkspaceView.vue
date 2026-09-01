@@ -179,7 +179,16 @@
       wrapClassName="workspace-file-preview-modal"
       @cancel="closePreview"
     >
+      <WorkspaceKnowledgePreview
+        v-if="isKnowledgePreviewFile"
+        :knowledge-id="selectedEntry?.file_id"
+        :file-type="knowledgePreviewFileType"
+        :file-name="selectedPreviewPath"
+        close-variant="close"
+        @close="closePreview"
+      />
       <AgentFilePreview
+        v-else
         :file="previewFile"
         :filePath="selectedPreviewPath"
         :showClose="true"
@@ -205,6 +214,7 @@ import { ChevronLeft, ChevronRight, CircleHelp, LibraryBig } from 'lucide-vue-ne
 import PageHeader from '@harness/components/shared/PageHeader.vue'
 import AgentFilePreview from '@harness/components/AgentFilePreview.vue'
 import WorkspaceFileList from '@harness/components/workspace/WorkspaceFileList.vue'
+import WorkspaceKnowledgePreview from '@harness/components/workspace/WorkspaceKnowledgePreview.vue'
 import WorkspacePreviewPane from '@harness/components/workspace/WorkspacePreviewPane.vue'
 import WorkspaceSidebar from '@harness/components/workspace/WorkspaceSidebar.vue'
 import { databaseApi } from '@harness/apis/knowledge_api'
@@ -215,13 +225,12 @@ import {
   downloadWorkspaceFile,
   downloadWorkspaceKnowledgeFile,
   getWorkspaceFileContent,
-  getWorkspaceKnowledgeFileContent,
   getWorkspaceKnowledgeTree,
   getWorkspaceTree,
   saveWorkspaceFileContent,
   uploadWorkspaceFiles
 } from '@harness/apis/workspace_api'
-import { normalizePreviewResponse } from '@harness/utils/file_preview'
+import { normalizePreviewResponse, resolveKnowledgePreviewFileType } from '@harness/utils/file_preview'
 
 const { t } = useI18n()
 const userStore = useUserStore()
@@ -297,6 +306,10 @@ const selectedPreviewPath = computed(() =>
     ? selectedEntry.value.name || ''
     : selectedEntry.value?.path || ''
 )
+const isKnowledgePreviewFile = computed(
+  () => selectedEntry.value?.source === 'knowledge' && Boolean(selectedEntry.value?.file_id)
+)
+const knowledgePreviewFileType = computed(() => resolveKnowledgePreviewFileType(selectedEntry.value))
 const showInlinePreview = computed(() => useInlinePreview.value && Boolean(previewFile.value))
 const workspaceMainStyle = computed(() => {
   if (!showInlinePreview.value) return {}
@@ -327,11 +340,6 @@ const revokePreviewObjectUrl = () => {
 
 const normalizePreviewFile = async (entry, response) => {
   return normalizePreviewResponse(response, entry)
-}
-
-const KNOWLEDGE_PREVIEW_LOAD_MESSAGES = {
-  log: '加载知识库文件预览失败:',
-  resolveUserMessage: () => t('workspacePage.loadKnowledgePreviewFailed')
 }
 
 const buildPreviewLoadingFile = (entry, baseFile = entry) => ({
@@ -420,19 +428,17 @@ const loadWorkspacePreview = async (entry) => {
   }
 }
 
-const loadKnowledgePreview = async (
-  entry,
-  baseFile = entry,
-  messages = KNOWLEDGE_PREVIEW_LOAD_MESSAGES
-) => {
+const loadKnowledgePreview = async (entry, baseFile = entry) => {
   const requestId = startPreviewRequest(entry, baseFile)
   try {
-    const response = await getWorkspaceKnowledgeFileContent(entry.kb_id, entry.file_id)
-    if (!isCurrentPreviewEntry(requestId, entry)) return
-    const file = await normalizePreviewFile(entry, response)
-    applyPreviewFile(requestId, entry, file)
-  } catch (error) {
-    showPreviewError(requestId, entry, error, messages.log, messages.resolveUserMessage(error))
+    applyPreviewFile(requestId, entry, {
+      ...entry,
+      supported: true,
+      previewType: 'weknora',
+      content: '',
+      previewUrl: '',
+      message: ''
+    })
   } finally {
     finishPreviewRequest(requestId)
   }

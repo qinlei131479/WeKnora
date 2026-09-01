@@ -85,6 +85,7 @@ def _workspace_knowledge_entry(kb_id: str, item: dict) -> dict:
         "path": path,
         "virtual_path": path,
         "name": item.get("filename") or file_id,
+        "file_type": item.get("file_type") or "",
         "is_dir": is_dir,
         "size": 0 if is_dir else int(item.get("file_size") or 0),
         "modified_at": item.get("updated_at") or item.get("created_at") or "",

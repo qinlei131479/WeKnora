@@ -123,6 +123,15 @@ export const getPreviewFileExtension = (path) => {
   return fileName.slice(dotIndex)
 }
 
+export const resolveKnowledgePreviewFileType = (entry) => {
+  const explicit = String(entry?.file_type || '')
+    .trim()
+    .replace(/^\./, '')
+    .toLowerCase()
+  if (explicit && explicit !== 'folder') return explicit
+  return getPreviewFileExtension(entry?.name || entry?.filename || '').replace(/^\./, '')
+}
+
 export const isMarkdownPreview = (path, previewType) => {
   if (previewType === 'markdown') return true
   return MARKDOWN_EXTENSIONS.has(getPreviewFileExtension(path))
@@ -164,7 +173,7 @@ export const normalizePreviewResponse = async (response, baseFile = {}) => {
     return {
       ...baseFile,
       ...payload,
-      content: payload.content ?? '',
+      content: payload.content ?? payload.preview ?? '',
       previewType,
       supported: payload.supported !== false,
       message: payload.message || '',

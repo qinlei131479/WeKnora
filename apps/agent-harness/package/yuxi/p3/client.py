@@ -112,6 +112,12 @@ class WeKnoraKBClient:
         data = await self.request("POST", f"/knowledge-bases/{kb_id}/hybrid-search", json=body)
         return data if isinstance(data, list) else []
 
+    async def list_knowledge_folders(self, kb_id: str) -> dict[str, Any]:
+        data = await self.request("GET", f"/knowledge-bases/{kb_id}/knowledge/folders")
+        if not isinstance(data, dict):
+            return {"folders": [], "root_document_count": 0, "total_document_count": 0}
+        return data
+
     async def list_knowledge(
         self,
         kb_id: str,
@@ -119,10 +125,17 @@ class WeKnoraKBClient:
         page: int = 1,
         page_size: int = 100,
         keyword: str | None = None,
+        folder_path: str | None = None,
+        folder_recursive: bool | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
         params: dict[str, Any] = {"page": page, "page_size": page_size}
         if keyword:
             params["keyword"] = keyword
+        # folder_path 只要出现在 query 里就会按目录过滤；空字符串表示知识库根目录。
+        if folder_path is not None:
+            params["folder_path"] = folder_path
+            if folder_recursive is not None:
+                params["folder_recursive"] = str(bool(folder_recursive)).lower()
         payload = await self._raw_page("GET", f"/knowledge-bases/{kb_id}/knowledge", params=params)
         items = payload.get("data") if isinstance(payload, dict) else payload
         if not isinstance(items, list):

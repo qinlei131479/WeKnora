@@ -279,6 +279,7 @@ import { useChunkPresetOptions } from '@harness/composables/useChunkPresetOption
 import { getKbTypeLabel, getKbTypeIcon, getKbTypeColor, kbUtils } from '@harness/utils/kb_utils'
 import { getShareConfigLabel } from '@harness/utils/shareConfig'
 import { DEFAULT_CHUNK_PRESET_ID } from '@harness/utils/chunkUtils'
+import { knowledgeBasesLocation, shouldHideYuxiKnowledgeAdmin, weknoraKnowledgeBaseLocation } from '@/utils/weknoraFeatures'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -301,7 +302,13 @@ const { databases, state: dbState } = storeToRefs(databaseStore)
 
 const knowledgeActiveView = 'documents'
 const knowledgeViewItems = computed(() => [
-  { key: 'documents', label: t('knowledgeList.tabs.runtime'), path: '/platform/knowledge-bases?surface=runtime' }
+  {
+    key: 'documents',
+    label: t('knowledgeList.tabs.runtime'),
+    path: shouldHideYuxiKnowledgeAdmin()
+      ? knowledgeBasesLocation('runtime').path
+      : '/platform/knowledge-bases?surface=runtime'
+  }
 ])
 
 const kbTypes = computed(() => Object.keys(supportedKbTypes.value))
@@ -544,7 +551,7 @@ const cardTags = (database) => {
 }
 
 const navigateToDatabase = (database) => {
-  router.push({ path: `/platform/harness/extensions/knowledgebase/${database.kb_id}` })
+  router.push(weknoraKnowledgeBaseLocation(database.kb_id))
 }
 
 const copyDatabaseId = async (database) => {
@@ -587,10 +594,7 @@ const handleDatabaseAction = (key, database) => {
     return
   }
   if (key === 'edit') {
-    router.push({
-      path: `/platform/harness/extensions/knowledgebase/${database.kb_id}`,
-      query: { action: 'edit' }
-    })
+    router.push(weknoraKnowledgeBaseLocation(database.kb_id))
     return
   }
   if (key === 'delete') {

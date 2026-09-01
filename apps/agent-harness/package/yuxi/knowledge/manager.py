@@ -798,16 +798,27 @@ class KnowledgeBaseManager:
 
         if is_weknora_kb_id(kb_id):
             executor = await self.get_kb_executor(kb_id)
-            tree = await executor.list_file_tree(kb_id)
+            tree = await executor.list_file_tree(
+                kb_id,
+                parent_id,
+                recursive,
+                files_only,
+                path_prefix=path_prefix,
+                page=page,
+                page_size=page_size,
+            )
             entries = tree.get("entries") if isinstance(tree, dict) else []
+            total = int(tree.get("total") or len(entries or []))
+            normalized_page = int(tree.get("page") or max(int(page or 1), 1))
+            normalized_page_size = int(tree.get("page_size") or min(max(int(page_size or 100), 1), 500))
             return {
                 "items": entries or [],
-                "total": len(entries or []),
-                "page": 1,
-                "page_size": len(entries or []),
-                "has_more": False,
+                "total": total,
+                "page": normalized_page,
+                "page_size": normalized_page_size,
+                "has_more": bool(tree.get("has_more", normalized_page * normalized_page_size < total)),
                 "parent_id": parent_id,
-                "path_prefix": path_prefix or "",
+                "path_prefix": tree.get("path_prefix", path_prefix or "") if isinstance(tree, dict) else (path_prefix or ""),
                 "recursive": False,
             }
 

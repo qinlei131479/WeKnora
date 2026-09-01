@@ -1,7 +1,16 @@
 <template>
   <aside class="workspace-preview-pane">
+    <WorkspaceKnowledgePreview
+      v-if="isKnowledgePreview"
+      :knowledge-id="knowledgeId"
+      :file-type="knowledgeFileType"
+      :file-name="knowledgeFileName"
+      :show-close="true"
+      close-variant="collapse-right"
+      @close="$emit('close')"
+    />
     <AgentFilePreview
-      v-if="file"
+      v-else-if="file"
       :file="file"
       :file-path="filePath"
       :show-download="false"
@@ -29,13 +38,16 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { FileSearch } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import AgentFilePreview from '@harness/components/AgentFilePreview.vue'
+import WorkspaceKnowledgePreview from '@harness/components/workspace/WorkspaceKnowledgePreview.vue'
+import { resolveKnowledgePreviewFileType } from '@harness/utils/file_preview'
 
 const { t } = useI18n()
 
-defineProps({
+const props = defineProps({
   file: { type: Object, default: null },
   filePath: { type: String, default: '' },
   loading: { type: Boolean, default: false },
@@ -44,6 +56,13 @@ defineProps({
 })
 
 defineEmits(['close', 'save'])
+
+const isKnowledgePreview = computed(
+  () => props.file?.source === 'knowledge' && Boolean(props.file?.file_id) && !props.file?.is_dir
+)
+const knowledgeId = computed(() => String(props.file?.file_id || ''))
+const knowledgeFileName = computed(() => props.file?.name || props.file?.filename || props.filePath || '')
+const knowledgeFileType = computed(() => resolveKnowledgePreviewFileType(props.file))
 </script>
 
 <style scoped lang="less">
