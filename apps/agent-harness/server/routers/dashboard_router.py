@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import Integer, String, cast, distinct, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +19,16 @@ from server.utils.auth_middleware import get_db, get_required_user
 from yuxi.p2.context import current_tenant_id
 from yuxi.p2.flags import is_tenant_scope_enabled
 from yuxi.p2.tenant_query import apply_tenant_filters
+from yuxi.p6.flags import is_weknora_dashboard_enabled
+from yuxi.p6.stats import (
+    count_weknora_active_users,
+    fetch_weknora_agent_stats,
+    fetch_weknora_daily_active_users,
+    fetch_weknora_knowledge_stats,
+    fetch_weknora_overview,
+    simple_sum,
+    weknora_user_total,
+)
 from yuxi.repositories.agent_repository import AgentRepository
 from yuxi.repositories.conversation_repository import ConversationRepository
 from yuxi.storage.minio.client import normalize_public_minio_url
@@ -123,6 +133,8 @@ class KnowledgeStats(BaseModel):
     total_storage_size: int  # 字节
     databases_by_type: dict
     file_type_distribution: dict
+    split_by_system: bool = False
+    source: str = "yuxi"
 
 
 class AgentAnalytics(BaseModel):
@@ -134,6 +146,11 @@ class AgentAnalytics(BaseModel):
     agent_tool_usage: list[dict]
     top_performing_agents: list[dict]
     agent_names: dict[str, str] = {}  # agent_id -> agent_name 映射
+    split_by_system: bool = False
+    yuxi_total_agents: int = 0
+    weknora_total_agents: int = 0
+    weknora_agent_conversation_counts: list[dict] = Field(default_factory=list)
+    weknora_agent_names: dict[str, str] = Field(default_factory=dict)
 
 
 class ConversationListItem(BaseModel):
@@ -308,6 +325,15 @@ async def get_user_activity_stats(
         # Join condition accounts for both representations.
         user_join_condition = Conversation.uid == User.uid
 
+        if is_weknora_dashboard_enabled():
+            overview = await fetch_weknora_overview(db)
+            return UserActivityStats(
+                total_users=weknora_user_total(weknora_users=overview.users),
+                active_users_24h=await count_weknora_active_users(db, since=now - timedelta(days=1)),
+                active_users_30d=await count_weknora_active_users(db, since=now - timedelta(days=30)),
+                daily_active_users=await fetch_weknora_daily_active_users(db),
+            )
+
         total_users_result = await db.execute(_user_count_stmt())
         total_users = total_users_result.scalar() or 0
 
@@ -342,7 +368,11 @@ async def get_user_activity_stats(
                     select(func.count(distinct(User.id)))
                     .select_from(Conversation)
                     .join(User, user_join_condition)
-                    .filter(Conversation.updated_at >= day_start, Conversation.updated_at < day_end, User.is_deleted == 0)
+                    .filter(
+                        Conversation.updated_at >= day_start,
+                        Conversation.updated_at < day_end,
+                        User.is_deleted == 0,
+                    )
                 )
             )
             active_count = active_count_result.scalar() or 0
@@ -459,6 +489,19 @@ async def get_knowledge_stats(
 ):
     """获取当前 token 空间的知识库统计"""
     try:
+        if is_weknora_dashboard_enabled():
+            wk = await fetch_weknora_knowledge_stats(db)
+            return KnowledgeStats(
+                total_databases=wk.total_databases,
+                total_files=wk.total_files,
+                total_nodes=wk.total_nodes,
+                total_storage_size=wk.total_storage_size,
+                databases_by_type=wk.databases_by_type,
+                file_type_distribution=wk.file_type_distribution,
+                split_by_system=True,
+                source="weknora",
+            )
+
         from yuxi.repositories.knowledge_base_repository import KnowledgeBaseRepository
         from yuxi.repositories.knowledge_file_repository import KnowledgeFileRepository
 
@@ -632,13 +675,23 @@ async def get_agent_analytics(
             agent_repo = AgentRepository(db)
             agent_names = {agent.slug: agent.name for agent in await agent_repo.list_by_slugs(agent_slugs)}
 
+        wk = await fetch_weknora_agent_stats(db) if is_weknora_dashboard_enabled() else None
+        wk_agents = wk.total_agents if wk else 0
+        wk_counts = wk.agent_conversation_counts if wk else []
+        wk_names = wk.agent_names if wk else {}
+
         return AgentAnalytics(
-            total_agents=total_agents,
+            total_agents=simple_sum(total_agents, wk_agents) if wk is not None else total_agents,
             agent_conversation_counts=agent_conversation_counts,
             agent_satisfaction_rates=agent_satisfaction,
             agent_tool_usage=agent_tool_usage,
             top_performing_agents=top_performing_agents,
             agent_names=agent_names,
+            split_by_system=wk is not None,
+            yuxi_total_agents=total_agents,
+            weknora_total_agents=wk_agents,
+            weknora_agent_conversation_counts=wk_counts,
+            weknora_agent_names=wk_names,
         )
 
     except Exception as e:
@@ -688,7 +741,7 @@ async def get_dashboard_stats(
         # Calculate satisfaction rate
         satisfaction_rate = round((like_count / total_feedbacks * 100), 2) if total_feedbacks > 0 else 100
 
-        return {
+        payload = {
             "total_conversations": total_conversations,
             "active_conversations": active_conversations,
             "total_messages": total_messages,
@@ -698,6 +751,21 @@ async def get_dashboard_stats(
                 "satisfaction_rate": satisfaction_rate,
             },
         }
+        if is_weknora_dashboard_enabled():
+            wk = await fetch_weknora_overview(db)
+            payload.update(
+                {
+                    "split_by_system": True,
+                    "weknora_sessions": wk.sessions,
+                    "yuxi_conversations": total_conversations,
+                    "total_conversations": simple_sum(wk.sessions, total_conversations),
+                    "weknora_messages": wk.messages,
+                    "yuxi_messages": total_messages,
+                    "total_messages": simple_sum(wk.messages, total_messages),
+                    "total_users": weknora_user_total(weknora_users=wk.users),
+                }
+            )
+        return payload
     except Exception as e:
         logger.error(f"Error getting dashboard stats: {e}")
         logger.error(traceback.format_exc())

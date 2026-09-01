@@ -8,6 +8,11 @@
         <div class="stat-content">
           <div class="stat-value">{{ basicStats?.total_conversations || 0 }}</div>
           <div class="stat-label">{{ $t('dashboard.stats.conversations') }}</div>
+          <div class="stat-split" v-if="basicStats?.split_by_system">
+            {{ $t('dashboard.stats.chat') }} {{ basicStats?.weknora_sessions || 0 }}
+            ·
+            {{ $t('dashboard.stats.work') }} {{ basicStats?.yuxi_conversations || 0 }}
+          </div>
           <div class="stat-trend" v-if="basicStats?.conversation_trend">
             <TrendingUp v-if="basicStats.conversation_trend > 0" class="trend-icon up" />
             <TrendingDown v-else-if="basicStats.conversation_trend < 0" class="trend-icon down" />
@@ -33,6 +38,11 @@
         <div class="stat-content">
           <div class="stat-value">{{ basicStats?.total_messages || 0 }}</div>
           <div class="stat-label">{{ $t('dashboard.stats.messages') }}</div>
+          <div class="stat-split" v-if="basicStats?.split_by_system">
+            {{ $t('dashboard.stats.chat') }} {{ basicStats?.weknora_messages || 0 }}
+            ·
+            {{ $t('dashboard.stats.work') }} {{ basicStats?.yuxi_messages || 0 }}
+          </div>
         </div>
       </div>
 
@@ -81,7 +91,6 @@ import {
   TrendingDown
 } from 'lucide-vue-next'
 
-// Props
 const props = defineProps({
   basicStats: {
     type: Object,
@@ -229,6 +238,15 @@ const getSatisfactionClass = () => {
           color: var(--gray-600);
           font-weight: 500;
           margin-bottom: 8px;
+        }
+
+        .stat-split {
+          font-size: 12px;
+          color: var(--gray-500);
+          font-weight: 500;
+          line-height: 1.3;
+          margin-top: -4px;
+          margin-bottom: 4px;
         }
 
         .stat-trend {

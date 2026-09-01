@@ -2,7 +2,7 @@
 
 > 本文档是分阶段执行手册。**每个阶段的验收门禁全绿之前，不进入下一阶段。**
 >
-> **P8 已停止执行**（IM / 网页嵌入 / OpenAPI 不接到 yuxi）。本计划范围为 **P0–P7 与 P9**。
+> **P5 不执行**（WeKnora 会话与 yuxi `h_*` 本已两套独立存储/查询，不做隔离验证或修补）。**P8 已停止执行**（IM / 网页嵌入 / OpenAPI 不接到 yuxi）。本计划范围为 **P0–P7 与 P9**（P5 记为跳过，不作为后续前置）。
 >
 > **收尾约定**：P0–P7 与 P9 全部完成且门禁通过后，**删除本文件**（`WEKNORA_YUXI_INTEGRATION_PLAN.md`），不要作为长期文档留在仓库。协议与实现以代码和正式文档为准。
 >
@@ -121,6 +121,7 @@ flowchart TB
 | `HARNESS_LEGACY_JWT_ENABLED` | 不使用 | 默认开 | **保持开**。独立登录签发的是 yuxi JWT，关掉后本地登录立刻不可用 |
 | `HARNESS_P0_RUN_TOKEN_STORE` / `HARNESS_P0_CHECK_AUTH_TOKENS` | 不使用 | P3 打开 | Worker 透传 JWT；调 WeKnora KB 必须打开 |
 | `HARNESS_WEKNORA_KB` / `WEKNORA_BASE_URL` | 不使用 | P3 打开 | harness API/Worker 调 `http://host.docker.internal:9980/api/v1`（本机 `make dev-app`）。空 URL 时启动打 error |
+| `HARNESS_WEKNORA_DASHBOARD` | 不使用 | P6 打开 | harness 数据总览 SQL 统计 WeKnora 表并分栏；关闭后仍只计 yuxi `h_*` |
 | `HARNESS_LOCAL_LOGIN_ENABLED` | 不使用 | 默认开；本机已开 | **保持开**。false 时密码/OIDC/初始化/用户增删改 404。本计划不再要求关闭 |
 | 前端 Token | `weknora_token` | 只读 `weknora_token`；启动/登出/切空间会清掉遗留的 `harness_user_token` | 不再双 token。独立登录若写入，也写 `weknora_token`，避免遮蔽 WeKnora JWT |
 | 前端代理 | Vite `:9988` → `APP_PORT`（kjsc 9980） | `VITE_HARNESS_PROXY_TARGET` → `:5050` | 与 `.env.kjsc.example` 的 `APP_PORT=9980` 对齐。Docker 容器内仍听 8080 |
@@ -139,7 +140,7 @@ flowchart TB
 | P2 | 租户贯通 + 部门移除 | yuxi | 中 |
 | P3 | 知识库统一（WeKnora KB 适配器） | yuxi | 中 |
 | P4 | 前端收口（知识库单一入口） | 前端 | 低 |
-| P5 | 会话存储与查询隔离验证 | 两侧，仅验证/修补 | 低 |
+| P5 | ~~会话存储与查询隔离验证~~ **不执行** | — | — |
 | P6 | 数据总览分系统统计 | yuxi | 中 |
 | P7 | 模型供应商统一到 WeKnora（内部模型代理） | WeKnora + yuxi | 高 |
 | P8 | ~~对外入口接入 yuxi~~ **停止执行** | — | — |
@@ -971,7 +972,11 @@ yuxi 原生知识库（milvus / dify / notion）**保持可用**，作为回滚�
 
 ---
 
-## P5 · 会话存储与查询隔离
+## P5 · 会话存储与查询隔离 — **不执行**
+
+> **2026-09-01 调整：本阶段从执行手册撤销。** WeKnora Agent 与 yuxi Agent 本来就写/查两套表，没有聚合、没有 UNION、没有共享 session ID。不需要再做隔离验证或修补，也不跑 P5.2 现场门禁。
+
+**现行约定**（与原 P5.0 边界一致，现状即满足）
 
 ### P5.0 最终边界
 
@@ -1006,6 +1011,16 @@ yuxi Agent    -> h_conversations/h_messages/h_agent_runs
 | 5 | 两边切换租户 | 均不串数据 |
 | 6 | yuxi checkpoint 恢复 | 正常 |
 
+### P5 执行记录（2026-09-01）— **不执行**
+
+核对后确认两边已经独立：
+
+- WeKnora 控制台会话 → `sessions` / `messages`
+- yuxi 智能体会话 → `h_conversations` / `h_messages` / `h_agent_runs` 及 LangGraph checkpoint
+- 前端两套会话列表各自请求，不混排、不互引 ID
+
+因此 **不实施、不验收、不作为 P6 前置**。下一阶段直接做 P6 数据总览分系统统计。
+
 ---
 
 ## P6 · 数据总览分系统统计
@@ -1014,17 +1029,19 @@ yuxi Agent    -> h_conversations/h_messages/h_agent_runs
 
 ### P6.1 直接跨表统计
 
-两库已同库，yuxi dashboard 可在明确复刻软删除、租户和权限规则的前提下，直接 SQL 统计 WeKnora 的 `users` / `sessions` / `messages` / `knowledge_bases`，无需在 Go 侧新开统计 API。
+两库已同库，yuxi dashboard 可在明确复刻软删除、租户和权限规则的前提下，直接 SQL 统计 WeKnora 的 `users` / `sessions` / `messages` / `knowledge_bases` / `knowledges` / `custom_agents` / `tenant_members`，无需在 Go 侧新开统计 API。
 
-文件：[apps/agent-harness/server/routers/dashboard_router.py](apps/agent-harness/server/routers/dashboard_router.py)
+开关：`HARNESS_WEKNORA_DASHBOARD`（默认关）。关闭后 `/api/dashboard/*` 仍只计 yuxi `h_*`。打开后按当前 token 空间补 WeKnora 表，并在 payload 里分栏；合计数为简单相加、不去重。用户总数只来自 WeKnora `tenant_members` ∩ `users`，绝不计入 `h_users`。
+
+文件：[apps/agent-harness/server/routers/dashboard_router.py](apps/agent-harness/server/routers/dashboard_router.py)、[apps/agent-harness/package/yuxi/p6/](apps/agent-harness/package/yuxi/p6/)
 
 ### P6.2 口径设计
 
 - **WeKnora Agent 与 yuxi Agent 分区统计**，不合并会话明细
-- 会话数分别展示 WeKnora 与 yuxi，可额外显示简单合计，但不去重
+- 会话数分别展示对话（WeKnora）与工作（yuxi），可额外显示简单合计，但不去重
 - 用户只统计 WeKnora `users`；`h_users` 是投影表，绝不计入用户总数
 - 知识库完成 P3 后只统计 WeKnora 知识库
-- “活跃用户”分别按 `sessions/messages` 和 `h_conversations/h_messages` 计算，并明确时间窗口
+- “活跃用户”只按 WeKnora `sessions/messages` 计算（24h / 30d），不与 yuxi 会话交叉、不做用户分栏
 - 明确系统超管与租户 owner/admin 的可见范围；若提供租户总览，租户管理员只能看当前 tenant
 
 ### P6.3 验收门禁
@@ -1036,6 +1053,18 @@ yuxi Agent    -> h_conversations/h_messages/h_agent_runs
 | 3 | 按租户下钻 | 数据正确 |
 | 4 | 两类智能体、会话、活跃用户 | 独立展示且口径清晰 |
 | 5 | 软删除、共享 KB、外部身份 | 与业务 API 口径一致 |
+
+### P6 执行记录（2026-09-01）
+
+代码已落地，开关 `HARNESS_WEKNORA_DASHBOARD`。默认关；本机 `.env` / `.env.kjsc.example` 已开。关闭后数据总览仍只计 yuxi `h_*`。
+
+| 项 | 状态 | 说明 |
+| --- | --- | --- |
+| P6.1 | **已落地** | harness 同库 SQL 读 WeKnora 表，无新 Go 统计 API |
+| P6.2 | **已落地** | 会话/消息/智能体分栏展示为「对话 / 工作」，合计只加不去重；用户=当前空间 `tenant_members`∩`users`；知识库=本空间非临时 WeKnora 库；活跃用户只走 WeKnora |
+| P6.3 | **已通过（人工）** | 2026-09-01 现场验收：分栏与合计一致、用户不双计、当前 token 空间过滤 |
+
+回滚：关 `HARNESS_WEKNORA_DASHBOARD` 并 recreate `api`。
 
 ---
 

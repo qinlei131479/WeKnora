@@ -6398,6 +6398,8 @@ export default {
       activeConversations: 'Активные чаты',
       messages: 'Сообщения',
       users: 'Пользователи',
+      chat: 'Диалог',
+      work: 'Работа',
       feedbacks: 'Отзывы',
       satisfaction: 'Удовлетворённость'
     },
@@ -6458,7 +6460,8 @@ export default {
       unit: '',
       fileTypes: 'Типы файлов',
       unknownType: 'Неизвестно',
-      noData: 'Нет данных'
+      noData: 'Нет данных',
+      sourceWeKnora: 'Только базы знаний WeKnora'
     },
     feedback: {
       title: 'Отзывы пользователей',

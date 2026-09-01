@@ -6398,6 +6398,8 @@ export default {
       activeConversations: '活跃对话',
       messages: '总消息数',
       users: '用户数',
+      chat: '对话',
+      work: '工作',
       feedbacks: '总反馈数',
       satisfaction: '满意度'
     },
@@ -6458,7 +6460,8 @@ export default {
       unit: '个',
       fileTypes: '文件类型分布',
       unknownType: '未知',
-      noData: '暂无数据'
+      noData: '暂无数据',
+      sourceWeKnora: '仅统计 WeKnora 知识库'
     },
     feedback: {
       title: '用户反馈详情',

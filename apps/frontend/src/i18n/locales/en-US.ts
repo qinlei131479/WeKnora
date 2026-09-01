@@ -12,6 +12,8 @@ export default {
       activeConversations: 'Active chats',
       messages: 'Messages',
       users: 'Users',
+      chat: 'Chat',
+      work: 'Work',
       feedbacks: 'Feedback',
       satisfaction: 'Satisfaction'
     },
@@ -72,7 +74,8 @@ export default {
       unit: '',
       fileTypes: 'File type distribution',
       unknownType: 'Unknown',
-      noData: 'No data'
+      noData: 'No data',
+      sourceWeKnora: 'WeKnora knowledge bases only'
     },
     feedback: {
       title: 'User feedback',

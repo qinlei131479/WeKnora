@@ -1,5 +1,8 @@
 <template>
   <a-card :title="$t('dashboard.knowledge.title')" :loading="loading" class="dashboard-card">
+    <template v-if="knowledgeStats?.source === 'weknora'" #extra>
+      <span class="knowledge-source">{{ $t('dashboard.knowledge.sourceWeKnora') }}</span>
+    </template>
     <!-- 知识库概览 -->
     <div class="stats-overview">
       <a-row :gutter="16">
@@ -358,6 +361,11 @@ defineExpose({
 </script>
 
 <style scoped lang="less">
+.knowledge-source {
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
 // KnowledgeStatsComponent 特有的样式
 .chart-container {
   .chart {

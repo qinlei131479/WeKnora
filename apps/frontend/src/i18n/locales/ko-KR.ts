@@ -6398,6 +6398,8 @@ export default {
       activeConversations: '활성 대화',
       messages: '메시지 수',
       users: '사용자 수',
+      chat: '대화',
+      work: '작업',
       feedbacks: '피드백 수',
       satisfaction: '만족도'
     },
@@ -6458,7 +6460,8 @@ export default {
       unit: '개',
       fileTypes: '파일 유형 분포',
       unknownType: '알 수 없음',
-      noData: '데이터 없음'
+      noData: '데이터 없음',
+      sourceWeKnora: 'WeKnora 지식베이스만 집계'
     },
     feedback: {
       title: '사용자 피드백',

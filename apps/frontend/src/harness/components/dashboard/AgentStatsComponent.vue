@@ -10,6 +10,11 @@
             :value-style="{ color: 'var(--color-info-500)' }"
             :suffix="$t('dashboard.agents.unit')"
           />
+          <div class="stat-split" v-if="agentStats?.split_by_system">
+            {{ $t('dashboard.stats.chat') }} {{ agentStats?.weknora_total_agents || 0 }}
+            ·
+            {{ $t('dashboard.stats.work') }} {{ agentStats?.yuxi_total_agents || 0 }}
+          </div>
         </a-col>
         <a-col :span="8">
           <a-statistic
@@ -18,6 +23,11 @@
             :value-style="{ color: 'var(--color-accent-500)' }"
             :suffix="$t('dashboard.agents.times')"
           />
+          <div class="stat-split" v-if="agentStats?.split_by_system">
+            {{ $t('dashboard.stats.chat') }} {{ chatConversations }}
+            ·
+            {{ $t('dashboard.stats.work') }} {{ workConversations }}
+          </div>
         </a-col>
         <a-col :span="8">
           <a-statistic
@@ -147,10 +157,17 @@ const performerColumns = computed(() => [
 ])
 
 // 计算属性
-const totalConversations = computed(() => {
-  const conversationCounts = props.agentStats?.agent_conversation_counts || []
-  return conversationCounts.reduce((sum, item) => sum + item.conversation_count, 0)
+const chatConversations = computed(() => {
+  const weknoraCounts = props.agentStats?.weknora_agent_conversation_counts || []
+  return weknoraCounts.reduce((sum, item) => sum + item.conversation_count, 0)
 })
+
+const workConversations = computed(() => {
+  const yuxiCounts = props.agentStats?.agent_conversation_counts || []
+  return yuxiCounts.reduce((sum, item) => sum + item.conversation_count, 0)
+})
+
+const totalConversations = computed(() => chatConversations.value + workConversations.value)
 
 const totalToolUsage = computed(() => {
   const toolUsage = props.agentStats?.agent_tool_usage || []
@@ -366,6 +383,13 @@ defineExpose({
 </script>
 
 <style scoped lang="less">
+.stat-split {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--gray-500);
+  font-weight: 500;
+}
+
 /* 指标值样式 */
 .metric-value {
   font-weight: 500;
