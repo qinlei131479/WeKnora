@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.AmpParserEnginesMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.AmpParserEngines">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="file_types" property="fileTypes"/>
+        <result column="engine_config" property="engineConfig"/>
+        <result column="check_type" property="checkType"/>
+        <result column="config_key" property="configKey"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="enabled" property="enabled"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, name, description, file_types, engine_config, check_type, config_key, sort_order, enabled, created_at, updated_at
+    </sql>
+
+    <!-- 分页查询（PostgreSQL：字符串使用 ILIKE 大小写不敏感模糊查询） -->
+    <select id="queryPage" resultMap="BaseResultMap" parameterType="com.iptv.business.domain.dto.page.AmpParserEnginesPageDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM amp_parser_engines
+        <where>
+            <if test="param.id != null">
+                AND id = #{param.id}
+            </if>
+            <if test="param.name != null and param.name != ''">
+                AND name ILIKE CONCAT('%', #{param.name}, '%')
+            </if>
+            <if test="param.description != null and param.description != ''">
+                AND description ILIKE CONCAT('%', #{param.description}, '%')
+            </if>
+            <if test="param.fileTypes != null and param.fileTypes != ''">
+                AND file_types ILIKE CONCAT('%', #{param.fileTypes}, '%')
+            </if>
+            <if test="param.engineConfig != null and param.engineConfig != ''">
+                AND engine_config ILIKE CONCAT('%', #{param.engineConfig}, '%')
+            </if>
+            <if test="param.checkType != null and param.checkType != ''">
+                AND check_type ILIKE CONCAT('%', #{param.checkType}, '%')
+            </if>
+            <if test="param.configKey != null and param.configKey != ''">
+                AND config_key ILIKE CONCAT('%', #{param.configKey}, '%')
+            </if>
+            <if test="param.sortOrder != null">
+                AND sort_order = #{param.sortOrder}
+            </if>
+            <if test="param.enabled != null">
+                AND enabled = #{param.enabled}
+            </if>
+            <if test="param.createdAt != null">
+                AND created_at = #{param.createdAt}
+            </if>
+            <if test="param.updatedAt != null">
+                AND updated_at = #{param.updatedAt}
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+</mapper>
