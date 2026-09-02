@@ -1,5 +1,4 @@
-import { PageDomain, TableDataInfo } from '@/types';
-import { TenantsDTO, TenantsVO } from '@/types/api/data/tenants';
+import { PageDomain, TableDataInfo, TenantsDTO, TenantsVO } from '@/types';
 import request from '@/utils/request';
 
 const PATH = '/business/tenants';

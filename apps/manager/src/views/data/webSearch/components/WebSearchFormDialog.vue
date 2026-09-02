@@ -9,7 +9,7 @@ import type {
   WebSearchProvidersDTO,
   WebSearchProvidersVO,
   WebSearchTestResult
-} from '@/types/api/data/webSearchProviders';
+} from '@/types';
 
 const { proxy } = getCurrentInstance() as any;
 const { t } = useI18n();
@@ -34,9 +34,7 @@ const dialogVisible = computed({
 const isEdit = computed(() => props.mode === 'edit');
 
 const dialogTitle = computed(() =>
-  isEdit.value
-    ? t('page.data.webSearch.form.title.edit', '编辑网络搜索配置')
-    : t('page.data.webSearch.form.title.add', '新增网络搜索配置')
+  isEdit.value ? t('page.data.webSearch.form.title.edit', '编辑网络搜索配置') : t('page.data.webSearch.form.title.add', '新增网络搜索配置')
 );
 
 const saveFormRef = ref();
@@ -67,9 +65,7 @@ const form = reactive({
   extraConfig: {} as Record<string, string>
 });
 
-const selectedProviderType = computed(() =>
-  providerTypes.value.find((item: WebSearchProviderTypeVO) => item.id === form.provider)
-);
+const selectedProviderType = computed(() => providerTypes.value.find((item: WebSearchProviderTypeVO) => item.id === form.provider));
 
 /** 必填或可选，只要该提供商支持密钥就展示输入项 */
 const showApiKeyField = computed(() => {
@@ -108,12 +104,8 @@ type FormRule = { required: boolean; message: string; trigger: string };
 /** API Key 只在「新增 + 该提供商强制要求」时参与必填校验 */
 const rules = computed(() => {
   const result: Record<string, FormRule[]> = {
-    name: [
-      { required: true, message: t('page.data.webSearch.form.namePlaceholder', '请输入配置名称'), trigger: 'blur' }
-    ],
-    provider: [
-      { required: true, message: t('page.data.webSearch.form.providerPlaceholder', '请选择提供商'), trigger: 'change' }
-    ],
+    name: [{ required: true, message: t('page.data.webSearch.form.namePlaceholder', '请输入配置名称'), trigger: 'blur' }],
+    provider: [{ required: true, message: t('page.data.webSearch.form.providerPlaceholder', '请选择提供商'), trigger: 'change' }],
     apiKey: [
       {
         required: !isEdit.value && !!selectedProviderType.value?.requiresApiKey,
@@ -349,9 +341,7 @@ const handleSave = async () => {
     }
 
     proxy?.$modal?.msgSuccess(
-      isEdit.value
-        ? t('page.normal.confirmInfo.updateSuccess', '修改成功')
-        : t('page.normal.confirmInfo.addSuccess', '新增成功')
+      isEdit.value ? t('page.normal.confirmInfo.updateSuccess', '修改成功') : t('page.normal.confirmInfo.addSuccess', '新增成功')
     );
     emit('success');
     dialogVisible.value = false;
@@ -466,11 +456,7 @@ const handleRemoveApiKey = () => {
       <h4 class="section-title">{{ $t('page.data.webSearch.form.section.basic', '基本信息') }}</h4>
 
       <el-form-item :label="$t('page.data.webSearch.form.name', '配置名称')" prop="name">
-        <el-input
-          v-model="form.name"
-          :placeholder="$t('page.data.webSearch.form.namePlaceholder', '请输入配置名称')"
-          maxlength="100"
-        />
+        <el-input v-model="form.name" :placeholder="$t('page.data.webSearch.form.namePlaceholder', '请输入配置名称')" maxlength="100" />
       </el-form-item>
 
       <el-form-item :label="$t('page.data.webSearch.form.description', '描述')" prop="description">
@@ -510,10 +496,7 @@ const handleRemoveApiKey = () => {
         </span>
       </el-form-item>
 
-      <el-form-item
-        v-if="selectedProviderType?.docsUrl"
-        :label="$t('page.data.webSearch.form.docsUrl', '官方文档')"
-      >
+      <el-form-item v-if="selectedProviderType?.docsUrl" :label="$t('page.data.webSearch.form.docsUrl', '官方文档')">
         <el-link :href="selectedProviderType.docsUrl" target="_blank" type="primary">
           {{ selectedProviderType.docsUrl }}
         </el-link>
@@ -552,60 +535,30 @@ const handleRemoveApiKey = () => {
             type="password"
             show-password
             autocomplete="new-password"
-            :placeholder="
-              $t('page.data.webSearch.form.apiKeyReplacePlaceholder', '输入新的 API Key，点击「更新密钥」或直接保存均可生效')
-            "
+            :placeholder="$t('page.data.webSearch.form.apiKeyReplacePlaceholder', '输入新的 API Key，点击「更新密钥」或直接保存均可生效')"
           />
 
           <div class="credential-actions">
             <el-button size="small" type="primary" :loading="credentialBusy" @click="handleUpdateApiKey">
               {{ $t('page.data.webSearch.form.credentialUpdate', '更新密钥') }}
             </el-button>
-            <el-button
-              size="small"
-              type="danger"
-              plain
-              :disabled="!apiKeyConfigured"
-              :loading="credentialBusy"
-              @click="handleRemoveApiKey"
-            >
+            <el-button size="small" type="danger" plain :disabled="!apiKeyConfigured" :loading="credentialBusy" @click="handleRemoveApiKey">
               {{ $t('page.data.webSearch.form.credentialRemove', '清除密钥') }}
             </el-button>
           </div>
         </div>
       </el-form-item>
 
-      <el-form-item
-        v-if="selectedProviderType?.requiresEngineId"
-        :label="$t('page.data.webSearch.form.engineId', 'Engine ID')"
-        prop="engineId"
-      >
-        <el-input
-          v-model="form.engineId"
-          :placeholder="$t('page.data.webSearch.form.engineIdPlaceholder', '例如 Google CSE 的搜索引擎 ID')"
-        />
+      <el-form-item v-if="selectedProviderType?.requiresEngineId" :label="$t('page.data.webSearch.form.engineId', 'Engine ID')" prop="engineId">
+        <el-input v-model="form.engineId" :placeholder="$t('page.data.webSearch.form.engineIdPlaceholder', '例如 Google CSE 的搜索引擎 ID')" />
       </el-form-item>
 
-      <el-form-item
-        v-if="selectedProviderType?.requiresBaseUrl"
-        :label="$t('page.data.webSearch.form.baseUrl', 'Base URL')"
-        prop="baseUrl"
-      >
-        <el-input
-          v-model="form.baseUrl"
-          :placeholder="$t('page.data.webSearch.form.baseUrlPlaceholder', '例如 https://searx.example.com')"
-        />
+      <el-form-item v-if="selectedProviderType?.requiresBaseUrl" :label="$t('page.data.webSearch.form.baseUrl', 'Base URL')" prop="baseUrl">
+        <el-input v-model="form.baseUrl" :placeholder="$t('page.data.webSearch.form.baseUrlPlaceholder', '例如 https://searx.example.com')" />
       </el-form-item>
 
-      <el-form-item
-        v-if="selectedProviderType?.supportsProxy"
-        :label="$t('page.data.webSearch.form.proxyUrl', '代理 URL')"
-        prop="proxyUrl"
-      >
-        <el-input
-          v-model="form.proxyUrl"
-          :placeholder="$t('page.data.webSearch.form.proxyUrlPlaceholder', '需要走代理时填写（可选）')"
-        />
+      <el-form-item v-if="selectedProviderType?.supportsProxy" :label="$t('page.data.webSearch.form.proxyUrl', '代理 URL')" prop="proxyUrl">
+        <el-input v-model="form.proxyUrl" :placeholder="$t('page.data.webSearch.form.proxyUrlPlaceholder', '需要走代理时填写（可选）')" />
       </el-form-item>
 
       <!-- configFields 由后端下发，字段数量和类型都不固定，只能循环渲染 -->
@@ -632,11 +585,7 @@ const handleRemoveApiKey = () => {
 
       <div v-if="testResult" class="test-result" :class="testResult.success ? 'is-success' : 'is-error'">
         <span class="test-result__title">
-          {{
-            testResult.success
-              ? $t('page.data.webSearch.test.success', '测试成功')
-              : $t('page.data.webSearch.test.fail', '测试失败')
-          }}
+          {{ testResult.success ? $t('page.data.webSearch.test.success', '测试成功') : $t('page.data.webSearch.test.fail', '测试失败') }}
         </span>
         <span class="test-result__text">{{ testResult.message || testResult.error || '-' }}</span>
       </div>

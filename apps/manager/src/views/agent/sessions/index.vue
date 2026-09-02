@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { API } from '@/api';
-import type { PageDomain, SessionsPageDTO, SessionsVO } from '@/types';
-import type { TenantsPageDTO, TenantsVO } from '@/types/api/data/tenants';
-import type { UsersPageDTO, UsersVO } from '@/types/api/data/users';
+import type { PageDomain, SessionsPageDTO, SessionsVO, TenantsPageDTO, TenantsVO, UsersPageDTO, UsersVO } from '@/types';
 import { Search } from 'lucide-vue-next';
 import DetailDrawer from './components/DetailDrawer.vue';
 import MessagesDrawer from './components/MessagesDrawer.vue';

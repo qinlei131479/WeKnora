@@ -23,6 +23,16 @@
       }
     },
     "data": {
+      "ampParserEngines": {
+        "table.availability": 130,
+        "table.createdAt": 180,
+        "table.description": 360,
+        "table.enabled": 100,
+        "table.name": 220,
+        "table.operation": 140,
+        "table.sortOrder": 80,
+        "table.updatedAt": 180
+      },
       "skill": {
         "table.description": 360,
         "table.name": 220

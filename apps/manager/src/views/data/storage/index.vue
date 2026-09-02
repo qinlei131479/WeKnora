@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { API } from '@/api';
-import { PageDomain, StorageBackendsPageDTO, StorageBackendsVO } from '@/types';
-import { TenantsPageDTO, TenantsVO } from '@/types/api/data/tenants';
+import { PageDomain, StorageBackendsPageDTO, StorageBackendsVO, TenantsPageDTO, TenantsVO } from '@/types';
 import { Search } from 'lucide-vue-next';
 import DetailDrawer from './components/DetailDrawer.vue';
 

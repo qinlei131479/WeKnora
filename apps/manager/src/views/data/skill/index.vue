@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { API } from '@/api';
-import type { SkillVO } from '@/types/api/data/skill';
+import type { SkillVO } from '@/types';
 
 const loading = ref(false);
 const keyword = ref('');
@@ -63,27 +63,11 @@ onMounted(() => {
         </div>
       </template>
 
-      <el-table
-        v-loading="loading"
-        :data="filteredSkills"
-        show-overflow-tooltip
-        height="100%"
-        style="width: 100%"
-      >
+      <el-table v-loading="loading" :data="filteredSkills" show-overflow-tooltip height="100%" style="width: 100%">
         <template #empty>
-          <kjsc-empty
-            :description="
-              skillsAvailable === false
-                ? $t('page.data.skill.empty.unavailable', '当前系统未配置预装技能目录')
-                : undefined
-            "
-          />
+          <kjsc-empty :description="skillsAvailable === false ? $t('page.data.skill.empty.unavailable', '当前系统未配置预装技能目录') : undefined" />
         </template>
-        <el-table-column
-          prop="name"
-          :label="$t('page.data.skill.table.name', '技能名称')"
-          :min-width="$dim('page.data.skill.table.name', 220)"
-        />
+        <el-table-column prop="name" :label="$t('page.data.skill.table.name', '技能名称')" :min-width="$dim('page.data.skill.table.name', 220)" />
         <el-table-column
           prop="description"
           :label="$t('page.data.skill.table.description', '技能描述')"

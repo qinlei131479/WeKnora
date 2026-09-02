@@ -1,6 +1,7 @@
 import { CustomAgents } from './agent/customAgents';
 import { Messages } from './agent/messages';
 import { Sessions } from './agent/sessions';
+import { AmpParserEngines } from './data/ampParserEngines';
 import { Storage } from './data/storage';
 import { Models } from './model/models';
 import { Tenants } from './tenants/tenants';
@@ -14,6 +15,7 @@ export const API = {
   Messages,
   Models,
   Sessions,
+  AmpParserEngines,
   Storage,
   Tenants,
   Users,

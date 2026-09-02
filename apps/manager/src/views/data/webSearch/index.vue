@@ -1,13 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { API } from '@/api';
-import type { PageDomain } from '@/types';
-import type { TenantsPageDTO, TenantsVO } from '@/types/api/data/tenants';
-import type {
-  WebSearchProviderTypeVO,
-  WebSearchProvidersPageDTO,
-  WebSearchProvidersVO
-} from '@/types/api/data/webSearchProviders';
+import type { PageDomain, TenantsPageDTO, TenantsVO, WebSearchProviderTypeVO, WebSearchProvidersPageDTO, WebSearchProvidersVO } from '@/types';
 import { Search } from 'lucide-vue-next';
 import WebSearchFormDialog from './components/WebSearchFormDialog.vue';
 
@@ -150,9 +144,7 @@ const handleDelete = (row: WebSearchProvidersVO) => {
   if (!row.id) return;
 
   proxy?.$modal
-    ?.confirm(
-      t('page.data.webSearch.tips.deleteConfirm', { name: row.name ?? '' }, `是否确认删除搜索配置「${row.name ?? ''}」？`)
-    )
+    ?.confirm(t('page.data.webSearch.tips.deleteConfirm', { name: row.name ?? '' }, `是否确认删除搜索配置「${row.name ?? ''}」？`))
     .then(() => API.WebSearchProviders.delete(row.id!))
     .then(() => {
       proxy?.$modal?.msgSuccess(t('page.normal.confirmInfo.removeSuccess', '删除成功'));
@@ -175,9 +167,7 @@ const handleTest = (row: WebSearchProvidersVO) => {
         return;
       }
       // 后端测试失败同样返回 code=200，成败要看 data.success
-      proxy?.$modal?.msgError(
-        res.data?.error || res.data?.message || t('page.data.webSearch.test.fail', '测试失败')
-      );
+      proxy?.$modal?.msgError(res.data?.error || res.data?.message || t('page.data.webSearch.test.fail', '测试失败'));
     })
     .catch((error) => {
       console.error('[WebSearch] test failed:', error);
@@ -196,12 +186,7 @@ onMounted(() => {
 <template>
   <section>
     <page-name :title="$t('page.data.webSearch.title', '网络搜索配置')">
-      <el-button
-        type="success"
-        icon="Plus"
-        v-hasPermi="['business:webSearchProviders:add']"
-        @click="handleAdd"
-      >
+      <el-button type="success" icon="Plus" v-hasPermi="['business:webSearchProviders:add']" @click="handleAdd">
         {{ $t('page.normal.add', '新增') }}
       </el-button>
     </page-name>
@@ -316,12 +301,7 @@ onMounted(() => {
           :min-width="$dim('page.data.webSearch.table.operation', 200)"
         >
           <template #default="{ row }">
-            <el-button
-              link
-              type="primary"
-              v-hasPermi="['business:webSearchProviders:edit']"
-              @click.stop="handleEdit(row)"
-            >
+            <el-button link type="primary" v-hasPermi="['business:webSearchProviders:edit']" @click.stop="handleEdit(row)">
               {{ $t('page.normal.edit', '编辑') }}
             </el-button>
             <el-button
@@ -333,12 +313,7 @@ onMounted(() => {
             >
               {{ $t('page.data.webSearch.test.rowButton', '测试') }}
             </el-button>
-            <el-button
-              link
-              type="danger"
-              v-hasPermi="['business:webSearchProviders:remove']"
-              @click.stop="handleDelete(row)"
-            >
+            <el-button link type="danger" v-hasPermi="['business:webSearchProviders:remove']" @click.stop="handleDelete(row)">
               {{ $t('page.normal.delete', '删除') }}
             </el-button>
           </template>
@@ -346,21 +321,11 @@ onMounted(() => {
       </el-table>
 
       <template #footer>
-        <pagination
-          v-model:page="state.page.pageNum"
-          v-model:limit="state.page.pageSize"
-          :total="state.total"
-          @pagination="getProviders"
-        />
+        <pagination v-model:page="state.page.pageNum" v-model:limit="state.page.pageSize" :total="state.total" @pagination="getProviders" />
       </template>
     </page-content>
 
-    <WebSearchFormDialog
-      v-model:visible="dialog.visible"
-      :mode="dialog.mode"
-      :edit-id="dialog.editId"
-      @success="getProviders"
-    />
+    <WebSearchFormDialog v-model:visible="dialog.visible" :mode="dialog.mode" :edit-id="dialog.editId" @success="getProviders" />
   </section>
 </template>
 

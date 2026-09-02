@@ -1,5 +1,4 @@
-import type { PageDomain, TableDataInfo } from '@/types';
-import type { UsersPageDTO, UsersVO } from '@/types/api/data/users';
+import type { PageDomain, TableDataInfo, UsersPageDTO, UsersVO } from '@/types';
 import request from '@/utils/request';
 
 const PATH = '/business/users';
