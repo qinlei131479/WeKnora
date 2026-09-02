@@ -130,6 +130,9 @@ service.interceptors.response.use(
   },
   (error: any) => {
     console.log('err' + error);
+    if (error.name === 'CanceledError') {
+      return Promise.reject(error);
+    }
     let { message } = error;
     if (message == 'Network Error') {
       message = '后端接口连接异常';

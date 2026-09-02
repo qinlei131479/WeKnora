@@ -1,4 +1,13 @@
-import { AjaxResult, PageDomain, TableDataInfo, KnowledgeFileEntity, KnowledgeFileListReq, KnowledgeFileFoldersResp } from '@/types';
+import {
+  AjaxResult,
+  PageDomain,
+  TableDataInfo,
+  KnowledgeFileEntity,
+  KnowledgeFileListReq,
+  KnowledgeFileFoldersResp,
+  KnowledgeFileChunksReq,
+  KnowledgeFileChunk
+} from '@/types';
 import request, { getBlob } from '@/utils/request';
 
 const API = '/business';
@@ -39,4 +48,13 @@ export function getPreviewKnowledgeFileApi(req: number | string): Promise<Blob> 
   //   return getBlob(`${API}/p3.docx?api=knowledges/preview&id=${req}`, { baseURL: '/mock' });
   // }
   return getBlob(`${API}/knowledges/preview?id=${req}`);
+}
+
+let fileChunksController: AbortController | null = null;
+export function getKnowledgeFileChunksApi(req: KnowledgeFileChunksReq, page: PageDomain): Promise<TableDataInfo<KnowledgeFileChunk>> {
+  if (fileChunksController) {
+    fileChunksController.abort();
+  }
+  fileChunksController = new AbortController();
+  return request.get(`${API}/knowledges/chunks`, { params: { ...req, ...page }, signal: fileChunksController.signal });
 }

@@ -1309,6 +1309,7 @@
         "viewMerged": "全文",
         "viewChunks": "查看分块",
         "segment": "分块",
+        "totalChunks": "共 {total} 个片段",
         "retryIndex": "重试索引",
         "viewParentContext": "查看父块上下文",
         "generatedQuestions": "辅助召回问题",
@@ -1331,7 +1332,8 @@
         "disableChunk": "停用",
         "enableChunk": "启用",
         "editChunkContent": "编辑分块内容"
-      }
+      },
+      "characters": "字符"
     },
     "KnowledgeFaq": {
       "searchPlaceholder": "搜索问答",
@@ -1603,6 +1605,9 @@
         "exitFullscreen": "退出全屏",
         "audioLoading": "加载音频中…",
         "audioNotSupported": "您的浏览器不支持音频播放"
+      },
+      "error": {
+        "invalidImageLink": "无效的图片链接"
       }
     },
     "ollama": {

@@ -205,6 +205,16 @@ export interface KnowledgeTag {
   seqId: number; // 对外自增序号（API 友好）
 }
 
+export interface KnowledgeFileChunksReq {
+  knowledgeId?: string;
+  keyword?: string;
+  searchField?: string; // 搜索字段（FAQ类型时使用）：standard_question/similar_questions/answers
+  chunkType?: string[];
+  tagIds?: string[];
+  knowledgeType?: string; // 知识类型：document/faq
+  isEnabled?: boolean; // 是否启用
+  tenantId?: number;
+}
 export interface KnowledgeFileChunk {
   /** 分块ID */
   id?: string;
@@ -245,7 +255,7 @@ export interface KnowledgeFileChunk {
   /** 删除时间 */
   deletedAt?: string;
   /** 元数据 */
-  metadata?: string;
+  metadata?: string | KnowledgeFileChunkMetadata;
   /** 标签ID */
   tagId?: string;
   /** 状态 */
@@ -268,4 +278,15 @@ export interface KnowledgeFileChunk {
   lastEditorId?: string;
   /** 上下文标题 */
   contextHeader?: string;
+}
+
+export interface KnowledgeFileGeneratedQuestion {
+  id: string;
+  question: string;
+  content_revision?: number;
+}
+
+export interface KnowledgeFileChunkMetadata {
+  generated_questions?: KnowledgeFileGeneratedQuestion[];
+  generated_questions_revision?: number;
 }
