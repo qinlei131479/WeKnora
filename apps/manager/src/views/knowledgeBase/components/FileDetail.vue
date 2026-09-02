@@ -689,6 +689,16 @@ const setQuestionPopupVisible = (item: any, visible: boolean) => {
   //   cancelQuestionEdit();
   // }
 };
+
+watch(
+  () => viewMode.value,
+  (mode: 'chunks' | 'merged' | 'preview') => {
+    if ((mode === 'chunks' || mode === 'merged') && props.visible) {
+      runMarkdownPostRenderPipeline();
+    }
+  },
+  { flush: 'post' }
+);
 </script>
 <style scoped lang="scss">
 @use '@/components/css/markdown.scss';

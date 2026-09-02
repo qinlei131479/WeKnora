@@ -174,8 +174,9 @@ export default function useFileDetailChunks(options: UseFileDetailChunksOptions)
     return result;
   };
 
-  const runMarkdownPostRenderPipeline = async (kbId: string) => {
+  const runMarkdownPostRenderPipeline = async () => {
     await nextTick();
+    const kbId = knowledgeIdRef.value;
     const renderRoot = getMarkdownRenderRoot();
     if (!renderRoot) {
       return;
@@ -411,6 +412,7 @@ export default function useFileDetailChunks(options: UseFileDetailChunksOptions)
             chunks.value.push(...(res.rows || []));
           }
           chunkTotal.value = res.total || 0;
+          runMarkdownPostRenderPipeline();
         }
       })
       .catch((err) => {
