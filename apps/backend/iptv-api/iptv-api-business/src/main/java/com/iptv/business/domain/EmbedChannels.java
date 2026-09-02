@@ -32,7 +32,7 @@ public class EmbedChannels implements Serializable {
     private String id;
 
     @Schema(description = "所属工作空间（租户）ID")
-    private Long tenantId;
+    private Integer tenantId;
 
     @Schema(description = "智能体 ID")
     private String agentId;

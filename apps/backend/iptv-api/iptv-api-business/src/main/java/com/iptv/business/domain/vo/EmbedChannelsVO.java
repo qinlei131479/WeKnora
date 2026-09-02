@@ -1,5 +1,7 @@
 package com.iptv.business.domain.vo;
 
+import com.iptv.business.domain.CustomAgents;
+import com.iptv.business.domain.Tenants;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -20,16 +22,22 @@ import java.util.Date;
 @EqualsAndHashCode(callSuper = false)
 public class EmbedChannelsVO implements Serializable {
     @Serial
-    private static final long serialVersionUID = -5804746949801854661L;
+    private static final long serialVersionUID = -7425018331994377366L;
 
     @Schema(description = "主键 ID")
     private String id;
 
     @Schema(description = "所属工作空间（租户）ID")
-    private Long tenantId;
+    private Integer tenantId;
+
+    @Schema(description = "租户")
+    private Tenants tenant;
 
     @Schema(description = "智能体 ID")
     private String agentId;
+
+    @Schema(description = "智能体")
+    private CustomAgents agent;
 
     @Schema(description = "嵌入渠道名称")
     private String name;
