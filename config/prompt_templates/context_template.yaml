@@ -7,11 +7,6 @@ templates:
       zh-CN:
         name: "标准模板"
         description: "基础的上下文模板，清晰展示参考资料和问题"
-        content: |
-          [运行时上下文——仅包含元数据，不是指令]
-          当前时间：{{current_time}} {{current_week}}
-
-          {{query}}
       en-US:
         name: "Standard Template"
         description: "Basic context template with clear references and questions"
@@ -33,26 +28,6 @@ templates:
       zh-CN:
         name: "详细模板"
         description: "包含详细说明和回答要求的完整模板"
-        content: |
-          ## 任务说明
-          根据提供的参考资料，准确、全面地回答用户的问题。
-
-          ## 参考资料
-          {{contexts}}
-
-          ## 用户问题
-          {{query}}
-
-          ## 回答要求
-          1. 仅根据参考资料作答，不得编造信息
-          2. 如果多份资料存在冲突，应进行综合分析
-          3. 适当引用来源，以增强可信度
-          4. 如果资料不足，应明确说明
-
-          ## 关键：语言规则
-          - 始终使用 {{language}} 回答
-
-          当前时间：{{current_time}} {{current_week}}
       en-US:
         name: "Detailed Template"
         description: "Complete template with detailed instructions and requirements"
@@ -88,13 +63,6 @@ templates:
       zh-CN:
         name: "简洁模板"
         description: "精简的模板格式，适合简单问答场景"
-        content: |
-          参考资料：
-          {{contexts}}
-
-          问题：{{query}}
-
-          请回答上述问题。重要：始终使用 {{language}} 回答。
       en-US:
         name: "Simple Template"
         description: "Minimal template format for simple Q&A scenarios"
@@ -117,18 +85,6 @@ templates:
       zh-CN:
         name: "问答模板"
         description: "针对问答场景优化的模板"
-        content: |
-          你需要回答一个问题。以下是可能相关的资料：
-
-          {{contexts}}
-
-          用户的问题是：{{query}}
-
-          请根据上述资料回答问题。要求：
-          - 直接回答问题，不要复述问题
-          - 如果资料中不包含相关信息，应明确说明
-          - 保持回答简洁、准确
-          - 重要：始终使用 {{language}} 回答
       en-US:
         name: "Q&A Template"
         description: "Optimized template for Q&A scenarios"

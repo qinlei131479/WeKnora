@@ -10,15 +10,11 @@
 
 ```bash
 # 1. 补齐 JWT / Sandbox Token（复用仓库根已有 .env，不覆盖 WeKnora 键）
-make harness-init
+./scripts/dev_kjsc.sh init
 
-# 2. 启动（api/web/worker 均只起自身，不拉基础设施；milvus 需自行 docker 启动）
-make harness-api          # 仅 api
-make harness-web          # 仅 web
-make harness-up           # api + worker + web + sandbox-provisioner
-
-# 3. 首次写入演示用户（需 api 已 healthy）
-make harness-seed
+# 2. 启动（只起自身，不拉基础设施；milvus 需自行 docker 启动）
+make dev-kjsc-harness     # api + worker
+make dev-kjsc-sandbox     # sandbox-provisioner（单独起）
 ```
 
 访问 `http://localhost:5174`。
@@ -28,7 +24,7 @@ make harness-seed
 - 超管 `zwj` / `zwj12138`
 - 其他用户密码 `yuxi123456`
 
-停止只停 harness 容器，不动 postgres/app/frontend：`make harness-down`。不要加 `--remove-orphans`。
+不要对整份 compose 加 `--remove-orphans`。首次建库 / seed 请直接用 docker compose 或脚本，不经过 Makefile。
 
 ## 数据隔离
 
@@ -41,9 +37,7 @@ make harness-seed
 
 ## Make 目标
 
-- `make harness-init`
-- `make harness-api` / `harness-worker` / `harness-web`
-- `make harness-up` / `harness-down` / `harness-logs`
-- `make harness-seed`
-- `make harness-up-lite`（`LITE_MODE=true`，仅拉起 postgres/redis/minio，跳过 neo4j；milvus 自行启动）
+- `make dev-kjsc-harness`（api + worker）
+- `make dev-kjsc-sandbox`（sandbox-provisioner）
 - `COMPOSE_FILE=docker-compose-kjsc.yml` 可换 kjsc 编排
+- 首次环境：`./scripts/dev_kjsc.sh init`

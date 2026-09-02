@@ -469,11 +469,8 @@ start_app() {
         return 1
     fi
     
-    export APP_PORT="${APP_PORT:-9980}"
-
     log_info "环境变量已设置，启动应用..."
     log_info "数据库地址: $DB_HOST:${DB_PORT:-5432}"
-    log_info "本机 app 监听: http://localhost:${APP_PORT}"
     
     export CGO_CFLAGS="-Wno-deprecated-declarations -Wno-gnu-folding-constant"
     if [[ "$(uname)" == "Darwin" ]]; then
@@ -503,7 +500,7 @@ start_frontend() {
         load_env_files >/dev/null 2>&1 || true
     fi
     
-    cd "$PROJECT_ROOT/apps/frontend"
+    cd "$PROJECT_ROOT/frontend"
     
     # 检查 npm 是否安装
     if ! command -v npm &> /dev/null; then
@@ -517,15 +514,9 @@ start_frontend() {
         npm install
     fi
     
-    export APP_PORT="${APP_PORT:-9980}"
-    export VITE_DEV_PORT="${VITE_DEV_PORT:-${FRONTEND_PORT:-9988}}"
-    export VITE_DEV_PROXY_TARGET="${VITE_DEV_PROXY_TARGET:-${FRONTEND_BACKEND_URL:-http://localhost:${APP_PORT}}}"
-    export VITE_HARNESS_PROXY_TARGET="${VITE_HARNESS_PROXY_TARGET:-http://127.0.0.1:${AGENT_HARNESS_PORT:-5050}}"
-
     log_info "启动 Vite 开发服务器..."
-    log_info "前端将运行在 http://localhost:${VITE_DEV_PORT}"
-    log_info "前端 API 代理目标: ${VITE_DEV_PROXY_TARGET}"
-    log_info "Harness API 代理目标: ${VITE_HARNESS_PROXY_TARGET}"
+    log_info "前端将运行在 http://localhost:5173"
+    log_info "前端 API 代理目标: ${VITE_DEV_PROXY_TARGET:-${FRONTEND_BACKEND_URL:-http://localhost:8080}}"
     
     # 运行开发服务器
     npm run dev

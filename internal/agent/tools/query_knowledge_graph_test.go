@@ -90,10 +90,6 @@ func (s *stubKnowledgeBaseService) DuplicateKnowledgeBase(
 	return nil, nil
 }
 
-func (s *stubKnowledgeBaseService) SaveMindmap(context.Context, string, []byte, []byte, []byte) error {
-	return nil
-}
-
 func (s *stubKnowledgeBaseService) GetRepository() interfaces.KnowledgeBaseRepository {
 	return nil
 }

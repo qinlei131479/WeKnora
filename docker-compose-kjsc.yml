@@ -86,7 +86,7 @@ services:
     image: kjsc/agent-middle-app:${WEKNORA_VERSION:-latest}
     build:
       context: .
-      dockerfile: docker/Dockerfile.app
+      dockerfile: docker/Dockerfile.app-core
       args:
         - APK_MIRROR_ARG=${APK_MIRROR_ARG:-}
     container_name: agent-middle-app

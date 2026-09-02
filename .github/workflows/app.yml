@@ -6,6 +6,7 @@ on:
     paths:
       - "**/*.go"
       - "!cli/**"
+      - "!apps/app-core/**"
       - "go.mod"
       - "go.sum"
       - "Makefile"
@@ -19,6 +20,7 @@ on:
     paths:
       - "**/*.go"
       - "!cli/**"
+      - "!apps/app-core/**"
       - "go.mod"
       - "go.sum"
       - "Makefile"
@@ -78,7 +80,7 @@ jobs:
             diff_range="$base..$GITHUB_SHA"
           fi
           unformatted=$(
-            git diff --name-only --diff-filter=ACMR -z "$diff_range" -- '*.go' ':!cli/**' |
+            git diff --name-only --diff-filter=ACMR -z "$diff_range" -- '*.go' ':!cli/**' ':!apps/app-core/**' |
               xargs -0 -r gofmt -l
           )
           if [ -n "$unformatted" ]; then
@@ -90,7 +92,7 @@ jobs:
       - name: Vet and test
         shell: bash
         run: |
-          mapfile -t pkgs < <(go list ./... | grep -v '/docreader/')
+          mapfile -t pkgs < <(go list ./... | grep -v '/docreader/' | grep -v '/apps/app-core/')
           go vet "${pkgs[@]}"
           go test "${pkgs[@]}"
 

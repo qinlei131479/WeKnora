@@ -104,9 +104,4 @@ func RegisterChatRoutes(r *gin.RouterGroup, handler *session.Handler, g *rbacGua
 	{
 		knowledgeSearch.POST("", handler.SearchKnowledge)
 	}
-
-	internalParse := g.apiKeyGroup(r.Group("/internal", g.Viewer()), apiKeyChat(apiKeyFullAccess()))
-	{
-		internalParse.POST("/parse", handler.ParseInternal)
-	}
 }

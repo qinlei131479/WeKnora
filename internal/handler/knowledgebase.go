@@ -34,8 +34,7 @@ type KnowledgeBaseHandler struct {
 	vectorStoreService interfaces.VectorStoreService // enriches KB responses with bound store display
 	// userService 仅在 list 类接口里用于批量回填 creator_name；
 	// 真正的鉴权由 RBAC 中间件 + Lookup 完成，这里不参与决策。
-	userService  interfaces.UserService
-	modelService interfaces.ModelService
+	userService interfaces.UserService
 }
 
 // NewKnowledgeBaseHandler creates a new knowledge base handler instance
@@ -47,7 +46,6 @@ func NewKnowledgeBaseHandler(
 	asynqClient interfaces.TaskEnqueuer,
 	vectorStoreService interfaces.VectorStoreService,
 	userService interfaces.UserService,
-	modelService interfaces.ModelService,
 ) *KnowledgeBaseHandler {
 	return &KnowledgeBaseHandler{
 		service:            service,
@@ -57,7 +55,6 @@ func NewKnowledgeBaseHandler(
 		asynqClient:        asynqClient,
 		vectorStoreService: vectorStoreService,
 		userService:        userService,
-		modelService:       modelService,
 	}
 }
 

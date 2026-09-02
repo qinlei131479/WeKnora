@@ -8,23 +8,20 @@ builtin_agents:
     is_builtin: true
     i18n:
       default:
-        name: "Instant Q&A"
+        name: "Quick Answer"
         description: "Knowledge base RAG Q&A for fast and accurate answers"
       zh-CN:
-        name: "即时问答"
+        name: "快速问答"
         description: "基于知识库的 RAG 问答，快速准确地回答问题"
       zh-TW:
-        name: "即時問答"
+        name: "快速問答"
         description: "基於知識庫的 RAG 問答，快速準確地回答問題"
       ja-JP:
-        name: "即時回答"
+        name: "クイック回答"
         description: "ナレッジベース RAG Q&A による迅速で正確な回答"
       ko-KR:
-        name: "즉시 질의"
+        name: "빠른 답변"
         description: "지식 베이스 RAG Q&A를 통한 빠르고 정확한 답변"
-      ru-RU:
-        name: "Мгновенный ответ"
-        description: "RAG-вопросы и ответы по базе знаний"
     config:
       agent_mode: "quick-answer"
       system_prompt_id: "default_kb"
@@ -54,23 +51,20 @@ builtin_agents:
     is_builtin: true
     i18n:
       default:
-        name: "Reasoning Q&A"
+        name: "Smart Reasoning"
         description: "ReAct reasoning framework with multi-step thinking and tool calling"
       zh-CN:
-        name: "推理问答"
+        name: "智能推理"
         description: "ReAct 推理框架，支持多步思考与工具调用"
       zh-TW:
-        name: "推理問答"
+        name: "智能推理"
         description: "ReAct 推理框架，支援多步思考與工具呼叫"
       ja-JP:
-        name: "推論回答"
+        name: "スマート推論"
         description: "ReAct 推論フレームワーク、マルチステップ思考とツール呼び出し対応"
       ko-KR:
-        name: "추론 질의"
+        name: "스마트 추론"
         description: "ReAct 추론 프레임워크, 다단계 사고 및 도구 호출 지원"
-      ru-RU:
-        name: "Ответ с рассуждением"
-        description: "ReAct-рассуждение с многошаговым мышлением и вызовом инструментов"
     config:
       agent_mode: "smart-reasoning"
       agent_type: "rag-qa"
@@ -105,23 +99,20 @@ builtin_agents:
     is_builtin: true
     i18n:
       default:
-        name: "Table Analysis"
-        description: "SQL query and statistical analysis for CSV/Excel files"
+        name: "Data Analyst"
+        description: "Professional data analysis agent with SQL query and statistical analysis for CSV/Excel files"
       zh-CN:
-        name: "表格分析"
-        description: "针对 CSV、Excel 查看表结构、做统计和 SQL 查询"
+        name: "数据分析师"
+        description: "专业的数据分析智能体，支持对 CSV/Excel 文件进行 SQL 查询和统计分析"
       zh-TW:
-        name: "表格分析"
-        description: "針對 CSV、Excel 查看表結構、做統計和 SQL 查詢"
+        name: "數據分析師"
+        description: "專業的數據分析智能體，支援對 CSV/Excel 檔案進行 SQL 查詢和統計分析"
       ja-JP:
-        name: "表分析"
-        description: "CSV/Excel ファイルの表構造確認、統計分析、SQL クエリ"
+        name: "データアナリスト"
+        description: "CSV/Excel ファイルの SQL クエリと統計分析に対応するプロフェッショナルなデータ分析エージェント"
       ko-KR:
-        name: "표 분석"
-        description: "CSV/Excel 파일의 표 구조 확인, 통계 및 SQL 쿼리"
-      ru-RU:
-        name: "Анализ таблиц"
-        description: "SQL-запросы и статистика по CSV/Excel файлам"
+        name: "데이터 분석가"
+        description: "CSV/Excel 파일에 대한 SQL 쿼리 및 통계 분석을 지원하는 전문 데이터 분석 에이전트"
     config:
       agent_mode: "smart-reasoning"
       agent_type: "data-analysis"
@@ -153,7 +144,7 @@ builtin_agents:
     is_builtin: true
     i18n:
       default:
-        name: "Wiki Q&A"
+        name: "Wiki Questioner"
         description: "Specialized agent for answering questions based on Wiki knowledge bases"
       zh-CN:
         name: "维基问答"
@@ -162,14 +153,11 @@ builtin_agents:
         name: "維基問答"
         description: "專注於在 Wiki 知識庫中回答問題的智能體"
       ja-JP:
-        name: "Wiki問答"
+        name: "Wiki 問答"
         description: "Wikiナレッジベースでの回答問題に特化したエージェント"
       ko-KR:
-        name: "위키 질의"
+        name: "위키 질문"
         description: "위키 지식 베이스에서 답변하는 데 특화된 에이전트"
-      ru-RU:
-        name: "Wiki-вопросы"
-        description: "Ответы на вопросы по Wiki-базам знаний"
     config:
       agent_mode: "smart-reasoning"
       agent_type: "wiki-qa"
@@ -214,9 +202,6 @@ builtin_agents:
       ko-KR:
         name: "위키 수정"
         description: "검사 문제를 기반으로 Wiki 페이지를 修復하고 最適化하는 전용 에이전트"
-      ru-RU:
-        name: "Редактор Wiki"
-        description: "Правка Wiki-страниц по результатам проверки"
     config:
       agent_mode: "smart-reasoning"
       agent_type: "custom"

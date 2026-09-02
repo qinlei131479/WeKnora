@@ -1,4 +1,4 @@
-.PHONY: help harness-db-init build run test clean docker-build-app docker-build-docreader docker-build-frontend docker-build-all docker-run migrate-up migrate-down docker-restart docker-stop start-all stop-all start-ollama stop-ollama build-images build-images-app build-images-docreader build-images-frontend clean-images check-env list-containers pull-images show-platform dev-start dev-stop dev-restart dev-logs dev-status dev-app dev-frontend docs install-swagger build-lite run-lite package-lite harness-up harness-down harness-api harness-worker harness-web harness-init harness-seed harness-logs harness-up-lite
+.PHONY: help build run test clean docker-build-app docker-build-docreader docker-build-frontend docker-build-all docker-run migrate-up migrate-down docker-restart docker-stop start-all stop-all start-ollama stop-ollama build-images build-images-app build-images-docreader build-images-frontend clean-images check-env list-containers pull-images show-platform dev-start dev-stop dev-restart dev-logs dev-status dev-app dev-frontend docs install-swagger build-lite run-lite package-lite migrate-kjsc dev-kjsc-init dev-kjsc-infra dev-kjsc-app dev-kjsc-frontend dev-kjsc-harness dev-kjsc-sandbox
 
 # Show help
 help:
@@ -58,18 +58,15 @@ help:
 	@echo "  dev-app           启动后端应用（本地运行，需先运行 dev-start）"
 	@echo "  dev-frontend      启动前端（本地运行，需先运行 dev-start）"
 	@echo ""
-	@echo "Agent-Harness:"
-	@echo "  harness-init      补齐 .env 中 JWT/Sandbox Token，并拉取 harness 构建镜像"
-	@echo "  harness-db-init   幂等创建 agent_harness 库（现网请用 docker compose，见目标注释）"
-	@echo "  harness-api       仅启动 harness api，不拉起其它服务（含 milvus）"
-	@echo "  harness-worker    仅启动 harness worker，不拉起其它服务"
-	@echo "  harness-web       单独启动 harness web（需 apps/agent-web；不并入 harness-up）"
-	@echo "  harness-up        启动 api + worker + sandbox-provisioner（不含 web）"
-	@echo "  harness-up-lite   同上，LITE_MODE=true；会 up postgres/redis/minio，复用现网基础设施时禁用"
-	@echo "  harness-down      仅停止 harness 容器（含 web），不动 postgres/app/frontend"
-	@echo "  harness-logs      跟踪 api/worker/web/sandbox-provisioner 日志"
-	@echo "  harness-seed      在已启动的 api 中写入演示用户"
-	@echo "                    COMPOSE_FILE=docker-compose-kjsc.yml 可换 kjsc 编排"
+	@echo "KJSC 开发（整套环境按此顺序）:"
+	@echo "  1. make dev-kjsc-init     首次补齐 .env（JWT / sandbox token 等）；已有则只补缺键"
+	@echo "  2. make dev-kjsc-infra    启动 postgres/redis/docreader/minio + sandbox-provisioner"
+	@echo "                            已在运行的容器不会重建（compose up -d）"
+	@echo "  3. make migrate-kjsc      首次或有新公司迁移时"
+	@echo "  4. make dev-kjsc-app      本机 cmd/app-core（另开终端）"
+	@echo "  5. make dev-kjsc-frontend 本机 apps/frontend（另开终端）"
+	@echo "  6. make dev-kjsc-harness  需要时再起 harness api + worker（另开终端）"
+	@echo "  已起过官方 make dev-start 时可从第 3/4 步开始；只补 sandbox: make dev-kjsc-sandbox"
 	@echo ""
 	@echo "Lite 模式（零外部依赖）:"
 	@echo "  build-lite        构建 Lite 版本（先构建前端到 web/，再构建 Go；SKIP_FRONTEND=1 跳过前端）"
@@ -84,13 +81,6 @@ MAIN_PATH=./cmd/server
 # Docker related variables
 DOCKER_IMAGE=wechatopenai/weknora-app
 DOCKER_TAG=latest
-
-# Agent-Harness（不要对整份 compose 做 down / --remove-orphans）
-COMPOSE_FILE ?= docker-compose-mac.yml
-HARNESS_PROFILES := --profile harness --profile minio --profile neo4j
-# web 单独启动（make harness-web），不并入默认 harness-up。
-HARNESS_SERVICES ?= api worker sandbox-provisioner
-HARNESS_INFRA := postgres redis minio neo4j
 
 # Platform detection
 ifeq ($(shell uname -m),x86_64)
@@ -352,71 +342,34 @@ dev-app:
 dev-frontend:
 	./scripts/dev.sh frontend
 
-# Agent-Harness：只 up/stop 点名服务，不 down 整栈、不加 --remove-orphans
-# --no-deps：不因 depends_on 拉起 postgres/redis/minio/api/milvus 等
-define harness-up-one
-	@test -f .env || { echo "缺少 .env，请先 make harness-init"; exit 1; }
-	@grep -Eq '^SANDBOX_PROVISIONER_TOKEN=.+' .env || { echo "SANDBOX_PROVISIONER_TOKEN 为空，请先 make harness-init"; exit 1; }
-	@VERSION=$$(tr -d '\n\r' < VERSION); \
-	if ! docker image inspect "kjsc/agent-middle-harness:$$VERSION" >/dev/null 2>&1; then \
-		AGENT_HARNESS_VERSION="$$VERSION" docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) build api; \
-	fi; \
-	AGENT_HARNESS_VERSION="$$VERSION" docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) up -d --no-deps $(1)
-endef
+# KJSC 整套环境（按顺序）:
+#   1. make dev-kjsc-init     首次补 .env；已有则只补缺
+#   2. make dev-kjsc-infra    postgres/redis/docreader/minio（docker-compose.dev.yml --minio）
+#                            + sandbox-provisioner；已运行则跳过
+#   3. make migrate-kjsc      首次或有新公司迁移
+#   4. make dev-kjsc-app      本机 cmd/app-core（另开终端）
+#   5. make dev-kjsc-frontend 本机 apps/frontend（另开终端）
+#   6. make dev-kjsc-harness  需要时再起 api + worker（另开终端）
+# 已起过 make dev-start 时可从 3/4 开始；只补 sandbox: make dev-kjsc-sandbox
+dev-kjsc-init:
+	./scripts/dev_kjsc.sh init
 
-harness-init:
-	./scripts/init_agent_harness.sh
+dev-kjsc-infra:
+	./scripts/dev_kjsc.sh infra
 
-# 幂等创建 harness 独立库；harness-up 不含此步骤，首次部署需单独执行。
-# 现网推荐直接 docker（必须带 minio profile，否则 api 的 depends_on 校验失败）：
-#   docker compose -f docker-compose-kjsc.yml --profile harness --profile minio --profile neo4j \
-#     up --no-deps --exit-code-from harness-db-init harness-db-init
-harness-db-init:
-	docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) up --no-deps --exit-code-from harness-db-init harness-db-init
+migrate-kjsc:
+	./scripts/migrate_kjsc.sh up
 
-harness-api:
-	$(call harness-up-one,api)
+dev-kjsc-app:
+	./scripts/dev_kjsc.sh app
 
-harness-worker:
-	$(call harness-up-one,worker)
+dev-kjsc-frontend:
+	./scripts/dev_kjsc.sh frontend
 
-# 单独启动 harness-web。现网等价命令：
-#   docker compose -f docker-compose-kjsc.yml --profile harness --profile minio --profile neo4j \
-#     up -d --no-deps --build web
-harness-web:
-	@test -f .env || { echo "缺少 .env，请先 make harness-init"; exit 1; }
-	@test -f apps/agent-web/Dockerfile || { echo "缺少 apps/agent-web，无法构建 harness-web"; exit 1; }
-	@VERSION=$$(tr -d '\n\r' < VERSION); \
-	AGENT_HARNESS_VERSION="$$VERSION" docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) up -d --no-deps --build web
+dev-kjsc-harness:
+	./scripts/dev_kjsc.sh harness
 
-harness-up:
-	$(call harness-up-one,$(HARNESS_SERVICES))
-
-harness-up-lite:
-	@test -f .env || { echo "缺少 .env，请先 make harness-init"; exit 1; }
-	@grep -Eq '^SANDBOX_PROVISIONER_TOKEN=.+' .env || { echo "SANDBOX_PROVISIONER_TOKEN 为空，请先 make harness-init"; exit 1; }
-	@VERSION=$$(tr -d '\n\r' < VERSION); \
-	if ! docker image inspect "kjsc/agent-middle-harness:$$VERSION" >/dev/null 2>&1; then \
-		AGENT_HARNESS_VERSION="$$VERSION" docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) build api; \
-	fi; \
-	AGENT_HARNESS_VERSION="$$VERSION" LITE_MODE=true VITE_USE_RUNS_API=false \
-	  docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) up -d postgres redis minio $(HARNESS_SERVICES)
-
-harness-down:
-	docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) stop $(HARNESS_SERVICES) web
-
-harness-logs:
-	docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) logs --tail=50 -f harness-db-init api worker web sandbox-provisioner
-
-harness-seed:
-	@for i in $$(seq 1 36); do \
-		if docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) exec -T api curl -sf http://localhost:5050/api/system/health >/dev/null; then \
-			break; \
-		fi; \
-		if [ "$$i" -eq 36 ]; then echo "Agent-Harness API 未在 180 秒内就绪"; exit 1; fi; \
-		sleep 5; \
-	done
-	docker compose -f $(COMPOSE_FILE) $(HARNESS_PROFILES) exec -T api \
-		python3 /app/scripts/docker-env.py uv run python scripts/seed_initial_users.py
+dev-kjsc-sandbox:
+	./scripts/dev_kjsc.sh sandbox
 
 

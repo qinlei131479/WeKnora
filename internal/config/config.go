@@ -320,14 +320,10 @@ type OIDCAuthConfig struct {
 	UserInfoMapping       *OIDCUserInfoMapping `yaml:"user_info_mapping"      json:"user_info_mapping"`
 }
 
-// PromptTemplateI18n holds localized name, description, and optional body for a prompt template.
+// PromptTemplateI18n holds localized name and description for a prompt template.
 type PromptTemplateI18n struct {
 	Name        string `yaml:"name"        json:"name"`
 	Description string `yaml:"description" json:"description"`
-	// Content, when set, replaces the template body for this locale (agent editor defaults / picker).
-	Content string `yaml:"content" json:"content,omitempty"`
-	// User, when set, replaces the user-side prompt for this locale.
-	User string `yaml:"user" json:"user,omitempty"`
 }
 
 // PromptTemplate 提示词模板
@@ -335,8 +331,7 @@ type PromptTemplateI18n struct {
 // 字段设计：每个模板最多由两部分组成 —— 系统侧 (content) 和用户侧 (user)。
 //   - content: 主要内容 / 系统 Prompt（所有模板都使用此字段）
 //   - user:    用户侧 Prompt（仅在需要 system+user 配对的模板中使用，如 rewrite、keywords_extraction）
-//   - i18n:    多语言 name/description/content/user，键为 locale（如 "zh-CN"、"en-US"、"ko-KR"），
-//              后端根据请求语言替换后再返回；缺省 content/user 时保留英文默认正文
+//   - i18n:    多语言 name/description，键为 locale（如 "zh-CN"、"en-US"、"ko-KR"），后端根据请求语言替换 Name/Description 再返回
 type PromptTemplate struct {
 	ID               string                        `yaml:"id"                 json:"id"`
 	Name             string                        `yaml:"name"               json:"name"`
@@ -401,11 +396,10 @@ func DefaultTemplateByMode(templates []PromptTemplate, mode string) *PromptTempl
 	return DefaultTemplate(templates)
 }
 
-// LocalizeTemplates returns a deep copy of the template list with Name,
-// Description, and optional Content/User replaced according to the given locale.
-// Fallback chain:
+// LocalizeTemplates returns a deep copy of the template list with Name and
+// Description replaced according to the given locale.  Fallback chain:
 //
-//	locale → primary language (e.g. "zh" from "zh-CN") → original fields.
+//	locale → primary language (e.g. "zh" from "zh-CN") → original Name/Description.
 //
 // The returned slice is safe to serialise directly; it never mutates the original.
 func LocalizeTemplates(templates []PromptTemplate, locale string) []PromptTemplate {
@@ -433,12 +427,6 @@ func LocalizeTemplates(templates []PromptTemplate, locale string) []PromptTempla
 		}
 		if l10n.Description != "" {
 			out[i].Description = l10n.Description
-		}
-		if l10n.Content != "" {
-			out[i].Content = l10n.Content
-		}
-		if l10n.User != "" {
-			out[i].User = l10n.User
 		}
 	}
 	return out
@@ -499,24 +487,6 @@ func ConfigDir() string {
 	return "./config"
 }
 
-// expandEnvRefs replaces ${VAR} and ${VAR:-default} in config text.
-func expandEnvRefs(content string) string {
-	re := regexp.MustCompile(`\$\{([^}:]+)(?::-([^}]*))?\}`)
-	return re.ReplaceAllStringFunc(content, func(match string) string {
-		parts := re.FindStringSubmatch(match)
-		if len(parts) < 2 {
-			return match
-		}
-		if value := os.Getenv(parts[1]); value != "" {
-			return value
-		}
-		if len(parts) >= 3 && parts[2] != "" {
-			return parts[2]
-		}
-		return match
-	})
-}
-
 // LoadConfig 从配置文件加载配置
 func LoadConfig() (*Config, error) {
 	// 设置配置文件名和路径
@@ -542,7 +512,17 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("error reading config file content: %w", err)
 	}
 
-	result := expandEnvRefs(string(configFileContent))
+	// 替换${ENV_VAR}格式的环境变量引用
+	re := regexp.MustCompile(`\${([^}]+)}`)
+	result := re.ReplaceAllStringFunc(string(configFileContent), func(match string) string {
+		// 提取环境变量名称（去掉${}部分）
+		envVar := match[2 : len(match)-1]
+		// 获取环境变量值，如果不存在则保持原样
+		if value := os.Getenv(envVar); value != "" {
+			return value
+		}
+		return match
+	})
 
 	// 使用处理后的配置内容
 	viper.ReadConfig(strings.NewReader(result))

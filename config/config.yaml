@@ -1,6 +1,6 @@
 # Server configuration
 server:
-  port: ${APP_PORT:-8080}
+  port: 8080
   host: "0.0.0.0"
 
 # Conversation service configuration

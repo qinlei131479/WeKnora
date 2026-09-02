@@ -8,6 +8,8 @@
 !.gitignore
 !.github/
 !.dockerignore
+!.air.toml
+!.air.appcore.toml
 !.vitepress/
 !.vitepress/**
 !.prettierignore
