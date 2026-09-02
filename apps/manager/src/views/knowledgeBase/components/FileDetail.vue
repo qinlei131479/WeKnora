@@ -4,7 +4,7 @@
     @update:model-value="$emit('update:visible', $event)"
     close-on-click-modal
     :title="$t('page.knowledgeFile.detailModel.title', '文件详情')"
-    size="40%"
+    size="60%"
     :show-confirm="false"
     :cancelText="$t('page.normal.close', '关闭')"
     @close="handleClose"

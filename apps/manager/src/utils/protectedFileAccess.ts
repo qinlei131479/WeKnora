@@ -1,3 +1,5 @@
+import { getToken } from '@/utils/auth';
+
 /**
  * 受保护文件（provider:// / resource:// 等）的访问上下文。
  *
@@ -16,9 +18,12 @@ export const PROVIDER_SCHEME_PATTERN = 'resource|local|minio|cos|tos|s3|oss|ks3|
 const PROVIDER_FILE_SCHEME_RE = new RegExp(`^(${PROVIDER_SCHEME_PATTERN}):\\/\\/\\S+$`, 'i');
 const STORAGE_BACKEND_FILE_SCHEME_RE = new RegExp(`^storage:\\/\\/[0-9A-Za-z_-]+\\/(${PROVIDER_SCHEME_PATTERN}):\\/\\/\\S+$`, 'i');
 
-const KB_FILE_PROXY_PATH_RE = /^\/api\/v1\/knowledge-bases\/[^/]+\/files$/;
+// const KB_FILE_PROXY_PATH_RE = /^\/api\/v1\/knowledge-bases\/[^/]+\/files$/;
+const KB_FILE_PROXY_PATH_RE = /[.*]\/business\/knowledges\/files\/\?[.*]/;
 const EMBED_FILE_PROXY_PATH_RE = /^\/api\/v1\/embed\/[^/]+\/files$/;
 const MESSAGE_FILE_PROXY_PATH_RE = /^\/api\/v1\/sessions\/[^/]+\/messages\/[^/]+\/files$/;
+
+const baseURL = `${import.meta.env.VITE_APP_BASE_API}`;
 
 export type ProtectedFileAccessContext =
   /** 登录态用户：Bearer + 选中租户。 */
@@ -102,7 +107,8 @@ export function isProtectedFileProxyPath(pathname: string): boolean {
 function tenantRequestHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
   try {
-    const token = (localStorage.getItem('weknora_token') || '').trim();
+    // const token = (localStorage.getItem('weknora_token') || '').trim();
+    const token = getToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -147,7 +153,8 @@ export function buildProtectedFileRequest(sourceURL: string, access: ProtectedFi
 
   if (access.mode === 'knowledgeBase') {
     return {
-      url: `/api/v1/knowledge-bases/${encodeURIComponent(access.kbId.trim())}/files?${query}`,
+      // url: `/api/v1/knowledge-bases/${encodeURIComponent(access.kbId.trim())}/files?${query}`,
+      url: `${baseURL}/business/knowledges/files?${query}`,
       headers: tenantRequestHeaders()
     };
   }
