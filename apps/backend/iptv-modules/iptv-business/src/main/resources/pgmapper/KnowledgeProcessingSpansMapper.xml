@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.KnowledgeProcessingSpansMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.KnowledgeProcessingSpans">
+        <id column="id" property="id"/>
+        <result column="knowledge_id" property="knowledgeId"/>
+        <result column="attempt" property="attempt"/>
+        <result column="span_id" property="spanId"/>
+        <result column="parent_span_id" property="parentSpanId"/>
+        <result column="name" property="name"/>
+        <result column="kind" property="kind"/>
+        <result column="status" property="status"/>
+        <result column="input" property="input" typeHandler="com.iptv.common.core.typehandler.JsonbTypeHandler"/>
+        <result column="output" property="output" typeHandler="com.iptv.common.core.typehandler.JsonbTypeHandler"/>
+        <result column="metadata" property="metadata" typeHandler="com.iptv.common.core.typehandler.JsonbTypeHandler"/>
+        <result column="error_code" property="errorCode"/>
+        <result column="error_message" property="errorMessage"/>
+        <result column="error_detail" property="errorDetail"/>
+        <result column="started_at" property="startedAt"/>
+        <result column="finished_at" property="finishedAt"/>
+        <result column="duration_ms" property="durationMs"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, knowledge_id, attempt, span_id, parent_span_id, name, kind, status,
+        input, output, metadata, error_code, error_message, error_detail,
+        started_at, finished_at, duration_ms, created_at, updated_at
+    </sql>
+
+    <!-- 查询最新的尝试号 -->
+    <select id="selectLatestAttempt" resultType="java.lang.Integer">
+        SELECT COALESCE(MAX(attempt), 0)
+        FROM knowledge_processing_spans
+        WHERE knowledge_id = #{knowledgeId}
+    </select>
+
+    <!-- 按尝试号查询Span列表 -->
+    <select id="selectListByAttempt" resultMap="BaseResultMap">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM knowledge_processing_spans
+        WHERE knowledge_id = #{knowledgeId}
+        <if test="attempt != null and attempt > 0">
+            AND attempt = #{attempt}
+        </if>
+        ORDER BY id ASC
+    </select>
+
+</mapper>

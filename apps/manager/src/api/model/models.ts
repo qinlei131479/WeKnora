@@ -1,0 +1,153 @@
+import type { AjaxResult, PageDomain, TableDataInfo } from '@/types';
+import type {
+  CredentialsResponseVO,
+  ModelCredentialField,
+  ModelCredentialsDTO,
+  ModelDebugDTO,
+  ModelDebugVO,
+  ModelProviderVO,
+  ModelTestRequestDTO,
+  ModelTestResultVO,
+  ModelType,
+  ModelsDTO,
+  ModelsPageDTO,
+  ModelsVO,
+  ProviderModelType
+} from '@/types/api/model/model';
+import request from '@/utils/request';
+
+const PATH = '/business/models';
+
+/**
+ * 模型测试和调试都要真实调用第三方模型接口，默认 10s 超时不够用。
+ */
+const LONG_TIMEOUT = 120000;
+
+/**
+ * 落库的 type 与厂商表的 modelTypes 命名不一致：
+ * 库里存 KnowledgeQA / Embedding / ...，厂商表存 chat / embedding / ...。
+ * 调 /providers 和读 defaultUrls 都要用短名。
+ */
+const PROVIDER_TYPE_MAP: Record<ModelType, ProviderModelType> = {
+  KnowledgeQA: 'chat',
+  Embedding: 'embedding',
+  Rerank: 'rerank',
+  VLLM: 'vllm',
+  ASR: 'asr'
+};
+
+export const toProviderModelType = (type?: string): ProviderModelType | undefined =>
+  type ? PROVIDER_TYPE_MAP[type as ModelType] : undefined;
+
+// 1. 厂商列表。modelType 传 chat / embedding 等短名，不传则返回全部
+const providers = (modelType?: string): Promise<AjaxResult<ModelProviderVO[]>> =>
+  request({ url: `${PATH}/providers`, method: 'GET', params: modelType ? { modelType } : {} });
+
+// 2. 分页列表
+const list = (dto: ModelsPageDTO, page: PageDomain): Promise<TableDataInfo<ModelsVO>> =>
+  request({ url: `${PATH}/list`, method: 'GET', params: { ...dto, ...page } });
+
+// 3. 单条详情
+const single = (id: string): Promise<AjaxResult<ModelsVO>> =>
+  request({ url: `${PATH}/single`, method: 'GET', params: { id } });
+
+// 4. 新增。parameters 里可以带 apiKey / appSecret，后端会加密落库
+const insert = (data: ModelsDTO): Promise<AjaxResult<ModelsVO>> =>
+  request({ url: `${PATH}/insert/single`, method: 'POST', data });
+
+// 5. 更新。后端会忽略 parameters 里的凭证字段，凭证要走 credentials 接口
+const update = (data: ModelsDTO): Promise<AjaxResult<ModelsVO>> =>
+  request({ url: `${PATH}/update/single`, method: 'POST', data });
+
+// 6. 删除。后端是 GET，内置模型会被拒绝
+const _delete = (id: string): Promise<AjaxResult<void>> =>
+  request({ url: `${PATH}/delete/single`, method: 'GET', params: { id } });
+
+// 7. 更新/查询凭证。主键字段是 modelId
+const updateCredentials = (data: ModelCredentialsDTO): Promise<AjaxResult<CredentialsResponseVO>> =>
+  request({ url: `${PATH}/credentials/update`, method: 'POST', data });
+
+// 8. 查询凭证状态
+const getCredentials = (id: string): Promise<AjaxResult<CredentialsResponseVO>> =>
+  request({ url: `${PATH}/credentials/single`, method: 'GET', params: { id } });
+
+// 9. 删除单个凭证字段，field 用 snake_case
+const deleteCredentialField = (id: string, field: ModelCredentialField): Promise<AjaxResult<void>> =>
+  request({ url: `${PATH}/credentials/delete`, method: 'GET', params: { id, field } });
+
+/**
+ * 10. 调试模型。
+ *
+ * 只支持纯 JSON 提交，因此仅 KnowledgeQA / Embedding / Rerank 可用：
+ * 后端 debugModel 声明为 `@RequestBody ModelDebugDTO + @RequestParam MultipartFile`，
+ * Spring 无法在一个请求里同时绑定 JSON body 和 multipart 文件，
+ * 需要后端改成 @RequestPart 后才能调试 VLLM / ASR。
+ */
+const debug = (data: ModelDebugDTO): Promise<AjaxResult<ModelDebugVO>> =>
+  request({ url: `${PATH}/debug`, method: 'POST', data, timeout: LONG_TIMEOUT });
+
+const testRequest = (path: string, data: ModelTestRequestDTO): Promise<AjaxResult<ModelTestResultVO>> =>
+  request({ url: `${PATH}${path}`, method: 'POST', data, timeout: LONG_TIMEOUT });
+
+// 11-14. 按模型类型分别测试连接
+const testChat = (data: ModelTestRequestDTO) => testRequest('/test/chat', data);
+const testEmbedding = (data: ModelTestRequestDTO) => testRequest('/test/embedding', data);
+const testRerank = (data: ModelTestRequestDTO) => testRequest('/test/rerank', data);
+const testAsr = (data: ModelTestRequestDTO) => testRequest('/test/asr', data);
+
+/**
+ * 15. 多模态测试。
+ *
+ * 与 /debug 同样的问题：后端声明为 `@RequestBody + @RequestParam("file")`，
+ * 而且 file 是必填，当前无法从前端正确调用（会得到 415 或缺参数）。
+ * 保留封装以便后端改成 @RequestPart 后直接接上，UI 暂未使用，
+ * VLLM 的测试连接走 /test/chat 做基础连通性校验。
+ */
+const testMultimodal = (data: ModelTestRequestDTO, file: File): Promise<AjaxResult<ModelTestResultVO>> => {
+  const form = new FormData();
+  form.append('file', file);
+  Object.entries(data).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    form.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value));
+  });
+  return request({
+    url: `${PATH}/test/multimodal`,
+    method: 'POST',
+    data: form,
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: LONG_TIMEOUT
+  });
+};
+
+/** 按落库的模型类型选择对应的测试接口。VLLM 走 chat 做基础连通性校验 */
+const testByModelType = (type: string | undefined, data: ModelTestRequestDTO) => {
+  switch (type) {
+    case 'Embedding':
+      return testEmbedding(data);
+    case 'Rerank':
+      return testRerank(data);
+    case 'ASR':
+      return testAsr(data);
+    default:
+      return testChat(data);
+  }
+};
+
+export const Models = {
+  providers,
+  list,
+  single,
+  insert,
+  update,
+  delete: _delete,
+  updateCredentials,
+  getCredentials,
+  deleteCredentialField,
+  debug,
+  testChat,
+  testEmbedding,
+  testRerank,
+  testAsr,
+  testMultimodal,
+  testByModelType
+};

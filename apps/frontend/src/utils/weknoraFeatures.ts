@@ -80,6 +80,11 @@ const HIDDEN_MENU_PATHS = new Set([
 
 /** 知识库页右侧 surface 在 hide 模式下要藏的值 */
 const HIDDEN_KB_SURFACES = new Set([
+  // 'skills',
+  // 'tools',
+  // 'mcp',
+])
+const HIDDEN_KB_SURFACES = new Set([
   'runtime', // P4：下线 yuxi 知识库管理面，只留 WeKnora 入口
   // 'skills',
   // 'tools',
@@ -236,20 +241,12 @@ export function isWeKnoraKbId(kbId: string | undefined | null): boolean {
 }
 
 /** 跳转知识库列表；被隐藏的 surface 不带 query */
+/** 跳转知识库列表；被隐藏的 surface 不带 query */
 export function knowledgeBasesLocation(surface?: string): { path: string; query?: Record<string, string> } {
   if (!surface || surface === 'platform' || isHiddenKbSurface(surface)) {
     return { path: '/platform/knowledge-bases' }
   }
   return { path: '/platform/knowledge-bases', query: { surface } }
-}
-
-/** WeKnora 知识库详情；旧 yuxi kb_* 没有对应页，回到列表避免白屏 */
-export function weknoraKnowledgeBaseLocation(kbId?: string | null): { path: string } {
-  const id = String(kbId || '').trim()
-  if (isWeKnoraKbId(id)) {
-    return { path: `/platform/knowledge-bases/${id}` }
-  }
-  return { path: '/platform/knowledge-bases' }
 }
 
 /** 是否隐藏界面字体 / 代码字体选择 */

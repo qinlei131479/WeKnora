@@ -465,7 +465,7 @@ const handleRemoveApiKey = () => {
     >
       <h4 class="section-title">{{ $t('page.data.webSearch.form.section.basic', '基本信息') }}</h4>
 
-      <el-form-item :label="$t('page.data.webSearch.form.name', '名称')" prop="name">
+      <el-form-item :label="$t('page.data.webSearch.form.name', '配置名称')" prop="name">
         <el-input
           v-model="form.name"
           :placeholder="$t('page.data.webSearch.form.namePlaceholder', '请输入配置名称')"

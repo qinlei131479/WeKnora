@@ -13,7 +13,7 @@ export function updateModelSingleApi(req: ModelSaveReq): Promise<AjaxResult> {
   return request.post(`${API}/models/update/single`, req)
 }
 export function deleteModelSingleApi(req: number|string): Promise<AjaxResult> {
-  return request.post(`${API}/models/delete/single?id=${req}`)
+  return request.get(`${API}/models/delete/single`, { params: { id: req } })
 }
 export function getModelSingleApi(req: number|string): Promise<AjaxResult<ModelEntity>> {
   return request.get(`${API}/models/single?id=${req}`)

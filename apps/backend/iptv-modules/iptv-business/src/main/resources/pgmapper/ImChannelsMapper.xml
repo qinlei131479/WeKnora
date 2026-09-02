@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.ImChannelsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.ImChannels">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="agent_id" property="agentId"/>
+        <result column="platform" property="platform"/>
+        <result column="name" property="name"/>
+        <result column="enabled" property="enabled"/>
+        <result column="mode" property="mode"/>
+        <result column="output_mode" property="outputMode"/>
+        <result column="credentials" property="credentials"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted_at" property="deletedAt"/>
+        <result column="knowledge_base_id" property="knowledgeBaseId"/>
+        <result column="bot_identity" property="botIdentity"/>
+        <result column="session_mode" property="sessionMode"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, tenant_id, agent_id, platform, name, enabled, mode, output_mode, credentials, created_at, updated_at, deleted_at, knowledge_base_id, bot_identity, session_mode
+    </sql>
+
+    <!-- 分页查询（PostgreSQL：字符串使用 ILIKE 大小写不敏感模糊查询） -->
+    <select id="queryPage" resultMap="BaseResultMap" parameterType="com.iptv.business.domain.dto.page.ImChannelsPageDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM im_channels
+        <where>
+            <if test="param.id != null and param.id != ''">
+                AND id ILIKE CONCAT('%', #{param.id}, '%')
+            </if>
+            <if test="param.tenantId != null">
+                AND tenant_id = #{param.tenantId}
+            </if>
+            <if test="param.agentId != null and param.agentId != ''">
+                AND agent_id ILIKE CONCAT('%', #{param.agentId}, '%')
+            </if>
+            <if test="param.platform != null and param.platform != ''">
+                AND platform ILIKE CONCAT('%', #{param.platform}, '%')
+            </if>
+            <if test="param.name != null and param.name != ''">
+                AND name ILIKE CONCAT('%', #{param.name}, '%')
+            </if>
+            <if test="param.enabled != null">
+                AND enabled = #{param.enabled}
+            </if>
+            <if test="param.mode != null and param.mode != ''">
+                AND mode ILIKE CONCAT('%', #{param.mode}, '%')
+            </if>
+            <if test="param.outputMode != null and param.outputMode != ''">
+                AND output_mode ILIKE CONCAT('%', #{param.outputMode}, '%')
+            </if>
+            <if test="param.credentials != null and param.credentials != ''">
+                AND credentials ILIKE CONCAT('%', #{param.credentials}, '%')
+            </if>
+            <if test="param.createdAt != null">
+                AND created_at = #{param.createdAt}
+            </if>
+            <if test="param.updatedAt != null">
+                AND updated_at = #{param.updatedAt}
+            </if>
+            <if test="param.deletedAt != null">
+                AND deleted_at = #{param.deletedAt}
+            </if>
+            <if test="param.knowledgeBaseId != null and param.knowledgeBaseId != ''">
+                AND knowledge_base_id ILIKE CONCAT('%', #{param.knowledgeBaseId}, '%')
+            </if>
+            <if test="param.botIdentity != null and param.botIdentity != ''">
+                AND bot_identity ILIKE CONCAT('%', #{param.botIdentity}, '%')
+            </if>
+            <if test="param.sessionMode != null and param.sessionMode != ''">
+                AND session_mode ILIKE CONCAT('%', #{param.sessionMode}, '%')
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+</mapper>

@@ -1,5 +1,5 @@
 import { AjaxResult, PageDomain, TableDataInfo, KnowledgeFileEntity, KnowledgeFileListReq, KnowledgeFileFoldersResp } from '@/types';
-import request from '@/utils/request';
+import request, { getBlob } from '@/utils/request';
 
 const API = '/business';
 
@@ -31,3 +31,12 @@ export function getKnowledgeFileFoldersApi(knowledgeBaseId: number | string): Pr
 // export function disableKnowledgeFilesBatchApi(req: string[]|number[]): Promise<AjaxResult> {
 //   return request.post(`${API}/knowledges/disabled/batch`, req)
 // }
+
+export function getPreviewKnowledgeFileApi(req: number | string): Promise<Blob> {
+  // const isDev = import.meta.env.DEV;
+  // console.log('isDev', isDev);
+  // if (isDev) {
+  //   return getBlob(`${API}/p3.docx?api=knowledges/preview&id=${req}`, { baseURL: '/mock' });
+  // }
+  return getBlob(`${API}/knowledges/preview?id=${req}`);
+}

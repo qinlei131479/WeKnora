@@ -81,4 +81,58 @@
         </where>
     </select>
 
+    <!-- 分页查询知识分块（参照Go代码ListPagedChunksByKnowledgeID） -->
+    <select id="queryPage" resultMap="BaseResultMap" parameterType="com.iptv.business.domain.dto.page.ChunksPageDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM chunks
+        <where>
+            deleted_at IS NULL
+            AND knowledge_id = #{param.knowledgeId}
+            <!-- 分块类型过滤，默认为text -->
+            <choose>
+                <when test="param.chunkType != null and param.chunkType.size() > 0">
+                    AND chunk_type IN
+                    <foreach collection="param.chunkType" item="type" open="(" separator="," close=")">
+                        #{type}
+                    </foreach>
+                </when>
+                <otherwise>
+                    AND chunk_type = 'text'
+                </otherwise>
+            </choose>
+            <!-- 状态过滤：0=默认，2=已索引 -->
+            AND status IN (0, 2)
+            <!-- 标签过滤 -->
+            <if test="param.tagIds != null and param.tagIds.size() > 0">
+                AND tag_id IN
+                <foreach collection="param.tagIds" item="tagId" open="(" separator="," close=")">
+                    #{tagId}
+                </foreach>
+            </if>
+            <!-- 启用状态过滤 -->
+            <if test="param.isEnabled != null">
+                AND is_enabled = #{param.isEnabled}
+            </if>
+            <!-- 关键词搜索 -->
+            <if test="param.keyword != null and param.keyword != ''">
+                <choose>
+                    <!-- FAQ类型：根据searchField搜索不同字段 -->
+                    <when test="param.knowledgeType != null and param.knowledgeType == 'faq'">
+                        AND (
+                        metadata->>'standard_question' ILIKE concat('%', #{param.keyword}, '%')
+                        OR (metadata->'similar_questions')::text ILIKE concat('%', #{param.keyword}, '%')
+                        OR (metadata->'answers')::text ILIKE concat('%', #{param.keyword}, '%')
+                        OR content ILIKE concat('%', #{param.keyword}, '%')
+                        OR metadata::text ILIKE concat('%', #{param.keyword}, '%')
+                        )
+                    </when>
+                    <!-- 文档类型：只搜索content -->
+                    <otherwise>
+                        AND content ILIKE concat('%', #{param.keyword}, '%')
+                    </otherwise>
+                </choose>
+            </if>
+        </where>
+    </select>
 </mapper>

@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import { getParserEngineListApi } from '@/api/data/system';
 import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { t } from '@/i18n';
-import type { CustomAgentConfig, CustomAgentsVO } from '@/types';
+import type { CustomAgentConfig, CustomAgentsVO, ParserEngineEntity } from '@/types';
 import type { KnowledgeBaseEntity, McpEntity } from '@/types/api/data';
 import type { ModelEntity } from '@/types/api/model';
 
@@ -10,6 +11,35 @@ interface DetailItem {
   label: string;
   value: unknown;
   json?: boolean;
+  parserRules?: boolean;
+  toolTags?: boolean;
+}
+
+interface ParserFileGroup {
+  key: string;
+  labelKey: string;
+  labelDefault: string;
+  extensions: string[];
+}
+
+interface ParserEngineRule {
+  file_types?: string[];
+  engine?: string;
+  xlsx_first_row_as_header?: boolean;
+}
+
+interface ParserRuleRow {
+  key: string;
+  label: string;
+  extensions: string[];
+  engine: string;
+  showXlsxFirstRowAsHeader: boolean;
+  xlsxFirstRowAsHeader: boolean;
+}
+
+interface ToolDisplay {
+  key: string;
+  label: string;
 }
 
 interface DetailSection {
@@ -23,6 +53,140 @@ interface MenuGroup {
   label: string;
   sections: DetailSection[];
 }
+
+const parserFileGroups: ParserFileGroup[] = [
+  {
+    key: 'pdf',
+    labelKey: 'component.kbSettings.parser.fileTypePdf',
+    labelDefault: 'PDF 文档',
+    extensions: ['pdf']
+  },
+  {
+    key: 'office',
+    labelKey: 'component.kbSettings.parser.fileTypeWord',
+    labelDefault: 'Word 文档',
+    extensions: ['docx', 'doc']
+  },
+  {
+    key: 'ppt',
+    labelKey: 'component.kbSettings.parser.fileTypePpt',
+    labelDefault: '演示文稿',
+    extensions: ['pptx', 'ppt']
+  },
+  {
+    key: 'excel',
+    labelKey: 'component.kbSettings.parser.fileTypeExcel',
+    labelDefault: 'Excel 表格',
+    extensions: ['xlsx', 'xls']
+  },
+  {
+    key: 'ebook',
+    labelKey: 'component.kbSettings.parser.fileTypeEbook',
+    labelDefault: '电子书',
+    extensions: ['epub']
+  },
+  {
+    key: 'webarchive',
+    labelKey: 'component.kbSettings.parser.fileTypeWebArchive',
+    labelDefault: '网页归档',
+    extensions: ['mhtml']
+  },
+  {
+    key: 'csv',
+    labelKey: 'component.kbSettings.parser.fileTypeCsv',
+    labelDefault: 'CSV 文件',
+    extensions: ['csv']
+  },
+  {
+    key: 'markdown',
+    labelKey: '',
+    labelDefault: 'Markdown',
+    extensions: ['md', 'markdown']
+  },
+  {
+    key: 'text',
+    labelKey: 'component.kbSettings.parser.fileTypeText',
+    labelDefault: '纯文本',
+    extensions: ['txt']
+  },
+  {
+    key: 'json',
+    labelKey: 'component.kbSettings.parser.fileTypeJson',
+    labelDefault: 'JSON 文件',
+    extensions: ['json']
+  },
+  {
+    key: 'image',
+    labelKey: 'component.kbSettings.parser.fileTypeImage',
+    labelDefault: '图片',
+    extensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp']
+  },
+  {
+    key: 'audiovisual',
+    labelKey: 'component.kbSettings.parser.fileTypeAudiovisual',
+    labelDefault: '音频',
+    extensions: ['mp3', 'wav', 'm4a', 'flac', 'ogg']
+  }
+];
+
+const parserEngineLabels: Record<string, { key: string; label: string }> = {
+  builtin: { key: 'component.kbSettings.parser.engines.builtin.name', label: '内置' },
+  markitdown: { key: 'component.kbSettings.parser.engines.markitdown.name', label: 'MarkItDown' },
+  mineru: { key: 'component.kbSettings.parser.engines.mineru.name', label: 'MinerU' },
+  mineru_cloud: { key: 'component.kbSettings.parser.engines.mineru_cloud.name', label: 'MinerU Cloud' },
+  opendataloader: { key: 'component.kbSettings.parser.engines.opendataloader.name', label: 'OpenDataLoader' },
+  paddleocr_vl: { key: 'component.kbSettings.parser.engines.paddleocr_vl.name', label: 'PaddleOCR-VL' },
+  paddleocr_vl_cloud: { key: 'component.kbSettings.parser.engines.paddleocr_vl_cloud.name', label: 'PaddleOCR-VL Cloud' },
+  simple: { key: 'component.kbSettings.parser.engines.simple.name', label: 'Simple' },
+  weknoracloud: { key: 'component.kbSettings.parser.engines.weknoracloud.name', label: 'WeKnora Cloud' }
+};
+
+const toolLabels: Record<string, { key: string; label: string }> = {
+  data_analysis: { key: 'page.agent.list.detail.tool.dataAnalysis', label: '数据分析' },
+  data_schema: { key: 'page.agent.list.detail.tool.dataSchema', label: '查看数据元信息' },
+  database_query: { key: 'page.agent.list.detail.tool.databaseQuery', label: '查询数据库' },
+  get_document_info: { key: 'page.agent.list.detail.tool.getDocumentInfo', label: '获取文档信息' },
+  grep_chunks: { key: 'page.agent.list.detail.tool.grepChunks', label: '关键词搜索' },
+  knowledge_search: { key: 'page.agent.list.detail.tool.knowledgeSearch', label: '语义搜索' },
+  list_knowledge_chunks: { key: 'page.agent.list.detail.tool.listKnowledgeChunks', label: '查看文档分块' },
+  query_knowledge_graph: { key: 'page.agent.list.detail.tool.queryKnowledgeGraph', label: '查询知识图谱' },
+  search_knowledge: { key: 'page.agent.list.detail.tool.knowledgeSearch', label: '语义搜索' },
+  thinking: { key: 'page.agent.list.detail.tool.thinking', label: '思考' },
+  todo_write: { key: 'page.agent.list.detail.tool.todoWrite', label: '制定计划' },
+  wiki_delete_page: { key: 'page.agent.list.detail.tool.wikiDeletePage', label: '删除 Wiki' },
+  wiki_flag_issue: { key: 'page.agent.list.detail.tool.wikiFlagIssue', label: '标记 Wiki 问题' },
+  wiki_read_issue: { key: 'page.agent.list.detail.tool.wikiReadIssue', label: '查看 Wiki 问题' },
+  wiki_read_page: { key: 'page.agent.list.detail.tool.wikiReadPage', label: '阅读 Wiki 页面' },
+  wiki_read_source_doc: { key: 'page.agent.list.detail.tool.wikiReadSourceDoc', label: '精读源文档' },
+  wiki_rename_page: { key: 'page.agent.list.detail.tool.wikiRenamePage', label: '重命名 Wiki' },
+  wiki_replace_text: { key: 'page.agent.list.detail.tool.wikiReplaceText', label: '局部替换 Wiki' },
+  wiki_search: { key: 'page.agent.list.detail.tool.wikiSearch', label: '搜索 Wiki' },
+  wiki_update_issue: { key: 'page.agent.list.detail.tool.wikiUpdateIssue', label: '更新 Wiki 问题' },
+  wiki_write_page: { key: 'page.agent.list.detail.tool.wikiWritePage', label: '创建/覆盖 Wiki' }
+};
+
+const toolOrder = [
+  'thinking',
+  'todo_write',
+  'grep_chunks',
+  'knowledge_search',
+  'list_knowledge_chunks',
+  'query_knowledge_graph',
+  'get_document_info',
+  'database_query',
+  'wiki_search',
+  'wiki_read_page',
+  'wiki_read_source_doc',
+  'wiki_flag_issue',
+  'wiki_write_page',
+  'wiki_replace_text',
+  'wiki_rename_page',
+  'wiki_delete_page',
+  'wiki_read_issue',
+  'wiki_update_issue',
+  'data_analysis',
+  'data_schema'
+];
 
 const props = withDefaults(
   defineProps<{
@@ -41,6 +205,10 @@ const emit = defineEmits<{
 
 const { proxy } = getCurrentInstance();
 const activeSection = ref('basic');
+const parserEngines = ref<ParserEngineEntity[]>([]);
+const parserEnginesTenantKey = ref<string>();
+const parserEnginesLoadingTenantKey = ref<string>();
+const parserEnginesRequestId = ref(0);
 
 const visible = computed({
   get: () => props.modelValue,
@@ -91,9 +259,104 @@ const formatValue = (value: unknown): string => {
   return String(value);
 };
 
+const getDefaultParserEngineName = (extensions: string[]): string => {
+  const extensionSet = new Set(extensions.map((extension) => extension.replace(/^\./, '').toLowerCase()));
+  return (
+    parserEngines.value.find(
+      (engine: ParserEngineEntity) =>
+        engine.available !== false && (engine.fileTypes || []).some((fileType: string) => extensionSet.has(fileType.replace(/^\./, '').toLowerCase()))
+    )?.name || ''
+  );
+};
+
+const formatParserEngineName = (engine: string, extensions: string[]): string => {
+  const engineLabel = parserEngineLabels[engine];
+  const label = engineLabel ? t(engineLabel.key, engineLabel.label) : engine;
+  if (engine && engine === getDefaultParserEngineName(extensions)) {
+    return `${label} (${t('component.kbSettings.parser.default', '默认')})`;
+  }
+  return label;
+};
+
+const formatParserRuleRows = (value: unknown): ParserRuleRow[] => {
+  if (!Array.isArray(value)) return [];
+
+  const rules = value
+    .map((item, index) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return undefined;
+      const rule = item as ParserEngineRule;
+      return {
+        index,
+        engine: rule.engine || '',
+        fileTypes: (rule.file_types || []).map((fileType) => fileType.replace(/^\./, '').toLowerCase()),
+        xlsxFirstRowAsHeader: rule.xlsx_first_row_as_header === true
+      };
+    })
+    .filter((rule): rule is NonNullable<typeof rule> => Boolean(rule));
+
+  const rows: ParserRuleRow[] = [];
+  const knownFileTypes = new Set(parserFileGroups.flatMap((group) => group.extensions));
+
+  parserFileGroups.forEach((group) => {
+    rules.forEach((rule) => {
+      const extensions = group.extensions.filter((extension) => rule.fileTypes.includes(extension));
+      if (!extensions.length) return;
+
+      rows.push({
+        key: `${group.key}-${rule.index}`,
+        label: group.labelKey ? t(group.labelKey, group.labelDefault) : group.labelDefault,
+        extensions,
+        engine: formatParserEngineName(rule.engine, group.extensions),
+        showXlsxFirstRowAsHeader: extensions.includes('xlsx') && rule.engine === 'builtin',
+        xlsxFirstRowAsHeader: rule.xlsxFirstRowAsHeader
+      });
+    });
+  });
+
+  rules.forEach((rule) => {
+    rule.fileTypes
+      .filter((fileType) => !knownFileTypes.has(fileType))
+      .sort()
+      .forEach((fileType) => {
+        rows.push({
+          key: `dynamic-${fileType}-${rule.index}`,
+          label: fileType.toUpperCase(),
+          extensions: [fileType],
+          engine: formatParserEngineName(rule.engine, [fileType]),
+          showXlsxFirstRowAsHeader: false,
+          xlsxFirstRowAsHeader: false
+        });
+      });
+  });
+
+  return rows;
+};
+
+const formatAllowedTools = (value: unknown): ToolDisplay[] => {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item, index) => ({ key: String(item), index }))
+    .sort((left, right) => {
+      const leftIndex = toolOrder.indexOf(left.key);
+      const rightIndex = toolOrder.indexOf(right.key);
+      if (leftIndex === -1 && rightIndex === -1) return left.index - right.index;
+      if (leftIndex === -1) return 1;
+      if (rightIndex === -1) return -1;
+      return leftIndex - rightIndex;
+    })
+    .map(({ key }) => {
+      const toolLabel = toolLabels[key];
+      return {
+        key,
+        label: toolLabel ? t(toolLabel.key, toolLabel.label) : key
+      };
+    });
+};
+
 const formatModel = (model: ModelEntity | undefined, modelId: string | undefined): string => {
   const name = model?.displayName || model?.name;
-  if (name && modelId) return `${name} (${modelId})`;
+  if (name && modelId) return `${name}<br/>${modelId}`;
   return name || modelId || '';
 };
 
@@ -165,7 +428,7 @@ const formatKnowledgeBases = (ids: string[] | undefined): string => {
   return (ids || [])
     .map((id) => {
       const knowledgeBase = props.agent.knowledgeBasesList?.find((item: KnowledgeBaseEntity) => item.id === id);
-      return knowledgeBase?.name ? `${knowledgeBase.name}（${id}）` : id;
+      return knowledgeBase?.name ? `${knowledgeBase.name}<br/>${id}` : id;
     })
     .join('\n');
 };
@@ -174,7 +437,7 @@ const formatMcpServices = (ids: string[] | undefined): string => {
   return (ids || [])
     .map((id) => {
       const service = props.agent.mcpServicesList?.find((item: McpEntity) => item.id === id);
-      return service?.name ? `${service.name} (${id})` : id;
+      return service?.name ? `${service.name}<br/>${id}` : id;
     })
     .join('\n');
 };
@@ -424,7 +687,7 @@ const detailSections = computed<DetailSection[]>(() => {
       key: 'chatParserEngineRules',
       label: t('page.agent.list.detail.chatParserEngineRules', '附件解析引擎规则'),
       value: current.chat_parser_engine_rules,
-      json: true
+      parserRules: true
     }
   );
 
@@ -493,7 +756,14 @@ const detailSections = computed<DetailSection[]>(() => {
       {
         key: 'tools',
         label: t('page.agent.list.detail.menu.tools', '工具'),
-        items: [{ key: 'allowedTools', label: t('page.agent.list.detail.allowedTools', '允许的工具'), value: current.allowed_tools }]
+        items: [
+          {
+            key: 'allowedTools',
+            label: t('page.agent.list.detail.allowedTools', '允许的工具'),
+            value: current.allowed_tools,
+            toolTags: true
+          }
+        ]
       },
       { key: 'mcp', label: t('page.agent.list.detail.menu.mcp', 'MCP 服务'), items: mcpItems },
       { key: 'skills', label: t('page.agent.list.detail.menu.skills', '技能'), items: skillItems }
@@ -576,73 +846,99 @@ const copyText = (value: unknown) => {
   copyWithTextarea(text);
 };
 
+const loadParserEngines = () => {
+  const tenantId = props.agent.tenantId;
+  const tenantKey = String(tenantId ?? '');
+  if (parserEnginesTenantKey.value === tenantKey || parserEnginesLoadingTenantKey.value === tenantKey) return;
+
+  const requestId = ++parserEnginesRequestId.value;
+  parserEnginesTenantKey.value = undefined;
+  parserEnginesLoadingTenantKey.value = tenantKey;
+  parserEngines.value.length = 0;
+  getParserEngineListApi(tenantId)
+    .then((res) => {
+      if (requestId !== parserEnginesRequestId.value) return;
+      parserEngines.value.push(...(res.data?.engines || []));
+      parserEnginesTenantKey.value = tenantKey;
+    })
+    .catch((error) => {
+      if (requestId !== parserEnginesRequestId.value) return;
+      console.error('--> --> Error:', error);
+    })
+    .finally(() => {
+      if (requestId === parserEnginesRequestId.value) parserEnginesLoadingTenantKey.value = undefined;
+    });
+};
+
 watch(visible, (value: boolean) => {
-  if (value) activeSection.value = 'basic';
+  if (value) {
+    activeSection.value = 'basic';
+    loadParserEngines();
+  }
 });
+
+watch(
+  () => props.agent.tenantId,
+  () => {
+    if (visible.value) loadParserEngines();
+  }
+);
 </script>
 
 <template>
-  <KjscRtlDrawer v-model="visible" :size="1000" :title="drawerTitle" :show-cancel="false" :show-confirm="false">
+  <KjscRtlDrawer v-model="visible" :size="850" :title="drawerTitle" :show-cancel="false" :show-confirm="false">
     <template #header>
       <el-text>{{ drawerTitle }}</el-text>
     </template>
 
-    <el-container class="container">
-      <el-aside class="aside">
-        <el-menu class="menu" :default-active="activeSection" @select="selectSection">
-          <el-menu-item-group v-for="group in menuGroups" :key="group.key">
-            <template #title>{{ group.label }}</template>
-            <el-menu-item v-for="section in group.sections" :key="section.key" :index="section.key">
-              {{ section.label }}
-            </el-menu-item>
-          </el-menu-item-group>
-        </el-menu>
-      </el-aside>
-
-      <el-main class="main">
-        <!-- <el-text size="large">{{ activeDetailSection?.label }}</el-text> -->
-        <el-descriptions :column="1" border>
-          <el-descriptions-item v-for="item in activeDetailSection?.items" :key="item.key" :label="item.label" label-width="200px">
-            <div v-if="item.json && hasValue(item.value)" class="json-content">
-              <el-button size="small" class="json-content__copy" @click="copyText(item.value)">
-                {{ $t('page.normal.copy', '复制') }}
-              </el-button>
-              <pre class="json-content__pre">{{ formatJson(item.value) }}</pre>
-            </div>
-            <span v-else-if="!item.json" class="detail-value">{{ formatValue(item.value) }}</span>
-          </el-descriptions-item>
-        </el-descriptions>
-      </el-main>
-    </el-container>
+    <el-tabs v-model="activeSection" @tab-change="selectSection">
+      <el-tab-pane v-for="group in menuGroups" :label="group.label" :name="group.key">
+        <el-main v-for="section in group.sections">
+          <el-descriptions :title="section.label" :column="1" border>
+            <el-descriptions-item v-for="item in section.items" :key="item.key" :label="item.label" label-width="200px">
+              <div v-if="item.parserRules && formatParserRuleRows(item.value).length" class="parser-rules">
+                <div v-for="rule in formatParserRuleRows(item.value)" :key="rule.key" class="parser-rule">
+                  <div class="parser-rule__info">
+                    <el-text tag="b" class="parser-rule__label">{{ rule.label }}</el-text>
+                    <el-space wrap :size="4">
+                      <el-tag v-for="extension in rule.extensions" :key="extension" type="info" effect="plain" size="small">
+                        .{{ extension }}
+                      </el-tag>
+                    </el-space>
+                  </div>
+                  <div class="parser-rule__control">
+                    <div class="parser-rule__engine">
+                      <el-text>{{ rule.engine }}</el-text>
+                    </div>
+                    <el-checkbox v-if="rule.showXlsxFirstRowAsHeader" :model-value="rule.xlsxFirstRowAsHeader" disabled>
+                      {{ $t('component.kbSettings.parser.xlsxFirstRowAsHeader', '将首行作为列标题，并保留在每行上下文中') }}
+                    </el-checkbox>
+                  </div>
+                </div>
+              </div>
+              <el-space v-else-if="item.toolTags && formatAllowedTools(item.value).length" direction="vertical" alignment="flex-start" :size="4">
+                <el-tag v-for="tool in formatAllowedTools(item.value)" :key="tool.key" type="info" effect="plain">
+                  {{ tool.label }}
+                </el-tag>
+              </el-space>
+              <div v-else-if="item.json && hasValue(item.value)" class="json-content">
+                <el-button size="small" class="json-content__copy" @click="copyText(item.value)">
+                  {{ $t('page.normal.copy', '复制') }}
+                </el-button>
+                <pre class="json-content__pre">{{ formatJson(item.value) }}</pre>
+              </div>
+              <span v-else-if="!item.json && !item.parserRules && !item.toolTags" class="detail-value" v-html="formatValue(item.value)" />
+            </el-descriptions-item>
+          </el-descriptions>
+        </el-main>
+      </el-tab-pane>
+    </el-tabs>
   </KjscRtlDrawer>
 </template>
 
 <style lang="scss" scoped>
-.container {
-  height: 100%;
-  min-height: 0;
-}
-
-.aside {
-  width: 200px;
-  padding: 1px;
-  margin: 0;
-}
-
-.menu {
-  height: 100%;
-  border-right: 0;
-}
-
-.main {
-  padding: 0 0 0 10px;
-}
-
-:deep(.el-menu-item-group__title) {
-  padding: 7px 0 7px 7px !important;
-  background-color: #eef1f6;
-  font-size: 10px;
-  font-weight: bold;
+:deep(.el-tabs) {
+  width: 100%;
 }
 
 :deep(.el-descriptions__label),
@@ -653,6 +949,62 @@ watch(visible, (value: boolean) => {
 .detail-value {
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+.parser-rules {
+  width: 100%;
+  overflow: hidden;
+  border: var(--el-border-width) var(--el-border-style) var(--el-border-color);
+  border-radius: var(--el-border-radius-base);
+}
+
+.parser-rule {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  border-bottom: var(--el-border-width) var(--el-border-style) var(--el-border-color);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &__info {
+    flex: 0 0 170px;
+    max-width: 170px;
+  }
+
+  &__label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  &__control {
+    flex: 1;
+    min-width: 140px;
+  }
+
+  &__engine {
+    display: flex;
+    align-items: center;
+    min-height: 30px;
+    padding: 0 11px;
+    border: var(--el-border-width) var(--el-border-style) var(--el-border-color);
+    border-radius: var(--el-border-radius-base);
+  }
+
+  :deep(.el-checkbox) {
+    height: auto;
+    margin-top: 4px;
+    white-space: normal;
+  }
+
+  :deep(.el-checkbox__label) {
+    line-height: 1.4;
+    white-space: normal;
+  }
 }
 
 .json-content {

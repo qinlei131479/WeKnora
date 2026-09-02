@@ -6,6 +6,7 @@ import com.iptv.business.domain.Knowledges;
 import com.iptv.business.domain.dto.FAQEntryQueryDTO;
 import com.iptv.business.domain.dto.page.KnowledgesPageDTO;
 import com.iptv.business.domain.vo.FAQEntryVO;
+import com.iptv.business.domain.vo.KnowledgeSpansVO;
 import com.iptv.business.domain.vo.KnowledgesFolderVO;
 import com.iptv.business.domain.vo.KnowledgesVO;
 import com.iptv.common.core.web.page.PageDTO;
@@ -86,4 +87,21 @@ public interface KnowledgesService extends IService<Knowledges> {
      * @param id 主键
      */
     void deleteFAQById(@Nonnull String id);
+
+    /**
+     * 查询知识处理Span树
+     *
+     * @param id 知识条目ID
+     * @param attempt 尝试号（可选，不传则返回最新尝试）
+     * @return Span树响应
+     */
+    KnowledgeSpansVO querySpansByKnowledgeId(@Nonnull String id, Integer attempt);
+
+    /**
+     * 查询分块图片
+     *
+     * @param file_path 文件路径
+     * @param response  响应对象
+     */
+    void queryFileByPath(@Nonnull String file_path, HttpServletResponse response);
 }

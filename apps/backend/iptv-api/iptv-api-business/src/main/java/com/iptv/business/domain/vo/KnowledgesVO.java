@@ -1,11 +1,13 @@
 package com.iptv.business.domain.vo;
 
-import java.io.Serializable;
-import java.util.Date;
-import java.io.Serializable;
+import com.iptv.business.domain.KnowledgeTags;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.io.Serializable;
+import java.util.Date;
+import java.util.List;
 
 /**
  * <p>
@@ -188,4 +190,10 @@ public class KnowledgesVO implements Serializable {
      */
     @Schema(description = "知识库内相对目录路径；空表示根目录（仅导航，非物理路径）")
     private String folderPath;
+
+    /**
+     * 标签列表
+     */
+    @Schema(description = "标签列表")
+    private List<KnowledgeTags> tags;
 }

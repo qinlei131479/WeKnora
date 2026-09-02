@@ -2,10 +2,14 @@ package com.iptv.business.controller;
 
 import com.iptv.business.domain.KnowledgeTags;
 import com.iptv.business.domain.dto.FAQEntryQueryDTO;
+import com.iptv.business.domain.dto.page.ChunksPageDTO;
 import com.iptv.business.domain.dto.page.KnowledgesPageDTO;
+import com.iptv.business.domain.vo.ChunksVO;
 import com.iptv.business.domain.vo.FAQEntryVO;
+import com.iptv.business.domain.vo.KnowledgeSpansVO;
 import com.iptv.business.domain.vo.KnowledgesFolderVO;
 import com.iptv.business.domain.vo.KnowledgesVO;
+import com.iptv.business.service.ChunksService;
 import com.iptv.business.service.KnowledgesService;
 import com.iptv.common.core.domain.R;
 import com.iptv.common.core.web.page.PageDTO;
@@ -37,6 +41,9 @@ public class KnowledgesController {
 
     @Autowired
     private KnowledgesService knowledgesService;
+
+    @Autowired
+    private ChunksService chunksService;
 
     @Operation(summary = "按 id 查询", description = "按 id 查询")
     @GetMapping("/single")
@@ -92,5 +99,25 @@ public class KnowledgesController {
     public R<Void> deleteFAQById(@RequestParam String id) {
         knowledgesService.deleteFAQById(id);
         return R.ok();
+    }
+
+    @Operation(summary = "分页查询知识分块", description = "根据知识条目ID分页查询分块列表，支持按分块类型、标签、关键词过滤")
+    @GetMapping("/chunks")
+    @RequiresPermissions("business:knowledges:query")
+    public TableDataInfo<ChunksVO> queryChunks(ChunksPageDTO dto, PageDTO pg) {
+        return chunksService.queryPage(dto, pg);
+    }
+
+    @Operation(summary = "查询知识处理Span树", description = "获取知识文档解析的Span树（含历史尝试），支持?attempt=N查看历史尝试")
+    @GetMapping("/spans")
+    @RequiresPermissions("business:knowledges:query")
+    public R<KnowledgeSpansVO> querySpansByKnowledgeId(@RequestParam String knowledgeId, @RequestParam(required = false) Integer attempt) {
+        return R.ok(knowledgesService.querySpansByKnowledgeId(knowledgeId, attempt));
+    }
+
+    @Operation(summary = "查看分块图片", description = "查看分块图片")
+    @GetMapping("/files")
+    public void queryFileByPath(@RequestParam String file_path, HttpServletResponse response) {
+        knowledgesService.queryFileByPath(file_path, response);
     }
 }

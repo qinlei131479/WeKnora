@@ -17,7 +17,7 @@ export default function useFilesQuery(knowledgeBaseId?: number | string) {
       keyword: ''
     } as KnowledgeFileListReq,
     deleteConfirmMessage: (row: KnowledgeFileEntity) => {
-      return t('page.knowledgeBase.deleteConfirm', { fileName: row.fileName }, `是否确认删除知识库文件 ${row.fileName} 数据项？`);
+      return t('page.knowledgeFile.deleteConfirm', { fileName: row.fileName }, `是否确认删除知识库文件名为 ${row.fileName} 数据项？`);
     },
     deleteApi: deleteKnowledgeFileSingleApi,
     deleteSuccessMessage: t('page.normal.deleteSuccess')

@@ -1,27 +1,26 @@
 package com.iptv.business.domain;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.iptv.common.core.typehandler.JsonbTypeHandler;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.io.Serial;
+import java.io.Serializable;
 import java.util.Date;
 
 /**
  * 文档解析引擎表
  *
  * @author kjsc
- * @since 2026-08-26
+ * @since 2026-09-01
  */
 @Data
 @EqualsAndHashCode(callSuper = false)
 @TableName("amp_parser_engines")
-public class AmpParserEngines implements java.io.Serializable {
+public class AmpParserEngines implements Serializable {
     @Serial
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 6920955313753137185L;
 
     @Schema(description = "主键 ID")
     private Long id;
@@ -33,13 +32,15 @@ public class AmpParserEngines implements java.io.Serializable {
     private String description;
 
     @Schema(description = "支持的文件类型列表（JSON 数组）")
-    @TableField(typeHandler = JsonbTypeHandler.class)
     private String fileTypes;
 
-    @Schema(description = "可用性检测方式：none/docreader/config/http_ping")
+    @Schema(description = "引擎配置（JSON 对象）")
+    private String engineConfig;
+
+    @Schema(description = "可用性检测方式：none-无需检测/docreader-依赖DocReader连接/config-仅检查配置项存在/http_ping-HTTP探测")
     private String checkType;
 
-    @Schema(description = "检测所需的租户配置项名称")
+    @Schema(description = "检测所需的租户配置项名称（check_type=config/http_ping 时使用）")
     private String configKey;
 
     @Schema(description = "排序序号")

@@ -40,25 +40,18 @@
               <el-input
                 v-model="queryParams.keyword"
                 class="search-bar__input"
-                placeholder="搜索文档"
+                :placeholder="$t('page.knowledgeFile.searchPlaceholder', '搜索文档')"
                 clearable
                 :prefix-icon="Search"
                 @keyup.enter="loadTableData"
                 @clear="loadTableData"
               />
             </div>
-            <!-- <el-select v-model="queryParams.fileType" style="max-width: 300px" placeholder="文件类型" clearable @clear="loadTableData">
-              <el-option label="所有" value="" />
-              <el-option label="文本" value="text" />
-              <el-option label="图片" value="image" />
-              <el-option label="视频" value="video" />
-              <el-option label="音频" value="audio" />
-            </el-select> -->
             <el-autocomplete
               v-model="queryParams.fileType"
               style="max-width: 300px"
               value-key="name"
-              placeholder="文件类型"
+              :placeholder="$t('page.knowledgeFile.fileTypePlaceholder', '文件类型')"
               clearable
               hide-loading
               :suffix-icon="Search"
@@ -199,7 +192,7 @@
     </page-content>
 
     <!-- 详情抽屉 -->
-    <!-- <KnowledgeBaseDetailDrawer v-model:visible="open" :kbId="kbId" /> -->
+    <FileDetail v-model:visible="detailVisible" :entity="detailEntity" />
   </section>
 </template>
 
@@ -207,30 +200,18 @@
 import { ref, reactive, onMounted } from '@vue/runtime-core';
 // import { Document, Folder, FolderOpened } from '@element-plus/icons-vue';
 import { Folder, FolderOpen, LoaderCircle, CircleX } from 'lucide-vue-next';
-import {
-  AjaxResult,
-  KnowledgeBaseEntity,
-  KnowledgeBaseExtends,
-  KnowledgeBaseListReq,
-  KnowledgeFileEntity,
-  KnowledgeFileFoldersNode,
-  KnowledgeFileListReq,
-  TableShowColumns
-} from '@/types';
+import { AjaxResult, KnowledgeBaseEntity, KnowledgeFileEntity, KnowledgeFileFoldersNode, KnowledgeFileListReq, TableShowColumns } from '@/types';
 
 import { useI18n } from 'vue-i18n';
 import { Search } from 'lucide-vue-next';
 
-// import KnowledgeBaseDetailDrawer from './components/KnowledgeBaseDetailDrawer.vue';
-// import KnowledgeBaseTypeTag from './components/KnowledgeBaseTypeTag.vue';
-import { deleteKnowledgeBaseSingleApi, getKnowledgeBaseListApi, getKnowledgeBaseSingleApi } from '@/api/data/knowledgeBase.js';
+import { getKnowledgeBaseSingleApi } from '@/api/data/knowledgeBase.js';
 
-import { getKBChunkStrategyOptionLabel } from '@/composables/useKBChunk.js';
-import { parseEntity } from '@/composables/useKnowledge.js';
 import { formatSize } from '@/utils';
 import folderUse from './fileList/folderUse';
 import filesQueryUse from './fileList/filesQueryUse';
-import { deleteKnowledgeFileSingleApi } from '@/api/data/knowledgeFile';
+
+import FileDetail from './components/FileDetail.vue';
 
 const { proxy } = getCurrentInstance();
 const emit = defineEmits(['back']);
@@ -262,17 +243,6 @@ const libName = computed(() => libInfo.value.name || libInfo.value.id);
 const { folderTreeData, folderTreeProps, folderTreeIds, loadFolderTreeData } = folderUse({ t }, props.libId);
 
 const { pageParams, queryParams, tableData, loading, total, loadTableData, resetQuerySearch, resetParams, handleDelete } = filesQueryUse(props.libId);
-
-// const folderDefaultExpandedKeys = ref<string[]>([]);
-// watch(
-//   () => folderTreeData,
-//   (newVal: KnowledgeFileFoldersNode[]) => {
-//     console.log('folderTreeData', newVal);
-//   },
-//   {
-//     immediate: true
-//   }
-// );
 
 const loadLibInfo = () => {
   getKnowledgeBaseSingleApi(props.libId).then((res) => {
@@ -344,7 +314,12 @@ function handleRowClick(row: KnowledgeFileEntity, column: any) {
   }
   // showFiles(row);
 }
-function handleDetail(row: KnowledgeFileEntity) {}
+const detailVisible = ref<boolean>(false);
+const detailEntity = ref<KnowledgeFileEntity>({});
+function handleDetail(row: KnowledgeFileEntity) {
+  detailVisible.value = true;
+  detailEntity.value = row;
+}
 
 interface StatusInfo {
   label: string;

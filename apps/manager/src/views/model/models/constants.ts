@@ -1,0 +1,34 @@
+import type { ModelType } from '@/types/api/model/model';
+
+interface SelectOption {
+  value: string;
+  /** i18n key，第二个参数是兜底中文 */
+  labelKey: string;
+  label: string;
+}
+
+/** 模型类型，值与后端落库的 type 一致 */
+export const MODEL_TYPE_OPTIONS: SelectOption[] = [
+  { value: 'KnowledgeQA', labelKey: 'page.models.type.KnowledgeQA', label: '对话' },
+  { value: 'Embedding', labelKey: 'page.models.type.Embedding', label: '向量嵌入' },
+  { value: 'Rerank', labelKey: 'page.models.type.Rerank', label: '重排序' },
+  { value: 'VLLM', labelKey: 'page.models.type.VLLM', label: '多模态' },
+  { value: 'ASR', labelKey: 'page.models.type.ASR', label: '语音识别' }
+];
+
+/**
+ * 模型来源。后端只做字符串存储，remote / local 是最常用的两个值，
+ * 表单里允许自定义输入以兼容厂商专属来源。
+ */
+export const MODEL_SOURCE_OPTIONS: SelectOption[] = [
+  { value: 'remote', labelKey: 'page.models.source.remote', label: '远程 API' },
+  { value: 'local', labelKey: 'page.models.source.local', label: '本地（Ollama）' }
+];
+
+const TYPE_LABEL_KEYS = MODEL_TYPE_OPTIONS.reduce<Record<string, string>>((acc, item) => {
+  acc[item.value] = item.labelKey;
+  return acc;
+}, {});
+
+/** 列表里把落库的 type 翻译成中文，未知值原样展示 */
+export const modelTypeLabelKey = (type?: string) => (type ? TYPE_LABEL_KEYS[type as ModelType] : undefined);

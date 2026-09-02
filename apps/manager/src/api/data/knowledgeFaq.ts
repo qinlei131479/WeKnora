@@ -1,4 +1,4 @@
-import { AjaxResult, PageDomain, TableDataInfo, KnowledgeFaqEntity, KnowledgeFaqListReq, KnowledgeFaqTag } from '@/types';
+import { AjaxResult, PageDomain, TableDataInfo, KnowledgeFaqEntity, KnowledgeFaqListReq, KnowledgeTag } from '@/types';
 import request from '@/utils/request';
 
 const API = '/business';
@@ -20,7 +20,7 @@ export function deleteKnowledgeFaqSingleApi(req: number | string): Promise<AjaxR
 // }
 
 // 根据知识库ID查询所有标签
-export function getKnowledgeFaqTagsApi(knowledgeBaseId: number | string): Promise<AjaxResult<KnowledgeFaqTag[]>> {
+export function getKnowledgeTagsApi(knowledgeBaseId: number | string): Promise<AjaxResult<KnowledgeTag[]>> {
   return request.get(`${API}/knowledges/tags?knowledgeBaseId=${knowledgeBaseId}`);
 }
 
