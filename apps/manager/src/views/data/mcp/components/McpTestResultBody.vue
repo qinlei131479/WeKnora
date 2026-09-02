@@ -4,14 +4,14 @@
     <div class="mtr-status" :class="result.success ? 'is-success' : 'is-error'">
       <!-- <t-icon :name="result.success ? 'check-circle-filled' : 'close-circle-filled'" /> -->
       <el-icon>
-        <CircleCheckFilled v-if="result.success"/>
-        <CircleCloseFilled v-else/>
+        <CircleCheckFilled v-if="result.success" />
+        <CircleCloseFilled v-else />
       </el-icon>
-      <span>{{ result.success ? $t('mcp.testResult.connectionSuccess') : $t('mcp.testResult.connectionFailed') }}</span>
+      <span>{{ result.success ? $t('page.mcp.testResult.connectionSuccess') : $t('page.mcp.testResult.connectionFailed') }}</span>
     </div>
     <p v-if="result.message" class="mtr-message">{{ result.message }}</p>
     <div v-if="result.success && result.description" class="mtr-service-desc">
-      <span>{{ $t('mcp.testResult.descriptionLabel') }}</span>
+      <span>{{ $t('page.mcp.testResult.descriptionLabel') }}</span>
       <p>{{ result.description }}</p>
     </div>
 
@@ -19,26 +19,21 @@
       <!-- 工具列表 -->
       <div v-if="result.tools && result.tools.length > 0" class="mtr-group">
         <div class="mtr-group-title">
-          <span>{{ $t('mcp.testResult.toolsTitle') }}</span>
+          <span>{{ $t('page.mcp.testResult.toolsTitle') }}</span>
           <el-tag type="primary" variant="light" size="small">{{ result.tools.length }}</el-tag>
         </div>
         <div class="mtr-list">
-          <div
-            v-for="(tool, index) in displayTools"
-            :key="index"
-            class="mtr-item"
-            :class="{ 'is-open': expandedToolIndex === index }"
-          >
+          <div v-for="(tool, index) in displayTools" :key="index" class="mtr-item" :class="{ 'is-open': expandedToolIndex === index }">
             <div class="mtr-item-head" @click="toggleTool(index)">
               <!-- <t-icon name="tools" class="mtr-item-icon" /> -->
               <el-icon class="mtr-item-icon"><Tools /></el-icon>
               <span class="mtr-item-name">{{ tool.name }}</span>
               <div class="mtr-item-actions" @click.stop>
-                <el-tooltip v-if="serviceId" :content="$t('mcp.testResult.requireApprovalTip')" placement="top">
+                <el-tooltip v-if="serviceId" :content="$t('page.mcp.testResult.requireApprovalTip')" placement="top">
                   <span class="mtr-approval">
                     <!-- <t-icon name="error-circle-filled" class="mtr-approval-icon" /> -->
                     <el-icon class="mtr-approval-icon"><WarningFilled /></el-icon>
-                    <span class="mtr-approval-label">{{ $t('mcp.testResult.requireApproval') }}</span>
+                    <span class="mtr-approval-label">{{ $t('page.mcp.testResult.requireApproval') }}</span>
                     <el-switch
                       :value="tool.requireApproval"
                       :loading="approvalLoading[tool.name]"
@@ -52,20 +47,16 @@
                   class="mtr-chevron"
                 /> -->
                 <el-icon class="mtr-chevron">
-                  <ArrowUpBold v-if="expandedToolIndex === index"/>
-                  <ArrowDownBold v-else/>
+                  <ArrowUpBold v-if="expandedToolIndex === index" />
+                  <ArrowDownBold v-else />
                 </el-icon>
               </div>
             </div>
-            <div
-              v-if="tool.description"
-              class="mtr-item-desc"
-              :class="{ 'is-clamped': expandedToolIndex !== index }"
-            >
+            <div v-if="tool.description" class="mtr-item-desc" :class="{ 'is-clamped': expandedToolIndex !== index }">
               {{ tool.description }}
             </div>
             <div v-if="expandedToolIndex === index && tool.inputSchema" class="mtr-item-schema">
-              <div class="mtr-schema-label">{{ $t('mcp.testResult.schemaLabel') }}</div>
+              <div class="mtr-schema-label">{{ $t('page.mcp.testResult.schemaLabel') }}</div>
               <pre>{{ formatSchema(tool.inputSchema) }}</pre>
             </div>
           </div>
@@ -75,7 +66,7 @@
       <!-- 资源列表 -->
       <div v-if="result.resources && result.resources.length > 0" class="mtr-group">
         <div class="mtr-group-title">
-          <span>{{ $t('mcp.testResult.resourcesTitle') }}</span>
+          <span>{{ $t('page.mcp.testResult.resourcesTitle') }}</span>
           <el-tag type="primary" variant="light" size="small">{{ result.resources.length }}</el-tag>
         </div>
         <div class="mtr-list">
@@ -99,9 +90,9 @@
       </div>
 
       <!-- 空状态 -->
-      <t-empty
+      <el-empty
         v-if="(!result.tools || result.tools.length === 0) && (!result.resources || result.resources.length === 0)"
-        :description="$t('mcp.testResult.emptyDescription')"
+        :description="$t('page.mcp.testResult.emptyDescription')"
         class="mtr-empty"
       />
     </template>
@@ -109,139 +100,147 @@
 </template>
 
 <script setup lang="ts">
-import { Close, CircleCheckFilled, CircleCloseFilled,Tools,WarningFilled,ArrowUpBold,ArrowDownBold,Document,Link } from '@element-plus/icons-vue'
-import type { MCPTestResult, MCPTool } from '@/api/data/mcp'
-import { getMcpToolListApi, enableMcpToolBatchApi, disableMcpToolBatchApi } from '@/api/data/mcp'
-import { McpToolBatchReqItem } from '@/types'
+import {
+  Close,
+  CircleCheckFilled,
+  CircleCloseFilled,
+  Tools,
+  WarningFilled,
+  ArrowUpBold,
+  ArrowDownBold,
+  Document,
+  Link
+} from '@element-plus/icons-vue';
+import type { MCPTestResult, MCPTool } from '@/api/data/mcp';
+import { getMcpToolListApi, enableMcpToolBatchApi, disableMcpToolBatchApi } from '@/api/data/mcp';
+import { McpToolBatchReqItem } from '@/types';
 // import { MessagePlugin } from 'tdesign-vue-next'
 
-import { useI18n } from 'vue-i18n'
+import { useI18n } from 'vue-i18n';
 
 interface Props {
-  result: MCPTestResult | null
+  result: MCPTestResult | null;
   /** When set, loads/saves per-tool approval flags */
-  serviceId?: string
+  serviceId?: string;
   /** When true, (re)loads approval flags. Lets the dialog gate the fetch on
    *  visibility; defaults to true for always-rendered inline usage. */
-  active?: boolean
+  active?: boolean;
 }
 
-const props = withDefaults(defineProps<Props>(), { active: true })
+const props = withDefaults(defineProps<Props>(), { active: true });
 
-const { proxy } = getCurrentInstance()
+const { proxy } = getCurrentInstance();
 
 const getMCPToolApprovals = (id: string) => {
-  return getMcpToolListApi(id).then((res) => res?.data || [])
-}
+  return getMcpToolListApi(id).then((res) => res?.data || []);
+};
 const setMCPToolApproval = (id: string, toolName: string, value: boolean) => {
   const item: McpToolBatchReqItem = {
     toolName: toolName,
-    serviceId: id,
+    serviceId: id
   };
   if (value) {
-    return enableMcpToolBatchApi([item])
+    return enableMcpToolBatchApi([item]);
   } else {
-    return disableMcpToolBatchApi([item])
+    return disableMcpToolBatchApi([item]);
   }
-}
+};
 
-const pageLangConfig: Record<string, string> = {
-  'page.mcp.add': '新增MCP',
-  'page.mcp.searchPlaceholder': '通过模型ID、模型名称、创建人进行模糊搜索',
-  'page.mcp.range_separator': '至',
-  'page.mcp.start_date.placeholder': '开始时间',
-  'page.mcp.end_date.placeholder': '结束时间',
-  'page.mcp.reset': '重置',
-  'page.mcp.search': '搜索',
-  'form.button.reset': '重置',
-  'form.button.edit': '编辑',
-  'form.button.delete': '删除',
-  'form.button.enable': '启用',
-  'form.button.disable': '禁用',
+// const pageLangConfig: Record<string, string> = {
+//   'page.mcp.add': '新增MCP',
+//   'page.mcp.searchPlaceholder': '通过模型ID、模型名称、创建人进行模糊搜索',
+//   'page.mcp.range_separator': '至',
+//   'page.mcp.start_date.placeholder': '开始时间',
+//   'page.mcp.end_date.placeholder': '结束时间',
+//   'page.mcp.reset': '重置',
+//   'page.mcp.search': '搜索',
+//   'form.button.reset': '重置',
+//   'form.button.edit': '编辑',
+//   'form.button.delete': '删除',
+//   'form.button.enable': '启用',
+//   'form.button.disable': '禁用',
 
-  'mcpServiceDialog.codeImport.toggle': '从代码导入',
-  'mcpServiceDialog.codeImport.hint': '粘贴标准 mcpServers JSON 配置，自动填充表单',
-  'mcpServiceDialog.codeImport.editOverwriteHint': '导入会覆盖当前表单内容（不影响已保存的凭证，需点保存生效）',
-  'mcpServiceDialog.codeImport.parse': '解析并填充',
-  'mcpServiceDialog.codeImport.errors.empty': '请先粘贴配置内容',
-  'mcpServiceDialog.codeImport.errors.invalidJson': '无法解析，请检查 JSON 格式'
-}
-const t = function (key: string, params?: Record<string, string> | string) {
-  let msg = pageLangConfig[key] || key
-  if (params) {
-    if (typeof params == 'string') {
-      msg = pageLangConfig[key] || params
-    } else {
-      Object.keys(params).forEach((key) => {
-        msg = msg.replace(`{${key}}`, params[key])
-      })
-    }
-  }
-  return msg
-}
-const $t = t;
+//   'mcpServiceDialog.codeImport.toggle': '从代码导入',
+//   'mcpServiceDialog.codeImport.hint': '粘贴标准 mcpServers JSON 配置，自动填充表单',
+//   'mcpServiceDialog.codeImport.editOverwriteHint': '导入会覆盖当前表单内容（不影响已保存的凭证，需点保存生效）',
+//   'mcpServiceDialog.codeImport.parse': '解析并填充',
+//   'mcpServiceDialog.codeImport.errors.empty': '请先粘贴配置内容',
+//   'mcpServiceDialog.codeImport.errors.invalidJson': '无法解析，请检查 JSON 格式'
+// };
+// const t = function (key: string, params?: Record<string, string> | string) {
+//   let msg = pageLangConfig[key] || key;
+//   if (params) {
+//     if (typeof params == 'string') {
+//       msg = pageLangConfig[key] || params;
+//     } else {
+//       Object.keys(params).forEach((key) => {
+//         msg = msg.replace(`{${key}}`, params[key]);
+//       });
+//     }
+//   }
+//   return msg;
+// };
+// const $t = t;
 
-const expandedToolIndex = ref<number | null>(null)
-// const { t } = useI18n()
-const displayTools = ref<MCPTool[]>([])
-const approvalLoading = ref<Record<string, boolean>>({})
+const expandedToolIndex = ref<number | null>(null);
+const { t } = useI18n();
+const displayTools = ref<MCPTool[]>([]);
+const approvalLoading = ref<Record<string, boolean>>({});
 
 const mergeApprovals = async () => {
-  const tools: MCPTool[] = props.result?.tools || []
+  const tools: MCPTool[] = props.result?.tools || [];
   if (!tools.length) {
-    displayTools.value = []
-    return
+    displayTools.value = [];
+    return;
   }
   if (!props.serviceId) {
-    displayTools.value = tools.map((x) => ({ ...x }))
-    return
+    displayTools.value = tools.map((x) => ({ ...x }));
+    return;
   }
   try {
-    const rows = await getMCPToolApprovals(props.serviceId)
-    const map = new Map(rows.map((r) => [r.toolName, r.requireApproval]))
+    const rows = await getMCPToolApprovals(props.serviceId);
+    const map = new Map(rows.map((r) => [r.toolName, r.requireApproval]));
     displayTools.value = tools.map((tool) => ({
       ...tool,
-      requireApproval: map.get(tool.name) || false,
-    }))
+      requireApproval: map.get(tool.name) || false
+    }));
   } catch {
-    displayTools.value = tools.map((x) => ({ ...x }))
+    displayTools.value = tools.map((x) => ({ ...x }));
   }
-}
+};
 
 watch(
   () => [props.active, props.serviceId, props.result?.tools],
   () => {
     if (props.active) {
-      void mergeApprovals()
+      void mergeApprovals();
     }
   },
   { deep: true, immediate: true }
-)
+);
 
 const onRequireApprovalChange = async (toolName: string, value: boolean) => {
-  if (!props.serviceId) return
-  approvalLoading.value = { ...approvalLoading.value, [toolName]: true }
+  if (!props.serviceId) return;
+  approvalLoading.value = { ...approvalLoading.value, [toolName]: true };
   try {
-    await setMCPToolApproval(props.serviceId, toolName, value)
-    displayTools.value = displayTools.value.map((x: MCPTool) =>
-      x.name === toolName ? { ...x, requireApproval: value } : x
-    )
+    await setMCPToolApproval(props.serviceId, toolName, value);
+    displayTools.value = displayTools.value.map((x: MCPTool) => (x.name === toolName ? { ...x, requireApproval: value } : x));
   } catch (e) {
-    console.error(e)
-    proxy.$modal.msgError(t('mcp.testResult.approvalSaveFailed'))
+    console.error(e);
+    proxy.$modal.msgError(t('page.mcp.testResult.approvalSaveFailed'));
   } finally {
-    approvalLoading.value = { ...approvalLoading.value, [toolName]: false }
+    approvalLoading.value = { ...approvalLoading.value, [toolName]: false };
   }
-}
+};
 
 const toggleTool = (index: number) => {
-  expandedToolIndex.value = expandedToolIndex.value === index ? null : index
-}
+  expandedToolIndex.value = expandedToolIndex.value === index ? null : index;
+};
 
 const formatSchema = (schema: any): string => {
-  if (!schema) return ''
-  return JSON.stringify(schema, null, 2)
-}
+  if (!schema) return '';
+  return JSON.stringify(schema, null, 2);
+};
 </script>
 
 <style scoped lang="less">

@@ -1,134 +1,127 @@
 <template>
-  <section class="manage-page mcp-manage-page">
+  <section class="mcp-manage-page">
     <page-name class="page-name">
-      <button type="button" class="add-btn" v-hasPermi="['business:mcpServices:add']" @click="handleAdd">+ {{
-        $t('page.mcp.add')
-      }}</button>
+      <el-button type="primary" icon="Plus" v-hasPermi="['business:mcpServices:add']" @click="handleAdd">{{
+        $t('page.normal.add')
+      }}</el-button>
     </page-name>
 
-    <div class="search-bar">
-      <div class="search-bar__keyword">
-        <el-input v-model="queryParams.name" class="search-bar__input" clearable
-          :placeholder="$t('page.mcp.searchPlaceholder')" @keyup.enter="handleQuery" />
-        <button type="button" class="search-bar__icon-btn" @click="handleQuery">
-          <svg-icon icon-class="search" class="search-bar__icon" />
-        </button>
+    <page-content>
+      <template #header>
+        <div class="search-bar">
+          <div class="search-bar__keyword">
+            <el-input v-model="queryParams.name" class="search-bar__input" clearable
+              :placeholder="$t('page.mcp.nameSearchPlaceholder')" @keyup.enter="handleQuery" />
+          </div>
+
+          <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
+          <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
+
+        </div>
+        <div class="action-toolbar">
+        <div class="action-toolbar__left">
+          <!-- <button type="button" class="toolbar-btn" :disabled="multiple" v-hasPermi="['system:dict:remove']"
+            @click="handleDelete()">
+            批量删除
+          </button> -->
+          <el-button class="toolbar-btn" :disabled="multiple" v-hasPermi="['business:mcpServices:edit']"
+            @click="handleEnable()">
+            {{ $t('page.normal.batchEnable', '批量启用') }}
+          </el-button>
+          <el-button class="toolbar-btn" :disabled="multiple" v-hasPermi="['business:mcpServices:edit']"
+            @click="handleDisable()">
+            {{ $t('page.normal.batchDisable', '批量停用') }}
+          </el-button>
+          <span class="selected-text">{{ $t('page.normal.selected', '共选中') }} <span>{{ ids.length }}</span> {{
+            $t('page.normal.items', '条') }}</span>
+        </div>
+
+        <div class="action-toolbar__right">
+          <!-- <button type="button" class="toolbar-btn" v-hasPermi="['system:dict:export']" @click="handleExport">导出</button> -->
+          <!-- <button type="button" class="toolbar-btn" v-hasPermi="['system:dict:remove']"
+            @click="handleRefreshCache">刷新缓存</button> -->
+          <!-- <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" /> -->
+        </div>
       </div>
-
-      <!-- <div class="search-bar__date-wrap">
-        <el-date-picker v-model="dateRange" class="search-bar__date" value-format="YYYY-MM-DD" type="daterange"
-          :range-separator="$t('page.mcp.range_separator')"
-          :start-placeholder="$t('page.mcp.start_date.placeholder')"
-          :end-placeholder="$t('page.mcp.end_date.placeholder')" />
-      </div> -->
-
-      <button type="button" class="search-bar__reset" @click="resetQuery">{{ $t('page.mcp.reset') }}</button>
-      <button type="button" class="search-bar__submit" @click="handleQuery">{{ $t('page.mcp.search') }}</button>
-    </div>
-
-    <div class="action-toolbar">
-      <div class="action-toolbar__left">
-        <!-- <button type="button" class="toolbar-btn" :disabled="multiple" v-hasPermi="['system:dict:remove']"
-          @click="handleDelete()">
-          批量删除
-        </button> -->
-        <button type="button" class="toolbar-btn" :disabled="multiple" v-hasPermi="['business:mcpServices:edit']"
-          @click="handleEnable()">
-          {{ $t('page.mcp.batchEnable', '批量启用') }}
-        </button>
-        <button type="button" class="toolbar-btn" :disabled="multiple" v-hasPermi="['business:mcpServices:edit']"
-          @click="handleDisable()">
-          {{ $t('page.mcp.batchDisable', '批量停用') }}
-        </button>
-        <span class="selected-text">{{ $t('page.mcp.selected', '共选中') }} <span>{{ ids.length }}</span> {{
-          $t('page.mcp.items', '条') }}</span>
-      </div>
-
-      <div class="action-toolbar__right">
-        <!-- <button type="button" class="toolbar-btn" v-hasPermi="['system:dict:export']" @click="handleExport">导出</button> -->
-        <!-- <button type="button" class="toolbar-btn" v-hasPermi="['system:dict:remove']"
-          @click="handleRefreshCache">刷新缓存</button> -->
-        <!-- <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" /> -->
-      </div>
-    </div>
-
-    <div class="table-pager-area">
-      <div class="table-wrap">
-        <el-table ref="tableRef" v-loading="loading" :data="tableData" height="100%"
-          @selection-change="handleSelectionChange">
-          <template #empty>
-            <kjsc-empty />
+      </template>
+      <el-table ref="tableRef" v-loading="loading" :data="tableData" height="100%"
+        @selection-change="handleSelectionChange">
+        <template #empty>
+          <kjsc-empty />
+        </template>
+        <el-table-column type="selection" width="50" align="center" />
+        <el-table-column :label="$t('page.mcp.id', '编号')" align="left" key="id" prop="id"
+          :width="$dim('page.mcp.id', 320)"
+          :show-overflow-tooltip="true" />
+        <el-table-column :label="$t('page.mcp.name', '名称')" align="left" key="name" prop="name"
+          :min-width="$dim('page.mcp.name', 120)"
+          :show-overflow-tooltip="true" />
+        <el-table-column :label="$t('page.mcp.description', '描述')" align="left" key="description" prop="description"
+          :min-width="$dim('page.mcp.description', 120)"
+          :show-overflow-tooltip="true" />
+        <el-table-column :label="$t('page.mcp.enableddisabled', '启用/停用')" align="left" key="enabled" prop="enabled"
+          :width="$dim('page.mcp.enableddisabled', 120)"
+          :show-overflow-tooltip="true">
+          <template #default="scope">
+            <span>{{ scope.row.enabled ? $t('page.normal.enable', '启用') : $t('page.normal.disable', '停用') }}</span>
           </template>
-          <el-table-column type="selection" width="50" align="center" />
-          <el-table-column :label="$t('page.mcp.id', '编号')" align="left" key="id" prop="id" min-width="280"
-            :show-overflow-tooltip="true" />
-          <el-table-column :label="$t('page.mcp.name', '名称')" align="left" key="name" prop="name" min-width="120"
-            v-if="columns.name.visible" :show-overflow-tooltip="true" />
-          <el-table-column :label="$t('page.mcp.description', '描述')" align="left" key="description" prop="description"
-            min-width="120" v-if="columns.description.visible" :show-overflow-tooltip="true" />
-          <el-table-column :label="$t('page.mcp.enableddisabled', '启用/停用')" align="left" key="enabled" prop="enabled"
-            min-width="120" v-if="columns.enabled.visible" :show-overflow-tooltip="true">
-            <template #default="scope">
-              <span>{{ scope.row.enabled ? $t('page.mcp.enable', '启用') : $t('page.mcp.disable', '停用') }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column :label="$t('page.mcp.isBuiltin', '是否内置')" align="left" key="isBuiltin" prop="isBuiltin"
-            min-width="120" v-if="columns.isBuiltin.visible" :show-overflow-tooltip="true">
-            <template #default="scope">
-              <span>{{ scope.row.isBuiltin ? $t('page.mcp.yes', '是') : $t('page.mcp.no', '否') }}</span>
-            </template>
-          </el-table-column>
+        </el-table-column>
+        <el-table-column :label="$t('page.mcp.isBuiltin', '是否内置')" align="left" key="isBuiltin" prop="isBuiltin"
+          :width="$dim('page.mcp.isBuiltin', 120)"
+          :show-overflow-tooltip="true">
+          <template #default="scope">
+            <span>{{ scope.row.isBuiltin ? $t('page.mcp.yes', '是') : $t('page.mcp.no', '否') }}</span>
+          </template>
+        </el-table-column>
 
-          <!-- <el-table-column v-if="columns.createBy.visible" label="创建人" key="createBy" prop="createBy" min-width="120"
-            align="left" :show-overflow-tooltip="true" />
-          <el-table-column v-if="columns.roleName.visible" label="所属角色" key="roleName" prop="roleName" min-width="120"
-            align="left" />
-          <el-table-column v-if="columns.tenantName.visible" label="所属租户" key="tenantName" prop="tenantName"
-            min-width="120" align="left" />
-          <el-table-column label="启用状态" align="center" key="status" width="100" v-if="columns.status.visible">
-            <template #default="scope">
-              <el-switch v-model="scope.row.status" style="--el-switch-on-color: #31aba0" active-value="0"
-                inactive-value="1" @change="handleStatusChange(scope.row)" />
-            </template>
-          </el-table-column>
-          <el-table-column label="最新修改时间" align="left" prop="updateTime" min-width="170"
-            v-if="columns.updateTime.visible">
-            <template #default="scope">
-              <span>{{ parseTime(scope.row.updateTime) }}</span>
-            </template>
-          </el-table-column> -->
-          <el-table-column :label="$t('page.mcp.operation', '操作')" align="left" width="220" fixed="right">
-            <template #default="scope">
-              <el-button link class="action-link action-link--primary" @click="handleUpdate(scope.row)"
-                v-hasPermi="['business:mcpServices:edit']">
-                {{ $t('form.button.edit') }}
-              </el-button>
-              <el-button link class="action-link action-link--danger" @click="handleDelete(scope.row)"
-                v-hasPermi="['business:mcpServices:remove']">
-                {{ $t('form.button.delete') }}
-              </el-button>
-              <el-button v-if="!scope.row.enabled" link class="action-link action-link--primary"
-                @click="handleEnable(scope.row)" v-hasPermi="['business:mcpServices:edit']">
-                {{ $t('form.button.enable') }}
-              </el-button>
-              <el-button v-else link class="action-link action-link--primary" @click="handleDisable(scope.row)"
-                v-hasPermi="['business:mcpServices:edit']">
-                {{ $t('form.button.disable') }}
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-      </div>
-
-      <div class="pagination-row">
-        <pagination v-show="total > 0" :total="total" v-model:page="pageParams.pageNum"
-          v-model:limit="pageParams.pageSize" @pagination="getList" />
-      </div>
-    </div>
+        <!-- <el-table-column v-if="columns.createBy.visible" label="创建人" key="createBy" prop="createBy" min-width="120"
+          align="left" :show-overflow-tooltip="true" />
+        <el-table-column v-if="columns.roleName.visible" label="所属角色" key="roleName" prop="roleName" min-width="120"
+          align="left" />
+        <el-table-column v-if="columns.tenantName.visible" label="所属租户" key="tenantName" prop="tenantName"
+          min-width="120" align="left" />
+        <el-table-column label="启用状态" align="center" key="status" width="100" v-if="columns.status.visible">
+          <template #default="scope">
+            <el-switch v-model="scope.row.status" style="--el-switch-on-color: #31aba0" active-value="0"
+              inactive-value="1" @change="handleStatusChange(scope.row)" />
+          </template>
+        </el-table-column>
+        <el-table-column label="最新修改时间" align="left" prop="updateTime" min-width="170"
+          v-if="columns.updateTime.visible">
+          <template #default="scope">
+            <span>{{ parseTime(scope.row.updateTime) }}</span>
+          </template>
+        </el-table-column> -->
+        <el-table-column :label="$t('page.normal.operation', '操作')" align="left"
+          :width="$dim('page.mcp.operation', 220)" fixed="right">
+          <template #default="scope">
+            <el-button link type="primary" @click="handleUpdate(scope.row)"
+              v-hasPermi="['business:mcpServices:edit']">
+              {{ $t('page.normal.edit') }}
+            </el-button>
+            <el-button link type="danger" @click="handleDelete(scope.row)"
+              v-hasPermi="['business:mcpServices:remove']">
+              {{ $t('page.normal.remove') }}
+            </el-button>
+            <el-button v-if="!scope.row.enabled" link type="primary"
+              @click="handleEnable(scope.row)" v-hasPermi="['business:mcpServices:edit']">
+              {{ $t('page.normal.enable') }}
+            </el-button>
+            <el-button v-else link type="danger" @click="handleDisable(scope.row)"
+              v-hasPermi="['business:mcpServices:edit']">
+              {{ $t('page.normal.disable') }}
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <pagination v-show="total > 0" :total="total" v-model:page="pageParams.pageNum" v-model:limit="pageParams.pageSize" @pagination="getList" />
+      </template>
+    </page-content>
 
     <!-- 添加或修改对话框 -->
     <KJSCDialogV2 :title="$t(title)" v-model="open" width="800px" append-to-body
-      custom-class="manage-dialog mcp-form-dialog" :showCloseBtn="false" :showSubitBtn="false">
+      custom-class="mcp-form-dialog" :showCloseBtn="false" :showSubitBtn="false">
       <el-form :model="form" :rules="rules" ref="saveFormRef" label-position="top" class="user-form"
         hide-required-asterisk>
         <!--
@@ -142,76 +135,76 @@
               <ArrowDown v-if="codeImportOpen" />
               <ArrowRight v-else />
             </el-icon>
-            <span>{{ t('mcpServiceDialog.codeImport.toggle') }}</span>
+            <span>{{ t('page.mcp.mcpServiceDialog.codeImport.toggle') }}</span>
           </button>
           <div v-if="codeImportOpen" class="code-import__body">
-            <p class="form-desc">{{ t('mcpServiceDialog.codeImport.hint') }}</p>
+            <p class="form-desc">{{ t('page.mcp.mcpServiceDialog.codeImport.hint') }}</p>
             <p v-if="mode === 'edit'" class="form-desc code-import__warn">
-              {{ t('mcpServiceDialog.codeImport.editOverwriteHint') }}
+              {{ t('page.mcp.mcpServiceDialog.codeImport.editOverwriteHint') }}
             </p>
             <el-input type="textarea" v-model="codeImportText" :autosize="{ minRows: 5, maxRows: 14 }"
               :placeholder="codeImportPlaceholder" class="code-import__textarea" />
             <p v-if="codeImportError" class="code-import__error">{{ codeImportError }}</p>
             <div class="code-import__actions">
               <el-button type="primary" @click="handleCodeImport">
-                {{ t('mcpServiceDialog.codeImport.parse') }}
+                {{ t('page.mcp.mcpServiceDialog.codeImport.parse') }}
               </el-button>
             </div>
           </div>
         </section>
         <!-- Section 1 — 基本信息 -->
         <section class="setting-drawer__section">
-          <h4 class="setting-drawer__section-title">{{ t('mcpServiceDialog.basicSection', '基本信息') }}</h4>
-          <el-form-item :label="t('mcpServiceDialog.name')" prop="name">
-            <el-input v-model="form.name" :placeholder="t('mcpServiceDialog.namePlaceholder')" maxlength="999"
+          <h4 class="setting-drawer__section-title">{{ t('page.mcp.mcpServiceDialog.basicSection', '基本信息') }}</h4>
+          <el-form-item :label="t('page.mcp.mcpServiceDialog.name')" prop="name">
+            <el-input v-model="form.name" :placeholder="t('page.mcp.mcpServiceDialog.namePlaceholder')" maxlength="999"
               :show-word-limit="false" />
           </el-form-item>
-          <el-form-item :label="t('mcpServiceDialog.description')" prop="description">
+          <el-form-item :label="t('page.mcp.mcpServiceDialog.description')" prop="description">
             <el-input v-model="form.description" type="textarea" :autosize="{ minRows: 2, maxRows: 5 }"
-              :placeholder="t('mcpServiceDialog.descriptionPlaceholder')" />
+              :placeholder="t('page.mcp.mcpServiceDialog.descriptionPlaceholder')" />
           </el-form-item>
-          <el-form-item :label="t('mcpServiceDialog.enableService')" prop="enabled">
+          <el-form-item :label="t('page.mcp.mcpServiceDialog.enableService')" prop="enabled">
             <el-switch v-model="form.enabled" />
             <span class="form-desc form-desc--inline">
-              {{ t('mcpServiceDialog.enableServiceDesc', '关闭后该服务不会被调用') }}
+              {{ t('page.mcp.mcpServiceDialog.enableServiceDesc', '关闭后该服务不会被调用') }}
             </span>
           </el-form-item>
         </section>
         <!-- Section 2 — 连接配置（transport + url） -->
         <section class="setting-drawer__section">
-          <h4 class="setting-drawer__section-title">{{ t('mcpServiceDialog.connectionSection', '连接配置') }}</h4>
-          <el-form-item :label="t('mcpServiceDialog.transportType')" prop="transportType">
+          <h4 class="setting-drawer__section-title">{{ t('page.mcp.mcpServiceDialog.connectionSection', '连接配置') }}</h4>
+          <el-form-item :label="t('page.mcp.mcpServiceDialog.transportType')" prop="transportType">
             <el-radio-group v-model="form.transportType">
               <el-radio-button value="sse">SSE</el-radio-button>
               <el-radio-button value="http-streamable">HTTP Streamable</el-radio-button>
             </el-radio-group>
           </el-form-item>
-          <el-form-item :label="t('mcpServiceDialog.serviceUrl')" prop="serviceUrl">
-            <el-input v-model="form.serviceUrl" :placeholder="t('mcpServiceDialog.serviceUrlPlaceholder')"
+          <el-form-item :label="t('page.mcp.mcpServiceDialog.serviceUrl')" prop="serviceUrl">
+            <el-input v-model="form.serviceUrl" :placeholder="t('page.mcp.mcpServiceDialog.serviceUrlPlaceholder')"
               maxlength="9999" :show-word-limit="false" />
           </el-form-item>
           <el-form-item prop="custom_headers">
             <template #label>
               <div>
                 <div>
-                  <div>{{ t('mcpServiceDialog.custom_headers.label') }}</div>
+                  <div>{{ t('page.mcp.mcpServiceDialog.customHeaders.label') }}</div>
                   <div>
                     <el-button text size="small" @click="addCustomHeader">
                       <el-icon>
                         <Plus />
                       </el-icon>
-                      {{ t('mcpServiceDialog.custom_headers.add') }}
+                      {{ t('page.mcp.mcpServiceDialog.customHeaders.add') }}
                     </el-button>
                   </div>
                 </div>
-                <p class="form-desc custom-headers-desc">{{ t('mcpServiceDialog.custom_headers.desc') }}</p>
+                <p class="form-desc custom-headers-desc">{{ t('page.mcp.mcpServiceDialog.customHeaders.desc') }}</p>
               </div>
             </template>
             <div v-if="form.custom_headers.length > 0" class="custom-headers-list">
               <div v-for="(item, idx) in form.custom_headers" :key="idx" class="custom-header-row">
-                <el-input v-model="item.key" :placeholder="t('mcpServiceDialog.custom_headers.keyPlaceholder')"
+                <el-input v-model="item.key" :placeholder="t('page.mcp.mcpServiceDialog.customHeaders.keyPlaceholder')"
                   class="custom-header-key" />
-                <el-input v-model="item.value" :placeholder="t('mcpServiceDialog.custom_headers.valuePlaceholder')"
+                <el-input v-model="item.value" :placeholder="t('page.mcp.mcpServiceDialog.customHeaders.valuePlaceholder')"
                   class="custom-header-value" />
                 <el-button text size="small" class="custom-header-remove" :aria-label="t('common.delete')"
                   @click="removeCustomHeader(idx)">
@@ -225,8 +218,8 @@
         </section>
         <!-- Section 3 — 认证配置（无 / API Key / Bearer Token / OAuth） -->
         <section class="setting-drawer__section">
-          <h4 class="setting-drawer__section-title">{{ t('mcpServiceDialog.authConfig') }}</h4>
-          <el-form-item :label="t('mcpServiceDialog.authType')" prop="authType">
+          <h4 class="setting-drawer__section-title">{{ t('page.mcp.mcpServiceDialog.authConfig') }}</h4>
+          <el-form-item :label="t('page.mcp.mcpServiceDialog.authType')" prop="authType">
             <el-radio-group v-model="form.authType">
               <el-radio-button v-for="(item, idx) in authTypeOptions" :key="idx" :value="item.value"
                 :disabled="item.disabled">{{ item.label }}</el-radio-button>
@@ -234,19 +227,19 @@
           </el-form-item>
           <!-- OAuth 2.0：零配置（自动发现 + 动态客户端注册），按用户授权 -->
           <template v-if="form.authType === 'oauth'">
-            <!-- <el-form-item :label="t('mcpServiceDialog.oauthScopes', 'Scopes（可选，空格分隔）')" prop="oauthClientId">
-              <el-input v-model="form.oauthScopesText" :placeholder="t('mcpServiceDialog.optional')" />
+            <!-- <el-form-item :label="t('page.mcp.mcpServiceDialog.oauthScopes', 'Scopes（可选，空格分隔）')" prop="oauthClientId">
+              <el-input v-model="form.oauthScopesText" :placeholder="t('page.mcp.mcpServiceDialog.optional')" />
             </el-form-item>
-            <el-form-item :label="t('mcpServiceDialog.oauthAuthorization', '授权状态')">
+            <el-form-item :label="t('page.mcp.mcpServiceDialog.oauthAuthorization', '授权状态')">
               <div class="oauth-status">
                 <el-tag v-if="oauthTokenState === 'authorized'" type="success" variant="light">
-                  {{ t('mcpServiceDialog.oauthAuthorized', '已授权') }}
+                  {{ t('page.mcp.mcpServiceDialog.oauthAuthorized', '已授权') }}
                 </el-tag>
                 <el-tag v-else-if="oauthTokenState === 'refreshable'" type="primary" variant="light">
-                  {{ t('mcpServiceDialog.oauthRefreshable', 'Token 已过期，将自动刷新') }}
+                  {{ t('page.mcp.mcpServiceDialog.oauthRefreshable', 'Token 已过期，将自动刷新') }}
                 </el-tag>
                 <el-tag v-else type="warning" variant="light">
-                  {{ t('mcpServiceDialog.oauthUnauthorized', '未授权') }}
+                  {{ t('page.mcp.mcpServiceDialog.oauthUnauthorized', '未授权') }}
                 </el-tag>
                 <el-button
                   size="small"
@@ -254,7 +247,7 @@
                   :loading="oauthAuthorizing || oauthChecking || submitting"
                   @click="handleAuthorize"
                 >
-                  {{ oauthTokenState === 'reauth_required' ? t('mcpServiceDialog.oauthAuthorize', '去授权') : t('mcpServiceDialog.oauthReauthorize', '重新授权') }}
+                  {{ oauthTokenState === 'reauth_required' ? t('page.mcp.mcpServiceDialog.oauthAuthorize', '去授权') : t('page.mcp.mcpServiceDialog.oauthReauthorize', '重新授权') }}
                 </el-button>
                 <el-button
                   v-if="oauthTokenState !== 'reauth_required' && props.service?.id"
@@ -263,11 +256,11 @@
                   variant="outline"
                   @click="handleRevokeOAuth"
                 >
-                  {{ t('mcpServiceDialog.oauthRevoke', '撤销授权') }}
+                  {{ t('page.mcp.mcpServiceDialog.oauthRevoke', '撤销授权') }}
                 </el-button>
               </div>
               <p class="form-desc">
-                {{ t('mcpServiceDialog.oauthAuthorizeHint', '点击「去授权」会先自动保存当前配置，再发起授权（每个用户独立授权）。') }}
+                {{ t('page.mcp.mcpServiceDialog.oauthAuthorizeHint', '点击「去授权」会先自动保存当前配置，再发起授权（每个用户独立授权）。') }}
               </p>
             </el-form-item>
              -->
@@ -280,15 +273,15 @@
           -->
           <!-- 凭证 Header 策略：请求头名称 + 密钥值（其余 auth_type 不展示密钥字段） -->
           <template v-else-if="form.authType === 'api_key'">
-            <el-form-item :label="t('mcpServiceDialog.apiKeyHeader', '请求头名称')" prop="api_key_header">
+            <el-form-item :label="t('page.mcp.mcpServiceDialog.apiKeyHeader', '请求头名称')" prop="api_key_header">
               <el-input v-model="form.api_key_header" placeholder="X-API-Key" />
-              <p class="form-desc">{{ t('mcpServiceDialog.apiKeyHeaderDesc', '留空默认 X-API-Key。Bearer 方式请填 Authorization，并在下方密钥值中写 “Bearer<token>”；需要裸 token 时填 Authorization 并直接填入 token。') }}</p>
+              <p class="form-desc">{{ t('page.mcp.mcpServiceDialog.apiKeyHeaderDesc', '留空默认 X-API-Key。Bearer 方式请填 Authorization，并在下方密钥值中写 “Bearer<token>”；需要裸 token 时填 Authorization 并直接填入 token。') }}</p>
             </el-form-item>
             <CredentialResource v-if="mode === 'edit'" :api="credentialApi" :fields="credentialFields"
               :meta="credentialMeta" />
-            <el-form-item v-else :label="t('mcpServiceDialog.credentialValue', '密钥值 / Token')" prop="api_key">
+            <el-form-item v-else :label="t('page.mcp.mcpServiceDialog.credentialValue', '密钥值 / Token')" prop="api_key">
               <el-input v-model="form.api_key" type="password" show-password
-                :placeholder="t('mcpServiceDialog.optional')" prefix-icon="Lock" />
+                :placeholder="t('page.mcp.mcpServiceDialog.optional')" prefix-icon="Lock" />
             </el-form-item>
           </template>
         </section>
@@ -296,25 +289,25 @@
         <!-- Section 4 — 高级配置（超时/重试），改用带后缀单位的轻量数字输入框，
            不再用 t-input-number 的加减器（步进按钮在这里没必要，用户更倾向直接键入）。 -->
         <section class="setting-drawer__section">
-          <h4 class="setting-drawer__section-title">{{ t('mcpServiceDialog.advancedConfig') }}</h4>
-          <el-form-item :label="t('mcpServiceDialog.timeoutSec')" prop="advancedConfig_timeout">
+          <h4 class="setting-drawer__section-title">{{ t('page.mcp.mcpServiceDialog.advancedConfig') }}</h4>
+          <el-form-item :label="t('page.mcp.mcpServiceDialog.timeoutSec')" prop="advancedConfig_timeout">
             <el-input-number v-model="form.advancedConfig_timeout" :min="1" :max="300" placeholder="30">
               <template #suffix>
-                <span class="number-input__unit">{{ t('mcpServiceDialog.unitSecond', '秒') }}</span>
+                <span class="number-input__unit">{{ t('page.mcp.mcpServiceDialog.unitSecond', '秒') }}</span>
               </template>
             </el-input-number>
           </el-form-item>
-          <el-form-item :label="t('mcpServiceDialog.retryCount')" prop="advancedConfig_retry_count">
+          <el-form-item :label="t('page.mcp.mcpServiceDialog.retryCount')" prop="advancedConfig_retry_count">
             <el-input-number v-model="form.advancedConfig_retry_count" :min="1" :max="3" placeholder="3">
               <template #suffix>
-                <span class="number-input__unit">{{ t('mcpServiceDialog.unitTimes', '次') }}</span>
+                <span class="number-input__unit">{{ t('page.mcp.mcpServiceDialog.unitTimes', '次') }}</span>
               </template>
             </el-input-number>
           </el-form-item>
-          <el-form-item :label="t('mcpServiceDialog.retryDelaySec')" prop="advancedConfig_retry_delay">
+          <el-form-item :label="t('page.mcp.mcpServiceDialog.retryDelaySec')" prop="advancedConfig_retry_delay">
             <el-input-number v-model="form.advancedConfig_retry_delay" :min="0" :max="60" placeholder="1">
               <template #suffix>
-                <span class="number-input__unit">{{ t('mcpServiceDialog.unitSecond', '秒') }}</span>
+                <span class="number-input__unit">{{ t('page.mcp.mcpServiceDialog.unitSecond', '秒') }}</span>
               </template>
             </el-input-number>
           </el-form-item>
@@ -323,7 +316,7 @@
         <!-- Section 5 — 测试结果（内联，避免在抽屉上再叠一个居中弹窗） -->
         <section v-if="testResult" ref="testResultSection" class="setting-drawer__section">
           <div class="test-result-header">
-            <h4 class="setting-drawer__section-title">{{ t('mcpServiceDialog.testResultTitle', '测试结果') }}</h4>
+            <h4 class="setting-drawer__section-title">{{ t('page.mcp.mcpServiceDialog.testResultTitle', '测试结果') }}</h4>
             <el-button text shape="square" size="small" class="test-result-close" @click="testResult = null">
               <template #icon><el-icon>
                   <Close />
@@ -335,7 +328,7 @@
       </el-form>
       <template #prefixFooter>
         <div class="manage-dialog-footer">
-          <el-button class="test-btn" size="large" round :disabled="!form.id" @click="handleTestConnection">
+          <el-button class="test-btn" :disabled="!form.id" @click="handleTestConnection">
             <template v-if="!testing && typeof lastTestOk === 'boolean'" #icon>
               <el-icon v-if="!testing && lastTestOk === true" class="status-icon available">
                 <CircleCheckFilled />
@@ -345,12 +338,12 @@
               </el-icon>
             </template>{{ t('form.button.test', '测试连接') }}
           </el-button>
-          <el-button class="close-btn" size="large" round @click="closeDialog">
+          <el-button class="close-btn" @click="closeDialog">
             {{ t('form.button.close', '取消') }}
           </el-button>
-          <button class="submit-btn" :disabled="submitDisabled" @click="submitForm">
+          <el-button type="primary" class="submit-btn" :disabled="submitDisabled" @click="submitForm">
             {{ t('form.button.submit', '保存') }}
-          </button>
+          </el-button>
         </div>
       </template>
     </KJSCDialogV2>
@@ -359,6 +352,7 @@
 </template>
 
 <script setup lang="ts" name="Models">
+import { useI18n } from 'vue-i18n';
 import { ElMessage } from 'element-plus'
 import { Close, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import McpTestResultBody from './components/McpTestResultBody.vue'
@@ -411,27 +405,22 @@ const pageLangConfig: Record<string, string> = {
   'form.button.enable': '启用',
   'form.button.disable': '禁用',
 
-  'mcpServiceDialog.codeImport.toggle': '从代码导入',
-  'mcpServiceDialog.codeImport.hint': '粘贴标准 mcpServers JSON 配置，自动填充表单',
-  'mcpServiceDialog.codeImport.editOverwriteHint': '导入会覆盖当前表单内容（不影响已保存的凭证，需点保存生效）',
-  'mcpServiceDialog.codeImport.parse': '解析并填充',
-  'mcpServiceDialog.codeImport.errors.empty': '请先粘贴配置内容',
-  'mcpServiceDialog.codeImport.errors.invalidJson': '无法解析，请检查 JSON 格式'
 }
-const t = function (key: string, params?: Record<string, string> | string) {
-  let msg = pageLangConfig[key] || key
-  if (params) {
-    if (typeof params == 'string') {
-      msg = pageLangConfig[key] || params
-    } else {
-      Object.keys(params).forEach((key) => {
-        msg = msg.replace(`{${key}}`, params[key])
-      })
-    }
-  }
-  return msg
-}
-const $t = t;
+// const t = function (key: string, params?: Record<string, string> | string) {
+//   let msg = pageLangConfig[key] || key
+//   if (params) {
+//     if (typeof params == 'string') {
+//       msg = pageLangConfig[key] || params
+//     } else {
+//       Object.keys(params).forEach((key) => {
+//         msg = msg.replace(`{${key}}`, params[key])
+//       })
+//     }
+//   }
+//   return msg
+// }
+// const $t = t;
+const { t } = useI18n();
 
 const tableData = ref<McpEntity[]>([])
 const tableRef = ref()
@@ -443,10 +432,10 @@ const multiple = ref<boolean>(true)
 const total = ref<number>(0)
 // 列显隐信息
 const columns = ref<Record<string, TableShowColumns>>({
-  name: { label: $t('page.mcp.name', '名称'), visible: true },
-  description: { label: $t('page.mcp.description', '描述'), visible: true },
-  enabled: { label: $t('page.mcp.enableddisabled', '启用/停用'), visible: true },
-  isBuiltin: { label: $t('page.mcp.isBuiltin', '是否内置'), visible: true }
+  name: { label: t('page.mcp.name', '名称'), visible: true },
+  description: { label: t('page.mcp.description', '描述'), visible: true },
+  enabled: { label: t('page.mcp.enableddisabled', '启用/停用'), visible: true },
+  isBuiltin: { label: t('page.mcp.isBuiltin', '是否内置'), visible: true }
 })
 
 // // 校验登录账号
@@ -698,7 +687,7 @@ function cancel() {
 /** 新增按钮操作 */
 function handleAdd() {
   reset()
-  title.value = "page.mcp.title.add"
+  title.value = "page.mcp.addTitle"
   // getTanentList();
   open.value = true
   mode = 'add';
@@ -707,7 +696,7 @@ function handleAdd() {
 /** 修改按钮操作 */
 function handleUpdate(row: McpEntity) {
   reset()
-  title.value = "page.mcp.title.update"
+  title.value = "page.mcp.updateTitle"
   const id = row?.id || ids.value[0]
   mode = 'update';
   getMcpSingleApi(id).then(res => {
@@ -893,12 +882,12 @@ const codeImportPlaceholder = `{
 // Map a raw MCP server config object onto the form. Stdio is rejected.
 function applyServerConfig(name: string, cfg: Record<string, unknown>) {
   if (cfg.command) {
-    codeImportError.value = t('mcpServiceDialog.codeImport.errors.stdioUnsupported')
+    codeImportError.value = t('page.mcp.mcpServiceDialog.codeImport.errors.stdioUnsupported')
     return false
   }
   const url = typeof cfg.url === 'string' ? cfg.url.trim() : ''
   if (!url) {
-    codeImportError.value = t('mcpServiceDialog.codeImport.errors.missingUrl')
+    codeImportError.value = t('page.mcp.mcpServiceDialog.codeImport.errors.missingUrl')
     return false
   }
 
@@ -965,7 +954,7 @@ const handleCodeImport = () => {
   codeImportError.value = ''
   const raw = codeImportText.value.trim()
   if (!raw) {
-    codeImportError.value = t('mcpServiceDialog.codeImport.errors.empty')
+    codeImportError.value = t('page.mcp.mcpServiceDialog.codeImport.errors.empty')
     return
   }
 
@@ -973,11 +962,11 @@ const handleCodeImport = () => {
   try {
     parsed = JSON.parse(raw)
   } catch {
-    codeImportError.value = t('mcpServiceDialog.codeImport.errors.invalidJson')
+    codeImportError.value = t('page.mcp.mcpServiceDialog.codeImport.errors.invalidJson')
     return
   }
   if (!parsed || typeof parsed !== 'object') {
-    codeImportError.value = t('mcpServiceDialog.codeImport.errors.noServer')
+    codeImportError.value = t('page.mcp.mcpServiceDialog.codeImport.errors.noServer')
     return
   }
 
@@ -990,7 +979,7 @@ const handleCodeImport = () => {
   if (servers && typeof servers === 'object') {
     const entries = Object.entries(servers as Record<string, unknown>)
     if (entries.length === 0) {
-      codeImportError.value = t('mcpServiceDialog.codeImport.errors.noServer')
+      codeImportError.value = t('page.mcp.mcpServiceDialog.codeImport.errors.noServer')
       return
     }
     multiple = entries.length > 1
@@ -1000,12 +989,12 @@ const handleCodeImport = () => {
     // Bare single-server object (no mcpServers wrapper).
     cfg = obj
   } else {
-    codeImportError.value = t('mcpServiceDialog.codeImport.errors.noServer')
+    codeImportError.value = t('page.mcp.mcpServiceDialog.codeImport.errors.noServer')
     return
   }
 
   if (!cfg || typeof cfg !== 'object') {
-    codeImportError.value = t('mcpServiceDialog.codeImport.errors.noServer')
+    codeImportError.value = t('page.mcp.mcpServiceDialog.codeImport.errors.noServer')
     return
   }
 
@@ -1014,10 +1003,10 @@ const handleCodeImport = () => {
   saveFormRef.value?.clearValidate()
   if (multiple) {
     proxy.$modal.msgInfo(
-      t('mcpServiceDialog.codeImport.toasts.multipleServers', { name }) as string,
+      t('page.mcp.mcpServiceDialog.codeImport.toasts.multipleServers', { name }) as string,
     )
   } else {
-    proxy.$modal.msgSuccess(t('mcpServiceDialog.codeImport.toasts.filled') as string)
+    proxy.$modal.msgSuccess(t('page.mcp.mcpServiceDialog.codeImport.toasts.filled') as string)
   }
 }
 
@@ -1040,9 +1029,9 @@ const oauthScopesText = computed({
   },
 })
 const authTypeOptions = computed(() => [
-  { value: '', disabled: false, label: t('mcpServiceDialog.authTypeNone', '无 / 自定义 Header') },
-  { value: 'api_key', disabled: false, label: t('mcpServiceDialog.authTypeApiKey', 'API Key / Token') },
-  { value: 'oauth', disabled: true, label: t('mcpServiceDialog.authTypeOAuth', 'OAuth 2.0（首次连接授权）') },
+  { value: '', disabled: false, label: t('page.mcp.mcpServiceDialog.authTypeNone', '无 / 自定义 Header') },
+  { value: 'api_key', disabled: false, label: t('page.mcp.mcpServiceDialog.authTypeApiKey', 'API Key / Token') },
+  { value: 'oauth', disabled: true, label: t('page.mcp.mcpServiceDialog.authTypeOAuth', 'OAuth 2.0（首次连接授权）') },
 ])
 
 // Field metadata for the credential subresource. Keep label keys local to
@@ -1053,7 +1042,7 @@ const authTypeOptions = computed(() => [
 // secret, so the credential card is only shown for the api_key strategy.
 const credentialFields = computed<CredentialFieldDef<McpCredentialField>[]>(() => {
   if (form.value.authType === 'api_key') {
-    return [{ key: 'api_key', label: t('mcpServiceDialog.credentialValue', '密钥值 / Token') }]
+    return [{ key: 'api_key', label: t('page.mcp.mcpServiceDialog.credentialValue', '密钥值 / Token') }]
   }
   return []
 })
@@ -1140,7 +1129,7 @@ async function handleTestConnection() {
     if (safe.oauth_required === true && form.value.authType !== 'oauth') {
       form.value.authType = 'oauth'
       ElMessage.warning(
-        t('mcpServiceDialog.toasts.oauthRequired', '该服务需要 OAuth 授权，已自动切换为 OAuth 2.0，请保存后点击「去授权」。') as string,
+        t('page.mcp.mcpServiceDialog.toasts.oauthRequired', '该服务需要 OAuth 授权，已自动切换为 OAuth 2.0，请保存后点击「去授权」。') as string,
       )
     }
     scrollToTestResult()
@@ -1256,6 +1245,14 @@ getList()
   }
 }
 
+.setting-drawer__section {
+  .setting-drawer__section-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--td-text-color-primary);
+  }
+}
+
 .test-result-header {
   display: flex;
   align-items: center;
@@ -1272,13 +1269,13 @@ getList()
 }
 
 .manage-dialog-footer {
-  .test-btn {
-    margin-right: auto;
-  }
+  // .test-btn {
+  //   margin-right: auto;
+  // }
 
-  .close-btn {
-    margin-right: 12px;
-  }
+  // .close-btn {
+  //   margin-right: 12px;
+  // }
 }
 // ---- footer-left 测试按钮的状态 icon ----
 .status-icon {

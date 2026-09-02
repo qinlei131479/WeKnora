@@ -75,7 +75,14 @@
       "updatedAt": 180,
       "vectorStore": 200
     },
-    "mcp": {},
+    "mcp": {
+      "id": 320,
+      "name": 120,
+      "description": 120,
+      "enableddisabled": 120,
+      "isBuiltin": 120,
+      "operation": 220
+    },
     "models": {},
     "normal": {
       "datetime": 180

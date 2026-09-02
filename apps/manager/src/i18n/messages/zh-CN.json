@@ -1291,7 +1291,101 @@
       "deleteConfirm": "是否确认删除标准问题为 {name} 的数据项？",
       "titleDetail": "问答详情"
     },
-    "mcp": {},
+    "mcp": {
+      "nameSearchPlaceholder": "按名称搜索",
+      "id": "编号",
+      "name": "名称",
+      "description": "描述",
+      "enableddisabled": "启用/停用",
+      "isBuiltin": "是否内置",
+      "yes": "是",
+      "no": "否",
+      "addTitle": "添加MCP",
+      "updateTitle": "编辑MCP",
+      "mcpServiceDialog": {
+        "addTitle": "添加 MCP 服务",
+        "editTitle": "编辑 MCP 服务",
+        "basicSection": "基本信息",
+        "connectionSection": "连接配置",
+        "enableServiceDesc": "关闭后该服务不会被调用",
+        "testAfterSaveHint": "保存后可测试连接",
+        "unitSecond": "秒",
+        "unitTimes": "次",
+        "name": "服务名称",
+        "namePlaceholder": "请输入服务名称",
+        "description": "描述",
+        "descriptionPlaceholder": "请输入服务描述",
+        "transportType": "传输类型",
+        "serviceUrl": "服务 URL",
+        "serviceUrlPlaceholder": "https://example.com/mcp",
+        "enableService": "启用服务",
+        "authConfig": "认证配置",
+        "authType": "认证方式",
+        "authTypeNone": "无 / 自定义 Header",
+        "authTypeApiKey": "API Key / Token",
+        "authTypeOAuth": "OAuth 2.0（首次连接授权）",
+        "oauthRefreshable": "Token 已过期，将在下次使用时自动刷新",
+        "oauthAuthorizeHint": "点击「去授权」会先自动保存当前配置，再发起授权（每个用户独立授权）。",
+        "apiKeyHeader": "请求头名称",
+        "apiKeyHeaderDesc": "留空默认 X-API-Key。Bearer 方式请填 Authorization，并在下方密钥值中写 “Bearer <token>”；需要裸 token 时填 Authorization 并直接填入 token。",
+        "credentialValue": "密钥值 / Token",
+        "optional": "可选",
+        "advancedConfig": "高级配置",
+        "timeoutSec": "超时时间(秒)",
+        "retryCount": "重试次数",
+        "retryDelaySec": "重试延迟(秒)",
+        "codeImport": {
+          "toggle": "从代码导入",
+          "hint": "粘贴标准 mcpServers JSON 配置，自动填充表单",
+          "parse": "解析并填充",
+          "editOverwriteHint": "导入会覆盖当前表单内容（不影响已保存的凭证，需点保存生效）",
+          "toasts": {
+            "filled": "已填充表单，请检查后保存",
+            "multipleServers": "检测到多个服务，已导入第一个：{name}"
+          },
+          "errors": {
+            "empty": "请先粘贴配置内容",
+            "invalidJson": "无法解析，请检查 JSON 格式",
+            "noServer": "未找到 MCP 服务配置",
+            "missingUrl": "配置缺少 url",
+            "stdioUnsupported": "暂不支持 stdio（command/args）配置，请使用带 url 的远程配置"
+          }
+        },
+        "customHeaders": {
+          "label": "自定义请求头（可选）",
+          "desc": "附加到每次 MCP 请求的 HTTP 请求头，常用于企业网关鉴权、链路追踪等场景。",
+          "add": "添加请求头",
+          "keyPlaceholder": "Header 名称",
+          "valuePlaceholder": "Header 值"
+        },
+        "toasts": {
+          "created": "MCP 服务已创建",
+          "updated": "MCP 服务已更新",
+          "createFailed": "创建 MCP 服务失败",
+          "updateFailed": "更新 MCP 服务失败",
+          "oauthRequired": "该服务需要 OAuth 授权，已自动切换为 OAuth 2.0，请保存后点击「去授权」。"
+        },
+        "rules": {
+          "nameRequired": "请输入服务名称",
+          "transportRequired": "请选择传输类型",
+          "urlRequired": "请输入服务 URL",
+          "urlInvalid": "请输入有效的 URL"
+        }
+      },
+      "testResult": {
+        "title": "测试结果: {name}",
+        "connectionSuccess": "连接成功",
+        "connectionFailed": "连接失败",
+        "toolsTitle": "可用工具",
+        "resourcesTitle": "可用资源",
+        "descriptionLabel": "描述",
+        "schemaLabel": "参数结构",
+        "emptyDescription": "该服务未提供工具或资源",
+        "requireApproval": "需人工审核",
+        "requireApprovalTip": "开启后，Agent 调用该工具前会暂停并等待确认，适用于可能改库/删文件等高危操作",
+        "approvalSaveFailed": "保存审核设置失败"
+      }
+    },
     "models": {
       "debug.copy": "复制结果",
       "debug.documents": "候选文档",

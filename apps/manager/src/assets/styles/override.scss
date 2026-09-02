@@ -135,4 +135,8 @@ body {
   align-items: center;
   gap: 12px;
   margin: calc(var(--layout-padding) * 2) var(--layout-padding) var(--layout-padding);
+  .selected-text {
+    margin-left: 10px;
+    color: var(--el-text-color-secondary);
+  }
 }
