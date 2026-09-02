@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.EmbedChannelsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.EmbedChannels">
+        <id column="id" property="id"/>
+        <result column="tenant_id" property="tenantId"/>
+        <result column="agent_id" property="agentId"/>
+        <result column="name" property="name"/>
+        <result column="enabled" property="enabled"/>
+        <result column="publish_token" property="publishToken"/>
+        <result column="allowed_origins" property="allowedOrigins"/>
+        <result column="welcome_message" property="welcomeMessage"/>
+        <result column="rate_limit_per_minute" property="rateLimitPerMinute"/>
+        <result column="rate_limit_per_day" property="rateLimitPerDay"/>
+        <result column="primary_color" property="primaryColor"/>
+        <result column="page_title" property="pageTitle"/>
+        <result column="header_title_mode" property="headerTitleMode"/>
+        <result column="show_suggested_questions" property="showSuggestedQuestions"/>
+        <result column="widget_position" property="widgetPosition"/>
+        <result column="allow_web_search" property="allowWebSearch"/>
+        <result column="allow_memory" property="allowMemory"/>
+        <result column="allow_file_upload" property="allowFileUpload"/>
+        <result column="default_locale" property="defaultLocale"/>
+        <result column="webhook_url" property="webhookUrl"/>
+        <result column="webhook_secret" property="webhookSecret"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+        <result column="deleted_at" property="deletedAt"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, tenant_id, agent_id, name, enabled, publish_token, allowed_origins, welcome_message, rate_limit_per_minute, rate_limit_per_day, primary_color, page_title, header_title_mode, show_suggested_questions, widget_position, allow_web_search, allow_memory, allow_file_upload, default_locale, webhook_url, webhook_secret, created_at, updated_at, deleted_at
+    </sql>
+
+    <!-- 分页查询（PostgreSQL：字符串使用 ILIKE 大小写不敏感模糊查询） -->
+    <select id="queryPage" resultMap="BaseResultMap" parameterType="com.iptv.business.domain.dto.page.EmbedChannelsPageDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM embed_channels
+        <where>
+            deleted_at IS NULL
+            <if test="param.id != null and param.id != ''">
+                AND id ILIKE CONCAT('%', #{param.id}, '%')
+            </if>
+            <if test="param.tenantId != null">
+                AND tenant_id = #{param.tenantId}
+            </if>
+            <if test="param.agentId != null and param.agentId != ''">
+                AND agent_id ILIKE CONCAT('%', #{param.agentId}, '%')
+            </if>
+            <if test="param.name != null and param.name != ''">
+                AND name ILIKE CONCAT('%', #{param.name}, '%')
+            </if>
+            <if test="param.enabled != null">
+                AND enabled = #{param.enabled}
+            </if>
+            <if test="param.publishToken != null and param.publishToken != ''">
+                AND publish_token ILIKE CONCAT('%', #{param.publishToken}, '%')
+            </if>
+            <if test="param.allowedOrigins != null and param.allowedOrigins != ''">
+                AND allowed_origins ILIKE CONCAT('%', #{param.allowedOrigins}, '%')
+            </if>
+            <if test="param.welcomeMessage != null and param.welcomeMessage != ''">
+                AND welcome_message ILIKE CONCAT('%', #{param.welcomeMessage}, '%')
+            </if>
+            <if test="param.rateLimitPerMinute != null">
+                AND rate_limit_per_minute = #{param.rateLimitPerMinute}
+            </if>
+            <if test="param.rateLimitPerDay != null">
+                AND rate_limit_per_day = #{param.rateLimitPerDay}
+            </if>
+            <if test="param.primaryColor != null and param.primaryColor != ''">
+                AND primary_color ILIKE CONCAT('%', #{param.primaryColor}, '%')
+            </if>
+            <if test="param.pageTitle != null and param.pageTitle != ''">
+                AND page_title ILIKE CONCAT('%', #{param.pageTitle}, '%')
+            </if>
+            <if test="param.headerTitleMode != null and param.headerTitleMode != ''">
+                AND header_title_mode ILIKE CONCAT('%', #{param.headerTitleMode}, '%')
+            </if>
+            <if test="param.showSuggestedQuestions != null">
+                AND show_suggested_questions = #{param.showSuggestedQuestions}
+            </if>
+            <if test="param.widgetPosition != null and param.widgetPosition != ''">
+                AND widget_position ILIKE CONCAT('%', #{param.widgetPosition}, '%')
+            </if>
+            <if test="param.allowWebSearch != null">
+                AND allow_web_search = #{param.allowWebSearch}
+            </if>
+            <if test="param.allowMemory != null">
+                AND allow_memory = #{param.allowMemory}
+            </if>
+            <if test="param.allowFileUpload != null">
+                AND allow_file_upload = #{param.allowFileUpload}
+            </if>
+            <if test="param.defaultLocale != null and param.defaultLocale != ''">
+                AND default_locale ILIKE CONCAT('%', #{param.defaultLocale}, '%')
+            </if>
+            <if test="param.webhookUrl != null and param.webhookUrl != ''">
+                AND webhook_url ILIKE CONCAT('%', #{param.webhookUrl}, '%')
+            </if>
+            <if test="param.webhookSecret != null and param.webhookSecret != ''">
+                AND webhook_secret ILIKE CONCAT('%', #{param.webhookSecret}, '%')
+            </if>
+            <if test="param.createdAt != null">
+                AND created_at = #{param.createdAt}
+            </if>
+            <if test="param.updatedAt != null">
+                AND updated_at = #{param.updatedAt}
+            </if>
+            <if test="param.deletedAt != null">
+                AND deleted_at = #{param.deletedAt}
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+</mapper>

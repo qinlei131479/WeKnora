@@ -33,7 +33,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/imChannels")
 public class ImChannelsController {
-
     @Autowired
     private ImChannelsService imChannelsService;
 
@@ -75,21 +74,21 @@ public class ImChannelsController {
         return R.ok();
     }
 
-    @Log(title = "批量启用IM 渠道：平台凭证、绑定智能体、会话模式与输出模式", businessType = BusinessType.UPDATE)
-    @Operation(summary = "批量启用", description = "批量启用",hidden = true)
-    @PostMapping("/enabled/batch")
-    @RequiresPermissions("business:imChannels:edit")
-    public R<Void> updateEnabledBatch(@RequestParam List<String> ids) {
-        imChannelsService.updateEnabledBatch(ids);
-        return R.ok();
-    }
-
-    @Log(title = "批量停用IM 渠道：平台凭证、绑定智能体、会话模式与输出模式", businessType = BusinessType.UPDATE)
-    @Operation(summary = "批量停用", description = "批量停用",hidden = true)
-    @PostMapping("/disabled/batch")
-    @RequiresPermissions("business:imChannels:edit")
-    public R<Void> updateDisabledBatch(@RequestParam List<String> ids) {
-        imChannelsService.updateDisabledBatch(ids);
-        return R.ok();
-    }
+//    @Log(title = "批量启用IM 渠道：平台凭证、绑定智能体、会话模式与输出模式", businessType = BusinessType.UPDATE)
+//    @Operation(summary = "批量启用", description = "批量启用",hidden = true)
+//    @PostMapping("/enabled/batch")
+//    @RequiresPermissions("business:imChannels:edit")
+//    public R<Void> updateEnabledBatch(@RequestParam List<String> ids) {
+//        imChannelsService.updateEnabledBatch(ids);
+//        return R.ok();
+//    }
+//
+//    @Log(title = "批量停用IM 渠道：平台凭证、绑定智能体、会话模式与输出模式", businessType = BusinessType.UPDATE)
+//    @Operation(summary = "批量停用", description = "批量停用",hidden = true)
+//    @PostMapping("/disabled/batch")
+//    @RequiresPermissions("business:imChannels:edit")
+//    public R<Void> updateDisabledBatch(@RequestParam List<String> ids) {
+//        imChannelsService.updateDisabledBatch(ids);
+//        return R.ok();
+//    }
 }

@@ -26,11 +26,11 @@ import java.util.Map;
 public class PgCodeGenerator {
 
     // ===== 路径常量 =====
-    static final String CODE_PREFIX     = "/src/main/java/com/iptv/business";
-    static final String TEST_PREFIX     = "/src/test/java/com/iptv/business";
-    static final String BASE_PATH       = System.getProperty("user.dir");
-    static final String PROJECT_MODULE  = BASE_PATH + "/iptv-modules/iptv-business";
-    static final String PROJECT_MODULE_PATH      = PROJECT_MODULE + CODE_PREFIX + "/";
+    static final String CODE_PREFIX = "/src/main/java/com/iptv/business";
+    static final String TEST_PREFIX = "/src/test/java/com/iptv/business";
+    static final String BASE_PATH = System.getProperty("user.dir");
+    static final String PROJECT_MODULE = BASE_PATH + "/iptv-modules/iptv-business";
+    static final String PROJECT_MODULE_PATH = PROJECT_MODULE + CODE_PREFIX + "/";
     static final String PROJECT_MODULE_TEST_PATH = PROJECT_MODULE + TEST_PREFIX + "/";
 
     // entity 生成到 domain 子包
@@ -39,29 +39,30 @@ public class PgCodeGenerator {
     static final String MAPPER_XML_PATH = PROJECT_MODULE + "/src/main/resources/pgmapper";
 
     // ===== 代码配置 =====
-    static final Class<?> BASE_ENTITY     = null;
+    static final Class<?> BASE_ENTITY = null;
     static final Class<?> BASE_CONTROLLER = null;
-    static final String   PARENT_PKG      = "com.iptv.business";
-    static final String   MODULE_NAME     = "business";
-    static final String   AUTHOR          = "kjsc";
+    static final String PARENT_PKG = "com.iptv.business";
+    static final String MODULE_NAME = "business";
+    static final String AUTHOR = "kjsc";
 
     // 实体基类字段（与 MySQL 保持一致，从父类 BaseEntity 继承）
     static final String[] SUPER_ENTITY_COLS = {};
 
     // ===== 待生成的 PostgreSQL 表 =====
-    static final String[] DATA_TABLES = {"knowledge_tag_relations"};
+    static final String[] DATA_TABLES = {"embed_channels", "im_channels"};
 
     // ===== PostgreSQL jsonb 列配置 =====
     // Key: 表名（小写），Value: jsonb 列名数组（下划线命名）
     static final Map<String, String[]> JSONB_COLUMNS = Map.of(
-            "knowledge_tag_relations", new String[]{}
+            "embed_channels", new String[]{"allowed_origins"},
+            "im_channels", new String[]{"credentials"}
     );
     // jsonb 列名后缀（自动匹配以这些后缀结尾的列）
     static final String[] JSONB_COLUMN_SUFFIXES = {};
 
     // ===== PostgreSQL 数据源配置 =====
     private interface DataBaseConfig {
-        String URL      = "jdbc:postgresql://192.168.180.238:5432/agent-middle?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai";
+        String URL = "jdbc:postgresql://192.168.180.238:5432/agent-middle?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai";
         String USERNAME = "postgres";
         String PASSWORD = "postgres123!@#";
     }
@@ -112,7 +113,7 @@ public class PgCodeGenerator {
         // 策略配置
         StrategyConfig strategy = new StrategyConfig();
         strategy.setEntityLombokModel(true);
-        if (BASE_ENTITY != null)     strategy.setSuperEntityClass(BASE_ENTITY);
+        if (BASE_ENTITY != null) strategy.setSuperEntityClass(BASE_ENTITY);
         if (BASE_CONTROLLER != null) strategy.setSuperControllerClass(BASE_CONTROLLER);
         strategy.setSuperEntityColumns(SUPER_ENTITY_COLS);
         strategy.setInclude(DATA_TABLES);

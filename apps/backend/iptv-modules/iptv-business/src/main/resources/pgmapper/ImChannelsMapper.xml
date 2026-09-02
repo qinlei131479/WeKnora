@@ -32,6 +32,7 @@
         <include refid="Base_Column_List"/>
         FROM im_channels
         <where>
+            deleted_at IS NULL
             <if test="param.id != null and param.id != ''">
                 AND id ILIKE CONCAT('%', #{param.id}, '%')
             </if>
