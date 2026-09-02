@@ -1,5 +1,5 @@
 <template>
-  <section>
+  <section class="tenant-space-manage-page">
     <page-name>
       <el-button type="success" icon="Plus" @click="handleAdd" v-hasPermi="['business:tenants:add']">{{
         $t('page.tenantSpace.add', '添加空间')
@@ -279,7 +279,7 @@
   </section>
 </template>
 
-<script setup lang="ts" name="Models">
+<script setup lang="ts" name="TenantSpace">
 import { ref, reactive } from '@vue/runtime-core';
 // import { ElMessage } from 'element-plus'
 // import { Close, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'

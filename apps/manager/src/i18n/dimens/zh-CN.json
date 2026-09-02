@@ -80,7 +80,12 @@
     "normal": {
       "datetime": 180
     },
-    "ollama": {},
+    "ollama": {
+      "name": 160,
+      "size": 120,
+      "digest": 300,
+      "modifiedAt": 170
+    },
     "system": {
       "dept": {
         "table.createTime": 170,

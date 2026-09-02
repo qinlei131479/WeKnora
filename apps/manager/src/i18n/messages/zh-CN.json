@@ -1457,7 +1457,36 @@
         "audioNotSupported": "您的浏览器不支持音频播放"
       }
     },
-    "ollama": {},
+    "ollama": {
+      "add": "下载新模型",
+      "download": {
+        "title": "下载模型",
+        "namePlaceholder": "请输入模型名称",
+        "downloading": "正在下载{name}",
+        "confirm": "确认下载"
+      },
+      "searchPlaceholder": "通过模型名称进行模糊搜索",
+      "status": {
+        "testing": "检测中",
+        "available": "可用",
+        "unavailable": "不可用",
+        "untested": "未检测",
+        "retest": "重新检测"
+      },
+      "name": "模型名称",
+      "size": "模型大小",
+      "digest": "模型摘要",
+      "modifiedAt": "修改时间",
+      "toasts": {
+        "listFailed": "获取模型列表失败",
+        "connected": "连接成功",
+        "connectFailed": "连接失败，请检查 Ollama 是否运行",
+        "downloadFailed": "下载失败，请稍后重试",
+        "downloadStarted": "已开始下载模型",
+        "downloadCompleted": "模型 下载完成",
+        "progressFailed": "查询下载进度失败"
+      }
+    },
     "system": {
       "dept": {
         "add": "新增部门",

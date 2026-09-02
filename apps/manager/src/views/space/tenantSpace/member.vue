@@ -1,5 +1,5 @@
 <template>
-  <section class="manage-page member-manage-page">
+  <section class="tenant-space-member-manage-page">
     <page-name class="page-name">
       <el-button type="success" icon="Plus" @click="handleAdd" v-hasPermi="['business:users:add']">{{
         $t('page.tenantMember.add', '添加成员')
@@ -271,7 +271,7 @@
   </section>
 </template>
 
-<script setup lang="ts" name="Models">
+<script setup lang="ts" name="TenantSpaceMember">
 // import { Delete } from '@element-plus/icons-vue'
 import { ref, reactive } from '@vue/runtime-core';
 import {
