@@ -3,6 +3,7 @@ package com.iptv.business.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -23,6 +24,7 @@ import com.iptv.common.security.utils.SecurityUtils;
 import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -943,29 +945,69 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
 
         try {
             // 构建 multipart/form-data 请求
-            // 使用一个空的测试音频（实际使用时应该提供测试音频文件）
-            byte[] testAudio = new byte[0];
-            String fileName = "test.wav";
+            // 使用内置静默 WAV 测试音频（与 Go 端 assets/asr_test.wav 行为一致）
+            ClassPathResource wavResource = new ClassPathResource("asr_test.wav");
+            byte[] testAudio = wavResource.getInputStream().readAllBytes();
+            String fileName = "asr_test.wav";
 
-            String response = HttpRequest.post(url)
+            HttpRequest request = HttpRequest.post(url)
                     .header("Authorization", "Bearer " + apiKey)
                     .form("file", testAudio, fileName)
                     .form("model", dto.getModelName())
-                    .timeout(60000)
-                    .execute()
-                    .body();
+                    .timeout(60000);
 
-            Map<String, Object> result = JSONUtil.toBean(response, Map.class);
+            // 注入自定义请求头（部分厂商要求，类似 OpenAI SDK 的 extra_headers）
+            if (dto.getCustomHeaders() != null) {
+                for (Map.Entry<String, String> entry : dto.getCustomHeaders().entrySet()) {
+                    if (StrUtil.isNotBlank(entry.getKey()) && entry.getValue() != null) {
+                        request.header(entry.getKey(), entry.getValue());
+                    }
+                }
+            }
 
-            // 检查是否有错误
-            if (result.containsKey("error")) {
-                Map<String, Object> error = (Map<String, Object>) result.get("error");
-                String errorMsg = (String) error.get("message");
-                return new ModelTestResultVO(false, classifyConnectionError(errorMsg) + "：" + errorMsg);
+            // 可选转写语言（与 Go 端 req.Language 行为一致）
+            if (StrUtil.isNotBlank(dto.getLanguage())) {
+                request.form("language", dto.getLanguage());
+            }
+
+            HttpResponse httpResponse = request.execute();
+            int statusCode = httpResponse.getStatus();
+            String responseBody = httpResponse.body();
+
+            // 响应体可能不是 JSON（如网关纯文本错误 "Error request, response status: 404"），需要容错
+            Map<String, Object> result = null;
+            if (StrUtil.isNotBlank(responseBody)) {
+                try {
+                    result = JSONUtil.toBean(responseBody, Map.class);
+                } catch (Exception ex) {
+                    log.warn("ASR test response is not JSON, status={}, body={}", statusCode, responseBody);
+                }
+            }
+
+            // 提取错误消息：兼容 OpenAI 风格 {"error":{"message":...}} 与厂商直返 {"code":...,"message":...}
+            String errorMsg = null;
+            if (result != null) {
+                Object errorObj = result.get("error");
+                if (errorObj instanceof Map) {
+                    Map<String, Object> error = (Map<String, Object>) errorObj;
+                    Object errMessage = error.get("message");
+                    errorMsg = errMessage != null ? errMessage.toString() : null;
+                } else if (result.containsKey("code") && result.containsKey("message")) {
+                    Object errMessage = result.get("message");
+                    errorMsg = errMessage != null ? errMessage.toString() : null;
+                }
+            }
+            // 非 JSON 错误体，直接按文本错误处理
+            if (errorMsg == null && (result == null || statusCode >= 400)) {
+                errorMsg = responseBody;
+            }
+
+            if (StrUtil.isNotBlank(errorMsg)) {
+                return classifyASRError(statusCode, errorMsg);
             }
 
             // 如果有转写结果，说明连接成功
-            if (result.containsKey("text")) {
+            if (result != null && result.containsKey("text")) {
                 String text = (String) result.get("text");
                 if (StrUtil.isNotBlank(text)) {
                     return new ModelTestResultVO(true, "ASR连接成功，转写结果: " + text);
@@ -976,8 +1018,35 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
         } catch (Exception e) {
             log.error("ASR model test failed", e);
             String errorMsg = e.getMessage();
-            return new ModelTestResultVO(false, classifyConnectionError(errorMsg) + "：" + errorMsg);
+            return classifyASRError(0, errorMsg);
         }
+    }
+
+    /**
+     * 按 Go 端 CheckASRModel 语义分类 ASR 连通性检查错误：
+     * 结合 HTTP 状态码与错误消息，401/403/404/连接失败/模型不存在 判不可用，其余视为端点可达（非致命错误）
+     */
+    private ModelTestResultVO classifyASRError(int statusCode, String errorMsg) {
+        String msg = errorMsg == null ? "" : errorMsg;
+        // 认证失败：401/403 状态码或错误消息特征
+        if (statusCode == 401 || statusCode == 403
+                || msg.contains("401") || msg.contains("Unauthorized") || msg.contains("authentication")) {
+            return new ModelTestResultVO(false, "认证失败，请检查API Key：" + msg);
+        }
+        // 模型不存在：如 {"code":"InvalidParameter","message":"Model not exist."}
+        if (msg.contains("model") && (msg.contains("not exist") || msg.contains("not found"))) {
+            return new ModelTestResultVO(false, "模型不存在，请检查模型名称：" + msg);
+        }
+        // 端点不存在：404 状态码或错误消息特征（如纯文本 "Error request, response status: 404"）
+        if (statusCode == 404 || msg.contains("404") || msg.contains("Not Found")) {
+            return new ModelTestResultVO(false, "API端点不存在，请检查Base URL：" + msg);
+        }
+        // 连接失败
+        if (msg.contains("connection refused") || msg.contains("no such host") || msg.contains("dial tcp")) {
+            return new ModelTestResultVO(false, "无法连接到服务器，请检查Base URL：" + msg);
+        }
+        // 端点可达但存在非致命错误（如音频过短、格式提示等），视为可用
+        return new ModelTestResultVO(true, "ASR端点可达（非致命错误: " + msg + "）");
     }
 
     @Override
@@ -1214,7 +1283,8 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
      */
     private String buildASRUrl(String baseUrl) {
         String url = trimTrailingSlash(baseUrl);
-        return url + "/audio/asr/transcriptions";
+        //  + "/audio/asr/transcriptions"
+        return url;
     }
 
     /**

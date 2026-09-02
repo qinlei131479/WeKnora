@@ -41,6 +41,9 @@ public class ModelTestRequestDTO {
     @Schema(description = "自定义请求头")
     private Map<String, String> customHeaders;
 
+    @Schema(description = "语言（ASR模型转写语言，可选）")
+    private String language;
+
     @Schema(description = "额外配置")
     private Map<String, String> extraConfig;
 
