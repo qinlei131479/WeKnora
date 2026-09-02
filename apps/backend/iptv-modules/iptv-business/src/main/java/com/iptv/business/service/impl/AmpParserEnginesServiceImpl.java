@@ -43,7 +43,7 @@ public class AmpParserEnginesServiceImpl extends ServiceImpl<AmpParserEnginesMap
     }
 
     @Override
-    public AmpParserEnginesVO queryById(@Nonnull String id) {
+    public AmpParserEnginesVO queryById(@Nonnull Long id) {
         AmpParserEngines entity = this.baseMapper.selectById(id);
         return BeanUtil.copyProperties(entity, AmpParserEnginesVO.class);
     }
@@ -70,7 +70,7 @@ public class AmpParserEnginesServiceImpl extends ServiceImpl<AmpParserEnginesMap
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void deleteById(@Nonnull String id) {
+    public void deleteById(@Nonnull Long id) {
         AmpParserEngines entity = this.baseMapper.selectById(id);
         if (BeanUtil.isNotEmpty(entity)) {
             this.baseMapper.deleteById(id);
@@ -79,7 +79,7 @@ public class AmpParserEnginesServiceImpl extends ServiceImpl<AmpParserEnginesMap
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int updateEnabledBatch(@Nonnull List<String> ids) {
+    public int updateEnabledBatch(@Nonnull List<Long> ids) {
         if (ids.isEmpty()) return 0;
         return this.baseMapper.update(new LambdaUpdateWrapper<AmpParserEngines>()
                 .in(AmpParserEngines::getId, ids)
@@ -88,7 +88,7 @@ public class AmpParserEnginesServiceImpl extends ServiceImpl<AmpParserEnginesMap
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public int updateDisabledBatch(@Nonnull List<String> ids) {
+    public int updateDisabledBatch(@Nonnull List<Long> ids) {
         if (ids.isEmpty()) return 0;
         return this.baseMapper.update(new LambdaUpdateWrapper<AmpParserEngines>()
                 .in(AmpParserEngines::getId, ids)

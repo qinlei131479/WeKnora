@@ -2,6 +2,9 @@ package com.iptv.business.domain;
 
 import java.util.Date;
 import java.io.Serializable;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.iptv.common.core.typehandler.JsonbTypeHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -29,7 +32,7 @@ public class Messages implements java.io.Serializable {
      * 主键 ID
      */
 
-
+    @TableId(type = IdType.ASSIGN_UUID)
     @Schema(description = "主键 ID")
     private String id;
 
@@ -69,7 +72,7 @@ public class Messages implements java.io.Serializable {
      * 回答引用的知识分块
      */
 
-
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "回答引用的知识分块")
     private String knowledgeReferences;
 
@@ -77,7 +80,7 @@ public class Messages implements java.io.Serializable {
      * Agent 执行步骤（仅展示，不进 LLM 上下文）
      */
 
-
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "Agent 执行步骤（仅展示，不进 LLM 上下文）")
     private String agentSteps;
 
@@ -117,7 +120,7 @@ public class Messages implements java.io.Serializable {
      * 用户 @ 提及的知识库/文件
      */
 
-
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "用户 @ 提及的知识库/文件")
     private String mentionedItems;
 
@@ -149,7 +152,7 @@ public class Messages implements java.io.Serializable {
      * 用户消息附带图片及 OCR/描述
      */
 
-
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "用户消息附带图片及 OCR/描述")
     private String images;
 
@@ -173,7 +176,7 @@ public class Messages implements java.io.Serializable {
      * 用户消息附件
      */
 
-
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "用户消息附件")
     private String attachments;
 
@@ -205,7 +208,7 @@ public class Messages implements java.io.Serializable {
      * execution context
      */
 
-
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "execution context")
     private String executionContext;
 }

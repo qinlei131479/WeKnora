@@ -40,7 +40,7 @@ public class AmpParserEnginesController {
     @Operation(summary = "按 id 查询", description = "按 id 查询")
     @GetMapping("/single")
     @RequiresPermissions("business:ampParserEngines:query")
-    public R<AmpParserEnginesVO> queryById(String id) {
+    public R<AmpParserEnginesVO> queryById(Long id) {
         return R.ok(ampParserEnginesService.queryById(id));
     }
 
@@ -71,7 +71,7 @@ public class AmpParserEnginesController {
     @Operation(summary = "按 id 删除", description = "按 id 删除")
     @PostMapping("/delete/single")
     @RequiresPermissions("business:ampParserEngines:remove")
-    public R<Void> deleteById(String id) {
+    public R<Void> deleteById(Long id) {
         ampParserEnginesService.deleteById(id);
         return R.ok();
     }

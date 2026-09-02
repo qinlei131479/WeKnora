@@ -1,6 +1,10 @@
 package com.iptv.business.domain;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.iptv.common.core.typehandler.JsonbTypeHandler;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -22,6 +26,7 @@ public class AmpParserEngines implements Serializable {
     @Serial
     private static final long serialVersionUID = 6920955313753137185L;
 
+    @TableId(type = IdType.AUTO)
     @Schema(description = "主键 ID")
     private Long id;
 
@@ -31,9 +36,11 @@ public class AmpParserEngines implements Serializable {
     @Schema(description = "引擎描述")
     private String description;
 
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "支持的文件类型列表（JSON 数组）")
     private String fileTypes;
 
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "引擎配置（JSON 对象）")
     private String engineConfig;
 

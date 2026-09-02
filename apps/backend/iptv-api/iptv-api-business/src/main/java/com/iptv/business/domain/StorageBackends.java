@@ -1,5 +1,7 @@
 package com.iptv.business.domain;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -22,6 +24,7 @@ public class StorageBackends implements java.io.Serializable {
     @Serial
     private static final long serialVersionUID = -2839142726633486219L;
 
+    @TableId(type = IdType.ASSIGN_UUID)
     @Schema(description = "主键 ID")
     private String id;
 

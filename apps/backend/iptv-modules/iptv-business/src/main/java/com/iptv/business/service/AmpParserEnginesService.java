@@ -36,7 +36,7 @@ public interface AmpParserEnginesService extends IService<AmpParserEngines> {
      * @param id 主键
      * @return 实体
      */
-    AmpParserEnginesVO queryById(@Nonnull String id);
+    AmpParserEnginesVO queryById(@Nonnull Long id);
 
     /**
      * 新增
@@ -59,7 +59,7 @@ public interface AmpParserEnginesService extends IService<AmpParserEngines> {
      *
      * @param id 主键
      */
-    void deleteById(@Nonnull String id);
+    void deleteById(@Nonnull Long id);
 
     /**
      * 批量启用
@@ -67,7 +67,7 @@ public interface AmpParserEnginesService extends IService<AmpParserEngines> {
      * @param ids 主键列表
      * @return 影响行数
      */
-    int updateEnabledBatch(@Nonnull List<String> ids);
+    int updateEnabledBatch(@Nonnull List<Long> ids);
 
     /**
      * 批量停用
@@ -75,5 +75,5 @@ public interface AmpParserEnginesService extends IService<AmpParserEngines> {
      * @param ids 主键列表
      * @return 影响行数
      */
-    int updateDisabledBatch(@Nonnull List<String> ids);
+    int updateDisabledBatch(@Nonnull List<Long> ids);
 }

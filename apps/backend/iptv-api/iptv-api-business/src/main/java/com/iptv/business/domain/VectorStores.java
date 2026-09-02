@@ -3,6 +3,7 @@ package com.iptv.business.domain;
 import java.util.Date;
 import java.io.Serializable;
 
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.iptv.common.core.typehandler.JsonbTypeHandler;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -33,6 +34,7 @@ public class VectorStores implements java.io.Serializable {
      */
 
 
+    @TableId(type = IdType.ASSIGN_UUID)
     @Schema(description = "主键 ID")
     private String id;
 

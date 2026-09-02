@@ -1,5 +1,9 @@
 package com.iptv.business.domain;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.iptv.common.core.typehandler.JsonbTypeHandler;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -22,6 +26,7 @@ public class Sessions implements java.io.Serializable {
     @Serial
     private static final long serialVersionUID = -6049317450590689756L;
 
+    @TableId(type = IdType.ASSIGN_UUID)
     @Schema(description = "主键 ID")
     private String id;
 
@@ -70,12 +75,15 @@ public class Sessions implements java.io.Serializable {
     @Schema(description = "摘要模型 ID")
     private String summaryModelId;
 
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "摘要相关参数（JSON）")
     private String summaryParameters;
 
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "最近一次提问栏状态（选用的智能体/模型/知识范围/联网/MCP 等）；历史列名")
     private String agentConfig;
 
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "全局上下文管理配置（会话默认）")
     private String contextConfig;
 

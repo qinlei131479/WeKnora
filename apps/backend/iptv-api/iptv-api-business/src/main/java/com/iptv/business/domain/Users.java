@@ -1,7 +1,9 @@
 package com.iptv.business.domain;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.iptv.common.core.typehandler.JsonbTypeHandler;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -116,7 +118,7 @@ public class Users implements java.io.Serializable {
      * 用户偏好（JSONB，如记忆开关等）
      */
 
-
+    @TableField(typeHandler = JsonbTypeHandler.class)
     @Schema(description = "用户偏好（JSONB，如记忆开关等）")
     private String preferences;
 
