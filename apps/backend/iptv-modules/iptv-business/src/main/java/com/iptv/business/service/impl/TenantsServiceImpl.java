@@ -5,6 +5,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
+import cn.hutool.json.JSON;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -116,6 +117,25 @@ public class TenantsServiceImpl extends ServiceImpl<TenantsMapper, Tenants> impl
         Map<String, Object> retrieverEngines = new HashMap<>();
         retrieverEngines.put("engines", new ArrayList<>());
         entity.setRetrieverEngines(JSONUtil.toJsonStr(retrieverEngines));
+
+        // 配置默认解析引擎
+        List<AmpParserEngines> defaultParserEngines = ampParserEnginesMapper.selectList(new LambdaQueryWrapper<AmpParserEngines>()
+                .eq(AmpParserEngines::getEnabled, true));
+        if(CollUtil.isNotEmpty(defaultParserEngines)){
+            Map<String, Object> defaultParserEnginesConfig = new HashMap<>();
+            defaultParserEngines.forEach(engine -> {
+                String engineConfig = engine.getEngineConfig();
+                if(StrUtil.isNotBlank(engineConfig)){
+                    try{
+                        JSONObject entries = JSONUtil.parseObj(engineConfig);
+                        defaultParserEnginesConfig.putAll(entries);
+                    }catch (Exception e){
+                        log.error("解析引擎配置失败，引擎名称：{}，错误信息：{}", engine.getName(), e.getMessage(), e);
+                    }
+                }
+            });
+            entity.setParserEngineConfig(JSONUtil.toJsonStr(defaultParserEnginesConfig));
+        }
 
         // 保存到数据库
         this.baseMapper.insert(entity);
