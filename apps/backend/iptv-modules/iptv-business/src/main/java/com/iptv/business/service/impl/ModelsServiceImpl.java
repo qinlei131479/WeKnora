@@ -195,14 +195,8 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
             throw new ServiceException("模型不存在");
         }
 
-        // 检查是否为内置模型
-        if (Boolean.TRUE.equals(entity.getIsBuiltin())) {
-            throw new ServiceException("内置模型不能删除");
-        }
-
         // 逻辑删除
-        entity.setDeletedAt(new Date());
-        this.baseMapper.updateById(entity);
+        this.baseMapper.deleteById(id);
     }
 
     @Override
@@ -1076,14 +1070,9 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
             return;
         }
 
-        // 如果两个密钥都已提供，不需要补齐
-        if (StrUtil.isNotBlank(dto.getApiKey()) && StrUtil.isNotBlank(dto.getAppSecret())) {
-            return;
-        }
-
         try {
             Models storedModel = this.baseMapper.selectById(dto.getModelId());
-            if (storedModel == null) {
+            if (BeanUtil.isEmpty(storedModel)) {
                 log.warn("Stored model {} not found, leaving secrets empty", dto.getModelId());
                 return;
             }
@@ -1093,6 +1082,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
             // 解密凭证
             String apiKey = null;
             String appSecret = null;
+            String baseUrl = null;
 
             if (StrUtil.isNotBlank(params.getApiKey())) {
                 CryptoUtils.DecryptResult result = CryptoUtils.decryptLenient(params.getApiKey());
@@ -1107,6 +1097,10 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
                 }
             }
 
+            if (StrUtil.isNotBlank(params.getBaseUrl())) {
+                baseUrl = params.getBaseUrl();
+            }
+
             // 补齐缺失的密钥
             if (StrUtil.isBlank(dto.getApiKey()) && StrUtil.isNotBlank(apiKey)) {
                 dto.setApiKey(apiKey);
@@ -1114,6 +1108,16 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
             if (StrUtil.isBlank(dto.getAppSecret()) && StrUtil.isNotBlank(appSecret)) {
                 dto.setAppSecret(appSecret);
             }
+            if (StrUtil.isBlank(dto.getBaseUrl()) && StrUtil.isNotBlank(baseUrl)) {
+                dto.setBaseUrl(baseUrl);
+            }
+            if (StrUtil.isBlank(dto.getModelName())) {
+                dto.setModelName(storedModel.getName());
+            }
+            if (StrUtil.isBlank(dto.getProvider())) {
+                dto.setProvider(params.getProvider());
+            }
+
         } catch (Exception e) {
             log.warn("Failed to fill secrets from stored model: {}", e.getMessage());
         }
@@ -1210,7 +1214,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
      */
     private String buildASRUrl(String baseUrl) {
         String url = trimTrailingSlash(baseUrl);
-        return url + "/audio/transcriptions";
+        return url + "/audio/asr/transcriptions";
     }
 
     /**

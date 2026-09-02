@@ -17,12 +17,10 @@ import java.util.Map;
 @Schema(description = "模型测试请求")
 public class ModelTestRequestDTO {
 
-    @NotBlank(message = "模型名称不能为空")
-    @Schema(description = "模型名称", required = true)
+    @Schema(description = "模型名称")
     private String modelName;
 
-    @NotBlank(message = "Base URL不能为空")
-    @Schema(description = "Base URL", required = true)
+    @Schema(description = "Base URL")
     private String baseUrl;
 
     @Schema(description = "API Key")

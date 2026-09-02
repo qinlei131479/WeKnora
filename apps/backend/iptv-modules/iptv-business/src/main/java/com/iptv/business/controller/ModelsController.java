@@ -110,7 +110,7 @@ public class ModelsController {
     }
 
     @Log(title = "调试模型", businessType = BusinessType.OTHER)
-    @Operation(summary = "调试模型", description = "测试模型的连通性和功能")
+    @Operation(summary = "调试模型", description = "测试模型的连通性和功能",hidden = true)
     @PostMapping("/debug")
     @RequiresPermissions("business:models:edit")
     public R<Object> debugModel(@RequestBody @Validated ModelDebugDTO dto,
@@ -123,7 +123,7 @@ public class ModelsController {
     @Log(title = "测试Chat模型连接", businessType = BusinessType.OTHER)
     @Operation(summary = "测试Chat模型连接", description = "检查远程Chat模型连接是否正常")
     @PostMapping("/test/chat")
-    public R<ModelTestResultVO> testRemoteModel(@RequestBody @Validated ModelTestRequestDTO dto) {
+    public R<ModelTestResultVO> testRemoteModel(@RequestBody ModelTestRequestDTO dto) {
         return R.ok(modelsService.testRemoteModel(dto));
     }
 
