@@ -152,20 +152,6 @@ onMounted(getList);
           </template>
         </el-table-column>
         <el-table-column
-          :label="$t('page.data.ampParserEngines.table.availability', '可用性')"
-          align="center"
-          :min-width="$dim('page.data.ampParserEngines.table.availability', 130)"
-        >
-          <template #default="{ row }">
-            <el-tag v-if="row.enabled === false" type="info">
-              {{ $t('page.data.ampParserEngines.availability.disabledCheck', '● 禁用检查') }}
-            </el-tag>
-            <el-tag v-else type="info" effect="plain">
-              {{ $t('page.data.ampParserEngines.availability.checking', '● 检查中...') }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column
           prop="createdAt"
           :label="$t('page.data.ampParserEngines.table.createdAt', '创建时间')"
           align="center"

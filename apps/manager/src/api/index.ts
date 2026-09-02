@@ -3,6 +3,8 @@ import { Messages } from './agent/messages';
 import { Sessions } from './agent/sessions';
 import { AmpParserEngines } from './data/ampParserEngines';
 import { Storage } from './data/storage';
+import { EmbedChannels } from './integration/embedChannels';
+import { ImChannels } from './integration/imChannels';
 import { Models } from './model/models';
 import { Tenants } from './tenants/tenants';
 import { Users } from './users/users';
@@ -16,6 +18,8 @@ export const API = {
   Models,
   Sessions,
   AmpParserEngines,
+  EmbedChannels,
+  ImChannels,
   Storage,
   Tenants,
   Users,

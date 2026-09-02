@@ -65,9 +65,7 @@ const visible = computed({
 
 const isEdit = computed(() => props.row !== undefined);
 const drawerTitle = computed(() =>
-  isEdit.value
-    ? t('page.data.ampParserEngines.form.editTitle', '编辑解析引擎')
-    : t('page.data.ampParserEngines.form.addTitle', '新增解析引擎')
+  isEdit.value ? t('page.data.ampParserEngines.form.editTitle', '编辑解析引擎') : t('page.data.ampParserEngines.form.addTitle', '新增解析引擎')
 );
 
 const requiresConfigKey = (checkType: string): boolean => {
@@ -204,9 +202,7 @@ const submitForm = () => {
     request
       .then(() => {
         proxy.$modal.msgSuccess(
-          editing
-            ? t('page.normal.confirmInfo.updateSuccess', '修改成功')
-            : t('page.normal.confirmInfo.addSuccess', '新增成功')
+          editing ? t('page.normal.confirmInfo.updateSuccess', '修改成功') : t('page.normal.confirmInfo.addSuccess', '新增成功')
         );
         emit('success');
         visible.value = false;
@@ -255,11 +251,7 @@ watch(
 
     <el-form ref="formRef" :model="form" :rules="rules" label-position="top">
       <el-form-item :label="$t('page.data.ampParserEngines.form.name', '名称')" prop="name">
-        <el-input
-          v-model="form.name"
-          maxlength="64"
-          :placeholder="$t('page.data.ampParserEngines.form.namePlaceholder', '请输入引擎名称')"
-        />
+        <el-input v-model="form.name" maxlength="64" :placeholder="$t('page.data.ampParserEngines.form.namePlaceholder', '请输入引擎名称')" />
       </el-form-item>
       <el-form-item :label="$t('page.data.ampParserEngines.form.description', '描述')" prop="description">
         <el-input
@@ -301,10 +293,7 @@ watch(
         :label="$t('page.data.ampParserEngines.form.configKey', '租户配置项名称')"
         prop="configKey"
       >
-        <el-input
-          v-model="form.configKey"
-          :placeholder="$t('page.data.ampParserEngines.form.configKeyPlaceholder', '请输入租户配置项名称')"
-        />
+        <el-input v-model="form.configKey" :placeholder="$t('page.data.ampParserEngines.form.configKeyPlaceholder', '请输入租户配置项名称')" />
       </el-form-item>
       <el-form-item :label="$t('page.data.ampParserEngines.form.sortOrder', '排序序号')">
         <el-input-number v-model="form.sortOrder" :min="0" controls-position="right" style="width: 100%" />

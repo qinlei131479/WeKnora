@@ -1075,8 +1075,6 @@
     },
     "data": {
       "ampParserEngines": {
-        "availability.checking": "● 检查中...",
-        "availability.disabledCheck": "● 禁用检查",
         "checkType.config": "检查配置项",
         "checkType.docreader": "依赖 DocReader 连接",
         "checkType.httpPing": "HTTP 探测",
@@ -1120,7 +1118,6 @@
         "search.namePlaceholder": "输入名称查询",
         "status.disabled": "禁用",
         "status.enabled": "启用",
-        "table.availability": "可用性",
         "table.createdAt": "创建时间",
         "table.description": "描述",
         "table.enabled": "状态",

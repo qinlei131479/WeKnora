@@ -24,7 +24,6 @@
     },
     "data": {
       "ampParserEngines": {
-        "table.availability": 130,
         "table.createdAt": 180,
         "table.description": 360,
         "table.enabled": 100,

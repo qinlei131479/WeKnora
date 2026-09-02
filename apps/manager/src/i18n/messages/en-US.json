@@ -407,8 +407,6 @@
     },
     "data": {
       "ampParserEngines": {
-        "availability.checking": "● Checking...",
-        "availability.disabledCheck": "● Check Disabled",
         "checkType.config": "Check Configuration",
         "checkType.docreader": "Require DocReader Connection",
         "checkType.httpPing": "HTTP Probe",
@@ -452,7 +450,6 @@
         "search.namePlaceholder": "Search by name",
         "status.disabled": "Disabled",
         "status.enabled": "Enabled",
-        "table.availability": "Availability",
         "table.createdAt": "Created Time",
         "table.description": "Description",
         "table.enabled": "Status",
