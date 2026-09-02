@@ -45,6 +45,7 @@ public class ImChannelsController {
 
     @Operation(summary = "分页查询", description = "按条件分页查询")
     @GetMapping("/list")
+    @RequiresPermissions("business:imChannels:list")
     public TableDataInfo<ImChannelsVO> list(ImChannelsPageDTO dto, PageDTO pg) {
         return imChannelsService.queryPage(dto, pg);
     }
