@@ -67,6 +67,25 @@
         "table.updatedAt": 180
       }
     },
+    "integration": {
+      "embedChannels": {
+        "table.agentName": 220,
+        "table.createdAt": 180,
+        "table.name": 220,
+        "table.operation": 100,
+        "table.tenantName": 300,
+        "table.updatedAt": 180
+      },
+      "imChannels": {
+        "table.agentName": 220,
+        "table.createdAt": 180,
+        "table.name": 220,
+        "table.operation": 100,
+        "table.platform": 120,
+        "table.tenantName": 300,
+        "table.updatedAt": 180
+      }
+    },
     "system": {
       "user": {
         "table.userId": 100,
