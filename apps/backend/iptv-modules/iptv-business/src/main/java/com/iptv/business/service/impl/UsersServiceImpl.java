@@ -12,6 +12,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.iptv.business.domain.TenantMembers;
 import com.iptv.business.domain.Tenants;
 import com.iptv.business.domain.Users;
+import com.iptv.business.domain.dto.TenantsDTO;
 import com.iptv.business.domain.dto.UserBindTenantsDTO;
 import com.iptv.business.domain.dto.UsersDTO;
 import com.iptv.business.domain.dto.page.UsersPageDTO;
@@ -23,6 +24,7 @@ import com.iptv.business.pgmapper.TenantMembersMapper;
 import com.iptv.business.pgmapper.TenantsMapper;
 import com.iptv.business.pgmapper.UsersMapper;
 import com.iptv.business.service.TenantMembersService;
+import com.iptv.business.service.TenantsService;
 import com.iptv.business.service.UsersService;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
@@ -51,6 +53,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements UsersService {
 
+    private final TenantsService tenantsService;
     private final TenantsMapper tenantsMapper;
 
     private final TenantMembersMapper tenantMembersMapper;
@@ -155,17 +158,11 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         List<Tenants> defaultTenantsList = new ArrayList<>();
         if (CollUtil.isEmpty(dto.getTenants())) {
             // 创建默认工作空间
-            Tenants defaultTenant = new Tenants();
+            TenantsDTO defaultTenant = new TenantsDTO();
             defaultTenant.setName(dto.getUsername() + "'s Workspace");
             defaultTenant.setDescription("Default workspace");
-            defaultTenant.setStatus("active");
-            defaultTenant.setBusiness("");
-            defaultTenant.setCreatedAt(new Date());
-            defaultTenant.setUpdatedAt(new Date());
-            defaultTenant.setStorageQuota(10L * 1024 * 1024 * 1024); // 10GB
-            defaultTenant.setStorageUsed(0L);
-            tenantsMapper.insert(defaultTenant);
-            defaultTenantsList.add(defaultTenant);
+            TenantsVO insert = tenantsService.insert(defaultTenant);
+            defaultTenantsList.add(BeanUtil.copyProperties(insert, Tenants.class));
         } else {
             // 检查工作空间是否存在
             defaultTenantsList = tenantsMapper.selectList(new LambdaQueryWrapper<Tenants>()
@@ -196,11 +193,14 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         // 8. 创建默认租户成员
         List<TenantMembers> tenantMembersList = new ArrayList<>();
         defaultTenantsList.forEach(tenant -> {
-            String role = dto.getTenants().stream()
-                    .filter(b -> ObjectUtil.equal(b.getTenantId(), tenant.getId()))
-                    .map(UsersDTO.BindTenantDTO::getRole)
-                    .findFirst()
-                    .orElse(TenantMemberRoleEnum.OWNER.getCode());
+            String role = TenantMemberRoleEnum.OWNER.getCode();
+            if(CollUtil.isNotEmpty(dto.getTenants())){
+                role = dto.getTenants().stream()
+                        .filter(b -> ObjectUtil.equal(b.getTenantId(), tenant.getId()))
+                        .map(UsersDTO.BindTenantDTO::getRole)
+                        .findFirst()
+                        .orElse(TenantMemberRoleEnum.OWNER.getCode());
+            }
             TenantMembers defaultTenantMember = TenantMembers.create(entity, tenant, role);
             tenantMembersList.add(defaultTenantMember);
         });
