@@ -4,8 +4,8 @@
     <div class="mtr-status" :class="result.success ? 'is-success' : 'is-error'">
       <!-- <t-icon :name="result.success ? 'check-circle-filled' : 'close-circle-filled'" /> -->
       <el-icon>
-        <CircleCheckFilled v-if="result.success" />
-        <CircleCloseFilled v-else />
+        <CircleCheck v-if="result.success" />
+        <CircleX v-else />
       </el-icon>
       <span>{{ result.success ? $t('page.mcp.testResult.connectionSuccess') : $t('page.mcp.testResult.connectionFailed') }}</span>
     </div>
@@ -26,16 +26,16 @@
           <div v-for="(tool, index) in displayTools" :key="index" class="mtr-item" :class="{ 'is-open': expandedToolIndex === index }">
             <div class="mtr-item-head" @click="toggleTool(index)">
               <!-- <t-icon name="tools" class="mtr-item-icon" /> -->
-              <el-icon class="mtr-item-icon"><Tools /></el-icon>
+              <el-icon class="mtr-item-icon"><Wrench /></el-icon>
               <span class="mtr-item-name">{{ tool.name }}</span>
               <div class="mtr-item-actions" @click.stop>
                 <el-tooltip v-if="serviceId" :content="$t('page.mcp.testResult.requireApprovalTip')" placement="top">
                   <span class="mtr-approval">
                     <!-- <t-icon name="error-circle-filled" class="mtr-approval-icon" /> -->
-                    <el-icon class="mtr-approval-icon"><WarningFilled /></el-icon>
+                    <el-icon class="mtr-approval-icon"><CircleAlert /></el-icon>
                     <span class="mtr-approval-label">{{ $t('page.mcp.testResult.requireApproval') }}</span>
                     <el-switch
-                      :value="tool.requireApproval"
+                      v-model="tool.requireApproval"
                       :loading="approvalLoading[tool.name]"
                       size="small"
                       @change="(v: boolean) => onRequireApprovalChange(tool.name, v)"
@@ -47,8 +47,8 @@
                   class="mtr-chevron"
                 /> -->
                 <el-icon class="mtr-chevron">
-                  <ArrowUpBold v-if="expandedToolIndex === index" />
-                  <ArrowDownBold v-else />
+                  <ChevronUp v-if="expandedToolIndex === index" />
+                  <ChevronRight v-else />
                 </el-icon>
               </div>
             </div>
@@ -73,7 +73,7 @@
           <div v-for="(resource, index) in result.resources" :key="index" class="mtr-item">
             <div class="mtr-item-head is-static">
               <!-- <t-icon name="file" class="mtr-item-icon" /> -->
-              <el-icon class="mtr-item-icon"><Document /></el-icon>
+              <el-icon class="mtr-item-icon"><File /></el-icon>
               <span class="mtr-item-name">{{ resource.name || resource.uri }}</span>
               <el-tag v-if="resource.mimeType" type="default" variant="light-outline" size="small">
                 {{ resource.mimeType }}
@@ -100,17 +100,18 @@
 </template>
 
 <script setup lang="ts">
-import {
-  Close,
-  CircleCheckFilled,
-  CircleCloseFilled,
-  Tools,
-  WarningFilled,
-  ArrowUpBold,
-  ArrowDownBold,
-  Document,
-  Link
-} from '@element-plus/icons-vue';
+// import {
+//   Close,
+//   CircleCheckFilled,
+//   CircleCloseFilled,
+//   Tools,
+//   WarningFilled,
+//   ArrowUpBold,
+//   ArrowDownBold,
+//   Document,
+//   Link
+// } from '@element-plus/icons-vue';
+import { X, CircleCheck, CircleX, Wrench, CircleAlert, ChevronUp, ChevronRight, File, Link } from 'lucide-vue-next';
 import type { MCPTestResult, MCPTool } from '@/api/data/mcp';
 import { getMcpToolListApi, enableMcpToolBatchApi, disableMcpToolBatchApi } from '@/api/data/mcp';
 import { McpToolBatchReqItem } from '@/types';
@@ -239,6 +240,11 @@ const toggleTool = (index: number) => {
 
 const formatSchema = (schema: any): string => {
   if (!schema) return '';
+  if (typeof schema === 'string') {
+    try {
+      schema = JSON.parse(schema);
+    } catch (e) {}
+  }
   return JSON.stringify(schema, null, 2);
 };
 </script>
@@ -259,15 +265,16 @@ const formatSchema = (schema: any): string => {
   border-radius: 6px;
   font-size: 14px;
   font-weight: 500;
+  margin-top: 10px;
 
   &.is-success {
-    color: var(--td-success-color);
-    background: var(--td-success-color-1, var(--td-bg-color-secondarycontainer));
+    color: var(--el-color-success);
+    background: var(--el-color-success-light-9, var(--el-bg-color-page));
   }
 
   &.is-error {
-    color: var(--td-error-color);
-    background: var(--td-error-color-1, var(--td-bg-color-secondarycontainer));
+    color: var(--el-color-danger);
+    background: var(--el-color-danger-light-9, var(--el-bg-color-page));
   }
 
   :deep(.t-icon) {
@@ -278,28 +285,28 @@ const formatSchema = (schema: any): string => {
 .mtr-message {
   margin: 0;
   font-size: 13px;
-  color: var(--td-text-color-secondary);
+  color: var(--el-text-color-secondary);
   line-height: 1.6;
   word-break: break-word;
 }
 
 .mtr-service-desc {
   padding: 10px 12px;
-  border: 1px solid var(--td-component-stroke);
+  border: 1px solid var(--el-border-color);
   border-radius: 6px;
-  background: var(--td-bg-color-secondarycontainer);
+  background: var(--el-fill-color-light);
 
   span {
     display: block;
     margin-bottom: 4px;
-    color: var(--td-text-color-placeholder);
+    color: var(--el-text-color-placeholder);
     font-size: 12px;
     font-weight: 600;
   }
 
   p {
     margin: 0;
-    color: var(--td-text-color-primary);
+    color: var(--el-text-color-primary);
     font-size: 13px;
     line-height: 1.6;
     word-break: break-word;
@@ -319,28 +326,28 @@ const formatSchema = (schema: any): string => {
   gap: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--td-text-color-secondary);
+  color: var(--el-text-color-secondary);
 }
 
 /* 列表：扁平卡片，靠分隔与圆角，无重阴影，贴合抽屉 */
 .mtr-list {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--td-component-stroke);
+  border: 1px solid var(--el-border-color);
   border-radius: 8px;
   overflow: hidden;
 }
 
 .mtr-item {
   padding: 12px 14px;
-  background: var(--td-bg-color-container);
+  background: var(--el-bg-color-container);
 
   & + .mtr-item {
-    border-top: 1px solid var(--td-component-stroke);
+    border-top: 1px solid var(--el-border-color);
   }
 
   &.is-open {
-    background: var(--td-bg-color-secondarycontainer);
+    background: var(--el-fill-color-light);
   }
 }
 
@@ -359,7 +366,7 @@ const formatSchema = (schema: any): string => {
 .mtr-item-icon {
   flex-shrink: 0;
   font-size: 16px;
-  color: var(--td-brand-color);
+  color: var(--el-color-primary);
 }
 
 .mtr-item-name {
@@ -367,7 +374,7 @@ const formatSchema = (schema: any): string => {
   min-width: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--td-text-color-primary);
+  color: var(--el-text-color-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -385,11 +392,11 @@ const formatSchema = (schema: any): string => {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--td-text-color-secondary);
+  color: var(--el-text-color-secondary);
 
   .mtr-approval-icon {
     font-size: 15px;
-    color: var(--td-warning-color);
+    color: var(--el-color-warning);
   }
 
   .mtr-approval-label {
@@ -399,7 +406,7 @@ const formatSchema = (schema: any): string => {
 
 .mtr-chevron {
   font-size: 16px;
-  color: var(--td-text-color-placeholder);
+  color: var(--el-text-color-placeholder);
   flex-shrink: 0;
 }
 
@@ -407,7 +414,7 @@ const formatSchema = (schema: any): string => {
 .mtr-item-desc {
   margin-top: 6px;
   font-size: 13px;
-  color: var(--td-text-color-placeholder);
+  color: var(--el-text-color-placeholder);
   line-height: 1.6;
   word-break: break-word;
 
@@ -425,7 +432,7 @@ const formatSchema = (schema: any): string => {
   .mtr-schema-label {
     font-size: 12px;
     font-weight: 600;
-    color: var(--td-text-color-placeholder);
+    color: var(--el-text-color-placeholder);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 6px;
@@ -435,12 +442,12 @@ const formatSchema = (schema: any): string => {
     margin: 0;
     padding: 10px 12px;
     border-radius: 6px;
-    background: var(--td-bg-color-page);
-    border: 1px solid var(--td-component-stroke);
+    background: var(--el-bg-color-page);
+    border: 1px solid var(--el-border-color);
     overflow-x: auto;
     font-size: 12px;
-    font-family: var(--app-font-family-mono);
-    color: var(--td-text-color-primary);
+    // font-family: var(--app-font-family-mono);
+    color: var(--el-text-color-primary);
     line-height: 1.6;
   }
 }
@@ -451,7 +458,7 @@ const formatSchema = (schema: any): string => {
   gap: 6px;
   margin-top: 8px;
   font-size: 12px;
-  color: var(--td-text-color-placeholder);
+  color: var(--el-text-color-placeholder);
 
   span {
     overflow: hidden;

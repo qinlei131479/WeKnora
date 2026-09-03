@@ -1428,6 +1428,12 @@
       "isBuiltin": "是否内置",
       "yes": "是",
       "no": "否",
+      "deleteConfirm": "是否确认删除MCP编号为 {id} 的数据项？",
+      "enableConfirmMulti": "是否确认启用选中的MCP服务？",
+      "disableConfirmMulti": "是否确认停用选中的MCP服务？",
+      "enableConfirmSingle": "是否确认启用编号为 {id} 的MCP服务？",
+      "disableConfirmSingle": "是否确认停用编号为 {id} 的MCP服务？",
+      "confirmMultiError": "请选择要操作的MCP服务",
       "addTitle": "添加MCP",
       "updateTitle": "编辑MCP",
       "mcpServiceDialog": {
@@ -1512,6 +1518,17 @@
         "requireApproval": "需人工审核",
         "requireApprovalTip": "开启后，Agent 调用该工具前会暂停并等待确认，适用于可能改库/删文件等高危操作",
         "approvalSaveFailed": "保存审核设置失败"
+      },
+      "toasts": {
+        "loadFailed": "加载 MCP 服务列表失败",
+        "enabled": "已启用 MCP 服务",
+        "disabled": "已禁用 MCP 服务",
+        "updateStateFailed": "更新 MCP 服务状态失败",
+        "testing": "正在测试 {name}...",
+        "noResponse": "测试失败：未收到服务器响应",
+        "testFailed": "测试 MCP 服务失败",
+        "deleted": "MCP 服务已删除",
+        "deleteFailed": "删除 MCP 服务失败"
       }
     },
     "models": {
@@ -1681,6 +1698,20 @@
       },
       "error": {
         "invalidImageLink": "无效的图片链接"
+      },
+      "credential": {
+        "configured": "已配置",
+        "unconfigured": "未配置",
+        "configure": "配置",
+        "update": "更换",
+        "remove": "移除",
+        "inputPlaceholder": "请输入",
+        "savedToast": "凭据已保存",
+        "saveFailed": "保存凭据失败",
+        "removedToast": "凭据已移除",
+        "removeFailed": "移除凭据失败",
+        "confirmRemovePrompt": "确认移除？此操作不可撤销",
+        "confirmRemove": "确认移除"
       }
     },
     "ollama": {

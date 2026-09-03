@@ -11,11 +11,11 @@
         <div class="search-bar">
           <div class="search-bar__keyword">
             <el-input v-model="queryParams.name" class="search-bar__input" clearable
-              :placeholder="$t('page.mcp.nameSearchPlaceholder')" @keyup.enter="handleQuery" />
+              :placeholder="$t('page.mcp.nameSearchPlaceholder')" @keyup.enter="resetPageSearch" />
           </div>
 
-          <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
-          <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
+          <el-button @click="resetQuerySearch">{{ $t('page.normal.reset', '重置') }}</el-button>
+          <el-button type="primary" @click="resetPageSearch">{{ $t('page.normal.search', '搜索') }}</el-button>
 
         </div>
         <div class="action-toolbar">
@@ -40,7 +40,7 @@
           <!-- <button type="button" class="toolbar-btn" v-hasPermi="['system:dict:export']" @click="handleExport">导出</button> -->
           <!-- <button type="button" class="toolbar-btn" v-hasPermi="['system:dict:remove']"
             @click="handleRefreshCache">刷新缓存</button> -->
-          <!-- <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" /> -->
+          <!-- <right-toolbar v-model:showSearch="showSearch" @queryTable="loadTableData" /> -->
         </div>
       </div>
       </template>
@@ -99,7 +99,7 @@
               v-hasPermi="['business:mcpServices:edit']">
               {{ $t('page.normal.edit') }}
             </el-button>
-            <el-button link type="danger" @click="handleDelete(scope.row)"
+            <el-button link type="danger" @click="handleDelete(scope.row.id, scope.row)"
               v-hasPermi="['business:mcpServices:remove']">
               {{ $t('page.normal.remove') }}
             </el-button>
@@ -115,15 +115,14 @@
         </el-table-column>
       </el-table>
       <template #footer>
-        <pagination v-show="total > 0" :total="total" v-model:page="pageParams.pageNum" v-model:limit="pageParams.pageSize" @pagination="getList" />
+        <pagination v-show="total > 0" :total="total" v-model:page="pageParams.pageNum" v-model:limit="pageParams.pageSize" @pagination="loadTableData" />
       </template>
     </page-content>
 
     <!-- 添加或修改对话框 -->
-    <KJSCDialogV2 :title="$t(title)" v-model="open" width="800px" append-to-body
-      custom-class="mcp-form-dialog" :showCloseBtn="false" :showSubitBtn="false">
-      <el-form :model="form" :rules="rules" ref="saveFormRef" label-position="top" class="user-form"
-        hide-required-asterisk>
+    <KjscRtlDrawer :title="$t(title)" v-model="open" size="800px"
+      custom-class="mcp-form-dialog" close-on-click-modal>
+      <el-form :model="form" :rules="rules" ref="saveFormRef" label-position="top" class="user-form" >
         <!--
           从代码导入：粘贴标准 mcpServers JSON，纯前端解析后填回表单。
           不自动提交；用户检查后再点保存。
@@ -132,8 +131,8 @@
           <button type="button" class="code-import__toggle" @click="codeImportOpen = !codeImportOpen">
             <!-- <t-icon :name="codeImportOpen ? 'chevron-down' : 'chevron-right'" /> -->
             <el-icon class="code-import__icon">
-              <ArrowDown v-if="codeImportOpen" />
-              <ArrowRight v-else />
+              <ChevronDown v-if="codeImportOpen" />
+              <ChevronRight v-else />
             </el-icon>
             <span>{{ t('page.mcp.mcpServiceDialog.codeImport.toggle') }}</span>
           </button>
@@ -209,7 +208,7 @@
                 <el-button text size="small" class="custom-header-remove" :aria-label="t('common.delete')"
                   @click="removeCustomHeader(idx)">
                   <el-icon>
-                    <Close />
+                    <X />
                   </el-icon>
                 </el-button>
               </div>
@@ -277,10 +276,10 @@
               <el-input v-model="form.api_key_header" placeholder="X-API-Key" />
               <p class="form-desc">{{ t('page.mcp.mcpServiceDialog.apiKeyHeaderDesc', '留空默认 X-API-Key。Bearer 方式请填 Authorization，并在下方密钥值中写 “Bearer<token>”；需要裸 token 时填 Authorization 并直接填入 token。') }}</p>
             </el-form-item>
-            <CredentialResource v-if="mode === 'edit'" :api="credentialApi" :fields="credentialFields"
-              :meta="credentialMeta" />
-            <el-form-item v-else :label="t('page.mcp.mcpServiceDialog.credentialValue', '密钥值 / Token')" prop="api_key">
-              <el-input v-model="form.api_key" type="password" show-password
+            <!-- <CredentialResource v-if="mode === 'update'" :api="credentialApi" :fields="credentialFields"
+              :meta="credentialMeta" /> -->
+            <el-form-item :label="t('page.mcp.mcpServiceDialog.credentialValue', '密钥值 / Token')" prop="api_key">
+              <el-input v-model="form.api_key" type="password" show-password autocomplete="new-password"
                 :placeholder="t('page.mcp.mcpServiceDialog.optional')" prefix-icon="Lock" />
             </el-form-item>
           </template>
@@ -319,22 +318,22 @@
             <h4 class="setting-drawer__section-title">{{ t('page.mcp.mcpServiceDialog.testResultTitle', '测试结果') }}</h4>
             <el-button text shape="square" size="small" class="test-result-close" @click="testResult = null">
               <template #icon><el-icon>
-                  <Close />
+                  <X />
                 </el-icon></template>
             </el-button>
           </div>
           <McpTestResultBody :result="testResult" :service-id="form.id" />
         </section>
       </el-form>
-      <template #prefixFooter>
+      <template #footer>
         <div class="manage-dialog-footer">
           <el-button class="test-btn" :disabled="!form.id" @click="handleTestConnection">
             <template v-if="!testing && typeof lastTestOk === 'boolean'" #icon>
               <el-icon v-if="!testing && lastTestOk === true" class="status-icon available">
-                <CircleCheckFilled />
+                <CircleCheck />
               </el-icon>
               <el-icon v-else-if="!testing && lastTestOk === false" class="status-icon unavailable">
-                <CircleCloseFilled />
+                <CircleX />
               </el-icon>
             </template>{{ t('form.button.test', '测试连接') }}
           </el-button>
@@ -346,7 +345,7 @@
           </el-button>
         </div>
       </template>
-    </KJSCDialogV2>
+    </KjscRtlDrawer>
 
   </section>
 </template>
@@ -354,15 +353,19 @@
 <script setup lang="ts" name="Models">
 import { useI18n } from 'vue-i18n';
 import { ElMessage } from 'element-plus'
-import { Close, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
+// import { Close, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
+import { ChevronDown, ChevronRight, X, CircleCheck, CircleX } from 'lucide-vue-next';
 import McpTestResultBody from './components/McpTestResultBody.vue'
 import CredentialResource, {
   type CredentialFieldDef,
   type CredentialResourceApi,
 } from "@/components/credentials/CredentialResource.vue";
+import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { isEmpty } from "@/utils/common.js";
 import { AjaxResult, McpEntity, McpListReq, TableShowColumns, MCPOAuthTokenState, McpCredentialField, McpAuthConfig, McpAdvancedConfig } from "@/types";
 import { deleteMcpSingleApi, disableMcpBatchApi, enableMcpBatchApi, getMcplistApi, getMcpSingleApi, insertMcpSingleApi, updateMcpSingleApi, testMcpServiceApi, type MCPTestResult } from "@/api/data/mcp";
+import useTableData from '@/composables/useTableData.js';
+
 
 interface FormEntity extends McpEntity {
   custom_headers: { key: string; value: string }[];
@@ -391,21 +394,21 @@ interface FormEntity extends McpEntity {
 }
 const { proxy } = getCurrentInstance()
 
-const pageLangConfig: Record<string, string> = {
-  'page.mcp.add': '新增MCP',
-  'page.mcp.searchPlaceholder': '通过模型ID、模型名称、创建人进行模糊搜索',
-  'page.mcp.range_separator': '至',
-  'page.mcp.start_date.placeholder': '开始时间',
-  'page.mcp.end_date.placeholder': '结束时间',
-  'page.mcp.reset': '重置',
-  'page.mcp.search': '搜索',
-  'form.button.reset': '重置',
-  'form.button.edit': '编辑',
-  'form.button.delete': '删除',
-  'form.button.enable': '启用',
-  'form.button.disable': '禁用',
+// const pageLangConfig: Record<string, string> = {
+//   'page.mcp.add': '新增MCP',
+//   'page.mcp.searchPlaceholder': '通过模型ID、模型名称、创建人进行模糊搜索',
+//   'page.mcp.range_separator': '至',
+//   'page.mcp.start_date.placeholder': '开始时间',
+//   'page.mcp.end_date.placeholder': '结束时间',
+//   'page.mcp.reset': '重置',
+//   'page.mcp.search': '搜索',
+//   'form.button.reset': '重置',
+//   'form.button.edit': '编辑',
+//   'form.button.delete': '删除',
+//   'form.button.enable': '启用',
+//   'form.button.disable': '禁用',
 
-}
+// }
 // const t = function (key: string, params?: Record<string, string> | string) {
 //   let msg = pageLangConfig[key] || key
 //   if (params) {
@@ -422,21 +425,91 @@ const pageLangConfig: Record<string, string> = {
 // const $t = t;
 const { t } = useI18n();
 
-const tableData = ref<McpEntity[]>([])
-const tableRef = ref()
-const loading = ref<boolean>(true)
-// const showSearch = ref<boolean>(true)
+const {
+  pageParams,queryParams,tableData,loading,total,loadTableData,resetPageSearch,resetQuerySearch,handleDelete
+} = useTableData<McpEntity>({
+  queryParams: {name: undefined},
+  searchApi: getMcplistApi,
+  deleteConfirmMessage: (row: McpEntity) => {
+    return t('page.mcp.deleteConfirm', { id: row.id }, `是否确认删除MCP编号为 ${row.id} 的数据项？`)
+  },
+  deleteSuccessMessage: t('page.normal.confirmInfo.removeSuccess'),
+  deleteApi: deleteMcpSingleApi,
+})
+
 const ids = ref<number[]>([])
 const single = ref<boolean>(true)
 const multiple = ref<boolean>(true)
-const total = ref<number>(0)
-// 列显隐信息
-const columns = ref<Record<string, TableShowColumns>>({
-  name: { label: t('page.mcp.name', '名称'), visible: true },
-  description: { label: t('page.mcp.description', '描述'), visible: true },
-  enabled: { label: t('page.mcp.enableddisabled', '启用/停用'), visible: true },
-  isBuiltin: { label: t('page.mcp.isBuiltin', '是否内置'), visible: true }
-})
+
+// /** 导出按钮操作 */
+// function handleExport() {
+//   proxy.download("system/user/export", {
+//     ...queryParams.value,
+//   }, `user_${new Date().getTime()}.xlsx`)
+// }
+
+/** 选择条数  */
+function handleSelectionChange(selection: McpEntity[]) {
+  ids.value = selection.map(item => item.id!)
+  single.value = selection.length != 1
+  multiple.value = !selection.length
+}
+
+/** 启用按钮操作 */
+function handleEnable(row?: McpEntity) {
+  let message = '';
+  let saveIds: string[] = [];
+  if (row) {
+    message = t('page.mcp.enableConfirmSingle', { id: row.id }, `是否确认启用编号为 ${row.id} 的MCP服务？`)
+    saveIds.push(row.id!)
+  } else {
+    if (ids.value.length === 0) {
+      proxy.$modal.msgError(t('page.mcp.confirmMultiError'))
+      return
+    }
+    message = t('page.mcp.enableConfirmMulti', {}, '是否确认启用选中的MCP服务？')
+    saveIds = ids.value
+  }
+  proxy.$modal.confirm(message).then(function () {
+    return doEnable(saveIds)
+  }, () => { });
+}
+function doEnable(saveIds: string[]) {
+  return enableMcpBatchApi(saveIds).then((res: AjaxResult) => {
+    if (res.code === 200) {
+      proxy.$modal.msgSuccess(t('page.normal.confirmInfo.enableSuccess'))
+      loadTableData()
+    }
+  })
+}
+
+/** 停用按钮操作 */
+function handleDisable(row?: McpEntity) {
+  let message = '';
+  let saveIds: string[] = [];
+  if (row) {
+    message = t('page.mcp.disableConfirmSingle', { id: row.id }, `是否确认停用编号为 ${row.id} 的MCP服务？`)
+    saveIds.push(row.id!)
+  } else {
+    if (ids.value.length === 0) {
+      proxy.$modal.msgError(t('page.mcp.confirmMultiError'))
+      return
+    }
+    message = t('page.mcp.disableConfirmMulti', {}, '是否确认停用选中的MCP服务？')
+    saveIds = ids.value
+  }
+  proxy.$modal.confirm(message).then(function () {
+    return doDisable(saveIds)
+  }, () => { });
+}
+function doDisable(saveIds: string[]) {
+  return disableMcpBatchApi(saveIds).then((res: AjaxResult) => {
+    if (res.code === 200) {
+      proxy.$modal.msgSuccess(t('page.normal.confirmInfo.disableSuccess'))
+      loadTableData()
+    }
+  })
+}
 
 // // 校验登录账号
 // const validateUserName = (rule: any, value: string, callback: Function) => {
@@ -482,7 +555,7 @@ const columns = ref<Record<string, TableShowColumns>>({
 
 const open = ref<boolean>(false)
 let mode = '';
-const title = ref<string>("page.mcp.title.add")
+const title = ref<string>("page.mcp.addTitle")
 const saveFormRef = ref(null);
 const data = reactive({
   form: {
@@ -542,132 +615,18 @@ const data = reactive({
   }
 })
 
-const { queryParams, pageParams, form, rules } = toRefs(data)
+const { form, rules } = toRefs(data)
 
 // 是否必填为空
 const submitDisabled = computed(() => {
   const formValue: McpEntity = form.value
   return (
     // isEmpty(formValue.nickName) ||
-    isEmpty(formValue.name) ||
-    isEmpty(formValue.tenantId)
+    isEmpty(formValue.name)
+    // isEmpty(formValue.tenantId)
     // isEmpty(formValue.roleIds)
   );
 });
-
-/** 查询用户列表 */
-function getList() {
-  loading.value = true
-  getMcplistApi(queryParams.value, pageParams.value).then(res => {
-    loading.value = false
-    tableData.value = res.rows || []
-    total.value = +res.total || 0
-    // nextTick(() => {
-    //   tableRef.value?.doLayout()
-    // })
-  }, () => {
-    loading.value = false
-  })
-}
-
-/** 搜索按钮操作 */
-function handleQuery() {
-  pageParams.value.pageNum = 1
-  getList()
-}
-
-/** 重置按钮操作 */
-function resetQuery() {
-  queryParams.value.name = undefined
-  handleQuery()
-}
-
-/** 删除按钮操作 */
-function handleDelete(row: McpEntity) {
-  const userId = row.id!
-  proxy.$modal.confirm('是否确认删除MCP编号为"' + userId + '"的数据项？').then(function () {
-    return doDelete(userId)
-  }, () => { });
-}
-
-function doDelete(id: string) {
-  return deleteMcpSingleApi(id).then((res: AjaxResult) => {
-    if (res.code === 200) {
-      proxy.$modal.msgSuccess("删除成功")
-      getList()
-    }
-  })
-}
-
-// /** 导出按钮操作 */
-// function handleExport() {
-//   proxy.download("system/user/export", {
-//     ...queryParams.value,
-//   }, `user_${new Date().getTime()}.xlsx`)
-// }
-
-/** 选择条数  */
-function handleSelectionChange(selection: McpEntity[]) {
-  ids.value = selection.map(item => item.id!)
-  single.value = selection.length != 1
-  multiple.value = !selection.length
-}
-
-/** 启用按钮操作 */
-function handleEnable(row?: McpEntity) {
-  let message = '';
-  let saveIds: string[] = [];
-  if (row) {
-    message = '是否确认启用编号为"' + row.id + '"的数据项？'
-    saveIds.push(row.id!)
-  } else {
-    if (ids.value.length === 0) {
-      proxy.$modal.msgError("请选择要操作的MCP服务")
-      return
-    }
-    message = '是否确认启用选中的MCP服务？'
-    saveIds = ids.value
-  }
-  proxy.$modal.confirm(message).then(function () {
-    return doEnable(saveIds)
-  }, () => { });
-}
-function doEnable(saveIds: string[]) {
-  return enableMcpBatchApi(saveIds).then((res: AjaxResult) => {
-    if (res.code === 200) {
-      proxy.$modal.msgSuccess("启用成功")
-      getList()
-    }
-  })
-}
-
-/** 停用按钮操作 */
-function handleDisable(row?: McpEntity) {
-  let message = '';
-  let saveIds: string[] = [];
-  if (row) {
-    message = '是否确认停用编号为"' + row.id + '"的数据项？'
-    saveIds.push(row.id!)
-  } else {
-    if (ids.value.length === 0) {
-      proxy.$modal.msgError("请选择要操作的MCP服务")
-      return
-    }
-    message = '是否确认停用选中的MCP服务？'
-    saveIds = ids.value
-  }
-  proxy.$modal.confirm(message).then(function () {
-    return doDisable(saveIds)
-  }, () => { });
-}
-function doDisable(saveIds: string[]) {
-  return disableMcpBatchApi(saveIds).then((res: AjaxResult) => {
-    if (res.code === 200) {
-      proxy.$modal.msgSuccess("停用成功")
-      getList()
-    }
-  })
-}
 
 /** 重置操作表单 */
 function reset() {
@@ -833,7 +792,7 @@ function doUpdate() {
   return updateMcpSingleApi(params).then((res: AjaxResult) => {
     if (res.code === 200) {
       proxy.$modal.msgSuccess("修改成功")
-      getList()
+      loadTableData()
       open.value = false
     }
   })
@@ -844,7 +803,7 @@ function doAdd() {
   return insertMcpSingleApi(params).then((res: AjaxResult) => {
     if (res.code === 200) {
       proxy.$modal.msgSuccess("新增成功")
-      getList()
+      loadTableData()
       open.value = false
     }
   })
@@ -1050,24 +1009,36 @@ const credentialFields = computed<CredentialFieldDef<McpCredentialField>[]>(() =
 // Adapter that binds the generic CredentialResource component to the MCP
 // credential endpoints. Recomputed if the user opens a different service.
 const credentialApi = computed<CredentialResourceApi<McpCredentialField>>(() => {
-  const id = form.value.id ?? ''
+  // const id = form.value.id ?? ''
   return {
     save: async (patch: any) => {
       // const meta = await putMCPCredentials(id, patch)
       // return meta.fields
-      const newValue = { ...patch }
-      newValue.configured = true
+      const newValue: any = {};
+      for(var key in patch) {
+        newValue[key] = {
+          configured: true,
+          value: patch[key],
+        }
+      }
+      Object.assign(form.value, patch)
       return newValue
     },
     remove: async (field: McpCredentialField) => {
       // await deleteMCPCredentialField(id, field)
+      form.value[field] = '';
     },
   }
 })
 
-const credentialMeta = computed(() => form.value.credentials ?? {
-  api_key: { configured: false },
-  token: { configured: false },
+const credentialMeta = computed(() => {
+  // return form.value.credentials ?? {
+  //   api_key: { configured: false },
+  //   token: { configured: false },
+  // }
+  return {
+    api_key: { configured: !!form.value.api_key }
+  }
 })
 
 
@@ -1103,7 +1074,7 @@ async function handleTestConnection() {
   if (!form.value.id) return
   testing.value = true
   ElMessage.info({
-    content: t('mcpSettings.toasts.testing', { name: form.value.name || '' }),
+    message: t('page.mcp.toasts.testing', { name: form.value.name || '' }),
     duration: 0,
     showClose: false,
   })
@@ -1112,7 +1083,7 @@ async function handleTestConnection() {
     ElMessage.closeAll()
     const safe: MCPTestResult = result?.data ?? {
       success: false,
-      message: t('mcpSettings.toasts.noResponse') as string,
+      message: t('page.mcp.toasts.noResponse') as string,
     }
     lastTestOk.value = safe.success === true
     testResult.value = safe
@@ -1120,25 +1091,26 @@ async function handleTestConnection() {
     if (safe.success === true && discoveredDescription) {
       form.value.description = discoveredDescription
     }
-    // Server told us it needs OAuth (RFC 9728): guide the user by switching the
-    // auth strategy to OAuth. We intentionally do NOT prefill
-    // auth_server_metadata_url — the discovered URL is the RFC 9728
-    // protected-resource metadata (not the RFC 8414 authorization-server
-    // metadata), and the client library discovers the right endpoints from the
-    // base URL on its own.
-    if (safe.oauth_required === true && form.value.authType !== 'oauth') {
-      form.value.authType = 'oauth'
-      ElMessage.warning(
-        t('page.mcp.mcpServiceDialog.toasts.oauthRequired', '该服务需要 OAuth 授权，已自动切换为 OAuth 2.0，请保存后点击「去授权」。') as string,
-      )
-    }
+    // // Server told us it needs OAuth (RFC 9728): guide the user by switching the
+    // // auth strategy to OAuth. We intentionally do NOT prefill
+    // // auth_server_metadata_url — the discovered URL is the RFC 9728
+    // // protected-resource metadata (not the RFC 8414 authorization-server
+    // // metadata), and the client library discovers the right endpoints from the
+    // // base URL on its own.
+    // // oauth_required 接口无此字段
+    // if (safe.oauth_required === true && form.value.authType !== 'oauth') {
+    //   form.value.authType = 'oauth'
+    //   ElMessage.warning(
+    //     t('page.mcp.mcpServiceDialog.toasts.oauthRequired', '该服务需要 OAuth 授权，已自动切换为 OAuth 2.0，请保存后点击「去授权」。') as string,
+    //   )
+    // }
     scrollToTestResult()
   } catch (error: any) {
     ElMessage.closeAll()
     const errorMessage =
       error?.response?.data?.error?.message ||
       error?.message ||
-      (t('mcpSettings.toasts.testFailed') as string)
+      (t('page.mcp.toasts.testFailed') as string)
     console.error('Failed to test MCP service:', error)
     lastTestOk.value = false
     testResult.value = { success: false, message: errorMessage }
@@ -1148,7 +1120,7 @@ async function handleTestConnection() {
   }
 }
 
-getList()
+loadTableData()
 </script>
 
 <style scoped lang="scss">
@@ -1237,11 +1209,11 @@ getList()
 
 .custom-header-remove {
   flex-shrink: 0;
-  color: var(--td-text-color-placeholder);
+  color: var(--el-text-color-placeholder);
 
   &:hover,
   &:focus-visible {
-    color: var(--td-error-color);
+    color: var(--el-color-danger);
   }
 }
 
@@ -1249,7 +1221,7 @@ getList()
   .setting-drawer__section-title {
     font-size: 20px;
     font-weight: 700;
-    color: var(--td-text-color-primary);
+    color: var(--el-text-color-primary);
   }
 }
 
@@ -1264,7 +1236,7 @@ getList()
 
   .test-result-close {
     flex-shrink: 0;
-    color: var(--td-text-color-placeholder);
+    color: var(--el-text-color-placeholder);
   }
 }
 
@@ -1293,11 +1265,4 @@ getList()
 </style>
 
 <style lang="scss">
-.mcp-form-dialog.kjsc-dialog-v2 {
-  .el-dialog__body {
-    max-height: 600px;
-    overflow: auto;
-  }
-}
-
 </style>

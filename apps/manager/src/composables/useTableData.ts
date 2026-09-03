@@ -5,12 +5,12 @@ export interface TableDataOptions<T> {
   initPageParams?: PageDomain;
   queryParams?: Record<string, any>;
   initQueryParams?: Record<string, any>;
-  searchApi: (params: any, page: PageDomain) => Promise<TableDataInfo<T>>;
+  searchApi: (params: any, page: PageDomain) => Promise<TableDataInfo>;
   skipEmptyParam?: boolean;
-  parseRowData?: (row: T) => T;
+  parseRowData?: (row: any) => T;
   deleteConfirmMessage?: string | ((row: T) => string);
   deleteSuccessMessage?: string | ((row: T) => string);
-  deleteApi?: (id: number | string) => Promise<AjaxResult>;
+  deleteApi?: (id: any) => Promise<AjaxResult>;
 }
 
 export default function useTableData<T>(options: TableDataOptions<T>) {
