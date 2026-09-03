@@ -358,6 +358,12 @@ fill_harness_connection_urls() {
         export MINIO_URI="http://${MINIO_ENDPOINT:-localhost:9000}"
     fi
 
+    # 与 Compose 挂载 ./docker/volumes/agent-harness:/app/saves 对齐，本机不另起一份 saves。
+    if [ -z "${YUXI_SAVE_DIR:-}" ]; then
+        export YUXI_SAVE_DIR="$PROJECT_ROOT/docker/volumes/agent-harness"
+    fi
+    mkdir -p "$YUXI_SAVE_DIR"
+
     if [[ "${NEO4J_URI:-}" == *"://graph:"* ]]; then
         export NEO4J_URI="bolt://localhost:7687"
     fi
@@ -520,6 +526,7 @@ start_harness() {
     log_info "本机启动 harness api + worker（不启 Docker）..."
     log_info "数据库: ${DB_HOST}:${DB_PORT:-5432}/${DB_NAME:-agent-middle}"
     log_info "Redis: ${REDIS_ADDR:-localhost:6379} DB ${AGENT_HARNESS_REDIS_DB:-2}"
+    log_info "工作区: ${YUXI_SAVE_DIR}"
     log_info "API: http://127.0.0.1:${api_port}"
     log_info "WeKnora: ${WEKNORA_BASE_URL}"
 

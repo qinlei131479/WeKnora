@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,8 @@ from yuxi.utils.logging_config import logger
 
 READONLY_CONFIG_FIELDS = frozenset({"save_dir"})
 DEFAULT_OCR_ENGINE = "rapid_ocr"
+# apps/agent-harness/package/yuxi/config/app.py → 仓库根
+_REPO_DOCKER_SAVES = Path(__file__).resolve().parents[5] / "docker" / "volumes" / "agent-harness"
 
 
 def _get_available_ocr_engines() -> set[str]:
@@ -28,6 +31,20 @@ def _normalize_default_ocr_engine(value: Any) -> str:
     return engine
 
 
+def _running_in_docker() -> bool:
+    return Path("/.dockerenv").exists() or os.getenv("RUNNING_IN_DOCKER") == "true"
+
+
+def _default_save_dir() -> str:
+    env = (os.getenv("YUXI_SAVE_DIR") or "").strip()
+    if env:
+        return env
+    # 本机 uvicorn 默认相对路径 saves/ 会另起一套空目录；与 compose 挂载对齐。
+    if not _running_in_docker() and _REPO_DOCKER_SAVES.is_dir():
+        return str(_REPO_DOCKER_SAVES)
+    return "saves"
+
+
 class Config(BaseModel):
     """应用配置类。
 
@@ -36,7 +53,7 @@ class Config(BaseModel):
     其他进程通过 `start_runtime_sync()` 启动的后台线程周期性拉取该快照刷新内存值。
     """
 
-    save_dir: str = Field(default="saves", description="保存目录", exclude=True)
+    save_dir: str = Field(default_factory=_default_save_dir, description="保存目录", exclude=True)
     enable_content_guard: bool = Field(default=False, description="是否启用内容审查")
     enable_content_guard_llm: bool = Field(default=False, description="是否启用LLM内容审查")
     default_model: str = Field(
