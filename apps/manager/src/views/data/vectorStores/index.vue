@@ -95,9 +95,9 @@ onMounted(() => {
   <section>
     <page-name />
     <page-content>
-      <template #header>
-        <div class="search-bar" @keydown.capture="handleAutocompleteKeydown">
-          <el-autocomplete
+      <!-- <template #header> -->
+      <!-- <div class="search-bar" @keydown.capture="handleAutocompleteKeydown"> -->
+      <!-- <el-autocomplete
             v-model="state.keyword"
             value-key="name"
             class="search-bar__input"
@@ -110,11 +110,11 @@ onMounted(() => {
             @select="onSelectTenants"
             @clear="onClearTenants"
             @input="onInput"
-          />
-          <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
-          <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
-        </div>
-      </template>
+          /> -->
+      <!-- <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button> -->
+      <!-- <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button> -->
+      <!-- </div> -->
+      <!-- </template> -->
 
       <el-table :data="state.vectorStoresVOs" show-overflow-tooltip height="100%" style="width: 100%">
         <template #empty>

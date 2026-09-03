@@ -120,7 +120,7 @@ onMounted(() => {
             :placeholder="$t('page.agent.list.search.namePlaceholder', '输入智能体名称查询')"
           />
 
-          <el-autocomplete
+          <!-- <el-autocomplete
             v-model="state.tenantKeyword"
             class="search-bar__input"
             style="max-width: 300px"
@@ -134,7 +134,7 @@ onMounted(() => {
             @select="onSelectTenant"
             @clear="onTenantInput"
             @input="onTenantInput"
-          />
+          /> -->
 
           <el-date-picker
             v-model="state.dateRange"

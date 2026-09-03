@@ -162,7 +162,7 @@ onMounted(() => {
             :placeholder="$t('page.agent.sessions.search.titlePlaceholder', '输入标题查询')"
           />
 
-          <el-autocomplete
+          <!-- <el-autocomplete
             v-model="state.tenantKeyword"
             class="search-bar__input"
             style="max-width: 300px"
@@ -176,9 +176,9 @@ onMounted(() => {
             @select="onSelectTenant"
             @clear="onTenantInput"
             @input="onTenantInput"
-          />
+          /> -->
 
-          <el-autocomplete
+          <!-- <el-autocomplete
             v-model="state.userKeyword"
             style="max-width: 300px"
             class="search-bar__input"
@@ -192,7 +192,7 @@ onMounted(() => {
             @select="onSelectUser"
             @clear="onUserInput"
             @input="onUserInput"
-          />
+          /> -->
 
           <el-date-picker
             v-model="state.dateRange"

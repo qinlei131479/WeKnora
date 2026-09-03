@@ -1,14 +1,6 @@
 <script setup lang="ts">
 import { API } from '@/api';
-import type {
-  CustomAgentsPageDTO,
-  CustomAgentsVO,
-  EmbedChannelsPageDTO,
-  EmbedChannelsVO,
-  PageDomain,
-  TenantsPageDTO,
-  TenantsVO
-} from '@/types';
+import type { CustomAgentsPageDTO, CustomAgentsVO, EmbedChannelsPageDTO, EmbedChannelsVO, PageDomain, TenantsPageDTO, TenantsVO } from '@/types';
 import { Search } from 'lucide-vue-next';
 import DetailDrawer from './components/DetailDrawer.vue';
 
@@ -153,7 +145,8 @@ onMounted(() => {
             :placeholder="$t('page.integration.embedChannels.search.namePlaceholder', '输入嵌入渠道名称查询')"
           />
 
-          <el-autocomplete
+          <!-- <el-autocomplete
+            v-if="false"
             v-model="state.tenantKeyword"
             class="search-bar__input"
             style="max-width: 300px"
@@ -167,9 +160,10 @@ onMounted(() => {
             @select="onSelectTenant"
             @clear="onTenantInput"
             @input="onTenantInput"
-          />
+          /> -->
 
-          <el-autocomplete
+          <!-- <el-autocomplete
+            v-if="false"
             v-model="state.agentKeyword"
             class="search-bar__input"
             style="max-width: 300px"
@@ -183,7 +177,7 @@ onMounted(() => {
             @select="onSelectAgent"
             @clear="onAgentInput"
             @input="onAgentInput"
-          />
+          /> -->
 
           <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
           <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>

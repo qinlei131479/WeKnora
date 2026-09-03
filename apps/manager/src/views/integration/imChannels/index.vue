@@ -1,15 +1,7 @@
 <script setup lang="ts">
 import { API } from '@/api';
 import { t } from '@/i18n';
-import type {
-  CustomAgentsPageDTO,
-  CustomAgentsVO,
-  ImChannelsPageDTO,
-  ImChannelsVO,
-  PageDomain,
-  TenantsPageDTO,
-  TenantsVO
-} from '@/types';
+import type { CustomAgentsPageDTO, CustomAgentsVO, ImChannelsPageDTO, ImChannelsVO, PageDomain, TenantsPageDTO, TenantsVO } from '@/types';
 import { Search } from 'lucide-vue-next';
 import DetailDrawer from './components/DetailDrawer.vue';
 
@@ -177,7 +169,7 @@ onMounted(() => {
             <el-option v-for="option in platformOptions" :key="option.value" :label="option.label" :value="option.value" />
           </el-select>
 
-          <el-autocomplete
+          <!-- <el-autocomplete
             v-model="state.tenantKeyword"
             class="search-bar__input"
             style="max-width: 300px"
@@ -191,9 +183,9 @@ onMounted(() => {
             @select="onSelectTenant"
             @clear="onTenantInput"
             @input="onTenantInput"
-          />
+          /> -->
 
-          <el-autocomplete
+          <!-- <el-autocomplete
             v-model="state.agentKeyword"
             class="search-bar__input"
             style="max-width: 300px"
@@ -207,7 +199,7 @@ onMounted(() => {
             @select="onSelectAgent"
             @clear="onAgentInput"
             @input="onAgentInput"
-          />
+          /> -->
 
           <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
           <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
