@@ -99,7 +99,7 @@
               v-hasPermi="['business:mcpServices:edit']">
               {{ $t('page.normal.edit') }}
             </el-button>
-            <el-button link type="danger" @click="handleDelete(scope.row)"
+            <el-button link type="danger" @click="handleDelete(scope.row.id, scope.row)"
               v-hasPermi="['business:mcpServices:remove']">
               {{ $t('page.normal.remove') }}
             </el-button>
