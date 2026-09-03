@@ -1,7 +1,7 @@
 <template>
   <section class="tenant-space-manage-page">
     <page-name>
-      <el-button type="success" icon="Plus" @click="handleAdd" v-hasPermi="['business:tenants:add']">{{
+      <el-button type="primary" icon="Plus" @click="handleAdd" v-hasPermi="['business:tenants:add']">{{
         $t('page.tenantSpace.add', '添加空间')
       }}</el-button>
     </page-name>

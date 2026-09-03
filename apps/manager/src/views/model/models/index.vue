@@ -46,7 +46,7 @@ const sourceLabel = (source?: string) => {
 
 const providerLabel = (provider?: string) => {
   if (!provider) return '-';
-  return providers.value.find((item) => item.value === provider)?.label ?? provider;
+  return providers.value.find((item: any) => item.value === provider)?.label ?? provider;
 };
 
 const isCredentialConfigured = (row: ModelsVO) => !!row.credentials?.api_key?.configured;
@@ -131,7 +131,7 @@ onMounted(() => {
 <template>
   <section>
     <page-name :title="$t('page.models.title', '模型管理')">
-      <el-button type="success" icon="Plus" v-hasPermi="['business:models:add']" @click="handleAdd">
+      <el-button type="primary" icon="Plus" v-hasPermi="['business:models:add']" @click="handleAdd">
         {{ $t('page.normal.add', '新增') }}
       </el-button>
     </page-name>
@@ -155,12 +155,7 @@ onMounted(() => {
             :placeholder="$t('page.models.search.typePlaceholder', '全部类型')"
             @change="handleQuery"
           >
-            <el-option
-              v-for="item in MODEL_TYPE_OPTIONS"
-              :key="item.value"
-              :label="$t(item.labelKey, item.label)"
-              :value="item.value"
-            />
+            <el-option v-for="item in MODEL_TYPE_OPTIONS" :key="item.value" :label="$t(item.labelKey, item.label)" :value="item.value" />
           </el-select>
           <el-select
             v-model="state.modelsDto.source"
@@ -169,12 +164,7 @@ onMounted(() => {
             :placeholder="$t('page.models.search.sourcePlaceholder', '全部来源')"
             @change="handleQuery"
           >
-            <el-option
-              v-for="item in MODEL_SOURCE_OPTIONS"
-              :key="item.value"
-              :label="$t(item.labelKey, item.label)"
-              :value="item.value"
-            />
+            <el-option v-for="item in MODEL_SOURCE_OPTIONS" :key="item.value" :label="$t(item.labelKey, item.label)" :value="item.value" />
           </el-select>
           <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
           <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
@@ -185,34 +175,19 @@ onMounted(() => {
         <template #empty>
           <kjsc-empty />
         </template>
-        <el-table-column
-          prop="name"
-          :label="$t('page.models.table.name', '模型名称')"
-          :min-width="$dim('page.models.table.name', 180)"
-        />
+        <el-table-column prop="name" :label="$t('page.models.table.name', '模型名称')" :min-width="$dim('page.models.table.name', 180)" />
         <el-table-column
           prop="displayName"
           :label="$t('page.models.table.displayName', '显示名称')"
           :min-width="$dim('page.models.table.displayName', 160)"
         />
-        <el-table-column
-          prop="type"
-          :label="$t('page.models.table.type', '模型类型')"
-          :min-width="$dim('page.models.table.type', 120)"
-        >
+        <el-table-column prop="type" :label="$t('page.models.table.type', '模型类型')" :min-width="$dim('page.models.table.type', 120)">
           <template #default="{ row }">{{ typeLabel(row.type) }}</template>
         </el-table-column>
-        <el-table-column
-          prop="source"
-          :label="$t('page.models.table.source', '模型来源')"
-          :min-width="$dim('page.models.table.source', 120)"
-        >
+        <el-table-column prop="source" :label="$t('page.models.table.source', '模型来源')" :min-width="$dim('page.models.table.source', 120)">
           <template #default="{ row }">{{ sourceLabel(row.source) }}</template>
         </el-table-column>
-        <el-table-column
-          :label="$t('page.models.table.provider', '提供商')"
-          :min-width="$dim('page.models.table.provider', 140)"
-        >
+        <el-table-column :label="$t('page.models.table.provider', '提供商')" :min-width="$dim('page.models.table.provider', 140)">
           <template #default="{ row }">{{ providerLabel(row.parameters?.provider) }}</template>
         </el-table-column>
         <el-table-column
@@ -283,21 +258,11 @@ onMounted(() => {
       </el-table>
 
       <template #footer>
-        <pagination
-          v-model:page="state.page.pageNum"
-          v-model:limit="state.page.pageSize"
-          :total="state.total"
-          @pagination="getModels"
-        />
+        <pagination v-model:page="state.page.pageNum" v-model:limit="state.page.pageSize" :total="state.total" @pagination="getModels" />
       </template>
     </page-content>
 
-    <ModelFormDialog
-      v-model:visible="dialog.visible"
-      :mode="dialog.mode"
-      :edit-id="dialog.editId"
-      @success="getModels"
-    />
+    <ModelFormDialog v-model:visible="dialog.visible" :mode="dialog.mode" :edit-id="dialog.editId" @success="getModels" />
 
     <ModelDebugDialog v-model:visible="debugDialog.visible" :model="debugDialog.model" />
   </section>

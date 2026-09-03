@@ -2,7 +2,7 @@
   <section class="models-ollama-manage-page">
     <page-name class="page-name">
       <!-- <button class="add-btn" v-hasPermi="['business:ollama:edit']" @click="showDownloadForm">+ {{ $t('page.ollama.add') }}</button> -->
-      <el-button type="success" icon="Plus" @click="showDownloadForm" v-hasPermi="['business:ollama:edit']">{{ $t('page.ollama.add') }}</el-button>
+      <el-button type="primary" icon="Plus" @click="showDownloadForm" v-hasPermi="['business:ollama:edit']">{{ $t('page.ollama.add') }}</el-button>
     </page-name>
 
     <page-content>

@@ -186,7 +186,7 @@ onMounted(() => {
 <template>
   <section>
     <page-name :title="$t('page.data.webSearch.title', '网络搜索配置')">
-      <el-button type="success" icon="Plus" v-hasPermi="['business:webSearchProviders:add']" @click="handleAdd">
+      <el-button type="primary" icon="Plus" v-hasPermi="['business:webSearchProviders:add']" @click="handleAdd">
         {{ $t('page.normal.add', '新增') }}
       </el-button>
     </page-name>
