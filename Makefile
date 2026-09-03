@@ -349,7 +349,7 @@ dev-frontend:
 #   3. make migrate-kjsc      首次或有新公司迁移
 #   4. make dev-kjsc-app      本机 cmd/app-core（另开终端）
 #   5. make dev-kjsc-frontend 本机 apps/frontend（另开终端）
-#   6. make dev-kjsc-harness  需要时再起 api + worker（另开终端）
+#   6. make dev-kjsc-harness  本机 uvicorn + arq（另开终端，不启 Docker）
 # 已起过 make dev-start 时可从 3/4 开始；只补 sandbox: make dev-kjsc-sandbox
 dev-kjsc-init:
 	./scripts/dev_kjsc.sh init

@@ -80,3 +80,4 @@ agent-web
 
 # 本地 ASR/评测素材（体积大，不入库）
 apps/agent-harness/test/unit/models/
+apps/agent-harness/saves

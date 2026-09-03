@@ -12,12 +12,21 @@
 # 1. 补齐 JWT / Sandbox Token（复用仓库根已有 .env，不覆盖 WeKnora 键）
 ./scripts/dev_kjsc.sh init
 
-# 2. 启动（只起自身，不拉基础设施；milvus 需自行 docker 启动）
-make dev-kjsc-harness     # api + worker
-make dev-kjsc-sandbox     # sandbox-provisioner（单独起）
+# 2. 启动（本机进程连当前 .env / .env.local；不拉 Docker api/worker）
+make dev-kjsc-harness     # 本机 uvicorn + arq
+make dev-kjsc-sandbox     # sandbox-provisioner（仍走 Docker）
 ```
 
 访问 `http://localhost:5174`。
+
+本机 PG/Redis 请用 `.env.local` 覆盖 Compose 主机名，例如：
+
+```text
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=agent-middle
+REDIS_ADDR=localhost:6379
+```
 
 默认账号：
 
@@ -37,7 +46,7 @@ make dev-kjsc-sandbox     # sandbox-provisioner（单独起）
 
 ## Make 目标
 
-- `make dev-kjsc-harness`（api + worker）
-- `make dev-kjsc-sandbox`（sandbox-provisioner）
-- `COMPOSE_FILE=docker-compose-kjsc.yml` 可换 kjsc 编排
+- `make dev-kjsc-harness`（本机 api + worker，不启 Docker）
+- `make dev-kjsc-sandbox`（sandbox-provisioner，Docker）
 - 首次环境：`./scripts/dev_kjsc.sh init`
+- Docker 编排仍可用：`docker compose -f docker-compose-mac.yml --profile harness up -d api worker`

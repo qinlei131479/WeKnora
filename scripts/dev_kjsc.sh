@@ -35,12 +35,11 @@ show_help() {
     echo "  infra      启动 postgres/redis/docreader/minio（dev.sh --minio）+ sandbox-provisioner"
     echo "  app        启动后端（cmd/app-core）"
     echo "  frontend   启动前端（apps/frontend）"
-    echo "  harness    启动 harness api + worker"
-    echo "  sandbox    单独启动 sandbox-provisioner"
+    echo "  harness    本机启动 harness api + worker（uvicorn / arq，不启 Docker）"
+    echo "  sandbox    单独启动 sandbox-provisioner（Docker）"
     echo ""
     echo "整套顺序: init → infra → migrate-kjsc → app / frontend → harness"
     echo "Makefile:     make dev-kjsc-init / dev-kjsc-infra / ..."
-    echo "编排文件:     COMPOSE_FILE=docker-compose-kjsc.yml $0 harness"
 }
 
 kjsc_ldflags() {
@@ -282,22 +281,8 @@ check_remote_dev_connectivity() {
     return 0
 }
 
-start_app() {
-    log_info "启动后端应用（app-core，cmd/app-core）..."
-
-    cd "$PROJECT_ROOT"
-
-    if ! command -v go &> /dev/null; then
-        log_error "Go 未安装"
-        return 1
-    fi
-
-    log_info "加载环境配置..."
-    if ! load_env_files; then
-        log_error ".env 文件不存在，请先运行: ./scripts/dev_kjsc.sh init"
-        return 1
-    fi
-
+# 本机进程把 Compose 主机名换成 localhost；远程开发则指向 DEV_REMOTE_HOST。
+apply_host_dev_env() {
     if [ -n "${DEV_REMOTE_HOST:-}" ]; then
         log_info "远程开发模式: 基础设施 → ${DEV_REMOTE_HOST}"
         export DB_HOST="${DB_HOST:-$DEV_REMOTE_HOST}"
@@ -320,6 +305,87 @@ start_app() {
         export QDRANT_HOST=localhost
     fi
     export DOCREADER_TRANSPORT="${DOCREADER_TRANSPORT:-grpc}"
+}
+
+urlencode_query() {
+    python3 -c "import urllib.parse,sys; print(urllib.parse.quote_plus(sys.argv[1]))" "$1"
+}
+
+# 本机拼接 POSTGRES_URL / REDIS_URL；不调用 docker-env.py（其主机名为 postgres/redis）。
+fill_harness_connection_urls() {
+    local db_user db_password db_name db_port encoded_user encoded_pass
+    local redis_addr redis_host redis_port redis_db encoded_redis_pass
+    local app_port sandbox_port
+
+    db_user="${DB_USER:-postgres}"
+    db_password="${DB_PASSWORD:-postgres}"
+    db_name="${DB_NAME:-${AGENT_HARNESS_DB_NAME:-agent-middle}}"
+    db_port="${DB_PORT:-5432}"
+    encoded_user="$(urlencode_query "$db_user")"
+    encoded_pass="$(urlencode_query "$db_password")"
+
+    if [ -z "${POSTGRES_URL:-}" ] || [[ "${POSTGRES_URL}" == *"@postgres:"* ]]; then
+        export POSTGRES_URL="postgresql+asyncpg://${encoded_user}:${encoded_pass}@${DB_HOST}:${db_port}/${db_name}"
+    fi
+
+    redis_addr="${REDIS_ADDR:-localhost:6379}"
+    redis_host="${redis_addr%%:*}"
+    redis_port="${redis_addr##*:}"
+    if [ "$redis_port" = "$redis_addr" ]; then
+        redis_port=6379
+    fi
+    redis_db="${AGENT_HARNESS_REDIS_DB:-2}"
+    if [ -z "${REDIS_URL:-}" ] || [[ "${REDIS_URL}" == *"@redis:"* ]] || [[ "${REDIS_URL}" == *"//redis:"* ]]; then
+        if [ -n "${REDIS_PASSWORD:-}" ]; then
+            encoded_redis_pass="$(urlencode_query "$REDIS_PASSWORD")"
+            export REDIS_URL="redis://:${encoded_redis_pass}@${redis_host}:${redis_port}/${redis_db}"
+        else
+            export REDIS_URL="redis://${redis_host}:${redis_port}/${redis_db}"
+        fi
+    fi
+
+    app_port="${APP_PORT:-9980}"
+    if [ -z "${WEKNORA_BASE_URL:-}" ] || [[ "${WEKNORA_BASE_URL}" == *"host.docker.internal"* ]]; then
+        export WEKNORA_BASE_URL="http://127.0.0.1:${app_port}/api/v1"
+    fi
+
+    sandbox_port="${SANDBOX_PROVISIONER_PORT:-8002}"
+    if [ -z "${SANDBOX_PROVISIONER_URL:-}" ] || [[ "${SANDBOX_PROVISIONER_URL}" == *"sandbox-provisioner"* ]]; then
+        export SANDBOX_PROVISIONER_URL="http://127.0.0.1:${sandbox_port}"
+    fi
+
+    if [ -z "${MINIO_URI:-}" ] || [[ "${MINIO_URI}" == *"//minio:"* ]]; then
+        export MINIO_URI="http://${MINIO_ENDPOINT:-localhost:9000}"
+    fi
+
+    if [[ "${NEO4J_URI:-}" == *"://graph:"* ]]; then
+        export NEO4J_URI="bolt://localhost:7687"
+    fi
+    if [[ "${MILVUS_URI:-}" == *"//milvus:"* ]]; then
+        export MILVUS_URI="http://localhost:19530"
+    fi
+
+    unset RUNNING_IN_DOCKER
+    export YUXI_ENV="${YUXI_ENV:-development}"
+}
+
+start_app() {
+    log_info "启动后端应用（app-core，cmd/app-core）..."
+
+    cd "$PROJECT_ROOT"
+
+    if ! command -v go &> /dev/null; then
+        log_error "Go 未安装"
+        return 1
+    fi
+
+    log_info "加载环境配置..."
+    if ! load_env_files; then
+        log_error ".env 文件不存在，请先运行: ./scripts/dev_kjsc.sh init"
+        return 1
+    fi
+
+    apply_host_dev_env
 
     if ! check_remote_dev_connectivity; then
         return 1
@@ -417,14 +483,58 @@ harness_compose() {
 
 start_harness() {
     require_env_file || return 1
-    local ver
-    ver="$(harness_version)"
-    log_info "启动 harness api + worker（不拉 sandbox / 基础设施）..."
-    if ! docker image inspect "kjsc/agent-middle-harness:${ver}" >/dev/null 2>&1; then
-        log_info "本地无 kjsc/agent-middle-harness:${ver}，先 build api"
-        harness_compose build api || return 1
+
+    log_info "加载环境配置..."
+    if ! load_env_files; then
+        log_error ".env 文件不存在，请先运行: ./scripts/dev_kjsc.sh init"
+        return 1
     fi
-    harness_compose up -d --no-deps api worker
+
+    if ! command -v python3 >/dev/null 2>&1; then
+        log_error "未安装 python3"
+        return 1
+    fi
+    if ! command -v uv >/dev/null 2>&1; then
+        log_error "未安装 uv，请先安装: https://docs.astral.sh/uv/"
+        return 1
+    fi
+
+    apply_host_dev_env
+    fill_harness_connection_urls
+
+    if [ -z "${JWT_SECRET:-}" ]; then
+        log_error "JWT_SECRET 为空，本机 harness 需要与 WeKnora 相同的密钥"
+        return 1
+    fi
+
+    local harness_dir="$PROJECT_ROOT/apps/agent-harness"
+    local api_port="${AGENT_HARNESS_PORT:-5050}"
+    local worker_pid=""
+
+    cd "$harness_dir"
+    if [ ! -d ".venv" ]; then
+        log_info "首次同步 harness 依赖（uv sync）..."
+        uv sync || return 1
+    fi
+
+    log_info "本机启动 harness api + worker（不启 Docker）..."
+    log_info "数据库: ${DB_HOST}:${DB_PORT:-5432}/${DB_NAME:-agent-middle}"
+    log_info "Redis: ${REDIS_ADDR:-localhost:6379} DB ${AGENT_HARNESS_REDIS_DB:-2}"
+    log_info "API: http://127.0.0.1:${api_port}"
+    log_info "WeKnora: ${WEKNORA_BASE_URL}"
+
+    cleanup_harness() {
+        if [ -n "${worker_pid:-}" ]; then
+            kill "$worker_pid" 2>/dev/null || true
+            wait "$worker_pid" 2>/dev/null || true
+        fi
+    }
+    trap cleanup_harness EXIT INT TERM
+
+    uv run watchfiles --filter python "arq server.worker_main.WorkerSettings" server package &
+    worker_pid=$!
+    uv run uvicorn server.main:app --host 0.0.0.0 --port "$api_port" \
+        --reload --reload-dir server --reload-dir package --timeout-graceful-shutdown 5
 }
 
 start_sandbox() {
