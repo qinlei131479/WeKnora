@@ -1245,17 +1245,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
      */
     private String buildEmbeddingUrl(String baseUrl, String provider) {
         String url = trimTrailingSlash(baseUrl);
-
-        // 阿里云 DashScope 使用特殊的 embedding 端点
-        if (StrUtil.equalsIgnoreCase(provider, "aliyun") || StrUtil.equalsIgnoreCase(provider, "dashscope")) {
-            // 如果 baseUrl 包含 /compatible-mode/v1，需要移除
-            if (url.contains("/compatible-mode/v1")) {
-                url = url.replace("/compatible-mode/v1", "");
-            }
-            return url + "/api/v1/services/embeddings/multimodal-embedding/multimodal-embedding";
-        }
-
-        // 其他 provider 使用 OpenAI 兼容的 /embeddings 端点
+        // 使用 OpenAI 兼容的 /embeddings 端点
         return url + "/embeddings";
     }
 
