@@ -247,9 +247,9 @@ onMounted(() => {
             <el-button link type="primary" v-hasPermi="['business:models:edit']" @click.stop="handleEdit(row)">
               {{ $t('page.normal.edit', '编辑') }}
             </el-button>
-            <!-- <el-button link type="primary" v-hasPermi="['business:models:edit']" @click.stop="handleDebug(row)">
+            <el-button link type="primary" v-hasPermi="['business:models:edit']" @click.stop="handleDebug(row)">
               {{ $t('page.models.debug.rowButton', '调试') }}
-            </el-button> -->
+            </el-button>
             <el-button link type="danger" v-hasPermi="['business:models:remove']" @click.stop="handleDelete(row)">
               {{ $t('page.normal.delete', '删除') }}
             </el-button>

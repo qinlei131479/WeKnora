@@ -227,6 +227,8 @@ export interface ModelDebugDTO {
   thinking?: boolean;
   /** Rerank 模型使用 */
   documents?: string[];
+  /** 视觉 / 语音调试时上传的文件 */
+  file?: File;
 }
 
 /** 调试结果。Swagger 里写的是 string，后端实际返回 ModelDebugVO */

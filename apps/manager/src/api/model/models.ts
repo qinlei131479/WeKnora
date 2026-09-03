@@ -76,15 +76,29 @@ const deleteCredentialField = (id: string, field: ModelCredentialField): Promise
   request({ url: `${PATH}/credentials/delete`, method: 'GET', params: { id, field } });
 
 /**
- * 10. 调试模型。
- *
- * 只支持纯 JSON 提交，因此仅 KnowledgeQA / Embedding / Rerank 可用：
- * 后端 debugModel 声明为 `@RequestBody ModelDebugDTO + @RequestParam MultipartFile`，
- * Spring 无法在一个请求里同时绑定 JSON body 和 multipart 文件，
- * 需要后端改成 @RequestPart 后才能调试 VLLM / ASR。
+ * 10. 调试模型。后端是 @ModelAttribute，要摊开成 form / multipart，不能发 JSON。
+ * VLLM / ASR 把文件放在 file 字段里。
  */
-const debug = (data: ModelDebugDTO): Promise<AjaxResult<ModelDebugVO>> =>
-  request({ url: `${PATH}/debug`, method: 'POST', data, timeout: LONG_TIMEOUT });
+const debug = (data: ModelDebugDTO): Promise<AjaxResult<ModelDebugVO>> => {
+  const form = new FormData();
+  form.append('modelId', data.modelId);
+  form.append('input', data.input);
+  if (data.systemPrompt) form.append('systemPrompt', data.systemPrompt);
+  if (data.temperature !== undefined) form.append('temperature', String(data.temperature));
+  if (data.topP !== undefined) form.append('topP', String(data.topP));
+  if (data.maxTokens !== undefined) form.append('maxTokens', String(data.maxTokens));
+  if (data.thinking !== undefined) form.append('thinking', String(data.thinking));
+  data.documents?.forEach((doc) => form.append('documents', doc));
+  if (data.file) form.append('file', data.file);
+
+  return request({
+    url: `${PATH}/debug`,
+    method: 'POST',
+    data: form,
+    headers: { 'Content-Type': 'multipart/form-data', repeatSubmit: false },
+    timeout: LONG_TIMEOUT
+  });
+};
 
 const testRequest = (path: string, data: ModelTestRequestDTO): Promise<AjaxResult<ModelTestResultVO>> =>
   request({ url: `${PATH}${path}`, method: 'POST', data, timeout: LONG_TIMEOUT });

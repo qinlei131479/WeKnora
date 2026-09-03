@@ -35,16 +35,26 @@ const form = reactive({
   thinking: false
 });
 
+interface DebugUploadFile {
+  name: string;
+  uid: number;
+  raw?: File;
+}
+
+const fileList = ref<DebugUploadFile[]>([]);
+const selectedFile = ref<File | null>(null);
+
 const modelType = computed(() => props.model?.type ?? '');
 const isChat = computed(() => modelType.value === 'KnowledgeQA');
 const isRerank = computed(() => modelType.value === 'Rerank');
-
-/**
- * 后端 debugVLLM / debugASR 强校验文件不能为空，但 debug 接口把
- * @RequestBody 和 @RequestParam MultipartFile 混用，Spring 无法同时绑定，
- * 前端没有办法把文件传进去。等后端改成 @RequestPart 再放开。
- */
-const needsFile = computed(() => modelType.value === 'VLLM' || modelType.value === 'ASR');
+const isVision = computed(() => modelType.value === 'VLLM');
+const needsFile = computed(() => isVision.value || modelType.value === 'ASR');
+const fileAccept = computed(() => (isVision.value ? 'image/*' : 'audio/*'));
+const filePlaceholder = computed(() =>
+  isVision.value
+    ? t('page.models.debug.fileImagePlaceholder', '请上传一张图片')
+    : t('page.models.debug.fileAudioPlaceholder', '请上传一段音频')
+);
 
 const typeLabel = computed(() => {
   const key = modelTypeLabelKey(modelType.value);
@@ -54,12 +64,14 @@ const typeLabel = computed(() => {
 const documents = computed(() =>
   form.documentsText
     .split('\n')
-    .map((line) => line.trim())
+    .map((line: string) => line.trim())
     .filter(Boolean)
 );
 
-/** input 是后端必填项 */
-const canRun = computed(() => !!props.model?.id && !!form.input.trim() && !needsFile.value);
+/** input 必填；视觉 / 语音还必须带文件 */
+const canRun = computed(
+  () => !!props.model?.id && !!form.input.trim() && (!needsFile.value || !!selectedFile.value)
+);
 
 const resetState = () => {
   form.input = '';
@@ -69,7 +81,24 @@ const resetState = () => {
   form.topP = 1;
   form.maxTokens = 512;
   form.thinking = false;
+  fileList.value = [];
+  selectedFile.value = null;
   result.value = null;
+};
+
+const onFileChange = (uploadFile: DebugUploadFile) => {
+  selectedFile.value = uploadFile.raw ?? null;
+};
+
+const onFileRemove = () => {
+  selectedFile.value = null;
+};
+
+const onFileExceed = (files: File[]) => {
+  const file = files[0];
+  if (!file) return;
+  fileList.value = [{ name: file.name, uid: Date.now(), raw: file }];
+  selectedFile.value = file;
 };
 
 watch(
@@ -112,6 +141,8 @@ const handleRun = () => {
     payload.documents = documents.value;
   }
 
+  if (selectedFile.value) payload.file = selectedFile.value;
+
   API.Models.debug(payload)
     .then((res) => {
       // 后端即使调用失败也返回 code=200，错误信息在 data.error 里
@@ -153,16 +184,24 @@ const handleCopy = async () => {
         <el-tag size="small" type="info">{{ typeLabel }}</el-tag>
       </div>
 
-      <el-alert
-        v-if="needsFile"
-        class="debug-alert"
-        type="warning"
-        show-icon
-        :closable="false"
-        :title="$t('page.models.debug.fileUnsupported', '该类型模型调试需要上传文件，当前后端调试接口暂不支持，请先用「测试连接」验证连通性')"
-      />
-
       <el-form :model="form" label-position="top">
+        <el-form-item v-if="needsFile" :label="$t('page.models.debug.file', '上传文件')">
+          <el-upload
+            v-model:file-list="fileList"
+            :auto-upload="false"
+            :limit="1"
+            :accept="fileAccept"
+            :on-change="onFileChange"
+            :on-remove="onFileRemove"
+            :on-exceed="onFileExceed"
+          >
+            <el-button>{{ $t('page.models.debug.fileSelect', '选择文件') }}</el-button>
+            <template #tip>
+              <div class="el-upload__tip">{{ filePlaceholder }}</div>
+            </template>
+          </el-upload>
+        </el-form-item>
+
         <el-form-item :label="$t('page.models.debug.input', '输入内容')">
           <el-input
             v-model="form.input"
@@ -244,7 +283,13 @@ const handleCopy = async () => {
       <div class="dialog-footer">
         <el-button v-if="result" @click="handleCopy">{{ $t('page.models.debug.copy', '复制结果') }}</el-button>
         <el-button @click="dialogVisible = false">{{ $t('page.normal.close', '关闭') }}</el-button>
-        <el-button type="primary" :loading="running" :disabled="!canRun" @click="handleRun">
+        <el-button
+          type="primary"
+          :loading="running"
+          :disabled="!canRun"
+          :title="needsFile && !selectedFile ? $t('page.models.debug.fileRequired', '该类型需要先上传文件再调试') : ''"
+          @click="handleRun"
+        >
           {{ $t('page.models.debug.run', '开始调试') }}
         </el-button>
       </div>
