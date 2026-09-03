@@ -140,13 +140,10 @@
       </template>
     </page-content>
 
-    <KJSCDialogV2
+    <KjscRtlDrawer
       :title="form.dictId ? $t('page.system.dict.form.editTitle', '修改字典类型') : $t('page.system.dict.form.addTitle', '添加字典类型')"
       v-model="open"
-      width="800px"
-      append-to-body
-      :showCloseBtn="false"
-      :showSubitBtn="false"
+      size="800px"
     >
       <el-form ref="dictRef" :model="form" :rules="rules" label-position="top" hide-required-asterisk>
         <el-form-item :label="$t('page.system.dict.form.name', '字典名称')" prop="dictName">
@@ -163,13 +160,13 @@
         </el-form-item>
       </el-form>
 
-      <template #prefixFooter>
+      <template #footer>
         <el-button type="primary" @click="submitForm">
           {{ $t('page.system.dict.form.confirm', '确认')
           }}{{ form.dictId ? $t('page.system.dict.form.update', '修改') : $t('page.system.dict.form.add', '新增') }}
         </el-button>
       </template>
-    </KJSCDialogV2>
+    </KjscRtlDrawer>
 
     <dict-data-drawer v-model:visible="drawerVisible" :row="drawerRow" />
   </section>

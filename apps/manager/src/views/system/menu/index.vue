@@ -137,13 +137,10 @@
       </el-table>
     </page-content>
 
-    <KJSCDialogV2
+    <KjscRtlDrawer
       :title="form.menuId ? $t('page.system.menu.form.editTitle', '修改菜单') : $t('page.system.menu.form.addTitle', '添加菜单')"
       v-model="open"
-      width="800px"
-      append-to-body
-      :showCloseBtn="false"
-      :showSubitBtn="false"
+      size="800px"
     >
       <el-form ref="menuRef" :model="form" :rules="rules" label-position="top" hide-required-asterisk>
         <el-form-item :label="$t('page.system.menu.form.parentMenu', '上级菜单')">
@@ -234,13 +231,13 @@
         </div>
       </el-form>
 
-      <template #prefixFooter>
+      <template #footer>
         <el-button type="primary" @click="submitForm">
           {{ $t('page.system.menu.form.confirm', '确认')
           }}{{ form.menuId ? $t('page.system.menu.form.update', '修改') : $t('page.system.menu.form.add', '新增') }}
         </el-button>
       </template>
-    </KJSCDialogV2>
+    </KjscRtlDrawer>
   </section>
 </template>
 

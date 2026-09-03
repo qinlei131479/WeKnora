@@ -128,13 +128,10 @@
     </page-content>
 
     <!-- 添加或修改角色配置对话框 -->
-    <KJSCDialogV2
+    <KjscRtlDrawer
       :title="form.roleId ? $t('page.system.role.form.editTitle', '修改角色') : $t('page.system.role.form.addTitle', '添加角色')"
       v-model="open"
-      width="800px"
-      append-to-body
-      :showCloseBtn="false"
-      :showSubitBtn="false"
+      size="800px"
     >
       <el-form ref="roleRef" :model="form" :rules="rules" label-position="top" hide-required-asterisk>
         <el-form-item :label="$t('page.system.role.form.roleName', '角色名称')" prop="roleName">
@@ -197,12 +194,12 @@
           />
         </el-form-item>
       </el-form>
-      <template #prefixFooter>
+      <template #footer>
         <el-button type="primary" :disabled="submitDisabled || isEdit" @click="submitForm">
           {{ form.roleId ? $t('page.system.role.form.confirmEdit', '确认修改') : $t('page.system.role.form.confirmAdd', '确认新增') }}
         </el-button>
       </template>
-    </KJSCDialogV2>
+    </KjscRtlDrawer>
   </section>
 </template>
 

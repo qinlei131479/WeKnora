@@ -137,13 +137,10 @@
     </page-content>
 
     <!-- 添加或修改用户配置对话框 -->
-    <KJSCDialogV2
+    <KjscRtlDrawer
       :title="form.userId ? $t('page.system.user.form.editTitle', '修改用户') : $t('page.system.user.form.addTitle', '添加用户')"
       v-model="open"
-      width="800px"
-      append-to-body
-      :showCloseBtn="false"
-      :showSubitBtn="false"
+      size="800px"
     >
       <el-form :model="form" :rules="rules" ref="userRef" label-position="top" class="user-form" hide-required-asterisk>
         <el-form-item :label="$t('page.system.user.form.nickName', '用户昵称')" prop="nickName">
@@ -212,12 +209,12 @@
           <el-text>{{ $t('page.system.user.form.initialPassword', '账号初始密码为') }} {{ orginPwd }}</el-text>
         </div>
       </el-form>
-      <template #prefixFooter>
+      <template #footer>
         <el-button type="primary" :disabled="submitDisabled" @click="submitForm">
           {{ form.userId ? $t('page.system.user.form.confirmEdit', '确认修改') : $t('page.system.user.form.confirmAdd', '确认新增') }}
         </el-button>
       </template>
-    </KJSCDialogV2>
+    </KjscRtlDrawer>
 
     <!-- 重置密码对话框 -->
     <KJSCDialogV2

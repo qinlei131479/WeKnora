@@ -103,13 +103,10 @@
       </el-table>
     </page-content>
 
-    <KJSCDialogV2
+    <KjscRtlDrawer
       :title="form.deptId ? $t('page.system.dept.form.editTitle', '修改部门') : $t('page.system.dept.form.addTitle', '添加部门')"
       v-model="open"
-      width="800px"
-      append-to-body
-      :showCloseBtn="false"
-      :showSubitBtn="false"
+      size="800px"
     >
       <el-form ref="deptRef" :model="form" :rules="rules" label-position="top" hide-required-asterisk>
         <el-form-item v-if="form.parentId !== 0" :label="$t('page.system.dept.form.parentDept', '上级部门')" prop="parentId">
@@ -158,12 +155,12 @@
         </el-form-item>
       </el-form>
 
-      <template #prefixFooter>
+      <template #footer>
         <el-button type="primary" @click="submitForm">
           {{ form.deptId ? $t('page.system.dept.form.confirmEdit', '确认修改') : $t('page.system.dept.form.confirmAdd', '确认新增') }}
         </el-button>
       </template>
-    </KJSCDialogV2>
+    </KjscRtlDrawer>
   </section>
 </template>
 

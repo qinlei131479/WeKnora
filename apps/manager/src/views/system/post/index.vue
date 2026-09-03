@@ -124,13 +124,10 @@
       </template>
     </page-content>
 
-    <KJSCDialogV2
+    <KjscRtlDrawer
       :title="form.postId ? $t('page.system.post.form.editTitle', '修改岗位') : $t('page.system.post.form.addTitle', '添加岗位')"
       v-model="open"
-      width="800px"
-      append-to-body
-      :showCloseBtn="false"
-      :showSubitBtn="false"
+      size="800px"
     >
       <el-form ref="postRef" :model="form" :rules="rules" label-position="top" hide-required-asterisk>
         <div class="post-form-grid">
@@ -152,12 +149,12 @@
         </el-form-item>
       </el-form>
 
-      <template #prefixFooter>
+      <template #footer>
         <el-button type="primary" @click="submitForm">
           {{ form.postId ? $t('page.system.post.form.confirmEdit', '确认修改') : $t('page.system.post.form.confirmAdd', '确认新增') }}
         </el-button>
       </template>
-    </KJSCDialogV2>
+    </KjscRtlDrawer>
   </section>
 </template>
 

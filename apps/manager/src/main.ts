@@ -51,6 +51,7 @@ import KJSCDialogV2 from '@/components/KJSCCmpt/KJSCDialogV2.vue';
 import KjscEmpty from '@/components/KjscUi/KjscEmpty.vue';
 import PageName from '@/components/PageName/PageName.vue';
 import PageContent from '@/components/PageContent/PageContent.vue';
+import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 
 const app = createApp(App);
 
@@ -78,6 +79,7 @@ app.component('KJSCDialogV2', KJSCDialogV2);
 app.component('kjsc-empty', KjscEmpty);
 app.component('page-name', PageName);
 app.component('page-content', PageContent);
+app.component('KjscRtlDrawer', KjscRtlDrawer);
 
 app.use(router);
 app.use(store);
