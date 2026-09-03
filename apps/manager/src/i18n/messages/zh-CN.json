@@ -1717,7 +1717,10 @@
     "ollama": {
       "add": "下载新模型",
       "download": {
+        "name": "模型名称",
         "title": "下载模型",
+        "descPrefix": "输入模型名称下载，",
+        "browse": "浏览 Ollama 模型库",
         "namePlaceholder": "请输入模型名称",
         "downloading": "正在下载{name}",
         "confirm": "确认下载"

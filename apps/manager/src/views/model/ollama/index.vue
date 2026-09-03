@@ -118,16 +118,24 @@
       :showCloseBtn="false"
       :showSubitBtn="false"
     >
-      <el-form
-        :model="downloadForm"
-        :rules="downloadFormRules"
-        @submit.native.prevent
-        ref="downloadRef"
-        label-position="top"
-        class="download-form"
-        hide-required-asterisk
-      >
-        <el-form-item label="模型名称" prop="name">
+      <el-form :model="downloadForm" :rules="downloadFormRules" @submit.native.prevent ref="downloadRef" label-position="top" class="download-form">
+        <el-form-item :label="$t('page.ollama.download.name')" prop="name">
+          <template #label>
+            <div class="label-row">
+              <div class="label-name">
+                {{ $t('page.ollama.download.name') }}
+              </div>
+              <div class="label-extra">
+                <p>
+                  {{ $t('page.ollama.download.descPrefix') }}
+                  <a href="https://ollama.com/search" target="_blank" rel="noopener noreferrer" class="doc-link">
+                    {{ $t('page.ollama.download.browse') }}
+                    <el-icon class="link-icon"><Link /></el-icon>
+                  </a>
+                </p>
+              </div>
+            </div>
+          </template>
           <el-input v-model="downloadForm.name" :placeholder="$t('page.ollama.download.namePlaceholder')" maxlength="99" show-word-limit />
         </el-form-item>
         <div v-if="downloadModelName" class="download-progress">
@@ -150,38 +158,10 @@
 </template>
 
 <script setup lang="ts" name="Models">
+import { Link } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 import { downloadOllamaModelApi, getOllamaDownloadProgressApi, getOllamaModelsApi, getOllamaStatusApi } from '@/api/model/ollama';
 import { OllamaDownloadResp, OllamaModelsResp, TableShowColumns } from '@/types';
-
-// const pageLangConfig: Record<string, string> = {
-//   'page.ollama.add': '下载新模型',
-//   'page.ollama.download.title': '下载模型',
-//   'page.ollama.download.namePlaceholder': '请输入模型名称',
-//   'page.ollama.download.confirm': '确认下载',
-//   'page.ollama.download.downloading': '正在下载${name}',
-//   'page.ollama.status.testing': '检测中',
-//   'page.ollama.status.available': '可用',
-//   'page.ollama.status.unavailable': '不可用',
-//   'page.ollama.status.untested': '未检测',
-//   'page.ollama.status.retest': '重新检测',
-//   'page.ollama.searchPlaceholder': '通过模型ID、模型名称、创建人进行模糊搜索',
-//   'page.ollama.range_separator': '至',
-//   'page.ollama.start_date.placeholder': '开始时间',
-//   'page.ollama.end_date.placeholder': '结束时间',
-//   'page.ollama.reset': '重置',
-//   'page.ollama.search': '搜索',
-//   'form.button.reset': '重置',
-//   'form.button.edit': '编辑',
-//   'form.button.delete': '删除',
-//   'page.ollama.toasts.listFailed': '获取模型列表失败',
-//   'page.ollama.toasts.connected': '连接成功',
-//   'page.ollama.toasts.connectFailed': '连接失败，请检查 Ollama 是否运行',
-//   'page.ollama.toasts.downloadFailed': '下载失败，请稍后重试',
-//   'page.ollama.toasts.downloadStarted': '已开始下载模型',
-//   'page.ollama.toasts.downloadCompleted': '模型 下载完成',
-//   'page.ollama.toasts.progressFailed': '查询下载进度失败'
-// };
 
 const { proxy } = getCurrentInstance();
 const { t } = useI18n();
@@ -471,6 +451,50 @@ function handleSelectionChange(selection: OllamaModelsResp[]) {
     font-size: 14px;
     // color: var(--td-text-color-primary);
     font-weight: 500;
+  }
+}
+.download-form {
+  :deep(.el-form-item__label) {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+  .label-row {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: space-between;
+  }
+  .label-extra {
+    h3 {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--el-text-color-primary);
+      margin: 0 0 6px 0;
+    }
+
+    p {
+      font-size: 13px;
+      color: var(--el-text-color-placeholder);
+      margin: 0;
+      line-height: 1.5;
+    }
+    .doc-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 450;
+      color: var(--el-color-primary);
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+    .doc-link:hover {
+      color: var(--el-color-primary-dark-2);
+      text-decoration: underline;
+    }
   }
 }
 </style>
