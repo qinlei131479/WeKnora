@@ -59,7 +59,7 @@ const testResult = ref<ModelTestResultVO | null>(null);
 const apiKeyConfigured = ref(false);
 const appSecretConfigured = ref(false);
 
-/** 内置模型：后端禁止删除，且非管理员看不到 baseUrl 等字段 */
+/** 内置模型：可改配置与凭证，也可删除 */
 const isBuiltin = ref(false);
 
 const form = reactive({
@@ -92,10 +92,9 @@ const supportsVisionVisible = computed(() => form.type === 'KnowledgeQA' || form
 const selectedProvider = computed(() => providers.value.find((item) => item.value === form.provider));
 
 /**
- * 必填项没填完就禁掉测试，避免请求发出去必然失败。
- * 后端 ModelTestRequestDTO 强制要求 modelName 和 baseUrl。
+ * 后端 test 接口最低要 modelId，未保存的新增不能测。
  */
-const canTest = computed(() => !!form.name && !!form.baseUrl);
+const canTest = computed(() => !!form.id);
 
 const rules = computed(() => ({
   name: [{ required: true, message: t('page.models.form.namePlaceholder', '请输入模型名称'), trigger: 'blur' }],
@@ -366,10 +365,13 @@ const handleSave = async () => {
 };
 
 const handleTest = () => {
+  if (!form.id) return;
+
   testing.value = true;
   testResult.value = null;
 
   const payload: ModelTestRequestDTO = {
+    modelId: form.id,
     modelName: form.name,
     baseUrl: form.baseUrl,
     provider: form.provider || undefined,
@@ -381,8 +383,6 @@ const handleTest = () => {
 
   if (form.apiKey) payload.apiKey = form.apiKey;
   if (form.appSecret) payload.appSecret = form.appSecret;
-  // 编辑态没填新密钥时带上 modelId，让后端用库里已存的凭证补齐
-  if (isEdit.value && form.id) payload.modelId = form.id;
 
   if (isEmbedding.value) {
     payload.dimension = form.dimension ?? undefined;
@@ -506,7 +506,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         type="info"
         show-icon
         :closable="false"
-        :title="$t('page.models.form.builtinHint', '内置模型可修改配置与凭证，但不允许删除')"
+        :title="$t('page.models.form.builtinHint', '内置模型可修改配置与凭证')"
       />
 
       <el-form-item :label="$t('page.models.form.name', '模型名称')" prop="name">
@@ -806,7 +806,12 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
 
     <template #prefixFooter>
       <div class="dialog-footer">
-        <el-button :loading="testing" :disabled="!canTest" @click="handleTest">
+        <el-button
+          :loading="testing"
+          :disabled="!canTest"
+          :title="!canTest ? $t('page.models.test.saveFirst', '请先保存后再测试连接') : ''"
+          @click="handleTest"
+        >
           {{ $t('page.models.test.button', '测试连接') }}
         </el-button>
         <el-button @click="dialogVisible = false">{{ $t('page.normal.cancel', '取消') }}</el-button>

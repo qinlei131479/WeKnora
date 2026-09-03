@@ -59,7 +59,7 @@ const insert = (data: ModelsDTO): Promise<AjaxResult<ModelsVO>> =>
 const update = (data: ModelsDTO): Promise<AjaxResult<ModelsVO>> =>
   request({ url: `${PATH}/update/single`, method: 'POST', data });
 
-// 6. 删除。后端是 GET，内置模型会被拒绝
+// 6. 删除。后端是 GET
 const _delete = (id: string): Promise<AjaxResult<void>> =>
   request({ url: `${PATH}/delete/single`, method: 'GET', params: { id } });
 
@@ -119,7 +119,7 @@ const testMultimodal = (data: ModelTestRequestDTO, file: File): Promise<AjaxResu
   });
 };
 
-/** 按落库的模型类型选择对应的测试接口。VLLM 走 chat 做基础连通性校验 */
+/** 按落库类型选 test 接口。多模态/视觉按后端要求走 chat，不调 test/multimodal */
 const testByModelType = (type: string | undefined, data: ModelTestRequestDTO) => {
   switch (type) {
     case 'Embedding':
@@ -128,6 +128,8 @@ const testByModelType = (type: string | undefined, data: ModelTestRequestDTO) =>
       return testRerank(data);
     case 'ASR':
       return testAsr(data);
+    case 'VLLM':
+    case 'KnowledgeQA':
     default:
       return testChat(data);
   }

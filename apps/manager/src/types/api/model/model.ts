@@ -197,7 +197,7 @@ export interface ModelTestRequestDTO {
   customHeaders?: Record<string, string>;
   extraConfig?: Record<string, string>;
   appSecret?: string;
-  /** 传了就让后端用库里已存的密钥补齐 */
+  /** 必填。后端用它补库里已存的密钥；新增未保存时不能测 */
   modelId?: string;
   source?: string;
 }

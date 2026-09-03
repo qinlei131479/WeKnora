@@ -107,7 +107,6 @@ const handleDebug = (row: ModelsVO) => {
   debugDialog.visible = true;
 };
 
-/** 内置模型后端直接拒绝删除，前端把按钮禁掉，省一次无效请求 */
 const handleDelete = (row: ModelsVO) => {
   if (!row.id) return;
 
@@ -273,17 +272,10 @@ onMounted(() => {
             <el-button link type="primary" v-hasPermi="['business:models:edit']" @click.stop="handleEdit(row)">
               {{ $t('page.normal.edit', '编辑') }}
             </el-button>
-            <el-button link type="primary" v-hasPermi="['business:models:edit']" @click.stop="handleDebug(row)">
+            <!-- <el-button link type="primary" v-hasPermi="['business:models:edit']" @click.stop="handleDebug(row)">
               {{ $t('page.models.debug.rowButton', '调试') }}
-            </el-button>
-            <el-button
-              link
-              type="danger"
-              :disabled="row.isBuiltin === true"
-              :title="row.isBuiltin === true ? $t('page.models.tips.builtinCannotDelete', '内置模型不能删除') : ''"
-              v-hasPermi="['business:models:remove']"
-              @click.stop="handleDelete(row)"
-            >
+            </el-button> -->
+            <el-button link type="danger" v-hasPermi="['business:models:remove']" @click.stop="handleDelete(row)">
               {{ $t('page.normal.delete', '删除') }}
             </el-button>
           </template>
