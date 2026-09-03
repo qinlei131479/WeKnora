@@ -101,11 +101,10 @@ public interface ModelsService extends IService<Models> {
     /**
      * 调试模型
      *
-     * @param dto  调试参数
-     * @param file 上传文件（可选）
+     * @param dto 调试参数
      * @return 调试结果
      */
-    Object debugModel(@Nonnull ModelDebugDTO dto, MultipartFile file);
+    Object debugModel(@Nonnull ModelDebugDTO dto);
 
     /**
      * 测试远程 Chat 模型连接

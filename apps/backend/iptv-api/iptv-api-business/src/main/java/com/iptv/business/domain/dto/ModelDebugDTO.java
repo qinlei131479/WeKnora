@@ -9,6 +9,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * <p>
@@ -30,6 +31,12 @@ public class ModelDebugDTO implements Serializable {
     @NotBlank(message = "模型ID不能为空")
     @Schema(description = "模型ID")
     private String modelId;
+
+    /**
+     * 模型名称 (可选)
+     */
+    @Schema(description = "模型名称", hidden = true)
+    private String modelName;
 
     /**
      * 输入文本 (必填)
@@ -79,4 +86,10 @@ public class ModelDebugDTO implements Serializable {
      */
     @Schema(description = "文档列表")
     private List<String> documents;
+
+    /**
+     * 文件
+     */
+    @Schema(description = "文件（可选, 语音模型和视觉模型使用）")
+    private MultipartFile file;
 }

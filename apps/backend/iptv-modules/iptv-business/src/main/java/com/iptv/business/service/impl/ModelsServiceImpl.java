@@ -298,7 +298,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
     }
 
     @Override
-    public Object debugModel(@Nonnull ModelDebugDTO dto, MultipartFile file) {
+    public Object debugModel(@Nonnull ModelDebugDTO dto) {
         Models entity = this.baseMapper.selectById(dto.getModelId());
         if (entity == null) {
             throw new ServiceException("模型不存在");
@@ -311,6 +311,8 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
 
         try {
             // 解析参数并解密凭证
+            dto.setModelName(entity.getName());
+
             ModelParametersDTO params = JSONUtil.toBean(entity.getParameters(), ModelParametersDTO.class);
             String apiKey = null;
             String appSecret = null;
@@ -342,21 +344,22 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
 
             // 根据模型类型调用不同的 API
             Object response = null;
+            MultipartFile file = dto.getFile();
             switch (modelType) {
                 case "KnowledgeQA":
-                    response = debugKnowledgeQA(baseUrl, apiKey, dto, observations);
+                    response = debugKnowledgeQA(buildChatUrl(baseUrl), apiKey, dto, observations);
                     break;
                 case "Embedding":
-                    response = debugEmbedding(baseUrl, apiKey, dto, observations);
+                    response = debugEmbedding(buildEmbeddingUrl(baseUrl,params.getProvider()), apiKey, dto, observations);
                     break;
                 case "Rerank":
-                    response = debugRerank(baseUrl, apiKey, dto, observations);
+                    response = debugRerank(buildRerankUrl(baseUrl,params.getProvider()), apiKey, dto, observations);
                     break;
                 case "VLLM":
-                    response = debugVLLM(baseUrl, apiKey, dto, file, observations);
+                    response = debugVLLM(buildChatUrl(baseUrl), apiKey, dto, file, observations);
                     break;
                 case "ASR":
-                    response = debugASR(baseUrl, apiKey, dto, file, observations);
+                    response = debugASR(buildChatUrl(baseUrl), apiKey, dto, file, observations);
                     break;
                 default:
                     throw new ServiceException("不支持的模型类型: " + modelType);
@@ -380,15 +383,13 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
     /**
      * 调试 KnowledgeQA 模型（聊天对话）
      */
-    private Object debugKnowledgeQA(String baseUrl, String apiKey, ModelDebugDTO dto, Map<String, Object> observations) {
+    private Object debugKnowledgeQA(String url, String apiKey, ModelDebugDTO dto, Map<String, Object> observations) {
         if (StrUtil.isBlank(dto.getInput())) {
             throw new ServiceException("输入不能为空");
         }
 
-        String url = baseUrl.endsWith("/") ? baseUrl + "chat/completions" : baseUrl + "/chat/completions";
-
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", dto.getModelId());
+        requestBody.put("model", dto.getModelName());
 
         // 构建消息
         List<Map<String, String>> messages = new ArrayList<>();
@@ -451,15 +452,13 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
     /**
      * 调试 Embedding 模型（向量化）
      */
-    private Object debugEmbedding(String baseUrl, String apiKey, ModelDebugDTO dto, Map<String, Object> observations) {
+    private Object debugEmbedding(String url, String apiKey, ModelDebugDTO dto, Map<String, Object> observations) {
         if (StrUtil.isBlank(dto.getInput())) {
             throw new ServiceException("输入不能为空");
         }
 
-        String url = baseUrl.endsWith("/") ? baseUrl + "embeddings" : baseUrl + "/embeddings";
-
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", dto.getModelId());
+        requestBody.put("model", dto.getModelName());
         requestBody.put("input", dto.getInput());
 
         // 调用 API
@@ -488,7 +487,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
     /**
      * 调试 Rerank 模型（重排序）
      */
-    private Object debugRerank(String baseUrl, String apiKey, ModelDebugDTO dto, Map<String, Object> observations) {
+    private Object debugRerank(String url, String apiKey, ModelDebugDTO dto, Map<String, Object> observations) {
         if (StrUtil.isBlank(dto.getInput())) {
             throw new ServiceException("查询不能为空");
         }
@@ -496,13 +495,12 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
             throw new ServiceException("文档列表不能为空");
         }
 
-        String url = baseUrl.endsWith("/") ? baseUrl + "rerank" : baseUrl + "/rerank";
-
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", dto.getModelId());
-        requestBody.put("query", dto.getInput());
-        requestBody.put("documents", dto.getDocuments());
-
+        requestBody.put("model", dto.getModelName());
+        Map<String, Object> input = new HashMap<>();
+        input.put("query", dto.getInput());
+        input.put("documents", dto.getDocuments());
+        requestBody.put("input", input);
         // 调用 API
         String response = HttpRequest.post(url)
                 .header("Authorization", "Bearer " + apiKey)
@@ -526,12 +524,10 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
     /**
      * 调试 VLLM 模型（视觉语言模型）
      */
-    private Object debugVLLM(String baseUrl, String apiKey, ModelDebugDTO dto, MultipartFile file, Map<String, Object> observations) {
+    private Object debugVLLM(String url, String apiKey, ModelDebugDTO dto, MultipartFile file, Map<String, Object> observations) {
         if (file == null || file.isEmpty()) {
             throw new ServiceException("图片文件不能为空");
         }
-
-        String url = baseUrl.endsWith("/") ? baseUrl + "chat/completions" : baseUrl + "/chat/completions";
 
         try {
             // 将图片转为 base64
@@ -539,7 +535,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
             String imageDataUrl = "data:" + file.getContentType() + ";base64," + base64Image;
 
             Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", dto.getModelId());
+            requestBody.put("model", dto.getModelName());
 
             // 构建包含图片的消息
             List<Map<String, Object>> messages = new ArrayList<>();
@@ -597,19 +593,16 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
     /**
      * 调试 ASR 模型（语音识别）
      */
-    private Object debugASR(String baseUrl, String apiKey, ModelDebugDTO dto, MultipartFile file, Map<String, Object> observations) {
+    private Object debugASR(String url, String apiKey, ModelDebugDTO dto, MultipartFile file, Map<String, Object> observations) {
         if (file == null || file.isEmpty()) {
             throw new ServiceException("音频文件不能为空");
         }
-
-        String url = baseUrl.endsWith("/") ? baseUrl + "audio/transcriptions" : baseUrl + "/audio/transcriptions";
-
         try {
             // 构建 multipart/form-data 请求
             HttpRequest request = HttpRequest.post(url)
                     .header("Authorization", "Bearer " + apiKey)
                     .form("file", file.getBytes(), file.getOriginalFilename())
-                    .form("model", dto.getModelId())
+                    .form("model", dto.getModelName())
                     .timeout(120000);
 
             String response = request.execute().body();

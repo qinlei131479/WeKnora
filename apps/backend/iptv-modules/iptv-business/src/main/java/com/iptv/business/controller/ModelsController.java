@@ -110,12 +110,11 @@ public class ModelsController {
     }
 
     @Log(title = "调试模型", businessType = BusinessType.OTHER)
-    @Operation(summary = "调试模型", description = "测试模型的连通性和功能",hidden = true)
+    @Operation(summary = "调试模型", description = "测试模型的连通性和功能")
     @PostMapping("/debug")
     @RequiresPermissions("business:models:edit")
-    public R<Object> debugModel(@RequestBody @Validated ModelDebugDTO dto,
-                                @RequestParam(required = false) MultipartFile file) {
-        return R.ok(modelsService.debugModel(dto, file));
+    public R<Object> debugModel(@ModelAttribute ModelDebugDTO dto) {
+        return R.ok(modelsService.debugModel(dto));
     }
 
     // ==================== 远程模型测试接口 ====================
