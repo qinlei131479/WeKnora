@@ -1312,6 +1312,7 @@
       }
     },
     "knowledgeBase": {
+      "manage": "管理",
       "add": "添加知识库",
       "embeddingModel": "Embedding嵌入模型",
       "id": "编号",

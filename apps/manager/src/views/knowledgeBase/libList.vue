@@ -267,10 +267,13 @@
           :label="$t('page.normal.operation', '操作')"
           prop="operation"
           align="left"
-          :width="$dim('page.knowledgeBase.operation', 120)"
+          :width="$dim('page.knowledgeBase.operation', 180)"
           fixed="right"
         >
           <template #default="scope">
+            <el-button link type="primary" @click="showManage(scope.row)" v-hasPermi="['business:knowledgeBases:query']">
+              {{ $t('page.knowledgeBase.manage') }}
+            </el-button>
             <el-button link type="primary" @click="handleDetail(scope.row)" v-hasPermi="['business:knowledgeBases:edit']">
               {{ $t('page.normal.detail') }}
             </el-button>
@@ -419,10 +422,10 @@ function handleSelectionChange(selection: KnowledgeBaseEntity[]) {
   multiple.value = !selection.length;
 }
 function handleRowClick(row: KnowledgeBaseEntity, column: any) {
-  if (column.property === 'operation') {
-    return;
-  }
-  showManage(row);
+  // if (column.property === 'operation') {
+  //   return;
+  // }
+  // showManage(row);
 }
 
 function showManage(row: KnowledgeBaseEntity) {

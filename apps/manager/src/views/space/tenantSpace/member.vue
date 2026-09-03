@@ -178,17 +178,7 @@
     </page-content>
 
     <!-- 添加或修改对话框 -->
-    <KJSCDialogV2
-      :title="title"
-      v-model="open"
-      width="800px"
-      append-to-body
-      @open="handleSaveModelOpen"
-      @close="handleSaveModelClose"
-      custom-class="manage-dialog tenant-space-form-dialog"
-      :showCloseBtn="false"
-      :showSubitBtn="false"
-    >
+    <KjscRtlDrawer :title="title" v-model="open" size="800px" @open="handleSaveModelOpen" @close="handleSaveModelClose">
       <el-form
         :model="form"
         :rules="mode === 'add' ? addRules : editRules"
@@ -257,7 +247,7 @@
           </div>
         </el-form-item>
       </el-form>
-      <template #prefixFooter>
+      <template #footer>
         <div class="manage-dialog-footer">
           <el-button @click="closeDialog">
             {{ t('page.normal.cancel', '取消') }}
@@ -267,7 +257,7 @@
           </el-button>
         </div>
       </template>
-    </KJSCDialogV2>
+    </KjscRtlDrawer>
   </section>
 </template>
 

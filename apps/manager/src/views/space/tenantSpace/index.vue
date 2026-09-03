@@ -166,10 +166,13 @@
           :label="$t('page.normal.operation', '操作')"
           prop="operation"
           align="left"
-          :width="$dim('page.tenantSpace.operation', 200)"
+          :width="$dim('page.tenantSpace.operation', 180)"
           fixed="right"
         >
           <template #default="scope">
+            <el-button link type="primary" @click="showDetail(scope.row.id)" v-hasPermi="['business:tenants:query']">
+              {{ $t('page.normal.detail') }}
+            </el-button>
             <el-button link type="primary" @click.stop="handleUpdate(scope.row)" v-hasPermi="['business:tenants:edit']">
               {{ $t('page.normal.edit') }}
             </el-button>
@@ -194,15 +197,7 @@
     </page-content>
 
     <!-- 添加或修改对话框 -->
-    <KJSCDialogV2
-      :title="title"
-      v-model="open"
-      width="800px"
-      append-to-body
-      custom-class="manage-dialog tenant-space-form-dialog"
-      :showCloseBtn="false"
-      :showSubitBtn="false"
-    >
+    <KjscRtlDrawer :title="title" v-model="open" size="800px">
       <el-form :model="form" :rules="rules" ref="saveFormRef" label-position="top" class="tenant-space-form">
         <el-form-item :label="$t('page.tenantSpace.name', '空间名称')" prop="name">
           <el-input
@@ -221,7 +216,7 @@
           />
         </el-form-item>
       </el-form>
-      <template #prefixFooter>
+      <template #footer>
         <div class="manage-dialog-footer">
           <el-button class="close-btn" @click="closeDialog">
             {{ $t('page.normal.cancel', '取消') }}
@@ -231,17 +226,9 @@
           </el-button>
         </div>
       </template>
-    </KJSCDialogV2>
+    </KjscRtlDrawer>
 
-    <KJSCDialogV2
-      :title="detailTitle"
-      v-model="detailOpen"
-      width="800px"
-      append-to-body
-      custom-class="manage-dialog tenant-space-form-dialog"
-      :showCloseBtn="false"
-      :showSubitBtn="false"
-    >
+    <KjscRtlDrawer :title="detailTitle" v-model="detailOpen" size="800px" close-on-press-escape close-on-click-modal>
       <el-form label-position="left" label-width="120" class="tenant-space-form">
         <el-form-item :label="$t('page.tenantSpace.id', '空间id')">
           {{ detailForm.id }}
@@ -268,14 +255,14 @@
           <span>{{ getRate(detailForm.storageQuota, detailForm.storageUsed) }}</span>
         </el-form-item>
       </el-form>
-      <template #prefixFooter>
+      <template #footer>
         <div class="manage-dialog-footer">
           <el-button class="close-btn" @click="closeDialogDetail">
             {{ $t('page.normal.close', '关闭') }}
           </el-button>
         </div>
       </template>
-    </KJSCDialogV2>
+    </KjscRtlDrawer>
   </section>
 </template>
 
@@ -444,7 +431,7 @@ function handleRowClick(row: TenantSpaceEntity, column: any, event: PointerEvent
   if (column.property === 'operation') {
     return;
   }
-  showDetail(row.id!);
+  // showDetail(row.id!);
 }
 
 /** 启用按钮操作 */
@@ -601,9 +588,9 @@ getList();
   width: 100%;
 }
 
-.manage-dialog-footer {
-  .close-btn {
-    margin-right: 12px;
-  }
-}
+// .manage-dialog-footer {
+//   .close-btn {
+//     margin-right: 12px;
+//   }
+// }
 </style>
