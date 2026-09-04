@@ -2,30 +2,28 @@ from yuxi.storage.postgres.naming import HARNESS_TABLES, LANGGRAPH_CHECKPOINT_TA
 
 
 def test_ht_prefixes_logical_names():
-    assert ht("users") == "h_users"
-    assert ht("knowledge_bases") == "h_knowledge_bases"
-    assert ht("user_identity_map") == "h_user_identity_map"
-    assert ht("h_users") == "h_users"
+    assert ht("agents") == "h_agents"
+    assert ht("messages") == "h_messages"
+    assert ht("h_agents") == "h_agents"
 
 
-def test_prefix_sql_rewrites_table_tokens_only():
-    sql = (
-        "ALTER TABLE IF EXISTS knowledge_bases ADD COLUMN IF NOT EXISTS mindmap JSONB; "
-        "UPDATE users SET role = 'admin'; "
-        "SELECT env FROM agent_envs WHERE uid = $1; "
-        "REFERENCES messages(id)"
-    )
+def test_prefix_sql_does_not_rewrite_weknora_users():
+    sql = "SELECT id FROM users WHERE email = $1; SELECT env FROM agent_envs WHERE uid = $1"
     out = prefix_sql(sql)
-    assert "h_knowledge_bases" in out
-    assert "h_users" in out
+    assert "FROM users " in out
+    assert "h_users" not in out
+    assert "h_agent_envs" in out
+
+
+def test_prefix_sql_rewrites_harness_tokens_only():
+    sql = "SELECT env FROM agent_envs WHERE uid = $1; REFERENCES messages(id)"
+    out = prefix_sql(sql)
     assert "h_agent_envs" in out
     assert "h_messages" in out
-    assert "ALTER TABLE IF EXISTS knowledge_bases " not in out
-    assert "UPDATE users SET" not in out
 
 
 def test_prefix_sql_does_not_double_prefix():
-    sql = "SELECT * FROM h_users JOIN h_messages ON h_messages.conversation_id = h_conversations.id"
+    sql = "SELECT * FROM h_messages JOIN h_conversations ON h_messages.conversation_id = h_conversations.id"
     assert prefix_sql(sql) == sql
 
 
@@ -53,3 +51,5 @@ def test_langgraph_checkpoint_tables_stay_unprefixed():
         "JOIN checkpoint_migrations ON true"
     )
     assert prefix_sql(sql) == sql
+    assert "users" not in HARNESS_TABLES
+    assert "api_keys" not in HARNESS_TABLES

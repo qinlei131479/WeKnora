@@ -98,12 +98,11 @@ class PostgresManager(metaclass=SingletonMeta):
             raise RuntimeError("PostgreSQL manager not initialized. Please check configuration.")
 
     async def create_tables(self):
-        """创建所有表（知识库和业务表）"""
+        """创建业务表（知识库原生表已删除）。"""
         self._check_initialized()
         async with self.async_engine.begin() as conn:
-            await conn.run_sync(KnowledgeBase.metadata.create_all)
             await conn.run_sync(BusinessBase.metadata.create_all)
-        logger.info("PostgreSQL tables created/checked (knowledge + business)")
+        logger.info("PostgreSQL tables created/checked (business)")
 
     async def create_business_tables(self):
         """创建所有业务数据表"""
@@ -121,368 +120,9 @@ class PostgresManager(metaclass=SingletonMeta):
         logger.info("PostgreSQL tables dropped")
 
     async def ensure_knowledge_schema(self):
-        """确保知识库 schema 包含所有必要字段"""
+        """原生知识库 / 图谱 / 评测表已删除。"""
         self._check_initialized()
-        stmts = [
-            "ALTER TABLE IF EXISTS knowledge_bases ADD COLUMN IF NOT EXISTS embedding_model_spec VARCHAR(512)",
-            "ALTER TABLE IF EXISTS knowledge_bases ADD COLUMN IF NOT EXISTS llm_model_spec VARCHAR(512)",
-            "ALTER TABLE IF EXISTS knowledge_bases DROP COLUMN IF EXISTS embed_info",
-            "ALTER TABLE IF EXISTS knowledge_bases DROP COLUMN IF EXISTS llm_info",
-            "ALTER TABLE IF EXISTS knowledge_bases ADD COLUMN IF NOT EXISTS query_params JSONB",
-            "ALTER TABLE IF EXISTS knowledge_bases ADD COLUMN IF NOT EXISTS additional_params JSONB",
-            "ALTER TABLE IF EXISTS knowledge_bases ADD COLUMN IF NOT EXISTS share_config JSONB",
-            (
-                "UPDATE knowledge_bases SET share_config = jsonb_build_object("
-                "'version', 2, "
-                "'read_scope', COALESCE(NULLIF(share_config, '{}'::jsonb), "
-                '\'{"access_level": "global", "department_ids": [], "user_uids": []}\'::jsonb), '
-                "'manage_scope', COALESCE(NULLIF(share_config, '{}'::jsonb), "
-                '\'{"access_level": "global", "department_ids": [], "user_uids": []}\'::jsonb)) '
-                "WHERE share_config IS NULL OR share_config->>'version' IS DISTINCT FROM '2'"
-            ),
-            "ALTER TABLE IF EXISTS knowledge_bases ADD COLUMN IF NOT EXISTS mindmap JSONB",
-            "ALTER TABLE IF EXISTS knowledge_bases ADD COLUMN IF NOT EXISTS mindmap_file_ids JSONB",
-            "ALTER TABLE IF EXISTS knowledge_bases ADD COLUMN IF NOT EXISTS mindmap_metadata JSONB",
-            "ALTER TABLE IF EXISTS knowledge_bases ADD COLUMN IF NOT EXISTS sample_questions JSONB",
-            "ALTER TABLE IF EXISTS knowledge_bases ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS parent_id VARCHAR(64)",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS original_filename VARCHAR(512)",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS file_type VARCHAR(64)",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS path VARCHAR(1024)",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS minio_url VARCHAR(1024)",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS markdown_file VARCHAR(1024)",
-            "ALTER TABLE IF EXISTS knowledge_files DROP COLUMN IF EXISTS source_preview_file",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS status VARCHAR(32)",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS content_hash VARCHAR(128)",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS file_size BIGINT",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS chunk_count INTEGER DEFAULT 0",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS token_count BIGINT DEFAULT 0",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS content_type VARCHAR(64)",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS processing_params JSONB",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS is_folder BOOLEAN",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS error_message TEXT",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS created_by VARCHAR(64)",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS updated_by VARCHAR(64)",
-            "ALTER TABLE IF EXISTS knowledge_files ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ",
-            "ALTER TABLE IF EXISTS evaluation_datasets ADD COLUMN IF NOT EXISTS created_by VARCHAR(64)",
-            "ALTER TABLE IF EXISTS evaluation_datasets ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ",
-            "ALTER TABLE IF EXISTS evaluation_datasets ADD COLUMN IF NOT EXISTS build_metadata JSONB",
-            "ALTER TABLE IF EXISTS evaluation_runs ADD COLUMN IF NOT EXISTS name VARCHAR(255)",
-            "ALTER TABLE IF EXISTS evaluation_runs ADD COLUMN IF NOT EXISTS metrics JSONB",
-            "ALTER TABLE IF EXISTS evaluation_runs ADD COLUMN IF NOT EXISTS overall_score DOUBLE PRECISION",
-            "ALTER TABLE IF EXISTS evaluation_runs ADD COLUMN IF NOT EXISTS total_items INTEGER",
-            "ALTER TABLE IF EXISTS evaluation_runs ADD COLUMN IF NOT EXISTS completed_items INTEGER",
-            "ALTER TABLE IF EXISTS evaluation_runs ADD COLUMN IF NOT EXISTS started_at TIMESTAMPTZ",
-            "ALTER TABLE IF EXISTS evaluation_runs ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ",
-            "ALTER TABLE IF EXISTS evaluation_runs ADD COLUMN IF NOT EXISTS created_by VARCHAR(64)",
-            "ALTER TABLE IF EXISTS evaluation_run_items ADD COLUMN IF NOT EXISTS gold_chunk_ids JSONB",
-            "ALTER TABLE IF EXISTS evaluation_run_items ADD COLUMN IF NOT EXISTS gold_answer TEXT",
-            "ALTER TABLE IF EXISTS evaluation_run_items ADD COLUMN IF NOT EXISTS generated_answer TEXT",
-            "ALTER TABLE IF EXISTS evaluation_run_items ADD COLUMN IF NOT EXISTS retrieved_chunks JSONB",
-            "ALTER TABLE IF EXISTS evaluation_run_items ADD COLUMN IF NOT EXISTS metrics JSONB",
-            "ALTER TABLE IF EXISTS evaluation_run_items ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ",
-            """
-            CREATE TABLE IF NOT EXISTS evaluation_datasets (
-                id SERIAL PRIMARY KEY,
-                dataset_id VARCHAR(64) NOT NULL UNIQUE,
-                kb_id VARCHAR(80) NOT NULL REFERENCES knowledge_bases(kb_id) ON DELETE CASCADE,
-                name VARCHAR(255) NOT NULL,
-                description TEXT,
-                item_count INTEGER DEFAULT 0,
-                has_gold_chunks BOOLEAN DEFAULT FALSE,
-                has_gold_answers BOOLEAN DEFAULT FALSE,
-                build_metadata JSONB,
-                created_by VARCHAR(64),
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                updated_at TIMESTAMPTZ DEFAULT NOW()
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS evaluation_dataset_items (
-                id SERIAL PRIMARY KEY,
-                item_id VARCHAR(64) NOT NULL UNIQUE,
-                dataset_id VARCHAR(64) NOT NULL REFERENCES evaluation_datasets(dataset_id) ON DELETE CASCADE,
-                kb_id VARCHAR(80) NOT NULL REFERENCES knowledge_bases(kb_id) ON DELETE CASCADE,
-                item_index INTEGER NOT NULL,
-                query_text TEXT NOT NULL,
-                gold_chunk_ids JSONB,
-                gold_answer TEXT,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                CONSTRAINT uq_evaluation_dataset_items_dataset_index UNIQUE (dataset_id, item_index)
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS evaluation_runs (
-                id SERIAL PRIMARY KEY,
-                run_id VARCHAR(64) NOT NULL UNIQUE,
-                name VARCHAR(255) NOT NULL,
-                kb_id VARCHAR(80) NOT NULL REFERENCES knowledge_bases(kb_id) ON DELETE CASCADE,
-                dataset_id VARCHAR(64) REFERENCES evaluation_datasets(dataset_id) ON DELETE SET NULL,
-                status VARCHAR(32) DEFAULT 'running',
-                retrieval_config JSONB,
-                metrics JSONB,
-                overall_score DOUBLE PRECISION,
-                total_items INTEGER DEFAULT 0,
-                completed_items INTEGER DEFAULT 0,
-                started_at TIMESTAMPTZ DEFAULT NOW(),
-                completed_at TIMESTAMPTZ,
-                created_by VARCHAR(64)
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS evaluation_run_items (
-                id SERIAL PRIMARY KEY,
-                run_id VARCHAR(64) NOT NULL REFERENCES evaluation_runs(run_id) ON DELETE CASCADE,
-                dataset_item_id VARCHAR(64) REFERENCES evaluation_dataset_items(item_id) ON DELETE SET NULL,
-                item_index INTEGER NOT NULL,
-                query_text TEXT NOT NULL,
-                gold_chunk_ids JSONB,
-                gold_answer TEXT,
-                generated_answer TEXT,
-                retrieved_chunks JSONB,
-                metrics JSONB,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                CONSTRAINT uq_evaluation_run_items_run_index UNIQUE (run_id, item_index)
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS knowledge_chunks (
-                id SERIAL PRIMARY KEY,
-                chunk_id VARCHAR(128) NOT NULL UNIQUE,
-                file_id VARCHAR(64) NOT NULL REFERENCES knowledge_files(file_id) ON DELETE CASCADE,
-                kb_id VARCHAR(80) NOT NULL REFERENCES knowledge_bases(kb_id) ON DELETE CASCADE,
-                chunk_index INTEGER NOT NULL,
-                content TEXT NOT NULL,
-                start_char_pos INTEGER,
-                end_char_pos INTEGER,
-                start_token_pos INTEGER,
-                end_token_pos INTEGER,
-                graph_structure_indexed BOOLEAN NOT NULL DEFAULT FALSE,
-                graph_indexed BOOLEAN DEFAULT FALSE,
-                graph_extraction_details JSONB NOT NULL
-                    DEFAULT jsonb_build_object('status', 'pending', 'attempt_count', 0),
-                ent_ids JSONB,
-                tags JSONB,
-                extraction_result JSONB,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                updated_at TIMESTAMPTZ DEFAULT NOW()
-            )
-            """,
-            "ALTER TABLE IF EXISTS knowledge_chunks ADD COLUMN IF NOT EXISTS extraction_result JSONB",
-            (
-                "ALTER TABLE IF EXISTS knowledge_chunks ADD COLUMN IF NOT EXISTS "
-                "graph_structure_indexed BOOLEAN NOT NULL DEFAULT FALSE"
-            ),
-            (
-                "ALTER TABLE IF EXISTS knowledge_chunks ADD COLUMN IF NOT EXISTS "
-                "graph_extraction_details JSONB NOT NULL "
-                "DEFAULT jsonb_build_object('status', 'pending', 'attempt_count', 0)"
-            ),
-            (
-                "ALTER TABLE IF EXISTS knowledge_chunks ALTER COLUMN graph_extraction_details "
-                "SET DEFAULT jsonb_build_object('status', 'pending', 'attempt_count', 0)"
-            ),
-            ("ALTER TABLE IF EXISTS knowledge_chunks ALTER COLUMN graph_structure_indexed SET DEFAULT FALSE"),
-            (
-                "UPDATE knowledge_chunks SET graph_structure_indexed = TRUE "
-                "WHERE graph_indexed IS TRUE AND graph_structure_indexed IS NOT TRUE"
-            ),
-            (
-                "UPDATE knowledge_chunks SET graph_extraction_details = jsonb_build_object('status', 'succeeded') "
-                "WHERE (graph_extraction_details IS NULL "
-                "OR graph_extraction_details->>'status' = 'pending') "
-                "AND (extraction_result IS NOT NULL OR graph_structure_indexed IS TRUE OR graph_indexed IS TRUE)"
-            ),
-            (
-                "UPDATE knowledge_chunks SET graph_extraction_details = "
-                "jsonb_build_object('status', 'pending', 'attempt_count', 0) "
-                "WHERE graph_extraction_details IS NULL"
-            ),
-            """
-            CREATE TABLE IF NOT EXISTS knowledge_graph_entities (
-                id SERIAL PRIMARY KEY,
-                entity_id VARCHAR(64) NOT NULL UNIQUE,
-                kb_id VARCHAR(80) NOT NULL REFERENCES knowledge_bases(kb_id) ON DELETE CASCADE,
-                normalized_name VARCHAR(512) NOT NULL,
-                label VARCHAR(128) NOT NULL,
-                name VARCHAR(512) NOT NULL,
-                attributes JSONB,
-                vector_status VARCHAR(16) NOT NULL DEFAULT 'pending',
-                vector_attempt_count INTEGER NOT NULL DEFAULT 0,
-                vector_last_error TEXT,
-                vector_next_retry_at TIMESTAMPTZ,
-                vector_locked_until TIMESTAMPTZ,
-                vector_lock_token VARCHAR(32),
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                updated_at TIMESTAMPTZ DEFAULT NOW(),
-                CONSTRAINT uq_knowledge_graph_entities_identity UNIQUE (kb_id, normalized_name, label)
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS knowledge_graph_entity_mentions (
-                id SERIAL PRIMARY KEY,
-                entity_id VARCHAR(64) NOT NULL REFERENCES knowledge_graph_entities(entity_id) ON DELETE CASCADE,
-                kb_id VARCHAR(80) NOT NULL REFERENCES knowledge_bases(kb_id) ON DELETE CASCADE,
-                file_id VARCHAR(64) NOT NULL REFERENCES knowledge_files(file_id) ON DELETE CASCADE,
-                chunk_id VARCHAR(128) NOT NULL REFERENCES knowledge_chunks(chunk_id) ON DELETE CASCADE,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                CONSTRAINT uq_knowledge_graph_entity_mentions_entity_chunk UNIQUE (entity_id, chunk_id)
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS knowledge_graph_triples (
-                id SERIAL PRIMARY KEY,
-                triple_id VARCHAR(64) NOT NULL UNIQUE,
-                kb_id VARCHAR(80) NOT NULL REFERENCES knowledge_bases(kb_id) ON DELETE CASCADE,
-                source_entity_id VARCHAR(64) NOT NULL REFERENCES knowledge_graph_entities(entity_id) ON DELETE CASCADE,
-                target_entity_id VARCHAR(64) NOT NULL REFERENCES knowledge_graph_entities(entity_id) ON DELETE CASCADE,
-                relation_type VARCHAR(256) NOT NULL,
-                content TEXT NOT NULL,
-                vector_status VARCHAR(16) NOT NULL DEFAULT 'pending',
-                vector_attempt_count INTEGER NOT NULL DEFAULT 0,
-                vector_last_error TEXT,
-                vector_next_retry_at TIMESTAMPTZ,
-                vector_locked_until TIMESTAMPTZ,
-                vector_lock_token VARCHAR(32),
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                updated_at TIMESTAMPTZ DEFAULT NOW()
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS knowledge_graph_triple_mentions (
-                id SERIAL PRIMARY KEY,
-                triple_id VARCHAR(64) NOT NULL REFERENCES knowledge_graph_triples(triple_id) ON DELETE CASCADE,
-                kb_id VARCHAR(80) NOT NULL REFERENCES knowledge_bases(kb_id) ON DELETE CASCADE,
-                file_id VARCHAR(64) NOT NULL REFERENCES knowledge_files(file_id) ON DELETE CASCADE,
-                chunk_id VARCHAR(128) NOT NULL REFERENCES knowledge_chunks(chunk_id) ON DELETE CASCADE,
-                text TEXT,
-                extractor_type VARCHAR(128),
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                CONSTRAINT uq_knowledge_graph_triple_mentions_triple_chunk UNIQUE (triple_id, chunk_id)
-            )
-            """,
-            "ALTER TABLE IF EXISTS knowledge_bases ALTER COLUMN kb_id TYPE VARCHAR(80)",
-            "ALTER TABLE IF EXISTS knowledge_graph_entities ADD COLUMN IF NOT EXISTS vector_status VARCHAR(16)",
-            (
-                "ALTER TABLE IF EXISTS knowledge_graph_entities ADD COLUMN IF NOT EXISTS "
-                "vector_attempt_count INTEGER NOT NULL DEFAULT 0"
-            ),
-            "ALTER TABLE IF EXISTS knowledge_graph_entities ADD COLUMN IF NOT EXISTS vector_last_error TEXT",
-            (
-                "ALTER TABLE IF EXISTS knowledge_graph_entities ADD COLUMN IF NOT EXISTS "
-                "vector_next_retry_at TIMESTAMPTZ"
-            ),
-            ("ALTER TABLE IF EXISTS knowledge_graph_entities ADD COLUMN IF NOT EXISTS vector_locked_until TIMESTAMPTZ"),
-            ("ALTER TABLE IF EXISTS knowledge_graph_entities ADD COLUMN IF NOT EXISTS vector_lock_token VARCHAR(32)"),
-            (
-                "UPDATE knowledge_graph_entities AS entity SET vector_status = CASE WHEN EXISTS ("
-                "SELECT 1 FROM knowledge_graph_entity_mentions AS mention "
-                "JOIN knowledge_chunks AS chunk ON chunk.chunk_id = mention.chunk_id "
-                "WHERE mention.entity_id = entity.entity_id AND chunk.graph_indexed IS NOT TRUE"
-                ") THEN 'pending' ELSE 'indexed' END WHERE entity.vector_status IS NULL"
-            ),
-            "ALTER TABLE IF EXISTS knowledge_graph_entities ALTER COLUMN vector_status SET DEFAULT 'pending'",
-            "ALTER TABLE IF EXISTS knowledge_graph_entities ALTER COLUMN vector_status SET NOT NULL",
-            ("ALTER TABLE IF EXISTS knowledge_graph_entities ALTER COLUMN vector_attempt_count SET DEFAULT 0"),
-            "ALTER TABLE IF EXISTS knowledge_graph_triples ADD COLUMN IF NOT EXISTS vector_status VARCHAR(16)",
-            (
-                "ALTER TABLE IF EXISTS knowledge_graph_triples ADD COLUMN IF NOT EXISTS "
-                "vector_attempt_count INTEGER NOT NULL DEFAULT 0"
-            ),
-            "ALTER TABLE IF EXISTS knowledge_graph_triples ADD COLUMN IF NOT EXISTS vector_last_error TEXT",
-            ("ALTER TABLE IF EXISTS knowledge_graph_triples ADD COLUMN IF NOT EXISTS vector_next_retry_at TIMESTAMPTZ"),
-            ("ALTER TABLE IF EXISTS knowledge_graph_triples ADD COLUMN IF NOT EXISTS vector_locked_until TIMESTAMPTZ"),
-            "ALTER TABLE IF EXISTS knowledge_graph_triples ADD COLUMN IF NOT EXISTS vector_lock_token VARCHAR(32)",
-            (
-                "UPDATE knowledge_graph_triples AS triple SET vector_status = CASE WHEN EXISTS ("
-                "SELECT 1 FROM knowledge_graph_triple_mentions AS mention "
-                "JOIN knowledge_chunks AS chunk ON chunk.chunk_id = mention.chunk_id "
-                "WHERE mention.triple_id = triple.triple_id AND chunk.graph_indexed IS NOT TRUE"
-                ") THEN 'pending' ELSE 'indexed' END WHERE triple.vector_status IS NULL"
-            ),
-            "ALTER TABLE IF EXISTS knowledge_graph_triples ALTER COLUMN vector_status SET DEFAULT 'pending'",
-            "ALTER TABLE IF EXISTS knowledge_graph_triples ALTER COLUMN vector_status SET NOT NULL",
-            ("ALTER TABLE IF EXISTS knowledge_graph_triples ALTER COLUMN vector_attempt_count SET DEFAULT 0"),
-            "ALTER TABLE IF EXISTS knowledge_files ALTER COLUMN kb_id TYPE VARCHAR(80)",
-            "ALTER TABLE IF EXISTS evaluation_datasets ALTER COLUMN kb_id TYPE VARCHAR(80)",
-            "ALTER TABLE IF EXISTS evaluation_dataset_items ALTER COLUMN kb_id TYPE VARCHAR(80)",
-            "ALTER TABLE IF EXISTS evaluation_runs ALTER COLUMN kb_id TYPE VARCHAR(80)",
-            "CREATE INDEX IF NOT EXISTS idx_kb_type ON knowledge_bases(kb_type)",
-            "CREATE INDEX IF NOT EXISTS idx_kb_name ON knowledge_bases(name)",
-            "CREATE INDEX IF NOT EXISTS idx_kf_kb_id ON knowledge_files(kb_id)",
-            "CREATE INDEX IF NOT EXISTS idx_kf_kb_filename ON knowledge_files(kb_id, filename)",
-            "CREATE INDEX IF NOT EXISTS idx_kf_parent ON knowledge_files(parent_id)",
-            "CREATE INDEX IF NOT EXISTS idx_kf_status ON knowledge_files(status)",
-            "CREATE INDEX IF NOT EXISTS idx_kf_hash ON knowledge_files(content_hash)",
-            "CREATE INDEX IF NOT EXISTS ix_evaluation_datasets_kb_id ON evaluation_datasets(kb_id)",
-            (
-                "CREATE INDEX IF NOT EXISTS ix_evaluation_dataset_items_dataset_index "
-                "ON evaluation_dataset_items(dataset_id, item_index)"
-            ),
-            "CREATE INDEX IF NOT EXISTS ix_evaluation_dataset_items_kb_id ON evaluation_dataset_items(kb_id)",
-            "CREATE INDEX IF NOT EXISTS ix_evaluation_runs_kb_id ON evaluation_runs(kb_id)",
-            "CREATE INDEX IF NOT EXISTS ix_evaluation_runs_status ON evaluation_runs(status)",
-            "CREATE INDEX IF NOT EXISTS ix_evaluation_runs_started ON evaluation_runs(started_at DESC)",
-            "CREATE INDEX IF NOT EXISTS ix_evaluation_run_items_run_index ON evaluation_run_items(run_id, item_index)",
-            "CREATE UNIQUE INDEX IF NOT EXISTS uq_knowledge_chunks_chunk_id ON knowledge_chunks(chunk_id)",
-            "CREATE INDEX IF NOT EXISTS ix_knowledge_chunks_file_id ON knowledge_chunks(file_id)",
-            "CREATE INDEX IF NOT EXISTS ix_knowledge_chunks_kb_id ON knowledge_chunks(kb_id)",
-            "CREATE INDEX IF NOT EXISTS ix_knowledge_chunks_graph_indexed ON knowledge_chunks(graph_indexed)",
-            (
-                "CREATE INDEX IF NOT EXISTS ix_knowledge_chunks_graph_structure_indexed "
-                "ON knowledge_chunks(graph_structure_indexed)"
-            ),
-            (
-                "CREATE INDEX IF NOT EXISTS ix_knowledge_chunks_graph_extraction_status "
-                "ON knowledge_chunks(kb_id, ((graph_extraction_details->>'status')))"
-            ),
-            (
-                "CREATE UNIQUE INDEX IF NOT EXISTS uq_knowledge_graph_entities_entity_id "
-                "ON knowledge_graph_entities(entity_id)"
-            ),
-            "CREATE INDEX IF NOT EXISTS ix_knowledge_graph_entities_kb_id ON knowledge_graph_entities(kb_id)",
-            (
-                "CREATE INDEX IF NOT EXISTS ix_knowledge_graph_entities_vector_pending "
-                "ON knowledge_graph_entities(kb_id, vector_status, vector_next_retry_at)"
-            ),
-            (
-                "CREATE INDEX IF NOT EXISTS ix_knowledge_graph_entity_mentions_kb_id "
-                "ON knowledge_graph_entity_mentions(kb_id)"
-            ),
-            (
-                "CREATE INDEX IF NOT EXISTS ix_knowledge_graph_entity_mentions_file_id "
-                "ON knowledge_graph_entity_mentions(file_id)"
-            ),
-            (
-                "CREATE INDEX IF NOT EXISTS ix_knowledge_graph_entity_mentions_chunk_id "
-                "ON knowledge_graph_entity_mentions(chunk_id)"
-            ),
-            (
-                "CREATE UNIQUE INDEX IF NOT EXISTS uq_knowledge_graph_triples_triple_id "
-                "ON knowledge_graph_triples(triple_id)"
-            ),
-            "CREATE INDEX IF NOT EXISTS ix_knowledge_graph_triples_kb_id ON knowledge_graph_triples(kb_id)",
-            (
-                "CREATE INDEX IF NOT EXISTS ix_knowledge_graph_triples_vector_pending "
-                "ON knowledge_graph_triples(kb_id, vector_status, vector_next_retry_at)"
-            ),
-            (
-                "CREATE INDEX IF NOT EXISTS ix_knowledge_graph_triple_mentions_kb_id "
-                "ON knowledge_graph_triple_mentions(kb_id)"
-            ),
-            (
-                "CREATE INDEX IF NOT EXISTS ix_knowledge_graph_triple_mentions_file_id "
-                "ON knowledge_graph_triple_mentions(file_id)"
-            ),
-            (
-                "CREATE INDEX IF NOT EXISTS ix_knowledge_graph_triple_mentions_chunk_id "
-                "ON knowledge_graph_triple_mentions(chunk_id)"
-            ),
-        ]
-
-        async with self.async_engine.begin() as conn:
-            for stmt in stmts:
-                await conn.execute(text(prefix_sql(stmt)))
+        logger.info("Knowledge schema skipped (P7 native KB removed)")
 
     async def ensure_business_schema(self):
         """确保业务 schema 包含后续新增字段（运行时 schema 演进）。"""
@@ -563,15 +203,6 @@ class PostgresManager(metaclass=SingletonMeta):
             "ALTER TABLE IF EXISTS agents ALTER COLUMN share_config DROP DEFAULT",
             "ALTER TABLE IF EXISTS agents ADD COLUMN IF NOT EXISTS is_subagent BOOLEAN NOT NULL DEFAULT FALSE",
             "ALTER TABLE IF EXISTS user_config ADD COLUMN IF NOT EXISTS enable_memory BOOLEAN NOT NULL DEFAULT FALSE",
-            """
-            UPDATE cli_auth_sessions
-            SET api_key_id = NULL
-            WHERE api_key_id IN (
-                SELECT id FROM api_keys WHERE user_id IS NULL
-            )
-            """,
-            "DELETE FROM api_keys WHERE user_id IS NULL",
-            "ALTER TABLE IF EXISTS api_keys ALTER COLUMN user_id SET NOT NULL",
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_agents_slug ON agents(slug)",
             "CREATE INDEX IF NOT EXISTS ix_agents_backend_id ON agents(backend_id)",
             "CREATE INDEX IF NOT EXISTS ix_agents_is_subagent ON agents(is_subagent)",
@@ -596,33 +227,6 @@ class PostgresManager(metaclass=SingletonMeta):
             )
             """,
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_config_options_key ON config_options(key)",
-            """
-            CREATE TABLE IF NOT EXISTS model_providers (
-                id SERIAL PRIMARY KEY,
-                provider_id VARCHAR(100) NOT NULL UNIQUE,
-                display_name VARCHAR(100) NOT NULL,
-                provider_type VARCHAR(32) NOT NULL DEFAULT 'openai',
-                default_protocol VARCHAR(64),
-                base_url VARCHAR(500) NOT NULL,
-                embedding_base_url VARCHAR(500),
-                rerank_base_url VARCHAR(500),
-                models_endpoint VARCHAR(200),
-                embedding_models_endpoint VARCHAR(200),
-                rerank_models_endpoint VARCHAR(200),
-                api_key_env VARCHAR(128),
-                api_key VARCHAR(500),
-                capabilities JSONB NOT NULL DEFAULT '[]'::jsonb,
-                enabled_models JSONB NOT NULL DEFAULT '[]'::jsonb,
-                headers_json JSONB,
-                extra_json JSONB,
-                is_enabled BOOLEAN NOT NULL DEFAULT TRUE,
-                is_builtin BOOLEAN NOT NULL DEFAULT FALSE,
-                created_by VARCHAR(100),
-                updated_by VARCHAR(100),
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                updated_at TIMESTAMPTZ DEFAULT NOW()
-            )
-            """,
             """
             CREATE TABLE IF NOT EXISTS subagent_threads (
                 id SERIAL PRIMARY KEY,
@@ -871,8 +475,6 @@ class PostgresManager(metaclass=SingletonMeta):
             WHERE status NOT IN ({AGENT_RUN_TERMINAL_STATUS_SQL})
             """,
             "CREATE INDEX IF NOT EXISTS ix_conversations_is_pinned ON conversations(is_pinned)",
-            "CREATE UNIQUE INDEX IF NOT EXISTS ix_model_providers_provider_id ON model_providers(provider_id)",
-            "CREATE INDEX IF NOT EXISTS ix_model_providers_is_enabled ON model_providers(is_enabled)",
             """
             CREATE TABLE IF NOT EXISTS agent_run_requests (
                 id SERIAL PRIMARY KEY,
@@ -892,21 +494,6 @@ class PostgresManager(metaclass=SingletonMeta):
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
             """,
-            """
-            CREATE TABLE IF NOT EXISTS user_identity_map (
-                id SERIAL PRIMARY KEY,
-                h_user_id INTEGER NOT NULL,
-                old_uid VARCHAR(64) NOT NULL,
-                new_uid VARCHAR(64) NOT NULL,
-                weknora_user_id VARCHAR(36) NOT NULL,
-                confirmed_by VARCHAR(64),
-                confirmed_at TIMESTAMPTZ,
-                batch_id VARCHAR(64),
-                created_at TIMESTAMPTZ DEFAULT NOW()
-            )
-            """,
-            "CREATE UNIQUE INDEX IF NOT EXISTS ix_user_identity_map_weknora_user_id ON user_identity_map(weknora_user_id)",
-            "CREATE INDEX IF NOT EXISTS ix_user_identity_map_h_user_id ON user_identity_map(h_user_id)",
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_agent_run_requests_request_id ON agent_run_requests(request_id)",
             """
             CREATE INDEX IF NOT EXISTS ix_agent_run_requests_queue
@@ -918,22 +505,6 @@ class PostgresManager(metaclass=SingletonMeta):
 
         stmts.extend(tenant_scope_ddl_statements())
         async with self.async_engine.begin() as conn:
-            # 历史未绑定用户的 API Key 会在下方迁移语句里被静默删除，先计数告警
-            # 便于运维凭据失效时回溯；DELETE 之后无法再查询这些 Key。
-            try:
-                unbound_keys_result = await conn.execute(
-                    text(prefix_sql("SELECT count(*) FROM api_keys WHERE user_id IS NULL"))
-                )
-                unbound_keys_count = int(unbound_keys_result.scalar() or 0)
-                if unbound_keys_count > 0:
-                    logger.warning(
-                        f"Schema migration will delete {unbound_keys_count} unbound API key(s) "
-                        "(user_id IS NULL). These keys were previously allowed via dept-admin/superadmin "
-                        "fallback and will stop authenticating after this migration."
-                    )
-            except Exception as exc:
-                logger.warning(f"Failed to count unbound api_keys before migration: {exc}")
-
             for stmt in stmts:
                 await conn.execute(text(prefix_sql(stmt)))
             try:

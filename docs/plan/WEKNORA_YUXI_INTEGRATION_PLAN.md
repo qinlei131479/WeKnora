@@ -6,14 +6,14 @@
 >
 > IM / 嵌入 / OpenAPI 不接到 yuxi；两套会话不聚合。这些不再单列阶段。
 >
-> 环境：本机 `make dev-app` / `make dev-frontend` + Docker harness；库 `WeKnora`；表前缀 `h_`。
+> 环境：本机 `make dev-kjsc-init/infra/app/frontend/harness`；库 **`agent-middle`**；表前缀 `h_`。测试环境升级见 `docs/plan/P7_TEST_ENV_UPGRADE.md`。
 
 | 进程 | 启动 |
 | --- | --- |
-| WeKnora 后端 | `make dev-app`（`:9980`） |
-| 前端 | `make dev-frontend`（`:9988`） |
-| harness API/Worker | compose `harness` profile |
-| 基础设施 | postgres / redis / minio |
+| WeKnora 后端 | `make dev-kjsc-app`（`:9980`） |
+| 前端 | `make dev-kjsc-frontend`（`:9988`） |
+| harness API/Worker | `make dev-kjsc-harness` |
+| 基础设施 | `make dev-kjsc-infra`（postgres / redis / minio） |
 
 编号对照（只此一处）：旧 P6 数据总览 → **P5**；旧 P7 模型/解析 → **P6**；旧 P9 裁剪 → **P7**。
 
@@ -25,17 +25,17 @@
 **yuxi / harness**：智能体运行时（Skill、MCP、工具、沙箱、Run、工作会话）。
 
 1. 改动最小化；WeKnora 只加内部模型代理、附件解析代理、知识库思维导图。
-2. **不新加环境变量。** P6 复用已有 `HARNESS_WEKNORA_KB`。P7 删掉独立登录后，再减配去掉只为已删能力服务的项。
-3. P6 只接线 **P7 之后还要用的能力**；原生库、供应商后台、评测、yuxi 图谱、独立登录、CLI Key **P6 不修**，留给 P7 删除。
+2. **不新加环境变量。** P6 复用已有 `HARNESS_WEKNORA_KB`。P7 减配去掉只为已删能力服务的项。
+3. P6 只接线 **P7 之后还要用的能力**；原生库、供应商后台、评测、yuxi 图谱、CLI Key **P6 不修**，留给 P7 删除。
 4. P7 备份后 **删代码和表**，不是只隐藏。P7 之后关 `HARNESS_WEKNORA_KB` 不再能回到原生 KB/模型。
-5. 禁止无备份的 DROP；P7 删除前必须可恢复备份。
+5. 禁止无备份的 DROP；P7 **只备份 `agent-middle` 库**。
 
 ### 已确认决策
 
 | 议题 | 决策 |
 | --- | --- |
-| 用户 | 统一 WeKnora；**P7 删除 `h_users` 与 harness 独立登录** |
-| Token | 主路径 WeKnora JWT；P7 后不再签发 yuxi JWT |
+| 用户 | 统一 WeKnora `users`；**P7 删除 `h_users`**。Harness `POST /api/auth/login` 与 `/api/auth/token` **保留**，校验 email+bcrypt，签发与 Go 相同的 WeKnora JWT |
+| Token | 主路径 WeKnora JWT（`JWT_SECRET`）；P7 后不再签发 yuxi JWT |
 | 知识库 | 只保留 WeKnora；yuxi 适配器实时透传 |
 | 思维导图 | **迁到 WeKnora 知识库**；智能体 `get_mindmap` 走 WeKnora |
 | 评测 / yuxi 知识图谱 | **删除**（图谱 ≠ 思维导图） |
@@ -52,7 +52,7 @@
 
 继续对齐：`JWT_SECRET`、同库、`HARNESS_WEKNORA_IDENTITY`、`HARNESS_TENANT_SCOPE`、`HARNESS_WEKNORA_KB` + `WEKNORA_BASE_URL`、P0 run-token、`HARNESS_WEKNORA_DASHBOARD`。
 `HARNESS_WEKNORA_KB_MAP` 只映射旧 `kb_*`，不放模型 ID。
-P7 删除独立登录后：去掉 `HARNESS_LOCAL_LOGIN_*`、`HARNESS_LEGACY_JWT_*`、`JWT_SECRET_KEY`（仅当代码已不再引用）。
+P7 去掉：`HARNESS_LOCAL_LOGIN_*`、`HARNESS_LEGACY_JWT_*`、`JWT_SECRET_KEY`（仅当代码已不再引用）。Python 登录接口本身保留。
 
 ---
 
@@ -67,7 +67,7 @@ P7 删除独立登录后：去掉 `HARNESS_LOCAL_LOGIN_*`、`HARNESS_LEGACY_JWT_
 | **P4** | 前端知识库收口 | 完成 |
 | **P5** | 数据总览分栏统计 | 完成 |
 | **P6** | 模型代理 + 解析 + 知识库思维导图 | 完成 |
-| **P7** | 删除重复能力 | 待执行 |
+| **P7** | 删除重复能力 | 本机已执行；测试环境按 `P7_TEST_ENV_UPGRADE.md` |
 
 ---
 
@@ -79,7 +79,7 @@ JWT 进 Redis、`run_id` 传递；全文用 `/chunks`；模型协议：不返回
 
 ## P1 · 身份统一 — 完成
 
-WeKnora JWT + `h_users` 投影。独立登录当时保留，**P7 删除**。
+WeKnora JWT + 当时投影到 `h_users`。P7 起直接读 `users`；Python 登录接口保留。
 
 ---
 
@@ -149,9 +149,9 @@ WeKnora 新增（Viewer+，用户 JWT）：
 
 ---
 
-## P7 · 删除重复能力 — 待执行
+## P7 · 删除重复能力 — 本机已执行
 
-备份 `WeKnora` 库 + 相关 MinIO → 确认本清单 → 删代码/路由 → DROP 表 → 减配 `.env.example` → 回归核心路径 → 删除本手册。
+**只备份 `agent-middle`。** 迁移 `000006` 已 DROP 未列入核心清单的表（含 `h_users`、`h_api_keys`、`h_cli_auth_sessions`）。测试环境步骤见 `docs/plan/P7_TEST_ENV_UPGRADE.md`。残留未引用代码清完后再删本手册。
 
 ### 保留（harness 核心）
 
@@ -167,8 +167,8 @@ WeKnora 新增（Viewer+，用户 JWT）：
 
 | 块 | 表 / 能力 |
 | --- | --- |
-| 身份 | `h_users`、`h_user_identity_map`、`h_tenant_backfill_map`；密码/OIDC/Token Gate；`JWT_SECRET_KEY` |
-| CLI/API Key | `h_api_keys`、`h_cli_auth_sessions` 及 CLI device flow |
+| 身份 | `h_users`、`h_user_identity_map`、`h_tenant_backfill_map`；OIDC/Token Gate；`JWT_SECRET_KEY`。**保留** Python `/api/auth/login`、`/api/auth/token` |
+| CLI/API Key | **删除** `h_api_keys`、`h_cli_auth_sessions` 及 CLI device flow |
 | 部门 | `h_departments` 及 `department_id` |
 | 原生知识库 | `h_knowledge_bases/files/chunks`；milvus/dify/notion；管理 UI |
 | yuxi 图谱 | `h_knowledge_graph_*` 四表 + 图谱 UI（导图已在 WeKnora） |
@@ -181,7 +181,7 @@ WeKnora 新增（Viewer+，用户 JWT）：
 1. 工作智能体：对话、工具、WeKnora 检索、模型、附件解析、思维导图
 2. 清单内表和入口已不存在
 3. 未列入的核心表数据还在
-4. WeKnora 登录可用；harness 独立登录入口 404
+4. WeKnora 登录可用；harness `/api/auth/login` 与 `/token` 用同一套 `users`+JWT；initialize / CLI / Token Gate 404
 5. harness CLI/API Key 不可用
 6. 相关环境变量已从 example 去掉
 7. 删除本文件
@@ -192,4 +192,4 @@ WeKnora 新增（Viewer+，用户 JWT）：
 
 - LangGraph 表无前缀；`spatial_ref_sys` 不动。
 - P6 不新增 `.env` 键。
-- 本机验收走 `dev-app` / `dev-frontend`。
+- 本机验收走 `make dev-kjsc-*`；库 `agent-middle`。

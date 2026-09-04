@@ -6,7 +6,6 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from yuxi.services.task_service import tasker
 from yuxi.agents.mcp.service import ensure_builtin_mcp_servers_in_db
-from yuxi.models.providers.service import ensure_builtin_model_providers_in_db
 from yuxi.services.run_queue_service import close_queue_clients, get_redis_client
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.neo4j import close_shared_neo4j_connection
@@ -54,24 +53,6 @@ async def lifespan(app: FastAPI):
             await repository.ensure_deep_research_agents()
     except Exception as e:
         logger.error(f"Failed to ensure default agent during startup: {e}")
-
-    # 初始化内置模型供应商配置
-    try:
-        async with pg_manager.get_async_session_context() as session:
-            await ensure_builtin_model_providers_in_db(session)
-    except Exception as e:
-        logger.error(f"Failed to ensure builtin model providers during startup: {e}")
-
-    # 初始化模型缓存（v2 模型选择使用）
-    try:
-        from yuxi.models.providers.cache import model_cache
-        from yuxi.models.providers.service import get_all_model_providers
-
-        async with pg_manager.get_async_session_context() as session:
-            providers = await get_all_model_providers(session)
-            model_cache.rebuild(providers)
-    except Exception as e:
-        logger.error(f"Failed to initialize model cache during startup: {e}")
 
     try:
         from yuxi.config.options import ensure_options_in_db

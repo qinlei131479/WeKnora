@@ -1,6 +1,5 @@
-"""PostgreSQL 业务数据模型 - 用户、部门、对话等相关表"""
+"""PostgreSQL 业务数据模型。User 映射 WeKnora `users`，其余 harness 表带 h_ 前缀。"""
 
-from datetime import timedelta
 from typing import Any
 
 from sqlalchemy import (
@@ -15,10 +14,12 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    case,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import relationship, synonym
 from yuxi.storage.minio.client import normalize_public_minio_url
 from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive
 from yuxi.storage.postgres.naming import ht
@@ -32,141 +33,102 @@ LOGIN_LOCK_DURATION_SECONDS = 300
 AGENT_RUN_TERMINAL_STATUSES = ("completed", "failed", "cancelled", "interrupted")
 
 
-class Department(Base):
-    """部门模型"""
-
-    __tablename__ = ht("departments")
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(50), nullable=False, unique=True, index=True)
-    description = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=utc_now_naive)
-
-    # 关联关系
-    users = relationship("User", back_populates="department", cascade="all, delete-orphan")
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "name": self.name,
-            "description": self.description,
-            "created_at": format_utc_datetime(self.created_at),
-        }
-
-
 class User(Base):
-    """用户模型"""
+    """WeKnora `users` 表。uid 与 id 同为 UUID；role 由中间件按成员资格写入。"""
 
-    __tablename__ = ht("users")
+    __tablename__ = "users"
+    __table_args__ = {"extend_existing": True}
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    username = Column(String, nullable=False, unique=True, index=True)  # 显示名称
-    uid = Column(String, nullable=False, unique=True, index=True)  # 登录标识
-    phone_number = Column(String, nullable=True, unique=True, index=True)  # 手机号
-    avatar = Column(String, nullable=True)  # 头像URL
-    password_hash = Column(String, nullable=False)
-    role = Column(String, nullable=False, default="user")  # 角色: superadmin, admin, user
-    department_id = Column(Integer, ForeignKey(f"{ht('departments')}.id"), nullable=True)  # 部门ID
+    id = Column(String(36), primary_key=True)
+    username = Column(String(100), nullable=False)
+    email = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    avatar = Column(String(500), nullable=True)
+    tenant_id = Column(BigInteger, nullable=True)
+    is_active = Column(Boolean, default=True)
+    can_access_all_tenants = Column(Boolean, default=False)
+    is_system_admin = Column(Boolean, default=False)
+    preferences = Column(JSON_VALUE, nullable=True)
     created_at = Column(DateTime, default=utc_now_naive)
-    last_login = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
+    deleted_at = Column(DateTime, nullable=True)
 
-    # 登录失败限制相关字段
-    login_failed_count = Column(Integer, nullable=False, default=0)  # 登录失败次数
-    last_failed_login = Column(DateTime, nullable=True)  # 最后一次登录失败时间
-    login_locked_until = Column(DateTime, nullable=True)  # 锁定到什么时候
+    uid = synonym("id")
 
-    # 软删除相关字段
-    is_deleted = Column(Integer, nullable=False, default=0, index=True)  # 是否已删除：0=否，1=是
-    deleted_at = Column(DateTime, nullable=True)  # 删除时间
+    def __init__(self, **kwargs: Any):
+        uid = kwargs.pop("uid", None)
+        if uid is not None and kwargs.get("id") is None:
+            kwargs["id"] = uid
+        role = kwargs.pop("role", None)
+        kwargs.pop("department_id", None)
+        kwargs.pop("phone_number", None)
+        kwargs.pop("is_deleted", None)
+        kwargs.pop("last_login", None)
+        kwargs.pop("login_failed_count", None)
+        kwargs.pop("last_failed_login", None)
+        kwargs.pop("login_locked_until", None)
+        kwargs.pop("department", None)
+        if not kwargs.get("email"):
+            name = str(kwargs.get("username") or "user")
+            kwargs["email"] = f"{name}@local.invalid"
+        if kwargs.get("password_hash") is None:
+            kwargs["password_hash"] = ""
+        super().__init__(**kwargs)
+        object.__setattr__(self, "_role", role)
 
-    # 关联操作日志
-    operation_logs = relationship("OperationLog", back_populates="user", cascade="all, delete-orphan")
+    @hybrid_property
+    def is_deleted(self) -> int:
+        return 1 if self.deleted_at is not None else 0
 
-    # 关联部门
-    department = relationship("Department", back_populates="users")
+    @is_deleted.expression
+    def is_deleted(cls):
+        return case((cls.deleted_at.isnot(None), 1), else_=0)
 
-    # 关联 API Keys
-    api_keys = relationship("APIKey", back_populates="user", cascade="all, delete-orphan")
+    @property
+    def role(self) -> str:
+        stored = getattr(self, "_role", None)
+        if stored:
+            return str(stored)
+        if self.is_system_admin or self.can_access_all_tenants:
+            return "superadmin"
+        return "user"
 
-    agent_env = relationship("AgentEnv", back_populates="user", cascade="all, delete-orphan", uselist=False)
-    user_config = relationship("UserConfig", back_populates="user", cascade="all, delete-orphan", uselist=False)
+    @role.setter
+    def role(self, value: str) -> None:
+        object.__setattr__(self, "_role", value)
+
+    @property
+    def department_id(self) -> None:
+        return None
+
+    @property
+    def phone_number(self) -> None:
+        return None
+
+    def is_login_locked(self) -> bool:
+        return False
+
+    def get_remaining_lock_time(self) -> int:
+        return 0
 
     def to_dict(self, include_password: bool = False) -> dict[str, Any]:
         result = {
             "id": self.id,
             "username": self.username,
             "uid": self.uid,
-            "phone_number": self.phone_number,
+            "email": self.email,
+            "phone_number": None,
             "avatar": normalize_public_minio_url(self.avatar),
             "role": self.role,
-            "department_id": self.department_id,
+            "department_id": None,
             "created_at": format_utc_datetime(self.created_at),
-            "last_login": format_utc_datetime(self.last_login),
-            "login_failed_count": self.login_failed_count,
-            "last_failed_login": format_utc_datetime(self.last_failed_login),
-            "login_locked_until": format_utc_datetime(self.login_locked_until),
+            "last_login": None,
             "is_deleted": self.is_deleted,
             "deleted_at": format_utc_datetime(self.deleted_at),
         }
         if include_password:
             result["password_hash"] = self.password_hash
         return result
-
-    def is_login_locked(self) -> bool:
-        """检查用户是否处于登录锁定状态"""
-        if self.login_locked_until is None:
-            return False
-        return utc_now_naive() < self.login_locked_until
-
-    def get_remaining_lock_time(self) -> int:
-        """获取剩余锁定时间（秒）"""
-        if self.login_locked_until is None:
-            return 0
-        remaining = int((self.login_locked_until - utc_now_naive()).total_seconds())
-        return max(0, remaining)
-
-    def increment_failed_login(self):
-        """增加登录失败计数，并在达到阈值后锁定登录"""
-        self.login_failed_count += 1
-        self.last_failed_login = utc_now_naive()
-        if self.login_failed_count >= MAX_LOGIN_FAILED_ATTEMPTS:
-            self.login_locked_until = self.last_failed_login + timedelta(seconds=LOGIN_LOCK_DURATION_SECONDS)
-
-    def reset_failed_login(self):
-        """重置登录失败相关字段"""
-        self.login_failed_count = 0
-        self.last_failed_login = None
-        self.login_locked_until = None
-
-
-class UserIdentityMap(Base):
-    """P1 人工确认的旧 h_users → WeKnora UUID 映射。P1 完成后仍保留。"""
-
-    __tablename__ = ht("user_identity_map")
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    h_user_id = Column(Integer, nullable=False, index=True)
-    old_uid = Column(String(64), nullable=False)
-    new_uid = Column(String(64), nullable=False)
-    weknora_user_id = Column(String(36), nullable=False, unique=True, index=True)
-    confirmed_by = Column(String(64), nullable=True)
-    confirmed_at = Column(DateTime, nullable=True)
-    batch_id = Column(String(64), nullable=True)
-    created_at = Column(DateTime, default=utc_now_naive)
-
-
-class TenantBackfillMap(Base):
-    """P2 历史行 → tenant 回填记录。unresolved 行不得静默归空间。"""
-
-    __tablename__ = ht("tenant_backfill_map")
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    table_name = Column(String(64), nullable=False, index=True)
-    row_pk = Column(String(64), nullable=False)
-    tenant_id = Column(BigInteger, nullable=True)
-    source = Column(String(64), nullable=False)
-    batch_id = Column(String(64), nullable=True)
-    created_at = Column(DateTime, default=utc_now_naive)
 
 
 class AgentEnv(Base):
@@ -175,13 +137,11 @@ class AgentEnv(Base):
     __tablename__ = ht("agent_envs")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    uid = Column(String, ForeignKey(f"{ht('users')}.uid"), nullable=False, unique=True, index=True)
+    uid = Column(String, nullable=False, unique=True, index=True)
     tenant_id = Column(BigInteger, nullable=True, index=True)
     env = Column(JSON, nullable=False, default=dict)
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
-
-    user = relationship("User", back_populates="agent_env")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -198,13 +158,11 @@ class UserConfig(Base):
     __tablename__ = ht("user_config")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    uid = Column(String, ForeignKey(f"{ht('users')}.uid"), nullable=False, unique=True, index=True)
+    uid = Column(String, nullable=False, unique=True, index=True)
     tenant_id = Column(BigInteger, nullable=True, index=True)
     enable_memory = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=utc_now_naive)
     updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive)
-
-    user = relationship("User", back_populates="user_config")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -519,14 +477,11 @@ class OperationLog(Base):
     __tablename__ = ht("operation_logs")
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey(f"{ht('users')}.id"), nullable=False)
+    user_id = Column(String(36), nullable=True)
     operation = Column(String, nullable=False)
     details = Column(Text, nullable=True)
     ip_address = Column(String, nullable=True)
     timestamp = Column(DateTime, default=utc_now_naive)
-
-    # 关联用户
-    user = relationship("User", back_populates="operation_logs")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -677,67 +632,6 @@ class MCPServer(Base):
         return config
 
 
-class ModelProvider(Base):
-    """模型供应商配置，存储 provider 基础信息、模型端点和可用模型。"""
-
-    __tablename__ = ht("model_providers")
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    provider_id = Column(String(100), nullable=False, unique=True, index=True, comment="供应商稳定标识")
-    display_name = Column(String(100), nullable=False, comment="展示名称")
-    provider_type = Column(String(32), nullable=False, default="openai", comment="供应商适配类型，默认 openai")
-
-    default_protocol = Column(String(64), nullable=True, comment="默认协议，如 openai_compatible")
-    base_url = Column(String(500), nullable=False, comment="API 基础 URL")
-    embedding_base_url = Column(String(500), nullable=True, comment="Embedding 模型请求基础 URL")
-    rerank_base_url = Column(String(500), nullable=True, comment="Rerank 模型请求基础 URL")
-    models_endpoint = Column(String(200), nullable=True, comment="聊天/通用模型列表端点")
-    embedding_models_endpoint = Column(String(200), nullable=True, comment="Embedding 模型列表端点")
-    rerank_models_endpoint = Column(String(200), nullable=True, comment="Rerank 模型列表端点")
-    api_key_env = Column(String(128), nullable=True, comment="API Key 环境变量名")
-    api_key = Column(String(500), nullable=True, comment="直接配置的 API Key")
-
-    capabilities = Column(JSON, nullable=False, default=list, comment="支持能力：chat/embedding/rerank")
-    enabled_models = Column(JSON, nullable=False, default=list, comment="已启用模型配置对象")
-    headers_json = Column(JSON, nullable=True, comment="额外请求头")
-    extra_json = Column(JSON, nullable=True, comment="扩展配置")
-
-    is_enabled = Column(Boolean, nullable=False, default=True, index=True, comment="供应商是否启用")
-    is_builtin = Column(Boolean, nullable=False, default=False, comment="是否内置")
-
-    created_by = Column(String(100), nullable=True)
-    updated_by = Column(String(100), nullable=True)
-    created_at = Column(DateTime, default=utc_now_naive, comment="创建时间")
-    updated_at = Column(DateTime, default=utc_now_naive, onupdate=utc_now_naive, comment="更新时间")
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "provider_id": self.provider_id,
-            "display_name": self.display_name,
-            "provider_type": self.provider_type,
-            "default_protocol": self.default_protocol,
-            "base_url": self.base_url,
-            "embedding_base_url": self.embedding_base_url,
-            "rerank_base_url": self.rerank_base_url,
-            "models_endpoint": self.models_endpoint,
-            "embedding_models_endpoint": self.embedding_models_endpoint,
-            "rerank_models_endpoint": self.rerank_models_endpoint,
-            "api_key_env": self.api_key_env,
-            "api_key": self.api_key,
-            "capabilities": self.capabilities or [],
-            "enabled_models": self.enabled_models or [],
-            "headers_json": self.headers_json or {},
-            "extra_json": self.extra_json or {},
-            "is_enabled": bool(self.is_enabled),
-            "is_builtin": bool(self.is_builtin),
-            "created_by": self.created_by,
-            "updated_by": self.updated_by,
-            "created_at": format_utc_datetime(self.created_at),
-            "updated_at": format_utc_datetime(self.updated_at),
-        }
-
-
 class ConfigOption(Base):
     """系统定义、管理员维护值的通用配置项。"""
 
@@ -796,90 +690,6 @@ class TaskRecord(Base):
         data.pop("payload", None)
         data.pop("result", None)
         return data
-
-
-class APIKey(Base):
-    """API Key 模型"""
-
-    __tablename__ = ht("api_keys")
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    key_hash = Column(String(64), nullable=False, unique=True, index=True)
-    key_prefix = Column(String(16), nullable=False)
-    name = Column(String(100), nullable=False)
-
-    user_id = Column(Integer, ForeignKey(f"{ht('users')}.id"), nullable=False, index=True)
-    department_id = Column(Integer, ForeignKey(f"{ht('departments')}.id"), nullable=True, index=True)
-
-    expires_at = Column(DateTime, nullable=True)
-    is_enabled = Column(Boolean, nullable=False, default=True)
-    last_used_at = Column(DateTime, nullable=True)
-
-    created_by = Column(String(64), nullable=False)
-    created_at = Column(DateTime, default=utc_now_naive)
-
-    # 关联
-    user = relationship("User", back_populates="api_keys")
-    department = relationship("Department")
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "key_prefix": self.key_prefix,
-            "name": self.name,
-            "user_id": self.user_id,
-            "department_id": self.department_id,
-            "expires_at": format_utc_datetime(self.expires_at),
-            "is_enabled": bool(self.is_enabled),
-            "last_used_at": format_utc_datetime(self.last_used_at),
-            "created_by": self.created_by,
-            "created_at": format_utc_datetime(self.created_at),
-        }
-
-    def is_valid(self) -> bool:
-        """检查 Key 是否有效"""
-        if not self.is_enabled:
-            return False
-        if self.expires_at and utc_now_naive() > self.expires_at:
-            return False
-        return True
-
-
-class CLIAuthSession(Base):
-    """CLI 浏览器授权会话。"""
-
-    __tablename__ = ht("cli_auth_sessions")
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    device_code_hash = Column(String(64), nullable=False, unique=True, index=True)
-    user_code = Column(String(16), nullable=False, unique=True, index=True)
-    status = Column(String(32), nullable=False, default="pending", index=True)
-    key_name = Column(String(100), nullable=False)
-
-    approved_user_id = Column(Integer, ForeignKey(f"{ht('users')}.id"), nullable=True, index=True)
-    api_key_id = Column(Integer, ForeignKey(f"{ht('api_keys')}.id"), nullable=True, index=True)
-
-    created_at = Column(DateTime, default=utc_now_naive, nullable=False)
-    expires_at = Column(DateTime, nullable=False)
-    approved_at = Column(DateTime, nullable=True)
-    consumed_at = Column(DateTime, nullable=True)
-
-    approved_user = relationship("User")
-    api_key = relationship("APIKey")
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "id": self.id,
-            "user_code": self.user_code,
-            "status": self.status,
-            "key_name": self.key_name,
-            "approved_user_id": self.approved_user_id,
-            "api_key_id": self.api_key_id,
-            "created_at": format_utc_datetime(self.created_at),
-            "expires_at": format_utc_datetime(self.expires_at),
-            "approved_at": format_utc_datetime(self.approved_at),
-            "consumed_at": format_utc_datetime(self.consumed_at),
-        }
 
 
 class AgentRun(Base):

@@ -159,7 +159,6 @@ init_kjsc() {
         log_warning "SILICONFLOW_API_KEY 未设置（harness 对话需要时可自行写入 .env）"
     fi
 
-    ensure_env_key "JWT_SECRET_KEY" "$(generate_hex 32)"
     ensure_env_key "YUXI_INSTANCE_ID" "instance-$(generate_hex 8)"
     ensure_env_key "SANDBOX_PROVISIONER_TOKEN" "$(generate_hex 32)"
     ensure_env_key "AGENT_HARNESS_DB_NAME" "agent_harness"

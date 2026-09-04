@@ -87,6 +87,22 @@ def test_global_agent_scope_preserves_admin_management():
     assert resolve_agent_permission(_user(role="admin"), resource) == ResourcePermission.MANAGE
 
 
+def test_readonly_global_agent_is_editable_for_owner_and_admin_only():
+    resource = _resource(
+        created_by="owner-1",
+        share_config={
+            "version": 2,
+            "read_scope": {"access_level": "global"},
+            "manage_scope": None,
+        },
+    )
+
+    assert resolve_agent_permission(_user(uid="owner-1", role="user"), resource) == ResourcePermission.MANAGE
+    assert resolve_agent_permission(_user(uid="other", role="admin"), resource) == ResourcePermission.MANAGE
+    assert resolve_agent_permission(_user(uid="other", role="superadmin"), resource) == ResourcePermission.MANAGE
+    assert resolve_agent_permission(_user(uid="other", role="user"), resource) == ResourcePermission.READ
+
+
 def test_user_agent_and_skill_scope_preserves_user_management():
     resource = _resource(
         share_config={

@@ -5385,6 +5385,7 @@ export default {
         changeIcon: '아이콘 변경',
         share: '공유 권한',
         notEditable: '이 에이전트는 편집할 수 없습니다',
+        readonlyHint: '이 에이전트 설정은 볼 수 있지만 관리 권한이 없습니다.',
         nameRequired: '에이전트 이름을 입력하세요',
         iconUploadType: '이미지 파일만 업로드할 수 있습니다',
         iconUploadSize: '이미지 크기는 {size}MB를 초과할 수 없습니다',

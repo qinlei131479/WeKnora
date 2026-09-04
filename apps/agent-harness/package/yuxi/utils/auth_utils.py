@@ -61,6 +61,15 @@ class AuthUtils:
 
     @staticmethod
     def verify_password(stored_password: str, provided_password: str) -> bool:
+        if not stored_password:
+            return False
+        if stored_password.startswith("$2"):
+            try:
+                import bcrypt
+
+                return bcrypt.checkpw(provided_password.encode("utf-8"), stored_password.encode("utf-8"))
+            except (ValueError, TypeError, ImportError):
+                return False
         if not stored_password.startswith("$argon2"):
             return False
         try:

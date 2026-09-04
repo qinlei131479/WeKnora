@@ -1,17 +1,13 @@
-"""P3 功能开关。WeKnora 知识库实时透传默认关闭。"""
+"""P3 功能开关。P7 后知识库只走 WeKnora。"""
 
 from __future__ import annotations
 
 import os
 
 
-def _flag(name: str) -> bool:
-    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
-
-
 def is_weknora_kb_enabled() -> bool:
-    """接入模式：智能体知识库选择与 list_kbs 只走 WeKnora；关闭后仍查 yuxi 原生库。"""
-    return _flag("HARNESS_WEKNORA_KB")
+    """P7 后只走 WeKnora。"""
+    return True
 
 
 def weknora_base_url() -> str:
