@@ -295,6 +295,18 @@
                     <encoding>${project.build.sourceEncoding}</encoding>
                 </configuration>
             </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.4.0</version>
+                <configuration>
+                    <nonFilteredFileExtensions>
+                        <nonFilteredFileExtension>wav</nonFilteredFileExtension>
+                        <!-- 如有其他二进制文件，继续添加 -->
+                    </nonFilteredFileExtensions>
+                </configuration>
+            </plugin>
         </plugins>
         <pluginManagement>
             <plugins>
