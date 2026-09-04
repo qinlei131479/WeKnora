@@ -4,6 +4,12 @@
 > **禁止** `migrate down`（包括 KJSC `000002` 与官方 `082`）。  
 > 代码与迁移已在本机落地；本文件给测试环境按同样步骤升级。
 
+测试环境统一用户：
+
+`98e324c7-8d86-4550-a4c2-cfca9e0d42b6`（WeKnora `users.id`）
+
+历史 harness 数据里的旧 `uid` / `created_by`（如 `admin`）必须 remap 到该 UUID，否则 P7 后旧会话、智能体、Run 对不上当前登录用户。
+
 ---
 
 ## 0. 这次改了什么
@@ -44,8 +50,9 @@ pg_restore -l agent-middle-p7-YYYYMMDD.dump | head
 ## 2. 部署顺序
 
 1. **先备份**，确认 dump 文件已拷走。
-2. 发布本分支代码（Go app-core、前端、harness 镜像一起升）。
-3. **只升 KJSC 迁移**（不要跑官方 `make migrate-up` / `migrate down`）：
+2. **uid remap（必须在 000006 之前）**，见第 2.1 节。
+3. 发布本分支代码（Go app-core、前端、harness 镜像一起升）。
+4. **只升 KJSC 迁移**（不要跑官方 `make migrate-up` / `migrate down`）：
 
 ```bash
 # 仓库根目录，.env 里 DB_HOST/DB_NAME 必须指向测试环境的 agent-middle
@@ -53,8 +60,40 @@ make migrate-kjsc
 # 等价：./scripts/migrate_kjsc.sh up
 ```
 
-4. 重启 WeKnora app、前端、harness api / worker。
-5. 做第 5 节冒烟。
+5. 重启 WeKnora app、前端、harness api / worker。
+6. 做第 5 节冒烟。
+
+### 2.1 uid remap（测试环境）
+
+目标：旧 `uid=admin` → `98e324c7-8d86-4550-a4c2-cfca9e0d42b6`。
+
+先确认该 UUID 在测试库存在：
+
+```sql
+SELECT id, username, email FROM users
+ WHERE id = '98e324c7-8d86-4550-a4c2-cfca9e0d42b6' AND deleted_at IS NULL;
+```
+
+再在 **DROP 之前** 执行正向脚本（会写 `h_users` / `h_user_identity_map` 以及仍保留的核心表）：
+
+```bash
+psql -h <测试库主机> -U postgres -d agent-middle \
+  -f apps/agent-harness/scripts/p1_uid_remap.sql
+```
+
+核对：
+
+```sql
+SELECT DISTINCT uid FROM h_conversations;
+SELECT DISTINCT created_by FROM h_agents;
+-- 期望看到 98e324c7-8d86-4550-a4c2-cfca9e0d42b6，不应再大量出现 admin
+```
+
+若还有其它旧登录名 uid，同样改成该 UUID 后再升 000006。
+
+**若已经跑过 000006**：不要整份执行原脚本（会碰已删表）。只对还在的表做 UPDATE，例如 `h_conversations.uid`、`h_agent_runs.uid`、`h_agents.created_by`、`share_config` 等，目标 UUID 相同。
+
+反向脚本 `p1_uid_remap_reverse.sql` **仅 000006 之前**可用。P7 代码已上线后不要 reverse；回滚用第 6 节 dump。
 
 ### 迁移注意
 
@@ -107,9 +146,9 @@ make migrate-kjsc
 
 登录：
 
-- [ ] WeKnora 前端 `/login`（`/api/v1/auth/login`）成功，进入平台。
-- [ ] 同一账号用 email + 密码调 harness `POST /api/auth/login` 或 `POST /api/auth/token`，拿到的 JWT 能调 harness `/api/auth/me`，且 `user_id` 为 UUID。
-- [ ] 旧会话（`h_conversations` / `h_messages`）仍能打开。
+- [ ] WeKnora 前端 `/login`（`/api/v1/auth/login`）成功，进入平台。登录用户 id 为 `98e324c7-8d86-4550-a4c2-cfca9e0d42b6`。
+- [ ] 同一账号用 email + 密码调 harness `POST /api/auth/login` 或 `POST /api/auth/token`，拿到的 JWT 能调 harness `/api/auth/me`，且 `user_id` 为上述 UUID。
+- [ ] remap 前的旧会话（`h_conversations` / `h_messages`）仍能打开，不是空列表。
 - [ ] 工作区能列出 WeKnora 知识库；对话检索、模型出话、附件解析、思维导图可用。
 - [ ] Skill / MCP / 智能体 / 数据总览可用。
 
@@ -136,6 +175,7 @@ pg_restore -h <主机> -U postgres -d agent-middle --no-owner --no-acl \
 
 3. 回退到升级前的镜像/代码。
 4. **不要**在「恢复错的库」上再跑一遍 `000006`。
+5. 已跑 000006 或已发 P7 代码后，不要用 `p1_uid_remap_reverse.sql`。
 
 `dropdb` 前必须再确认主机和库名，禁止对生产库操作。
 
@@ -149,3 +189,24 @@ pg_restore -h <主机> -U postgres -d agent-middle --no-owner --no-acl \
 - `schema_migrations_kjsc.version = 6`
 - `\dt h_*` 仅剩 16 张核心表；`h_agents` 6 行、`users` 2 行仍在
 - `h_users` / `h_api_keys` / `h_cli_auth_sessions` 已不存在
+
+---
+
+## 8. 清理执行计划
+
+已删（本次，不挡升级）：
+
+- 脚本：`p0_verify.py`、`copy_harness_tables_to_weknora.sh`、`seed_initial_users.py`
+- 已砍能力测试：部门 / API Key / CLI / OIDC / 原生 KB / 图谱 / 评测 / yuxi 供应商 / OCR 配置中心 e2e
+
+**等测试环境升级完成后再执行（先留在仓库）：**
+
+| 时机 | 项 | 说明 |
+| --- | --- | --- |
+| 升级完成后 | 删除 `scripts/p1_identity_candidates.py` | remap 前只读核对用 |
+| 升级完成后 | 删除 `scripts/p1_uid_remap.sql` | 测试环境正向 remap；目标 UUID 见上文 |
+| 升级完成后 | 删除 `scripts/p1_uid_remap_reverse.sql` | 仅 000006 前的 remap 回滚 |
+| 升级完成后 | 删除未注册路由：`auth_dept_router.py`、`knowledge_eval_router.py`、`graph_router.py`、`external_kb_router.py` | 路由已不挂载 |
+| 升级完成后 | 删除死实现：`oidc_service.py`、`department_repository.py`、原生 milvus/dify/notion、`knowledge/graphs/`、`knowledge/eval/`、多余 yuxi OCR parser | P7 能力已删，第二批清代码 |
+
+长期保留：`scripts/docker-env.py`（compose / 测试启动仍用）。
