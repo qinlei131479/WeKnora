@@ -233,8 +233,10 @@ def require_knowledge_base_permission(
 
 
 def resolve_agent_permission(user: Any, resource: ShareableResource) -> ResourcePermission:
-    """解析 Agent 权限。"""
+    """解析 Agent 权限：管理员可改任意智能体；拥有者可改自己的；其余按共享范围。"""
 
+    if str(_value(user, "role") or "") in {"admin", "superadmin"}:
+        return ResourcePermission.MANAGE
     return resolve_resource_permission(
         user,
         resource,

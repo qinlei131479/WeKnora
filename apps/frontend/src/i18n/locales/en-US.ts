@@ -1236,6 +1236,7 @@ export default {
         changeIcon: 'Change icon',
         share: 'Sharing',
         notEditable: 'This agent cannot be edited',
+        readonlyHint: 'You can view this agent, but you do not have manage permission.',
         nameRequired: 'Please enter an agent name',
         iconUploadType: 'Only image files are allowed',
         iconUploadSize: 'Image size cannot exceed {size}MB',

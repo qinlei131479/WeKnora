@@ -17,7 +17,8 @@ from yuxi.models.providers.repository import (
     list_model_providers,
     update_model_provider,
 )
-from yuxi.storage.postgres.models_business import ModelProvider
+
+ModelProvider = Any
 
 VALID_MODEL_TYPES = {"chat", "embedding", "rerank"}
 VALID_MODEL_SOURCES = {"manual", "remote"}

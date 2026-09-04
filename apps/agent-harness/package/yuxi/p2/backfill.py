@@ -21,7 +21,7 @@ def resolve_owner_tenant(
         if key in weknora_id_to_tenant:
             found[int(weknora_id_to_tenant[key])] = "users.tenant_id"
         elif key in uid_to_tenant:
-            found[int(uid_to_tenant[key])] = "h_users.uid"
+            found[int(uid_to_tenant[key])] = "users.id"
     if len(found) == 1:
         tenant_id, source = next(iter(found.items()))
         return tenant_id, source

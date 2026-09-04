@@ -148,7 +148,7 @@ const openCreateAgentModal = () => {
 }
 
 const openEditAgentModal = (agent) => {
-  if (!canManageAgent(agent)) return
+  if (!agent?.id) return
   openMoreAgentId.value = null
   agentEditModalRef.value?.openEdit(agent)
 }
@@ -160,11 +160,7 @@ const openAgentChat = (agent) => {
 
 const handleCardClick = (agent) => {
   if (openMoreAgentId.value === agent.id) return
-  if (canManageAgent(agent)) {
-    openEditAgentModal(agent)
-    return
-  }
-  if (!agent.is_subagent) openAgentChat(agent)
+  openEditAgentModal(agent)
 }
 
 const refreshAgentLists = async () => {

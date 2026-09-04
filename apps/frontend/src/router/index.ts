@@ -257,12 +257,6 @@ const router = createRouter({
                   }
                 },
                 {
-                  path: "knowledgebase/:kbId",
-                  name: "harnessExtensionKb",
-                  component: () => import("@harness/views/DataBaseInfoView.vue"),
-                  meta: { requiresInit: true, requiresAuth: true }
-                },
-                {
                   path: "mcp/:slug",
                   name: "harnessExtensionMcp",
                   component: () => import("@harness/components/extensions/McpDetailView.vue"),

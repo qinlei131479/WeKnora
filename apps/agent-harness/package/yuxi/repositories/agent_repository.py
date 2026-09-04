@@ -144,8 +144,6 @@ def user_can_access_agent(user: User, agent: Agent) -> bool:
 
 
 def user_can_manage_agent(user: User, agent: Agent) -> bool:
-    if is_builtin_agent(agent):
-        return user.role in ADMIN_ROLES
     return resolve_agent_permission(user, agent) == ResourcePermission.MANAGE
 
 

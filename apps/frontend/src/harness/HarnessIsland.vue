@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, onBeforeMount, onUnmounted, ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 import enUS from 'ant-design-vue/es/locale/en_US'
 import ruRU from 'ant-design-vue/es/locale/ru_RU'
@@ -14,7 +15,6 @@ import { useConfigStore } from '@harness/stores/config'
 import { useInfoStore } from '@harness/stores/info'
 import { useTaskerStore } from '@harness/stores/tasker'
 import TaskCenterDrawer from '@harness/components/TaskCenterDrawer.vue'
-import HarnessTokenGate from '@harness/HarnessTokenGate.vue'
 
 const HARNESS_THEME_CLASS = 'harness-theme'
 const HARNESS_DARK_CLASS = 'harness-dark'
@@ -26,6 +26,7 @@ const ANTD_LOCALES = {
 }
 
 const { locale } = useI18n()
+const router = useRouter()
 const userStore = useUserStore()
 const agentStore = useAgentStore()
 const chatThreadsStore = useChatThreadsStore()
@@ -68,6 +69,7 @@ onMounted(async () => {
   try {
     userStore.syncToken()
     if (!userStore.token) {
+      router.replace({ path: '/login', query: { redirect: window.location.pathname + window.location.search } })
       return
     }
     await userStore.getCurrentUser()
@@ -98,7 +100,7 @@ onMounted(async () => {
     >
       <div :class="rootClass">
         <div v-if="booting" class="harness-root-body" />
-        <HarnessTokenGate v-else-if="!userStore.token" />
+        <div v-else-if="!userStore.token" class="harness-root-body" />
         <template v-else>
           <div class="harness-root-body">
             <slot />

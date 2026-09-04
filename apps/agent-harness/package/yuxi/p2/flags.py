@@ -15,10 +15,5 @@ def is_tenant_scope_enabled() -> bool:
 
 
 def is_department_enforced() -> bool:
-    """是否强制部门绑定并允许 department 共享匹配。
-
-    租户开关打开时默认关闭部门强制（可用 HARNESS_DEPARTMENT_ENFORCED 覆盖）。
-    """
-    if os.environ.get("HARNESS_DEPARTMENT_ENFORCED", "").strip():
-        return _flag("HARNESS_DEPARTMENT_ENFORCED")
-    return not is_tenant_scope_enabled()
+    """部门能力已删除。"""
+    return False

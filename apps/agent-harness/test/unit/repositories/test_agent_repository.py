@@ -186,6 +186,24 @@ def test_user_shared_agent_is_manageable_for_normal_user():
     assert user_can_manage_agent(user, agent) is True
 
 
+def test_readonly_global_agent_manageable_for_owner_and_admin():
+    agent = Agent(
+        slug="deep-research",
+        name="深度研究",
+        backend_id="ChatbotAgent",
+        created_by="owner-1",
+        share_config=DEFAULT_SHARE_CONFIG,
+    )
+    owner = User(username="owner", uid="owner-1", password_hash="x", role="user")
+    admin = User(username="admin", uid="admin-1", password_hash="x", role="admin")
+    reader = User(username="reader", uid="reader-1", password_hash="x", role="user")
+
+    assert user_can_manage_agent(owner, agent) is True
+    assert user_can_manage_agent(admin, agent) is True
+    assert user_can_access_agent(reader, agent) is True
+    assert user_can_manage_agent(reader, agent) is False
+
+
 @pytest.mark.asyncio
 async def test_delegated_manager_update_preserves_shared_agent_acl():
     db = FakeDb()

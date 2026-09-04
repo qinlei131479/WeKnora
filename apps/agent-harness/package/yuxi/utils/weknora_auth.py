@@ -83,3 +83,27 @@ def verify_weknora_access_token(token: str) -> dict[str, Any]:
         "iat": payload.get("iat"),
         "type": "access",
     }
+
+
+def create_weknora_access_token(*, user_id: str, email: str | None, tenant_id: int) -> str:
+    now = int(utc_now().timestamp())
+    payload = {
+        "user_id": str(user_id),
+        "email": email,
+        "tenant_id": int(tenant_id),
+        "exp": now + 24 * 3600,
+        "iat": now,
+        "type": "access",
+    }
+    return jwt.encode(payload, get_weknora_jwt_secret(), algorithm=JWT_ALGORITHM)
+
+
+def create_weknora_refresh_token(*, user_id: str) -> str:
+    now = int(utc_now().timestamp())
+    payload = {
+        "user_id": str(user_id),
+        "exp": now + 7 * 24 * 3600,
+        "iat": now,
+        "type": "refresh",
+    }
+    return jwt.encode(payload, get_weknora_jwt_secret(), algorithm=JWT_ALGORITHM)

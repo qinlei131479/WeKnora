@@ -29,6 +29,7 @@ const runtimeAgentModalTabs = ['model', 'tools', 'other']
 
 const showAgentModal = ref(false)
 const editingAgentId = ref(null)
+const canEditOpenedAgent = ref(true)
 const agentModalActiveTab = ref('basic')
 const agentIconUploading = ref(false)
 const saving = ref(false)
@@ -181,7 +182,9 @@ const normalizeShareConfigForPayload = () => {
 }
 
 const isEditingBuiltinAgent = computed(() => isBuiltinAgent({ id: editingAgentId.value }))
-const canEditAgentShareConfig = computed(() => !isEditingBuiltinAgent.value)
+const canEditAgentShareConfig = computed(
+  () => canEditOpenedAgent.value && !isEditingBuiltinAgent.value
+)
 const getAgentShareAllowedLevels = () => {
   if (isEditingBuiltinAgent.value) return ['global']
   if (userStore.isAdmin) return ['global', 'department', 'user']
@@ -244,6 +247,7 @@ const focusAgentNameInput = async () => {
 
 const openCreate = () => {
   editingAgentId.value = null
+  canEditOpenedAgent.value = true
   agentModalActiveTab.value = 'basic'
   resetAgentForm()
   agentStore.resetAgentConfig()
@@ -255,12 +259,16 @@ const openEdit = async (agent) => {
   const agentId = typeof agent === 'string' ? agent : agent?.id
   if (!agentId) return
 
-  const detail = await agentStore.fetchAgentDetail(agentId, true)
-  if (!detail?.can_manage) {
-    MessagePlugin.warning(t('agent.runtimeManage.editor.notEditable'))
+  let detail
+  try {
+    detail = await agentStore.fetchAgentDetail(agentId, true)
+  } catch (error) {
+    MessagePlugin.error(error.message || t('agent.runtimeManage.loadFailed'))
     return
   }
+  if (!detail?.id) return
 
+  canEditOpenedAgent.value = !!detail.can_manage
   editingAgentId.value = detail.id
   agentModalActiveTab.value = 'basic'
   Object.assign(agentForm, {
@@ -280,6 +288,7 @@ const openEdit = async (agent) => {
   await agentStore.selectAgent(detail.id, { allowSubagent: true })
   captureProfileBaseline()
   showAgentModal.value = true
+  if (canEditOpenedAgent.value) focusAgentNameInput()
 }
 
 const restoreChatAgentSelectionIfNeeded = async () => {
@@ -310,6 +319,7 @@ const beforeAgentIconUpload = (file) => {
 }
 
 const uploadAgentIcon = async (file) => {
+  if (!canEditOpenedAgent.value) return
   agentIconUploading.value = true
   try {
     const data = await userApi.uploadImage(file)
@@ -340,6 +350,10 @@ const buildAgentPayload = () => {
 }
 
 const saveAgent = async () => {
+  if (!canEditOpenedAgent.value) {
+    MessagePlugin.warning(t('agent.runtimeManage.editor.notEditable'))
+    return
+  }
   if (!agentForm.name.trim()) {
     agentModalActiveTab.value = 'basic'
     MessagePlugin.error(t('agent.runtimeManage.editor.nameRequired'))
@@ -429,6 +443,9 @@ defineExpose({
                   <div class="section-header">
                     <h2>{{ t('agent.editor.basicInfo') }}</h2>
                     <p class="section-description">{{ t('agent.runtimeManage.editor.basicInfoDesc') }}</p>
+                    <p v-if="!canEditOpenedAgent" class="section-description readonly-hint">
+                      {{ t('agent.runtimeManage.editor.readonlyHint') }}
+                    </p>
                   </div>
                   <div class="agent-profile-header">
                     <div class="agent-icon-preview">
@@ -436,7 +453,7 @@ defineExpose({
                         <a-upload
                           :show-upload-list="false"
                           :before-upload="beforeAgentIconUpload"
-                          :disabled="agentIconUploading"
+                          :disabled="!canEditOpenedAgent || agentIconUploading"
                           accept="image/*"
                         >
                           <div
@@ -458,7 +475,7 @@ defineExpose({
                               :alt="agentForm.name || t('agent.title')"
                               class="agent-icon-preview-avatar"
                             />
-                            <div class="agent-icon-mask">
+                            <div v-if="canEditOpenedAgent" class="agent-icon-mask">
                               <RefreshCw v-if="agentIconUploading" :size="16" class="spinning" />
                               <Upload v-else :size="16" />
                               <span>{{
@@ -477,6 +494,7 @@ defineExpose({
                             type="text"
                             :placeholder="t('agent.runtimeManage.editor.namePlaceholder')"
                             :aria-label="t('agent.editor.name')"
+                            :readonly="!canEditOpenedAgent"
                           />
                           <input
                             v-if="!editingAgentId"
@@ -517,10 +535,11 @@ defineExpose({
                         class="agent-description-textarea"
                         :rows="3"
                         :placeholder="t('agent.runtimeManage.editor.descriptionPlaceholder')"
+                        :readonly="!canEditOpenedAgent"
                       />
                     </label>
                   </div>
-                  <div v-if="canEditAgentShareConfig" class="share-config-block">
+                  <div v-if="editingAgentId || canEditAgentShareConfig" class="share-config-block">
                     <div class="section-heading">
                       <span>{{ t('agent.runtimeManage.editor.share') }}</span>
                     </div>
@@ -529,6 +548,10 @@ defineExpose({
                       v-model="agentShareConfig"
                       :auto-select-user-dept="true"
                       :allowed-access-levels="getAgentShareAllowedLevels()"
+                      :disabled="!canEditAgentShareConfig"
+                      :disabled-reason="
+                        canEditAgentShareConfig ? '' : t('agent.runtimeManage.editor.readonlyHint')
+                      "
                     />
                   </div>
                 </section>
@@ -547,9 +570,14 @@ defineExpose({
               <div class="settings-footer">
                 <div class="settings-footer-actions">
                   <t-button variant="outline" :disabled="saving" @click="closeAgentModal">
-                    {{ t('common.cancel') }}
+                    {{ canEditOpenedAgent ? t('common.cancel') : t('common.close') }}
                   </t-button>
-                  <t-button theme="primary" :loading="saving" @click="saveAgent">
+                  <t-button
+                    v-if="canEditOpenedAgent"
+                    theme="primary"
+                    :loading="saving"
+                    @click="saveAgent"
+                  >
                     {{
                       editingAgentId
                         ? t('agent.editor.buttons.saveAndClose')
@@ -723,6 +751,11 @@ defineExpose({
   font-size: 14px;
   color: var(--td-text-color-placeholder);
   line-height: 22px;
+
+  &.readonly-hint {
+    margin-top: 6px;
+    color: var(--td-text-color-secondary);
+  }
 }
 
 .settings-footer {

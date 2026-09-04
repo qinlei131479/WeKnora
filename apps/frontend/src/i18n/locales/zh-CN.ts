@@ -5385,6 +5385,7 @@ export default {
         changeIcon: '更换图标',
         share: '共享权限',
         notEditable: '当前智能体不可编辑',
+        readonlyHint: '你可以查看此智能体的配置，但没有管理权限。',
         nameRequired: '请填写智能体名称',
         iconUploadType: '只能上传图片文件',
         iconUploadSize: '图片大小不能超过 {size}MB',

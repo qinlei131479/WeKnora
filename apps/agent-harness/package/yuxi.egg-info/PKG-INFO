@@ -13,6 +13,7 @@ Requires-Dist: aiohttp>=3.14.1
 Requires-Dist: aiosqlite>=0.20.0
 Requires-Dist: argon2-cffi>=25.1.0
 Requires-Dist: asyncpg>=0.30.0
+Requires-Dist: bcrypt>=4.2.0
 Requires-Dist: chardet>=5.0.0
 Requires-Dist: colorlog>=6.9.0
 Requires-Dist: dashscope>=1.23.2

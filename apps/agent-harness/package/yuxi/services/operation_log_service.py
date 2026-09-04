@@ -5,7 +5,7 @@ from yuxi.storage.postgres.models_business import OperationLog
 
 async def log_operation(
     db: AsyncSession,
-    user_id: int | None,
+    user_id: str | int | None,
     operation: str,
     details: str | None = None,
     request: Request | None = None,
