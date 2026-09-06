@@ -419,8 +419,8 @@ const isMenuItemActive = (itemPath: string): boolean => {
             return isNewChatRoute.value;
         case 'harness/workspace':
             return currentRoute === 'harnessWorkspace';
-        case 'harness/dashboard':
-            return currentRoute === 'harnessDashboard';
+        case 'dashboard':
+            return currentRoute === 'dashboard' || currentRoute === 'harnessDashboard';
         case 'settings':
             return currentRoute === 'settings';
         default:
@@ -445,7 +445,7 @@ const getIconActiveState = (itemPath: string) => {
 
 const HARNESS_TOP_MENU_PATHS = new Set([
     'harness/workspace',
-    'harness/dashboard',
+    'dashboard',
 ]);
 
 // 分离上下两部分菜单（使用 visibleMenuArr 以便 lite 模式过滤 logout）

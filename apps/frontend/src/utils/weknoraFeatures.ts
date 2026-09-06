@@ -181,7 +181,7 @@ export function getFeatureFlags(): FeatureFlags {
     hideClaw: hide,
     hideVersionInfo: hide,
     hideFontPickers: hide,
-    hideFontSize: hide,
+    hideFontSize: false,
     hideKnowledgeGraph: hide,
     hideDatasource: hide,
     hideShareManagement: hide,
@@ -259,7 +259,7 @@ export function shouldHideFontPickers(): boolean {
 
 /** 是否隐藏顶部栏与常规设置中的字体大小 */
 export function shouldHideFontSize(): boolean {
-  return readHide()
+  return false
 }
 
 /** 是否隐藏知识库「知识图谱」配置入口 */

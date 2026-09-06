@@ -166,6 +166,12 @@ const router = createRouter({
           meta: { requiresInit: true, requiresAuth: true }
         },
         {
+          path: "dashboard",
+          name: "dashboard",
+          component: () => import("../views/dashboard/index.vue"),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
           path: "organizations",
           name: "organizationList",
           component: () => import("../views/organization/OrganizationList.vue"),
@@ -198,6 +204,8 @@ const router = createRouter({
           redirect: { path: "/platform/settings", query: { section: "runtime-queues" } },
           meta: { requiresInit: true, requiresAuth: true, requiresSystemAdmin: true },
         },
+        // Phase 1: new product pages mount under views/. /platform/harness/*
+        // remains only as compatibility redirects until F9 removes the tree.
         {
           path: "harness",
           component: () => import("@harness/HarnessRoot.vue"),
@@ -273,7 +281,7 @@ const router = createRouter({
             {
               path: "dashboard",
               name: "harnessDashboard",
-              component: () => import("@harness/views/DashboardView.vue"),
+              redirect: { path: "/platform/dashboard" },
               meta: { requiresInit: true, requiresAuth: true }
             }
           ]
@@ -493,7 +501,10 @@ router.beforeEach(async (to, from, next) => {
     next('/platform/creatChat')
     return
   }
-  if (isHiddenMenuPath('harness/dashboard') && to.path.startsWith('/platform/harness/dashboard')) {
+  if (
+    (isHiddenMenuPath('harness/dashboard') || isHiddenMenuPath('dashboard')) &&
+    (to.path.startsWith('/platform/harness/dashboard') || to.path === '/platform/dashboard')
+  ) {
     next('/platform/creatChat')
     return
   }
