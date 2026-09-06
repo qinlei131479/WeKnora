@@ -18,27 +18,27 @@
   >
     <template #toolbar-actions>
       <span class="entry-count">{{ entryCountText }}</span>
-      <a-tooltip v-if="!readonly" :title="t('workspacePage.multiSelect')">
-        <a-button
+      <t-tooltip v-if="!readonly" :content="t('workspacePage.multiSelect')">
+        <t-button
           size="small"
-          class="lucide-icon-btn"
-          :type="effectiveSelectionMode ? 'primary' : 'default'"
+          variant="outline"
+          :theme="effectiveSelectionMode ? 'primary' : 'default'"
           :aria-label="t('workspacePage.multiSelect')"
           @click="toggleSelectionMode"
         >
           <ListChecks :size="14" />
-        </a-button>
-      </a-tooltip>
-      <a-button
+        </t-button>
+      </t-tooltip>
+      <t-button
         v-if="effectiveSelectionMode"
         size="small"
-        danger
+        theme="danger"
         :disabled="!selectedPaths.length"
         :loading="deletingPaths.length > 0"
         @click="$emit('delete-selected')"
       >
         {{ t('workspacePage.deleteSelected') }}
-      </a-button>
+      </t-button>
     </template>
 
     <template #name="{ row }">
@@ -57,7 +57,7 @@
     </template>
 
     <template #row-actions="{ row }">
-      <a-dropdown v-if="!row.is_dir || (!readonly && !row.readonly)" :trigger="['click']">
+      <t-dropdown v-if="!row.is_dir || (!readonly && !row.readonly)" trigger="click" attach="body">
         <button
           type="button"
           class="more-action"
@@ -67,28 +67,27 @@
         >
           <MoreHorizontal :size="16" />
         </button>
-        <template #overlay>
-          <a-menu>
-            <a-menu-item v-if="!row.is_dir" key="download" @click="$emit('download-entry', row)">
+        <template #dropdown>
+          <t-dropdown-menu>
+            <t-dropdown-item v-if="!row.is_dir" @click="$emit('download-entry', row)">
               <span class="menu-item-content">
                 <Download :size="14" />
                 <span>{{ t('harness.chat.download') }}</span>
               </span>
-            </a-menu-item>
-            <a-menu-item
+            </t-dropdown-item>
+            <t-dropdown-item
               v-if="!readonly && !row.readonly"
-              key="delete"
-              danger
+              theme="error"
               @click="$emit('delete-entry', row)"
             >
               <span class="menu-item-content">
                 <Trash2 :size="14" />
                 <span>{{ t('harness.chat.delete') }}</span>
               </span>
-            </a-menu-item>
-          </a-menu>
+            </t-dropdown-item>
+          </t-dropdown-menu>
         </template>
-      </a-dropdown>
+      </t-dropdown>
     </template>
   </FileBrowserTable>
 </template>

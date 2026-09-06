@@ -417,8 +417,8 @@ const isMenuItemActive = (itemPath: string): boolean => {
             return currentRoute === 'organizationList';
         case 'creatChat':
             return isNewChatRoute.value;
-        case 'harness/workspace':
-            return currentRoute === 'harnessWorkspace';
+        case 'workspace':
+            return currentRoute === 'workspace' || currentRoute === 'harnessWorkspace';
         case 'dashboard':
             return currentRoute === 'dashboard' || currentRoute === 'harnessDashboard';
         case 'settings':
@@ -444,7 +444,7 @@ const getIconActiveState = (itemPath: string) => {
 };
 
 const HARNESS_TOP_MENU_PATHS = new Set([
-    'harness/workspace',
+    'workspace',
     'dashboard',
 ]);
 

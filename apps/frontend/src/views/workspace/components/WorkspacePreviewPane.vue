@@ -26,7 +26,7 @@
       @save="$emit('save', $event)"
     />
     <div v-else-if="loading" class="preview-state">
-      <a-spin />
+      <t-loading size="small" />
       <span>{{ t('workspacePage.loadingPreview') }}</span>
     </div>
     <div v-else class="preview-empty">
@@ -42,7 +42,7 @@ import { computed } from 'vue'
 import { FileSearch } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import AgentFilePreview from '@harness/components/AgentFilePreview.vue'
-import WorkspaceKnowledgePreview from '@harness/components/workspace/WorkspaceKnowledgePreview.vue'
+import WorkspaceKnowledgePreview from './WorkspaceKnowledgePreview.vue'
 import { resolveKnowledgePreviewFileType } from '@harness/utils/file_preview'
 
 const { t } = useI18n()

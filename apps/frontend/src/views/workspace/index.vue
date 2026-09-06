@@ -2,28 +2,29 @@
   <div class="workspace-view layout-container">
     <PageHeader :title="t('menu.workspace')" :subtitle="t('workspacePage.subtitle')" :loading="loadingTree || loadingPreview">
       <template #actions>
-        <a-button
+        <t-button
           v-if="isAgentsWorkspacePath"
-          class="lucide-icon-btn"
+          variant="outline"
           @click="openAgentsGuideModal"
         >
           <template #icon><CircleHelp :size="16" /></template>
           {{ t('workspacePage.guide') }}
-        </a-button>
-        <a-button
+        </t-button>
+        <t-button
+          variant="outline"
           :disabled="activeSourceKey !== 'personal' || isReadonlyWorkspacePath"
           @click="openCreateDirectoryModal"
         >
           {{ t('workspacePage.newFolder') }}
-        </a-button>
-        <a-button
-          type="primary"
+        </t-button>
+        <t-button
+          theme="primary"
           :loading="uploadingFile"
           :disabled="activeSourceKey !== 'personal' || isReadonlyWorkspacePath"
           @click="openUploadFilePicker"
         >
           {{ t('workspacePage.uploadFile') }}
-        </a-button>
+        </t-button>
       </template>
     </PageHeader>
 
@@ -50,7 +51,6 @@
           :current-path="currentPath"
           :databases="databases"
           :loading-databases="loadingDatabases"
-          :current-uid="userStore.uid"
           @select-personal="selectPersonalWorkspace"
           @select-database="selectDatabase"
           @select-path="selectWorkspacePath"
@@ -124,28 +124,32 @@
       </main>
     </div>
 
-    <a-modal
-      v-model:open="createDirectoryModalVisible"
-      :title="t('workspacePage.createFolderTitle')"
-      :okText="t('workspacePage.create')"
-      :cancelText="t('workspacePage.cancel')"
+    <t-dialog
+      v-model:visible="createDirectoryModalVisible"
+      attach="body"
+      class="workspace-view-dialog"
+      :header="t('workspacePage.createFolderTitle')"
+      :confirm-btn="t('workspacePage.create')"
+      :cancel-btn="t('workspacePage.cancel')"
       :confirm-loading="creatingDirectory"
-      @ok="createDirectory"
+      @confirm="createDirectory"
     >
-      <a-input
-        v-model:value="newDirectoryName"
+      <t-input
+        v-model="newDirectoryName"
         :placeholder="t('workspacePage.folderNamePlaceholder')"
         :disabled="creatingDirectory"
-        @keyup.enter="createDirectory"
+        @enter="createDirectory"
       />
-    </a-modal>
+    </t-dialog>
 
-    <a-modal
-      v-model:open="agentsGuideModalVisible"
-      :title="t('workspacePage.agentsGuideTitle')"
-      :okText="t('workspacePage.agentsGuideOk')"
-      :cancelButtonProps="{ style: { display: 'none' } }"
-      @ok="closeAgentsGuideModal"
+    <t-dialog
+      v-model:visible="agentsGuideModalVisible"
+      attach="body"
+      class="workspace-view-dialog"
+      :header="t('workspacePage.agentsGuideTitle')"
+      :confirm-btn="t('workspacePage.agentsGuideOk')"
+      :cancel-btn="null"
+      @confirm="closeAgentsGuideModal"
     >
       <div class="agents-guide-content">
         <p>
@@ -167,17 +171,19 @@
           </ul>
         </section>
       </div>
-    </a-modal>
+    </t-dialog>
 
-    <a-modal
-      :open="previewModalVisible && !useInlinePreview"
+    <t-dialog
+      :visible="previewModalVisible && !useInlinePreview"
+      attach="body"
+      class="workspace-view-dialog"
+      :header="null"
+      :footer="false"
+      :close-btn="false"
       width="880px"
-      :style="{ maxWidth: '92vw', top: '5vh' }"
-      :bodyStyle="{ height: '82vh', maxHeight: '90vh', padding: '0', overflow: 'hidden' }"
-      :footer="null"
-      :closable="false"
-      wrapClassName="workspace-file-preview-modal"
-      @cancel="closePreview"
+      placement="center"
+      dialog-class-name="workspace-file-preview-modal"
+      @close="closePreview"
     >
       <WorkspaceKnowledgePreview
         v-if="isKnowledgePreviewFile"
@@ -202,21 +208,21 @@
         @close="closePreview"
         @save="handleSavePreviewFile"
       />
-    </a-modal>
+    </t-dialog>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { message, Modal } from 'ant-design-vue'
+import { DialogPlugin, MessagePlugin } from 'tdesign-vue-next'
 import { ChevronLeft, ChevronRight, CircleHelp, LibraryBig } from 'lucide-vue-next'
 import PageHeader from '@harness/components/shared/PageHeader.vue'
 import AgentFilePreview from '@harness/components/AgentFilePreview.vue'
-import WorkspaceFileList from '@harness/components/workspace/WorkspaceFileList.vue'
-import WorkspaceKnowledgePreview from '@harness/components/workspace/WorkspaceKnowledgePreview.vue'
-import WorkspacePreviewPane from '@harness/components/workspace/WorkspacePreviewPane.vue'
-import WorkspaceSidebar from '@harness/components/workspace/WorkspaceSidebar.vue'
+import WorkspaceFileList from './components/WorkspaceFileList.vue'
+import WorkspaceKnowledgePreview from './components/WorkspaceKnowledgePreview.vue'
+import WorkspacePreviewPane from './components/WorkspacePreviewPane.vue'
+import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import { databaseApi } from '@harness/apis/knowledge_api'
 import { useUserStore } from '@harness/stores/user'
 import {
@@ -229,7 +235,7 @@ import {
   getWorkspaceTree,
   saveWorkspaceFileContent,
   uploadWorkspaceFiles
-} from '@harness/apis/workspace_api'
+} from '@/api/runtime/workspace'
 import { normalizePreviewResponse, resolveKnowledgePreviewFileType } from '@harness/utils/file_preview'
 
 const { t } = useI18n()
@@ -399,7 +405,7 @@ const showPreviewError = (requestId, entry, error, logMessage, userMessage) => {
   if (!isCurrentPreviewEntry(requestId, entry)) return
   console.warn(logMessage, error)
   previewFile.value = buildPreviewErrorFile(entry, error)
-  message.error(userMessage)
+  MessagePlugin.error(userMessage)
 }
 
 const finishPreviewRequest = (requestId) => {
@@ -479,7 +485,7 @@ const loadWorkspaceEntries = async (path = '/') => {
     }
   } catch (error) {
     console.warn('加载工作区目录失败:', error)
-    message.error(t('workspacePage.loadDirFailed'))
+    MessagePlugin.error(t('workspacePage.loadDirFailed'))
   } finally {
     loadingTree.value = false
   }
@@ -546,7 +552,7 @@ const loadKnowledgeEntries = async (
   } catch (error) {
     console.warn('加载知识库目录失败:', error)
     entries.value = []
-    message.error(error?.message || t('workspacePage.loadKnowledgeDirFailed'))
+    MessagePlugin.error(error?.message || t('workspacePage.loadKnowledgeDirFailed'))
   } finally {
     loadingTree.value = false
   }
@@ -689,7 +695,7 @@ const closePreview = () => {
 
 const handleSavePreviewFile = async (content) => {
   if (isReadonlyWorkspacePath.value) {
-    message.warning(t('workspacePage.readonlyCannotSave'))
+    MessagePlugin.warning(t('workspacePage.readonlyCannotSave'))
     return
   }
   if (!selectedEntry.value?.path || savingPreviewFile.value) return
@@ -705,10 +711,10 @@ const handleSavePreviewFile = async (content) => {
       content
     }
     await loadWorkspaceEntries(currentPath.value)
-    message.success(t('workspacePage.saveSuccess'))
+    MessagePlugin.success(t('workspacePage.saveSuccess'))
   } catch (error) {
     console.warn('保存工作区文件失败:', error)
-    message.error(error?.message || t('workspacePage.saveFailed'))
+    MessagePlugin.error(error?.message || t('workspacePage.saveFailed'))
   } finally {
     savingPreviewFile.value = false
   }
@@ -729,11 +735,11 @@ const closeAgentsGuideModal = () => {
 }
 
 const createDirectory = async () => {
-  if (creatingDirectory.value) return
+  if (creatingDirectory.value) return false
   const directoryName = newDirectoryName.value.trim()
   if (!directoryName) {
-    message.warning(t('workspacePage.folderNameRequired'))
-    return
+    MessagePlugin.warning(t('workspacePage.folderNameRequired'))
+    return false
   }
 
   creatingDirectory.value = true
@@ -742,10 +748,11 @@ const createDirectory = async () => {
     await loadWorkspaceEntries(currentPath.value)
     createDirectoryModalVisible.value = false
     newDirectoryName.value = ''
-    message.success(t('workspacePage.createFolderSuccess'))
+    MessagePlugin.success(t('workspacePage.createFolderSuccess'))
   } catch (error) {
     console.warn('创建文件夹失败:', error)
-    message.error(error?.message || t('workspacePage.createFolderFailed'))
+    MessagePlugin.error(error?.message || t('workspacePage.createFolderFailed'))
+    return false
   } finally {
     creatingDirectory.value = false
   }
@@ -764,7 +771,7 @@ const handleUploadInputChange = async (event) => {
   const files = Array.from(event.target?.files || [])
   if (!files.length || uploadingFile.value) return
   if (files.length > MAX_WORKSPACE_UPLOAD_FILES) {
-    message.warning(t('workspacePage.uploadLimit', { count: MAX_WORKSPACE_UPLOAD_FILES }))
+    MessagePlugin.warning(t('workspacePage.uploadLimit', { count: MAX_WORKSPACE_UPLOAD_FILES }))
     event.target.value = ''
     return
   }
@@ -773,10 +780,10 @@ const handleUploadInputChange = async (event) => {
   try {
     await uploadWorkspaceFiles(currentPath.value, files)
     await loadWorkspaceEntries(currentPath.value)
-    message.success(t('workspacePage.uploadSuccess', { count: files.length }))
+    MessagePlugin.success(t('workspacePage.uploadSuccess', { count: files.length }))
   } catch (error) {
     console.warn('上传文件失败:', error)
-    message.error(error?.message || t('workspacePage.uploadFailed'))
+    MessagePlugin.error(error?.message || t('workspacePage.uploadFailed'))
   } finally {
     uploadingFile.value = false
     event.target.value = ''
@@ -789,20 +796,20 @@ const confirmDeleteEntries = (targetEntries) => {
 
   const isBatch = validEntries.length > 1
   const firstEntry = validEntries[0]
-  Modal.confirm({
-    title: isBatch
+  DialogPlugin.confirm({
+    attach: 'body',
+    header: isBatch
       ? t('workspacePage.confirmDeleteSelected', { count: validEntries.length })
       : firstEntry.is_dir
         ? t('harness.chat.panel.confirmDeleteFolder', { name: firstEntry.name })
         : t('harness.chat.panel.confirmDeleteFile', { name: firstEntry.name }),
-    content:
+    body:
       isBatch || firstEntry.is_dir
         ? t('harness.chat.panel.deleteFolderContent')
         : t('harness.chat.panel.deleteIrreversible'),
-    okText: t('harness.chat.delete'),
-    okType: 'danger',
-    cancelText: t('harness.chat.cancel'),
-    onOk: () => deleteEntries(validEntries)
+    confirmBtn: { content: t('harness.chat.delete'), theme: 'danger' },
+    cancelBtn: t('harness.chat.cancel'),
+    onConfirm: () => deleteEntries(validEntries),
   })
 }
 
@@ -819,12 +826,12 @@ const deleteEntries = async (targetEntries) => {
     }
     clearWorkspaceSelection()
     await loadWorkspaceEntries(currentPath.value)
-    message.success(
+    MessagePlugin.success(
       paths.length > 1 ? t('workspacePage.deleteSelectedSuccess') : t('workspacePage.deleteSuccess')
     )
   } catch (error) {
     console.warn('删除工作区文件失败:', error)
-    message.error(error?.message || t('workspacePage.deleteFailed'))
+    MessagePlugin.error(error?.message || t('workspacePage.deleteFailed'))
     await loadWorkspaceEntries(currentPath.value)
   } finally {
     deletingPaths.value = []
@@ -873,7 +880,7 @@ const downloadEntry = async (entry) => {
     window.URL.revokeObjectURL(url)
   } catch (error) {
     console.warn('下载文件失败:', error)
-    message.error(error?.message || t('harness.chat.downloadFailed'))
+    MessagePlugin.error(error?.message || t('harness.chat.downloadFailed'))
   }
 }
 
@@ -951,8 +958,11 @@ watch(useInlinePreview, (isInline, wasInline) => {
 .workspace-view {
   display: flex;
   flex-direction: column;
+  width: 100%;
   height: 100%;
   min-height: 0;
+  color: var(--gray-900);
+  background: var(--gray-25);
 }
 
 .upload-input {
@@ -1109,41 +1119,127 @@ watch(useInlinePreview, (isInline, wasInline) => {
 </style>
 
 <style lang="less">
-.workspace-file-preview-modal {
-  .ant-modal {
-    z-index: 1050;
+.workspace-view,
+.workspace-view-dialog {
+  --page-padding: 22px;
+  --main-800: #027218;
+  --main-700: #038626;
+  --main-600: #049b38;
+  --main-500: #07c05f;
+  --main-100: #b7ebc8;
+  --main-20: #f7fcf8;
+  --main-5: #fcfefd;
+  --main-color: #07c05f;
+  --shadow-1: rgba(0, 0, 0, 0.05);
+  --gray-2000: #0c0d0d;
+  --gray-1000: #151616;
+  --gray-900: #1e1f1f;
+  --gray-800: #323333;
+  --gray-700: #4c4d4d;
+  --gray-600: #697070;
+  --gray-500: #979999;
+  --gray-300: #d7d9d9;
+  --gray-200: #e4e6e6;
+  --gray-150: #eef0f0;
+  --gray-100: #eff2f2;
+  --gray-50: #f5f7f7;
+  --gray-25: #f8fafa;
+  --gray-10: #fbfcfc;
+  --gray-0: #ffffff;
+  --bg-sider: #fcfefd;
+}
 
-    .ant-modal-content {
-      padding: 0;
-      overflow: hidden;
-      border: 1px solid var(--gray-200);
-      border-radius: 8px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    }
+html[theme-mode="dark"] .workspace-view,
+html[theme-mode="dark"] .workspace-view-dialog {
+  --main-800: #07c05f;
+  --main-700: #07c05f;
+  --main-600: #06b04d;
+  --main-500: #06b04d;
+  --main-100: #015e0d;
+  --main-20: #06110a;
+  --main-5: var(--td-bg-color-container, #242424);
+  --main-color: var(--td-brand-color, #06b04d);
+  --shadow-1: rgba(255, 255, 255, 0.05);
+  --gray-2000: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  --gray-1000: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  --gray-900: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  --gray-800: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55));
+  --gray-700: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55));
+  --gray-600: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55));
+  --gray-500: var(--td-text-color-placeholder, rgba(255, 255, 255, 0.35));
+  --gray-300: var(--td-component-border, #5e5e5e);
+  --gray-200: var(--td-component-border, #5e5e5e);
+  --gray-150: var(--td-component-stroke, #383838);
+  --gray-100: var(--td-component-stroke, #383838);
+  --gray-50: var(--td-bg-color-container-hover, #2c2c2c);
+  --gray-25: var(--td-bg-color-page, #181818);
+  --gray-10: var(--td-bg-color-page, #181818);
+  --gray-0: var(--td-bg-color-page, #181818);
+  --bg-sider: var(--td-bg-color-sidebar, #181818);
+}
 
-    .ant-modal-body {
-      height: 82vh;
-      padding: 0;
-      overflow: hidden;
-    }
-
-    .workspace-modal-preview-container {
-      height: 100%;
-      max-height: none;
-    }
-
-    .workspace-modal-preview-content {
-      flex: 1 1 auto;
-      max-height: none;
-      min-height: 0;
-    }
-
-    .workspace-modal-preview-content .html-preview,
-    .workspace-modal-preview-content .pdf-preview {
-      display: block;
-      height: 100%;
-      min-height: 100%;
-    }
+@media (min-width: 1440px) {
+  .workspace-view {
+    --page-padding: 30px;
   }
+}
+
+@media (max-width: 1199px) {
+  .workspace-view {
+    --page-padding: 18px;
+  }
+}
+
+@media (max-width: 767px) {
+  .workspace-view {
+    --page-padding: 14px;
+  }
+}
+
+.t-dialog.workspace-file-preview-modal {
+  z-index: 1050;
+  max-width: 92vw;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  .t-dialog__body {
+    height: 82vh;
+    max-height: 90vh;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .workspace-modal-preview-container {
+    height: 100%;
+    max-height: none;
+  }
+
+  .workspace-modal-preview-content {
+    flex: 1 1 auto;
+    max-height: none;
+    min-height: 0;
+  }
+
+  .workspace-modal-preview-content .html-preview,
+  .workspace-modal-preview-content .pdf-preview {
+    display: block;
+    height: 100%;
+    min-height: 100%;
+  }
+}
+
+html[theme-mode="dark"] .workspace-view .ant-table-thead > tr > th::before {
+  display: none;
+}
+
+html[theme-mode="dark"] .workspace-view .ant-table-thead > tr > th {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+html[theme-mode="dark"] .workspace-view .ant-table-tbody > tr > td {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 </style>

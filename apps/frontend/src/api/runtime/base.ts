@@ -126,3 +126,26 @@ export function apiPost(
     responseType,
   )
 }
+
+export function apiPut(
+  url: string,
+  data: unknown = {},
+  options: RequestInit = {},
+  requiresAuth = true,
+  responseType: ResponseType = 'json',
+) {
+  return apiRequest(
+    url,
+    {
+      method: 'PUT',
+      body: data instanceof FormData ? data : JSON.stringify(data),
+      ...options,
+    },
+    requiresAuth,
+    responseType,
+  )
+}
+
+export function apiDelete(url: string, options: RequestInit = {}, requiresAuth = true, responseType: ResponseType = 'json') {
+  return apiRequest(url, { method: 'DELETE', ...options }, requiresAuth, responseType)
+}

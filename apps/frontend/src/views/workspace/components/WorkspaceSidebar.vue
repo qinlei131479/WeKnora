@@ -39,22 +39,7 @@
     <section class="sidebar-section">
       <div class="section-title">{{ t('workspacePage.myKnowledge') }}</div>
       <button
-        v-for="database in myDatabases"
-        :key="database.kb_id || database.id || database.name"
-        type="button"
-        class="workspace-nav-item secondary"
-        :class="{ active: activeKey === `database:${database.kb_id}` }"
-        @click="$emit('select-database', database)"
-      >
-        <FileTypeIcon is-dir :size="18" />
-        <span>{{ database.name }}</span>
-      </button>
-    </section>
-
-    <section v-if="sharedDatabases.length" class="sidebar-section">
-      <div class="section-title">{{ t('workspacePage.sharedKnowledge') }}</div>
-      <button
-        v-for="database in sharedDatabases"
+        v-for="database in databases"
         :key="database.kb_id || database.id || database.name"
         type="button"
         class="workspace-nav-item secondary"
@@ -73,7 +58,6 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
 
@@ -96,19 +80,10 @@ const props = defineProps({
   activeKey: { type: String, default: 'personal' },
   currentPath: { type: String, default: '/' },
   databases: { type: Array, default: () => [] },
-  loadingDatabases: { type: Boolean, default: false },
-  currentUid: { type: String, default: '' }
+  loadingDatabases: { type: Boolean, default: false }
 })
 
 defineEmits(['select-personal', 'select-database', 'select-path'])
-
-const myDatabases = computed(() =>
-  props.databases.filter((db) => db.created_by === props.currentUid)
-)
-
-const sharedDatabases = computed(() =>
-  props.databases.filter((db) => db.created_by !== props.currentUid)
-)
 </script>
 
 <style scoped lang="less">

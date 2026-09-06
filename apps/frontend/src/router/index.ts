@@ -172,6 +172,12 @@ const router = createRouter({
           meta: { requiresInit: true, requiresAuth: true }
         },
         {
+          path: "workspace",
+          name: "workspace",
+          component: () => import("../views/workspace/index.vue"),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
           path: "organizations",
           name: "organizationList",
           component: () => import("../views/organization/OrganizationList.vue"),
@@ -212,9 +218,9 @@ const router = createRouter({
           meta: { requiresInit: true, requiresAuth: true },
           children: [
             { path: "", redirect: () => (
-              isHiddenMenuPath('harness/workspace')
+              isHiddenMenuPath('harness/workspace') || isHiddenMenuPath('workspace')
                 ? '/platform/creatChat'
-                : '/platform/harness/workspace'
+                : '/platform/workspace'
             ) },
             {
               path: "chat",
@@ -240,7 +246,7 @@ const router = createRouter({
             {
               path: "workspace",
               name: "harnessWorkspace",
-              component: () => import("@harness/views/WorkspaceView.vue"),
+              redirect: { path: "/platform/workspace" },
               meta: { requiresInit: true, requiresAuth: true }
             },
             {
@@ -497,7 +503,10 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
-  if (isHiddenMenuPath('harness/workspace') && to.path.startsWith('/platform/harness/workspace')) {
+  if (
+    (isHiddenMenuPath('harness/workspace') || isHiddenMenuPath('workspace')) &&
+    (to.path.startsWith('/platform/harness/workspace') || to.path === '/platform/workspace')
+  ) {
     next('/platform/creatChat')
     return
   }

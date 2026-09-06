@@ -228,10 +228,10 @@ F0 → F1 → … → F9 验收通过
 - Modify: `stores/menu.ts` — `path: 'workspace'`
 - Delete 同批: 已无引用的 harness workspace 页/组件/专用 api
 
-- [ ] 正式页 TDesign：目录、上传、预览、与 Agent 工作区路径相关交互与旧页同等（能力+色相+组件块，不像素级）。
-- [ ] 菜单「工作区」进 `/platform/workspace`。
-- [ ] 同批删旧入口；验证测试当场删。
-- [ ] 提交：`feat(frontend): move workspace into official views`
+- [x] 正式页 TDesign：目录、上传、预览、与 Agent 工作区路径相关交互与旧页同等（能力+色相+组件块，不像素级）。
+- [x] 菜单「工作区」进 `/platform/workspace`。
+- [x] 同批删旧入口；验证测试当场删。
+- [x] 提交：`feat(frontend): 将工作区迁入正式 views`
 
 **验收**
 

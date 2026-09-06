@@ -123,7 +123,7 @@
 import { computed, h, onBeforeUnmount, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { documentApi } from '@harness/apis/knowledge_api'
-import { getWorkspaceKnowledgeFileContent } from '@harness/apis/workspace_api'
+import { getWorkspaceKnowledgeFileContent } from '@/api/runtime/workspace'
 import { mergeChunks } from '@harness/utils/chunkUtils'
 import { getPreviewTypeByPath, normalizePreviewResponse } from '@harness/utils/file_preview'
 import {

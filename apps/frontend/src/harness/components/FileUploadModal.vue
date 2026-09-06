@@ -346,7 +346,7 @@ import { useUserStore } from '@harness/stores/user'
 import { useConfigStore } from '@harness/stores/config'
 import { useDatabaseStore } from '@harness/stores/database'
 import { fileApi, documentApi } from '@harness/apis/knowledge_api'
-import { getWorkspaceTree } from '@harness/apis/workspace_api'
+import { getWorkspaceTree } from '@/api/runtime/workspace'
 import {
   FileUp,
   FolderUp,
