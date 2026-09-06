@@ -111,7 +111,7 @@ F0 → F1 → … → F9 验收通过
 | --- | --- | --- | --- |
 | 一 | **F0** | 基建：runtime API 搬家、路由/菜单约定、禁止新 Ant | 完成 |
 | 一 | **F1** | 数据总览 → `views/dashboard` | 完成（已收束文件：无独立 css / 短 util） |
-| 一 | **F2** | 工作区 → `views/workspace` | 未开始 |
+| 一 | **F2** | 工作区 → `views/workspace` | 完成（`c43485fc`；后续修删除弹窗/深色表线/勾选主色） |
 | 一 | **F3** | Skill 列表/详情 → `views/skills` | 未开始 |
 | 一 | **F4** | Tools 列表 → `views/tools` | 未开始 |
 | 一 | **F5** | MCP 列表/详情 → `views/mcp`（UI 合一，接口仍两套） | 未开始 |
@@ -235,9 +235,13 @@ F0 → F1 → … → F9 验收通过
 
 **验收**
 
-- [ ] 浏览、上传、预览、空态/加载/失败与旧页同等，无少样式/少色/少一块 UI
-- [ ] 无 `HarnessIsland`、无新 Ant、无本批 `*.test.ts`
-- [ ] 请求仍为 `/harness-api/api/workspace/...`
+- [x] 浏览、上传、预览、空态/加载/失败与旧页同等，无少样式/少色/少一块 UI
+- [x] 无 `HarnessIsland`、无新 Ant、无本批 `*.test.ts`
+- [x] 请求仍为 `/harness-api/api/workspace/...`
+
+**落地偏差（非像素级，已写明）：** 文件表仍复用共享 `FileBrowserTable`（内部 Ant Table）；TDesign Dialog 铬与旧 Ant Modal 不同。图标形状可不同。侧栏不再拆「共享知识库」分组，知识库统一列在「我的知识库」。
+
+**跟进修复（本批工作区页内）：** 删除确认后关闭 `DialogPlugin`；深色表头/行分隔线压淡；批量勾选框改主色绿。
 
 ---
 

@@ -796,7 +796,7 @@ const confirmDeleteEntries = (targetEntries) => {
 
   const isBatch = validEntries.length > 1
   const firstEntry = validEntries[0]
-  DialogPlugin.confirm({
+  const dialog = DialogPlugin.confirm({
     attach: 'body',
     header: isBatch
       ? t('workspacePage.confirmDeleteSelected', { count: validEntries.length })
@@ -809,7 +809,13 @@ const confirmDeleteEntries = (targetEntries) => {
         : t('harness.chat.panel.deleteIrreversible'),
     confirmBtn: { content: t('harness.chat.delete'), theme: 'danger' },
     cancelBtn: t('harness.chat.cancel'),
-    onConfirm: () => deleteEntries(validEntries),
+    onConfirm: async () => {
+      try {
+        await deleteEntries(validEntries)
+      } finally {
+        dialog.hide()
+      }
+    },
   })
 }
 
@@ -1169,9 +1175,9 @@ html[theme-mode="dark"] .workspace-view-dialog {
   --gray-500: var(--td-text-color-placeholder, rgba(255, 255, 255, 0.35));
   --gray-300: var(--td-component-border, #5e5e5e);
   --gray-200: var(--td-component-border, #5e5e5e);
-  --gray-150: var(--td-component-stroke, #383838);
-  --gray-100: var(--td-component-stroke, #383838);
-  --gray-50: var(--td-bg-color-container-hover, #2c2c2c);
+  --gray-150: rgba(255, 255, 255, 0.06);
+  --gray-100: rgba(255, 255, 255, 0.06);
+  --gray-50: rgba(255, 255, 255, 0.06);
   --gray-25: var(--td-bg-color-page, #181818);
   --gray-10: var(--td-bg-color-page, #181818);
   --gray-0: var(--td-bg-color-page, #181818);
@@ -1231,15 +1237,57 @@ html[theme-mode="dark"] .workspace-view-dialog {
   }
 }
 
-html[theme-mode="dark"] .workspace-view .ant-table-thead > tr > th::before {
+html[theme-mode="dark"] .workspace-view .file-browser-header {
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-container,
+html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-content,
+html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-header,
+html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-body {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-thead > tr > th::before {
   display: none;
 }
 
-html[theme-mode="dark"] .workspace-view .ant-table-thead > tr > th {
-  border-bottom-color: rgba(255, 255, 255, 0.08);
+html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-thead > tr > th,
+html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-tbody > tr > td,
+html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-cell {
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow: none !important;
 }
 
-html[theme-mode="dark"] .workspace-view .ant-table-tbody > tr > td {
-  border-bottom-color: rgba(255, 255, 255, 0.06);
+html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-placeholder > td {
+  border-bottom: none !important;
+}
+
+.workspace-view .ant-checkbox-inner {
+  border-color: var(--td-brand-color, var(--main-color));
+}
+
+.workspace-view .ant-checkbox-wrapper:hover .ant-checkbox-inner,
+.workspace-view .ant-checkbox:hover .ant-checkbox-inner,
+.workspace-view .ant-checkbox-input:focus + .ant-checkbox-inner {
+  border-color: var(--td-brand-color, var(--main-color)) !important;
+}
+
+.workspace-view .ant-checkbox-checked .ant-checkbox-inner,
+.workspace-view .ant-checkbox-indeterminate .ant-checkbox-inner {
+  background-color: var(--td-brand-color, var(--main-color)) !important;
+  border-color: var(--td-brand-color, var(--main-color)) !important;
+}
+
+.workspace-view .ant-checkbox-checked::after {
+  border-color: var(--td-brand-color, var(--main-color)) !important;
+}
+
+.workspace-view .ant-checkbox-indeterminate .ant-checkbox-inner::after {
+  background-color: #fff !important;
 }
 </style>
