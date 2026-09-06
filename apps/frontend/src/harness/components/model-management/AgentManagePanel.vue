@@ -174,6 +174,7 @@ const deleteAgent = (agent) => {
   }
   openMoreAgentId.value = null
   const dialog = DialogPlugin.confirm({
+    attach: 'body',
     header: t('agent.runtimeManage.deleteConfirmTitle', { name: agent.name }),
     body: t('agent.runtimeManage.deleteConfirmContent'),
     confirmBtn: t('common.delete'),

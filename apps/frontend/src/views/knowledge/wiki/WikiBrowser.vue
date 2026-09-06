@@ -727,7 +727,7 @@
       @reverted="onPageReverted" />
 
     <!-- Create page dialog -->
-    <t-dialog v-model:visible="showCreatePageDialog" :header="$t('knowledgeEditor.wikiBrowser.newPageTitle')"
+    <t-dialog v-model:visible="showCreatePageDialog" attach="body" :header="$t('knowledgeEditor.wikiBrowser.newPageTitle')"
       :confirm-btn="{ content: $t('common.confirm'), loading: creatingPage }" :cancel-btn="$t('common.cancel')"
       width="520px" @confirm="submitCreatePage">
       <div class="wiki-create-page-form">

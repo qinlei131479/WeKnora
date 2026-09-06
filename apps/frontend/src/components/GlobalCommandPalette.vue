@@ -1,5 +1,5 @@
 <template>
-  <t-dialog v-model:visible="dialogVisible" :footer="false" :header="false" :close-btn="false" width="640px" top="10vh"
+  <t-dialog v-model:visible="dialogVisible" attach="body" :footer="false" :header="false" :close-btn="false" width="640px" top="10vh"
     destroy-on-close class="cmdk-dialog" @close="handleClose" @opened="onDialogOpened">
     <div class="cmdk" @keydown="onKeyDown">
       <!-- Input row -->

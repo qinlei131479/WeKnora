@@ -1,5 +1,5 @@
 <template>
-  <t-dialog :visible="visible" :footer="false" width="420px" dialog-class-name="batch-tag-dialog"
+  <t-dialog :visible="visible" attach="body" :footer="false" width="420px" dialog-class-name="batch-tag-dialog"
     :close-on-overlay-click="false" destroy-on-close @close="handleClose">
     <template #header>
       <div class="batch-tag-heading">

@@ -5,7 +5,7 @@
        keeps the user in whatever context the bell icon was clicked
        from rather than yanking them to a separate page. The trigger
        lives in UserMenu's avatar-row bell. -->
-  <t-dialog v-model:visible="visibleModel" :header="$t('tenantInvitation.myInbox.title')" :footer="false" width="540px"
+  <t-dialog v-model:visible="visibleModel" attach="body" :header="$t('tenantInvitation.myInbox.title')" :footer="false" width="540px"
     :close-on-overlay-click="true">
     <p class="my-invitations-desc">{{ $t('tenantInvitation.myInbox.description') }}</p>
 

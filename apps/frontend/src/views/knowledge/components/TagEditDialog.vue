@@ -1,5 +1,5 @@
 <template>
-  <t-dialog :visible="visible" :footer="false" width="400px" dialog-class-name="tag-edit-dialog"
+  <t-dialog :visible="visible" attach="body" :footer="false" width="400px" dialog-class-name="tag-edit-dialog"
     :close-on-overlay-click="false" destroy-on-close @close="handleClose">
     <template #header>
       <div class="tag-edit-heading">

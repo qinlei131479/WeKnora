@@ -697,7 +697,7 @@
     </div>
 
     <!-- 删除确认对话框 -->
-    <t-dialog v-model:visible="deleteVisible" dialogClassName="del-knowledge-dialog" :closeBtn="false" :cancelBtn="null"
+    <t-dialog v-model:visible="deleteVisible" attach="body" top="40vh" dialogClassName="del-knowledge-dialog" :closeBtn="false" :cancelBtn="null"
       :confirmBtn="null">
       <div class="circle-wrap">
         <div class="dialog-header">
@@ -2983,6 +2983,23 @@ const handleUploadFinishedEvent = (event: Event) => {
 
 <style lang="less">
 /* 下拉菜单样式已统一至 @/assets/dropdown-menu.less */
+
+.del-knowledge-dialog {
+  padding: 0px !important;
+  border-radius: 6px !important;
+
+  .t-dialog__header {
+    display: none;
+  }
+
+  .t-dialog__body {
+    padding: 16px;
+  }
+
+  .t-dialog__footer {
+    padding: 0;
+  }
+}
 
 // 共享知识库卡片：详情触发（替代三点，用「查看详情」链接样式）
 .shared-detail-trigger {

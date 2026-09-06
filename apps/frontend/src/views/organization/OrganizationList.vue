@@ -204,7 +204,7 @@
       @update:visible="showSettingsModal = $event" />
 
     <!-- Delete Confirm Dialog -->
-    <t-dialog v-model:visible="deleteVisible" dialogClassName="del-org-dialog" :closeBtn="false" :cancelBtn="null"
+    <t-dialog v-model:visible="deleteVisible" attach="body" top="40vh" dialogClassName="del-org-dialog" :closeBtn="false" :cancelBtn="null"
       :confirmBtn="null">
       <div class="circle-wrap">
         <div class="dialog-header">
@@ -222,7 +222,7 @@
     </t-dialog>
 
     <!-- Leave Confirm Dialog -->
-    <t-dialog v-model:visible="leaveVisible" dialogClassName="del-org-dialog" :closeBtn="false" :cancelBtn="null"
+    <t-dialog v-model:visible="leaveVisible" attach="body" top="40vh" dialogClassName="del-org-dialog" :closeBtn="false" :cancelBtn="null"
       :confirmBtn="null">
       <div class="circle-wrap">
         <div class="dialog-header">
@@ -1954,6 +1954,23 @@ onUnmounted(() => {
 
 <style lang="less">
 /* 下拉菜单样式已统一至 @/assets/dropdown-menu.less */
+
+.del-org-dialog {
+  padding: 0px !important;
+  border-radius: 6px !important;
+
+  .t-dialog__header {
+    display: none;
+  }
+
+  .t-dialog__body {
+    padding: 16px;
+  }
+
+  .t-dialog__footer {
+    padding: 0;
+  }
+}
 
 // 创建对话框样式优化
 .create-org-dialog,

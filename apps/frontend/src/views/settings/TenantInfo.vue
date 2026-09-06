@@ -216,7 +216,7 @@
 
     </div>
 
-    <t-dialog v-model:visible="deleteTenantVisible" :header="$t('tenant.deleteDangerZone.confirmTitle')"
+    <t-dialog v-model:visible="deleteTenantVisible" attach="body" :header="$t('tenant.deleteDangerZone.confirmTitle')"
       :confirm-btn="{
         content: $t('tenant.deleteDangerZone.confirm'),
         theme: 'danger',

@@ -204,6 +204,7 @@
     <!-- 加入确认弹窗 -->
     <t-dialog
       v-model:visible="showJoinConfirm"
+      attach="body"
       :header="$t('organization.join.confirmTitle')"
       :confirm-btn="previewInfo?.is_already_member ? $t('common.close') : $t('organization.join.confirm')"
       :cancel-btn="previewInfo?.is_already_member ? null : $t('common.cancel')"

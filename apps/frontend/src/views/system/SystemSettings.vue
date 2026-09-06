@@ -411,6 +411,7 @@
     </template>
     <t-dialog
       v-model:visible="passwordResetVisible"
+      attach="body"
       :header="t('system.globalSettings.passwordReset.dialogTitle')"
       width="440px"
       placement="center"

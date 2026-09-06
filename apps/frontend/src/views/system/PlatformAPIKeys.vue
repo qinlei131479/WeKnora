@@ -193,6 +193,7 @@
 
     <t-dialog
       v-model:visible="tokenVisible"
+      attach="body"
       :header="t('platformApiKeys.createdTitle')"
       :confirm-btn="{ content: t('platformApiKeys.copy'), theme: 'primary' }"
       :cancel-btn="null"

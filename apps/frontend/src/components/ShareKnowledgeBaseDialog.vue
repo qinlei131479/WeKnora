@@ -1,6 +1,7 @@
 <template>
   <t-dialog
     v-model:visible="dialogVisible"
+    attach="body"
     :header="$t('organization.share.title')"
     width="520px"
     :footer="false"

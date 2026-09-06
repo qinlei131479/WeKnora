@@ -726,7 +726,7 @@
     </div>
 
     <!-- 删除确认对话框 -->
-    <t-dialog v-model:visible="deleteVisible" dialogClassName="del-agent-dialog" :closeBtn="false" :cancelBtn="null"
+    <t-dialog v-model:visible="deleteVisible" attach="body" top="40vh" dialogClassName="del-agent-dialog" :closeBtn="false" :cancelBtn="null"
       :confirmBtn="null">
       <div class="circle-wrap">
         <div class="dialog-header">
@@ -2569,6 +2569,23 @@ defineExpose({
 
 <style lang="less">
 /* 下拉菜单样式已统一至 @/assets/dropdown-menu.less */
+
+.del-agent-dialog {
+  padding: 0px !important;
+  border-radius: 6px !important;
+
+  .t-dialog__header {
+    display: none;
+  }
+
+  .t-dialog__body {
+    padding: 16px;
+  }
+
+  .t-dialog__footer {
+    padding: 0;
+  }
+}
 
 // 共享智能体详情侧边栏
 .shared-detail-drawer-overlay {
