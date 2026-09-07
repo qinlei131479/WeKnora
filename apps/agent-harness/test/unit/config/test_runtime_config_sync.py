@@ -8,7 +8,7 @@ from contextlib import contextmanager
 
 import pytest
 import tomli
-from yuxi.config.app import Config
+from yuxi.config.app import Config, _default_save_dir
 from yuxi.config.cache import RUNTIME_CONFIG_REDIS_KEY
 
 pytestmark = pytest.mark.unit
@@ -280,3 +280,29 @@ def test_resolve_chat_model_spec_reads_runtime_refreshed_default(tmp_path, monke
     monkeypatch.setattr(models, "sys_config", cfg)
 
     assert models.resolve_chat_model_spec(None) == "test-provider:resolved-chat"
+
+
+def test_default_save_dir_uses_env(monkeypatch: pytest.MonkeyPatch, tmp_path):
+    monkeypatch.setenv("YUXI_SAVE_DIR", str(tmp_path))
+    assert _default_save_dir() == str(tmp_path)
+
+
+def test_default_save_dir_in_docker_is_saves(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv("YUXI_SAVE_DIR", raising=False)
+    monkeypatch.setenv("RUNNING_IN_DOCKER", "true")
+    assert _default_save_dir() == "saves"
+
+
+def test_repo_docker_saves_returns_none_when_parents_are_shallow(monkeypatch: pytest.MonkeyPatch):
+    app_mod = importlib.import_module("yuxi.config.app")
+
+    class _ShallowPath:
+        def resolve(self):
+            return self
+
+        @property
+        def parents(self):
+            return ("a", "b", "c")
+
+    monkeypatch.setattr(app_mod, "Path", lambda *_args, **_kwargs: _ShallowPath())
+    assert app_mod._repo_docker_saves() is None

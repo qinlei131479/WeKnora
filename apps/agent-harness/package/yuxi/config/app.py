@@ -16,8 +16,6 @@ from yuxi.utils.logging_config import logger
 
 READONLY_CONFIG_FIELDS = frozenset({"save_dir"})
 DEFAULT_OCR_ENGINE = "rapid_ocr"
-# apps/agent-harness/package/yuxi/config/app.py → 仓库根
-_REPO_DOCKER_SAVES = Path(__file__).resolve().parents[5] / "docker" / "volumes" / "agent-harness"
 
 
 def _get_available_ocr_engines() -> set[str]:
@@ -35,13 +33,24 @@ def _running_in_docker() -> bool:
     return Path("/.dockerenv").exists() or os.getenv("RUNNING_IN_DOCKER") == "true"
 
 
+def _repo_docker_saves() -> Path | None:
+    # apps/agent-harness/package/yuxi/config/app.py → 仓库根；容器内路径更浅，不能写死 parents[5]。
+    parts = Path(__file__).resolve().parents
+    if len(parts) <= 5:
+        return None
+    return parts[5] / "docker" / "volumes" / "agent-harness"
+
+
 def _default_save_dir() -> str:
     env = (os.getenv("YUXI_SAVE_DIR") or "").strip()
     if env:
         return env
+    if _running_in_docker():
+        return "saves"
     # 本机 uvicorn 默认相对路径 saves/ 会另起一套空目录；与 compose 挂载对齐。
-    if not _running_in_docker() and _REPO_DOCKER_SAVES.is_dir():
-        return str(_REPO_DOCKER_SAVES)
+    repo_saves = _repo_docker_saves()
+    if repo_saves is not None and repo_saves.is_dir():
+        return str(repo_saves)
     return "saves"
 
 
