@@ -11,10 +11,10 @@
     <p class="suite-card-description">{{ suite.description }}</p>
 
     <div class="suite-card-members" :aria-label="t('knowledgeList.extensions.skills.suite.membersAria')">
-      <span v-for="skill in visibleSkills" :key="skill.slug" class="suite-member-tag">
+      <t-tag v-for="skill in visibleSkills" :key="skill.slug" size="small" variant="light-outline" class="wk-chip">
         {{ skill.name }}
-      </span>
-      <span v-if="hiddenCount" class="suite-member-tag">+{{ hiddenCount }}</span>
+      </t-tag>
+      <t-tag v-if="hiddenCount" size="small" variant="light-outline" class="wk-chip">+{{ hiddenCount }}</t-tag>
     </div>
 
     <div class="suite-card-footer">
@@ -74,49 +74,74 @@ const statusText = computed(() => {
 
 <style lang="less" scoped>
 .skill-suite-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
-  min-height: 196px;
-  padding: 18px;
-  border: 1px solid var(--gray-150);
+  min-height: 136px;
+  padding: 12px 14px;
+  border: 1px solid var(--td-component-stroke, var(--gray-150));
   border-radius: 8px;
-  background: var(--gray-0);
-  color: var(--gray-900);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  background: linear-gradient(
+    135deg,
+    var(--td-bg-color-container, var(--gray-0)) 0%,
+    rgba(7, 192, 95, 0.04) 100%
+  );
+  color: var(--td-text-color-primary, var(--gray-900));
   text-align: left;
   cursor: pointer;
+  overflow: hidden;
   transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease,
-    box-shadow 0.2s ease;
+    border-color 0.25s ease,
+    background-color 0.25s ease,
+    box-shadow 0.25s ease;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, rgba(7, 192, 95, 0.08) 0%, transparent 100%);
+    border-radius: 0 8px 0 100%;
+    pointer-events: none;
+  }
 
   &:hover {
     border-color: var(--td-brand-color, var(--main-color));
-    background: var(--td-bg-color-container, var(--gray-0));
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--td-brand-color, var(--main-color)) 12%, transparent);
+    box-shadow: 0 4px 12px rgba(7, 192, 95, 0.12);
+    background: linear-gradient(
+      135deg,
+      var(--td-bg-color-container, var(--gray-0)) 0%,
+      rgba(7, 192, 95, 0.08) 100%
+    );
   }
 
   &:focus-visible {
-    outline: 2px solid var(--main-color);
+    outline: 2px solid var(--td-brand-color, var(--main-color));
     outline-offset: 2px;
   }
 }
 
 .suite-card-head {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .suite-card-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 34px;
-  height: 34px;
-  border-radius: 8px;
-  background: var(--gray-100);
-  color: var(--gray-700);
+  flex: 0 0 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--td-brand-color, var(--main-color)) 10%, transparent);
+  color: var(--td-brand-color, var(--main-color));
 }
 
 .suite-card-title-group {
@@ -126,54 +151,66 @@ const statusText = computed(() => {
 .suite-card-title {
   overflow: hidden;
   font-size: 15px;
-  font-weight: 650;
-  line-height: 21px;
+  font-weight: 600;
+  line-height: 22px;
+  letter-spacing: 0.01em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .suite-card-provider {
   margin-top: 1px;
-  color: var(--gray-500);
+  color: var(--td-text-color-secondary, var(--gray-600));
   font-size: 12px;
   line-height: 18px;
 }
 
 .suite-card-description {
+  position: relative;
+  z-index: 1;
   display: -webkit-box;
-  min-height: 40px;
-  margin: 14px 0 12px;
+  flex: 1;
+  min-height: 34px;
+  margin: 6px 0 8px;
   overflow: hidden;
-  color: var(--gray-600);
-  font-size: 13px;
-  line-height: 20px;
+  color: var(--td-text-color-secondary, var(--gray-600));
+  font-size: 12px;
+  line-height: 17px;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
 
 .suite-card-members {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
-.suite-member-tag {
-  padding: 2px 7px;
-  border: 1px solid var(--gray-150);
+:deep(.t-tag.wk-chip) {
+  height: 18px;
+  max-height: 18px;
+  line-height: 16px;
+  padding: 0 6px;
+  margin: 0;
   border-radius: 999px;
-  background: var(--gray-25);
-  color: var(--gray-600);
+  background: transparent;
+  border-color: var(--td-component-stroke, var(--gray-200));
+  color: var(--td-text-color-secondary, var(--gray-600));
   font-size: 11px;
-  line-height: 18px;
+  font-weight: 500;
 }
 
 .suite-card-footer {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-top: auto;
-  padding-top: 14px;
+  padding-top: 8px;
 }
 
 .suite-card-status {

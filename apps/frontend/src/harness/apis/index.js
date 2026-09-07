@@ -10,9 +10,9 @@ export * from './graph_api' // 图谱API
 export * from './agent_api' // 智能体API
 export * from './tasker' // 任务管理API
 export * from './department_api' // 部门管理API
-export * from './mcp_api' // MCP API
-export * from './skill_api' // Skills API
-export * from './tool_api' // 工具 API
+export { mcpApi } from '@/api/runtime/mcp'
+export { skillApi } from '@/api/runtime/skill'
+export { toolApi } from '@/api/runtime/tool'
 export * from './mention_api' // 提及搜索 API
 export * from './user_api' // 用户资源 API
 

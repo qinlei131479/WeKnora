@@ -251,7 +251,7 @@ import { MessagePlugin, DialogPlugin, Icon as TIcon } from "tdesign-vue-next";
 import TenantSelector from '@/components/TenantSelector.vue';
 import HarnessHistoryNav from '@harness/HarnessHistoryNav.vue';
 import ChatEngineSegmented from '@/components/ChatEngineSegmented.vue';
-import { FolderKanban, BarChart3, MessageCirclePlus } from 'lucide-vue-next';
+import { FolderKanban, BarChart3, MessageCirclePlus, Blocks } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 import { getSystemInfo } from '@/api/system';
 import { useChatEngineNav } from '@/composables/useChatEngineNav';
@@ -409,14 +409,22 @@ const isMenuItemActive = (itemPath: string): boolean => {
         case 'knowledge-bases':
             return currentRoute === 'knowledgeBaseList' ||
                 currentRoute === 'knowledgeBaseDetail' ||
-                currentRoute === 'knowledgeBaseSettings' ||
-                (typeof currentRoute === 'string' && currentRoute.startsWith('harnessExtension'));
+                currentRoute === 'knowledgeBaseSettings';
         case 'agents':
             return currentRoute === 'agentList';
         case 'organizations':
             return currentRoute === 'organizationList';
         case 'creatChat':
             return isNewChatRoute.value;
+        case 'skills':
+            return currentRoute === 'skills'
+                || currentRoute === 'skillDetail'
+                || currentRoute === 'tools'
+                || currentRoute === 'mcp'
+                || currentRoute === 'mcpDetail'
+                || currentRoute === 'harnessExtensionSkill'
+                || currentRoute === 'harnessExtensionMcp'
+                || currentRoute === 'harnessExtensions';
         case 'workspace':
             return currentRoute === 'workspace' || currentRoute === 'harnessWorkspace';
         case 'dashboard':
@@ -444,6 +452,7 @@ const getIconActiveState = (itemPath: string) => {
 };
 
 const HARNESS_TOP_MENU_PATHS = new Set([
+    'skills',
     'workspace',
     'dashboard',
 ]);
@@ -1143,6 +1152,7 @@ const HARNESS_MENU_ICONS: Record<string, Component> = {
     'harness-new-chat': MessageCirclePlus,
     'harness-workspace': FolderKanban,
     'harness-dashboard': BarChart3,
+    'skills-tools': Blocks,
 }
 
 const harnessMenuIcon = (icon: string) => HARNESS_MENU_ICONS[icon] || null

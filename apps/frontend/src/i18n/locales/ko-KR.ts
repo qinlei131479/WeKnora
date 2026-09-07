@@ -6594,6 +6594,7 @@ export default {
   menu: {
     knowledgeBase: '지식베이스',
     agents: '에이전트',
+    skillsTools: '스킬 · 도구',
     workspace: '작업 공간',
     dashboard: '데이터 개요',
     organizations: '공유 공간',

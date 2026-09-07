@@ -6594,6 +6594,7 @@ export default {
   menu: {
     knowledgeBase: 'База знаний',
     agents: 'Агенты',
+    skillsTools: 'Навыки · Инструменты',
     workspace: 'Рабочая область',
     dashboard: 'Обзор данных',
     organizations: 'Общие пространства',

@@ -36,6 +36,8 @@ F0 → F1 → … → F9 验收通过
 
 禁止：前端做到一半改接口；后端改到一半回头改页面；把多批功能打进同一个 PR。
 
+**书面例外（仅 F3）：** 用户指定将原 F3 Skill / F4 Tools / F5 Runtime MCP 合并为一批；侧栏只加一项「技能·工具」，页内横向 tab 切三个面。F6 起仍一批一功能。
+
 ### 0.3 阶段一硬约束
 
 - **不改后端接口**：不改 `apps/app-core`、`apps/agent-harness` 的 path / method / body / 事件字段。
@@ -112,9 +114,9 @@ F0 → F1 → … → F9 验收通过
 | 一 | **F0** | 基建：runtime API 搬家、路由/菜单约定、禁止新 Ant | 完成 |
 | 一 | **F1** | 数据总览 → `views/dashboard` | 完成（已收束文件：无独立 css / 短 util） |
 | 一 | **F2** | 工作区 → `views/workspace` | 完成（`c43485fc`；后续修删除弹窗/深色表线/勾选主色） |
-| 一 | **F3** | Skill 列表/详情 → `views/skills` | 未开始 |
-| 一 | **F4** | Tools 列表 → `views/tools` | 未开始 |
-| 一 | **F5** | MCP 列表/详情 → `views/mcp`（UI 合一，接口仍两套） | 未开始 |
+| 一 | **F3** | 技能·工具：Skill / Tools / Runtime MCP 一并迁入正式 views（原 F3–F5 合并） | 完成（代码已落地，验收待用户） |
+| 一 | **F4** | （已并入 F3） | 取消 |
+| 一 | **F5** | （已并入 F3） | 取消 |
 | 一 | **F6** | Runtime 智能体并进 `views/agent` | 未开始 |
 | 一 | **F7** | Runtime 知识库并进 `views/knowledge`（开工前确认收口策略） | 未开始 |
 | 一 | **F8** | Runtime 对话并进 `views/chat` + `creatChat` + 侧栏历史 | 未开始 |
@@ -245,85 +247,55 @@ F0 → F1 → … → F9 验收通过
 
 ---
 
-F3–F8 一律遵守 §0.7：先 move 再改 TDesign、同批删旧入口、能力/色相/组件块不缩水、不提交 `*.test.ts`。
+F3、F6–F8 一律遵守 §0.7：先 move 再改 TDesign、同批删旧入口、能力/色相/组件块不缩水、不提交 `*.test.ts`。F3 为原 F3–F5 合并批。
 
-### F3 · Skill
+### F3 · 技能·工具（Skill / Tools / Runtime MCP）
 
-**依赖:** F2 验收。
+**依赖:** F2 验收。  
+**后端:** 不动。设置里 Go 版 `views/settings/McpSettings.vue`（`/api/v1/mcp-services`）不动；本批只迁 Runtime MCP（`/harness-api`）。两套数据不合并。
 
-**Files:**
+**导航**
 
-- Move: `SkillCardList.vue`、`SkillDetailView.vue`、`SkillInstallFlowModal.vue` → `views/skills/` 再改 TDesign
-- Source: 上列 harness 文件（正式路由生效后同批删除）
-- API: `skill_api.js` → `src/api/runtime/skill.ts`
-- Modify: `KnowledgeBaseList.vue` — 去掉 `surface === 'skills'` 的 `HarnessIsland` 嵌入；入口改为路由 `/platform/skills`
-- Modify: `router/index.ts` — `/platform/skills`、`/platform/skills/:slug`；旧 `harness/extensions/skill/:slug` redirect
-- Modify: 命令面板 / KB 右侧 surface 导航：skills 项指向新路由，不再改 query `surface`
-
-- [ ] 列表、详情、安装/分享表单用 TDesign。
-- [ ] `KnowledgeBaseList` 不再渲染 Skill 嵌入岛。
-- [ ] 提交：`feat(frontend): move skills into official views`
-
-**验收**
-
-- [ ] `/platform/skills` 与旧 surface=skills 能力、色相、组件块一致（不少样式/不少一块 UI）
-- [ ] 深链 `/platform/harness/extensions/skill/:slug` 跳到新详情
-- [ ] 仍打 `/harness-api` skill 接口
-- [ ] 同批无死代码、无本批 `*.test.ts`
-
----
-
-### F4 · Tools
-
-**依赖:** F3 验收。
+- 侧栏只加 **一项**，文案「技能·工具」（MCP 视为工具的一种，不进菜单名）。
+- 位置：智能体下、工作区上。`path: 'skills'`；`/platform/tools`、`/platform/mcp` 时同一项高亮。
+- 页内三个 **横向** tab（技能 / 工具 / MCP），对齐 harness `PageHeader` 标题旁 pill，**禁止** `ListSpaceSidebar` 纵向 surface。
+- 菜单必须走 i18n，四语都加 `menu.skillsTools`：zh-CN `技能·工具` / en-US `Skills · Tools` / ru-RU `Навыки · Инструменты` / ko-KR `스킬 · 도구`。tab 复用 `knowledgeList.tabs.skills|tools|mcp`。
+- 禁止新建 `views/extensions/` 空树；tab 铬用现成 `PageHeader`。
 
 **Files:**
 
+- Create: `views/skills/index.vue` — 壳：`PageHeader` 标题 + 横向 tab，按路由切三个列表
+- Move: `SkillCardList.vue`、`SkillDetailView.vue`、`SkillInstallFlowModal.vue`、`SkillSuiteCard.vue` → `views/skills/` 再改 TDesign
 - Move: `ToolsCardList.vue` → `views/tools/` 再改 TDesign
-- Source: 上列 harness 文件（同批删除）
-- API: `tool_api.js` → `src/api/runtime/tool.ts`
-- Modify: `KnowledgeBaseList.vue` — 去掉 tools surface 嵌入
-- Modify: `router/index.ts` — `/platform/tools`
-
-- [ ] TDesign 列表页；入口从 KB surface 改为正式菜单或知识库旁路按钮（与 F3 同一套导航模式）。
-- [ ] 提交：`feat(frontend): move tools into official views`
-
-**验收**
-
-- [ ] 列表与旧 surface=tools 能力/色相/组件块一致
-- [ ] `KnowledgeBaseList` 无 tools 的 `HarnessIsland`
-- [ ] 同批无死代码、无本批 `*.test.ts`
-
----
-
-### F5 · MCP
-
-**依赖:** F4 验收。
-
-说明：设置里已有 Go 版 `views/settings/McpSettings.vue`（`/api/v1/mcp-services`）。本批只把 **Runtime MCP**（`/harness-api` mcp_api）做成正式 `views/mcp/`。两套数据阶段一不合并。页面文案区分「平台 MCP」与「运行时 MCP」，不要写 harness。
-
-**Files:**
-
 - Move: `McpCardList.vue`、`McpDetailView.vue`、`McpFormModal.vue` → `views/mcp/` 再改 TDesign
-- Source: 上列 harness 文件（同批删除）
-- Modify: `KnowledgeBaseList.vue` — 去掉 mcp surface 嵌入
-- Modify: `router/index.ts` — `/platform/mcp`、`/platform/mcp/:slug`；旧 extensions/mcp redirect
-- Optional: `Settings.vue` 增加跳转到 `/platform/mcp` 的入口（不删原 Go MCP 设置页）
+- Move: `skill_api.js` / `tool_api.js` / `mcp_api.js` → `src/api/runtime/{skill,tool,mcp}.ts`（URL 不变；`agent` store 等剩余引用改指向 runtime）
+- 共享且仍被 Runtime KB / 模型管理使用的 `ExtensionCardGrid`、`PageShoulder`、`InfoCard`、`PageHeader` **先留 harness**，本批不整树复制
+- Modify: `menu.ts` / `menu.vue` — 新菜单 + `skills|tools|mcp` 高亮
+- Modify: `router/index.ts` — `/platform/skills`、`/platform/skills/:slug`、`/platform/tools`、`/platform/mcp`、`/platform/mcp/:slug`；旧 `harness/extensions`、`extensions/skill|mcp/:slug`、知识库 `?surface=skills|tools|mcp` redirect
+- Modify: `KnowledgeBaseList.vue` — 同批去掉 skills/tools/mcp 三个 `HarnessIsland` 与 surface；知识库侧栏只留「知识库 / 运行时」
+- Modify: `knowledgeBasesLocation()` — skills/tools/mcp 改指向新路由
+- Modify: `weknoraFeatures` 隐藏菜单认 `skills`
 
-- [ ] TDesign 列表/详情/表单。
-- [ ] 提交：`feat(frontend): move runtime MCP into official views`
+- [x] 侧栏一项「技能·工具」，四语 i18n；页内横向 tab 切技能/工具/MCP
+- [x] 列表、详情、安装/MCP 表单用 TDesign（对照迁前 harness 扩展页，不是对照知识库竖条）
+- [x] `KnowledgeBaseList` 不再渲染这三个岛
+- [ ] 提交：`feat(frontend): 将技能、工具与 MCP 迁入正式 views`
 
 **验收**
 
-- [ ] Runtime MCP CRUD/详情与旧页能力/色相/组件块一致，URL 仍 `/harness-api`
+- [ ] 点菜单进 `/platform/skills`；三个横向 tab 能力/色相/组件块与旧扩展页同等
+- [ ] 旧 `/platform/harness/extensions`、`extensions/skill|mcp/:slug`、`?surface=skills|tools|mcp` 跳到新路由
+- [ ] 请求仍为 `/harness-api` skill / tools / mcp-servers
 - [ ] 设置里原 `/api/v1` MCP 页仍可用（回归）
-- [ ] 同批无死代码、无本批 `*.test.ts`
+- [ ] 无 `HarnessIsland` 嵌这三个面、无新 Ant、无本批 `*.test.ts`
+
+**落地偏差（写明）：** 卡片栅格仍复用 harness `ExtensionCardGrid` / `InfoCard`；技能详情文件树仍用 `FileTreeComponent`（内部 Ant）。`PageShoulder` 搜索已改 TDesign。TDesign Dialog 铬与旧 Ant Modal 不同。图标形状可不同。设置 MCP 与 Runtime MCP 不合并。
 
 ---
 
 ### F6 · Runtime 智能体并进 Agent 列表
 
-**依赖:** F5 验收。
+**依赖:** F3 验收。
 
 **Files:**
 

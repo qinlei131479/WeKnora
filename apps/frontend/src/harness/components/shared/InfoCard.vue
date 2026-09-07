@@ -3,7 +3,8 @@
     class="info-card"
     :class="{
       'info-card-disabled': disabled,
-      'info-card-mini': variant === 'mini'
+      'info-card-mini': variant === 'mini',
+      'info-card--kb': layout === 'kb'
     }"
     @click="$emit('click')"
   >
@@ -117,13 +118,14 @@
         class="info-card-tags"
       >
         <slot name="tags">
-          <span
+          <t-tag
             v-for="(tag, idx) in normalizedTags"
             :key="idx"
-            class="card-tag"
-            :class="tag.color ? `tag-${tag.color}` : ''"
-            :style="tag.bgColor ? { backgroundColor: tag.bgColor } : {}"
-            >{{ tag.name }}</span
+            size="small"
+            variant="light-outline"
+            :theme="tagTheme(tag)"
+            class="wk-chip"
+            >{{ tag.name }}</t-tag
           >
         </slot>
         <div v-if="$slots['tag-actions']" class="info-card-tag-actions">
@@ -153,7 +155,8 @@ const props = defineProps({
   status: { type: Object, default: null },
   actionLabel: { type: String, default: '' },
   actionVariant: { type: String, default: 'primary' },
-  variant: { type: String, default: 'default' }
+  variant: { type: String, default: 'default' },
+  layout: { type: String, default: 'default' }
 })
 
 const statusDotColor = computed(() => {
@@ -173,6 +176,15 @@ const normalizedTags = computed(() => {
     return { name: t.name || t.label || '', color: t.color, bgColor: t.bgColor }
   })
 })
+
+const tagTheme = (tag) => {
+  const color = tag?.color
+  if (color === 'orange' || color === 'warning') return 'warning'
+  if (color === 'green' || color === 'success') return 'success'
+  if (color === 'red' || color === 'error') return 'danger'
+  if (color === 'blue' || color === 'primary') return 'primary'
+  return 'default'
+}
 </script>
 
 <style lang="less" scoped>
@@ -302,7 +314,7 @@ const normalizedTags = computed(() => {
   &-tags {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     flex-wrap: wrap;
   }
 
@@ -352,10 +364,114 @@ const normalizedTags = computed(() => {
   }
 }
 
-.card-tag.tag-gray {
-  border: 0;
-  background: var(--gray-100);
-  color: var(--gray-600);
+.info-card--kb {
+  position: relative;
+  height: 136px;
+  min-height: 136px;
+  padding: 12px 14px;
+  gap: 6px;
+  border: 1px solid var(--td-component-stroke, var(--gray-150));
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  background: linear-gradient(
+    135deg,
+    var(--td-bg-color-container, var(--gray-0)) 0%,
+    rgba(7, 192, 95, 0.04) 100%
+  );
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, rgba(7, 192, 95, 0.08) 0%, transparent 100%);
+    border-radius: 0 8px 0 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  &:hover {
+    border-color: var(--td-brand-color, var(--main-color));
+    box-shadow: 0 4px 12px rgba(7, 192, 95, 0.12);
+    background: linear-gradient(
+      135deg,
+      var(--td-bg-color-container, var(--gray-0)) 0%,
+      rgba(7, 192, 95, 0.08) 100%
+    );
+  }
+
+  .info-card-header {
+    gap: 8px;
+    margin-bottom: 0;
+  }
+
+  .info-card-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--td-brand-color, var(--main-color)) 10%, transparent);
+    border: 0;
+    color: var(--td-brand-color, var(--main-color));
+  }
+
+  .info-card-name {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 22px;
+    letter-spacing: 0.01em;
+    color: var(--td-text-color-primary, var(--gray-900));
+  }
+
+  .info-card-subtitle {
+    margin-top: 1px;
+    font-size: 12px;
+    line-height: 18px;
+    font-family: inherit;
+    color: var(--td-text-color-secondary, var(--gray-600));
+  }
+
+  .info-card-desc {
+    flex: 1;
+    min-height: 0;
+    margin: 0;
+    font-size: 12px;
+    line-height: 17px;
+    color: var(--td-text-color-secondary, var(--gray-600));
+  }
+
+  .info-card-tags {
+    margin-top: auto;
+    gap: 8px;
+  }
+
+  .info-card-status {
+    z-index: 2;
+  }
+}
+
+:deep(.t-tag.wk-chip) {
+  height: 18px;
+  max-height: 18px;
+  line-height: 16px;
+  padding: 0 6px;
+  margin: 0;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+:deep(.t-tag.wk-chip.t-tag--default) {
+  background: transparent;
+  border-color: var(--td-component-stroke, var(--gray-200));
+  color: var(--td-text-color-secondary, var(--gray-600));
 }
 
 .card-more-action-corner {

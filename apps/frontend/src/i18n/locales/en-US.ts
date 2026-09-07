@@ -207,6 +207,7 @@ export default {
   menu: {
     knowledgeBase: 'Knowledge Base',
     agents: 'Agents',
+    skillsTools: 'Skills · Tools',
     workspace: 'Workspace',
     dashboard: 'Overview',
     organizations: 'Shared Spaces',

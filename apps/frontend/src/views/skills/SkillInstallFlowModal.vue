@@ -1,14 +1,18 @@
 <template>
-  <a-modal
-    :open="open"
+  <t-dialog
+    :visible="open"
+    attach="body"
+    placement="center"
     class="skill-install-flow-modal"
+    dialog-class-name="skill-install-flow-modal"
+    :header="false"
     :width="840"
-    :closable="canClose"
-    :mask-closable="canClose"
-    :keyboard="canClose"
-    :footer="null"
+    :close-btn="canClose"
+    :close-on-overlay-click="canClose"
+    :close-on-esc-keydown="canClose"
+    :footer="false"
     :destroy-on-close="true"
-    @cancel="handleClose"
+    @close="handleClose"
   >
     <div class="install-flow-shell">
       <header class="install-flow-header">
@@ -41,8 +45,8 @@
             <div class="selection-toolbar">
               <span>{{ t('knowledgeList.extensions.skills.install.pickToLoad') }}</span>
               <div>
-                <a-button type="link" size="small" @click="selectAllAvailable">{{ t('knowledgeList.extensions.skills.selectAll') }}</a-button>
-                <a-button type="link" size="small" @click="selectedSlugs = []">{{ t('knowledgeList.extensions.skills.clear') }}</a-button>
+                <t-button variant="text" size="small" @click="selectAllAvailable">{{ t('knowledgeList.extensions.skills.selectAll') }}</t-button>
+                <t-button variant="text" size="small" @click="selectedSlugs = []">{{ t('knowledgeList.extensions.skills.clear') }}</t-button>
               </div>
             </div>
             <div class="flow-item-list selection-list">
@@ -52,10 +56,10 @@
                 class="selection-item"
                 :class="{ installed: isInstalled(skill.slug) }"
               >
-                <a-checkbox
+                <t-checkbox
                   :checked="selectedSlugs.includes(skill.slug)"
                   :disabled="isInstalled(skill.slug)"
-                  @change="(event) => toggleSelection(skill.slug, event.target.checked)"
+                  @change="(checked) => toggleSelection(skill.slug, checked)"
                 />
                 <span class="flow-item-content">
                   <strong>{{ skill.name }}</strong>
@@ -191,35 +195,35 @@
           <span class="footer-summary">{{ footerSummary }}</span>
           <div class="footer-actions">
             <template v-if="phase === 'selecting'">
-              <a-button @click="handleClose">{{ t('knowledgeList.extensions.skills.install.cancel') }}</a-button>
-              <a-button type="primary" :disabled="selectedSlugs.length === 0" @click="prepareSuite">
+              <t-button @click="handleClose">{{ t('knowledgeList.extensions.skills.install.cancel') }}</t-button>
+              <t-button theme="primary" :disabled="selectedSlugs.length === 0" @click="prepareSuite">
                 {{ t('knowledgeList.extensions.skills.install.loadSelected') }}
-              </a-button>
+              </t-button>
             </template>
             <template v-else-if="phase === 'preparing'">
-              <a-button v-if="flowError" @click="handleClose">{{ t('knowledgeList.extensions.skills.install.close') }}</a-button>
-              <a-button v-else loading disabled>{{ t('knowledgeList.extensions.skills.install.loading') }}</a-button>
+              <t-button v-if="flowError" @click="handleClose">{{ t('knowledgeList.extensions.skills.install.close') }}</t-button>
+              <t-button v-else loading disabled>{{ t('knowledgeList.extensions.skills.install.loading') }}</t-button>
             </template>
             <template v-else-if="phase === 'reviewing'">
-              <a-button @click="handleClose">{{ t('knowledgeList.extensions.skills.install.cancel') }}</a-button>
-              <a-button type="primary" :disabled="readyItems.length === 0" @click="installDrafts">
+              <t-button @click="handleClose">{{ t('knowledgeList.extensions.skills.install.cancel') }}</t-button>
+              <t-button theme="primary" :disabled="readyItems.length === 0" @click="installDrafts">
                 {{ t('knowledgeList.extensions.skills.install.confirmInstall', { count: readyItems.length, target: installTargetLabel }) }}
-              </a-button>
+              </t-button>
             </template>
             <template v-else-if="phase === 'installing'">
-              <a-button type="primary" loading disabled>{{ t('knowledgeList.extensions.skills.install.installing') }}</a-button>
+              <t-button theme="primary" loading disabled>{{ t('knowledgeList.extensions.skills.install.installing') }}</t-button>
             </template>
             <template v-else>
-              <a-button v-if="failedInstallItems.length" @click="retryFailedItems">
+              <t-button v-if="failedInstallItems.length" @click="retryFailedItems">
                 {{ t('knowledgeList.extensions.skills.install.retryFailed') }}
-              </a-button>
-              <a-button type="primary" @click="finishFlow">{{ t('knowledgeList.extensions.skills.install.finish') }}</a-button>
+              </t-button>
+              <t-button theme="primary" @click="finishFlow">{{ t('knowledgeList.extensions.skills.install.finish') }}</t-button>
             </template>
           </div>
         </template>
       </footer>
     </div>
-  </a-modal>
+  </t-dialog>
 </template>
 
 <script setup>
@@ -234,7 +238,7 @@ import {
   XCircle
 } from 'lucide-vue-next'
 import ShareConfigForm from '@harness/components/ShareConfigForm.vue'
-import { skillApi } from '@harness/apis/skill_api'
+import { skillApi } from '@/api/runtime/skill'
 import { useUserStore } from '@harness/stores/user'
 
 const props = defineProps({
@@ -757,7 +761,7 @@ watch(
   font-size: 13px;
   font-weight: 600;
 
-  :deep(.ant-btn-link) {
+  :deep(.t-button--variant-text) {
     color: var(--gray-600);
 
     &:hover {
@@ -1167,7 +1171,7 @@ body:has(.skill-install-flow-modal) {
     margin: 0;
     padding: 0;
 
-    .ant-modal-content {
+    .t-dialog {
       min-height: 100vh;
       border-radius: 0;
     }

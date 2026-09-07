@@ -237,6 +237,9 @@ export function isWeKnoraKbId(kbId: string | undefined | null): boolean {
 
 /** 跳转知识库列表；被隐藏的 surface 不带 query */
 export function knowledgeBasesLocation(surface?: string): { path: string; query?: Record<string, string> } {
+  if (surface === 'skills' || surface === 'tools' || surface === 'mcp') {
+    return { path: `/platform/${surface}` }
+  }
   if (!surface || surface === 'platform' || isHiddenKbSurface(surface)) {
     return { path: '/platform/knowledge-bases' }
   }

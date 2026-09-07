@@ -111,7 +111,13 @@ const router = createRouter({
           path: "knowledge-bases",
           name: "knowledgeBaseList",
           component: () => import("../views/knowledge/KnowledgeBaseList.vue"),
-          meta: { requiresInit: true, requiresAuth: true }
+          meta: { requiresInit: true, requiresAuth: true },
+          beforeEnter: (to) => {
+            const surface = String(to.query.surface || '')
+            if (surface === 'skills' || surface === 'tools' || surface === 'mcp') {
+              return { path: `/platform/${surface}` }
+            }
+          }
         },
         {
           path: "knowledge-bases/:kbId",
@@ -175,6 +181,36 @@ const router = createRouter({
           path: "workspace",
           name: "workspace",
           component: () => import("../views/workspace/index.vue"),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
+          path: "skills",
+          name: "skills",
+          component: () => import("../views/skills/index.vue"),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
+          path: "skills/:slug",
+          name: "skillDetail",
+          component: () => import("../views/skills/detail.vue"),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
+          path: "tools",
+          name: "tools",
+          component: () => import("../views/skills/index.vue"),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
+          path: "mcp",
+          name: "mcp",
+          component: () => import("../views/skills/index.vue"),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
+          path: "mcp/:slug",
+          name: "mcpDetail",
+          component: () => import("../views/mcp/detail.vue"),
           meta: { requiresInit: true, requiresAuth: true }
         },
         {
@@ -258,28 +294,24 @@ const router = createRouter({
                   path: "",
                   name: "harnessExtensions",
                   redirect: (to) => {
-                    const hideExtensions = isHiddenKbSurface('skills')
-                    const tab = String(to.query.tab || (hideExtensions ? 'platform' : 'skills'))
-                    const surface = tab === 'knowledge'
-                      ? 'runtime'
-                      : (tab === 'platform'
-                        ? 'platform'
-                        : (tab === 'tools' || tab === 'mcp' || tab === 'skills'
-                          ? (isHiddenKbSurface(tab) ? 'platform' : tab)
-                          : (hideExtensions ? 'platform' : 'skills')))
-                    return { path: '/platform/knowledge-bases', query: { surface } }
+                    const tab = String(to.query.tab || 'skills')
+                    if (tab === 'tools') return { path: '/platform/tools' }
+                    if (tab === 'mcp') return { path: '/platform/mcp' }
+                    if (tab === 'knowledge') return { path: '/platform/knowledge-bases', query: { surface: 'runtime' } }
+                    if (tab === 'platform') return { path: '/platform/knowledge-bases' }
+                    return { path: '/platform/skills' }
                   }
                 },
                 {
                   path: "mcp/:slug",
                   name: "harnessExtensionMcp",
-                  component: () => import("@harness/components/extensions/McpDetailView.vue"),
+                  redirect: (to) => ({ name: 'mcpDetail', params: { slug: to.params.slug } }),
                   meta: { requiresInit: true, requiresAuth: true }
                 },
                 {
                   path: "skill/:slug",
                   name: "harnessExtensionSkill",
-                  component: () => import("@harness/components/extensions/SkillDetailView.vue"),
+                  redirect: (to) => ({ name: 'skillDetail', params: { slug: to.params.slug } }),
                   meta: { requiresInit: true, requiresAuth: true }
                 }
               ]

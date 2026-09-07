@@ -1,7 +1,10 @@
 <template>
   <div
     class="extension-card-grid"
-    :style="{ gridTemplateColumns: `repeat(auto-fill, minmax(${minWidth}px, 1fr))` }"
+    :style="{
+      gridTemplateColumns: `repeat(auto-fill, minmax(${minWidth}px, 1fr))`,
+      gap: `${gap}px`
+    }"
   >
     <slot />
     <div v-if="!$slots.default && items.length === 0" class="extension-card-grid-empty">
@@ -14,7 +17,8 @@
 defineProps({
   items: { type: Array, default: () => [] },
   emptyText: { type: String, default: '暂无数据' },
-  minWidth: { type: Number, default: 280 }
+  minWidth: { type: Number, default: 280 },
+  gap: { type: Number, default: 16 }
 })
 </script>
 

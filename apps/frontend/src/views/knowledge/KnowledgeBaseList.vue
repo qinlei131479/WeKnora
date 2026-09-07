@@ -1,6 +1,7 @@
 <template>
   <div class="kb-list-container">
     <ListSpaceSidebar
+      v-if="showKbSpaceSidebar"
       v-model="spaceSelection"
       v-model:surface-value="surface"
       :surface-items="surfaceNavItems"
@@ -21,19 +22,14 @@
             </t-tooltip>
           </div>
           <p class="header-subtitle" style="--wails-draggable: drag">{{
-            surface === 'platform'
-              ? $t('knowledgeList.subtitle')
-              : surface === 'runtime'
-                ? $t('knowledgeList.runtimeSubtitle')
-                : $t('knowledgeList.extensionsSubtitle')
+            surface === 'runtime'
+              ? $t('knowledgeList.runtimeSubtitle')
+              : $t('knowledgeList.subtitle')
           }}</p>
         </div>
       </div>
       <HarnessIsland v-if="surface !== 'platform'" class="surface-embed">
         <DataBaseView v-if="surface === 'runtime'" embedded />
-        <SkillCardList v-else-if="surface === 'skills'" />
-        <ToolsCardList v-else-if="surface === 'tools'" />
-        <McpCardList v-else-if="surface === 'mcp'" />
       </HarnessIsland>
       <div v-else class="kb-list-main">
         <!-- creator filter intentionally removed from chrome: every card
@@ -818,9 +814,6 @@ import { useListUrlState } from '@/composables/useListUrlState'
 import { useListSurface } from '@/composables/useListSurface'
 import HarnessIsland from '@harness/HarnessIsland.vue'
 import DataBaseView from '@harness/views/DataBaseView.vue'
-import SkillCardList from '@harness/components/extensions/SkillCardList.vue'
-import ToolsCardList from '@harness/components/extensions/ToolsCardList.vue'
-import McpCardList from '@harness/components/extensions/McpCardList.vue'
 import ContextualGuide from '@/components/ContextualGuide.vue'
 import { isContextualGuideDone, markContextualGuideDone } from '@/config/contextualGuides'
 import { useTenantModelReadiness } from '@/composables/useTenantModelReadiness'
@@ -854,19 +847,16 @@ const { scope: spaceSelection, creator: creatorFilter } = useListUrlState({
   defaultScope,
   defaultCreator: 'all',
 })
-type KbSurface = 'platform' | 'runtime' | 'skills' | 'tools' | 'mcp'
-const KB_SURFACES: KbSurface[] = ['platform', 'runtime', 'skills', 'tools', 'mcp']
+type KbSurface = 'platform' | 'runtime'
+const KB_SURFACES: KbSurface[] = ['platform', 'runtime']
 const { surface } = useListSurface<KbSurface>(
   () => KB_SURFACES.filter((item) => !isHiddenKbSurface(item)),
   'platform',
 )
 const surfaceNavItems = computed(() => [
-  { value: 'platform', label: t('knowledgeList.tabs.platform'), shortLabel: t('knowledgeList.tabs.short.platform'), icon: 'folder' },
   { value: 'runtime', label: t('knowledgeList.tabs.runtime'), shortLabel: t('knowledgeList.tabs.short.runtime'), icon: 'server' },
-  { value: 'skills', label: t('knowledgeList.tabs.skills'), shortLabel: t('knowledgeList.tabs.short.skills'), icon: 'app' },
-  { value: 'tools', label: t('knowledgeList.tabs.tools'), shortLabel: t('knowledgeList.tabs.short.tools'), icon: 'tools' },
-  { value: 'mcp', label: t('knowledgeList.tabs.mcp'), shortLabel: t('knowledgeList.tabs.short.mcp'), icon: 'link' },
 ].filter((item) => !isHiddenKbSurface(item.value)))
+const showKbSpaceSidebar = computed(() => SHOW_SCOPE_NAV || surfaceNavItems.value.length > 0)
 
 // Per-user favorites + recents (localStorage-backed). isFavorite & touchRecent
 // are wired into card render and click handlers below.

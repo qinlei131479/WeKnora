@@ -1,3 +1,72 @@
+.extension-detail-page {
+  --page-padding: 22px;
+  --main-800: #027218;
+  --main-700: #038626;
+  --main-600: #049b38;
+  --main-500: #07c05f;
+  --main-color: #07c05f;
+  --gray-2000: #0c0d0d;
+  --gray-1000: #151616;
+  --gray-900: #1e1f1f;
+  --gray-800: #323333;
+  --gray-700: #4c4d4d;
+  --gray-600: #697070;
+  --gray-500: #979999;
+  --gray-400: #bdbfbf;
+  --gray-300: #d7d9d9;
+  --gray-200: #e4e6e6;
+  --gray-150: #eef0f0;
+  --gray-100: #eff2f2;
+  --gray-50: #f5f7f7;
+  --gray-25: #f8fafa;
+  --gray-10: #fbfcfc;
+  --gray-0: #ffffff;
+}
+
+html[theme-mode="dark"] .extension-detail-page {
+  --main-color: var(--td-brand-color, #06b04d);
+  --gray-2000: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  --gray-1000: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  --gray-900: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  --gray-800: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55));
+  --gray-700: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55));
+  --gray-600: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55));
+  --gray-500: var(--td-text-color-placeholder, rgba(255, 255, 255, 0.35));
+  --gray-400: var(--td-text-color-placeholder, rgba(255, 255, 255, 0.35));
+  --gray-300: var(--td-component-border, #5e5e5e);
+  --gray-200: var(--td-component-border, #5e5e5e);
+  --gray-150: rgba(255, 255, 255, 0.06);
+  --gray-100: rgba(255, 255, 255, 0.06);
+  --gray-50: rgba(255, 255, 255, 0.06);
+  --gray-0: var(--td-bg-color-page, #181818);
+  --gray-10: var(--td-bg-color-page, #181818);
+  --gray-25: var(--td-bg-color-page, #181818);
+}
+
+.t-tag.wk-chip {
+  height: 18px;
+  max-height: 18px;
+  line-height: 16px;
+  padding: 0 6px;
+  margin: 0;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.wk-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.t-tag.wk-chip.t-tag--default {
+  background: transparent;
+  border-color: var(--td-component-stroke, var(--gray-200));
+  color: var(--td-text-color-secondary, var(--gray-600));
+}
+
 @border-color: var(--gray-150);
 @bg-secondary: var(--gray-10);
 @radius: 8px;
@@ -628,6 +697,15 @@
     > span {
       font-size: 14px;
       color: var(--gray-900);
+    }
+
+    > span:has(.t-tag),
+    .wk-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 2px;
     }
   }
 }

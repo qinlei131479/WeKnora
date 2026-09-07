@@ -6606,6 +6606,7 @@ export default {
   menu: {
     knowledgeBase: '知识库',
     agents: '智能体',
+    skillsTools: '技能·工具',
     workspace: '工作区',
     dashboard: '数据总览',
     organizations: '共享空间',

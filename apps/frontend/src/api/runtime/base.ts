@@ -149,3 +149,8 @@ export function apiPut(
 export function apiDelete(url: string, options: RequestInit = {}, requiresAuth = true, responseType: ResponseType = 'json') {
   return apiRequest(url, { method: 'DELETE', ...options }, requiresAuth, responseType)
 }
+
+export const apiAdminGet = apiGet
+export const apiAdminPost = apiPost
+export const apiAdminPut = apiPut
+export const apiAdminDelete = apiDelete

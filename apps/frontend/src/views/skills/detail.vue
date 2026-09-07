@@ -18,7 +18,7 @@
         </div>
       </div>
       <div class="detail-actions">
-        <a-space :size="8">
+        <div style="display:flex;align-items:center;gap:8px">
           <button
             v-if="isInstalledSkill && canManageCurrentSkill"
             type="button"
@@ -37,7 +37,7 @@
             <Trash2 :size="14" />
             <span>{{ t('knowledgeList.extensions.skills.detail.delete') }}</span>
           </button>
-        </a-space>
+        </div>
       </div>
     </div>
 
@@ -46,9 +46,9 @@
         <div v-if="isReadOnlySkill" class="readonly-scope-hint readonly-detail-hint">
           {{ t('knowledgeList.extensions.skills.detail.readonlyHint') }}
         </div>
-        <a-tabs v-if="isInstalledSkill" v-model:activeKey="activeTab" class="minimal-tabs">
-          <a-tab-pane key="editor">
-            <template #tab>
+        <t-tabs v-if="isInstalledSkill" v-model="activeTab" class="minimal-tabs">
+          <t-tab-panel value="editor">
+            <template #label>
               <span class="tab-title"><FileText :size="14" />{{ t('knowledgeList.extensions.skills.detail.tabCode') }}</span>
             </template>
             <div class="workspace">
@@ -56,15 +56,15 @@
                 <div class="tree-header">
                   <span class="label">{{ t('knowledgeList.extensions.skills.detail.projectStructure') }}</span>
                   <div class="tree-actions">
-                    <a-tooltip v-if="canEditSkillFiles" :title="t('knowledgeList.extensions.skills.detail.newFile')"
+                    <t-tooltip v-if="canEditSkillFiles" :content="t('knowledgeList.extensions.skills.detail.newFile')"
                       ><button @click="openCreateModal(false)"><FilePlus :size="14" /></button
-                    ></a-tooltip>
-                    <a-tooltip v-if="canEditSkillFiles" :title="t('knowledgeList.extensions.skills.detail.newDir')"
+                    ></t-tooltip>
+                    <t-tooltip v-if="canEditSkillFiles" :content="t('knowledgeList.extensions.skills.detail.newDir')"
                       ><button @click="openCreateModal(true)"><FolderPlus :size="14" /></button
-                    ></a-tooltip>
-                    <a-tooltip :title="t('knowledgeList.extensions.skills.detail.refresh')"
+                    ></t-tooltip>
+                    <t-tooltip :content="t('knowledgeList.extensions.skills.detail.refresh')"
                       ><button @click="reloadTree"><RotateCw :size="14" /></button
-                    ></a-tooltip>
+                    ></t-tooltip>
                   </div>
                 </div>
                 <div class="tree-content">
@@ -78,7 +78,7 @@
               </div>
               <div class="editor-container">
                 <div class="editor-main">
-                  <a-empty
+                  <t-empty
                     v-if="!selectedPath || selectedIsDir"
                     :description="t('knowledgeList.extensions.skills.detail.pickFile')"
                     class="mt-40"
@@ -101,10 +101,10 @@
                 </div>
               </div>
             </div>
-          </a-tab-pane>
+          </t-tab-panel>
 
-          <a-tab-pane key="settings">
-            <template #tab>
+          <t-tab-panel value="settings">
+            <template #label>
               <span class="tab-title"><Settings :size="14" />{{ t('knowledgeList.extensions.skills.detail.tabScope') }}</span>
             </template>
             <div class="config-view">
@@ -113,16 +113,16 @@
                   <h3>{{ t('knowledgeList.extensions.skills.detail.shareTitle') }}</h3>
                   <p>{{ t('knowledgeList.extensions.skills.detail.shareDesc') }}</p>
                 </div>
-                <a-button
+                <t-button
                   v-if="canManageCurrentSkill"
-                  type="primary"
+                  theme="primary"
                   :loading="savingShareConfig"
                   @click="saveShareConfig"
                   class="lucide-icon-btn"
                 >
                   <Save :size="14" />
                   <span>{{ t('knowledgeList.extensions.skills.detail.saveSettings') }}</span>
-                </a-button>
+                </t-button>
               </div>
               <div class="settings-stack">
                 <section class="settings-card">
@@ -136,7 +136,7 @@
                     <span class="status-pill" :class="enabledForm ? 'enabled' : 'disabled'">
                       {{ enabledForm ? t('knowledgeList.extensions.skills.detail.enabled') : t('knowledgeList.extensions.skills.detail.disabled') }}
                     </span>
-                    <a-switch v-model:checked="enabledForm" :disabled="!canManageCurrentSkill" />
+                    <t-switch v-model="enabledForm" :disabled="!canManageCurrentSkill" />
                   </div>
                 </section>
 
@@ -163,10 +163,10 @@
                 </section>
               </div>
             </div>
-          </a-tab-pane>
+          </t-tab-panel>
 
-          <a-tab-pane key="dependencies">
-            <template #tab>
+          <t-tab-panel value="dependencies">
+            <template #label>
               <span class="tab-title"><Layers :size="14" />{{ t('knowledgeList.extensions.skills.detail.tabDeps') }}</span>
             </template>
             <div class="config-view">
@@ -175,16 +175,16 @@
                   <h3>{{ t('knowledgeList.extensions.skills.detail.depsTitle') }}</h3>
                   <p>{{ t('knowledgeList.extensions.skills.detail.depsDesc') }}</p>
                 </div>
-                <a-button
+                <t-button
                   v-if="canEditSkillDependencies"
-                  type="primary"
+                  theme="primary"
                   :loading="savingDependencies"
                   @click="saveDependencies"
                   class="lucide-icon-btn"
                 >
                   <Save :size="14" />
                   <span>{{ t('knowledgeList.extensions.skills.detail.updateDeps') }}</span>
-                </a-button>
+                </t-button>
               </div>
               <div class="dependency-groups">
                 <section
@@ -203,27 +203,27 @@
                       </div>
                       <p>{{ group.description }}</p>
                     </div>
-                    <a-dropdown
+                    <t-popup
                       v-if="canEditSkillDependencies"
-                      :trigger="['click']"
-                      placement="bottomRight"
-                      overlay-class-name="dependency-selection-popover"
+                      trigger="click"
+                      placement="bottom-right"
+                      :overlay-class-name="'dependency-selection-popover'"
                     >
-                      <a-button size="small" class="dependency-action-btn dependency-select-btn">
+                      <t-button size="small" class="dependency-action-btn dependency-select-btn">
                         <Plus :size="13" />
                         <span>{{ t('knowledgeList.extensions.skills.detail.pickDeps') }}</span>
                         <ChevronDown :size="12" class="dependency-select-chevron" />
-                      </a-button>
-                      <template #overlay>
+                      </t-button>
+                      <template #content>
                         <div class="selection-dropdown" @mousedown.stop @click.stop>
                           <div class="selection-dropdown-header">
                             <div class="selection-dropdown-title">{{ group.title }}</div>
                             <div class="selection-dropdown-subtitle">{{ group.dropdownHint }}</div>
                           </div>
-                          <a-input
-                            v-model:value="dependencySearch[group.key]"
+                          <t-input
+                            v-model="dependencySearch[group.key]"
                             size="small"
-                            allow-clear
+                            clearable
                             class="selection-search"
                             :placeholder="t('knowledgeList.extensions.skills.detail.searchDeps', { name: group.shortTitle })"
                             @mousedown.stop
@@ -265,11 +265,11 @@
                               "
                             >
                               <span class="selection-item-content">
-                                <a-checkbox
+                                <t-checkbox
                                   :checked="isDependencySelected(group, option.value)"
                                   @click.stop
                                   @change="
-                                    toggleDependency(group, option.value, $event.target.checked)
+                                    (checked) => toggleDependency(group, option.value, checked)
                                   "
                                 />
                                 <span class="selection-label">{{ option.label }}</span>
@@ -281,10 +281,10 @@
                           </div>
                         </div>
                       </template>
-                    </a-dropdown>
-                    <a-button v-else size="small" disabled class="dependency-action-btn">
+                    </t-popup>
+                    <t-button v-else size="small" disabled class="dependency-action-btn">
                       {{ isBuiltinInstalledSkill ? t('knowledgeList.extensions.skills.detail.systemMaintained') : t('knowledgeList.extensions.skills.detail.readonly') }}
-                    </a-button>
+                    </t-button>
                   </div>
 
                   <div v-if="getDependencyValues(group).length" class="dependency-chip-list">
@@ -310,32 +310,34 @@
                 </section>
               </div>
             </div>
-          </a-tab-pane>
-        </a-tabs>
+          </t-tab-panel>
+        </t-tabs>
       </div>
       <div v-else-if="!loading" class="detail-empty">
-        <a-empty :description="t('knowledgeList.extensions.skills.detail.notFound')" />
+        <t-empty :description="t('knowledgeList.extensions.skills.detail.notFound')" />
       </div>
     </div>
 
-    <a-modal
-      v-model:open="createModalVisible"
-      :title="createForm.isDir ? t('knowledgeList.extensions.skills.detail.newDir') : t('knowledgeList.extensions.skills.detail.newFile')"
-      :ok-text="t('common.confirm')"
-      :cancel-text="t('knowledgeList.extensions.cancel')"
-      @ok="handleCreateNode"
+    <t-dialog
+      v-model:visible="createModalVisible"
+      attach="body"
+      placement="center"
+      :header="createForm.isDir ? t('knowledgeList.extensions.skills.detail.newDir') : t('knowledgeList.extensions.skills.detail.newFile')"
+      :confirm-btn="t('common.confirm')"
+      :cancel-btn="t('knowledgeList.extensions.cancel')"
       :confirm-loading="creatingNode"
-      width="400px"
+      :width="400"
+      @confirm="handleCreateNode"
     >
-      <a-form layout="vertical" class="pt-12">
-        <a-form-item :label="t('knowledgeList.extensions.skills.detail.pathRelative')" required>
-          <a-input v-model:value="createForm.path" placeholder="src/main.py" />
-        </a-form-item>
-        <a-form-item v-if="!createForm.isDir" :label="t('knowledgeList.extensions.skills.detail.content')">
-          <a-textarea v-model:value="createForm.content" :rows="5" />
-        </a-form-item>
-      </a-form>
-    </a-modal>
+      <t-form layout="vertical" class="pt-12">
+        <t-form-item :label="t('knowledgeList.extensions.skills.detail.pathRelative')" required>
+          <t-input v-model="createForm.path" placeholder="src/main.py" />
+        </t-form-item>
+        <t-form-item v-if="!createForm.isDir" :label="t('knowledgeList.extensions.skills.detail.content')">
+          <t-textarea v-model="createForm.content" :autosize="{ minRows: 5 }" />
+        </t-form-item>
+      </t-form>
+    </t-dialog>
   </div>
 </template>
 
@@ -343,7 +345,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import { message, Modal } from 'ant-design-vue'
+import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
 import {
   ArrowLeft,
   WandSparkles,
@@ -360,7 +362,7 @@ import {
   Plus,
   ChevronDown
 } from 'lucide-vue-next'
-import { skillApi } from '@harness/apis/skill_api'
+import { skillApi } from '@/api/runtime/skill'
 import AgentFilePreview from '@harness/components/AgentFilePreview.vue'
 import FileTreeComponent from '@harness/components/FileTreeComponent.vue'
 import ShareConfigForm from '@harness/components/ShareConfigForm.vue'
@@ -577,7 +579,7 @@ const fetchSkillDetail = async () => {
     }
     await fetchDependencyOptions(currentSkill.value?.slug)
   } catch {
-    message.error(t('knowledgeList.extensions.skills.detail.loadFailed'))
+    MessagePlugin.error(t('knowledgeList.extensions.skills.detail.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -631,7 +633,7 @@ const reloadTree = async () => {
     treeData.value = normalized
     expandedKeys.value = expandAllKeys(normalized)
   } catch {
-    message.error(t('knowledgeList.extensions.skills.detail.treeFailed'))
+    MessagePlugin.error(t('knowledgeList.extensions.skills.detail.treeFailed'))
   } finally {
     loading.value = false
   }
@@ -670,7 +672,7 @@ const handleTreeSelect = async (keys, info) => {
     const content = result?.data?.content || ''
     fileContent.value = content
   } catch {
-    message.error(t('knowledgeList.extensions.skills.detail.readFailed'))
+    MessagePlugin.error(t('knowledgeList.extensions.skills.detail.readFailed'))
   }
 }
 
@@ -684,10 +686,10 @@ const saveCurrentFile = async (content = fileContent.value) => {
       content
     })
     fileContent.value = content
-    message.success(t('knowledgeList.extensions.skills.detail.saved'))
+    MessagePlugin.success(t('knowledgeList.extensions.skills.detail.saved'))
     if (selectedPath.value === 'SKILL.md') await fetchSkillDetail()
   } catch {
-    message.error(t('knowledgeList.extensions.skills.detail.saveFailed'))
+    MessagePlugin.error(t('knowledgeList.extensions.skills.detail.saveFailed'))
   } finally {
     savingFile.value = false
   }
@@ -696,19 +698,22 @@ const saveCurrentFile = async (content = fileContent.value) => {
 const confirmDeleteSkill = () => {
   const target = currentSkill.value
   if (!target || !canManageCurrentSkill.value || isBuiltinInstalledSkill.value) return
-  Modal.confirm({
-    title: t('knowledgeList.extensions.skills.detail.confirmDeleteTitle', { name: target.slug }),
-    content: t('knowledgeList.extensions.skills.detail.confirmDeleteContent'),
-    okText: t('knowledgeList.extensions.skills.detail.confirmDeleteOk'),
-    okType: 'danger',
-    cancelText: t('knowledgeList.extensions.cancel'),
-    onOk: async () => {
+  const dialog = DialogPlugin.confirm({
+    attach: 'body',
+    placement: 'center',
+    header: t('knowledgeList.extensions.skills.detail.confirmDeleteTitle', { name: target.slug }),
+    body: t('knowledgeList.extensions.skills.detail.confirmDeleteContent'),
+    confirmBtn: { content: t('knowledgeList.extensions.skills.detail.confirmDeleteOk'), theme: 'danger' },
+    cancelBtn: t('knowledgeList.extensions.cancel'),
+    onConfirm: async () => {
       try {
         await skillApi.deleteSkill(target.slug)
-        message.success(t('knowledgeList.extensions.skills.detail.deleted'))
+        MessagePlugin.success(t('knowledgeList.extensions.skills.detail.deleted'))
         router.push(knowledgeBasesLocation('skills'))
       } catch {
-        message.error(t('knowledgeList.extensions.skills.detail.deleteFailed'))
+        MessagePlugin.error(t('knowledgeList.extensions.skills.detail.deleteFailed'))
+      } finally {
+        dialog.hide()
       }
     }
   })
@@ -726,7 +731,7 @@ const handleExport = async () => {
     link.click()
     URL.revokeObjectURL(url)
   } catch {
-    message.error(t('knowledgeList.extensions.skills.detail.exportFailed'))
+    MessagePlugin.error(t('knowledgeList.extensions.skills.detail.exportFailed'))
   }
 }
 
@@ -739,7 +744,7 @@ const openCreateModal = (isDir) => {
 }
 
 const handleCreateNode = async () => {
-  if (!currentSkill.value || !createForm.path.trim() || !canEditSkillFiles.value) return
+  if (!currentSkill.value || !createForm.path.trim() || !canEditSkillFiles.value) return false
   creatingNode.value = true
   try {
     await skillApi.createSkillFile(currentSkill.value.slug, {
@@ -749,9 +754,10 @@ const handleCreateNode = async () => {
     })
     createModalVisible.value = false
     await reloadTree()
-    message.success(t('knowledgeList.extensions.skills.detail.created'))
+    MessagePlugin.success(t('knowledgeList.extensions.skills.detail.created'))
   } catch {
-    message.error(t('knowledgeList.extensions.skills.detail.createFailed'))
+    MessagePlugin.error(t('knowledgeList.extensions.skills.detail.createFailed'))
+    return false
   } finally {
     creatingNode.value = false
   }
@@ -762,7 +768,7 @@ const saveShareConfig = async () => {
   if (!isBuiltinInstalledSkill.value) {
     const validation = shareConfigFormRef.value?.validate?.()
     if (validation && !validation.valid) {
-      message.warning(validation.message || t('knowledgeList.extensions.skills.detail.needScope'))
+      MessagePlugin.warning(validation.message || t('knowledgeList.extensions.skills.detail.needScope'))
       return
     }
   }
@@ -777,9 +783,9 @@ const saveShareConfig = async () => {
       currentSkill.value = result.data
       syncShareConfigFromSkill(result.data)
     }
-    message.success(t('knowledgeList.extensions.skills.detail.settingsSaved'))
+    MessagePlugin.success(t('knowledgeList.extensions.skills.detail.settingsSaved'))
   } catch {
-    message.error(t('knowledgeList.extensions.skills.detail.settingsSaveFailed'))
+    MessagePlugin.error(t('knowledgeList.extensions.skills.detail.settingsSaveFailed'))
   } finally {
     savingShareConfig.value = false
   }
@@ -800,9 +806,9 @@ const saveDependencies = async () => {
       syncDependencyFormFromSkill(updated)
     }
     await fetchSkillDetail()
-    message.success(t('knowledgeList.extensions.skills.detail.depsUpdated'))
+    MessagePlugin.success(t('knowledgeList.extensions.skills.detail.depsUpdated'))
   } catch {
-    message.error(t('knowledgeList.extensions.skills.detail.depsUpdateFailed'))
+    MessagePlugin.error(t('knowledgeList.extensions.skills.detail.depsUpdateFailed'))
   } finally {
     savingDependencies.value = false
   }
@@ -906,7 +912,7 @@ onMounted(() => {
     flex-direction: column;
   }
 
-  .editor-main :deep(.ant-empty) {
+  .editor-main :deep(.t-empty) {
     flex: 1;
     display: flex;
     align-items: center;

@@ -1,15 +1,15 @@
 <template>
   <div class="page-shoulder">
     <div class="page-shoulder-left">
-      <a-input
+      <t-input
         v-if="!$slots.search"
-        v-model:value="searchModel"
+        v-model="searchModel"
         :placeholder="searchPlaceholder"
-        allow-clear
+        clearable
         class="search-input"
       >
-        <template #prefix><Search :size="14" class="text-muted" /></template>
-      </a-input>
+        <template #prefixIcon><Search :size="14" class="text-muted" /></template>
+      </t-input>
       <slot name="search" />
       <slot name="filters" />
     </div>
@@ -52,33 +52,6 @@ defineProps({
 
 .search-input {
   width: 280px;
-  display: flex;
-  align-items: center;
-
-  :deep(.ant-input-affix-wrapper) {
-    height: 32px;
-    padding: 0 10px;
-    border: 1px solid var(--gray-150);
-    border-radius: 8px;
-    background-color: var(--gray-0);
-
-    &:hover,
-    &:focus,
-    &.ant-input-affix-wrapper-focused {
-      border-color: var(--gray-200);
-      box-shadow: none;
-    }
-  }
-
-  :deep(.ant-input-prefix) {
-    margin-right: 8px;
-    color: var(--gray-400);
-  }
-
-  :deep(.ant-input) {
-    height: 100%;
-    background-color: transparent;
-  }
 }
 
 .text-muted {

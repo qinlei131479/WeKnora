@@ -3,56 +3,53 @@
     <PageShoulder :search-placeholder="t('knowledgeList.extensions.skills.searchPlaceholder')" v-model:search="searchQuery">
       <template #actions>
         <template v-if="!isBatchDeleteMode">
-          <a-button
+          <t-button
             @click="isBatchDeleteMode = true"
             :disabled="loading || importing || filteredDeletableSkills.length === 0"
             class="lucide-icon-btn"
           >
             <span>{{ t('knowledgeList.extensions.skills.batchManage') }}</span>
-          </a-button>
-          <a-button
+          </t-button>
+          <t-button
             @click="handleOpenRemoteInstall"
             :disabled="loading || importing"
             class="lucide-icon-btn"
           >
             <Computer :size="14" />
             <span>{{ t('knowledgeList.extensions.skills.remoteInstall') }}</span>
-          </a-button>
-          <a-upload
+          </t-button>
+          <input
+            ref="skillFileInput"
+            type="file"
             accept=".zip,.md"
-            :show-upload-list="false"
-            :custom-request="handleImportUpload"
-            :before-upload="beforeSkillUpload"
+            style="display: none"
             :disabled="loading || importing"
-          >
-            <a-button type="primary" :loading="importing" class="lucide-icon-btn">
-              <Upload :size="14" />
-              <span>{{ t('knowledgeList.extensions.skills.upload') }}</span>
-            </a-button>
-          </a-upload>
-          <a-button
+            @change="onSkillFileChange"
+          />
+          <t-button
+            theme="primary"
+            :loading="importing"
+            :disabled="loading || importing"
             class="lucide-icon-btn"
-            :aria-label="t('knowledgeList.extensions.skills.refreshAria')"
-            :disabled="loading"
-            @click="fetchSkills({ refreshPersonal: true })"
+            @click="skillFileInput?.click()"
           >
-            <RefreshCw :size="14" />
-          </a-button>
+            <Upload :size="14" />
+            <span>{{ t('knowledgeList.extensions.skills.upload') }}</span>
+          </t-button>
         </template>
         <template v-else>
-          <a-button size="small" type="link" @click="handleBatchSelectAll">{{ t('knowledgeList.extensions.skills.selectAll') }}</a-button>
-          <a-button size="small" type="link" @click="handleBatchSelectInvert">{{ t('knowledgeList.extensions.skills.invert') }}</a-button>
-          <a-button size="small" type="link" @click="handleBatchSelectNone">{{ t('knowledgeList.extensions.skills.clear') }}</a-button>
-          <a-button
-            type="primary"
-            danger
+          <t-button size="small" variant="text" @click="handleBatchSelectAll">{{ t('knowledgeList.extensions.skills.selectAll') }}</t-button>
+          <t-button size="small" variant="text" @click="handleBatchSelectInvert">{{ t('knowledgeList.extensions.skills.invert') }}</t-button>
+          <t-button size="small" variant="text" @click="handleBatchSelectNone">{{ t('knowledgeList.extensions.skills.clear') }}</t-button>
+          <t-button
+            theme="danger"
             :disabled="selectedCardSlugs.length === 0"
             :loading="loading"
             @click="handleBatchDelete"
           >
             {{ t('knowledgeList.extensions.skills.batchDelete', { count: selectedCardSlugs.length }) }}
-          </a-button>
-          <a-button :disabled="loading" @click="exitBatchDeleteMode">{{ t('knowledgeList.extensions.skills.exitManage') }}</a-button>
+          </t-button>
+          <t-button :disabled="loading" @click="exitBatchDeleteMode">{{ t('knowledgeList.extensions.skills.exitManage') }}</t-button>
         </template>
       </template>
     </PageShoulder>
@@ -93,7 +90,7 @@
           <ChevronRight v-if="isSkillSectionCollapsed(group.key)" :size="14" class="section-toggle" />
           <ChevronDown v-else :size="14" class="section-toggle" />
         </div>
-        <ExtensionCardGrid v-show="!isSkillSectionCollapsed(group.key)" :min-width="280">
+        <ExtensionCardGrid v-show="!isSkillSectionCollapsed(group.key)" :min-width="240" :gap="12">
           <div
             v-for="skill in group.skills"
             :key="`${group.key}:${skill.slug || skill.id}`"
@@ -110,7 +107,7 @@
               @open="openRecommendedSuite"
             />
             <template v-else>
-              <a-checkbox
+              <t-checkbox
                 v-if="
                   isBatchDeleteMode &&
                   canManageSkill(skill) &&
@@ -123,6 +120,7 @@
               />
               <InfoCard
                 variant="default"
+                layout="kb"
                 :title="formatExtensionCardTitle(skill.name)"
                 :subtitle="skill.slug"
                 :description="skill.description || t('knowledgeList.extensions.noDescription')"
@@ -155,14 +153,18 @@
       </template>
     </div>
 
-    <a-modal
-      v-model:open="skillPreviewVisible"
+    <t-dialog
+      v-model:visible="skillPreviewVisible"
+      attach="body"
+      placement="center"
       class="skill-preview-modal"
-      :footer="null"
-      width="680px"
+      :header="false"
+      :footer="false"
+      :width="680"
       :closable="false"
+      :close-btn="false"
       :destroy-on-close="true"
-      @cancel="closeSkillPreview"
+      @close="closeSkillPreview"
     >
       <div v-if="previewSkill" class="skill-preview-panel">
         <div class="skill-preview-header">
@@ -178,16 +180,16 @@
                 <span>{{
                   sourceTypeLabel(previewSkill.sourceType || previewSkill.source_type)
                 }}</span>
-                <span v-if="previewSkill.enabled === false" class="skill-preview-disabled-tag">
+                <t-tag v-if="previewSkill.enabled === false" size="small" variant="light-outline" theme="warning" class="wk-chip">
                   {{ t('knowledgeList.extensions.skills.disabled') }}
-                </span>
+                </t-tag>
               </div>
             </div>
           </div>
           <div class="skill-preview-actions">
-            <a-switch
+            <t-switch
               v-if="previewSkill.sourceScope !== 'personal'"
-              :checked="previewSkill.enabled !== false"
+              :model-value="previewSkill.enabled !== false"
               :disabled="!canManageSkill(previewSkill) || isSkillToggling(previewSkill.slug)"
               :loading="isSkillToggling(previewSkill.slug)"
               size="small"
@@ -198,41 +200,41 @@
 
         <div class="skill-preview-body">
           <div v-if="skillPreviewLoading" class="skill-preview-loading">
-            <a-spin />
+            <t-loading />
           </div>
           <MarkdownPreview
             v-else-if="skillPreviewMarkdown"
             :content="skillPreviewMarkdown"
             :compact="true"
           />
-          <a-empty v-else :description="skillPreviewError || t('knowledgeList.extensions.skills.noSkillMd')" />
+          <t-empty v-else :description="skillPreviewError || t('knowledgeList.extensions.skills.noSkillMd')" />
         </div>
 
         <div class="skill-preview-footer">
           <div class="skill-preview-footer-left">
-            <a-button
+            <t-button
               v-if="canDeletePreviewSkill"
-              danger
+              theme="danger"
               :loading="deletingPreviewSkill"
               @click="confirmDeletePreviewSkill"
             >
               {{ t('knowledgeList.extensions.skills.uninstall') }}
-            </a-button>
+            </t-button>
           </div>
           <div class="skill-preview-footer-right">
-            <a-button @click="closeSkillPreview">{{ t('knowledgeList.extensions.close') }}</a-button>
-            <a-button
+            <t-button @click="closeSkillPreview">{{ t('knowledgeList.extensions.close') }}</t-button>
+            <t-button
               v-if="previewSkill.sourceScope !== 'personal'"
-              type="primary"
+              theme="primary"
               class="lucide-icon-btn"
               @click="goToPreviewSkillManagement"
             >
               <span>{{ t('knowledgeList.extensions.skills.manage') }}</span>
-            </a-button>
+            </t-button>
           </div>
         </div>
       </div>
-    </a-modal>
+    </t-dialog>
 
     <SkillInstallFlowModal
       :open="installFlowOpen"
@@ -242,75 +244,81 @@
     >
       <template #selection>
         <div class="remote-install-panel">
-          <a-tabs v-model:activeKey="activeTab" class="install-tabs">
+          <t-tabs v-model="activeTab" class="install-tabs">
             <!-- Tab 1: 按仓库拉取 -->
-            <a-tab-pane key="repo" :tab="t('knowledgeList.extensions.skills.pullTab')">
+            <t-tab-panel value="repo" :label="t('knowledgeList.extensions.skills.pullTab')">
               <div class="tab-content-wrapper">
-                <a-form layout="vertical" class="remote-install-form">
+                <t-form layout="vertical" class="remote-install-form">
                   <div class="repo-input-row">
                     <div class="repo-input-field">
-                      <a-input
-                        v-model:value="remoteInstallForm.source"
+                      <t-input
+                        v-model="remoteInstallForm.source"
                         :placeholder="t('knowledgeList.extensions.skills.repoPlaceholder')"
                       >
                         <template #suffix>
-                          <a-dropdown
-                            :trigger="['click']"
-                            placement="bottomRight"
-                            overlay-class-name="history-dropdown-menu"
+                          <t-dropdown
+                            trigger="click"
+                            placement="bottom-right"
+                            :popup-props="{ overlayClassName: 'history-dropdown-menu' }"
                           >
                             <div class="history-trigger-wrapper">
-                              <a-tooltip :title="t('knowledgeList.extensions.skills.repoHistory')">
+                              <t-tooltip :content="t('knowledgeList.extensions.skills.repoHistory')">
                                 <History
                                   :size="14"
                                   class="history-icon-trigger"
                                   :class="{ 'has-history': repoHistory.length > 0 }"
                                 />
-                              </a-tooltip>
+                              </t-tooltip>
                             </div>
-                            <template #overlay>
-                              <a-menu @click="handleSelectHistory">
-                                <a-menu-item v-if="repoHistory.length === 0" disabled>
-                                  <span class="history-empty-text">{{ t('knowledgeList.extensions.skills.noHistory') }}</span>
-                                </a-menu-item>
-                                <template v-else>
-                                  <a-menu-item v-for="item in repoHistory" :key="item">
-                                    <div class="history-item-menu-row">
-                                      <span class="history-item-text" :title="item">{{
-                                        item
-                                      }}</span>
-                                      <span
-                                        class="history-item-del-btn"
-                                        @click.stop="deleteHistoryItem(item)"
-                                      >
-                                        <Trash2 :size="12" />
-                                      </span>
-                                    </div>
-                                  </a-menu-item>
-                                  <a-menu-divider />
-                                  <a-menu-item
-                                    key="clear-all-history"
-                                    class="clear-history-menu-item"
-                                  >
-                                    <div class="clear-history-btn-content">
-                                      <Trash2 :size="12" class="clear-icon" />
-                                      <span>{{ t('knowledgeList.extensions.skills.clearHistory') }}</span>
-                                    </div>
-                                  </a-menu-item>
-                                </template>
-                              </a-menu>
+                            <template #dropdown>
+                            <t-dropdown-menu>
+                              <t-dropdown-item v-if="repoHistory.length === 0" disabled>
+                                <span class="history-empty-text">{{ t('knowledgeList.extensions.skills.noHistory') }}</span>
+                              </t-dropdown-item>
+                              <template v-else>
+                                <t-dropdown-item
+                                  v-for="item in repoHistory"
+                                  :key="item"
+                                  :value="item"
+                                  @click="handleSelectHistory({ key: item })"
+                                >
+                                  <div class="history-item-menu-row">
+                                    <span class="history-item-text" :title="item">{{
+                                      item
+                                    }}</span>
+                                    <span
+                                      class="history-item-del-btn"
+                                      @click.stop="deleteHistoryItem(item)"
+                                    >
+                                      <Trash2 :size="12" />
+                                    </span>
+                                  </div>
+                                </t-dropdown-item>
+                                <t-dropdown-item
+                                  value="clear-all-history"
+                                  divider
+                                  class="clear-history-menu-item"
+                                  @click="handleSelectHistory({ key: 'clear-all-history' })"
+                                >
+                                  <div class="clear-history-btn-content">
+                                    <Trash2 :size="12" class="clear-icon" />
+                                    <span>{{ t('knowledgeList.extensions.skills.clearHistory') }}</span>
+                                  </div>
+                                </t-dropdown-item>
+                              </template>
+                            </t-dropdown-menu>
                             </template>
-                          </a-dropdown>
+                          </t-dropdown>
                         </template>
-                      </a-input>
+                      </t-input>
                     </div>
-                    <a-button
-                      type="primary"
+                    <t-button
+                      theme="primary"
                       :loading="listingRemoteSkills"
                       @click="handleListRemoteSkills"
                     >
                       {{ t('knowledgeList.extensions.skills.pullSkills') }}
-                    </a-button>
+                    </t-button>
                   </div>
                   <div class="repo-hint-text">
                     {{ t('knowledgeList.extensions.skills.repoHintBefore') }}
@@ -337,22 +345,22 @@
                     <template v-else>
                       <div class="list-operations-bar">
                         <div class="op-buttons">
-                          <a-button size="small" type="link" @click="handleRepoSelectAll"
-                            >{{ t('knowledgeList.extensions.skills.selectAll') }}</a-button
+                          <t-button size="small" variant="text" @click="handleRepoSelectAll"
+                            >{{ t('knowledgeList.extensions.skills.selectAll') }}</t-button
                           >
-                          <a-button size="small" type="link" @click="handleRepoSelectInvert"
-                            >{{ t('knowledgeList.extensions.skills.invert') }}</a-button
+                          <t-button size="small" variant="text" @click="handleRepoSelectInvert"
+                            >{{ t('knowledgeList.extensions.skills.invert') }}</t-button
                           >
-                          <a-button size="small" type="link" @click="handleRepoSelectNone"
-                            >{{ t('knowledgeList.extensions.skills.clear') }}</a-button
+                          <t-button size="small" variant="text" @click="handleRepoSelectNone"
+                            >{{ t('knowledgeList.extensions.skills.clear') }}</t-button
                           >
                         </div>
-                        <a-input
-                          v-model:value="repoFilterKeyword"
+                        <t-input
+                          v-model="repoFilterKeyword"
                           :placeholder="t('knowledgeList.extensions.skills.localFilter')"
                           size="small"
                           style="width: 180px"
-                          allow-clear
+                          clearable
                         />
                       </div>
                       <div class="skills-list-viewport">
@@ -369,7 +377,7 @@
                             @keydown.enter.prevent="toggleRepoSkillFromRow(item.name)"
                             @keydown.space.prevent="toggleRepoSkillFromRow(item.name)"
                           >
-                            <a-checkbox
+                            <t-checkbox
                               class="remote-row-checkbox"
                               :checked="selectedRepoSkills.includes(item.name)"
                               :tabindex="-1"
@@ -386,29 +394,29 @@
                       </div>
                     </template>
                   </div>
-                </a-form>
+                </t-form>
               </div>
-            </a-tab-pane>
+            </t-tab-panel>
 
             <!-- Tab 2: 全局搜索发现 -->
-            <a-tab-pane key="search" :tab="t('knowledgeList.extensions.skills.searchTab')">
+            <t-tab-panel value="search" :label="t('knowledgeList.extensions.skills.searchTab')">
               <div class="tab-content-wrapper">
-                <a-form layout="vertical" class="remote-install-form">
+                <t-form layout="vertical" class="remote-install-form">
                   <div class="repo-input-row">
                     <div class="repo-input-field">
-                      <a-input
-                        v-model:value="searchKeyword"
+                      <t-input
+                        v-model="searchKeyword"
                         :placeholder="t('knowledgeList.extensions.skills.searchPlaceholderRemote')"
-                        @pressEnter="handleSearchRemoteSkills"
+                        @enter="handleSearchRemoteSkills"
                       />
                     </div>
-                    <a-button
-                      type="primary"
+                    <t-button
+                      theme="primary"
                       :loading="searchingRemoteSkills"
                       @click="handleSearchRemoteSkills"
                     >
                       {{ t('knowledgeList.extensions.skills.findSkills') }}
-                    </a-button>
+                    </t-button>
                   </div>
                   <div class="repo-hint-text">
                     {{ t('knowledgeList.extensions.skills.searchHint') }}
@@ -422,9 +430,9 @@
                           <div class="single-remote-skill-name">
                             {{ singleSearchedSkill.name }}
                           </div>
-                          <a-tag v-if="singleSearchedSkill.installs" class="skill-item-installs">
+                          <t-tag v-if="singleSearchedSkill.installs" size="small" variant="light-outline" class="wk-chip skill-item-installs">
                             {{ singleSearchedSkill.installs }}
-                          </a-tag>
+                          </t-tag>
                         </div>
                         <div class="single-remote-skill-meta">
                           {{ singleSearchedSkill.source }}
@@ -434,14 +442,14 @@
                     <template v-else>
                       <div class="list-operations-bar">
                         <div class="op-buttons">
-                          <a-button size="small" type="link" @click="handleSearchSelectAll"
-                            >{{ t('knowledgeList.extensions.skills.selectAll') }}</a-button
+                          <t-button size="small" variant="text" @click="handleSearchSelectAll"
+                            >{{ t('knowledgeList.extensions.skills.selectAll') }}</t-button
                           >
-                          <a-button size="small" type="link" @click="handleSearchSelectInvert"
-                            >{{ t('knowledgeList.extensions.skills.invert') }}</a-button
+                          <t-button size="small" variant="text" @click="handleSearchSelectInvert"
+                            >{{ t('knowledgeList.extensions.skills.invert') }}</t-button
                           >
-                          <a-button size="small" type="link" @click="handleSearchSelectNone"
-                            >{{ t('knowledgeList.extensions.skills.clear') }}</a-button
+                          <t-button size="small" variant="text" @click="handleSearchSelectNone"
+                            >{{ t('knowledgeList.extensions.skills.clear') }}</t-button
                           >
                         </div>
                       </div>
@@ -459,7 +467,7 @@
                             @keydown.enter.prevent="toggleSearchSkillFromRow(item)"
                             @keydown.space.prevent="toggleSearchSkillFromRow(item)"
                           >
-                            <a-checkbox
+                            <t-checkbox
                               class="remote-row-checkbox"
                               :checked="isSearchSkillSelected(item)"
                               :tabindex="-1"
@@ -477,19 +485,19 @@
                       </div>
                     </template>
                   </div>
-                </a-form>
+                </t-form>
               </div>
-            </a-tab-pane>
-          </a-tabs>
+            </t-tab-panel>
+          </t-tabs>
         </div>
       </template>
 
       <template #selection-footer>
         <span class="modal-footer-summary">{{ remoteSelectionSummary }}</span>
         <div class="modal-footer-buttons">
-          <a-button @click="closeInstallFlow">{{ t('knowledgeList.extensions.cancel') }}</a-button>
-          <a-button
-            type="primary"
+          <t-button @click="closeInstallFlow">{{ t('knowledgeList.extensions.cancel') }}</t-button>
+          <t-button
+            theme="primary"
             :disabled="
               activeTab === 'repo'
                 ? selectedRepoSkills.length === 0
@@ -498,7 +506,7 @@
             @click="startInstallRemoteSkills"
           >
             {{ t('knowledgeList.extensions.skills.confirmParse') }}
-          </a-button>
+          </t-button>
         </div>
       </template>
     </SkillInstallFlowModal>
@@ -509,9 +517,8 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { message, Modal } from 'ant-design-vue'
+import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
 import {
-  RefreshCw,
   Upload,
   Computer,
   WandSparkles,
@@ -523,8 +530,8 @@ import {
   ChevronDown,
   ChevronRight
 } from 'lucide-vue-next'
-import { skillApi } from '@harness/apis/skill_api'
-import ExtensionCardGrid from './ExtensionCardGrid.vue'
+import { skillApi } from '@/api/runtime/skill'
+import ExtensionCardGrid from '@harness/components/extensions/ExtensionCardGrid.vue'
 import SkillInstallFlowModal from './SkillInstallFlowModal.vue'
 import SkillSuiteCard from './SkillSuiteCard.vue'
 import InfoCard from '@harness/components/shared/InfoCard.vue'
@@ -535,6 +542,8 @@ import { getShareConfigLabel } from '@harness/utils/shareConfig'
 import { getSkillIcon } from '@harness/utils/skill_icon_utils'
 
 const { t } = useI18n()
+
+const emit = defineEmits(['loading-change'])
 
 const recommendedSuites = computed(() => [
   {
@@ -570,6 +579,7 @@ const recommendedSuites = computed(() => [
 const router = useRouter()
 
 const loading = ref(false)
+const skillFileInput = ref(null)
 const importing = ref(false)
 const listingRemoteSkills = ref(false)
 const searchQuery = ref('')
@@ -624,6 +634,8 @@ const remoteSelectionSummary = computed(() => {
 })
 
 const repoHistory = ref([])
+
+watch(loading, (v) => emit('loading-change', v), { immediate: true })
 
 const matchesSearch = (skill) => {
   if (!searchQuery.value) return true
@@ -826,7 +838,7 @@ const canManageSkill = (skill) => skill?.can_manage !== false
 const isSkillToggling = (slug) => togglingSkillSlugs.value.includes(slug)
 const navigateToDetail = (skill) => {
   if (skill?.sourceScope === 'personal') return
-  router.push({ path: `/platform/harness/extensions/skill/${encodeURIComponent(skill.slug)}` })
+  router.push({ path: `/platform/skills/${encodeURIComponent(skill.slug)}` })
 }
 
 const closeSkillPreview = () => {
@@ -903,9 +915,9 @@ const handleToggleSkillEnabled = async (skill) => {
         ? { ...updatedSkill, sourceType: updatedSkill.source_type || 'upload' }
         : { ...previewSkill.value, enabled }
     }
-    message.success(t(enabled ? 'knowledgeList.extensions.skills.enabled' : 'knowledgeList.extensions.skills.disabledOk'))
+    MessagePlugin.success(t(enabled ? 'knowledgeList.extensions.skills.enabled' : 'knowledgeList.extensions.skills.disabledOk'))
   } catch (error) {
-    message.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.toggleFailed'))
+    MessagePlugin.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.toggleFailed'))
   } finally {
     togglingSkillSlugs.value = togglingSkillSlugs.value.filter((slug) => slug !== skill.slug)
   }
@@ -920,31 +932,33 @@ const confirmDeletePreviewSkill = () => {
   const target = previewSkill.value
   if (!target || !canDeletePreviewSkill.value || deletingPreviewSkill.value) return
 
-  Modal.confirm({
-    title: t('knowledgeList.extensions.skills.uninstallTitle', { name: target.name || target.slug }),
-    content:
+  const dialog = DialogPlugin.confirm({
+    attach: 'body',
+    placement: 'center',
+    header: t('knowledgeList.extensions.skills.uninstallTitle', { name: target.name || target.slug }),
+    body:
       target.sourceScope === 'personal'
         ? t('knowledgeList.extensions.skills.uninstallPersonalHint')
         : t('knowledgeList.extensions.skills.uninstallSharedHint'),
-    okText: t('knowledgeList.extensions.skills.uninstall'),
-    okType: 'danger',
-    cancelText: t('knowledgeList.extensions.cancel'),
-    async onOk() {
-      deletingPreviewSkill.value = true
+    confirmBtn: { content: t('knowledgeList.extensions.skills.uninstall'), theme: 'danger' },
+    cancelBtn: t('knowledgeList.extensions.cancel'),
+    onConfirm: async () => {
       try {
+        deletingPreviewSkill.value = true
         if (target.sourceScope === 'personal') {
           await skillApi.deletePersonalSkill(target.slug)
         } else {
           await skillApi.deleteSkill(target.slug)
         }
-        message.success(t('knowledgeList.extensions.skills.uninstalled'))
+        MessagePlugin.success(t('knowledgeList.extensions.skills.uninstalled'))
         closeSkillPreview()
         previewSkill.value = null
         await fetchSkills()
       } catch (error) {
-        message.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.uninstallFailed'))
+        MessagePlugin.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.uninstallFailed'))
       } finally {
         deletingPreviewSkill.value = false
+        dialog.hide()
       }
     }
   })
@@ -983,32 +997,34 @@ const handleBatchDelete = () => {
   })
   if (deletableSlugs.length === 0) return
 
-  Modal.confirm({
-    title: t('knowledgeList.extensions.skills.batchDeleteTitle'),
-    content: t('knowledgeList.extensions.skills.batchDeleteContent', { count: deletableSlugs.length }),
-    okText: t('knowledgeList.extensions.skills.batchDeleteOk'),
-    okType: 'danger',
-    cancelText: t('knowledgeList.extensions.cancel'),
-    onOk: async () => {
-      loading.value = true
+  const dialog = DialogPlugin.confirm({
+    attach: 'body',
+    placement: 'center',
+    header: t('knowledgeList.extensions.skills.batchDeleteTitle'),
+    body: t('knowledgeList.extensions.skills.batchDeleteContent', { count: deletableSlugs.length }),
+    confirmBtn: { content: t('knowledgeList.extensions.skills.batchDeleteOk'), theme: 'danger' },
+    cancelBtn: t('knowledgeList.extensions.cancel'),
+    onConfirm: async () => {
       try {
+        loading.value = true
         const res = await skillApi.deleteSkillsBatch(deletableSlugs)
         const results = res?.data || []
         const successList = results.filter((r) => r.success)
         const failList = results.filter((r) => !r.success)
 
         if (failList.length === 0) {
-          message.success(t('knowledgeList.extensions.skills.batchDeleteSuccess', { count: successList.length }))
+          MessagePlugin.success(t('knowledgeList.extensions.skills.batchDeleteSuccess', { count: successList.length }))
         } else {
-          message.warning(t('knowledgeList.extensions.skills.batchDeletePartial', { success: successList.length, fail: failList.length }))
+          MessagePlugin.warning(t('knowledgeList.extensions.skills.batchDeletePartial', { success: successList.length, fail: failList.length }))
         }
 
         exitBatchDeleteMode()
         await fetchSkills()
       } catch (error) {
-        message.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.batchDeleteFailed'))
+        MessagePlugin.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.batchDeleteFailed'))
       } finally {
         loading.value = false
+        dialog.hide()
       }
     }
   })
@@ -1020,7 +1036,7 @@ const fetchSkills = async ({ refreshPersonal = false } = {}) => {
     const skillResult = await skillApi.listSkillCards({ refreshPersonal })
     skills.value = skillResult?.data || []
   } catch {
-    message.error(t('knowledgeList.extensions.skills.loadFailed'))
+    MessagePlugin.error(t('knowledgeList.extensions.skills.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -1029,10 +1045,18 @@ const fetchSkills = async ({ refreshPersonal = false } = {}) => {
 const beforeSkillUpload = (file) => {
   const lower = file.name.toLowerCase()
   if (!lower.endsWith('.zip') && lower !== 'skill.md') {
-    message.error(t('knowledgeList.extensions.skills.uploadType'))
+    MessagePlugin.error(t('knowledgeList.extensions.skills.uploadType'))
     return false
   }
   return true
+}
+
+const onSkillFileChange = async (event) => {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+  if (beforeSkillUpload(file) === false) return
+  await handleImportUpload({ file })
 }
 
 const openInstallFlow = (flow) => {
@@ -1065,8 +1089,8 @@ const openRecommendedSuite = (suite) => {
 }
 
 const handleInstallFlowCompleted = async ({ success, failed }) => {
-  if (failed === 0) message.success(t('knowledgeList.extensions.skills.addedCount', { count: success }))
-  else message.warning(t('knowledgeList.extensions.skills.installPartial', { success, failed }))
+  if (failed === 0) MessagePlugin.success(t('knowledgeList.extensions.skills.addedCount', { count: success }))
+  else MessagePlugin.warning(t('knowledgeList.extensions.skills.installPartial', { success, failed }))
   await fetchSkills()
 }
 
@@ -1082,7 +1106,7 @@ const handleImportUpload = async ({ file, onSuccess, onError }) => {
     })
     onSuccess?.(result)
   } catch (e) {
-    message.error(e?.response?.data?.detail || e.message || t('knowledgeList.extensions.skills.parseFailed'))
+    MessagePlugin.error(e?.response?.data?.detail || e.message || t('knowledgeList.extensions.skills.parseFailed'))
     onError?.(e)
   } finally {
     importing.value = false
@@ -1112,7 +1136,7 @@ const rememberRemoteSource = (source) => {
 const handleListRemoteSkills = async () => {
   const source = remoteInstallForm.source.trim()
   if (!source) {
-    message.warning(t('knowledgeList.extensions.skills.remoteNeedSource'))
+    MessagePlugin.warning(t('knowledgeList.extensions.skills.remoteNeedSource'))
     return
   }
   listingRemoteSkills.value = true
@@ -1122,18 +1146,18 @@ const handleListRemoteSkills = async () => {
     selectedRepoSkills.value =
       remoteSkillOptions.value.length === 1 ? [remoteSkillOptions.value[0].name] : []
     if (!remoteSkillOptions.value.length) {
-      message.warning(t('knowledgeList.extensions.skills.remoteNone'))
+      MessagePlugin.warning(t('knowledgeList.extensions.skills.remoteNone'))
       return
     }
     if (remoteSkillOptions.value.length === 1) {
-      message.success(t('knowledgeList.extensions.skills.remoteFoundOne'))
+      MessagePlugin.success(t('knowledgeList.extensions.skills.remoteFoundOne'))
     } else {
-      message.success(t('knowledgeList.extensions.skills.remoteFoundMany', { count: remoteSkillOptions.value.length }))
+      MessagePlugin.success(t('knowledgeList.extensions.skills.remoteFoundMany', { count: remoteSkillOptions.value.length }))
     }
 
     rememberRemoteSource(source)
   } catch (error) {
-    message.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.remoteFetchFailed'))
+    MessagePlugin.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.remoteFetchFailed'))
   } finally {
     listingRemoteSkills.value = false
   }
@@ -1158,7 +1182,7 @@ const deleteHistoryItem = (item) => {
 const clearAllHistory = () => {
   repoHistory.value = []
   localStorage.removeItem('yuxi_remote_repo_history')
-  message.success(t('knowledgeList.extensions.skills.historyCleared'))
+  MessagePlugin.success(t('knowledgeList.extensions.skills.historyCleared'))
 }
 
 const handleSelectHistory = ({ key }) => {
@@ -1172,7 +1196,7 @@ const handleSelectHistory = ({ key }) => {
 const handleSearchRemoteSkills = async () => {
   const query = searchKeyword.value.trim()
   if (!query) {
-    message.warning(t('knowledgeList.extensions.skills.needKeyword'))
+    MessagePlugin.warning(t('knowledgeList.extensions.skills.needKeyword'))
     return
   }
   searchingRemoteSkills.value = true
@@ -1181,14 +1205,14 @@ const handleSearchRemoteSkills = async () => {
     searchedSkills.value = result?.data || []
     selectedSearchSkills.value = searchedSkills.value.length === 1 ? [...searchedSkills.value] : []
     if (!searchedSkills.value.length) {
-      message.warning(t('knowledgeList.extensions.skills.searchNone'))
+      MessagePlugin.warning(t('knowledgeList.extensions.skills.searchNone'))
     } else if (searchedSkills.value.length === 1) {
-      message.success(t('knowledgeList.extensions.skills.searchFoundOne'))
+      MessagePlugin.success(t('knowledgeList.extensions.skills.searchFoundOne'))
     } else {
-      message.success(t('knowledgeList.extensions.skills.searchFoundMany', { count: searchedSkills.value.length }))
+      MessagePlugin.success(t('knowledgeList.extensions.skills.searchFoundMany', { count: searchedSkills.value.length }))
     }
   } catch (error) {
-    message.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.searchFailed'))
+    MessagePlugin.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.searchFailed'))
   } finally {
     searchingRemoteSkills.value = false
   }
@@ -1341,8 +1365,8 @@ defineExpose({
 
   &.selected {
     :deep(.info-card) {
-      border-color: var(--gray-500) !important;
-      background: var(--gray-25) !important;
+      border-color: var(--td-brand-color, var(--main-color)) !important;
+      box-shadow: 0 4px 12px rgba(7, 192, 95, 0.12);
     }
   }
 
@@ -1469,23 +1493,11 @@ defineExpose({
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   margin-top: 2px;
   color: var(--gray-500);
   font-size: 12px;
   line-height: 18px;
-}
-
-.skill-preview-disabled-tag {
-  display: inline-flex;
-  align-items: center;
-  height: 18px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--gray-100);
-  color: var(--gray-600);
-  font-size: 11px;
-  font-weight: 600;
 }
 
 .skill-preview-actions {
@@ -1533,7 +1545,7 @@ defineExpose({
 }
 
 .remote-install-panel {
-  :deep(.install-tabs > .ant-tabs-nav .ant-tabs-nav-wrap) {
+  :deep(.install-tabs > .t-tabs__nav) {
     justify-content: center;
   }
 
@@ -1624,7 +1636,7 @@ defineExpose({
       display: flex;
       gap: 2px;
 
-      .ant-btn {
+      .t-button {
         padding: 0 4px;
         height: auto;
         font-size: 12px;
@@ -1694,7 +1706,7 @@ defineExpose({
     gap: 12px;
     min-width: 0;
 
-    .ant-tag {
+    .t-tag {
       flex-shrink: 0;
       margin-inline-end: 0;
     }
@@ -1775,21 +1787,21 @@ defineExpose({
 
 <!-- NOTE: unscoped style block 用于 dropdown overlay 样式穿透 teleport -->
 <style lang="less">
-/* Ant Design Dropdown overlay 通过 teleport 挂载到 body，
+/* TDesign Dropdown overlay 通过 teleport 挂载到 body，
    scoped CSS 无法穿透，因此必须使用 unscoped 样式。
    使用 .history-dropdown-menu 作为 overlayClassName 命名空间。 */
 .history-dropdown-menu {
   min-width: 280px;
 
-  .ant-dropdown-menu {
+  .t-dropdown__menu {
     padding: 4px;
   }
 
-  .ant-dropdown-menu-item {
+  .t-dropdown__item {
     padding: 8px 12px;
     border-radius: 6px;
 
-    .ant-dropdown-menu-title-content {
+    .t-dropdown__item-text {
       display: flex;
       align-items: center;
       width: 100%;
