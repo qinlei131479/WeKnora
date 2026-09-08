@@ -292,40 +292,6 @@ export const documentApi = {
 }
 
 // =============================================================================
-// === 图谱构建分组 ===
-// =============================================================================
-
-function graphBuildUrl(kbId, action) {
-  return `/api/knowledge/databases/${kbId}/graph-build/${action}`
-}
-
-export const graphBuildApi = {
-  getStatus: async (kbId) => {
-    return apiAdminGet(graphBuildUrl(kbId, 'status'))
-  },
-
-  getFailedChunks: async (kbId, limit = 10) => {
-    return apiAdminGet(`${graphBuildUrl(kbId, 'failed-chunks')}?limit=${limit}`)
-  },
-
-  configure: async (kbId, data) => {
-    return apiAdminPost(graphBuildUrl(kbId, 'config'), data)
-  },
-
-  startIndex: async (kbId) => {
-    return apiAdminPost(graphBuildUrl(kbId, 'index'), {})
-  },
-
-  reset: async (kbId, data) => {
-    return apiAdminPost(graphBuildUrl(kbId, 'reset'), data)
-  },
-
-  reconcile: async (kbId, mode = 'failed') => {
-    return apiAdminPost(graphBuildUrl(kbId, 'reconcile'), { mode })
-  }
-}
-
-// =============================================================================
 // === 思维导图分组 ===
 // =============================================================================
 
@@ -554,71 +520,5 @@ export const typeApi = {
    */
   getStatistics: async () => {
     return apiAdminGet('/api/knowledge/stats')
-  }
-}
-
-// =============================================================================
-// === RAG评估分组 ===
-// =============================================================================
-
-export const evaluationApi = {
-  uploadDataset: async (kbId, file, metadata = {}) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('name', metadata.name || '')
-    formData.append('description', metadata.description || '')
-
-    return apiAdminPost(`/api/evaluation/databases/${kbId}/datasets/upload`, formData)
-  },
-
-  listDatasets: async (kbId) => {
-    return apiAdminGet(`/api/evaluation/databases/${kbId}/datasets`)
-  },
-
-  getDataset: async (kbId, datasetId, page = 1, pageSize = 50) => {
-    const params = new URLSearchParams({
-      page: page.toString(),
-      page_size: pageSize.toString()
-    })
-    return apiAdminGet(`/api/evaluation/databases/${kbId}/datasets/${datasetId}?${params}`)
-  },
-
-  deleteDataset: async (datasetId) => {
-    return apiAdminDelete(`/api/evaluation/datasets/${datasetId}`)
-  },
-
-  downloadDataset: async (datasetId) => {
-    return apiAdminGet(`/api/evaluation/datasets/${datasetId}/download`, {}, 'blob')
-  },
-
-  generateDataset: async (kbId, params) => {
-    return apiAdminPost(`/api/evaluation/databases/${kbId}/datasets/generate`, params)
-  },
-
-  resumeDatasetGeneration: async (kbId, datasetId) => {
-    return apiAdminPost(`/api/evaluation/databases/${kbId}/datasets/${datasetId}/resume`, {})
-  },
-
-  runEvaluation: async (kbId, params) => {
-    return apiAdminPost(`/api/evaluation/databases/${kbId}/runs`, params)
-  },
-
-  listRuns: async (kbId) => {
-    return apiAdminGet(`/api/evaluation/databases/${kbId}/runs`)
-  },
-
-  getRunResults: async (kbId, runId, params = {}) => {
-    const queryParams = new URLSearchParams()
-
-    if (params.page) queryParams.append('page', params.page)
-    if (params.pageSize) queryParams.append('page_size', params.pageSize)
-    if (params.errorOnly !== undefined) queryParams.append('error_only', params.errorOnly)
-
-    const url = `/api/evaluation/databases/${kbId}/runs/${runId}${queryParams.toString() ? '?' + queryParams.toString() : ''}`
-    return apiAdminGet(url)
-  },
-
-  deleteRun: async (kbId, runId) => {
-    return apiAdminDelete(`/api/evaluation/databases/${kbId}/runs/${runId}`)
   }
 }

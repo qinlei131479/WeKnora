@@ -67,33 +67,24 @@ make migrate-kjsc
 
 目标：旧 `uid=admin` → `98e324c7-8d86-4550-a4c2-cfca9e0d42b6`。
 
-先确认该 UUID 在测试库存在：
+**一次性 remap 脚本已删除**（`p1_uid_remap.sql`、`p1_uid_remap_reverse.sql`、`p1_identity_candidates.py`）。000006 已 DROP 相关表后，历史 remap **不可重复执行**。
+
+若测试环境尚未 remap 且仍停在 000006 之前：按当时备份时的手工 UPDATE 思路处理（只改仍保留的核心表，例如 `h_conversations.uid`、`h_agent_runs.uid`、`h_agents.created_by`、`share_config` 等，目标 UUID 同上），或直接用第 1 节 dump 恢复到 remap 前快照后再升。
+
+核对（remap 后、000006 前）：
 
 ```sql
 SELECT id, username, email FROM users
  WHERE id = '98e324c7-8d86-4550-a4c2-cfca9e0d42b6' AND deleted_at IS NULL;
-```
 
-再在 **DROP 之前** 执行正向脚本（会写 `h_users` / `h_user_identity_map` 以及仍保留的核心表）：
-
-```bash
-psql -h <测试库主机> -U postgres -d agent-middle \
-  -f apps/agent-harness/scripts/p1_uid_remap.sql
-```
-
-核对：
-
-```sql
 SELECT DISTINCT uid FROM h_conversations;
 SELECT DISTINCT created_by FROM h_agents;
 -- 期望看到 98e324c7-8d86-4550-a4c2-cfca9e0d42b6，不应再大量出现 admin
 ```
 
-若还有其它旧登录名 uid，同样改成该 UUID 后再升 000006。
+**若已经跑过 000006**：不要尝试重跑已删脚本。只对还在的表做 UPDATE，目标 UUID 相同。
 
-**若已经跑过 000006**：不要整份执行原脚本（会碰已删表）。只对还在的表做 UPDATE，例如 `h_conversations.uid`、`h_agent_runs.uid`、`h_agents.created_by`、`share_config` 等，目标 UUID 相同。
-
-反向脚本 `p1_uid_remap_reverse.sql` **仅 000006 之前**可用。P7 代码已上线后不要 reverse；回滚用第 6 节 dump。
+回滚 **只用第 1 节 dump**；不要用 reverse SQL。
 
 ### 迁移注意
 
@@ -175,7 +166,7 @@ pg_restore -h <主机> -U postgres -d agent-middle --no-owner --no-acl \
 
 3. 回退到升级前的镜像/代码。
 4. **不要**在「恢复错的库」上再跑一遍 `000006`。
-5. 已跑 000006 或已发 P7 代码后，不要用 `p1_uid_remap_reverse.sql`。
+5. remap 脚本已删除；已跑 000006 或已发 P7 代码后，**不要**尝试 reverse SQL，回滚只用第 1 节 dump。
 
 `dropdb` 前必须再确认主机和库名，禁止对生产库操作。
 
@@ -194,19 +185,21 @@ pg_restore -h <主机> -U postgres -d agent-middle --no-owner --no-acl \
 
 ## 8. 清理执行计划
 
-已删（本次，不挡升级）：
+代码清理已在仓库分支 `chore/p7-cleanup` 按 **`docs/plan/P7_CLEANUP.md`** 执行完毕（禁止 `migrate down`；未连接测试环境）。
+
+已删（升级当时，不挡升级）：
 
 - 脚本：`p0_verify.py`、`copy_harness_tables_to_weknora.sh`、`seed_initial_users.py`
 - 已砍能力测试：部门 / API Key / CLI / OIDC / 原生 KB / 图谱 / 评测 / yuxi 供应商 / OCR 配置中心 e2e
 
-**等测试环境升级完成后再执行（先留在仓库）：**
+升级完成后的代码清理（见 `docs/plan/P7_CLEANUP.md`）：
 
 | 时机 | 项 | 说明 |
 | --- | --- | --- |
-| 升级完成后 | 删除 `scripts/p1_identity_candidates.py` | remap 前只读核对用 |
-| 升级完成后 | 删除 `scripts/p1_uid_remap.sql` | 测试环境正向 remap；目标 UUID 见上文 |
-| 升级完成后 | 删除 `scripts/p1_uid_remap_reverse.sql` | 仅 000006 前的 remap 回滚 |
-| 升级完成后 | 删除未注册路由：`auth_dept_router.py`、`knowledge_eval_router.py`、`graph_router.py`、`external_kb_router.py` | 路由已不挂载 |
-| 升级完成后 | 删除死实现：`oidc_service.py`、`department_repository.py`、原生 milvus/dify/notion、`knowledge/graphs/`、`knowledge/eval/`、多余 yuxi OCR parser | P7 能力已删，第二批清代码 |
+| 已删除（P7_CLEANUP Task 1） | `scripts/p1_identity_candidates.py` | remap 前只读核对用 |
+| 已删除（P7_CLEANUP Task 1） | `scripts/p1_uid_remap.sql` | 正向 remap；不可重复，回滚用 dump |
+| 已删除（P7_CLEANUP Task 1） | `scripts/p1_uid_remap_reverse.sql` | 仅 000006 前的 remap 回滚 |
+| 已删除（P7_CLEANUP Task 2） | 未注册路由：`auth_dept_router.py`、`knowledge_eval_router.py`、`graph_router.py`、`external_kb_router.py` | 路由已不挂载 |
+| 已删除（P7_CLEANUP Task 3–7） | 死实现：`oidc_service.py`、`department_repository.py`、原生 milvus/dify/notion、`knowledge/graphs/`、`knowledge/eval/`、yuxi OCR parser | 登录 / WeKnora KB / mindmap 保留 |
 
 长期保留：`scripts/docker-env.py`（compose / 测试启动仍用）。

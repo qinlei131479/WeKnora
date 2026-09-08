@@ -11,15 +11,14 @@ import tomli_w
 from pydantic import BaseModel, Field, PrivateAttr
 
 from yuxi.config import cache as runtime_cache
-from yuxi.knowledge.parser.registry import PROCESSOR_TYPES
 from yuxi.utils.logging_config import logger
 
 READONLY_CONFIG_FIELDS = frozenset({"save_dir"})
-DEFAULT_OCR_ENGINE = "rapid_ocr"
+DEFAULT_OCR_ENGINE = "weknora"
 
 
 def _get_available_ocr_engines() -> set[str]:
-    return {"disable", *PROCESSOR_TYPES}
+    return {DEFAULT_OCR_ENGINE}
 
 
 def _normalize_default_ocr_engine(value: Any) -> str:

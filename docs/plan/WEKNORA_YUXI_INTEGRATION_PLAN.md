@@ -151,7 +151,7 @@ WeKnora 新增（Viewer+，用户 JWT）：
 
 ## P7 · 删除重复能力 — 本机已执行
 
-**只备份 `agent-middle`。** 迁移 `000006` 已 DROP 未列入核心清单的表（含 `h_users`、`h_api_keys`、`h_cli_auth_sessions`）。测试环境步骤见 `docs/plan/P7_TEST_ENV_UPGRADE.md`。残留未引用代码清完后再删本手册。
+**只备份 `agent-middle`。** 迁移 `000006` 已 DROP 未列入核心清单的表（含 `h_users`、`h_api_keys`、`h_cli_auth_sessions`）。测试环境步骤见 `docs/plan/P7_TEST_ENV_UPGRADE.md`。残留代码清理见 `docs/plan/P7_CLEANUP.md`（已执行）。本手册可在确认无引用后删除。
 
 ### 保留（harness 核心）
 

@@ -187,7 +187,7 @@ const canEditAgentShareConfig = computed(
 )
 const getAgentShareAllowedLevels = () => {
   if (isEditingBuiltinAgent.value) return ['global']
-  if (userStore.isAdmin) return ['global', 'department', 'user']
+  if (userStore.isAdmin) return ['global', 'user']
   return ['user']
 }
 

@@ -252,6 +252,7 @@ async def test_get_databases_by_user_sets_permission_and_redacts_readonly_secret
             record.created_by = "user_1"
             return [record]
 
+    monkeypatch.setattr("yuxi.p3.flags.is_weknora_kb_enabled", lambda: False)
     monkeypatch.setattr(
         "yuxi.repositories.knowledge_base_repository.KnowledgeBaseRepository",
         SecretKnowledgeBaseRepository,

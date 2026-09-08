@@ -2,7 +2,7 @@
 
 from datetime import UTC
 from datetime import datetime as dt
-from typing import Annotated, Any
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,45 +49,15 @@ class UserRepository:
             result = await session.execute(select(User).where(User.uid.in_(normalized_uids)))
             return list(result.scalars().all())
 
-    async def get_by_phone(self, phone: str) -> User | None:
-        """根据手机号获取用户"""
-        async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(select(User).where(User.phone_number == phone))
-            return result.scalar_one_or_none()
-
-    async def list_users(
-        self, skip: int = 0, limit: int = 100, department_id: int | None = None, role: str | None = None
-    ) -> list[User]:
+    async def list_users(self, skip: int = 0, limit: int = 100, role: str | None = None) -> list[User]:
         """获取用户列表"""
         async with pg_manager.get_async_session_context() as session:
             query = select(User).where(User.is_deleted == 0)
-            if department_id is not None:
-                query = query.where(User.department_id == department_id)
             if role is not None:
                 query = query.where(User.role == role)
             query = query.order_by(User.id.asc()).offset(skip).limit(limit)
             result = await session.execute(query)
             return list(result.scalars().all())
-
-    async def list_with_department(
-        self, skip: int = 0, limit: int = 100, department_id: int | None = None, role: str | None = None
-    ) -> Annotated[list[tuple[User, str | None]], "用户列表，包含部门名称"]:
-        """获取用户列表，包含部门名称"""
-        async with pg_manager.get_async_session_context() as session:
-            from yuxi.storage.postgres.models_business import Department
-
-            query = (
-                select(User, Department.name.label("department_name"))
-                .outerjoin(Department, User.department_id == Department.id)
-                .where(User.is_deleted == 0)
-            )
-            if department_id is not None:
-                query = query.where(User.department_id == department_id)
-            if role is not None:
-                query = query.where(User.role == role)
-            query = query.order_by(User.id.asc()).offset(skip).limit(limit)
-            result = await session.execute(query)
-            return list(result.all())
 
     async def create(self, data: dict[str, Any]) -> User:
         """创建用户"""
@@ -110,7 +80,7 @@ class UserRepository:
                     setattr(user, key, value)
         return user
 
-    async def soft_delete(self, id: int, username: str | None = None, phone_number: str | None = None) -> bool:
+    async def soft_delete(self, id: int, username: str | None = None) -> bool:
         """软删除用户"""
         async with pg_manager.get_async_session_context() as session:
             result = await session.execute(select(User).where(User.id == id, User.is_deleted == 0))
@@ -125,11 +95,6 @@ class UserRepository:
 
                 hash_suffix = hashlib.sha256(user.uid.encode()).hexdigest()[:4]
                 user.username = f"已注销用户-{hash_suffix}"
-            if phone_number:
-                user.phone_number = None
-            api_key_result = await session.execute(select(APIKey).where(APIKey.user_id == user.id))
-            for api_key in api_key_result.scalars().all():
-                api_key.is_enabled = False
         return True
 
     async def exists_by_uid(self, uid: str) -> bool:
@@ -138,18 +103,10 @@ class UserRepository:
             result = await session.execute(select(User.id).where(User.uid == uid))
             return result.scalar_one_or_none() is not None
 
-    async def exists_by_phone(self, phone: str) -> bool:
-        """检查手机号是否存在"""
-        async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(select(User.id).where(User.phone_number == phone))
-            return result.scalar_one_or_none() is not None
-
-    async def count(self, department_id: int | None = None) -> int:
+    async def count(self) -> int:
         """统计用户数量"""
         async with pg_manager.get_async_session_context() as session:
             query = select(func.count(User.id)).where(User.is_deleted == 0)
-            if department_id is not None:
-                query = query.where(User.department_id == department_id)
             result = await session.execute(query)
             return result.scalar() or 0
 
@@ -158,14 +115,3 @@ class UserRepository:
         async with pg_manager.get_async_session_context() as session:
             result = await session.execute(select(User.uid))
             return [uid for (uid,) in result.all()]
-
-    async def get_admin_count_in_department(self, department_id: int, exclude_user_id: int | None = None) -> int:
-        """统计部门中管理员数量"""
-        async with pg_manager.get_async_session_context() as session:
-            query = select(func.count(User.id)).where(
-                User.department_id == department_id, User.role == "admin", User.is_deleted == 0
-            )
-            if exclude_user_id is not None:
-                query = query.where(User.id != exclude_user_id)
-            result = await session.execute(query)
-            return result.scalar() or 0

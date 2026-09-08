@@ -84,14 +84,6 @@ async def admin_token() -> str:
             data={"username": username, "password": password},
         )
 
-        if response.status_code == 401:
-            first_run_response = await bootstrap_client.get("/api/auth/check-first-run")
-            if first_run_response.status_code == 200 and first_run_response.json().get("first_run", False):
-                pytest.fail(
-                    "Super admin account has not been initialized. Complete `/api/auth/initialize` before "
-                    "running integration tests."
-                )
-
     if response.status_code != 200:
         pytest.fail(f"Failed to authenticate as admin (status={response.status_code}): {response.text}")
 

@@ -60,14 +60,6 @@
               v-if="item.parseSupported && item.status !== 'uploading' && item.status !== 'error'"
               class="attachment-parse-controls"
             >
-              <OCRSelector
-                v-if="!weknoraManaged"
-                :model-value="item.selectedParseMethod"
-                :allowed-engines="item.parseMethods"
-                :disabled="item.status === 'parsing' || confirming"
-                placeholder="选择 OCR"
-                @update:model-value="handleParseMethodChange(item.localId, $event)"
-              />
               <a-button
                 type="primary"
                 size="small"
@@ -87,14 +79,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import { X } from 'lucide-vue-next'
 import { threadApi } from '@harness/apis'
-import { ocrApi } from '@harness/apis/system_api'
-import { useConfigStore } from '@harness/stores/config'
 import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
-import OCRSelector from '@harness/components/OCRSelector.vue'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -106,26 +95,10 @@ const props = defineProps({
 
 const emit = defineEmits(['update:open', 'added'])
 
-const DEFAULT_OCR_ENGINE = 'rapid_ocr'
-const configStore = useConfigStore()
 const fileItems = ref([])
 const confirming = ref(false)
-const weknoraManaged = ref(false)
 let localIdSeed = 0
 let consumedInitialFilesKey = 0
-
-const loadOcrMode = async () => {
-  try {
-    const data = await ocrApi.getOptions()
-    weknoraManaged.value = Boolean(data?.weknora_managed)
-  } catch (error) {
-    weknoraManaged.value = false
-  }
-}
-
-onMounted(() => {
-  void loadOcrMode()
-})
 
 const busy = computed(() =>
   fileItems.value.some((item) => ['uploading', 'parsing'].includes(item.status))
@@ -149,28 +122,7 @@ const getErrorMessage = (error, fallback = '操作失败') => {
   return error?.response?.data?.detail || error?.message || fallback
 }
 
-const getDefaultParseMethod = (parseMethods) => {
-  if (weknoraManaged.value) {
-    return 'weknora'
-  }
-  if (!Array.isArray(parseMethods) || parseMethods.length === 0) {
-    return null
-  }
-  const configuredEngine = String(
-    configStore.config?.default_ocr_engine || DEFAULT_OCR_ENGINE
-  ).trim()
-  if (configuredEngine === 'disable' && parseMethods.includes('disable')) {
-    return configuredEngine
-  }
-  const selectableMethods = parseMethods.filter((method) => method !== 'disable')
-  if (selectableMethods.includes(configuredEngine)) {
-    return configuredEngine
-  }
-  if (selectableMethods.includes(DEFAULT_OCR_ENGINE)) {
-    return DEFAULT_OCR_ENGINE
-  }
-  return selectableMethods[0] || null
-}
+const getDefaultParseMethod = () => 'weknora'
 
 const normalizeTmpUpload = (response) => ({
   tmpFileId: response.tmp_file_id,
@@ -182,8 +134,7 @@ const normalizeTmpUpload = (response) => ({
   minioUrl: response.minio_url,
   parseSupported: response.parse_supported,
   parseMethods: response.parse_methods || [],
-  selectedParseMethod: getDefaultParseMethod(response.parse_methods || []),
-  parseMethodTouched: false
+  selectedParseMethod: getDefaultParseMethod(),
 })
 
 const updateItem = (localId, patch) => {
@@ -251,17 +202,6 @@ const clearParsedState = {
   parsedMinioUrl: null,
   truncated: false,
   parseMethod: null
-}
-
-const handleParseMethodChange = (localId, selectedParseMethod) => {
-  const item = fileItems.value.find((entry) => entry.localId === localId)
-  updateItem(localId, {
-    ...clearParsedState,
-    selectedParseMethod,
-    parseMethodTouched: true,
-    parseError: null,
-    status: item?.status === 'parsed' ? 'uploaded' : item?.status
-  })
 }
 
 const handleStartParse = (localId) => {
@@ -493,13 +433,6 @@ const formatFileSize = (size) => {
   display: flex;
   align-items: center;
   gap: 6px;
-  width: min(260px, 100%);
   margin-left: auto;
-
-  :deep(.ocr-selector-trigger) {
-    min-height: 24px;
-    padding: 1px 8px;
-    font-size: 12px;
-  }
 }
 </style>

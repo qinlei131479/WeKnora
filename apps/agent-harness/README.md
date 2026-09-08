@@ -42,7 +42,7 @@ REDIS_ADDR=localhost:6379
 | PostgreSQL | `DB_NAME`（默认 `agent-middle`） | `AGENT_HARNESS_DB_NAME`（默认 `agent_harness`） |
 | Redis | DB 0 | DB 2 |
 | MinIO | 同一实例，账号仍用 `MINIO_ACCESS_KEY_ID` | 同一 `minio` 服务 |
-| 认证 | `JWT_SECRET` | `JWT_SECRET_KEY` |
+| 认证 | `JWT_SECRET` | `JWT_SECRET` |
 
 ## Make 目标
 

@@ -303,11 +303,11 @@ def test_sanitize_processing_params_should_drop_non_persistent_fields() -> None:
         {
             "chunk_preset_id": "general",
             "chunk_parser_config": {"chunk_token_num": 300},
-            "ocr_engine": "mineru_ocr",
+            "ocr_engine": "weknora",
             "ocr_engine_config": {},
             "auto_index": True,
             "content_hashes": {"a.md": "hash-a"},
-            "enable_ocr": "mineru_ocr",
+            "enable_ocr": "weknora",
             "_preprocessed_map": {"a.md": {"path": "/tmp/a.md"}},
         }
     )
@@ -315,7 +315,7 @@ def test_sanitize_processing_params_should_drop_non_persistent_fields() -> None:
     assert sanitized == {
         "chunk_preset_id": "general",
         "chunk_parser_config": {"chunk_token_num": 300},
-        "ocr_engine": "mineru_ocr",
+        "ocr_engine": "weknora",
     }
 
 
@@ -326,7 +326,7 @@ def test_resolve_processing_params_keeps_ocr_fields_and_chunk_params() -> None:
             "chunk_parser_config": {"delimiter": "\n", "chunk_token_num": 300},
         },
         file_processing_params={
-            "ocr_engine": "mineru_ocr",
+            "ocr_engine": "weknora",
             "ocr_engine_config": {"backend": "pipeline"},
             "chunk_preset_id": "qa",
             "chunk_parser_config": {"overlapped_percent": 10},
@@ -339,7 +339,7 @@ def test_resolve_processing_params_keeps_ocr_fields_and_chunk_params() -> None:
         },
     )
 
-    assert resolved["ocr_engine"] == "mineru_ocr"
+    assert resolved["ocr_engine"] == "weknora"
     assert "ocr_engine_config" not in resolved
     assert resolved["chunk_preset_id"] == "laws"
     assert resolved["chunk_parser_config"] == {
@@ -355,7 +355,7 @@ def test_resolve_processing_params_keeps_ocr_fields_and_chunk_params() -> None:
 def test_resolve_processing_params_does_not_inject_runtime_defaults() -> None:
     resolved = resolve_processing_params(
         kb_additional_params={},
-        file_processing_params={"ocr_engine_config": "invalid", "enable_ocr": "mineru_ocr"},
+        file_processing_params={"ocr_engine_config": "invalid", "enable_ocr": "weknora"},
     )
 
     assert "ocr_engine" not in resolved
@@ -367,11 +367,11 @@ def test_resolve_processing_params_drops_file_and_request_ocr_config() -> None:
     resolved = resolve_processing_params(
         kb_additional_params={},
         file_processing_params={
-            "ocr_engine": "rapid_ocr",
+            "ocr_engine": "weknora",
             "ocr_engine_config": {"det_box_thresh": 0.4, "zoom_x": 3.0},
         },
         request_params={"ocr_engine_config": {"det_box_thresh": 0.6}},
     )
 
-    assert resolved["ocr_engine"] == "rapid_ocr"
+    assert resolved["ocr_engine"] == "weknora"
     assert "ocr_engine_config" not in resolved

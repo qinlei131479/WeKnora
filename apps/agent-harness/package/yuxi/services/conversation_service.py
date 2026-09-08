@@ -13,7 +13,6 @@ from yuxi.agents.backends.sandbox import (
 )
 from yuxi.agents.buildin import agent_manager
 from yuxi.config import config as app_config
-from yuxi.knowledge.parser.factory import DocumentProcessorFactory
 from yuxi.repositories.agent_repository import AgentRepository
 from yuxi.repositories.conversation_repository import INVOCATION_CONVERSATION_SOURCES, ConversationRepository
 from yuxi.services.mention_search_service import invalidate_mention_cache
@@ -31,8 +30,8 @@ MAX_ATTACHMENT_MARKDOWN_CHARS = 32_000  # TODO: 转 MARKDOWN的时候，不应�
 TMP_ATTACHMENT_PREFIX = "tmp/chat_attachments"
 TMP_ATTACHMENT_PARSE_EXTENSIONS = (".pdf", ".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif")
 TMP_ATTACHMENT_IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif")
-TMP_ATTACHMENT_OCR_METHODS = tuple(DocumentProcessorFactory.get_available_processors())
-TMP_ATTACHMENT_PARSE_METHODS = ("disable", *TMP_ATTACHMENT_OCR_METHODS)
+TMP_ATTACHMENT_OCR_METHODS = ("weknora",)
+TMP_ATTACHMENT_PARSE_METHODS = ("weknora",)
 
 
 @dataclass(slots=True)
@@ -210,15 +209,8 @@ def _normalize_parse_method(file_name: str, parse_method: str | None) -> str:
     if suffix not in TMP_ATTACHMENT_PARSE_EXTENSIONS:
         raise HTTPException(status_code=400, detail="当前仅支持 PDF 和图片附件解析")
 
-    if suffix in TMP_ATTACHMENT_IMAGE_EXTENSIONS:
-        default_engine = app_config.default_ocr_engine
-        # 图片没有可直接提取的文本层，系统默认 disable 时仍需回退到本地 OCR。
-        method = parse_method or ("rapid_ocr" if default_engine == "disable" else default_engine)
-    else:
-        method = parse_method or "disable"
-    allowed_methods = (
-        TMP_ATTACHMENT_OCR_METHODS if suffix in TMP_ATTACHMENT_IMAGE_EXTENSIONS else TMP_ATTACHMENT_PARSE_METHODS
-    )
+    method = parse_method or "weknora"
+    allowed_methods = TMP_ATTACHMENT_PARSE_METHODS
 
     if method not in allowed_methods:
         allowed = ", ".join(allowed_methods)

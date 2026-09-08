@@ -312,7 +312,7 @@ class OcrParseFileInput(BaseModel):
     """Parse a sandbox file with OCR and save the Markdown result."""
 
     file_path: str = Field(description="需要 OCR 解析的沙盒虚拟路径，必须位于 /home/gem/user-data 下")
-    ocr_engine: str | None = Field(default=None, description="可选 OCR 引擎；省略时使用系统默认 OCR 引擎")
+    ocr_engine: str | None = Field(default=None, description="已忽略；解析始终走 WeKnora")
 
 
 OCR_PARSE_FILE_DESCRIPTION = f"""
@@ -425,15 +425,9 @@ def _runtime_scope_value(runtime: ToolRuntime, key: str) -> str | None:
 
 
 def _resolve_ocr_engine(ocr_engine: str | None) -> str:
-    """Validate the requested OCR engine, falling back to the system default when omitted."""
-    from yuxi.knowledge.parser.factory import DocumentProcessorFactory
-    from yuxi.services.ocr_service import resolve_ocr_engine_id
-
-    engine = resolve_ocr_engine_id(ocr_engine)
-    allowed = {"disable", *DocumentProcessorFactory.get_available_processors()}
-    if engine not in allowed:
-        raise ValueError(f"不支持的 OCR 引擎: {engine}")
-    return engine
+    """Parse always proxies WeKnora; the requested engine name is ignored."""
+    del ocr_engine
+    return "weknora"
 
 
 def _next_ocr_output_path(thread_id: str, source_path: Path) -> Path:

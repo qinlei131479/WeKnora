@@ -200,15 +200,6 @@
             <QuerySection ref="querySectionRef" :visible="true" @toggle-visible="() => {}" />
           </div>
 
-          <div v-if="isMilvus && activeTab === 'graph'" class="tab-panel">
-            <KnowledgeGraphSection
-              :visible="true"
-              :active="activeTab === 'graph'"
-              :readonly="!canManageDatabase"
-              @toggle-visible="() => {}"
-            />
-          </div>
-
           <div v-if="isMilvus && activeTab === 'mindmap'" class="tab-panel">
             <MindMapSection
               v-if="kbId"
@@ -216,26 +207,6 @@
               :readonly="!canManageDatabase"
               ref="mindmapSectionRef"
             />
-          </div>
-
-          <div v-if="isMilvus && activeTab === 'evaluation'" class="tab-panel">
-            <RAGEvaluationTab
-              v-if="kbId"
-              :kb-id="kbId"
-              @switch-to-benchmarks="activeTab = 'benchmarks'"
-            />
-          </div>
-
-          <div v-if="isMilvus && activeTab === 'benchmarks'" class="tab-panel">
-            <div class="benchmark-management-container">
-              <div class="benchmark-content">
-                <EvaluationBenchmarks
-                  v-if="kbId && isEvaluationSupported"
-                  :kb-id="kbId"
-                  @benchmark-selected="activeTab = 'evaluation'"
-                />
-              </div>
-            </div>
           </div>
         </main>
       </div>
@@ -372,8 +343,6 @@ import { useDatabaseStore } from '@harness/stores/database'
 import { useTaskerStore } from '@harness/stores/tasker'
 import {
   ArrowLeft,
-  BarChart3,
-  ClipboardList,
   Copy,
   Database as DatabaseIcon,
   FileUp,
@@ -382,7 +351,6 @@ import {
   Hash,
   LoaderCircle,
   Map as MapIcon,
-  Network,
   Pencil,
   Search
 } from 'lucide-vue-next'
@@ -392,16 +360,12 @@ import FileTable from '@harness/components/FileTable.vue'
 import FileDetailModal from '@harness/components/FileDetailModal.vue'
 import FileUploadModal from '@harness/components/FileUploadModal.vue'
 import FileSearchModal from '@harness/components/modals/FileSearchModal.vue'
-import KnowledgeGraphSection from '@harness/components/KnowledgeGraphSection.vue'
 import QuerySection from '@harness/components/QuerySection.vue'
 import MindMapSection from '@harness/components/MindMapSection.vue'
-import RAGEvaluationTab from '@harness/components/RAGEvaluationTab.vue'
-import EvaluationBenchmarks from '@harness/components/EvaluationBenchmarks.vue'
 import SearchConfigPanel from '@harness/components/SearchConfigPanel.vue'
 import AiTextarea from '@harness/components/AiTextarea.vue'
 import ShareConfigForm from '@harness/components/ShareConfigForm.vue'
 import { databaseApi } from '@harness/apis/knowledge_api'
-import { departmentApi } from '@harness/apis/department_api'
 import { authApi } from '@harness/apis/auth_api'
 import { useChunkPresetOptions } from '@harness/composables/useChunkPresetOptions'
 import { DEFAULT_CHUNK_PRESET_ID } from '@harness/utils/chunkUtils'
@@ -433,7 +397,6 @@ const isNotionKb = computed(() => kbType.value === 'notion')
 const isConnector = computed(
   () => isCurrentDatabaseLoaded.value && kbUtils.isReadOnlyDatabase(database.value)
 )
-const isEvaluationSupported = computed(() => isMilvus.value)
 const kbTypeIcon = computed(() => getKbTypeIcon(kbType.value || 'milvus'))
 
 const databaseSubtitle = computed(() => {
@@ -452,10 +415,7 @@ const tabs = computed(() => {
     return [
       { key: 'filetable', label: '文件管理', icon: FileText },
       { key: 'query', label: '检索测试', icon: Search },
-      { key: 'graph', label: '知识图谱', icon: Network },
-      { key: 'mindmap', label: '知识导图', icon: MapIcon },
-      { key: 'evaluation', label: 'RAG 评估', icon: BarChart3 },
-      { key: 'benchmarks', label: '评估基准', icon: ClipboardList }
+      { key: 'mindmap', label: '知识导图', icon: MapIcon }
     ]
   }
 
@@ -465,7 +425,7 @@ const tabs = computed(() => {
 const visibleTabs = computed(() =>
   canManageDatabase.value
     ? tabs.value
-    : tabs.value.filter((tab) => ['filetable', 'query', 'graph', 'mindmap'].includes(tab.key))
+    : tabs.value.filter((tab) => ['filetable', 'query', 'mindmap'].includes(tab.key))
 )
 const activeTab = ref('filetable')
 
@@ -721,7 +681,6 @@ const copyDatabaseId = async () => {
   }
 }
 
-const departments = ref([])
 const users = ref([])
 const editModalVisible = ref(false)
 const editModalTab = ref('basic')
@@ -764,9 +723,7 @@ const shareConfigDisplay = computed(() => {
     if (!scope) return '无'
     if (scope.access_level === 'global') return '全局'
     if (scope.access_level === 'department') {
-      const names =
-        (scope.department_ids || []).map((id) => getDepartmentName(id)).join('、') || '无'
-      return `${scope.department_ids?.length || 0} 个部门：${names}`
+      return `${scope.department_ids?.length || 0} 个部门`
     }
     const names = (scope.user_uids || []).map((uid) => getUserName(uid)).join('、') || '无'
     return `${scope.user_uids?.length || 0} 个用户：${names}`
@@ -785,23 +742,9 @@ const shareConfigDisplay = computed(() => {
   }
 })
 
-const getDepartmentName = (id) => {
-  const dept = departments.value.find((item) => Number(item.id) === Number(id))
-  return dept?.name || `部门${id}`
-}
-
 const getUserName = (uid) => {
   const user = users.value.find((item) => item.uid === uid)
   return user?.username || uid
-}
-
-const loadDepartments = async () => {
-  try {
-    const res = await departmentApi.getDepartments()
-    departments.value = res.departments || res || []
-  } catch {
-    departments.value = []
-  }
 }
 
 const loadUsers = async () => {
@@ -921,7 +864,6 @@ const handleEditSubmit = async () => {
 
 onMounted(() => {
   loadChunkPresetOptions()
-  loadDepartments()
   loadUsers()
 })
 </script>
@@ -1406,8 +1348,7 @@ onMounted(() => {
   }
 }
 
-.query-section,
-.graph-section {
+.query-section {
   .panel-section();
 
   .content {
@@ -1415,22 +1356,5 @@ onMounted(() => {
     flex: 1;
     overflow: hidden;
   }
-}
-
-.graph-section {
-  border: 1px solid var(--gray-100);
-  border-radius: 12px;
-}
-
-.benchmark-management-container {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.benchmark-content {
-  flex: 1;
-  overflow: hidden;
-  min-height: 0;
 }
 </style>

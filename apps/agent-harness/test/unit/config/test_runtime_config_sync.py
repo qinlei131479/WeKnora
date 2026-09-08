@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import os
 import subprocess
 import sys
 from contextlib import contextmanager
@@ -48,9 +49,12 @@ def _patch_runtime_redis(monkeypatch: pytest.MonkeyPatch, redis: _FakeRedis) -> 
 
 
 def _import_yuxi_in_fresh_process(tmp_path, config_text: str) -> tuple[dict, subprocess.CompletedProcess[str]]:
-    config_dir = tmp_path / "saves" / "config"
+    save_dir = tmp_path / "saves"
+    config_dir = save_dir / "config"
     config_dir.mkdir(parents=True)
     (config_dir / "base.toml").write_text(config_text, encoding="utf-8")
+    env = os.environ.copy()
+    env["YUXI_SAVE_DIR"] = str(save_dir)
     result = subprocess.run(
         [
             sys.executable,
@@ -67,6 +71,7 @@ def _import_yuxi_in_fresh_process(tmp_path, config_text: str) -> tuple[dict, sub
             ),
         ],
         cwd=tmp_path,
+        env=env,
         capture_output=True,
         text=True,
         check=True,
@@ -77,11 +82,11 @@ def _import_yuxi_in_fresh_process(tmp_path, config_text: str) -> tuple[dict, sub
 def test_fresh_import_loads_default_ocr_engine_without_initializing_knowledge_runtime(tmp_path):
     loaded, result = _import_yuxi_in_fresh_process(
         tmp_path,
-        'default_ocr_engine = "rapid_ocr"\ndefault_model = "test-provider:after-ocr"\n',
+        'default_ocr_engine = "weknora"\ndefault_model = "test-provider:after-ocr"\n',
     )
 
     assert loaded == {
-        "default_ocr_engine": "rapid_ocr",
+        "default_ocr_engine": "weknora",
         "default_model": "test-provider:after-ocr",
         "factory_loaded": False,
         "parser_loaded": False,
@@ -90,14 +95,14 @@ def test_fresh_import_loads_default_ocr_engine_without_initializing_knowledge_ru
     assert "Failed to load config" not in result.stdout + result.stderr
 
 
-def test_fresh_import_keeps_disable_as_default_ocr_engine(tmp_path):
+def test_fresh_import_ignores_disable_ocr_engine_and_loads_later_config(tmp_path):
     loaded, result = _import_yuxi_in_fresh_process(
         tmp_path,
         'default_ocr_engine = "disable"\n',
     )
 
-    assert loaded["default_ocr_engine"] == "disable"
-    assert "Invalid config key ignored" not in result.stdout + result.stderr
+    assert loaded["default_ocr_engine"] == "weknora"
+    assert "Invalid config key ignored" in result.stdout + result.stderr
 
 
 def test_fresh_import_ignores_invalid_ocr_engine_and_loads_later_config(tmp_path):
@@ -106,7 +111,7 @@ def test_fresh_import_ignores_invalid_ocr_engine_and_loads_later_config(tmp_path
         'default_ocr_engine = "unknown-ocr"\ndefault_model = "test-provider:after-invalid-ocr"\n',
     )
 
-    assert loaded["default_ocr_engine"] == "rapid_ocr"
+    assert loaded["default_ocr_engine"] == "weknora"
     assert loaded["default_model"] == "test-provider:after-invalid-ocr"
 
 
@@ -125,7 +130,7 @@ def test_save_writes_runtime_snapshot_after_base_toml(tmp_path, monkeypatch: pyt
     payload = json.loads(redis.data[RUNTIME_CONFIG_REDIS_KEY])
     assert payload["default_model"] == "test-provider:new-chat"
     assert payload["enable_content_guard"] is True
-    assert payload["default_ocr_engine"] == "rapid_ocr"
+    assert payload["default_ocr_engine"] == "weknora"
     assert "save_dir" not in payload
     assert "enable_reranker" not in payload
     assert "default_agent_id" not in payload
@@ -181,7 +186,7 @@ def test_refresh_loads_public_config_from_redis(tmp_path, monkeypatch: pytest.Mo
     payload = {
         "default_model": "test-provider:worker-chat",
         "save_dir": redis_save_dir,
-        "default_ocr_engine": "mineru_ocr",
+        "default_ocr_engine": "weknora",
         "enable_reranker": True,
     }
     redis = _FakeRedis(raw=json.dumps(payload))
@@ -192,7 +197,7 @@ def test_refresh_loads_public_config_from_redis(tmp_path, monkeypatch: pytest.Mo
     cfg.refresh()
 
     assert cfg.default_model == "test-provider:worker-chat"
-    assert cfg.default_ocr_engine == "mineru_ocr"
+    assert cfg.default_ocr_engine == "weknora"
     assert cfg.save_dir == str(tmp_path)
     assert str(cfg._config_file) == str(tmp_path / "config" / "base.toml")
     # 快照里的非运行时字段和未知键不会被写回
@@ -243,13 +248,13 @@ def test_update_ignores_readonly_save_dir(tmp_path, monkeypatch: pytest.MonkeyPa
         {
             "save_dir": str(tmp_path / "other-save"),
             "default_model": "test-provider:updated-chat",
-            "default_ocr_engine": "mineru_ocr",
+            "default_ocr_engine": "weknora",
         }
     )
 
     assert cfg.save_dir == str(tmp_path)
     assert cfg.default_model == "test-provider:updated-chat"
-    assert cfg.default_ocr_engine == "mineru_ocr"
+    assert cfg.default_ocr_engine == "weknora"
 
 
 def test_update_rejects_unknown_default_ocr_engine(tmp_path, monkeypatch: pytest.MonkeyPatch):
@@ -269,7 +274,7 @@ def test_dump_config_hides_save_dir(tmp_path):
     assert "save_dir" not in dumped["_config_items"]
 
 
-def test_resolve_chat_model_spec_reads_runtime_refreshed_default(tmp_path, monkeypatch):
+def test_resolve_chat_model_spec_does_not_fallback_to_yuxi_default(tmp_path, monkeypatch):
     from yuxi.agents import models
 
     payload = {"default_model": "test-provider:resolved-chat"}
@@ -279,7 +284,8 @@ def test_resolve_chat_model_spec_reads_runtime_refreshed_default(tmp_path, monke
     cfg.refresh()
     monkeypatch.setattr(models, "sys_config", cfg)
 
-    assert models.resolve_chat_model_spec(None) == "test-provider:resolved-chat"
+    with pytest.raises(ValueError, match="model spec 不能为空"):
+        models.resolve_chat_model_spec(None)
 
 
 def test_default_save_dir_uses_env(monkeypatch: pytest.MonkeyPatch, tmp_path):

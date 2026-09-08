@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import jwt
 import pytest
 from yuxi.p1.auth_token_status import access_token_cache_key, is_weknora_access_token_active
-from yuxi.p1.flags import is_legacy_jwt_enabled, is_local_login_enabled, is_weknora_identity_enabled
+from yuxi.p1.flags import is_local_login_enabled, is_weknora_identity_enabled
 from yuxi.services.weknora_identity_service import WeKnoraIdentityError, load_user_from_claims, map_projected_role
 from yuxi.utils.weknora_auth import WeKnoraTokenError, verify_weknora_access_token
 
@@ -30,7 +30,6 @@ def _access_token(monkeypatch: pytest.MonkeyPatch, secret: str = "p1-test-jwt-se
 
 def test_flags_p7_identity_only():
     assert is_weknora_identity_enabled() is True
-    assert is_legacy_jwt_enabled() is False
     assert is_local_login_enabled() is True
 
 

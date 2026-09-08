@@ -185,10 +185,9 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Building2, Globe, Users, UserPlus } from 'lucide-vue-next'
+import { Globe, Users, UserPlus } from 'lucide-vue-next'
 import { useUserStore } from '@harness/stores/user'
 import { authApi } from '@harness/apis/auth_api'
-import { departmentApi } from '@harness/apis/department_api'
 
 const { t } = useI18n()
 const userStore = useUserStore()
@@ -212,7 +211,7 @@ const props = defineProps({
   requireReadScope: { type: Boolean, default: false },
   allowedAccessLevels: {
     type: Array,
-    default: () => ['global', 'department', 'user']
+    default: () => ['global', 'user']
   }
 })
 
@@ -239,12 +238,6 @@ const baseShareModeOptions = computed(() => [
     icon: Globe
   },
   {
-    value: 'department',
-    title: t('knowledgeList.extensions.share.form.deptTitle'),
-    description: t('knowledgeList.extensions.share.form.deptDesc'),
-    icon: Building2
-  },
-  {
     value: 'user',
     title: t('knowledgeList.extensions.share.form.userTitle'),
     description: t('knowledgeList.extensions.share.form.userDesc'),
@@ -264,7 +257,7 @@ const currentDepartmentId = computed(() =>
 const currentUserUid = computed(() => userStore.uid || '')
 const normalizedAllowedAccessLevels = computed(() => {
   const allowed = props.allowedAccessLevels.filter((level) =>
-    ['global', 'department', 'user'].includes(level)
+    ['global', 'user'].includes(level)
   )
   return allowed.length ? allowed : ['global']
 })
@@ -446,14 +439,6 @@ const toggleSelection = (scopeKey, accessLevel, value, checked) => {
   }
 }
 
-const loadDepartments = async () => {
-  try {
-    const result = await departmentApi.getDepartments()
-    departments.value = result.departments || result || []
-  } catch (error) {
-    console.error('加载部门列表失败:', error)
-  }
-}
 const loadUsers = async () => {
   try {
     users.value = await authApi.getUserAccessOptions()
@@ -500,7 +485,6 @@ const hasManageScopeViolation = computed(() =>
 
 onMounted(() => {
   initConfig()
-  loadDepartments()
   loadUsers()
 })
 

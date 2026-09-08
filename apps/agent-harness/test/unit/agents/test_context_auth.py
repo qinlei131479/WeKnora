@@ -49,7 +49,6 @@ def test_get_configurable_items_filters_admin_fields_for_user():
     items = BaseContext.get_configurable_items(user_role="user")
 
     assert "system_prompt" in items
-    assert "WeKnora" not in items["knowledges"]["description"]
     assert "summary_threshold" not in items
     assert "summary_keep_messages" not in items
     assert "summary_prompt" not in items

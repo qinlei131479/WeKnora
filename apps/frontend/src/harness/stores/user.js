@@ -122,17 +122,6 @@ export const useUserStore = defineStore('harness-user', () => {
     return true
   }
 
-  async function checkFirstRun() {
-    try {
-      const response = await fetch(harnessUrl('/api/auth/check-first-run'))
-      const data = await response.json()
-      return data.first_run
-    } catch (error) {
-      console.error('检查首次运行状态错误:', error)
-      return false
-    }
-  }
-
   function getAuthHeaders() {
     const headers = {
       Authorization: `Bearer ${syncToken()}`
@@ -344,7 +333,6 @@ export const useUserStore = defineStore('harness-user', () => {
     logout,
     syncToken,
     initialize,
-    checkFirstRun,
     getAuthHeaders,
     getUsers,
     createUser,

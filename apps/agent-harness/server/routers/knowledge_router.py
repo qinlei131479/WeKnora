@@ -10,9 +10,8 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from starlette.responses import StreamingResponse
 from yuxi import config
-from yuxi.knowledge.base import KBNameConflictError, KBNotFoundError
+from yuxi.knowledge.base import KBNotFoundError
 from yuxi.knowledge.chunking.ragflow_like.presets import get_chunk_preset_options
-from yuxi.knowledge.graphs.milvus_graph_service import GRAPH_TASK_TYPE, MilvusGraphService
 from yuxi.knowledge.read_models import KnowledgeBaseDetail
 from yuxi.knowledge.parser.unified import SUPPORTED_FILE_EXTENSIONS, is_supported_file_extension
 from yuxi.knowledge.runtime import knowledge_base
@@ -53,7 +52,6 @@ from server.utils.knowledge_permissions import (
 
 knowledge = APIRouter(prefix="/knowledge", tags=["knowledge"])
 
-ACTIVE_GRAPH_BUILD_STATUSES = {"pending", "running"}
 ACTIVE_DOCUMENT_ACTION_TASK_STATUSES = {"pending", "running"}
 DOCUMENT_ACTION_BATCH_SIZE = 500
 DOCUMENT_ACTION_RESULT_ITEM_LIMIT = 200
@@ -203,17 +201,6 @@ def _params_for_uploaded_document_item(item: str, params: dict) -> dict:
     return item_params
 
 
-async def _has_running_graph_build_task(kb_id: str) -> bool:
-    return (
-        await tasker.find_task_by_payload(
-            task_type=GRAPH_TASK_TYPE,
-            payload_match={"kb_id": kb_id},
-            statuses=ACTIVE_GRAPH_BUILD_STATUSES,
-        )
-        is not None
-    )
-
-
 # =============================================================================
 # === 知识库管理分组 ===
 # =============================================================================
@@ -227,53 +214,6 @@ async def get_databases(current_user: User = Depends(get_admin_user)):
     except Exception as e:
         logger.error(f"获取数据库列表失败 {e}, {traceback.format_exc()}")
         return {"message": f"获取数据库列表失败 {e}", "databases": []}
-
-
-@knowledge.post("/databases")
-async def create_database(
-    database_name: str = Body(...),
-    description: str = Body(...),
-    embedding_model_spec: str | None = Body(None),
-    kb_type: str = Body("milvus"),
-    additional_params: dict | None = Body(None),
-    llm_model_spec: str | None = Body(None),
-    share_config: dict | None = Body(None),
-    current_user: User = Depends(get_admin_user),
-):
-    """创建知识库"""
-    logger.debug(
-        f"Create database {database_name} with kb_type {kb_type}, "
-        f"additional_params {additional_params}, llm_model_spec {llm_model_spec}, "
-        f"embedding_model_spec {embedding_model_spec}, share_config {share_config}"
-    )
-    try:
-        database_info = await knowledge_base.create_database(
-            database_name,
-            description,
-            kb_type=kb_type,
-            embedding_model_spec=embedding_model_spec,
-            llm_model_spec=llm_model_spec,
-            share_config=share_config,
-            created_by=current_user.uid,
-            created_by_department_id=current_user.department_id,
-            **(additional_params or {}),
-        )
-
-        # 需要重新加载所有智能体，因为工具刷新了
-        from yuxi.agents.buildin import agent_manager
-
-        await agent_manager.reload_all()
-
-        response = serialize_knowledge_base(database_info)
-        response["files"] = {}
-        return response
-    except KBNameConflictError as e:
-        raise HTTPException(status_code=409, detail=str(e)) from e
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"创建数据库失败 {e}, {traceback.format_exc()}")
-        raise HTTPException(status_code=400, detail=f"创建数据库失败: {e}")
 
 
 @knowledge.get("/databases/accessible")
@@ -384,19 +324,6 @@ async def get_database_info(
     )
 
 
-@knowledge.post("/databases/{kb_id}/stats/repair")
-async def repair_database_stats(kb_id: str, current_user: User = Depends(require_knowledge_base_manage)):
-    """修复知识库历史文件缺失的 Chunk/Token 统计。"""
-    await _ensure_database_supports_documents(kb_id, "统计修复")
-    try:
-        return await knowledge_base.repair_missing_file_stats(kb_id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"修复知识库统计失败 {e}, {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"修复知识库统计失败: {e}")
-
-
 @knowledge.put("/databases/{kb_id}")
 async def update_database_info(
     kb_id: str,
@@ -432,196 +359,9 @@ async def update_database_info(
 
 @knowledge.delete("/databases/{kb_id}")
 async def delete_database(kb_id: str, current_user: User = Depends(require_knowledge_base_manage)):
-    """删除知识库"""
-    logger.debug(f"Delete database {kb_id}")
-    try:
-        await knowledge_base.delete_database(kb_id)
-
-        # 需要重新加载所有智能体，因为工具刷新了
-        from yuxi.agents.buildin import agent_manager
-
-        await agent_manager.reload_all()
-
-        return {"message": "删除成功"}
-    except Exception as e:
-        logger.error(f"删除数据库失败 {e}, {traceback.format_exc()}")
-        raise HTTPException(status_code=400, detail=f"删除数据库失败: {e}")
-
-
-@knowledge.get("/databases/{kb_id}/graph-build/status")
-async def get_graph_build_status(kb_id: str, current_user: User = Depends(require_knowledge_base_read)):
-    try:
-        return await MilvusGraphService().get_status(kb_id, tasker=tasker)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取图谱构建状态失败 {e}, {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"获取图谱构建状态失败: {e}")
-
-
-@knowledge.post("/databases/{kb_id}/graph-build/config")
-async def configure_graph_build(
-    kb_id: str,
-    data: dict = Body(...),
-    current_user: User = Depends(require_knowledge_base_manage),
-):
-    try:
-        config = await MilvusGraphService().configure(
-            kb_id,
-            extractor_type=data.get("extractor_type"),
-            extractor_options=data.get("extractor_options") or {},
-            created_by=current_user.uid,
-        )
-        return {"message": "图谱抽取配置已锁定", "status": "success", "config": config}
-    except ValueError as e:
-        status_code = 409 if "已锁定" in str(e) else 400
-        raise HTTPException(status_code=status_code, detail=str(e))
-    except Exception as e:
-        logger.error(f"配置图谱构建失败 {e}, {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"配置图谱构建失败: {e}")
-
-
-@knowledge.post("/databases/{kb_id}/graph-build/index")
-async def index_graph_build(
-    kb_id: str,
-    current_user: User = Depends(require_knowledge_base_manage),
-):
-    try:
-        if await _has_running_graph_build_task(kb_id):
-            raise HTTPException(status_code=409, detail="该知识库已有正在运行的图谱构建任务")
-
-        database = await knowledge_base.get_database_info(kb_id)
-        if not database:
-            raise HTTPException(status_code=404, detail=f"知识库 {kb_id} 不存在")
-
-        service = MilvusGraphService()
-        graph_status = await service.get_status(kb_id)
-        if not graph_status.get("locked"):
-            raise HTTPException(status_code=400, detail="请先确认并锁定图谱抽取配置")
-
-        async def run_graph_index(context: TaskContext):
-            await context.set_message("任务初始化")
-            await context.set_progress(5.0, "准备构建图谱")
-            result = await service.build_pending_chunks(kb_id, context=context)
-            await context.set_result(result)
-            await context.set_progress(
-                100.0,
-                f"图谱构建执行完成，成功 {result['success']} 个，抽取失败 {result['extraction_failed']} 个",
-            )
-            return result
-
-        task, created = await tasker.enqueue_unique_by_payload(
-            name=f"图谱构建 ({database.name})",
-            task_type=GRAPH_TASK_TYPE,
-            payload={"kb_id": kb_id},
-            coroutine=run_graph_index,
-            payload_match={"kb_id": kb_id},
-            statuses=ACTIVE_GRAPH_BUILD_STATUSES,
-        )
-        if not created:
-            raise HTTPException(status_code=409, detail="该知识库已有正在运行的图谱构建任务")
-        return {"message": "图谱构建任务已提交", "status": "queued", "task_id": task.id}
-    except HTTPException:
-        raise
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"提交图谱构建任务失败 {e}, {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"提交图谱构建任务失败: {e}")
-
-
-@knowledge.get("/databases/{kb_id}/graph-build/failed-chunks")
-async def get_graph_build_failed_chunks(
-    kb_id: str,
-    limit: int = 10,
-    current_user: User = Depends(require_knowledge_base_read),
-):
-    try:
-        return await MilvusGraphService().get_failed_chunk_samples(kb_id, limit=max(1, min(limit, 10)))
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"获取图谱抽取失败 Chunk 样例失败 {e}, {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"获取图谱抽取失败 Chunk 样例失败: {e}")
-
-
-@knowledge.post("/databases/{kb_id}/graph-build/reset")
-async def reset_graph_build(
-    kb_id: str,
-    data: dict | None = Body(default=None),
-    current_user: User = Depends(require_knowledge_base_manage),
-):
-    data = data or {}
-    try:
-        if await _has_running_graph_build_task(kb_id):
-            raise HTTPException(status_code=409, detail="该知识库存在正在运行的图谱构建任务，无法重置")
-
-        return await MilvusGraphService().reset(
-            kb_id,
-            clear_extraction_result=bool(data.get("clear_extraction_result", True)),
-            clear_config=bool(data.get("clear_config", False)),
-        )
-    except HTTPException:
-        raise
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"重置图谱构建状态失败 {e}, {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"重置图谱构建状态失败: {e}")
-
-
-@knowledge.post("/databases/{kb_id}/graph-build/reconcile")
-async def reconcile_graph_build(
-    kb_id: str,
-    data: dict | None = Body(default=None),
-    current_user: User = Depends(require_knowledge_base_manage),
-):
-    data = data or {}
-    mode = data.get("mode") or "failed"
-    if mode not in {"failed", "all_vectors"}:
-        raise HTTPException(status_code=400, detail="mode 必须是 failed 或 all_vectors")
-    try:
-        if await _has_running_graph_build_task(kb_id):
-            raise HTTPException(status_code=409, detail="该知识库已有正在运行的图谱构建任务")
-
-        database = await knowledge_base.get_database_info(kb_id)
-        if not database:
-            raise HTTPException(status_code=404, detail=f"知识库 {kb_id} 不存在")
-
-        service = MilvusGraphService()
-
-        async def run_graph_reconcile(context: TaskContext):
-            await context.set_progress(5.0, "准备修复图谱向量索引")
-            reconcile_result = await service.reconcile_vectors(kb_id, all_vectors=mode == "all_vectors")
-            result = await service.build_pending_chunks(kb_id, context=context)
-            result["reconcile"] = reconcile_result
-            await context.set_result(result)
-            await context.set_progress(100.0, "图谱向量索引修复完成")
-            return result
-
-        task, created = await tasker.enqueue_unique_by_payload(
-            name=f"图谱向量索引修复 ({database.name})",
-            task_type=GRAPH_TASK_TYPE,
-            payload={"kb_id": kb_id, "reconcile_mode": mode},
-            coroutine=run_graph_reconcile,
-            payload_match={"kb_id": kb_id},
-            statuses=ACTIVE_GRAPH_BUILD_STATUSES,
-        )
-        if not created:
-            raise HTTPException(status_code=409, detail="该知识库已有正在运行的图谱构建任务")
-        return {
-            "message": "图谱向量索引修复任务已提交",
-            "status": "queued",
-            "task_id": task.id,
-            "mode": mode,
-        }
-    except HTTPException:
-        raise
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        logger.error(f"提交图谱向量索引修复任务失败 {e}, {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"提交图谱向量索引修复任务失败: {e}")
+    """原生知识库已删除；WeKnora 知识库请在 WeKnora 管理，不在此删除。"""
+    del current_user
+    raise HTTPException(status_code=404, detail=f"知识库 {kb_id} 不存在")
 
 
 @knowledge.get("/databases/{kb_id}/export")

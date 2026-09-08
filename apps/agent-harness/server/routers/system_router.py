@@ -32,25 +32,10 @@ async def discovery():
         "name": "Yuxi",
         "version": get_version(),
         "api_prefix": "/api",
-        "capabilities": {
-            "cli": {
-                "min_cli_version": "0.1.0",
-                "browser_login": True,
-                "api_key_auth": True,
-                "remote_config": True,
-                "kb_upload": True,
-                "kb_list": True,
-                "kb_files": True,
-                "kb_query": True,
-                "kb_open": True,
-                "kb_find": True,
-            }
-        },
+        "capabilities": {},
         "endpoints": {
             "health": "/api/system/health",
             "auth_me": "/api/auth/me",
-            "cli_auth_sessions": "/api/auth/cli/sessions",
-            "cli_auth_authorize": "/auth/cli/authorize",
         },
     }
 

@@ -21,7 +21,5 @@ def test_discovery_endpoint_is_public(monkeypatch):
     assert payload["name"] == "Yuxi"
     assert payload["version"] == "0.7.1.dev0"
     assert payload["api_prefix"] == "/api"
-    assert payload["capabilities"]["cli"]["browser_login"] is True
-    assert payload["capabilities"]["cli"]["api_key_auth"] is True
-    assert payload["capabilities"]["cli"]["kb_upload"] is True
-    assert payload["endpoints"]["cli_auth_sessions"] == "/api/auth/cli/sessions"
+    assert payload["capabilities"].get("cli", {}).get("api_key_auth") in (None, False)
+    assert "cli_auth_sessions" not in payload.get("endpoints", {})

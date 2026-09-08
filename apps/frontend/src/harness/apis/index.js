@@ -6,10 +6,8 @@
 // 导出API模块
 export * from './system_api' // 系统管理API
 export * from './knowledge_api' // 知识库管理API
-export * from './graph_api' // 图谱API
 export * from './agent_api' // 智能体API
 export * from './tasker' // 任务管理API
-export * from './department_api' // 部门管理API
 export { mcpApi } from '@/api/runtime/mcp'
 export { skillApi } from '@/api/runtime/skill'
 export { toolApi } from '@/api/runtime/tool'
@@ -44,10 +42,7 @@ export {
  *    - 权限要求: 管理员权限
  *
  *
- * 4. graph_api.js: 图谱API
- *    - 知识图谱相关功能
- *
- * 5. tools.js: 工具API
+ * 4. tools.js: 工具API
  *    - 工具信息获取
  *
  * 6. agent.js: 智能体API

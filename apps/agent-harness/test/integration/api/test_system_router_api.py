@@ -15,14 +15,12 @@ async def test_health_endpoint_is_public(test_client):
     assert response.json()["status"] == "ok"
 
 
-async def test_discovery_declares_cli_knowledge_capabilities(test_client):
+async def test_discovery_omits_cli_auth(test_client):
     response = await test_client.get("/api/system/discovery")
     assert response.status_code == 200
-    cli_capabilities = response.json()["capabilities"]["cli"]
-    for capability in ("kb_list", "kb_files", "kb_query", "kb_open", "kb_find"):
-        assert cli_capabilities.get(capability) is True, capability
-    assert "kb_parse" not in cli_capabilities
-    assert "kb_index" not in cli_capabilities
+    payload = response.json()
+    assert payload["capabilities"].get("cli", {}).get("api_key_auth") in (None, False)
+    assert "cli_auth_sessions" not in payload.get("endpoints", {})
 
 
 async def test_info_endpoint_is_public(test_client):
@@ -40,7 +38,7 @@ async def test_config_get_requires_login_and_update_requires_admin(test_client, 
 
     update_response = await test_client.post(
         "/api/system/config/update",
-        json={"default_ocr_engine": "rapid_ocr"},
+        json={"default_ocr_engine": "weknora"},
         headers=standard_user["headers"],
     )
     assert update_response.status_code == 403
@@ -54,71 +52,30 @@ async def test_ocr_options_and_config_options_permissions(
     options_response = await test_client.get("/api/system/ocr/options", headers=standard_user["headers"])
     assert options_response.status_code == 200, options_response.text
     options = options_response.json()
-    assert options["default_engine"]
-    assert options["engines"]
-    assert {"endpoint", "credential_source", "credential_ref", "default_params"}.isdisjoint(options["engines"][0])
+    assert options["default_engine"] == "weknora"
+    assert options["weknora_managed"] is True
+    assert options["engines"] == []
 
     denied_response = await test_client.get("/api/system/config/options", headers=standard_user["headers"])
     assert denied_response.status_code == 403
 
     configs_response = await test_client.get("/api/system/config/options", headers=admin_headers)
     assert configs_response.status_code == 200, configs_response.text
-    configs = configs_response.json()["options"]
-    assert {item["key"] for item in configs} == {
-        "mineru_ocr_host_opts",
-        "mineru_official_api_opts",
-        "pp_structure_v3_ocr_host_opts",
-        "paddleocr_api_opts",
-    }
-    assert all("deepseek" not in item["key"] for item in configs)
-    official = next(item for item in configs if item["key"] == "mineru_official_api_opts")
-    assert official["params"]["fields"][0]["sensitive"] is True
-    assert official["value"]["api_key"] == ""
-    assert isinstance(official["sensitive_configured"]["api_key"], bool)
-    assert official["sensitive_state"]["api_key"]["source"] in {"database", "environment", "none"}
-    assert "configured" in official["sensitive_state"]["api_key"]
+    assert configs_response.json()["options"] == []
 
 
-async def test_config_option_update_is_visible_and_restored(test_client, admin_headers):
-    response = await test_client.get("/api/system/config/options", headers=admin_headers)
-    option = next(item for item in response.json()["options"] if item["key"] == "mineru_ocr_host_opts")
-    previous_url = option["value"].get("server_url", "")
-
-    try:
-        update_response = await test_client.put(
-            "/api/system/config/options/mineru_ocr_host_opts",
-            json={"value": {"server_url": "http://integration-mineru:30001"}},
-            headers=admin_headers,
-        )
-        assert update_response.status_code == 200, update_response.text
-        assert update_response.json()["option"]["value"]["server_url"] == "http://integration-mineru:30001/"
-    finally:
-        restore_response = await test_client.put(
-            "/api/system/config/options/mineru_ocr_host_opts",
-            json={"value": {"server_url": previous_url}},
-            headers=admin_headers,
-        )
-        assert restore_response.status_code == 200, restore_response.text
-
-
-async def test_ocr_health_is_available_to_logged_in_users_and_returns_all_methods(
+async def test_ocr_health_is_available_to_logged_in_users(
     test_client,
     standard_user,
     admin_headers,
-    monkeypatch,
 ):
-    async def fake_health(db):
-        del db
-        return {"rapid_ocr": {"status": "healthy", "message": "ok"}}
-
-    monkeypatch.setattr("yuxi.services.ocr_service.check_all_ocr_health", fake_health)
-
     response = await test_client.get("/api/system/ocr/health", headers=standard_user["headers"])
     assert response.status_code == 200, response.text
-    assert response.json()["health"]["rapid_ocr"]["status"] == "healthy"
+    assert response.json()["health"] == {}
 
     admin_response = await test_client.get("/api/system/ocr/health", headers=admin_headers)
     assert admin_response.status_code == 200, admin_response.text
+    assert admin_response.json()["health"] == {}
 
 
 async def test_admin_can_fetch_config_and_reload_info(test_client, admin_headers):

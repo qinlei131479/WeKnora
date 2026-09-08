@@ -40,7 +40,7 @@
         class="settings-panel"
         v-if="folderTreeData.length > 0 || uploadMode !== 'url' || autoIndex"
       >
-        <!-- 第一行：存储位置 + OCR 引擎 -->
+        <!-- 第一行：存储位置 -->
         <div
           class="setting-row"
           v-if="folderTreeData.length > 0 || uploadMode !== 'url'"
@@ -64,17 +64,6 @@
             </div>
             <p class="param-description">选择文件保存的目标文件夹</p>
           </div>
-          <div class="col-item" v-if="uploadMode !== 'url'">
-            <div class="setting-label">OCR 引擎（仅应用于 PDF/图片文件）</div>
-            <div class="setting-content">
-              <OCRSelector
-                v-model="processingParams.ocr_engine"
-                :disabled="chunkLoading"
-                @change="ocrEngineTouched = true"
-                @options-loaded="handleOcrOptionsLoaded"
-              />
-            </div>
-          </div>
         </div>
 
         <!-- 第二行：自动入库配置 (仅在开启时显示) -->
@@ -95,12 +84,6 @@
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- PDF/图片OCR提醒 (Alert样式优化) -->
-      <div v-if="hasPdfOrImageFiles && !isOcrEnabled" class="inline-alert warning">
-        <Info :size="16" />
-        <span>检测到PDF或图片文件，建议启用 OCR 以提取文本内容</span>
       </div>
 
       <!-- 文件上传区域 -->
@@ -343,7 +326,6 @@ import { harnessUrl } from '@harness/apis/prefix'
 import { ref, computed, onMounted, watch, h } from 'vue'
 import { message, Upload, Modal } from 'ant-design-vue'
 import { useUserStore } from '@harness/stores/user'
-import { useConfigStore } from '@harness/stores/config'
 import { useDatabaseStore } from '@harness/stores/database'
 import { fileApi, documentApi } from '@harness/apis/knowledge_api'
 import { getWorkspaceTree } from '@/api/runtime/workspace'
@@ -365,7 +347,6 @@ import {
 import { buildChunkParamsPayload } from '@harness/utils/chunkUtils'
 import ChunkParamsConfig from '@harness/components/ChunkParamsConfig.vue'
 import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
-import OCRSelector from '@harness/components/OCRSelector.vue'
 
 const props = defineProps({
   visible: {
@@ -393,9 +374,6 @@ const props = defineProps({
 const emit = defineEmits(['update:visible', 'success'])
 
 const store = useDatabaseStore()
-const configStore = useConfigStore()
-const DEFAULT_OCR_ENGINE = 'rapid_ocr'
-const defaultOcrEngine = ref(DEFAULT_OCR_ENGINE)
 
 // 文件夹选择相关
 const selectedFolderId = ref(null)
@@ -421,8 +399,6 @@ watch(
   () => props.visible,
   (newVal) => {
     if (newVal) {
-      ocrEngineTouched.value = false
-      applyDefaultOcrEngine()
       selectedFolderId.value = props.currentFolderId
       isFolderUpload.value = props.isFolderMode
       uploadMode.value = props.mode || (props.isFolderMode ? 'folder' : 'file')
@@ -810,11 +786,8 @@ const toggleWorkspacePath = (path, checked) => {
   selectedWorkspacePaths.value = selectedWorkspacePaths.value.filter((item) => item !== path)
 }
 
-const ocrEngineTouched = ref(false)
-
-// 解析参数
 const processingParams = ref({
-  ocr_engine: DEFAULT_OCR_ENGINE
+  ocr_engine: 'weknora'
 })
 
 // 自动入库相关
@@ -831,38 +804,6 @@ const buildAutoIndexParams = () => {
 }
 
 const isFolderUpload = ref(false)
-
-// 计算属性：是否启用了OCR
-const isOcrEnabled = computed(() => {
-  return processingParams.value.ocr_engine !== 'disable'
-})
-
-// 上传模式切换相关逻辑已移除
-
-// 计算属性：是否有PDF或图片文件
-const hasPdfOrImageFiles = computed(() => {
-  if (fileList.value.length === 0) {
-    return false
-  }
-
-  const pdfExtensions = ['.pdf']
-  const imageExtensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.gif', '.webp']
-  const ocrExtensions = [...pdfExtensions, ...imageExtensions]
-
-  return fileList.value.some((file) => {
-    if (file.status !== 'done') {
-      return false
-    }
-
-    const filePath = file.response?.file_path || file.name
-    if (!filePath) {
-      return false
-    }
-
-    const ext = filePath.substring(filePath.lastIndexOf('.')).toLowerCase()
-    return ocrExtensions.includes(ext)
-  })
-})
 
 // 计算属性：是否有ZIP文件
 const hasZipFiles = computed(() => {
@@ -884,54 +825,6 @@ const hasZipFiles = computed(() => {
     return ext === '.zip'
   })
 })
-
-const ocrEngineOptions = ref([])
-
-const handleOcrOptionsLoaded = (data) => {
-  const engines = Array.isArray(data?.engines) ? data.engines : []
-  ocrEngineOptions.value = engines
-    .filter((engine) => engine.engine_id !== 'disable')
-    .map((engine) => ({ value: engine.engine_id }))
-  defaultOcrEngine.value = data?.default_engine || DEFAULT_OCR_ENGINE
-  if (!ocrEngineTouched.value) applyDefaultOcrEngine()
-}
-
-const resolveDefaultOcrEngine = () => {
-  const configuredEngine = String(
-    configStore.config?.default_ocr_engine || defaultOcrEngine.value || DEFAULT_OCR_ENGINE
-  ).trim()
-  if (configuredEngine === 'disable') return configuredEngine
-  return ocrEngineOptions.value.some((option) => option.value === configuredEngine)
-    ? configuredEngine
-    : DEFAULT_OCR_ENGINE
-}
-
-const applyDefaultOcrEngine = () => {
-  processingParams.value.ocr_engine = resolveDefaultOcrEngine()
-}
-
-watch(
-  () => configStore.config?.default_ocr_engine,
-  () => {
-    if (props.visible && !ocrEngineTouched.value) applyDefaultOcrEngine()
-  }
-)
-
-// 验证OCR服务可用性
-const validateOcrService = () => {
-  if (!isOcrEnabled.value) {
-    return true
-  }
-
-  if (
-    !ocrEngineOptions.value.some((option) => option.value === processingParams.value.ocr_engine)
-  ) {
-    message.error('OCR 引擎选项尚未加载，请稍后重试')
-    return false
-  }
-
-  return true
-}
 
 const handleCancel = () => {
   emit('update:visible', false)
@@ -1229,11 +1122,6 @@ const chunkData = async () => {
     return
   }
 
-  // 验证OCR服务可用性（非 URL 模式下）
-  if (uploadMode.value !== 'url' && !validateOcrService()) {
-    return
-  }
-
   if (uploadMode.value === 'workspace') {
     if (selectedWorkspacePaths.value.length === 0) {
       message.error('请先选择工作区文件')
@@ -1249,7 +1137,6 @@ const chunkData = async () => {
         return
       }
 
-      const imageExtensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif']
       const items = []
       const content_hashes = {}
       const file_sizes = {}
@@ -1260,15 +1147,6 @@ const chunkData = async () => {
         if (item.content_hash) content_hashes[filePath] = item.content_hash
         if (Number.isFinite(item.size)) file_sizes[filePath] = item.size
         mergeSameNameFiles(item.same_name_files)
-
-        const ext = filePath.substring(filePath.lastIndexOf('.')).toLowerCase()
-        if (imageExtensions.includes(ext) && !isOcrEnabled.value) {
-          message.error({
-            content: '检测到图片文件，必须启用 OCR 才能提取文本内容。',
-            duration: 5
-          })
-          return
-        }
       }
 
       const params = { ...processingParams.value, content_hashes, file_sizes }
@@ -1376,9 +1254,6 @@ const chunkData = async () => {
   }
 
   // 文件模式处理
-  const imageExtensions = ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif']
-
-  // 提取已上传的文件信息
   const items = []
   const content_hashes = {}
   const file_sizes = {}
@@ -1391,16 +1266,6 @@ const chunkData = async () => {
     items.push(file_path)
     if (content_hash) content_hashes[file_path] = content_hash
     if (Number.isFinite(file.response?.size)) file_sizes[file_path] = file.response.size
-
-    // 检查是否需要OCR
-    const ext = file_path.substring(file_path.lastIndexOf('.')).toLowerCase()
-    if (imageExtensions.includes(ext) && !isOcrEnabled.value) {
-      message.error({
-        content: '检测到图片文件，必须启用 OCR 才能提取文本内容。',
-        duration: 5
-      })
-      return
-    }
   }
 
   if (items.length === 0) {
