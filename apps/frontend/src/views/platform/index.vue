@@ -307,6 +307,7 @@ onUnmounted(() => {
 
 /* 右侧：顶栏 + 路由区 */
 .platform-main {
+    --platform-topbar-height: 48px;
     flex: 1;
     min-width: 0;
     min-height: 0;
@@ -317,7 +318,7 @@ onUnmounted(() => {
 
 .platform-topbar {
     flex-shrink: 0;
-    height: 48px;
+    height: var(--platform-topbar-height);
     display: flex;
     align-items: center;
     padding: 0 12px 0 16px;

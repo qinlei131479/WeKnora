@@ -427,7 +427,7 @@ export default {
       capabilityReadAgents: '读取智能体',
       capabilityReadAgentsHint: '允许列出智能体、查看智能体详情、读取智能体预设和建议问题；不允许发起对话或修改智能体。',
       capabilityIngest: '写入知识库内容',
-      capabilityIngestHint: '允许向授权范围内的知识库写入内容（上传文档、编辑分块/FAQ/标签/wiki）；不能新建知识库、不能新建智能体、不能清空知识库，且仅限所选知识库范围。',
+      capabilityIngestHint: '允许向授权范围内的知识库写入内容（上传文档、编辑分块/FAQ/标签/wiki）；不能创建知识库、不能新建智能体、不能清空知识库，且仅限所选知识库范围。',
       capabilityManageKbs: '管理知识库',
       capabilityManageKbsHint: '允许管理知识库全生命周期：新建、复制、修改、删除知识库并调整初始化/配置信息。针对已有知识库的操作（复制/更新/删除）仍受所选知识库范围限制；新建不受限（新知识库归本租户）。',
       capabilityManageAgents: '管理智能体',
@@ -2476,6 +2476,18 @@ export default {
     missingKbId: '缺少知识库ID',
     tokenNotFound: '未找到登录令牌，请重新登录',
     streamFailed: '流式连接失败',
+    kb: {
+      noPermissionOperate: '无权操作该知识库',
+      noPermissionDelete: '无权删除该知识',
+      noPermissionModify: '无权修改该知识',
+      noPermissionUpdate: '无权更新该知识库',
+      noPermissionCreate: '无权创建知识',
+      noPermissionUpdateTags: '无权更新知识标签',
+      moveNotCompleted: '该文件尚未解析完成，当前状态：{status}',
+      moveReuseAcrossStores: '目标知识库使用了不同的向量存储，不支持复用向量。请改用「重新解析」后再移动。',
+      moveTypeMismatch: '源知识库与目标知识库类型必须相同',
+      moveEmbeddingMismatch: '源知识库与目标知识库必须使用相同的向量模型',
+    },
     initialization: {
       checkFailed: '检查失败',
       testFailed: '测试失败'
@@ -3156,7 +3168,8 @@ export default {
       cancel: '取消',
       success: '租户创建成功',
       failed: '租户创建失败',
-      disabled: '当前系统只允许通过邀请加入租户，不能自行创建租户。'
+      disabled: '当前系统只允许通过邀请加入租户，不能自行创建租户。',
+      needAdmin: '仅租户所有者或管理员可以创建租户。'
     },
     switcher: {
       menuLabel: '切换租户',
@@ -3304,7 +3317,7 @@ export default {
     attachmentStillProcessing: '附件 {name} 仍在解析，请稍候'
   },
   knowledgeEditor: {
-    titleCreate: '新建知识库',
+    titleCreate: '创建知识库',
     titleEdit: '知识库设置',
     advanced: {
       title: '高级设置',
@@ -4102,7 +4115,7 @@ export default {
     defaultLocaleBrowser: '跟随浏览器 / 宿主'
   },
   knowledgeList: {
-    create: '新建知识库',
+    create: '创建知识库',
     subtitle: '管理和组织您的知识库，支持文档型和问答型知识库',
     extensionsSubtitle: '管理运行时技能、工具与 MCP',
     runtimeSubtitle: '管理运行时知识库，包含文档解析、图谱、脑图与评测能力',
@@ -4145,6 +4158,24 @@ export default {
         noSkillMd: '未读取到 SKILL.md',
         uninstall: '卸载',
         manage: '去管理',
+        form: {
+          navGroup: '技能',
+          navContent: '技能信息',
+          navEnable: '生效范围',
+          navDeps: '依赖管理',
+          viewTitle: '查看技能',
+          manageTitle: '管理技能',
+          installTitle: '安装技能',
+          navRecommended: '推荐安装',
+          navRemote: '远程安装',
+          navConfirm: '确认安装',
+          save: '保存',
+          saveAndClose: '保存并关闭',
+          enableHint: '关闭后，该 Skill 不会出现在智能体可选技能中。',
+          contentHint: '查看 SKILL.md 说明与使用方式。',
+          depsHint: '配置该 Skill 运行所需的工具、MCP 与其他 Skill。',
+          pickSuite: '选择要安装的推荐技能套件。'
+        },
         groupRecommended: '推荐',
         groupPersonal: '个人技能',
         groupBuiltin: '内置',
@@ -4384,8 +4415,9 @@ export default {
       mcp: {
         searchPlaceholder: '搜索 MCP...',
         add: '添加 MCP',
+        create: '创建 MCP',
         refresh: '刷新 MCP',
-        empty: '暂无 MCP，点击上方按钮添加',
+        empty: '暂无 MCP，点击上方按钮创建',
         emptySearch: '无匹配 MCP',
         added: '已添加',
         available: '可添加',
@@ -4407,24 +4439,44 @@ export default {
         deleteFailed: '删除失败',
         loadFailed: '获取 MCP 列表失败',
         form: {
-          addTitle: '添加 MCP',
+          addTitle: '创建 MCP',
           editTitle: '编辑 MCP',
+          viewTitle: '查看 MCP',
+          navGroup: 'MCP',
+          navCreate: 'MCP 配置',
+          navConfig: '修改 MCP',
+          navView: 'MCP 信息',
+          navTools: '工具查询',
+          testApi: '测试',
+          saveAndClose: '保存并关闭',
+          createHint: '填写远程 MCP 连接信息后即可创建。',
+          toolsHint: '搜索并启用该 MCP 提供的工具。',
           slug: 'MCP 标识',
-          slugPlaceholder: '请输入 MCP 稳定标识，如 my-mcp',
+          slugPlaceholder: '例如 my-mcp',
+          slugDesc: 'MCP 的稳定标识，创建后不可修改。',
           name: 'MCP 名称',
-          namePlaceholder: '请输入 MCP 展示名称',
+          namePlaceholder: '请输入展示名称',
+          nameDesc: '在列表和智能体中展示的名称。',
           description: '描述',
           descPlaceholder: '请输入 MCP 描述',
+          descriptionDesc: '简要说明此 MCP 的用途。',
           transport: '传输类型',
+          transportDesc: '选择与 MCP 服务通信的协议。',
           icon: '图标',
           iconPlaceholder: '输入 emoji，如 🧠',
+          iconDesc: '用于卡片展示的 emoji 图标。',
           url: 'MCP URL',
+          urlDesc: '远程 MCP 服务的访问地址。',
           headers: 'HTTP 请求头',
-          headersPlaceholder: 'JSON 格式，如：{"Authorization": "Bearer xxx"}',
+          headersPlaceholder: 'JSON 格式，如：{\'{\'}"Authorization": "Bearer xxx"{\'}\'}',
+          headersDesc: '连接时附加的 HTTP 请求头，需为合法 JSON 对象，留空表示不发送额外请求头。',
           httpTimeout: 'HTTP 超时（秒）',
+          httpTimeoutDesc: 'HTTP 请求的超时时间。',
           sseTimeout: 'SSE 读取超时（秒）',
+          sseTimeoutDesc: 'SSE 读取的超时时间。',
           tags: '标签',
           tagsPlaceholder: '输入标签后回车添加',
+          tagsDesc: '用于分类和检索的标签。',
           badHeaders: '请求头 JSON 格式错误',
           slugRequired: 'MCP 标识不能为空',
           nameRequired: 'MCP 名称不能为空',
@@ -4598,7 +4650,7 @@ export default {
     },
     empty: {
       title: '暂无知识库',
-      description: '点击左侧快捷操作"新建知识库"按钮创建第一个知识库',
+      description: '点击右上角"创建知识库"按钮创建第一个知识库',
       sharedTitle: '暂无共享知识库',
       sharedDescription: '您可以加入共享空间或请求他人共享知识库给您',
       favoritesTitle: '暂无收藏',
@@ -5101,7 +5153,7 @@ export default {
       loading: '加载中...',
       retry: '重试',
       defaultEngine: '默认引擎',
-      defaultEngineDesc: '新建知识库时默认选用的存储引擎',
+      defaultEngineDesc: '创建知识库时默认选用的存储引擎',
       engineLocal: 'Local（本地）',
       engineCos: '腾讯云 COS',
       engineTos: '火山引擎 TOS',
@@ -5628,6 +5680,7 @@ export default {
     copy: '复制',
     copyDetails: '复制详情',
     copied: '已复制到剪贴板',
+    copyFailed: '复制失败，请手动选中文本',
     close: '关闭',
     live: 'LIVE',
     liveTooltip: '解析进行中，每 2 秒自动刷新一次',
@@ -5837,6 +5890,7 @@ export default {
     tagSearchPlaceholder: '输入标签名称关键字',
     tagNamePlaceholder: '请输入标签名称',
     tagNameRequired: '请先输入标签名称',
+    tagNameTooLong: '标签名称最多 {max} 个字',
     tagCreateSuccess: '标签创建成功',
     tagEditSuccess: '标签更新成功',
     tagDeleteDescDoc: '确定删除标签"{name}"？该标签下的所有文档将被一并删除',
@@ -5997,6 +6051,8 @@ export default {
     viewModeGrid: '卡片视图',
     viewModeList: '列表视图',
     viewModeToggle: '切换视图',
+    moreFiltersShow: '展开筛选',
+    moreFiltersHide: '收起筛选',
     columnName: '文件名',
     columnTag: '标签',
     columnSize: '大小',
@@ -6314,7 +6370,7 @@ export default {
       steps: {
         done: {
           title: '添加完成后继续',
-          desc: '模型保存后关闭设置页，即可点击「新建知识库」；创建向导会引导你完成类型、索引与模型绑定。'
+          desc: '模型保存后关闭设置页，即可点击「创建知识库」；创建向导会引导你完成类型、索引与模型绑定。'
         },
         addModel: {
           title: '添加模型',
@@ -6330,7 +6386,7 @@ export default {
       steps: {
         create: {
           title: '创建第一个知识库',
-          desc: '知识库用来存放文档与 FAQ。点击下方高亮的「新建知识库」按钮，我们会带你完成表单填写。'
+          desc: '知识库用来存放文档与 FAQ。点击下方高亮的「创建知识库」按钮，我们会带你完成表单填写。'
         }
       }
     }
@@ -6564,9 +6620,9 @@ export default {
     viewSwitch: '知识库视图切换',
     searchPlaceholder: '搜索知识库...',
     allTypes: '全部类型',
-    create: '新建知识库',
-    createNamePlaceholder: '新建知识库名称',
-    createDescPlaceholder: '新建知识库描述',
+    create: '创建知识库',
+    createNamePlaceholder: '创建知识库名称',
+    createDescPlaceholder: '创建知识库描述',
     createAction: '创建',
     cancel: '取消',
     loading: '正在加载知识库...',

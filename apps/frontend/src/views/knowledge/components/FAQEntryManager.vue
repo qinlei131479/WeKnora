@@ -430,7 +430,8 @@
     <!-- Editor Drawer -->
     <t-drawer v-model:visible="editorVisible"
       :header="editorMode === 'create' ? $t('knowledgeEditor.faq.editorCreate') : $t('knowledgeEditor.faq.editorEdit')"
-      :close-btn="true" size="520px" placement="right" class="faq-editor-drawer" @close="handleEditorClose">
+      :close-btn="true" size="520px" placement="right" attach="body" :z-index="2500" show-overlay
+      prevent-scroll-through drawer-class-name="faq-editor-drawer" class="faq-editor-drawer" @close="handleEditorClose">
       <div class="faq-editor-drawer-content">
         <t-form ref="editorFormRef" :data="editorForm" :rules="editorRules" layout="vertical" :label-width="0"
           class="faq-editor-form">
@@ -723,7 +724,8 @@
 
     <!-- Search Test Drawer -->
     <t-drawer v-model:visible="searchDrawerVisible" :header="$t('knowledgeEditor.faq.searchTestTitle')"
-      :close-btn="true" size="420px" placement="right" class="faq-search-drawer">
+      :close-btn="true" size="420px" placement="right" attach="body" :z-index="2500" show-overlay
+      prevent-scroll-through drawer-class-name="faq-search-drawer" class="faq-search-drawer">
       <div class="search-test-content">
         <t-form layout="vertical" class="search-form" :label-width="0">
           <div class="settings-group">
@@ -2465,8 +2467,8 @@ const exampleData: FAQEntryPayload[] = [
   },
   {
     standard_question: '如何创建知识库？',
-    answers: ['点击"新建知识库"按钮', '选择知识库类型并填写相关信息', '完成创建后即可开始使用'],
-    similar_questions: ['怎么创建知识库？', '如何新建知识库？'],
+    answers: ['点击"创建知识库"按钮', '选择知识库类型并填写相关信息', '完成创建后即可开始使用'],
+    similar_questions: ['怎么创建知识库？', '如何创建知识库？'],
     negative_questions: [],
     tag_name: '使用指南',
   },
@@ -3067,9 +3069,10 @@ watch(() => entries.value.map(e => ({
   gap: 8px 12px;
 
   .faq-search-input {
-    flex: 1 1 220px;
+    flex: 0 1 25%;
+    width: 25%;
+    max-width: 25%;
     min-width: 0;
-    width: auto;
   }
 
   &__filters {
@@ -3089,7 +3092,7 @@ watch(() => entries.value.map(e => ({
     display: flex;
     align-items: center;
     gap: 4px;
-    margin-left: auto;
+    margin-left: 0;
 
     :deep(.content-bar-icon-btn) {
       color: var(--td-text-color-secondary);
@@ -3115,7 +3118,7 @@ watch(() => entries.value.map(e => ({
 
     &__trailing {
       flex: 0 0 auto;
-      margin-left: auto;
+      margin-left: 0;
     }
   }
 
@@ -4146,7 +4149,7 @@ watch(() => entries.value.map(e => ({
 .faq-import-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 2500;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
@@ -5490,7 +5493,7 @@ watch(() => entries.value.map(e => ({
 .batch-tag-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 2500;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
@@ -5645,5 +5648,50 @@ watch(() => entries.value.map(e => ({
   overflow-wrap: break-word;
   white-space: normal;
   line-height: 1.4;
+}
+</style>
+
+<style lang="less">
+/* Drawers attach to body so overlay covers sidebar + topbar. */
+.t-drawer.faq-editor-drawer {
+  .t-drawer__body {
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .t-drawer__header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--td-component-stroke);
+    font-family: var(--app-font-family);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--td-text-color-primary);
+  }
+
+  .t-drawer__footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--td-component-stroke);
+  }
+}
+
+.t-drawer.faq-search-drawer {
+  .t-drawer__body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .t-drawer__header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--td-component-stroke);
+    font-family: var(--app-font-family);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--td-text-color-primary);
+  }
 }
 </style>

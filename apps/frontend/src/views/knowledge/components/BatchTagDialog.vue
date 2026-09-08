@@ -65,7 +65,7 @@
         </div>
         <div class="batch-tag-create-row">
           <t-input v-model="newTagName" :placeholder="$t('knowledgeBase.tagNewPlaceholder')" size="small"
-            :maxlength="40" :disabled="creatingTag" @enter="handleAddNewTag" />
+            :maxlength="TAG_NAME_MAX_LENGTH" :disabled="creatingTag" @enter="handleAddNewTag" />
         </div>
       </section>
     </div>
@@ -91,6 +91,7 @@ import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { MessagePlugin } from 'tdesign-vue-next';
 import { createKnowledgeBaseTag } from '@/api/knowledge-base';
+import { TAG_NAME_MAX_LENGTH, isTagNameTooLong } from '@/utils/knowledgeTag';
 
 interface Tag {
   id: string;
@@ -168,6 +169,10 @@ function clearAll() {
 async function handleCreateTag() {
   const name = searchQuery.value.trim();
   if (!name) return;
+  if (isTagNameTooLong(name)) {
+    MessagePlugin.warning(t('knowledgeBase.tagNameTooLong', { max: TAG_NAME_MAX_LENGTH }));
+    return;
+  }
   creatingTag.value = true;
   try {
     const res: any = await createKnowledgeBaseTag(props.kbId, { name });
@@ -188,6 +193,10 @@ async function handleCreateTag() {
 async function handleAddNewTag() {
   const name = newTagName.value.trim();
   if (!name) return;
+  if (isTagNameTooLong(name)) {
+    MessagePlugin.warning(t('knowledgeBase.tagNameTooLong', { max: TAG_NAME_MAX_LENGTH }));
+    return;
+  }
   const exists = props.tagList.find((t) => t.name === name);
   if (exists) {
     const next = new Set(selectedSet.value);

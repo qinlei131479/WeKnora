@@ -131,8 +131,8 @@
             {{ $t('tenant.switcher.empty') }}
           </div>
         </div>
-        <!-- 自助创建入口与 /auth/me 返回的后端能力保持一致。 -->
-        <div v-if="authStore.canCreateTenant" class="tenant-submenu-create" @click="openCreateTenantDialog">
+        <!-- 自助创建：后端能力 + 当前租户 owner/admin。 -->
+        <div v-if="authStore.canCreateTenantUI" class="tenant-submenu-create" @click="openCreateTenantDialog">
           <t-icon name="add" class="tenant-submenu-create-icon" />
           <span class="tenant-submenu-create-label">{{ $t('tenant.create.action') }}</span>
         </div>
@@ -223,8 +223,8 @@ const createTenantDialogVisible = ref(false)
 
 const openCreateTenantDialog = () => {
   closeAll()
-  if (!authStore.canCreateTenant) {
-    MessagePlugin.info(t('tenant.create.disabled'))
+  if (!authStore.canCreateTenantUI) {
+    MessagePlugin.info(t(authStore.canCreateTenant ? 'tenant.create.needAdmin' : 'tenant.create.disabled'))
     return
   }
   createTenantDialogVisible.value = true

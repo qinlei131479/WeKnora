@@ -3,8 +3,13 @@ import axios from "axios";
 import { generateRandomString, MAX_FILE_SIZE_MB } from "./index";
 import i18n from '@/i18n'
 import { getApiBaseUrl } from './api-base';
+import { localizeBackendErrorMessage } from './backendErrorMessage';
 
-const t = (key: string) => i18n.global.t(key)
+const t = (key: string, params?: Record<string, string>) => i18n.global.t(key, params)
+
+function localizeApiErrorMessage(message: string | undefined): string | undefined {
+  return localizeBackendErrorMessage(message, t)
+}
 
 // API基础URL
 const BASE_URL = getApiBaseUrl();
@@ -132,7 +137,7 @@ instance.interceptors.response.use(
       const msg = typeof data === 'object'
         ? (typeof data?.error === 'string' ? data.error : (data?.error?.message || data?.message))
         : data;
-      return Promise.reject({ status, message: msg || t('error.invalidCredentials') });
+      return Promise.reject({ status, message: localizeApiErrorMessage(msg) || t('error.invalidCredentials') });
     }
 
     // Embed 调试页/挂件：无 JWT 时直接拒绝，勿走 refresh → /login
@@ -141,7 +146,7 @@ instance.interceptors.response.use(
       const msg = typeof data === 'object'
         ? (typeof data?.error === 'string' ? data.error : (data?.error?.message || data?.message))
         : data;
-      return Promise.reject({ status, message: msg || t('error.invalidCredentials') });
+      return Promise.reject({ status, message: localizeApiErrorMessage(msg) || t('error.invalidCredentials') });
     }
 
     // 如果是401错误且不是刷新token的请求，尝试刷新token
@@ -240,8 +245,8 @@ instance.interceptors.response.use(
     }
     return Promise.reject({ 
       status, 
-      message: errorMessage,
-      ...(typeof data === 'object' ? data : {}) 
+      ...(typeof data === 'object' ? data : {}),
+      message: localizeApiErrorMessage(errorMessage),
     });
   }
 );

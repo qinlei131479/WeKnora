@@ -7,7 +7,7 @@
       <h1>
         {{
           $t(
-            authStore.canCreateTenant
+            authStore.canCreateTenantUI
               ? 'auth.workspaceOnboarding.title'
               : 'auth.workspaceOnboarding.inviteOnlyTitle',
           )
@@ -16,7 +16,7 @@
       <p class="workspace-description">
         {{
           $t(
-            authStore.canCreateTenant
+            authStore.canCreateTenantUI
               ? 'auth.workspaceOnboarding.description'
               : 'auth.workspaceOnboarding.inviteOnlyDescription',
           )
@@ -36,19 +36,19 @@
       </div>
 
       <template v-else>
-        <div v-if="!authStore.canCreateTenant" class="invite-only-notice">
+        <div v-if="!authStore.canCreateTenantUI" class="invite-only-notice">
           <t-icon name="lock-on" size="20px" aria-hidden="true" />
           <span>{{ $t('auth.workspaceOnboarding.inviteOnlyNotice') }}</span>
         </div>
 
-        <div class="workspace-actions" :class="{ 'workspace-actions--single': !authStore.canCreateTenant }">
-          <t-button v-if="authStore.canCreateTenant" theme="primary" size="large" @click="createVisible = true">
+        <div class="workspace-actions" :class="{ 'workspace-actions--single': !authStore.canCreateTenantUI }">
+          <t-button v-if="authStore.canCreateTenantUI" theme="primary" size="large" @click="createVisible = true">
             <template #icon><t-icon name="add" /></template>
             {{ $t('auth.workspaceOnboarding.create') }}
           </t-button>
           <t-button
-            :theme="authStore.canCreateTenant ? 'default' : 'primary'"
-            :variant="authStore.canCreateTenant ? 'outline' : 'base'"
+            :theme="authStore.canCreateTenantUI ? 'default' : 'primary'"
+            :variant="authStore.canCreateTenantUI ? 'outline' : 'base'"
             size="large"
             @click="invitationsVisible = true"
           >
@@ -64,7 +64,7 @@
       <p v-if="!policyLoading && !policyLoadFailed" class="workspace-help">
         {{
           $t(
-            authStore.canCreateTenant
+            authStore.canCreateTenantUI
               ? 'auth.workspaceOnboarding.help'
               : 'auth.workspaceOnboarding.inviteOnlyHelp',
           )

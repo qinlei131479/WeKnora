@@ -106,12 +106,12 @@ onUnmounted(() => {
   height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
-  background: var(--td-bg-color-page, var(--gray-25));
+  background: var(--gray-25);
   box-sizing: border-box;
 }
 
 .page-header {
-  padding: 8px var(--page-padding) 16px;
+  padding: 20px var(--page-padding) 16px;
   h1 {
     margin: 0;
     font-size: 24px;

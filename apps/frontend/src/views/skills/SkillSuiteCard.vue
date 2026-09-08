@@ -129,7 +129,7 @@ const statusText = computed(() => {
   position: relative;
   z-index: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
 }
 
@@ -137,11 +137,16 @@ const statusText = computed(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 24px;
-  height: 24px;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
   border-radius: 6px;
   background: color-mix(in srgb, var(--td-brand-color, var(--main-color)) 10%, transparent);
   color: var(--td-brand-color, var(--main-color));
+
+  :deep(svg) {
+    display: block;
+  }
 }
 
 .suite-card-title-group {

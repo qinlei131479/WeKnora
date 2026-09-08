@@ -336,7 +336,10 @@ watch(visible, (open) => {
 
 .chat-references-panel {
   position: fixed;
-  top: 0;
+  /* Sit below the platform topbar. The bar lives in a higher stacking
+     context (.platform-topbar z-index 200 vs .platform-route-outlet 0),
+     so top:0 would hide this panel's close button. */
+  top: var(--platform-topbar-height, 48px);
   right: 0;
   bottom: 0;
   width: min(420px, 100vw);
@@ -349,6 +352,11 @@ watch(visible, (open) => {
 
   &.is-overlay {
     box-shadow: -12px 0 32px rgba(0, 0, 0, 0.12);
+  }
+
+  /* Embed / iframe chat has no platform topbar. */
+  &.is-embedded {
+    top: 0;
   }
 }
 

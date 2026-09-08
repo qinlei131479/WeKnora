@@ -306,6 +306,16 @@ export const useAuthStore = defineStore('auth', () => {
     canCreateTenant.value = allowed
   }
 
+  // UI-only gate on top of the deployment capability. Contributors / viewers
+  // must not see "create tenant". Onboarding (no current workspace yet) still
+  // follows canCreateTenant so a first workspace can be created.
+  const canCreateTenantUI = computed(() => {
+    if (!canCreateTenant.value) return false
+    if (isSystemAdmin.value || canAccessAllTenants.value) return true
+    if (!hasValidTenant.value) return true
+    return hasRole('admin')
+  })
+
   // fetchPendingInvitationCount hits the dedicated /me/invitations/
   // pending-count endpoint and updates the store. Errors are
   // swallowed — the badge degrades to its last-known value instead
@@ -530,6 +540,7 @@ export const useAuthStore = defineStore('auth', () => {
     memberships,
     pendingInvitationCount,
     canCreateTenant,
+    canCreateTenantUI,
 
     // 计算属性
     isLoggedIn,

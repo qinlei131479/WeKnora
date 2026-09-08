@@ -64,7 +64,7 @@
                   ref="newTagInputRef"
                   v-model="newTagName"
                   size="small"
-                  :maxlength="40"
+                  :maxlength="TAG_NAME_MAX_LENGTH"
                   class="tag-tile__input"
                   :placeholder="$t('knowledgeBase.tagNamePlaceholder')"
                   @enter="submitCreateTag"
@@ -112,7 +112,7 @@
                     :ref="(el: any) => setEditingTagInputRef(el, tag.id)"
                     v-model="editingTagName"
                     size="small"
-                    :maxlength="40"
+                    :maxlength="TAG_NAME_MAX_LENGTH"
                     class="tag-tile__input"
                     :placeholder="$t('knowledgeBase.tagNamePlaceholder')"
                     @enter="submitEditTag"
@@ -216,6 +216,7 @@ import {
   updateKnowledgeBaseTag,
   deleteKnowledgeBaseTag,
 } from '@/api/knowledge-base/index';
+import { TAG_NAME_MAX_LENGTH, isTagNameTooLong } from '@/utils/knowledgeTag';
 
 type TagRow = {
   id: string;
@@ -365,6 +366,10 @@ const submitCreateTag = async () => {
     MessagePlugin.warning(t('knowledgeBase.tagNameRequired'));
     return;
   }
+  if (isTagNameTooLong(name)) {
+    MessagePlugin.warning(t('knowledgeBase.tagNameTooLong', { max: TAG_NAME_MAX_LENGTH }));
+    return;
+  }
   creatingTagLoading.value = true;
   try {
     await createKnowledgeBaseTag(props.kbId, { name });
@@ -399,6 +404,10 @@ const submitEditTag = async () => {
   const name = editingTagName.value.trim();
   if (!name) {
     MessagePlugin.warning(t('knowledgeBase.tagNameRequired'));
+    return;
+  }
+  if (isTagNameTooLong(name)) {
+    MessagePlugin.warning(t('knowledgeBase.tagNameTooLong', { max: TAG_NAME_MAX_LENGTH }));
     return;
   }
   const current = tags.value.find((tag) => tag.id === editingTagId.value);

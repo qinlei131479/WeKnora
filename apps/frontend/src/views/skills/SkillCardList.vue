@@ -1,40 +1,31 @@
 <template>
   <div class="skill-cards-page extension-page-root">
-    <PageShoulder :search-placeholder="t('knowledgeList.extensions.skills.searchPlaceholder')" v-model:search="searchQuery">
-      <template #actions>
+    <Teleport defer to="#extension-page-header-actions">
+      <div class="extension-header-actions">
         <template v-if="!isBatchDeleteMode">
           <t-button
+            variant="outline"
             @click="isBatchDeleteMode = true"
             :disabled="loading || importing || filteredDeletableSkills.length === 0"
-            class="lucide-icon-btn"
           >
-            <span>{{ t('knowledgeList.extensions.skills.batchManage') }}</span>
+            {{ t('knowledgeList.extensions.skills.batchManage') }}
           </t-button>
           <t-button
+            variant="outline"
             @click="handleOpenRemoteInstall"
             :disabled="loading || importing"
-            class="lucide-icon-btn"
           >
-            <Computer :size="14" />
-            <span>{{ t('knowledgeList.extensions.skills.remoteInstall') }}</span>
+            <template #icon><t-icon name="cloud-download" /></template>
+            {{ t('knowledgeList.extensions.skills.remoteInstall') }}
           </t-button>
-          <input
-            ref="skillFileInput"
-            type="file"
-            accept=".zip,.md"
-            style="display: none"
-            :disabled="loading || importing"
-            @change="onSkillFileChange"
-          />
           <t-button
             theme="primary"
             :loading="importing"
             :disabled="loading || importing"
-            class="lucide-icon-btn"
             @click="skillFileInput?.click()"
           >
-            <Upload :size="14" />
-            <span>{{ t('knowledgeList.extensions.skills.upload') }}</span>
+            <template #icon><t-icon name="upload" /></template>
+            {{ t('knowledgeList.extensions.skills.upload') }}
           </t-button>
         </template>
         <template v-else>
@@ -49,10 +40,21 @@
           >
             {{ t('knowledgeList.extensions.skills.batchDelete', { count: selectedCardSlugs.length }) }}
           </t-button>
-          <t-button :disabled="loading" @click="exitBatchDeleteMode">{{ t('knowledgeList.extensions.skills.exitManage') }}</t-button>
+          <t-button variant="outline" :disabled="loading" @click="exitBatchDeleteMode">{{ t('knowledgeList.extensions.skills.exitManage') }}</t-button>
         </template>
-      </template>
-    </PageShoulder>
+      </div>
+    </Teleport>
+
+    <input
+      ref="skillFileInput"
+      type="file"
+      accept=".zip,.md"
+      style="display: none"
+      :disabled="loading || importing"
+      @change="onSkillFileChange"
+    />
+
+    <PageShoulder :search-placeholder="t('knowledgeList.extensions.skills.searchPlaceholder')" v-model:search="searchQuery" />
 
     <div
       v-if="visibleSkillGroups.length === 0"
@@ -77,18 +79,17 @@
 
     <div v-else class="extension-page-body">
       <template v-for="group in visibleSkillGroups" :key="group.key">
-        <div
-          class="extension-section-header is-toggle"
-          role="button"
-          tabindex="0"
-          @click="toggleSkillSection(group.key)"
-          @keydown.enter.prevent="toggleSkillSection(group.key)"
-          @keydown.space.prevent="toggleSkillSection(group.key)"
-        >
-          <span>{{ group.title }}</span>
-          <span class="section-count">{{ group.skills.length }}</span>
-          <ChevronRight v-if="isSkillSectionCollapsed(group.key)" :size="14" class="section-toggle" />
-          <ChevronDown v-else :size="14" class="section-toggle" />
+        <div class="extension-section-header skill-section-header">
+          <button
+            type="button"
+            class="skill-section-toggle"
+            @click="toggleSkillSection(group.key)"
+          >
+            <span>{{ group.title }}</span>
+            <span class="section-count">{{ group.skills.length }}</span>
+            <ChevronRight v-if="isSkillSectionCollapsed(group.key)" :size="14" class="section-toggle" />
+            <ChevronDown v-else :size="14" class="section-toggle" />
+          </button>
         </div>
         <ExtensionCardGrid v-show="!isSkillSectionCollapsed(group.key)" :min-width="240" :gap="12">
           <div
@@ -153,88 +154,11 @@
       </template>
     </div>
 
-    <t-dialog
-      v-model:visible="skillPreviewVisible"
-      attach="body"
-      placement="center"
-      class="skill-preview-modal"
-      :header="false"
-      :footer="false"
-      :width="680"
-      :closable="false"
-      :close-btn="false"
-      :destroy-on-close="true"
-      @close="closeSkillPreview"
-    >
-      <div v-if="previewSkill" class="skill-preview-panel">
-        <div class="skill-preview-header">
-          <div class="skill-preview-title-area">
-            <div class="skill-preview-icon">
-              <component :is="getSkillIcon(previewSkill.slug)" :size="18" />
-            </div>
-            <div class="skill-preview-title-text">
-              <div class="skill-preview-title">
-                {{ formatExtensionCardTitle(previewSkill.name) }}
-              </div>
-              <div class="skill-preview-meta">
-                <span>{{
-                  sourceTypeLabel(previewSkill.sourceType || previewSkill.source_type)
-                }}</span>
-                <t-tag v-if="previewSkill.enabled === false" size="small" variant="light-outline" theme="warning" class="wk-chip">
-                  {{ t('knowledgeList.extensions.skills.disabled') }}
-                </t-tag>
-              </div>
-            </div>
-          </div>
-          <div class="skill-preview-actions">
-            <t-switch
-              v-if="previewSkill.sourceScope !== 'personal'"
-              :model-value="previewSkill.enabled !== false"
-              :disabled="!canManageSkill(previewSkill) || isSkillToggling(previewSkill.slug)"
-              :loading="isSkillToggling(previewSkill.slug)"
-              size="small"
-              @change="handlePreviewToggle"
-            />
-          </div>
-        </div>
-
-        <div class="skill-preview-body">
-          <div v-if="skillPreviewLoading" class="skill-preview-loading">
-            <t-loading />
-          </div>
-          <MarkdownPreview
-            v-else-if="skillPreviewMarkdown"
-            :content="skillPreviewMarkdown"
-            :compact="true"
-          />
-          <t-empty v-else :description="skillPreviewError || t('knowledgeList.extensions.skills.noSkillMd')" />
-        </div>
-
-        <div class="skill-preview-footer">
-          <div class="skill-preview-footer-left">
-            <t-button
-              v-if="canDeletePreviewSkill"
-              theme="danger"
-              :loading="deletingPreviewSkill"
-              @click="confirmDeletePreviewSkill"
-            >
-              {{ t('knowledgeList.extensions.skills.uninstall') }}
-            </t-button>
-          </div>
-          <div class="skill-preview-footer-right">
-            <t-button @click="closeSkillPreview">{{ t('knowledgeList.extensions.close') }}</t-button>
-            <t-button
-              v-if="previewSkill.sourceScope !== 'personal'"
-              theme="primary"
-              class="lucide-icon-btn"
-              @click="goToPreviewSkillManagement"
-            >
-              <span>{{ t('knowledgeList.extensions.skills.manage') }}</span>
-            </t-button>
-          </div>
-        </div>
-      </div>
-    </t-dialog>
+    <SkillEditorModal
+      v-model:open="skillPreviewVisible"
+      :skill="previewSkill"
+      @submitted="handleSkillEditorSubmitted"
+    />
 
     <SkillInstallFlowModal
       :open="installFlowOpen"
@@ -495,7 +419,7 @@
       <template #selection-footer>
         <span class="modal-footer-summary">{{ remoteSelectionSummary }}</span>
         <div class="modal-footer-buttons">
-          <t-button @click="closeInstallFlow">{{ t('knowledgeList.extensions.cancel') }}</t-button>
+          <t-button variant="outline" @click="closeInstallFlow">{{ t('knowledgeList.extensions.cancel') }}</t-button>
           <t-button
             theme="primary"
             :disabled="
@@ -516,11 +440,8 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
 import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
 import {
-  Upload,
-  Computer,
   WandSparkles,
   History,
   Trash2,
@@ -533,10 +454,10 @@ import {
 import { skillApi } from '@/api/runtime/skill'
 import ExtensionCardGrid from '@harness/components/extensions/ExtensionCardGrid.vue'
 import SkillInstallFlowModal from './SkillInstallFlowModal.vue'
+import SkillEditorModal from './SkillEditorModal.vue'
 import SkillSuiteCard from './SkillSuiteCard.vue'
 import InfoCard from '@harness/components/shared/InfoCard.vue'
 import PageShoulder from '@harness/components/shared/PageShoulder.vue'
-import MarkdownPreview from '@harness/components/common/MarkdownPreview.vue'
 import { formatExtensionCardTitle } from '@harness/utils/extensionDisplayName'
 import { getShareConfigLabel } from '@harness/utils/shareConfig'
 import { getSkillIcon } from '@harness/utils/skill_icon_utils'
@@ -576,8 +497,6 @@ const recommendedSuites = computed(() => [
     ]
   }
 ])
-const router = useRouter()
-
 const loading = ref(false)
 const skillFileInput = ref(null)
 const importing = ref(false)
@@ -591,11 +510,6 @@ const togglingSkillSlugs = ref([])
 const skills = ref([])
 const skillPreviewVisible = ref(false)
 const previewSkill = ref(null)
-const skillPreviewMarkdown = ref('')
-const skillPreviewLoading = ref(false)
-const skillPreviewError = ref('')
-const deletingPreviewSkill = ref(false)
-let previewRequestSeq = 0
 const installFlowOpen = ref(false)
 const installFlow = ref(null)
 
@@ -718,12 +632,6 @@ const filteredDeletableSkills = computed(() =>
       canManageSkill(skill) && skill.sourceType !== 'builtin' && skill.sourceScope !== 'personal'
   )
 )
-const canDeletePreviewSkill = computed(
-  () =>
-    !!previewSkill.value &&
-    canManageSkill(previewSkill.value) &&
-    previewSkill.value.sourceType !== 'builtin'
-)
 
 // 仓库拉取的技能列表过滤
 const filteredRepoSkills = computed(() => {
@@ -811,13 +719,6 @@ const toggleSearchSkillFromRow = (item) => {
   handleToggleSearchSkill(item, !isSearchSkillSelected(item))
 }
 
-const sourceTypeLabel = (sourceType) => {
-  if (sourceType === 'personal') return t('knowledgeList.extensions.skills.sourcePersonal')
-  if (sourceType === 'builtin') return t('knowledgeList.extensions.skills.sourceBuiltin')
-  if (sourceType === 'remote') return t('knowledgeList.extensions.skills.sourceRemote')
-  return t('knowledgeList.extensions.skills.sourceUpload')
-}
-
 /** 返回 Skill 共享范围的简短展示文案。 */
 const getSkillShareLabel = (skill) => getShareConfigLabel(skill?.share_config, t)
 
@@ -836,42 +737,15 @@ const skillCardTags = (skill) => {
 
 const canManageSkill = (skill) => skill?.can_manage !== false
 const isSkillToggling = (slug) => togglingSkillSlugs.value.includes(slug)
-const navigateToDetail = (skill) => {
-  if (skill?.sourceScope === 'personal') return
-  router.push({ path: `/platform/skills/${encodeURIComponent(skill.slug)}` })
-}
 
-const closeSkillPreview = () => {
-  skillPreviewVisible.value = false
-}
-
-const openSkillPreview = async (skill) => {
+const openSkillPreview = (skill) => {
   if (!skill?.slug) return
-  const requestSeq = ++previewRequestSeq
   previewSkill.value = skill
-  skillPreviewMarkdown.value = ''
-  skillPreviewError.value = ''
-  skillPreviewLoading.value = true
   skillPreviewVisible.value = true
-  try {
-    const result =
-      skill.sourceScope === 'personal'
-        ? await skillApi.getPersonalSkillFile(skill.slug, 'SKILL.md')
-        : await skillApi.getSkillFile(skill.slug, 'SKILL.md')
-    if (requestSeq !== previewRequestSeq || previewSkill.value?.slug !== skill.slug) return
-    skillPreviewMarkdown.value = result?.data?.content || ''
-  } catch (error) {
-    if (requestSeq !== previewRequestSeq || previewSkill.value?.slug !== skill.slug) return
-    skillPreviewError.value = error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.readFailed')
-  } finally {
-    if (requestSeq === previewRequestSeq) skillPreviewLoading.value = false
-  }
 }
 
-const goToPreviewSkillManagement = () => {
-  if (!previewSkill.value) return
-  navigateToDetail(previewSkill.value)
-  closeSkillPreview()
+const handleSkillEditorSubmitted = async () => {
+  await fetchSkills()
 }
 
 const handleCardClick = (skill) => {
@@ -921,47 +795,6 @@ const handleToggleSkillEnabled = async (skill) => {
   } finally {
     togglingSkillSlugs.value = togglingSkillSlugs.value.filter((slug) => slug !== skill.slug)
   }
-}
-
-const handlePreviewToggle = () => {
-  if (!previewSkill.value) return
-  handleToggleSkillEnabled(previewSkill.value)
-}
-
-const confirmDeletePreviewSkill = () => {
-  const target = previewSkill.value
-  if (!target || !canDeletePreviewSkill.value || deletingPreviewSkill.value) return
-
-  const dialog = DialogPlugin.confirm({
-    attach: 'body',
-    placement: 'center',
-    header: t('knowledgeList.extensions.skills.uninstallTitle', { name: target.name || target.slug }),
-    body:
-      target.sourceScope === 'personal'
-        ? t('knowledgeList.extensions.skills.uninstallPersonalHint')
-        : t('knowledgeList.extensions.skills.uninstallSharedHint'),
-    confirmBtn: { content: t('knowledgeList.extensions.skills.uninstall'), theme: 'danger' },
-    cancelBtn: t('knowledgeList.extensions.cancel'),
-    onConfirm: async () => {
-      try {
-        deletingPreviewSkill.value = true
-        if (target.sourceScope === 'personal') {
-          await skillApi.deletePersonalSkill(target.slug)
-        } else {
-          await skillApi.deleteSkill(target.slug)
-        }
-        MessagePlugin.success(t('knowledgeList.extensions.skills.uninstalled'))
-        closeSkillPreview()
-        previewSkill.value = null
-        await fetchSkills()
-      } catch (error) {
-        MessagePlugin.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.uninstallFailed'))
-      } finally {
-        deletingPreviewSkill.value = false
-        dialog.hide()
-      }
-    }
-  })
 }
 
 const handleBatchSelectAll = () => {
@@ -1274,9 +1107,49 @@ defineExpose({
 
 <style lang="less" scoped>
 @import '@harness/assets/css/extensions.less';
-</style>
 
-<style lang="less" scoped>
+:deep(.t-button) {
+  display: inline-flex;
+  align-items: center;
+}
+
+.extension-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.skill-section-header {
+  cursor: default;
+}
+
+.skill-section-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--td-text-color-primary, var(--gray-800));
+  }
+
+  &:hover .section-toggle {
+    opacity: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--td-brand-color-focus, rgba(0, 82, 217, 0.2));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
 .skill-empty-state {
   width: 100%;
   min-height: 280px;
@@ -1782,6 +1655,10 @@ defineExpose({
   display: flex;
   margin-left: auto;
   gap: 8px;
+
+  :deep(.t-button--variant-outline) {
+    background: var(--gray-0);
+  }
 }
 </style>
 

@@ -77,7 +77,7 @@ function emitChange(item) {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 8px var(--page-padding) 16px;
+  padding: 20px var(--page-padding) 16px;
   background-color: transparent;
   position: relative;
   z-index: 0;

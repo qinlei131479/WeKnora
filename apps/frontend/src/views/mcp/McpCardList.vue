@@ -1,13 +1,13 @@
 <template>
   <div class="mcp-cards-page extension-page-root">
-    <PageShoulder :search-placeholder="t('knowledgeList.extensions.mcp.searchPlaceholder')" v-model:search="searchQuery">
-      <template #actions>
-        <t-button theme="primary" @click="handleMcpAdd" class="lucide-icon-btn">
-          <Plus :size="14" />
-          <span>{{ t('knowledgeList.extensions.mcp.add') }}</span>
-        </t-button>
-      </template>
-    </PageShoulder>
+    <Teleport defer to="#extension-page-header-actions">
+      <t-button theme="primary" @click="handleMcpAdd">
+        <template #icon><t-icon name="add" /></template>
+        {{ t('knowledgeList.extensions.mcp.create') }}
+      </t-button>
+    </Teleport>
+
+    <PageShoulder :search-placeholder="t('knowledgeList.extensions.mcp.searchPlaceholder')" v-model:search="searchQuery" />
 
     <div class="extension-page-body">
     <div
@@ -20,26 +20,7 @@
     </div>
 
     <template v-else>
-      <div
-        v-if="filteredEnabledServers.length"
-        class="extension-section-header is-toggle"
-        role="button"
-        tabindex="0"
-        @click="toggleMcpSection('added')"
-        @keydown.enter.prevent="toggleMcpSection('added')"
-        @keydown.space.prevent="toggleMcpSection('added')"
-      >
-        <span>{{ t('knowledgeList.extensions.mcp.added') }}</span>
-        <span class="section-count">{{ filteredEnabledServers.length }}</span>
-        <ChevronRight v-if="isMcpSectionCollapsed('added')" :size="14" class="section-toggle" />
-        <ChevronDown v-else :size="14" class="section-toggle" />
-      </div>
-      <ExtensionCardGrid
-        v-if="filteredEnabledServers.length"
-        v-show="!isMcpSectionCollapsed('added')"
-        :min-width="240"
-        :gap="12"
-      >
+      <ExtensionCardGrid v-if="filteredEnabledServers.length" :min-width="240" :gap="12">
         <InfoCard
           v-for="server in filteredEnabledServers"
           :key="server.slug"
@@ -56,38 +37,19 @@
           <template #actions>
             <button
               type="button"
-              class="mcp-card-action mcp-card-action-danger"
+              class="mcp-enabled-action enabled"
               :disabled="isActionLoading(server)"
               :aria-label="server.is_builtin ? t('knowledgeList.extensions.mcp.remove') : t('knowledgeList.extensions.mcp.delete')"
               @click.stop="handleRemoveServer(server)"
             >
               <Check :size="15" class="action-icon action-icon-check" />
-              <Trash2 :size="15" class="action-icon action-icon-trash" />
+              <Minus :size="15" class="action-icon action-icon-minus" />
             </button>
           </template>
         </InfoCard>
       </ExtensionCardGrid>
 
-      <div
-        v-if="filteredDisabledServers.length"
-        class="extension-section-header is-toggle"
-        role="button"
-        tabindex="0"
-        @click="toggleMcpSection('available')"
-        @keydown.enter.prevent="toggleMcpSection('available')"
-        @keydown.space.prevent="toggleMcpSection('available')"
-      >
-        <span>{{ t('knowledgeList.extensions.mcp.available') }}</span>
-        <span class="section-count">{{ filteredDisabledServers.length }}</span>
-        <ChevronRight v-if="isMcpSectionCollapsed('available')" :size="14" class="section-toggle" />
-        <ChevronDown v-else :size="14" class="section-toggle" />
-      </div>
-      <ExtensionCardGrid
-        v-if="filteredDisabledServers.length"
-        v-show="!isMcpSectionCollapsed('available')"
-        :min-width="240"
-        :gap="12"
-      >
+      <ExtensionCardGrid v-if="filteredDisabledServers.length" :min-width="240" :gap="12">
         <InfoCard
           v-for="server in filteredDisabledServers"
           :key="server.slug"
@@ -104,10 +66,8 @@
           <template #actions>
             <button
               type="button"
-              :class="[
-                'mcp-card-action',
-                { 'mcp-card-action-danger': server.requires_migration }
-              ]"
+              class="mcp-enabled-action"
+              :class="{ enabled: server.requires_migration }"
               :disabled="isActionLoading(server)"
               :aria-label="server.requires_migration ? t('knowledgeList.extensions.mcp.delete') : t('knowledgeList.extensions.mcp.add')"
               @click.stop="
@@ -116,7 +76,10 @@
                   : handleSetServerEnabled(server, true)
               "
             >
-              <Trash2 v-if="server.requires_migration" :size="15" class="action-icon" />
+              <template v-if="server.requires_migration">
+                <Check :size="15" class="action-icon action-icon-check" />
+                <Minus :size="15" class="action-icon action-icon-minus" />
+              </template>
               <Plus v-else :size="15" class="action-icon" />
             </button>
           </template>
@@ -194,7 +157,8 @@
 
     <McpFormModal
       v-model:open="formModalVisible"
-      :edit-mode="false"
+      :edit-mode="!!editingServer"
+      :edit-data="editingServer"
       @submitted="handleFormSubmitted"
     />
   </div>
@@ -203,9 +167,8 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
 import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
-import { Check, ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-vue-next'
+import { Check, Minus, Plus } from 'lucide-vue-next'
 import { mcpApi } from '@/api/runtime/mcp'
 import ExtensionCardGrid from '@harness/components/extensions/ExtensionCardGrid.vue'
 import InfoCard from '@harness/components/shared/InfoCard.vue'
@@ -214,7 +177,6 @@ import McpFormModal from './McpFormModal.vue'
 import { formatExtensionCardTitle } from '@harness/utils/extensionDisplayName'
 
 const { t } = useI18n()
-const router = useRouter()
 
 const emit = defineEmits(['loading-change'])
 
@@ -222,6 +184,7 @@ const loading = ref(false)
 const servers = ref([])
 const searchQuery = ref('')
 const formModalVisible = ref(false)
+const editingServer = ref(null)
 const basicInfoVisible = ref(false)
 const previewServer = ref(null)
 const actionLoadingSlug = ref('')
@@ -248,22 +211,10 @@ const filteredEnabledServers = computed(() =>
 const filteredDisabledServers = computed(() =>
   filteredServers.value.filter((item) => !item.enabled)
 )
-const collapsedMcpSections = ref(new Set())
-const isMcpSectionCollapsed = (key) => collapsedMcpSections.value.has(key)
-const toggleMcpSection = (key) => {
-  const next = new Set(collapsedMcpSections.value)
-  if (next.has(key)) next.delete(key)
-  else next.add(key)
-  collapsedMcpSections.value = next
-}
-
-const navigateToDetail = (server) => {
-  router.push({ path: `/platform/mcp/${encodeURIComponent(server.slug)}` })
-}
-
 const handleCardClick = (server) => {
   if (server.enabled || server.requires_migration) {
-    navigateToDetail(server)
+    editingServer.value = server
+    formModalVisible.value = true
     return
   }
   openBasicInfo(server)
@@ -292,11 +243,13 @@ const mcpCardTags = (server) => {
 }
 
 const handleMcpAdd = () => {
+  editingServer.value = null
   formModalVisible.value = true
 }
 
 const handleFormSubmitted = async () => {
   formModalVisible.value = false
+  editingServer.value = null
   await fetchServers()
 }
 
@@ -383,7 +336,12 @@ defineExpose({ fetchServers, loading })
   line-height: 1;
 }
 
-.mcp-card-action {
+:deep(.t-button) {
+  display: inline-flex;
+  align-items: center;
+}
+
+.mcp-enabled-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -392,7 +350,10 @@ defineExpose({ fetchServers, loading })
   border: 1px solid var(--gray-150);
   border-radius: 8px;
   background: var(--gray-0);
-  color: var(--main-color);
+  color: var(--gray-600);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
   cursor: pointer;
   transition:
     border-color 0.18s ease,
@@ -402,8 +363,8 @@ defineExpose({ fetchServers, loading })
   &:hover,
   &:focus {
     outline: none;
-    border-color: var(--main-200);
-    background: var(--main-50);
+    border-color: var(--gray-300);
+    background: var(--gray-50);
   }
 
   &:disabled {
@@ -411,24 +372,24 @@ defineExpose({ fetchServers, loading })
     opacity: 0.45;
   }
 
-  &.mcp-card-action-danger {
-    color: var(--color-success-700);
+  &.enabled {
+    color: var(--color-success-700, var(--td-brand-color, #07c05f));
 
-    .action-icon-trash {
+    .action-icon-minus {
       display: none;
     }
 
     &:hover,
     &:focus {
-      border-color: var(--color-error-100);
-      background: var(--color-error-50);
-      color: var(--color-error-700);
+      border-color: var(--color-error-200, #ffccc7);
+      background: var(--color-error-50, #fff2f0);
+      color: var(--color-error-700, #cf1322);
 
       .action-icon-check {
         display: none;
       }
 
-      .action-icon-trash {
+      .action-icon-minus {
         display: block;
       }
     }

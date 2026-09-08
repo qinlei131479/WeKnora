@@ -12,20 +12,22 @@
     <div class="kb-list-content">
       <div class="header" style="--wails-draggable: drag">
         <div class="header-title" style="--wails-draggable: drag">
-          <div class="title-row" style="--wails-draggable: drag">
-            <h2 style="--wails-draggable: drag">{{ $t('knowledgeBase.title') }}</h2>
-            <t-tooltip v-if="authStore.hasRole('contributor') && surface === 'platform'" :content="$t('knowledgeList.create')" placement="bottom">
-              <t-button variant="text" theme="default" size="small" class="header-action-btn"
-                data-guide="kb-list-create" style="--wails-draggable: no-drag" @click="handleCreateKnowledgeBase">
-                <template #icon><t-icon name="folder-add" size="16px" /></template>
-              </t-button>
-            </t-tooltip>
-          </div>
+          <h2 style="--wails-draggable: drag">{{ $t('knowledgeBase.title') }}</h2>
           <p class="header-subtitle" style="--wails-draggable: drag">{{
             surface === 'runtime'
               ? $t('knowledgeList.runtimeSubtitle')
               : $t('knowledgeList.subtitle')
           }}</p>
+        </div>
+        <div
+          v-if="authStore.hasRole('contributor') && surface === 'platform'"
+          class="header-actions"
+          style="--wails-draggable: no-drag"
+        >
+          <t-button theme="primary" data-guide="kb-list-create" @click="handleCreateKnowledgeBase">
+            <template #icon><t-icon name="folder-add" /></template>
+            {{ $t('knowledgeList.create') }}
+          </t-button>
         </div>
       </div>
       <HarnessIsland v-if="surface !== 'platform'" class="surface-embed">
@@ -643,7 +645,7 @@
           </template>
         </div>
 
-        <!-- 全部空状态：保留「新建知识库」CTA，因为是空间没有任何 KB 的真空场景 -->
+        <!-- 全部空状态：保留「创建知识库」CTA，因为是空间没有任何 KB 的真空场景 -->
         <div v-if="spaceSelection === 'all' && filteredKnowledgeBases.length === 0 && !loading" class="empty-state">
           <img class="empty-img" src="@/assets/img/upload.svg" alt="">
           <span class="empty-txt">{{ $t('knowledgeList.empty.title') }}</span>
@@ -1843,6 +1845,7 @@ const handleUploadFinishedEvent = (event: Event) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   margin-bottom: 16px;
   padding-right: 28px;
 
@@ -1850,12 +1853,7 @@ const handleUploadFinishedEvent = (event: Event) => {
     display: flex;
     flex-direction: column;
     gap: 4px;
-  }
-
-  .title-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+    min-width: 0;
   }
 
   h2 {
@@ -1933,32 +1931,11 @@ const handleUploadFinishedEvent = (event: Event) => {
   line-height: 20px;
 }
 
-.header-action-btn {
-  padding: 0 !important;
-  min-width: 28px !important;
-  width: 28px !important;
-  height: 28px !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  background: var(--td-bg-color-secondarycontainer) !important;
-  border: 1px solid var(--td-component-stroke) !important;
-  border-radius: 6px !important;
-  color: var(--td-text-color-secondary);
-  cursor: pointer;
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--td-bg-color-container) 72%, transparent);
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
-
-  &:hover {
-    background: var(--td-bg-color-secondarycontainer) !important;
-    border-color: var(--td-component-stroke) !important;
-    color: var(--td-text-color-primary);
-  }
-
-  :deep(.t-icon),
-  :deep(.btn-icon-wrapper) {
-    color: var(--td-brand-color);
-  }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 // Tab 切换样式（已由左侧菜单替代，保留以备兼容）

@@ -7,7 +7,11 @@
       :tabs="tabs"
       :loading="listLoading"
       :aria-label="t('menu.skillsTools')"
-    />
+    >
+      <template #actions>
+        <div id="extension-page-header-actions" class="extension-page-header-actions" />
+      </template>
+    </PageHeader>
     <SkillCardList v-if="activeTab === 'skills'" @loading-change="listLoading = $event" />
     <ToolsCardList v-else-if="activeTab === 'tools'" @loading-change="listLoading = $event" />
     <McpCardList v-else-if="activeTab === 'mcp'" @loading-change="listLoading = $event" />
@@ -71,6 +75,10 @@ const tabs = computed(() =>
   --gray-25: #f8fafa;
   --gray-10: #fbfcfc;
   --gray-0: #ffffff;
+  --color-success-700: #389e0d;
+  --color-error-50: #fff2f0;
+  --color-error-200: #ffccc7;
+  --color-error-700: #cf1322;
   --bg-sider: #fcfefd;
   height: 100%;
   min-height: 0;
@@ -111,6 +119,20 @@ html[theme-mode="dark"] .skills-tools-page {
 .skills-tools-page .extension-card-grid {
   padding-top: 8px;
   padding-bottom: 16px;
+}
+
+.extension-page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &:empty {
+    display: none;
+  }
+
+  .t-button--variant-outline {
+    background: var(--gray-0);
+  }
 }
 
 @media (min-width: 1440px) {

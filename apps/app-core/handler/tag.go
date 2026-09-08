@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 
@@ -115,6 +117,15 @@ type createTagRequest struct {
 	SortOrder int    `json:"sort_order"`
 }
 
+const maxTagNameRunes = 10
+
+func validateUserTagName(name string) error {
+	if utf8.RuneCountInString(strings.TrimSpace(name)) > maxTagNameRunes {
+		return errors.NewBadRequestError("标签名称不能超过10个字")
+	}
+	return nil
+}
+
 // CreateTag godoc
 // @Summary      创建标签
 // @Description  在知识库下创建新标签
@@ -136,6 +147,10 @@ func (h *TagHandler) CreateTag(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.Error(ctx, "Failed to bind create tag payload", err)
 		c.Error(errors.NewBadRequestError("请求参数不合法").WithDetails(err.Error()))
+		return
+	}
+	if err := validateUserTagName(req.Name); err != nil {
+		c.Error(err)
 		return
 	}
 
@@ -189,6 +204,12 @@ func (h *TagHandler) UpdateTag(c *gin.Context) {
 		logger.Error(ctx, "Failed to bind update tag payload", err)
 		c.Error(errors.NewBadRequestError("请求参数不合法").WithDetails(err.Error()))
 		return
+	}
+	if req.Name != nil {
+		if err := validateUserTagName(*req.Name); err != nil {
+			c.Error(err)
+			return
+		}
 	}
 
 	tag, err := h.tagService.UpdateTag(ctx, tagID, req.Name, req.Color, req.SortOrder)

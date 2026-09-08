@@ -143,7 +143,7 @@
       <div class="cmdk__footer">
         <span class="cmdk__hotkey"><kbd>↑</kbd><kbd>↓</kbd> {{ t('commandPalette.hotkey.select') }}</span>
         <span class="cmdk__hotkey"><kbd>↵</kbd> {{ t('commandPalette.hotkey.enter') }}</span>
-        <span class="cmdk__hotkey"><kbd>⌘</kbd><kbd>1</kbd>-<kbd>9</kbd> {{ t('commandPalette.hotkey.cmdNumber')
+        <span class="cmdk__hotkey"><kbd>⌘</kbd><kbd>1</kbd>-<kbd>6</kbd> {{ t('commandPalette.hotkey.cmdNumber')
           }}</span>
         <span class="cmdk__hotkey"><kbd>⌘</kbd><kbd>↵</kbd> {{ t('commandPalette.hotkey.cmdEnter') }}</span>
         <span class="cmdk__hotkey"><kbd>Esc</kbd> {{ t('commandPalette.hotkey.esc') }}</span>
@@ -485,11 +485,11 @@ const selectItemAt = (idx: number) => {
 
 /**
  * Return the ⌘N shortcut digit for the item at the given flat index, or
- * undefined if it's past the 9th slot. The ResultItem renders a kbd hint
- * iff this is defined, which is the only cue the user has that ⌘1-9 works.
+ * undefined if it's past the 6th slot. The ResultItem renders a kbd hint
+ * iff this is defined, which is the only cue the user has that ⌘1-6 works.
  */
 const shortcutFor = (flatIndex: number): number | undefined => {
-  if (flatIndex < 0 || flatIndex > 8) return undefined
+  if (flatIndex < 0 || flatIndex > 5) return undefined
   return flatIndex + 1
 }
 
@@ -502,9 +502,9 @@ const onKeyDown = (e: KeyboardEvent) => {
     moveSelection(-1)
   } else if (
     (e.metaKey || e.ctrlKey) &&
-    e.key >= '1' && e.key <= '9'
+    e.key >= '1' && e.key <= '6'
   ) {
-    // ⌘1-9 — jump straight to the Nth visible item (shortcut badge on each
+    // ⌘1-6 — jump straight to the Nth visible item (shortcut badge on each
     // row reveals the binding). No modifier combos with ⌘Enter: digits take
     // precedence because ⌘+digit can't be confused with ⌘+enter.
     const n = parseInt(e.key, 10)

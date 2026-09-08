@@ -102,17 +102,29 @@ export const buildManualMarkdown = (_question: string, answer: string): string =
 };
 
 export const copyTextToClipboard = async (content: string): Promise<void> => {
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    await navigator.clipboard.writeText(content);
-    return;
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(content);
+      return;
+    } catch {
+      // HTTP / non-localhost and some permission policies expose Clipboard API
+      // but reject writeText. Fall through to the legacy path.
+    }
   }
 
   const textArea = document.createElement('textarea');
   textArea.value = content;
+  textArea.setAttribute('readonly', '');
   textArea.style.position = 'fixed';
+  textArea.style.top = '0';
+  textArea.style.left = '0';
   textArea.style.opacity = '0';
   document.body.appendChild(textArea);
+  textArea.focus();
   textArea.select();
-  document.execCommand('copy');
-  document.body.removeChild(textArea);
+  const copied = document.execCommand('copy');
+  textArea.remove();
+  if (!copied) {
+    throw new Error('clipboard unavailable');
+  }
 };

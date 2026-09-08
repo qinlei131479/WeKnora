@@ -195,7 +195,7 @@
           <span class="footer-summary">{{ footerSummary }}</span>
           <div class="footer-actions">
             <template v-if="phase === 'selecting'">
-              <t-button @click="handleClose">{{ t('knowledgeList.extensions.skills.install.cancel') }}</t-button>
+              <t-button variant="outline" @click="handleClose">{{ t('knowledgeList.extensions.skills.install.cancel') }}</t-button>
               <t-button theme="primary" :disabled="selectedSlugs.length === 0" @click="prepareSuite">
                 {{ t('knowledgeList.extensions.skills.install.loadSelected') }}
               </t-button>
@@ -205,7 +205,7 @@
               <t-button v-else loading disabled>{{ t('knowledgeList.extensions.skills.install.loading') }}</t-button>
             </template>
             <template v-else-if="phase === 'reviewing'">
-              <t-button @click="handleClose">{{ t('knowledgeList.extensions.skills.install.cancel') }}</t-button>
+              <t-button variant="outline" @click="handleClose">{{ t('knowledgeList.extensions.skills.install.cancel') }}</t-button>
               <t-button theme="primary" :disabled="readyItems.length === 0" @click="installDrafts">
                 {{ t('knowledgeList.extensions.skills.install.confirmInstall', { count: readyItems.length, target: installTargetLabel }) }}
               </t-button>
@@ -1118,6 +1118,10 @@ watch(
 .footer-actions {
   display: flex;
   gap: 8px;
+
+  :deep(.t-button--variant-outline) {
+    background: var(--gray-0);
+  }
 }
 
 .spin {
@@ -1159,6 +1163,55 @@ watch(
 </style>
 
 <style lang="less">
+.skill-install-flow-modal {
+  --page-padding: 22px;
+  --main-800: #027218;
+  --main-700: #038626;
+  --main-600: #049b38;
+  --main-500: #07c05f;
+  --main-color: #07c05f;
+  --gray-2000: #0c0d0d;
+  --gray-1000: #151616;
+  --gray-900: #1e1f1f;
+  --gray-800: #323333;
+  --gray-700: #4c4d4d;
+  --gray-600: #697070;
+  --gray-500: #979999;
+  --gray-400: #bdbfbf;
+  --gray-300: #d7d9d9;
+  --gray-200: #e4e6e6;
+  --gray-150: #eef0f0;
+  --gray-100: #eff2f2;
+  --gray-50: #f5f7f7;
+  --gray-25: #f8fafa;
+  --gray-10: #fbfcfc;
+  --gray-0: #ffffff;
+
+  .t-button.t-button--variant-outline {
+    background: var(--gray-0);
+  }
+}
+
+html[theme-mode='dark'] .skill-install-flow-modal {
+  --main-color: var(--td-brand-color, #06b04d);
+  --gray-2000: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  --gray-1000: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  --gray-900: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  --gray-800: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55));
+  --gray-700: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55));
+  --gray-600: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55));
+  --gray-500: var(--td-text-color-placeholder, rgba(255, 255, 255, 0.35));
+  --gray-400: var(--td-text-color-placeholder, rgba(255, 255, 255, 0.35));
+  --gray-300: var(--td-component-border, #5e5e5e);
+  --gray-200: var(--td-component-border, #5e5e5e);
+  --gray-150: rgba(255, 255, 255, 0.06);
+  --gray-100: rgba(255, 255, 255, 0.06);
+  --gray-50: rgba(255, 255, 255, 0.06);
+  --gray-25: var(--td-bg-color-page, #181818);
+  --gray-10: var(--td-bg-color-page, #181818);
+  --gray-0: var(--td-bg-color-container, #242424);
+}
+
 body:has(.skill-install-flow-modal) {
   overflow-x: hidden;
 }

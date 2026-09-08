@@ -27,9 +27,9 @@
         </div>
       </t-option>
       
-      <!-- 添加模型选项（在底部） -->
+      <!-- 添加模型选项（仅在父组件监听 add-model 时展示，避免点击无反应） -->
       <t-option
-        v-if="!disabled"
+        v-if="!disabled && showAddModelOption"
         value="__add_model__"
         class="add-model-option"
       >
@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, getCurrentInstance } from 'vue'
 import { listModels, type ModelConfig } from '@/api/model'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useI18n } from 'vue-i18n'
@@ -70,6 +70,11 @@ const emit = defineEmits<{
   'update:selectedModelId': [value: string]
   'add-model': []
 }>()
+
+const instance = getCurrentInstance()
+const showAddModelOption = computed(
+  () => typeof instance?.vnode.props?.onAddModel === 'function',
+)
 
 const models = ref<ModelConfig[]>([])
 const loading = ref(false)

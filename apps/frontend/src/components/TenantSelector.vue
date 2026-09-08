@@ -53,8 +53,8 @@
           </div>
         </div>
 
-        <!-- 自助创建入口与 /auth/me 返回的后端能力保持一致。 -->
-        <div v-if="authStore.canCreateTenant" class="tenant-create-action" @click="openCreateDialog">
+        <!-- 自助创建：后端能力 + 当前租户 owner/admin。 -->
+        <div v-if="authStore.canCreateTenantUI" class="tenant-create-action" @click="openCreateDialog">
           <t-icon name="add" class="tenant-create-icon" />
           <span class="tenant-create-label">{{ $t('tenant.create.action') }}</span>
         </div>
@@ -257,8 +257,8 @@ const createDialogVisible = ref(false)
 
 const openCreateDialog = () => {
   closeDropdown()
-  if (!authStore.canCreateTenant) {
-    MessagePlugin.info(t('tenant.create.disabled'))
+  if (!authStore.canCreateTenantUI) {
+    MessagePlugin.info(t(authStore.canCreateTenant ? 'tenant.create.needAdmin' : 'tenant.create.disabled'))
     return
   }
   createDialogVisible.value = true

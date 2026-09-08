@@ -176,6 +176,11 @@ const groupedLogs = computed(() => {
     v-model:visible="visible"
     size="480px"
     destroy-on-close
+    attach="body"
+    :z-index="2500"
+    show-overlay
+    prevent-scroll-through
+    drawer-class-name="ds-logs-drawer"
     class="ds-logs-drawer"
   >
     <template #header>
@@ -614,6 +619,17 @@ const groupedLogs = computed(() => {
 }
 
 .ds-logs-drawer :deep(.t-drawer__body) {
+  padding: 20px 24px;
+}
+</style>
+
+<style lang="less">
+.t-drawer.ds-logs-drawer .t-drawer__header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--td-border-level-1-color);
+}
+
+.t-drawer.ds-logs-drawer .t-drawer__body {
   padding: 20px 24px;
 }
 </style>

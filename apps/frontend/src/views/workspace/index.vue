@@ -49,7 +49,8 @@
         <WorkspaceSidebar
           :active-key="activeSourceKey"
           :current-path="currentPath"
-          :databases="databases"
+          :databases="myDatabases"
+          :shared-databases="sharedDatabases"
           :loading-databases="loadingDatabases"
           @select-personal="selectPersonalWorkspace"
           @select-database="selectDatabase"
@@ -225,6 +226,7 @@ import WorkspacePreviewPane from './components/WorkspacePreviewPane.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
 import { databaseApi } from '@harness/apis/knowledge_api'
 import { useUserStore } from '@harness/stores/user'
+import { useAuthStore } from '@/stores/auth'
 import {
   createWorkspaceDirectory,
   deleteWorkspacePath,
@@ -240,6 +242,7 @@ import { normalizePreviewResponse, resolveKnowledgePreviewFileType } from '@harn
 
 const { t } = useI18n()
 const userStore = useUserStore()
+const authStore = useAuthStore()
 
 const activeSourceKey = ref('personal')
 const currentPath = ref('/')
@@ -258,6 +261,19 @@ const loadingPreview = ref(false)
 const savingPreviewFile = ref(false)
 const loadingDatabases = ref(false)
 const databases = ref([])
+const currentUserId = computed(
+  () => String(authStore.currentUserId || userStore.uid || '').trim()
+)
+const isOwnedDatabase = (database) => {
+  const owner = String(database?.created_by || '').trim()
+  const me = currentUserId.value
+  if (!owner || !me) return true
+  return owner === me
+}
+const myDatabases = computed(() => databases.value.filter((database) => isOwnedDatabase(database)))
+const sharedDatabases = computed(() =>
+  databases.value.filter((database) => !isOwnedDatabase(database))
+)
 const selectedDatabase = ref(null)
 const workspaceMainRef = ref(null)
 const workspaceMainWidth = ref(0)

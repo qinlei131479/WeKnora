@@ -666,7 +666,8 @@
 
     <!-- Global Issues Drawer -->
     <t-drawer v-model:visible="showGlobalIssuesDrawer" :header="$t('knowledgeEditor.wikiBrowser.globalIssuesTitle')"
-      size="480px" :footer="false" class="wiki-global-issues-drawer">
+      size="480px" :footer="false" attach="body" :z-index="2500" show-overlay prevent-scroll-through
+      drawer-class-name="wiki-global-issues-drawer" class="wiki-global-issues-drawer">
       <div class="wiki-issue-popup-list">
         <div v-for="issue in globalIssues" :key="issue.id" class="wiki-issue-popup-item">
           <div class="wiki-issue-popup-main">
@@ -716,7 +717,8 @@
 
     <!-- Fix Chat Drawer -->
     <t-drawer v-model:visible="showFixDrawer" :header="$t('knowledgeEditor.wikiBrowser.fixAssistantTitle')" size="700px"
-      :footer="false" class="wiki-fix-drawer">
+      :footer="false" attach="body" :z-index="2500" show-overlay prevent-scroll-through
+      drawer-class-name="wiki-fix-drawer" class="wiki-fix-drawer">
       <ChatView v-if="showFixDrawer" :session_id="currentFixSessionId" agentId="builtin-wiki-fixer"
         :kbIds="[props.knowledgeBaseId]" :embeddedMode="true" />
     </t-drawer>

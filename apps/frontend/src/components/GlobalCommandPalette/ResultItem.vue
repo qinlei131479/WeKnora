@@ -51,7 +51,7 @@ defineProps<{
   badge?: string
   badgeVariant?: 'vector' | 'keyword' | 'default'
   score?: number
-  /** Visible hint for the ⌘N shortcut that triggers this row (N: 1-9). */
+  /** Visible hint for the ⌘N shortcut that triggers this row (N: 1-6). */
   shortcut?: number | string
 }>()
 

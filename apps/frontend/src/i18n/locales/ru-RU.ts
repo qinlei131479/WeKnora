@@ -2476,6 +2476,18 @@ export default {
     missingKbId: 'Отсутствует ID базы знаний',
     tokenNotFound: 'Токен входа не найден, войдите снова',
     streamFailed: 'Ошибка потокового соединения',
+    kb: {
+      noPermissionOperate: 'Нет прав на операции с этой базой знаний',
+      noPermissionDelete: 'Нет прав на удаление этих знаний',
+      noPermissionModify: 'Нет прав на изменение этих знаний',
+      noPermissionUpdate: 'Нет прав на обновление этой базы знаний',
+      noPermissionCreate: 'Нет прав на создание знаний',
+      noPermissionUpdateTags: 'Нет прав на обновление тегов знаний',
+      moveNotCompleted: 'Файл ещё не готов к перемещению (текущий статус: {status})',
+      moveReuseAcrossStores: 'Повторное использование векторов между разными хранилищами не поддерживается. Используйте «Повторный разбор».',
+      moveTypeMismatch: 'Исходная и целевая базы знаний должны быть одного типа',
+      moveEmbeddingMismatch: 'Исходная и целевая базы знаний должны использовать одну модель эмбеддинга',
+    },
     initialization: {
       checkFailed: 'Проверка не пройдена',
       testFailed: 'Тест не пройден'
@@ -3156,7 +3168,8 @@ export default {
       cancel: 'Отмена',
       success: 'Тенант создан',
       failed: 'Не удалось создать тенант',
-      disabled: 'В этой системе присоединиться к тенанту можно только по приглашению; создать его самостоятельно нельзя.'
+      disabled: 'В этой системе присоединиться к тенанту можно только по приглашению; создать его самостоятельно нельзя.',
+      needAdmin: 'Создавать тенант могут только владелец или администратор.'
     },
     switcher: {
       menuLabel: 'Переключить тенант',
@@ -4145,6 +4158,24 @@ export default {
         noSkillMd: 'SKILL.md не найден',
         uninstall: 'Удалить',
         manage: 'Управление',
+        form: {
+          navGroup: 'Навыки',
+          navContent: 'Сведения',
+          navEnable: 'Область действия',
+          navDeps: 'Зависимости',
+          viewTitle: 'Просмотр навыка',
+          manageTitle: 'Управление навыком',
+          installTitle: 'Установка навыка',
+          navRecommended: 'Рекомендуемые',
+          navRemote: 'Удалённая установка',
+          navConfirm: 'Подтверждение',
+          save: 'Сохранить',
+          saveAndClose: 'Сохранить и закрыть',
+          enableHint: 'Если выключить, навык не появится в списке агента.',
+          contentHint: 'Просмотрите описание и инструкции из SKILL.md.',
+          depsHint: 'Настройте инструменты, MCP и другие навыки, которые нужны этому навыку.',
+          pickSuite: 'Выберите рекомендуемый набор навыков для установки.'
+        },
         groupRecommended: 'Рекомендуемые',
         groupPersonal: 'Личные',
         groupBuiltin: 'Встроенные',
@@ -4384,8 +4415,9 @@ export default {
       mcp: {
         searchPlaceholder: 'Поиск MCP...',
         add: 'Добавить MCP',
+        create: 'Создать MCP',
         refresh: 'Обновить MCP',
-        empty: 'MCP пока нет. Нажмите кнопку выше, чтобы добавить.',
+        empty: 'MCP пока нет. Нажмите кнопку выше, чтобы создать.',
         emptySearch: 'Нет подходящих MCP',
         added: 'Добавлено',
         available: 'Доступно',
@@ -4407,24 +4439,44 @@ export default {
         deleteFailed: 'Не удалось удалить',
         loadFailed: 'Не удалось загрузить список MCP',
         form: {
-          addTitle: 'Добавить MCP',
+          addTitle: 'Создать MCP',
           editTitle: 'Изменить MCP',
+          viewTitle: 'Просмотр MCP',
+          navGroup: 'MCP',
+          navCreate: 'Настройки MCP',
+          navConfig: 'Изменить MCP',
+          navView: 'Сведения MCP',
+          navTools: 'Инструменты',
+          testApi: 'Проверить',
+          saveAndClose: 'Сохранить и закрыть',
+          createHint: 'Укажите параметры удалённого MCP, чтобы создать его.',
+          toolsHint: 'Ищите и включайте инструменты, которые предоставляет этот MCP.',
           slug: 'ID MCP',
-          slugPlaceholder: 'Стабильный ID, например my-mcp',
+          slugPlaceholder: 'например my-mcp',
+          slugDesc: 'Стабильный идентификатор. После создания его нельзя изменить.',
           name: 'Имя MCP',
           namePlaceholder: 'Отображаемое имя',
+          nameDesc: 'Имя в списке и у агентов.',
           description: 'Описание',
           descPlaceholder: 'Описание MCP',
+          descriptionDesc: 'Кратко опишите назначение этого MCP.',
           transport: 'Транспорт',
+          transportDesc: 'Протокол для связи с сервером MCP.',
           icon: 'Значок',
           iconPlaceholder: 'Emoji, например 🧠',
+          iconDesc: 'Emoji на карточке MCP.',
           url: 'URL MCP',
+          urlDesc: 'Адрес удалённого сервиса MCP.',
           headers: 'HTTP-заголовки',
-          headersPlaceholder: 'JSON, например {"Authorization": "Bearer xxx"}',
+          headersPlaceholder: 'JSON, например {\'{\'}"Authorization": "Bearer xxx"{\'}\'}',
+          headersDesc: 'Дополнительные HTTP-заголовки в виде JSON. Оставьте пустым, чтобы не отправлять их.',
           httpTimeout: 'Таймаут HTTP (сек)',
+          httpTimeoutDesc: 'Таймаут HTTP-запросов.',
           sseTimeout: 'Таймаут чтения SSE (сек)',
+          sseTimeoutDesc: 'Таймаут чтения SSE.',
           tags: 'Теги',
           tagsPlaceholder: 'Введите тег и нажмите Enter',
+          tagsDesc: 'Теги для группировки и поиска.',
           badHeaders: 'Заголовки должны быть корректным JSON',
           slugRequired: 'Нужен ID MCP',
           nameRequired: 'Нужно имя MCP',
@@ -4598,7 +4650,7 @@ export default {
     },
     empty: {
       title: 'Базы знаний отсутствуют',
-      description: 'Нажмите «Создать базу знаний» в левом быстром действии, чтобы добавить первую базу.',
+      description: 'Нажмите «Создать базу знаний» в правом верхнем углу, чтобы добавить первую базу.',
       sharedTitle: 'No shared knowledge bases',
       sharedDescription: 'You can join a shared space or request others to share knowledge bases with you',
       favoritesTitle: 'No favorites yet',
@@ -5628,6 +5680,7 @@ export default {
     copy: 'Copy',
     copyDetails: 'Скопировать детали',
     copied: 'Скопировано в буфер обмена',
+    copyFailed: 'Не удалось скопировать, выделите текст вручную',
     close: 'Close',
     live: 'LIVE',
     liveTooltip: 'Parsing in progress — auto-refreshes every 2s',
@@ -5825,6 +5878,7 @@ export default {
     tagSearchPlaceholder: 'Введите название тега',
     tagNamePlaceholder: 'Введите название тега',
     tagNameRequired: 'Пожалуйста, укажите название тега',
+    tagNameTooLong: 'Название тега не более {max} символов',
     tagCreateSuccess: 'Тег создан',
     tagEditSuccess: 'Тег обновлён',
     tagDeleteDescDoc: 'Удалить тег «{name}»? Все документы под этим тегом также будут удалены.',
@@ -5985,6 +6039,8 @@ export default {
     viewModeGrid: 'Сетка',
     viewModeList: 'Список',
     viewModeToggle: 'Переключить вид',
+    moreFiltersShow: 'Показать фильтры',
+    moreFiltersHide: 'Скрыть фильтры',
     columnName: 'Имя',
     columnTag: 'Тег',
     columnSize: 'Размер',
@@ -6302,7 +6358,7 @@ export default {
       steps: {
         done: {
           title: 'Затем продолжите',
-          desc: 'После сохранения моделей закройте настройки и нажмите «Новая база знаний». Мастер проведёт через тип, индексацию и привязку моделей.'
+          desc: 'После сохранения моделей закройте настройки и нажмите «Создать базу знаний». Мастер проведёт через тип, индексацию и привязку моделей.'
         },
         addModel: {
           title: 'Добавить модели',
@@ -6318,7 +6374,7 @@ export default {
       steps: {
         create: {
           title: 'Создайте первую базу знаний',
-          desc: 'В базах знаний хранятся документы и FAQ. Нажмите выделенную кнопку «Новая база знаний» ниже — мы проведём вас по форме.'
+          desc: 'В базах знаний хранятся документы и FAQ. Нажмите выделенную кнопку «Создать базу знаний» ниже — мы проведём вас по форме.'
         }
       }
     }
@@ -6552,7 +6608,7 @@ export default {
     viewSwitch: 'Переключение вида базы знаний',
     searchPlaceholder: 'Поиск баз знаний...',
     allTypes: 'Все типы',
-    create: 'Новая база знаний',
+    create: 'Создать базу знаний',
     createNamePlaceholder: 'Название базы знаний',
     createDescPlaceholder: 'Описание базы знаний',
     createAction: 'Создать',

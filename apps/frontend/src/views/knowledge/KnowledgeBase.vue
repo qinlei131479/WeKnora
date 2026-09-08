@@ -555,6 +555,7 @@ const tagTotal = ref(0);
 let tagSearchDebounce: number | null = null;
 let docSearchDebounce: number | null = null;
 const docSearchKeyword = ref('');
+const moreFiltersOpen = ref(false);
 const selectedFileType = ref('');
 const fileTypeOptions = computed(() => [
   { label: t('knowledgeBase.allFileTypes'), value: '' },
@@ -618,6 +619,17 @@ if (selectedSource.value && !isAllowedKnowledgeSource(selectedSource.value)) {
 }
 // Date range as [start, end] in "YYYY-MM-DD" form (t-date-range-picker default).
 const updatedTimeRange = ref<string[]>([]);
+const hasSecondaryFilters = computed(() =>
+  selectedTagIds.value.length > 0
+  || Boolean(selectedSource.value)
+  || (updatedTimeRange.value || []).some(Boolean),
+);
+watch(hasSecondaryFilters, (active) => {
+  if (active) moreFiltersOpen.value = true;
+}, { immediate: true });
+watch(moreFiltersOpen, (open) => {
+  if (!open) tagFilterPanelVisible.value = false;
+});
 // Disable any date after today so users cannot filter into the future.
 const disableFutureDate = { after: new Date(new Date().setHours(23, 59, 59, 999)) };
 
@@ -2393,6 +2405,7 @@ async function createNewSession(value: string): Promise<void> {
                 </span>
               </nav>
               <div class="doc-filter-bar">
+                <div class="doc-filter-bar__primary">
                 <t-input v-model.trim="docSearchKeyword" :placeholder="$t('knowledgeBase.docSearchPlaceholder')"
                   clearable class="doc-search-input" @clear="loadKnowledgeFiles(kbId)"
                   @enter="loadKnowledgeFiles(kbId)">
@@ -2401,6 +2414,66 @@ async function createNewSession(value: string): Promise<void> {
                   </template>
                 </t-input>
                 <div class="doc-filter-bar__filters">
+                <div class="doc-filter-field">
+                  <t-select v-model="selectedFileType" :options="fileTypeOptions"
+                    :placeholder="$t('knowledgeBase.fileTypeFilter')" class="doc-type-select doc-filter-field__control"
+                    clearable>
+                    <template #prefixIcon>
+                      <t-icon name="file" size="16px" />
+                    </template>
+                  </t-select>
+                </div>
+                <div class="doc-filter-field">
+                  <t-select v-model="selectedParseStatus" :options="parseStatusOptions"
+                    :placeholder="$t('knowledgeBase.parseStatusFilter')" class="doc-type-select doc-filter-field__control"
+                    clearable>
+                    <template #prefixIcon>
+                      <t-icon name="check-circle" size="16px" />
+                    </template>
+                  </t-select>
+                </div>
+                <t-tooltip
+                  :content="moreFiltersOpen ? $t('knowledgeBase.moreFiltersHide') : $t('knowledgeBase.moreFiltersShow')"
+                  placement="top"
+                >
+                  <button
+                    type="button"
+                    class="doc-filter-more-btn"
+                    :class="{ open: moreFiltersOpen, 'has-active': hasSecondaryFilters }"
+                    :aria-expanded="moreFiltersOpen"
+                    :aria-label="moreFiltersOpen ? $t('knowledgeBase.moreFiltersHide') : $t('knowledgeBase.moreFiltersShow')"
+                    @click="moreFiltersOpen = !moreFiltersOpen"
+                  >
+                    <t-icon name="filter" size="16px" />
+                    <t-icon :name="moreFiltersOpen ? 'chevron-up' : 'chevron-down'" size="14px" />
+                  </button>
+                </t-tooltip>
+                </div>
+                <div class="doc-filter-bar__trailing">
+                  <div class="doc-view-toggle" role="group" :aria-label="$t('knowledgeBase.viewModeToggle')">
+                    <t-tooltip :content="$t('knowledgeBase.viewModeGrid')" placement="top">
+                      <button type="button" class="doc-view-toggle-btn" :class="{ active: viewMode === 'grid' }"
+                        @click="viewMode = 'grid'" :aria-pressed="viewMode === 'grid'">
+                        <t-icon name="view-module" size="16px" />
+                      </button>
+                    </t-tooltip>
+                    <t-tooltip :content="$t('knowledgeBase.viewModeList')" placement="top">
+                      <button type="button" class="doc-view-toggle-btn" :class="{ active: viewMode === 'list' }"
+                        @click="viewMode = 'list'" :aria-pressed="viewMode === 'list'">
+                        <t-icon name="view-list" size="16px" />
+                      </button>
+                    </t-tooltip>
+                  </div>
+                  <div v-if="canEdit" class="doc-filter-actions">
+                    <KbUploadSourceDropdown ref="uploadSourceRef" :accept-file-types="acceptFileTypes"
+                      :supported-file-types="[...supportedFileTypes]" include-manual trigger-icon="file-add"
+                      trigger-class="content-bar-icon-btn" data-guide="kb-detail-add-doc"
+                      :tooltip="t('knowledgeBase.addDocument')" placement="bottom-right" @files="handleUploadSourceFiles"
+                      @url="handleUploadSourceUrl" @manual="handleManualCreate" />
+                  </div>
+                </div>
+                </div>
+                <div v-show="moreFiltersOpen" class="doc-filter-bar__secondary">
                 <t-popup v-model:visible="tagFilterPanelVisible" trigger="click" placement="bottom-left"
                   overlay-class-name="tag-filter-popup" :overlay-inner-style="{ padding: 0 }">
                   <template #content>
@@ -2494,24 +2567,6 @@ async function createNewSession(value: string): Promise<void> {
                   </div>
                 </t-popup>
                 <div class="doc-filter-field">
-                  <t-select v-model="selectedFileType" :options="fileTypeOptions"
-                    :placeholder="$t('knowledgeBase.fileTypeFilter')" class="doc-type-select doc-filter-field__control"
-                    clearable>
-                    <template #prefixIcon>
-                      <t-icon name="file" size="16px" />
-                    </template>
-                  </t-select>
-                </div>
-                <div class="doc-filter-field">
-                  <t-select v-model="selectedParseStatus" :options="parseStatusOptions"
-                    :placeholder="$t('knowledgeBase.parseStatusFilter')" class="doc-type-select doc-filter-field__control"
-                    clearable>
-                    <template #prefixIcon>
-                      <t-icon name="check-circle" size="16px" />
-                    </template>
-                  </t-select>
-                </div>
-                <div class="doc-filter-field">
                   <t-select v-model="selectedSource" :options="sourceOptions"
                     :placeholder="$t('knowledgeBase.sourceFilter')" class="doc-type-select doc-filter-field__control"
                     clearable>
@@ -2530,29 +2585,6 @@ async function createNewSession(value: string): Promise<void> {
                     </template>
                   </t-date-range-picker>
                 </div>
-                </div>
-                <div class="doc-filter-bar__trailing">
-                  <div class="doc-view-toggle" role="group" :aria-label="$t('knowledgeBase.viewModeToggle')">
-                    <t-tooltip :content="$t('knowledgeBase.viewModeGrid')" placement="top">
-                      <button type="button" class="doc-view-toggle-btn" :class="{ active: viewMode === 'grid' }"
-                        @click="viewMode = 'grid'" :aria-pressed="viewMode === 'grid'">
-                        <t-icon name="view-module" size="16px" />
-                      </button>
-                    </t-tooltip>
-                    <t-tooltip :content="$t('knowledgeBase.viewModeList')" placement="top">
-                      <button type="button" class="doc-view-toggle-btn" :class="{ active: viewMode === 'list' }"
-                        @click="viewMode = 'list'" :aria-pressed="viewMode === 'list'">
-                        <t-icon name="view-list" size="16px" />
-                      </button>
-                    </t-tooltip>
-                  </div>
-                  <div v-if="canEdit" class="doc-filter-actions">
-                    <KbUploadSourceDropdown ref="uploadSourceRef" :accept-file-types="acceptFileTypes"
-                      :supported-file-types="[...supportedFileTypes]" include-manual trigger-icon="file-add"
-                      trigger-class="content-bar-icon-btn" data-guide="kb-detail-add-doc"
-                      :tooltip="t('knowledgeBase.addDocument')" placement="bottom-right" @files="handleUploadSourceFiles"
-                      @url="handleUploadSourceUrl" @manual="handleManualCreate" />
-                  </div>
                 </div>
               </div>
               <div class="doc-scroll-container"
@@ -2810,6 +2842,7 @@ async function createNewSession(value: string): Promise<void> {
   display: flex;
   flex: 1;
   min-height: 0;
+  min-width: 0;
   background: transparent;
   border: none;
 }
@@ -3044,6 +3077,7 @@ async function createNewSession(value: string): Promise<void> {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   position: relative;
   /* 作为批量工具栏悬浮的定位上下文 */
 }
@@ -3123,68 +3157,86 @@ async function createNewSession(value: string): Promise<void> {
 .doc-filter-bar {
   padding: 0 0 12px 0;
   flex-shrink: 0;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-areas:
-    'search trailing'
-    'filters filters';
-  gap: 8px 12px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+
+  &__primary,
+  &__secondary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    min-width: 0;
+  }
 
   .doc-search-input {
-    grid-area: search;
-    min-width: 0;
-    width: 100%;
+    flex: 0 1 400px;
+    width: 400px;
+    max-width: 100%;
+    min-width: 200px;
   }
 
   &__filters {
-    grid-area: filters;
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 12px;
+    gap: 8px 12px;
     min-width: 0;
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
-
-    &::-webkit-scrollbar {
-      height: 4px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background-color: rgba(0, 0, 0, 0.15);
-      border-radius: 2px;
-    }
+    flex: 1 1 auto;
+    overflow: visible;
   }
 
   &__trailing {
-    grid-area: trailing;
     display: flex;
     align-items: center;
     gap: 8px;
-    flex-shrink: 0;
+    flex: 0 0 auto;
+    margin-left: auto;
   }
 
-  @media (min-width: 1280px) {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    gap: 12px;
+  .doc-filter-more-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: var(--td-bg-color-secondarycontainer);
+    color: var(--td-text-color-secondary);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 
-    &__filters {
-      flex: 0 1 auto;
-      overflow-x: visible;
+    &:hover,
+    &.open {
+      color: var(--td-brand-color);
+      background: var(--td-bg-color-container-hover);
+    }
+
+    &.has-active::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      margin-left: 2px;
+      border-radius: 50%;
+      background: var(--td-brand-color);
     }
   }
 
   .doc-filter-field {
-    width: 140px;
-    flex-shrink: 0;
+    width: 132px;
+    flex: 0 1 132px;
+    min-width: 112px;
 
     &--wide {
-      width: 280px;
+      width: 240px;
+      flex: 1 1 200px;
+      min-width: 180px;
+      max-width: 280px;
     }
 
     &__control {
@@ -3260,13 +3312,6 @@ async function createNewSession(value: string): Promise<void> {
         color: var(--td-brand-color);
         transform: rotate(180deg);
       }
-    }
-  }
-
-  @media (min-width: 1280px) {
-    .doc-search-input {
-      flex: 1 1 220px;
-      min-width: 220px;
     }
   }
 

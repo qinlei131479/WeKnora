@@ -1,7 +1,5 @@
 <template>
-  <!-- 自助创建新工作区弹窗。任意已登录用户均可调用 POST /api/v1/tenants
-       （后端 router 已去掉 g.CrossTenant() 守卫），handler 会自动把当前
-       用户 EnsureOwner 成新空间的 Owner。 -->
+  <!-- 自助创建新工作区弹窗。入口由 canCreateTenantUI 控制（owner/admin）。 -->
   <t-dialog :visible="visible" attach="body" width="480px" :on-confirm="handleSubmit" :on-close="handleClose"
     :confirm-btn="{ content: $t('tenant.create.submit'), loading: submitting, theme: 'primary' }"
     :cancel-btn="{ content: $t('tenant.create.cancel') }" :close-on-overlay-click="!submitting"
@@ -33,6 +31,7 @@ import { reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { MessagePlugin, type FormInstanceFunctions, type FormRule } from 'tdesign-vue-next'
 import { createTenant, type TenantInfo } from '@/api/tenant'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps<{
   visible: boolean
@@ -45,6 +44,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const authStore = useAuthStore()
 
 const formRef = ref<FormInstanceFunctions | null>(null)
 const submitting = ref(false)
@@ -90,6 +90,11 @@ const handleClose = () => {
 
 const handleSubmit = async () => {
   if (submitting.value) return
+  if (!authStore.canCreateTenantUI) {
+    MessagePlugin.info(t(authStore.canCreateTenant ? 'tenant.create.needAdmin' : 'tenant.create.disabled'))
+    emit('update:visible', false)
+    return
+  }
   const validateResult = await formRef.value?.validate?.()
   if (validateResult !== true) return
 

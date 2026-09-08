@@ -409,17 +409,25 @@ const tagTheme = (tag) => {
   }
 
   .info-card-header {
+    align-items: flex-start;
     gap: 8px;
     margin-bottom: 0;
   }
 
   .info-card-icon {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     border-radius: 6px;
     background: color-mix(in srgb, var(--td-brand-color, var(--main-color)) 10%, transparent);
     border: 0;
     color: var(--td-brand-color, var(--main-color));
+    align-self: flex-start;
+
+    :deep(svg) {
+      display: block;
+      width: 14px;
+      height: 14px;
+    }
   }
 
   .info-card-name {

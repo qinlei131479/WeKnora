@@ -36,10 +36,14 @@
       </button>
     </section>
 
-    <section class="sidebar-section">
-      <div class="section-title">{{ t('workspacePage.myKnowledge') }}</div>
+    <section
+      v-for="section in knowledgeSections"
+      :key="section.key"
+      class="sidebar-section"
+    >
+      <div class="section-title">{{ section.title }}</div>
       <button
-        v-for="database in databases"
+        v-for="database in section.items"
         :key="database.kb_id || database.id || database.name"
         type="button"
         class="workspace-nav-item secondary"
@@ -58,6 +62,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
 
@@ -80,7 +85,23 @@ const props = defineProps({
   activeKey: { type: String, default: 'personal' },
   currentPath: { type: String, default: '/' },
   databases: { type: Array, default: () => [] },
+  sharedDatabases: { type: Array, default: () => [] },
   loadingDatabases: { type: Boolean, default: false }
+})
+
+const knowledgeSections = computed(() => {
+  const sections = []
+  if (props.databases.length || !props.sharedDatabases.length) {
+    sections.push({ key: 'mine', title: t('workspacePage.myKnowledge'), items: props.databases })
+  }
+  if (props.sharedDatabases.length) {
+    sections.push({
+      key: 'shared',
+      title: t('workspacePage.sharedKnowledge'),
+      items: props.sharedDatabases
+    })
+  }
+  return sections
 })
 
 defineEmits(['select-personal', 'select-database', 'select-path'])

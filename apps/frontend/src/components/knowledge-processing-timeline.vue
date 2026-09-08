@@ -10,6 +10,7 @@ import {
   type KnowledgeTraceNode,
 } from '@/utils/knowledgeTrace'
 import { resolveTimelineHeaderStatus } from '@/utils/knowledgeProcessingStatus'
+import { copyTextToClipboard } from '@/utils/chatMessageShared'
 import type { KnowledgeProcessOverrides } from '@/types/knowledgeProcess'
 
 type SpanNode = KnowledgeTraceNode
@@ -448,10 +449,10 @@ function localizedErrorSuggestion(code?: string): string {
 async function copyValue(value: any) {
   try {
     const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2)
-    await navigator.clipboard.writeText(text)
+    await copyTextToClipboard(text)
     MessagePlugin.success(t('knowledgeStages.copied'))
   } catch {
-    MessagePlugin.error(t('knowledgeStages.copyDetails'))
+    MessagePlugin.error(t('knowledgeStages.copyFailed'))
   }
 }
 

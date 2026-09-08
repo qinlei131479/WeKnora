@@ -223,8 +223,10 @@ select:-webkit-autofill {
 :root:root,
 :root:root[theme-mode="light"] {
     --gray-25: #f8fafa;
+    --platform-topbar-height: 48px;
 }
 
 :root:root[theme-mode="dark"] {
     --gray-25: var(--td-bg-color-page);
+    --platform-topbar-height: 48px;
 }
