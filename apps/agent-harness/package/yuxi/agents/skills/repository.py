@@ -3,8 +3,8 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from yuxi.p2.context import stamp_tenant_id
-from yuxi.p2.tenant_query import apply_tenant_filters, row_in_tenant, slug_taken_clauses
+from yuxi.tenancy.context import stamp_tenant_id
+from yuxi.tenancy.tenant_query import apply_tenant_filters, row_in_tenant, slug_taken_clauses
 from yuxi.storage.postgres.models_business import Skill
 from yuxi.utils.datetime_utils import utc_now_naive
 

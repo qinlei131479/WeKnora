@@ -384,7 +384,7 @@ async def test_get_mcp_tools_sets_handle_tool_error(monkeypatch):
 
 
 async def test_get_mcp_server_filters_to_token_tenant(mcp_session, monkeypatch: pytest.MonkeyPatch):
-    from yuxi.p2.context import TenantPrincipal, bind_tenant_principal
+    from yuxi.tenancy.context import TenantPrincipal, bind_tenant_principal
 
     mcp_session.add_all(
         [

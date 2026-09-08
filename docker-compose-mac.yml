@@ -36,11 +36,10 @@ x-api-worker-env: &api-worker-env
   YUXI_DATASET_PERSIST_BATCH_SIZE: ${YUXI_DATASET_PERSIST_BATCH_SIZE:-1}
   JWT_SECRET: ${JWT_SECRET:-}
   HARNESS_TENANT_SCOPE: ${HARNESS_TENANT_SCOPE:-}
-  HARNESS_WEKNORA_KB: ${HARNESS_WEKNORA_KB:-}
   HARNESS_WEKNORA_DASHBOARD: ${HARNESS_WEKNORA_DASHBOARD:-}
   WEKNORA_BASE_URL: ${WEKNORA_BASE_URL:-http://host.docker.internal:9980/api/v1}
-  HARNESS_P0_RUN_TOKEN_STORE: ${HARNESS_P0_RUN_TOKEN_STORE:-}
-  HARNESS_P0_CHECK_AUTH_TOKENS: ${HARNESS_P0_CHECK_AUTH_TOKENS:-}
+  HARNESS_RUN_TOKEN_STORE: ${HARNESS_RUN_TOKEN_STORE:-}
+  HARNESS_CHECK_AUTH_TOKENS: ${HARNESS_CHECK_AUTH_TOKENS:-}
   HARNESS_WEKNORA_KB_MAP: ${HARNESS_WEKNORA_KB_MAP:-}
   NO_PROXY: localhost,127.0.0.1,host.docker.internal,milvus,graph,neo4j,minio,postgres,redis,mineru,paddlex,sandbox-provisioner,api.siliconflow.cn
   no_proxy: localhost,127.0.0.1,host.docker.internal,milvus,graph,neo4j,minio,postgres,redis,mineru,paddlex,sandbox-provisioner,api.siliconflow.cn

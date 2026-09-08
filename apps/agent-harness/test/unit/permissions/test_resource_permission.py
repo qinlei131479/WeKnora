@@ -20,7 +20,7 @@ def _resource(created_by="owner", share_config=None):
     return SimpleNamespace(created_by=created_by, share_config=share_config)
 
 
-def test_knowledge_base_global_read_and_department_manage():
+def test_knowledge_base_global_read_ignores_department_manage():
     config = {
         "version": 2,
         "read_scope": {"access_level": "global"},
@@ -31,7 +31,7 @@ def test_knowledge_base_global_read_and_department_manage():
     assert resolve_knowledge_base_permission(_user(department_id=1), resource) == ResourcePermission.READ
     managing_admin = _user(uid="admin-1", role="admin", department_id=1)
     readonly_admin = _user(uid="other", role="admin", department_id=2)
-    assert resolve_knowledge_base_permission(managing_admin, resource) == ResourcePermission.MANAGE
+    assert resolve_knowledge_base_permission(managing_admin, resource) == ResourcePermission.READ
     assert resolve_knowledge_base_permission(readonly_admin, resource) == ResourcePermission.READ
 
 
@@ -156,15 +156,15 @@ def test_manage_only_scope_also_grants_read_to_matching_users():
         share_config={
             "version": 2,
             "read_scope": None,
-            "manage_scope": {"access_level": "department", "department_ids": [1]},
+            "manage_scope": {"access_level": "user", "user_uids": ["user-1"]},
         }
     )
 
     assert (
-        resolve_knowledge_base_permission(_user(role="admin", department_id=1), resource) == ResourcePermission.MANAGE
+        resolve_knowledge_base_permission(_user(role="admin", uid="user-1"), resource) == ResourcePermission.MANAGE
     )
-    assert resolve_knowledge_base_permission(_user(department_id=1), resource) == ResourcePermission.READ
-    assert resolve_knowledge_base_permission(_user(role="admin", department_id=2), resource) == ResourcePermission.NONE
+    assert resolve_knowledge_base_permission(_user(uid="user-1"), resource) == ResourcePermission.READ
+    assert resolve_knowledge_base_permission(_user(role="admin", uid="other"), resource) == ResourcePermission.NONE
 
 
 def test_require_permission_rejects_insufficient_access():

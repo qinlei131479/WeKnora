@@ -15,7 +15,7 @@ from server.routers.dashboard_router import (
     get_user_activity_stats,
 )
 from server.utils.auth_middleware import get_required_user
-from yuxi.p2.context import TenantPrincipal, bind_tenant_principal
+from yuxi.tenancy.context import TenantPrincipal, bind_tenant_principal
 from yuxi.storage.postgres.models_business import Base, Conversation, Department, Message, ToolCall, User
 from yuxi.utils.datetime_utils import utc_now_naive
 
@@ -193,7 +193,7 @@ async def test_dashboard_filters_to_token_tenant(dashboard_session, monkeypatch:
 
 
 async def test_p6_dashboard_split_does_not_count_h_users(dashboard_session, monkeypatch: pytest.MonkeyPatch):
-    from yuxi.p6.stats import WeKnoraKnowledgeStats, WeKnoraOverview
+    from yuxi.dashboard.stats import WeKnoraKnowledgeStats, WeKnoraOverview
 
     monkeypatch.setenv("HARNESS_WEKNORA_DASHBOARD", "true")
     monkeypatch.setenv("HARNESS_TENANT_SCOPE", "true")

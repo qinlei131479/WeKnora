@@ -18,8 +18,8 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from yuxi.p2.context import stamp_tenant_id
-from yuxi.p2.tenant_query import apply_tenant_filters, slug_taken_clauses
+from yuxi.tenancy.context import stamp_tenant_id
+from yuxi.tenancy.tenant_query import apply_tenant_filters, slug_taken_clauses
 from yuxi.storage.postgres.models_business import MCPServer
 from yuxi.utils import logger
 

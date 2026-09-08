@@ -9,8 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import flag_modified
 
-from yuxi.p2.context import stamp_tenant_id
-from yuxi.p2.tenant_query import tenant_clauses, visible_or_none
+from yuxi.tenancy.context import stamp_tenant_id
+from yuxi.tenancy.tenant_query import tenant_clauses, visible_or_none
 from yuxi.storage.postgres.models_business import Conversation, ConversationStats, Message, ToolCall
 from yuxi.utils import logger
 from yuxi.utils.datetime_utils import utc_now_naive

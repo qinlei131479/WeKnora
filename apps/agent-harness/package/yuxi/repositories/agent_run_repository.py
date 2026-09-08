@@ -5,8 +5,8 @@ from __future__ import annotations
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from yuxi.p2.context import stamp_tenant_id
-from yuxi.p2.tenant_query import tenant_clauses, visible_or_none
+from yuxi.tenancy.context import stamp_tenant_id
+from yuxi.tenancy.tenant_query import tenant_clauses, visible_or_none
 from yuxi.storage.postgres.models_business import AGENT_RUN_TERMINAL_STATUSES, AgentRun, SubagentThread
 from yuxi.utils.datetime_utils import utc_now_naive
 

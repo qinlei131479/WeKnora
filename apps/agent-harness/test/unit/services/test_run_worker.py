@@ -549,7 +549,7 @@ async def test_worker_startup_ensures_builtin_mcp_servers(monkeypatch: pytest.Mo
 async def test_process_agent_run_fails_on_expired_token_when_flag_on(monkeypatch: pytest.MonkeyPatch):
     from yuxi.utils.weknora_auth import WeKnoraTokenError
 
-    monkeypatch.setenv("HARNESS_P0_RUN_TOKEN_STORE", "1")
+    monkeypatch.setenv("HARNESS_RUN_TOKEN_STORE", "1")
     run_obj = _build_run()
     _patch_common(monkeypatch, run_obj)
 
@@ -579,8 +579,8 @@ async def test_process_agent_run_fails_on_expired_token_when_flag_on(monkeypatch
         del kwargs
         raise AssertionError("expired token must not enter chat stream")
 
-    monkeypatch.setattr("yuxi.p0.run_token_store.validate_stored_run_token", fake_validate)
-    monkeypatch.setattr("yuxi.p0.run_token_store.delete_run_access_token", fake_delete)
+    monkeypatch.setattr("yuxi.auth.run_token_store.validate_stored_run_token", fake_validate)
+    monkeypatch.setattr("yuxi.auth.run_token_store.delete_run_access_token", fake_delete)
     monkeypatch.setattr(run_worker, "mark_run_terminal", fake_mark_terminal)
     monkeypatch.setattr(run_worker, "stream_agent_chat", fail_stream_agent_chat)
 
@@ -599,7 +599,7 @@ async def test_process_agent_run_fails_on_expired_token_when_flag_on(monkeypatch
 
 @pytest.mark.asyncio
 async def test_process_agent_run_allows_missing_token_when_flag_on(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("HARNESS_P0_RUN_TOKEN_STORE", "1")
+    monkeypatch.setenv("HARNESS_RUN_TOKEN_STORE", "1")
     run_obj = _build_run()
     _patch_common(monkeypatch, run_obj)
 
@@ -624,8 +624,8 @@ async def test_process_agent_run_allows_missing_token_when_flag_on(monkeypatch: 
         streamed.append(True)
         return _BytesAsyncIter([b'{"status":"finished","request_id":"req-1","thread_id":"thread-1"}\n'])
 
-    monkeypatch.setattr("yuxi.p0.run_token_store.validate_stored_run_token", fake_validate)
-    monkeypatch.setattr("yuxi.p0.run_token_store.delete_run_access_token", fake_delete)
+    monkeypatch.setattr("yuxi.auth.run_token_store.validate_stored_run_token", fake_validate)
+    monkeypatch.setattr("yuxi.auth.run_token_store.delete_run_access_token", fake_delete)
     monkeypatch.setattr(run_worker, "append_run_event", fake_append_event)
     monkeypatch.setattr(run_worker, "mark_run_terminal", fake_mark_terminal)
     monkeypatch.setattr(run_worker, "stream_agent_chat", fake_stream_agent_chat)

@@ -245,18 +245,30 @@ async def test_get_databases_skips_rows_with_invalid_metadata(monkeypatch):
 
 
 async def test_get_databases_by_user_sets_permission_and_redacts_readonly_secrets(monkeypatch):
-    class SecretKnowledgeBaseRepository(FakeKnowledgeBaseRepository):
-        async def get_all(self):
-            record = await self.get_by_kb_id("kb_1")
-            record.additional_params = {"dify_token": "secret", "chunk_preset_id": "general"}
-            record.created_by = "user_1"
-            return [record]
+    from yuxi.knowledge.read_models import KnowledgeBaseSummary
 
-    monkeypatch.setattr("yuxi.p3.flags.is_weknora_kb_enabled", lambda: False)
-    monkeypatch.setattr(
-        "yuxi.repositories.knowledge_base_repository.KnowledgeBaseRepository",
-        SecretKnowledgeBaseRepository,
+    summary = KnowledgeBaseSummary(
+        kb_id="kb_1",
+        name="知识库",
+        description="desc",
+        kb_type="weknora",
+        embedding_model_spec=None,
+        llm_model_spec=None,
+        query_params={},
+        additional_params={"dify_token": "secret", "chunk_preset_id": "general"},
+        share_config={
+            "version": 2,
+            "read_scope": {"access_level": "global"},
+            "manage_scope": None,
+        },
+        created_by="user_1",
+        created_at=None,
     )
+
+    async def fake_summaries():
+        return [summary]
+
+    monkeypatch.setattr("yuxi.weknora.virtual.fetch_weknora_summaries", fake_summaries)
     manager = KnowledgeBaseManager("/tmp/yuxi-test")
 
     readonly = await manager.get_databases_by_user({"uid": "user_2", "role": "admin", "department_id": None})

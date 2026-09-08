@@ -23,9 +23,7 @@ pytest_plugins = ["pytest_asyncio"]
 
 
 @pytest.fixture(autouse=True)
-def _isolate_p2_machine_flags(monkeypatch: pytest.MonkeyPatch):
-    """单测不吃本机 .env 的 tenant 开关，避免部门匹配用例被连带改写。"""
+def _isolate_tenant_and_dashboard_flags(monkeypatch: pytest.MonkeyPatch):
+    """单测不吃本机 .env 的租户/总览开关。"""
     monkeypatch.delenv("HARNESS_TENANT_SCOPE", raising=False)
-    monkeypatch.delenv("HARNESS_DEPARTMENT_ENFORCED", raising=False)
-    monkeypatch.delenv("HARNESS_WEKNORA_KB", raising=False)
     monkeypatch.delenv("HARNESS_WEKNORA_DASHBOARD", raising=False)

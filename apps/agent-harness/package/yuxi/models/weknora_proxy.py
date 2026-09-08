@@ -1,4 +1,4 @@
-"""P6：yuxi 通过 WeKnora 内部代理调用模型 / 解析 / 思维导图。不读、不缓存密钥。"""
+"""yuxi 通过 WeKnora 内部代理调用模型 / 解析 / 思维导图。不读、不缓存密钥。"""
 
 from __future__ import annotations
 
@@ -8,9 +8,9 @@ from pathlib import Path
 from typing import Any
 import httpx
 
-from yuxi.p3.client import auth_headers
-from yuxi.p3.errors import WeKnoraKBAuthError, WeKnoraKBError, WeKnoraKBPermissionError
-from yuxi.p3.flags import require_weknora_base_url
+from yuxi.weknora.client import auth_headers
+from yuxi.weknora.errors import WeKnoraKBAuthError, WeKnoraKBError, WeKnoraKBPermissionError
+from yuxi.weknora.flags import require_weknora_base_url
 from yuxi.utils.logging_config import logger
 
 _YUXI_TYPE = {
@@ -232,7 +232,7 @@ def request_access_token() -> str:
     auth = headers.get("Authorization") or ""
     token = auth.removeprefix("Bearer ").strip()
     if not token:
-        raise WeKnoraKBAuthError("缺少用户 JWT，无法调用 WeKnora 模型（请确认 HARNESS_P0_RUN_TOKEN_STORE 已打开）")
+        raise WeKnoraKBAuthError("缺少用户 JWT，无法调用 WeKnora 模型（请确认 HARNESS_RUN_TOKEN_STORE 已打开）")
     return token
 
 

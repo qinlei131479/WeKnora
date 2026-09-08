@@ -6,11 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_business import User
 
-from yuxi.p0.flags import is_run_token_store_enabled
-from yuxi.p0.request_token import bind_request_access_token
-from yuxi.p1.auth_token_status import is_weknora_access_token_active
-from yuxi.p2.context import TenantPrincipal, bind_tenant_principal
-from yuxi.p2.resolve import TenantHeaderError, resolve_request_tenant_id
+from yuxi.auth.flags import is_run_token_store_enabled
+from yuxi.auth.request_token import bind_request_access_token
+from yuxi.auth.token_status import is_weknora_access_token_active
+from yuxi.tenancy.context import TenantPrincipal, bind_tenant_principal
+from yuxi.tenancy.resolve import TenantHeaderError, resolve_request_tenant_id
 from yuxi.services.weknora_identity_service import WeKnoraIdentityError, load_user_from_claims
 from yuxi.utils.weknora_auth import WeKnoraTokenError, verify_weknora_access_token
 

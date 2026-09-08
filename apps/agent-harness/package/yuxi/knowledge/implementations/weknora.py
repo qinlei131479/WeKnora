@@ -7,9 +7,9 @@ from typing import Any
 
 from yuxi.knowledge.base import KnowledgeBase
 from yuxi.knowledge.read_models import KnowledgeBaseConfig
-from yuxi.p0.kb_fulltext import CHUNKS_PAGE_SIZE_MAX, capability_for_kb_type, reconstruct_document_text
-from yuxi.p3.client import WeKnoraKBClient
-from yuxi.p3.errors import WeKnoraKBError, WeKnoraKBPermissionError
+from yuxi.weknora.kb_fulltext import CHUNKS_PAGE_SIZE_MAX, capability_for_kb_type, reconstruct_document_text
+from yuxi.weknora.client import WeKnoraKBClient
+from yuxi.weknora.errors import WeKnoraKBError, WeKnoraKBPermissionError
 from yuxi.services.file_preview import (
     MAX_BINARY_PREVIEW_SIZE_BYTES,
     OfficePreviewConversionError,

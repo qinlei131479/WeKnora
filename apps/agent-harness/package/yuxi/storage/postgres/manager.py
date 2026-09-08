@@ -122,7 +122,7 @@ class PostgresManager(metaclass=SingletonMeta):
     async def ensure_knowledge_schema(self):
         """原生知识库 / 图谱 / 评测表已删除。"""
         self._check_initialized()
-        logger.info("Knowledge schema skipped (P7 native KB removed)")
+        logger.info("Knowledge schema skipped (native KB tables removed)")
 
     async def ensure_business_schema(self):
         """确保业务 schema 包含后续新增字段（运行时 schema 演进）。"""
@@ -501,18 +501,18 @@ class PostgresManager(metaclass=SingletonMeta):
             """,
             "CREATE INDEX IF NOT EXISTS ix_agent_run_requests_dispatched_run_id ON agent_run_requests(dispatched_run_id)",  # noqa: E501
         ]
-        from yuxi.p2.schema import tenant_scope_ddl_statements
+        from yuxi.tenancy.schema import tenant_scope_ddl_statements
 
         stmts.extend(tenant_scope_ddl_statements())
         async with self.async_engine.begin() as conn:
             for stmt in stmts:
                 await conn.execute(text(prefix_sql(stmt)))
             try:
-                from yuxi.p2.schema import backfill_tenant_scope
+                from yuxi.tenancy.schema import backfill_tenant_scope
 
                 await backfill_tenant_scope(conn)
             except Exception as exc:
-                logger.warning(f"P2 tenant backfill skipped: {exc}")
+                logger.warning(f"tenant backfill skipped: {exc}")
 
     @property
     def is_postgresql(self) -> bool:

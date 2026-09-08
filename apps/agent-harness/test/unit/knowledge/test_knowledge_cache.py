@@ -81,7 +81,7 @@ async def test_cache_round_trip(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_cache_key_is_tenant_prefixed_and_isolated(monkeypatch):
-    from yuxi.p2.context import TenantPrincipal, bind_tenant_principal
+    from yuxi.tenancy.context import TenantPrincipal, bind_tenant_principal
 
     redis = _FakeRedis()
     monkeypatch.setattr(cache_module, "get_async_redis_client", lambda: _async_value(redis))

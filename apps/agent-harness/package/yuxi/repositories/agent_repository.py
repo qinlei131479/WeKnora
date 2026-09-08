@@ -8,8 +8,8 @@ from typing import Any, Literal
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from yuxi.p2.context import stamp_tenant_id
-from yuxi.p2.tenant_query import apply_tenant_filters, row_in_tenant, slug_taken_clauses, visible_or_none
+from yuxi.tenancy.context import stamp_tenant_id
+from yuxi.tenancy.tenant_query import apply_tenant_filters, row_in_tenant, slug_taken_clauses, visible_or_none
 from yuxi.permissions import ResourcePermission, normalize_permission_config, resolve_agent_permission
 from yuxi.storage.postgres.models_business import Agent, User
 from yuxi.utils.datetime_utils import utc_now_naive

@@ -28,7 +28,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from yuxi.agents.buildin import agent_manager
 from yuxi.agents.models import resolve_chat_model_spec
 from yuxi.agents.tool_approval import DEFAULT_TOOL_APPROVAL_MODE, normalize_tool_approval_mode
-from yuxi.models.providers.cache import model_cache
 from yuxi.repositories.agent_repository import AgentRepository
 from yuxi.repositories.agent_run_repository import TERMINAL_RUN_STATUSES, AgentRunRepository
 from yuxi.repositories.conversation_repository import ConversationRepository
@@ -100,28 +99,19 @@ def _load_agent_context(agent_item, agent_backend):
 
 
 def resolve_agent_run_model_spec(model_spec: str | None, agent_item, agent_backend, context=None) -> str:
-    """解析本次 run 实际使用的模型：显式覆盖优先，否则配置模型，最后系统默认模型。
+    """解析本次 run 实际使用的模型：显式覆盖优先，否则配置模型。
 
-    HARNESS_WEKNORA_KB 打开时，模型选择器传来的 model_spec 是 WeKnora `models.id`（UUID），
-    校验必须走 WeKnora 模型代理，而不是已停用的 yuxi 供应商 model_cache（P6.1）。
+    模型选择器传来的 model_spec 是 WeKnora `models.id`（UUID），校验走 WeKnora 模型代理。
     """
     normalized = model_spec.strip() if isinstance(model_spec, str) else None
     if normalized:
-        from yuxi.p3.flags import is_weknora_kb_enabled
+        from yuxi.models.weknora_proxy import resolve_weknora_model
+        from yuxi.weknora.errors import WeKnoraKBError
 
-        if is_weknora_kb_enabled():
-            from yuxi.models.weknora_proxy import resolve_weknora_model
-            from yuxi.p3.errors import WeKnoraKBError
-
-            try:
-                resolve_weknora_model(normalized, "chat")
-            except (ValueError, WeKnoraKBError) as exc:
-                raise HTTPException(status_code=422, detail=str(exc)) from exc
-            return normalized
-
-        info = model_cache.get_model_info(normalized)
-        if not info or info.model_type != "chat":
-            raise HTTPException(status_code=422, detail=f"未找到可用聊天模型: '{normalized}'")
+        try:
+            resolve_weknora_model(normalized, "chat")
+        except (ValueError, WeKnoraKBError) as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
         return normalized
 
     if context is None:
@@ -801,9 +791,9 @@ async def prepare_agent_run_creation_scope(
 
 async def enqueue_agent_run(run_id: str) -> None:
     """把已持久化的 run 投递到后台 worker 队列。"""
-    from yuxi.p0.flags import is_run_token_store_enabled
-    from yuxi.p0.request_token import get_request_access_token
-    from yuxi.p0.run_token_store import save_run_access_token
+    from yuxi.auth.flags import is_run_token_store_enabled
+    from yuxi.auth.request_token import get_request_access_token
+    from yuxi.auth.run_token_store import save_run_access_token
 
     if is_run_token_store_enabled():
         token = get_request_access_token()

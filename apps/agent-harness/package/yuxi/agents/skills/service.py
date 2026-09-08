@@ -421,7 +421,7 @@ def _build_builtin_skill_dir_path(slug: str) -> str:
 
 def _tenant_skill_relpath(slug: str) -> Path:
     """租户技能落在 skills/t{tenant_id}/{slug}，避免跨空间同 slug 互相覆盖。"""
-    from yuxi.p2.context import stamp_tenant_id
+    from yuxi.tenancy.context import stamp_tenant_id
 
     tenant_id = stamp_tenant_id()
     if tenant_id is None:

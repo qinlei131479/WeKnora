@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.utils.auth_middleware import get_current_user, get_db, get_required_user
 from yuxi.config import UserConfig, UserConfigSchema
-from yuxi.p2.context import stamp_tenant_id
+from yuxi.tenancy.context import stamp_tenant_id
 from yuxi.storage.minio import upload_image_to_minio
 from yuxi.storage.postgres.models_business import AgentEnv, User
 from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive

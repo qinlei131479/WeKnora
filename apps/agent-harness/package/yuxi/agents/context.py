@@ -344,13 +344,10 @@ class BaseContext:
 
                     description = f.metadata.get("description", "")
                     if f.name == "knowledges":
-                        from yuxi.p3.flags import is_weknora_kb_enabled
-
-                        if is_weknora_kb_enabled():
-                            description = (
-                                "知识库列表来自 WeKnora，请在左侧知识库页面创建。"
-                                "默认选择当前用户可访问的全部 WeKnora 知识库。"
-                            )
+                        description = (
+                            "知识库列表来自 WeKnora，请在左侧知识库页面创建。"
+                            "默认选择当前用户可访问的全部 WeKnora 知识库。"
+                        )
 
                     configurable_items[f.name] = {
                         "type": f.metadata.get("type", type_name),
@@ -505,7 +502,7 @@ async def normalize_agent_context_config(
     filtered = filter_config_by_role({"context": raw_context}, getattr(user, "role", None), schema)
     normalized = dict(filtered.get("context") or {})
     if "knowledges" in normalized and normalized.get("knowledges") is not None:
-        from yuxi.p3.mapping import remap_knowledge_ids
+        from yuxi.weknora.mapping import remap_knowledge_ids
 
         remapped, _unmapped = remap_knowledge_ids([str(value) for value in normalized.get("knowledges") or []])
         normalized["knowledges"] = remapped

@@ -638,7 +638,7 @@ EOF
 
 ```bash
 cd apps/agent-harness && python - <<'PY'
-from yuxi.p3.flags import is_weknora_kb_enabled
+from yuxi.weknora.flags import is_weknora_kb_enabled
 from yuxi.services.ocr_service import get_ocr_options
 assert is_weknora_kb_enabled() is True
 assert get_ocr_options()["weknora_managed"] is True

@@ -130,13 +130,12 @@ class KnowledgeBaseManager:
         Raises:
             KBNotFoundError: 数据库不存在或知识库类型不支持
         """
-        from yuxi.p3.flags import is_weknora_kb_enabled
-        from yuxi.p3.ids import is_weknora_kb_id
+        from yuxi.weknora.ids import is_weknora_kb_id
         from yuxi.repositories.knowledge_base_repository import KnowledgeBaseRepository
 
-        if is_weknora_kb_enabled() and is_weknora_kb_id(kb_id):
-            from yuxi.p3.errors import WeKnoraKBError
-            from yuxi.p3.virtual import fetch_weknora_config
+        if is_weknora_kb_id(kb_id):
+            from yuxi.weknora.errors import WeKnoraKBError
+            from yuxi.weknora.virtual import fetch_weknora_config
 
             try:
                 return await fetch_weknora_config(kb_id)
@@ -346,11 +345,10 @@ class KnowledgeBaseManager:
         if user.get("role") == "superadmin":
             return True
 
-        from yuxi.p3.flags import is_weknora_kb_enabled
-        from yuxi.p3.ids import is_weknora_kb_id
+        from yuxi.weknora.ids import is_weknora_kb_id
         from yuxi.repositories.knowledge_base_repository import KnowledgeBaseRepository
 
-        if is_weknora_kb_enabled() and is_weknora_kb_id(kb_id):
+        if is_weknora_kb_id(kb_id):
             info = await self.get_database_info(kb_id)
             return info is not None
 
@@ -416,20 +414,14 @@ class KnowledgeBaseManager:
         user_dept = user_info.get("department_id")
         logger.info(f"Getting databases for user with role {user_role} and department {user_dept}")
 
-        from yuxi.p3.flags import is_weknora_kb_enabled
+        # 智能体配置 / list_kbs 只暴露 WeKnora 知识库。
+        try:
+            from yuxi.weknora.virtual import fetch_weknora_summaries
 
-        if is_weknora_kb_enabled():
-            # 接入 WeKnora 时智能体配置 / list_kbs 只暴露 WeKnora 知识库。
-            # 原生 milvus 等查询路径在开关关闭（独立部署）时仍走 get_databases()。
-            try:
-                from yuxi.p3.virtual import fetch_weknora_summaries
-
-                all_databases = await fetch_weknora_summaries()
-            except Exception as exc:
-                logger.warning(f"WeKnora knowledge base list skipped: {exc}")
-                all_databases = []
-        else:
-            all_databases = await self.get_databases()
+            all_databases = await fetch_weknora_summaries()
+        except Exception as exc:
+            logger.warning(f"WeKnora knowledge base list skipped: {exc}")
+            all_databases = []
 
         # 超级管理员可以看到所有知识库
         filtered_databases: list[KnowledgeBaseSummary] = []
@@ -723,13 +715,12 @@ class KnowledgeBaseManager:
 
     async def get_database_info(self, kb_id: str, include_files: bool = False) -> KnowledgeBaseDetail | None:
         """获取知识库详情。"""
-        from yuxi.p3.flags import is_weknora_kb_enabled
-        from yuxi.p3.ids import is_weknora_kb_id
+        from yuxi.weknora.ids import is_weknora_kb_id
         from yuxi.repositories.knowledge_base_repository import KnowledgeBaseRepository
 
-        if is_weknora_kb_enabled() and is_weknora_kb_id(kb_id):
-            from yuxi.p3.errors import WeKnoraKBError
-            from yuxi.p3.virtual import fetch_weknora_detail
+        if is_weknora_kb_id(kb_id):
+            from yuxi.weknora.errors import WeKnoraKBError
+            from yuxi.weknora.virtual import fetch_weknora_detail
 
             try:
                 return await fetch_weknora_detail(kb_id)
@@ -792,7 +783,7 @@ class KnowledgeBaseManager:
         include_stats: bool = True,
     ) -> dict:
         """按目录和筛选条件分页获取轻量文件列表。"""
-        from yuxi.p3.ids import is_weknora_kb_id
+        from yuxi.weknora.ids import is_weknora_kb_id
         from yuxi.repositories.knowledge_base_repository import KnowledgeBaseRepository
         from yuxi.repositories.knowledge_file_repository import KnowledgeFileRepository
 
@@ -886,7 +877,7 @@ class KnowledgeBaseManager:
         include_parent_id: bool = False,
     ) -> dict:
         """按文件名在一组知识库中搜索文件，并返回分页结果。"""
-        from yuxi.p3.ids import is_weknora_kb_id
+        from yuxi.weknora.ids import is_weknora_kb_id
         from yuxi.repositories.knowledge_file_repository import KnowledgeFileRepository
 
         weknora_kbs = [kb for kb in knowledge_bases if is_weknora_kb_id(kb.get("kb_id"))]

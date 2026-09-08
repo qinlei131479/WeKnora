@@ -4,8 +4,8 @@ from typing import Any
 
 from sqlalchemy import select
 
-from yuxi.p2.context import stamp_tenant_id
-from yuxi.p2.tenant_query import tenant_clauses, visible_or_none
+from yuxi.tenancy.context import stamp_tenant_id
+from yuxi.tenancy.tenant_query import tenant_clauses, visible_or_none
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_business import MessageFeedback
 

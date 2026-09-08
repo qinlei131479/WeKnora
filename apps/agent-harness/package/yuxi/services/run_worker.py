@@ -307,11 +307,11 @@ async def _consume_stream_with_cancel(agen, run_ctx: RunContext):
 
 async def process_agent_run(ctx, run_id: str):
     """执行队列中的 AgentRun；开关打开时绑定并在结束时删除临时 JWT。"""
-    from yuxi.p0.flags import is_run_token_store_enabled
-    from yuxi.p0.request_token import bind_request_access_token
-    from yuxi.p0.run_token_store import delete_run_access_token
+    from yuxi.auth.flags import is_run_token_store_enabled
+    from yuxi.auth.request_token import bind_request_access_token
+    from yuxi.auth.run_token_store import delete_run_access_token
 
-    from yuxi.p2.context import bind_tenant_principal
+    from yuxi.tenancy.context import bind_tenant_principal
 
     bind_request_access_token(None)
     bind_tenant_principal(None)
@@ -375,7 +375,7 @@ async def _process_agent_run(ctx, run_id: str):
         await mark_run_terminal(run_id, "failed", "user_not_found", f"user {uid} not found")
         return
 
-    from yuxi.p2.context import TenantPrincipal, bind_tenant_principal
+    from yuxi.tenancy.context import TenantPrincipal, bind_tenant_principal
 
     bind_tenant_principal(
         TenantPrincipal(
@@ -385,9 +385,9 @@ async def _process_agent_run(ctx, run_id: str):
         )
     )
 
-    from yuxi.p0.flags import is_auth_token_db_check_enabled, is_run_token_store_enabled
-    from yuxi.p0.request_token import bind_request_access_token
-    from yuxi.p0.run_token_store import validate_stored_run_token
+    from yuxi.auth.flags import is_auth_token_db_check_enabled, is_run_token_store_enabled
+    from yuxi.auth.request_token import bind_request_access_token
+    from yuxi.auth.run_token_store import validate_stored_run_token
     from yuxi.utils.weknora_auth import WeKnoraTokenError
 
     if is_run_token_store_enabled():

@@ -49,6 +49,11 @@ logs/
 
 WeKnora
 WeKnora-lite
+# 上面这条会在大小写不敏感的 Git 里误伤 harness 的 yuxi.weknora 适配包
+!apps/agent-harness/package/yuxi/weknora/
+!apps/agent-harness/package/yuxi/weknora/**
+!apps/agent-harness/test/unit/weknora/
+!apps/agent-harness/test/unit/weknora/**
 cmd/desktop/build/bin/
 /models/
 test/data/mswag.txt

@@ -9,7 +9,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from yuxi.p2.context import stamp_tenant_id
+from yuxi.tenancy.context import stamp_tenant_id
 from yuxi.storage.postgres.models_business import UserConfig as UserConfigRecord
 from yuxi.utils.datetime_utils import format_utc_datetime, utc_now_naive
 

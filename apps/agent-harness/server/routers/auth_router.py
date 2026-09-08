@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
 from server.utils.auth_middleware import get_db, get_required_user
-from yuxi.p2.context import get_tenant_principal
+from yuxi.tenancy.context import get_tenant_principal
 from yuxi.services.operation_log_service import log_operation
 from yuxi.services.weknora_identity_service import (
     fetch_membership,

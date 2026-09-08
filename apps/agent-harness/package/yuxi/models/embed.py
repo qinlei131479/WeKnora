@@ -7,7 +7,6 @@ import httpx
 import numpy as np
 import requests
 
-from yuxi.models.providers.cache import model_cache
 from yuxi.utils import get_docker_safe_url, hashstr, logger
 
 EMBEDDING_RATE_LIMIT_MAX_RETRIES = 10
@@ -229,83 +228,44 @@ class OtherEmbedding(BaseEmbeddingModel):
 
 
 def get_embedding_model_info_by_id(model_id: str) -> dict:
-    from yuxi.p3.flags import is_weknora_kb_enabled
+    from yuxi.models.weknora_proxy import embeddings_proxy_url, model_dimension, resolve_weknora_model
 
-    if is_weknora_kb_enabled():
-        from yuxi.models.weknora_proxy import embeddings_proxy_url, model_dimension, resolve_weknora_model
-
-        resolved = resolve_weknora_model(model_id, "embedding")
-        resolved_id = str(resolved.get("id") or "")
-        logger.info(f"Loaded WeKnora embedding model info for {resolved_id}")
-        return {
-            "name": resolved_id,
-            "display_name": str(resolved.get("display_name") or resolved.get("name") or resolved_id),
-            "dimension": model_dimension(resolved),
-            "base_url": embeddings_proxy_url(resolved_id),
-            "api_key": "",
-            "model_id": resolved_id,
-            "batch_size": 40,
-        }
-
-    info = model_cache.get_model_info(model_id)
-    if not info:
-        raise ValueError(f"Unknown embedding model spec: {model_id}")
-    if info.model_type != "embedding":
-        raise ValueError(f"Model {model_id} is not an embedding model (type={info.model_type})")
-
-    logger.info(f"Loaded embedding model info for {model_id}")
+    resolved = resolve_weknora_model(model_id, "embedding")
+    resolved_id = str(resolved.get("id") or "")
+    logger.info(f"Loaded WeKnora embedding model info for {resolved_id}")
     return {
-        "name": info.model_id,
-        "display_name": info.display_name,
-        "dimension": info.dimension,
-        "base_url": info.base_url,
-        "api_key": info.api_key,
-        "model_id": info.spec,
-        "batch_size": info.batch_size,
+        "name": resolved_id,
+        "display_name": str(resolved.get("display_name") or resolved.get("name") or resolved_id),
+        "dimension": model_dimension(resolved),
+        "base_url": embeddings_proxy_url(resolved_id),
+        "api_key": "",
+        "model_id": resolved_id,
+        "batch_size": 40,
     }
 
 
 def select_embedding_model(model_id: str):
-    from yuxi.p3.flags import is_weknora_kb_enabled
-
-    if is_weknora_kb_enabled():
-        from yuxi.models.weknora_proxy import (
-            embeddings_proxy_url,
-            extra_request_headers,
-            model_dimension,
-            request_access_token,
-            resolve_weknora_model,
-        )
-
-        resolved = resolve_weknora_model(model_id, "embedding")
-        resolved_id = str(resolved.get("id") or "")
-        logger.info(f"Selecting WeKnora embedding model: {resolved_id}")
-        embedder = OtherEmbedding(
-            model=resolved_id,
-            base_url=embeddings_proxy_url(resolved_id),
-            api_key=request_access_token(),
-            dimension=model_dimension(resolved),
-        )
-        extra = extra_request_headers()
-        if extra:
-            embedder.headers.update(extra)
-        return embedder
-
-    info = model_cache.get_model_info(model_id)
-    if not info:
-        raise ValueError(f"Unknown embedding model spec: {model_id}")
-
-    if info.model_type != "embedding":
-        raise ValueError(f"Model {model_id} is not an embedding model (type={info.model_type})")
-
-    logger.info(f"Selecting embedding model: {model_id} (provider_type={info.provider_type})")
-    return OtherEmbedding(
-        model=info.model_id,
-        base_url=info.base_url,
-        api_key=info.api_key,
-        dimension=info.dimension,
-        batch_size=info.batch_size,
+    from yuxi.models.weknora_proxy import (
+        embeddings_proxy_url,
+        extra_request_headers,
+        model_dimension,
+        request_access_token,
+        resolve_weknora_model,
     )
+
+    resolved = resolve_weknora_model(model_id, "embedding")
+    resolved_id = str(resolved.get("id") or "")
+    logger.info(f"Selecting WeKnora embedding model: {resolved_id}")
+    embedder = OtherEmbedding(
+        model=resolved_id,
+        base_url=embeddings_proxy_url(resolved_id),
+        api_key=request_access_token(),
+        dimension=model_dimension(resolved),
+    )
+    extra = extra_request_headers()
+    if extra:
+        embedder.headers.update(extra)
+    return embedder
 
 
 async def test_embedding_model_status_by_spec(spec: str) -> dict:

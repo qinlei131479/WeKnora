@@ -56,8 +56,7 @@ def test_get_configurable_items_filters_admin_fields_for_user():
     assert "max_execution_steps" not in items
 
 
-def test_get_configurable_items_knowledges_description_when_weknora_enabled(monkeypatch):
-    monkeypatch.setenv("HARNESS_WEKNORA_KB", "true")
+def test_get_configurable_items_knowledges_description_mentions_weknora():
     items = BaseContext.get_configurable_items(user_role="user")
     assert "WeKnora" in items["knowledges"]["description"]
 

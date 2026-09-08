@@ -72,13 +72,12 @@ async def lifespan(app: FastAPI):
             logger.error(f"Failed to initialize knowledge base manager: {e}")
 
     try:
-        from yuxi.p3.flags import is_weknora_kb_enabled, require_weknora_base_url
+        from yuxi.weknora.flags import require_weknora_base_url
 
-        if is_weknora_kb_enabled():
-            url = require_weknora_base_url()
-            logger.info(f"P3 WeKnora KB adapter enabled: {url}")
+        url = require_weknora_base_url()
+        logger.info(f"WeKnora KB adapter enabled: {url}")
     except Exception as e:
-        logger.error(f"P3 WeKnora KB config invalid: {e}")
+        logger.error(f"WeKnora KB config invalid: {e}")
 
     # 预热 Redis（run 队列）
     try:

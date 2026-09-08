@@ -7,8 +7,8 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from yuxi.p2.context import current_tenant_id
-from yuxi.p2.flags import is_tenant_scope_enabled
+from yuxi.tenancy.context import current_tenant_id
+from yuxi.tenancy.flags import is_tenant_scope_enabled
 from yuxi.storage.redis import get_async_redis_client
 from yuxi.utils.logging_config import logger
 

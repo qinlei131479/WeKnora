@@ -16,11 +16,11 @@ from sqlalchemy import Integer, String, cast, distinct, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.utils.auth_middleware import get_db, get_required_user
-from yuxi.p2.context import current_tenant_id
-from yuxi.p2.flags import is_tenant_scope_enabled
-from yuxi.p2.tenant_query import apply_tenant_filters
-from yuxi.p6.flags import is_weknora_dashboard_enabled
-from yuxi.p6.stats import (
+from yuxi.tenancy.context import current_tenant_id
+from yuxi.tenancy.flags import is_tenant_scope_enabled
+from yuxi.tenancy.tenant_query import apply_tenant_filters
+from yuxi.dashboard.flags import is_weknora_dashboard_enabled
+from yuxi.dashboard.stats import (
     count_weknora_active_users,
     fetch_weknora_agent_stats,
     fetch_weknora_daily_active_users,

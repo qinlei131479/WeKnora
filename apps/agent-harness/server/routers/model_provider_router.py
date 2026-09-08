@@ -15,10 +15,8 @@ from yuxi.models.providers.service import (
     fetch_remote_models,
     get_all_model_providers,
     get_model_provider_by_id,
-    test_model_status_by_spec,
     update_provider_config,
 )
-from yuxi.p3.flags import is_weknora_kb_enabled
 from yuxi.storage.postgres.models_business import User
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.utils import logger
@@ -29,8 +27,7 @@ _WEKNORA_PROVIDER_LOCKED = "模型由 WeKnora 管理，已停止 yuxi 供应商�
 
 
 def _reject_yuxi_provider_writes() -> None:
-    if is_weknora_kb_enabled():
-        raise HTTPException(status_code=403, detail=_WEKNORA_PROVIDER_LOCKED)
+    raise HTTPException(status_code=403, detail=_WEKNORA_PROVIDER_LOCKED)
 
 
 async def _refresh_model_cache() -> None:
@@ -218,54 +215,20 @@ async def refresh_model_cache(
 async def get_v2_models(
     model_type: str = "chat",
     _current_user: User = Depends(get_required_user),
-    db: AsyncSession = Depends(get_db),
 ):
-    """获取 v2 格式的模型列表，按 provider 分组。
+    """获取模型列表，按 provider 分组。spec 为 WeKnora 模型 UUID。"""
+    from yuxi.models.weknora_proxy import grouped_v2_models, list_weknora_models_async
+    from yuxi.weknora.errors import WeKnoraKBError
 
-    v2 模型 spec 格式: provider_id:model_id（冒号分隔）
-    融合模式下 spec 为 WeKnora 模型 UUID。
-    返回数据供前端模型选择器使用。
-    """
-    if is_weknora_kb_enabled():
-        from yuxi.models.weknora_proxy import grouped_v2_models, list_weknora_models_async
-        from yuxi.p3.errors import WeKnoraKBError
-
-        try:
-            models = await list_weknora_models_async()
-        except WeKnoraKBError as exc:
-            raise HTTPException(status_code=502, detail=str(exc)) from exc
-        return {
-            "success": True,
-            "data": grouped_v2_models(models, model_type),
-            "weknora_managed": True,
-        }
-
-    from yuxi.models.providers.cache import model_cache
-
-    grouped = model_cache.get_specs_grouped_by_provider(model_type)
-    providers = await get_all_model_providers(db)
-    provider_name_by_id = {
-        provider.provider_id: provider.display_name or provider.provider_id for provider in providers
+    try:
+        models = await list_weknora_models_async()
+    except WeKnoraKBError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {
+        "success": True,
+        "data": grouped_v2_models(models, model_type),
+        "weknora_managed": True,
     }
-
-    result = {}
-    for provider_id, models in grouped.items():
-        result[provider_id] = {
-            "provider_id": provider_id,
-            "provider_display_name": provider_name_by_id.get(provider_id, provider_id),
-            "models": [
-                {
-                    "spec": m.spec,
-                    "model_id": m.model_id,
-                    "display_name": m.display_name,
-                    "dimension": m.dimension,
-                    "batch_size": m.batch_size,
-                }
-                for m in models
-            ]
-        }
-
-    return {"success": True, "data": result, "weknora_managed": False}
 
 
 @model_providers.get("/models/status")
@@ -273,36 +236,29 @@ async def get_model_status_by_spec(
     spec: str,
     current_user: User = Depends(get_admin_user),
 ):
-    """根据 full spec 检查模型状态（自动识别 V1/V2、Chat/Embedding）。"""
-    if is_weknora_kb_enabled():
-        from yuxi.models.weknora_proxy import list_weknora_models, resolve_weknora_model
-        from yuxi.p3.errors import WeKnoraKBError
+    """根据 spec 检查模型状态（Chat/Embedding/Rerank）。"""
+    from yuxi.models.weknora_proxy import list_weknora_models, resolve_weknora_model
+    from yuxi.weknora.errors import WeKnoraKBError
 
-        try:
-            models = list_weknora_models()
-            last_error = None
-            for model_type in ("chat", "embedding", "rerank"):
-                try:
-                    resolved = resolve_weknora_model(spec, model_type, models)
-                    return {
-                        "success": True,
-                        "data": {
-                            "spec": str(resolved.get("id") or spec),
-                            "status": "available",
-                            "message": "已接入",
-                        },
-                    }
-                except ValueError as exc:
-                    last_error = exc
-            raise last_error or ValueError(f"找不到模型 '{spec}'")
-        except WeKnoraKBError as e:
-            return {"success": False, "data": {"spec": spec, "status": "error", "message": str(e)}}
-        except Exception as e:
-            logger.error(f"测试模型状态失败 {spec}: {e}")
-            return {"success": False, "data": {"spec": spec, "status": "error", "message": str(e)}}
     try:
-        result = await test_model_status_by_spec(spec)
-        return {"success": True, "data": result}
+        models = list_weknora_models()
+        last_error = None
+        for model_type in ("chat", "embedding", "rerank"):
+            try:
+                resolved = resolve_weknora_model(spec, model_type, models)
+                return {
+                    "success": True,
+                    "data": {
+                        "spec": str(resolved.get("id") or spec),
+                        "status": "available",
+                        "message": "已接入",
+                    },
+                }
+            except ValueError as exc:
+                last_error = exc
+        raise last_error or ValueError(f"找不到模型 '{spec}'")
+    except WeKnoraKBError as e:
+        return {"success": False, "data": {"spec": spec, "status": "error", "message": str(e)}}
     except Exception as e:
         logger.error(f"测试模型状态失败 {spec}: {e}")
         return {"success": False, "data": {"spec": spec, "status": "error", "message": str(e)}}

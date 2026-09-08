@@ -143,15 +143,8 @@ def scope_matches(user: Any, scope: dict | None) -> bool:
     if access_level == "global":
         return True
     if access_level == "department":
-        from yuxi.p2.flags import is_department_enforced
-
-        if not is_department_enforced():
-            return False
-        department_id = _value(user, "department_id")
-        try:
-            return department_id is not None and int(department_id) in scope.get("department_ids", [])
-        except (TypeError, ValueError):
-            return False
+        # 部门能力已删除；历史配置里的 department 范围一律不命中。
+        return False
     if access_level == "user":
         return str(_value(user, "uid", "") or "") in scope.get("user_uids", [])
     return False

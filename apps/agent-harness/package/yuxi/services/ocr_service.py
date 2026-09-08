@@ -18,13 +18,13 @@ async def parse_document(
 ) -> str:
     """使用 WeKnora 将文件解析为 Markdown。
 
-    这是业务代码唯一应调用的文档解析入口。P7 后附件解析只走
+    这是业务代码唯一应调用的文档解析入口。附件解析只走
     ``parse_source_via_weknora``，不再调用本地 OCR 引擎。
     """
 
     del params, db
     from yuxi.models.weknora_proxy import parse_source_via_weknora
-    from yuxi.p3.errors import WeKnoraKBError
+    from yuxi.weknora.errors import WeKnoraKBError
 
     try:
         return await parse_source_via_weknora(source)

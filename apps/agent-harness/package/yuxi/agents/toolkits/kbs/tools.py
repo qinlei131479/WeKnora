@@ -120,12 +120,11 @@ async def get_mindmap(kb_name: str, runtime: ToolRuntime) -> str:
         return text
 
     try:
-        from yuxi.p3.flags import is_weknora_kb_enabled
-        from yuxi.p3.ids import is_weknora_kb_id
+        from yuxi.weknora.ids import is_weknora_kb_id
 
-        if is_weknora_kb_enabled() and is_weknora_kb_id(str(target_kb_id)):
+        if is_weknora_kb_id(str(target_kb_id)):
             from yuxi.models.weknora_proxy import get_or_generate_mindmap
-            from yuxi.p3.errors import WeKnoraKBError
+            from yuxi.weknora.errors import WeKnoraKBError
 
             try:
                 mindmap_data = await get_or_generate_mindmap(str(target_kb_id))
@@ -141,9 +140,6 @@ async def get_mindmap(kb_name: str, runtime: ToolRuntime) -> str:
         kb = await kb_repo.get_by_kb_id(target_kb_id)
 
         if kb is None:
-            if is_weknora_kb_id(str(target_kb_id)):
-                # HARNESS_WEKNORA_KB 关闭时无法走 WeKnora 思维导图接口，且该 KB 又不在 yuxi 原生库中。
-                return f"知识库 {target_info['name']} 由 WeKnora 管理，请打开 HARNESS_WEKNORA_KB 后重试。"
             return f"知识库 {target_info['name']} 不存在"
 
         mindmap_data = kb.mindmap

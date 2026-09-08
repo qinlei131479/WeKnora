@@ -1365,16 +1365,9 @@ def test_resolve_agent_run_model_spec_strips_explicit_chat_model(monkeypatch: py
     assert seen == ["gpt-x"]
 
 
-def test_resolve_agent_run_model_spec_uses_weknora_when_flag_on(monkeypatch: pytest.MonkeyPatch):
-    """HARNESS_WEKNORA_KB 打开时，前端选择器传来的是 WeKnora models.id（UUID），
-    必须走 WeKnora 模型代理校验，而不是已停用的 yuxi 供应商 model_cache。"""
-    monkeypatch.setenv("HARNESS_WEKNORA_KB", "true")
+def test_resolve_agent_run_model_spec_uses_weknora(monkeypatch: pytest.MonkeyPatch):
+    """前端选择器传来的是 WeKnora models.id（UUID），走 WeKnora 模型代理校验。"""
     kb_model_id = "1eb2d1cb-e160-4c26-b3df-364f4f03a37b"
-
-    def fake_get_model_info(spec):
-        raise AssertionError("不应查询已停用的 yuxi 供应商 model_cache")
-
-    monkeypatch.setattr(agent_run_service.model_cache, "get_model_info", fake_get_model_info)
 
     def fake_resolve_weknora_model(spec, model_type):
         assert spec == kb_model_id
@@ -1394,7 +1387,6 @@ def test_resolve_agent_run_model_spec_uses_weknora_when_flag_on(monkeypatch: pyt
 
 
 def test_resolve_agent_run_model_spec_rejects_unknown_weknora_model(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("HARNESS_WEKNORA_KB", "true")
 
     def fake_resolve_weknora_model(spec, model_type):
         raise ValueError(f"找不到聊天模型 '{spec}'")

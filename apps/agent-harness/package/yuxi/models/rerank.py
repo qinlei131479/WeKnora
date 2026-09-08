@@ -6,7 +6,6 @@ from typing import Any
 import aiohttp
 import numpy as np
 
-from yuxi.models.providers.cache import model_cache
 from yuxi.utils import get_docker_safe_url, logger
 
 
@@ -166,47 +165,17 @@ class DashscopeReranker(BaseReranker):
 
 
 def get_reranker(model_id: str, **kwargs):
-    from yuxi.p3.flags import is_weknora_kb_enabled
+    from yuxi.models.weknora_proxy import extra_request_headers, request_access_token, rerank_proxy_url, resolve_weknora_model
 
-    if is_weknora_kb_enabled():
-        from yuxi.models.weknora_proxy import extra_request_headers, request_access_token, rerank_proxy_url, resolve_weknora_model
-
-        resolved = resolve_weknora_model(model_id, "rerank")
-        resolved_id = str(resolved.get("id") or "")
-        reranker = OpenAIReranker(
-            model_name=resolved_id,
-            api_key=request_access_token(),
-            base_url=rerank_proxy_url(resolved_id),
-            **kwargs,
-        )
-        extra = extra_request_headers()
-        if extra:
-            reranker.headers.update(extra)
-        return reranker
-
-    info = model_cache.get_model_info(model_id)
-    if not info:
-        raise ValueError(f"Unknown reranker model spec: {model_id}")
-    if info.model_type != "rerank":
-        raise ValueError(f"Model {model_id} is not a rerank model (type={info.model_type})")
-    if not info.api_key:
-        raise ValueError(f"{info.display_name} api_key is required")
-
-    parameters = dict(info.extra.get("parameters") or {})
-    parameters.update(kwargs.pop("parameters", {}) or {})
-    reranker_kwargs = {**kwargs, "parameters": parameters}
-    protocol = info.extra.get("rerank_protocol") or info.extra.get("protocol")
-
-    if protocol == "dashscope":
-        return DashscopeReranker(
-            model_name=info.model_id,
-            api_key=info.api_key,
-            base_url=info.base_url,
-            **reranker_kwargs,
-        )
-    return OpenAIReranker(
-        model_name=info.model_id,
-        api_key=info.api_key,
-        base_url=info.base_url,
-        **reranker_kwargs,
+    resolved = resolve_weknora_model(model_id, "rerank")
+    resolved_id = str(resolved.get("id") or "")
+    reranker = OpenAIReranker(
+        model_name=resolved_id,
+        api_key=request_access_token(),
+        base_url=rerank_proxy_url(resolved_id),
+        **kwargs,
     )
+    extra = extra_request_headers()
+    if extra:
+        reranker.headers.update(extra)
+    return reranker
