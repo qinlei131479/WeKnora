@@ -21,9 +21,16 @@ def pytest_configure(config: pytest.Config) -> None:
 
 pytest_plugins = ["pytest_asyncio"]
 
+_DEFAULT_TEST_TENANT_ID = 1
+
 
 @pytest.fixture(autouse=True)
-def _isolate_tenant_and_dashboard_flags(monkeypatch: pytest.MonkeyPatch):
-    """单测不吃本机 .env 的租户/总览开关。"""
-    monkeypatch.delenv("HARNESS_TENANT_SCOPE", raising=False)
-    monkeypatch.delenv("HARNESS_WEKNORA_DASHBOARD", raising=False)
+def _bind_default_tenant_principal():
+    """单测默认带当前空间，与生产写入必须 stamp tenant_id 一致。"""
+    from yuxi.tenancy.context import TenantPrincipal, bind_tenant_principal
+
+    bind_tenant_principal(
+        TenantPrincipal(uid="test-user", tenant_id=_DEFAULT_TEST_TENANT_ID, role="user")
+    )
+    yield
+    bind_tenant_principal(None)

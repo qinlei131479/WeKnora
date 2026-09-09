@@ -24,10 +24,7 @@ x-api-worker-env: &api-worker-env
   RUN_EVENTS_STREAM_TTL_SECONDS: ${RUN_EVENTS_STREAM_TTL_SECONDS:-7200}
   YUXI_CORS_ORIGINS: ${YUXI_CORS_ORIGINS:-}
   JWT_SECRET: ${JWT_SECRET:-}
-  HARNESS_TENANT_SCOPE: ${HARNESS_TENANT_SCOPE:-}
   WEKNORA_BASE_URL: ${WEKNORA_BASE_URL:-http://host.docker.internal:9980/api/v1}
-  HARNESS_RUN_TOKEN_STORE: ${HARNESS_RUN_TOKEN_STORE:-}
-  HARNESS_CHECK_AUTH_TOKENS: ${HARNESS_CHECK_AUTH_TOKENS:-}
   NO_PROXY: localhost,127.0.0.1,host.docker.internal,minio,postgres,redis,sandbox-provisioner,api.siliconflow.cn
   no_proxy: localhost,127.0.0.1,host.docker.internal,minio,postgres,redis,sandbox-provisioner,api.siliconflow.cn
 

@@ -17,9 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.utils.auth_middleware import get_db, get_required_user
 from yuxi.tenancy.context import current_tenant_id
-from yuxi.tenancy.flags import is_tenant_scope_enabled
 from yuxi.tenancy.tenant_query import apply_tenant_filters
-from yuxi.dashboard.flags import is_weknora_dashboard_enabled
 from yuxi.dashboard.stats import (
     count_weknora_active_users,
     fetch_weknora_agent_stats,
@@ -71,7 +69,7 @@ def _join_tool_calls_on_conversation(stmt):
 def _user_count_stmt():
     from yuxi.storage.postgres.models_business import Conversation
 
-    if is_tenant_scope_enabled() and current_tenant_id() is not None:
+    if current_tenant_id() is not None:
         return apply_tenant_filters(
             select(func.count(distinct(Conversation.uid))),
             Conversation.tenant_id,
@@ -315,75 +313,13 @@ async def get_user_activity_stats(
 ):
     """获取当前 token 空间的用户活动统计"""
     try:
-        from yuxi.storage.postgres.models_business import Conversation, User
-
         now = utc_now()
-        # PostgreSQL with asyncpg requires naive datetime for naive DateTime columns
-        naive_now = now.replace(tzinfo=None)
-
-        # Conversations may store either the numeric user primary key or the login uid string.
-        # Join condition accounts for both representations.
-        user_join_condition = Conversation.uid == User.uid
-
-        if is_weknora_dashboard_enabled():
-            overview = await fetch_weknora_overview(db)
-            return UserActivityStats(
-                total_users=weknora_user_total(weknora_users=overview.users),
-                active_users_24h=await count_weknora_active_users(db, since=now - timedelta(days=1)),
-                active_users_30d=await count_weknora_active_users(db, since=now - timedelta(days=30)),
-                daily_active_users=await fetch_weknora_daily_active_users(db),
-            )
-
-        total_users_result = await db.execute(_user_count_stmt())
-        total_users = total_users_result.scalar() or 0
-
-        # 不同时间段的活跃用户数（基于对话活动，排除已删除用户）
-        active_users_24h_result = await db.execute(
-            _scope_conversations(
-                select(func.count(distinct(User.id)))
-                .select_from(Conversation)
-                .join(User, user_join_condition)
-                .filter(Conversation.updated_at >= naive_now - timedelta(days=1), User.is_deleted == 0)
-            )
-        )
-        active_users_24h = active_users_24h_result.scalar() or 0
-
-        active_users_30d_result = await db.execute(
-            _scope_conversations(
-                select(func.count(distinct(User.id)))
-                .select_from(Conversation)
-                .join(User, user_join_condition)
-                .filter(Conversation.updated_at >= naive_now - timedelta(days=30), User.is_deleted == 0)
-            )
-        )
-        active_users_30d = active_users_30d_result.scalar() or 0
-        # 最近7天每日活跃用户（排除已删除用户）
-        daily_active_users = []
-        for i in range(7):
-            day_start = naive_now - timedelta(days=i + 1)
-            day_end = naive_now - timedelta(days=i)
-
-            active_count_result = await db.execute(
-                _scope_conversations(
-                    select(func.count(distinct(User.id)))
-                    .select_from(Conversation)
-                    .join(User, user_join_condition)
-                    .filter(
-                        Conversation.updated_at >= day_start,
-                        Conversation.updated_at < day_end,
-                        User.is_deleted == 0,
-                    )
-                )
-            )
-            active_count = active_count_result.scalar() or 0
-
-            daily_active_users.append({"date": day_start.strftime("%Y-%m-%d"), "active_users": active_count})
-
+        overview = await fetch_weknora_overview(db)
         return UserActivityStats(
-            total_users=total_users,
-            active_users_24h=active_users_24h,
-            active_users_30d=active_users_30d,
-            daily_active_users=list(reversed(daily_active_users)),  # 按时间正序
+            total_users=weknora_user_total(weknora_users=overview.users),
+            active_users_24h=await count_weknora_active_users(db, since=now - timedelta(days=1)),
+            active_users_30d=await count_weknora_active_users(db, since=now - timedelta(days=30)),
+            daily_active_users=await fetch_weknora_daily_active_users(db),
         )
 
     except Exception as e:
@@ -489,87 +425,16 @@ async def get_knowledge_stats(
 ):
     """获取当前 token 空间的知识库统计"""
     try:
-        if is_weknora_dashboard_enabled():
-            wk = await fetch_weknora_knowledge_stats(db)
-            return KnowledgeStats(
-                total_databases=wk.total_databases,
-                total_files=wk.total_files,
-                total_nodes=wk.total_nodes,
-                total_storage_size=wk.total_storage_size,
-                databases_by_type=wk.databases_by_type,
-                file_type_distribution=wk.file_type_distribution,
-                split_by_system=True,
-                source="weknora",
-            )
-
-        from yuxi.repositories.knowledge_base_repository import KnowledgeBaseRepository
-        from yuxi.repositories.knowledge_file_repository import KnowledgeFileRepository
-
-        kb_repo = KnowledgeBaseRepository()
-        file_repo = KnowledgeFileRepository()
-
-        kb_rows = await kb_repo.get_all()
-        total_databases = len(kb_rows)
-
-        databases_by_type: dict[str, int] = {}
-        files_by_type: dict[str, int] = {}
-        total_files = 0
-        total_nodes = 0
-        total_storage_size = 0
-
-        file_type_mapping = {
-            "txt": "文本文件",
-            "pdf": "PDF文档",
-            "docx": "Word文档",
-            "doc": "Word文档",
-            "md": "Markdown",
-            "html": "HTML网页",
-            "htm": "HTML网页",
-            "json": "JSON数据",
-            "csv": "CSV表格",
-            "xlsx": "Excel表格",
-            "xls": "Excel表格",
-            "pptx": "PowerPoint",
-            "ppt": "PowerPoint",
-            "png": "PNG图片",
-            "jpg": "JPEG图片",
-            "jpeg": "JPEG图片",
-            "gif": "GIF图片",
-            "svg": "SVG图片",
-            "mp4": "MP4视频",
-            "mp3": "MP3音频",
-            "zip": "ZIP压缩包",
-            "rar": "RAR压缩包",
-            "7z": "7Z压缩包",
-        }
-
-        for kb in kb_rows:
-            kb_type = (kb.kb_type or "unknown").lower()
-            display_type = {
-                "faiss": "FAISS",
-                "milvus": "Milvus",
-                "dify": "Dify",
-                "qdrant": "Qdrant",
-                "elasticsearch": "Elasticsearch",
-                "unknown": "未知类型",
-            }.get(kb_type, kb.kb_type or "未知类型")
-            databases_by_type[display_type] = databases_by_type.get(display_type, 0) + 1
-
-            files = await file_repo.list_by_kb_id(kb.kb_id)
-            total_files += len(files)
-            for record in files:
-                file_ext = (record.file_type or "").lower()
-                display_name = file_type_mapping.get(file_ext, file_ext.upper() + "文件" if file_ext else "其他")
-                files_by_type[display_name] = files_by_type.get(display_name, 0) + 1
-                total_storage_size += int(record.file_size or 0)
-
+        wk = await fetch_weknora_knowledge_stats(db)
         return KnowledgeStats(
-            total_databases=total_databases,
-            total_files=total_files,
-            total_nodes=total_nodes,
-            total_storage_size=total_storage_size,
-            databases_by_type=databases_by_type,
-            file_type_distribution=files_by_type,
+            total_databases=wk.total_databases,
+            total_files=wk.total_files,
+            total_nodes=wk.total_nodes,
+            total_storage_size=wk.total_storage_size,
+            databases_by_type=wk.databases_by_type,
+            file_type_distribution=wk.file_type_distribution,
+            split_by_system=True,
+            source="weknora",
         )
 
     except Exception as e:
@@ -675,7 +540,7 @@ async def get_agent_analytics(
             agent_repo = AgentRepository(db)
             agent_names = {agent.slug: agent.name for agent in await agent_repo.list_by_slugs(agent_slugs)}
 
-        wk = await fetch_weknora_agent_stats(db) if is_weknora_dashboard_enabled() else None
+        wk = await fetch_weknora_agent_stats(db)
         wk_agents = wk.total_agents if wk else 0
         wk_counts = wk.agent_conversation_counts if wk else []
         wk_names = wk.agent_names if wk else {}
@@ -751,20 +616,19 @@ async def get_dashboard_stats(
                 "satisfaction_rate": satisfaction_rate,
             },
         }
-        if is_weknora_dashboard_enabled():
-            wk = await fetch_weknora_overview(db)
-            payload.update(
-                {
-                    "split_by_system": True,
-                    "weknora_sessions": wk.sessions,
-                    "yuxi_conversations": total_conversations,
-                    "total_conversations": simple_sum(wk.sessions, total_conversations),
-                    "weknora_messages": wk.messages,
-                    "yuxi_messages": total_messages,
-                    "total_messages": simple_sum(wk.messages, total_messages),
-                    "total_users": weknora_user_total(weknora_users=wk.users),
-                }
-            )
+        wk = await fetch_weknora_overview(db)
+        payload.update(
+            {
+                "split_by_system": True,
+                "weknora_sessions": wk.sessions,
+                "yuxi_conversations": total_conversations,
+                "total_conversations": simple_sum(wk.sessions, total_conversations),
+                "weknora_messages": wk.messages,
+                "yuxi_messages": total_messages,
+                "total_messages": simple_sum(wk.messages, total_messages),
+                "total_users": weknora_user_total(weknora_users=wk.users),
+            }
+        )
         return payload
     except Exception as e:
         logger.error(f"Error getting dashboard stats: {e}")

@@ -306,8 +306,7 @@ async def _consume_stream_with_cancel(agen, run_ctx: RunContext):
 
 
 async def process_agent_run(ctx, run_id: str):
-    """执行队列中的 AgentRun；开关打开时绑定并在结束时删除临时 JWT。"""
-    from yuxi.auth.flags import is_run_token_store_enabled
+    """执行队列中的 AgentRun；绑定用户 JWT，结束时删除临时凭证。"""
     from yuxi.auth.request_token import bind_request_access_token
     from yuxi.auth.run_token_store import delete_run_access_token
 
@@ -320,8 +319,7 @@ async def process_agent_run(ctx, run_id: str):
     finally:
         bind_request_access_token(None)
         bind_tenant_principal(None)
-        if is_run_token_store_enabled():
-            await delete_run_access_token(run_id)
+        await delete_run_access_token(run_id)
 
 
 async def _process_agent_run(ctx, run_id: str):
@@ -385,24 +383,27 @@ async def _process_agent_run(ctx, run_id: str):
         )
     )
 
-    from yuxi.auth.flags import is_auth_token_db_check_enabled, is_run_token_store_enabled
     from yuxi.auth.request_token import bind_request_access_token
     from yuxi.auth.run_token_store import validate_stored_run_token
     from yuxi.utils.weknora_auth import WeKnoraTokenError
 
-    if is_run_token_store_enabled():
-        try:
-            if is_auth_token_db_check_enabled():
-                async with pg_manager.get_async_session_context() as token_db:
-                    stored_token = await validate_stored_run_token(run_id, token_db)
-            else:
-                stored_token = await validate_stored_run_token(run_id)
-        except WeKnoraTokenError as exc:
-            await mark_run_terminal(run_id, "failed", "weknora_token_invalid", str(exc))
-            return
-        if stored_token:
-            bind_request_access_token(stored_token)
-            logger.info(f"Run bound WeKnora access token: {run_id}")
+    try:
+        async with pg_manager.get_async_session_context() as token_db:
+            stored_token = await validate_stored_run_token(run_id, token_db)
+    except WeKnoraTokenError as exc:
+        await mark_run_terminal(run_id, "failed", "weknora_token_invalid", str(exc))
+        return
+    if stored_token:
+        bind_request_access_token(stored_token)
+        logger.info(f"Run bound WeKnora access token: {run_id}")
+    else:
+        await mark_run_terminal(
+            run_id,
+            "failed",
+            "weknora_token_missing",
+            "缺少用户 JWT，无法调用 WeKnora 知识库（run token 未写入 Redis）",
+        )
+        return
 
     resume_input = None
     if run_type == "resume":

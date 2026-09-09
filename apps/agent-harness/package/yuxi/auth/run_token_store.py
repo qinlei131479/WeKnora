@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from yuxi.auth.flags import is_auth_token_db_check_enabled
 from yuxi.storage.redis import get_async_redis_client
 from yuxi.utils.weknora_auth import WeKnoraTokenError, remaining_ttl_seconds, verify_weknora_access_token
 
@@ -47,9 +46,9 @@ async def delete_run_access_token(run_id: str) -> None:
 
 
 async def is_weknora_access_token_active(token: str, db: Any | None = None) -> bool:
-    """JWT 验签通过后，可选地只读检查 auth_tokens。"""
+    """JWT 验签通过后，有 db 时只读检查 auth_tokens 是否吊销。"""
     verify_weknora_access_token(token)
-    if not is_auth_token_db_check_enabled() or db is None:
+    if db is None:
         return True
 
     from sqlalchemy import text

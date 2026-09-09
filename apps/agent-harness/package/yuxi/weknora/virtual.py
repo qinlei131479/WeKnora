@@ -7,7 +7,9 @@ from typing import Any
 
 from yuxi.knowledge.read_models import KnowledgeBaseConfig, KnowledgeBaseDetail, KnowledgeBaseSummary
 from yuxi.weknora.kb_fulltext import capability_for_kb_type
+from yuxi.utils import logger
 from yuxi.weknora.client import WeKnoraKBClient
+from yuxi.weknora.errors import WeKnoraKBAuthError, WeKnoraKBError
 from yuxi.permissions import ResourcePermission
 
 _GLOBAL_READ = {
@@ -72,10 +74,21 @@ def config_from_weknora(kb_id: str, meta: dict[str, Any] | None = None) -> Knowl
 async def fetch_weknora_summaries() -> list[KnowledgeBaseSummary]:
     client = WeKnoraKBClient()
     items = await client.list_knowledge_bases()
+    try:
+        items = [*items, *await client.list_shared_knowledge_bases()]
+    except WeKnoraKBAuthError:
+        raise
+    except WeKnoraKBError as exc:
+        logger.warning(f"WeKnora shared knowledge base list skipped: {exc}")
     summaries: list[KnowledgeBaseSummary] = []
+    seen: set[str] = set()
     for item in items:
         if not isinstance(item, dict) or not item.get("id"):
             continue
+        kb_id = str(item.get("id") or "").strip()
+        if not kb_id or kb_id in seen:
+            continue
+        seen.add(kb_id)
         summaries.append(summary_from_weknora(item))
     return summaries
 

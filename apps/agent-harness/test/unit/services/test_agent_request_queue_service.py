@@ -135,7 +135,7 @@ async def session():
 async def _seed_thread(session, *, uid="user-1", msg_id=100, conv_id=10):
     from yuxi.storage.postgres.models_business import Conversation, Message
 
-    session.add(Conversation(id=conv_id, thread_id="t1", uid=uid, agent_id="main", status="active"))
+    session.add(Conversation(id=conv_id, thread_id="t1", uid=uid, agent_id="main", status="active", tenant_id=1))
     session.add(Message(id=msg_id, conversation_id=conv_id, role="user", content="hi"))
     await session.commit()
 
@@ -161,6 +161,7 @@ async def _seed_active_run(session, *, source="chat", status="running", run_type
             conversation_thread_id="t1",
             agent_slug="main",
             uid="user-1",
+            tenant_id=1,
             status=status,
             request_id="active-request",
             conversation_id=10,
@@ -442,7 +443,7 @@ async def test_intake_idempotent_rejects_scope_mismatch(session):
     from yuxi.storage.postgres.models_business import Conversation
 
     await _seed_thread(session)
-    session.add(Conversation(id=11, thread_id="t2", uid="user-1", agent_id="other", status="active"))
+    session.add(Conversation(id=11, thread_id="t2", uid="user-1", agent_id="other", status="active", tenant_id=1))
     await _create_request(session, request_id="req-scope")
 
     with pytest.raises(HTTPException) as exc_info:
@@ -586,7 +587,7 @@ async def test_mark_run_terminal_sets_delivery_status(session):
     from yuxi.storage.postgres.models_business import AgentRun, Conversation, Message
 
     run_id = str(_uuid.uuid4())
-    session.add(Conversation(id=10, thread_id="t1", uid="user-1", agent_id="main", status="active"))
+    session.add(Conversation(id=10, thread_id="t1", uid="user-1", agent_id="main", status="active", tenant_id=1))
     session.add(Message(id=100, conversation_id=10, role="user", content="hi", delivery_status="dispatched"))
     session.add(
         AgentRun(
@@ -594,6 +595,7 @@ async def test_mark_run_terminal_sets_delivery_status(session):
             conversation_thread_id="t1",
             agent_slug="main",
             uid="user-1",
+            tenant_id=1,
             request_id="req-terminal",
             input_payload={},
             status="running",
@@ -624,7 +626,7 @@ async def test_mark_run_terminal_failed_sets_delivery_status(session):
     from yuxi.storage.postgres.models_business import AgentRun, Conversation, Message
 
     run_id = str(_uuid.uuid4())
-    session.add(Conversation(id=11, thread_id="t2", uid="user-1", agent_id="main", status="active"))
+    session.add(Conversation(id=11, thread_id="t2", uid="user-1", agent_id="main", status="active", tenant_id=1))
     session.add(Message(id=200, conversation_id=11, role="user", content="hi", delivery_status="dispatched"))
     session.add(
         AgentRun(
@@ -632,6 +634,7 @@ async def test_mark_run_terminal_failed_sets_delivery_status(session):
             conversation_thread_id="t2",
             agent_slug="main",
             uid="user-1",
+            tenant_id=1,
             request_id="req-failed",
             input_payload={},
             status="running",
@@ -670,6 +673,7 @@ async def test_reject_with_active_run_persists_request(session):
             conversation_thread_id="t1",
             agent_slug="main",
             uid="user-1",
+            tenant_id=1,
             request_id="existing",
             input_payload={},
             status="running",
@@ -714,6 +718,7 @@ async def test_reject_idempotent(session):
             conversation_thread_id="t1",
             agent_slug="main",
             uid="user-1",
+            tenant_id=1,
             request_id="existing",
             input_payload={},
             status="running",
@@ -780,6 +785,7 @@ async def _seed_terminal_run(session, *, run_id: str, status: str, created_at, f
             conversation_thread_id="t1",
             agent_slug="main",
             uid="user-1",
+            tenant_id=1,
             request_id=f"request-{run_id}",
             input_payload={},
             status=status,

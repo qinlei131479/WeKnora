@@ -27,6 +27,7 @@ async def _seed_subagent_runs(db, *, relation_child_thread_id: str = "child-thre
         conversation_thread_id="child-thread",
         agent_slug="worker",
         uid="user-1",
+        tenant_id=1,
         status="completed",
         request_id="child-req",
         conversation_id=20,
@@ -37,11 +38,12 @@ async def _seed_subagent_runs(db, *, relation_child_thread_id: str = "child-thre
     )
     db.add_all(
         [
-            Conversation(id=10, thread_id="parent-thread", uid="user-1", agent_id="main", status="active"),
-            Conversation(id=20, thread_id="child-thread", uid="user-1", agent_id="worker", status="subagent"),
+            Conversation(id=10, thread_id="parent-thread", uid="user-1", agent_id="main", status="active", tenant_id=1),
+            Conversation(id=20, thread_id="child-thread", uid="user-1", agent_id="worker", status="subagent", tenant_id=1),
             SubagentThread(
                 id=77,
                 uid="user-1",
+                tenant_id=1,
                 parent_conversation_id=10,
                 child_conversation_id=20,
                 child_thread_id=relation_child_thread_id,
@@ -53,6 +55,7 @@ async def _seed_subagent_runs(db, *, relation_child_thread_id: str = "child-thre
                 conversation_thread_id="parent-thread",
                 agent_slug="main",
                 uid="user-1",
+                tenant_id=1,
                 status="completed",
                 request_id="parent-req",
                 conversation_id=10,

@@ -27,7 +27,7 @@ def auth_headers(*, accept: str = "application/json") -> dict[str, str]:
 def _headers(*, accept: str = "application/json") -> dict[str, str]:
     token = get_request_access_token()
     if not token:
-        raise WeKnoraKBAuthError("缺少用户 JWT，无法调用 WeKnora 知识库（请确认 HARNESS_RUN_TOKEN_STORE 已打开）")
+        raise WeKnoraKBAuthError("缺少用户 JWT，无法调用 WeKnora 知识库")
     headers = {"Authorization": f"Bearer {token}", "Accept": accept}
     tenant_id = current_tenant_id()
     if tenant_id is not None:
@@ -106,6 +106,20 @@ class WeKnoraKBClient:
     async def list_knowledge_bases(self) -> list[dict[str, Any]]:
         data = await self.request("GET", "/knowledge-bases")
         return data if isinstance(data, list) else []
+
+    async def list_shared_knowledge_bases(self) -> list[dict[str, Any]]:
+        data = await self.request("GET", "/shared-knowledge-bases")
+        items = data if isinstance(data, list) else []
+        unwrapped: list[dict[str, Any]] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            kb = item.get("knowledge_base")
+            if isinstance(kb, dict) and kb.get("id"):
+                unwrapped.append(kb)
+            elif item.get("id"):
+                unwrapped.append(item)
+        return unwrapped
 
     async def get_knowledge_base(self, kb_id: str) -> dict[str, Any]:
         data = await self.request("GET", f"/knowledge-bases/{kb_id}")

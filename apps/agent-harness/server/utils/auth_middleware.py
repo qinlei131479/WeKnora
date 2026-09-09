@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_business import User
 
-from yuxi.auth.flags import is_run_token_store_enabled
 from yuxi.auth.request_token import bind_request_access_token
 from yuxi.auth.token_status import is_weknora_access_token_active
 from yuxi.tenancy.context import TenantPrincipal, bind_tenant_principal
@@ -50,8 +49,7 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    if is_run_token_store_enabled():
-        bind_request_access_token(None)
+    bind_request_access_token(None)
 
     if authorization is None or not authorization.startswith("Bearer "):
         return _bind_principal(None, None)
@@ -67,8 +65,7 @@ async def get_current_user(
     except WeKnoraTokenError:
         raise credentials_exception
 
-    if is_run_token_store_enabled():
-        bind_request_access_token(token)
+    bind_request_access_token(token)
     try:
         tenant_id = await resolve_request_tenant_id(
             db,

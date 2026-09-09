@@ -8,7 +8,6 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from yuxi.tenancy.context import current_tenant_id
-from yuxi.tenancy.flags import is_tenant_scope_enabled
 from yuxi.storage.redis import get_async_redis_client
 from yuxi.utils.logging_config import logger
 
@@ -35,8 +34,6 @@ def _cache_lock_key(kb_id: str) -> str:
 
 
 def _read_cache_tenant_id() -> int | None:
-    if not is_tenant_scope_enabled():
-        return None
     return current_tenant_id()
 
 
@@ -79,7 +76,7 @@ async def get_cached_kb_config(kb_id: str) -> dict[str, Any] | None:
     """读取单个知识库缓存；Redis 不可用或缓存非法时返回未命中。"""
     try:
         tenant_id = _read_cache_tenant_id()
-        if is_tenant_scope_enabled() and tenant_id is None:
+        if tenant_id is None:
             return None
         redis = await get_async_redis_client()
         raw = await redis.get(_cache_key(kb_id, tenant_id))
@@ -89,10 +86,9 @@ async def get_cached_kb_config(kb_id: str) -> dict[str, Any] | None:
         if not isinstance(snapshot, dict) or snapshot.get("kb_id") != kb_id:
             logger.warning(f"Invalid knowledge base cache snapshot: kb_id={kb_id}")
             return None
-        if is_tenant_scope_enabled():
-            cached_tid = _normalize_tenant_id(snapshot.get("tenant_id"))
-            if cached_tid is None or cached_tid != tenant_id:
-                return None
+        cached_tid = _normalize_tenant_id(snapshot.get("tenant_id"))
+        if cached_tid is None or cached_tid != tenant_id:
+            return None
         return snapshot
     except Exception as exc:
         logger.warning(f"Failed to read knowledge base cache: kb_id={kb_id}: {exc}")
@@ -104,7 +100,7 @@ async def cache_kb_config(row: Any) -> None:
     try:
         redis = await get_async_redis_client()
         snapshot = serialize_kb_config(row)
-        tenant_id = snapshot["tenant_id"] if is_tenant_scope_enabled() else None
+        tenant_id = snapshot["tenant_id"]
         await redis.set(
             _cache_key(row.kb_id, tenant_id),
             json.dumps(snapshot, ensure_ascii=False),

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 import pytest_asyncio
+from fastapi import HTTPException
 from fastapi.routing import APIRoute
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -16,7 +17,7 @@ from server.routers.dashboard_router import (
 )
 from server.utils.auth_middleware import get_required_user
 from yuxi.tenancy.context import TenantPrincipal, bind_tenant_principal
-from yuxi.storage.postgres.models_business import Base, Conversation, Department, Message, ToolCall, User
+from yuxi.storage.postgres.models_business import Base, Conversation, Message, ToolCall, User
 from yuxi.utils.datetime_utils import utc_now_naive
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.unit]
@@ -29,42 +30,35 @@ async def dashboard_session():
         await conn.run_sync(Base.metadata.create_all)
     factory = async_sessionmaker(engine, expire_on_commit=False)
     async with factory() as db:
-        dept_a = Department(name="Dept A")
-        dept_b = Department(name="Dept B")
         superadmin = User(
             username="Super Admin",
             uid="superadmin",
             password_hash="$argon2id$placeholder",
             role="superadmin",
-            department=dept_a,
         )
         admin_a = User(
             username="Admin A",
             uid="admin_a",
             password_hash="$argon2id$placeholder",
             role="admin",
-            department=dept_a,
         )
         user_a = User(
             username="User A",
             uid="user_a",
             password_hash="$argon2id$placeholder",
             role="user",
-            department=dept_a,
         )
         admin_b = User(
             username="Admin B",
             uid="admin_b",
             password_hash="$argon2id$placeholder",
             role="admin",
-            department=dept_b,
         )
         user_b = User(
             username="User B",
             uid="user_b",
             password_hash="$argon2id$placeholder",
             role="user",
-            department=dept_b,
         )
         now = utc_now_naive()
         conversation_a = Conversation(
@@ -93,8 +87,6 @@ async def dashboard_session():
         tool_call_b = ToolCall(message=message_b, tool_name="dept_b_tool", status="success", created_at=now)
         db.add_all(
             [
-                dept_a,
-                dept_b,
                 superadmin,
                 admin_a,
                 user_a,
@@ -110,8 +102,6 @@ async def dashboard_session():
         )
         await db.commit()
         for item in [
-            dept_a,
-            dept_b,
             superadmin,
             admin_a,
             user_a,
@@ -139,40 +129,58 @@ async def test_dashboard_allows_department_admin(dashboard_session):
     assert user.uid == "admin_a"
 
 
-async def test_conversation_list_without_tenant_scope_sees_all(dashboard_session):
+async def test_conversation_list_without_tenant_is_empty(dashboard_session):
+    bind_tenant_principal(None)
     response = await get_all_conversations(db=dashboard_session["db"], current_user=dashboard_session["superadmin"])
 
-    assert {item["thread_id"] for item in response} == {"thread-a", "thread-b"}
+    assert response == []
 
 
-async def test_conversation_detail_without_tenant_scope_can_view_other(dashboard_session):
-    response = await get_conversation_detail(
-        "thread-b",
-        db=dashboard_session["db"],
-        current_user=dashboard_session["superadmin"],
-    )
+async def test_conversation_detail_without_tenant_is_hidden(dashboard_session):
+    bind_tenant_principal(None)
+    with pytest.raises(HTTPException) as exc:
+        await get_conversation_detail(
+            "thread-b",
+            db=dashboard_session["db"],
+            current_user=dashboard_session["superadmin"],
+        )
 
-    assert response["thread_id"] == "thread-b"
+    assert exc.value.status_code == 404
 
 
-async def test_user_activity_stats_without_tenant_scope_include_all(dashboard_session):
+async def test_user_activity_stats_without_tenant_are_zero(dashboard_session):
+    bind_tenant_principal(None)
     stats = await get_user_activity_stats(db=dashboard_session["db"], current_user=dashboard_session["superadmin"])
 
-    assert stats.total_users == 5
-    assert stats.active_users_24h == 2
-    assert stats.active_users_30d == 2
+    assert stats.total_users == 0
+    assert stats.active_users_24h == 0
+    assert stats.active_users_30d == 0
 
 
-async def test_tool_stats_without_tenant_scope_include_all(dashboard_session):
+async def test_tool_stats_without_tenant_are_empty(dashboard_session):
+    bind_tenant_principal(None)
     stats = await get_tool_call_stats(db=dashboard_session["db"], current_user=dashboard_session["superadmin"])
 
-    assert stats.total_calls == 2
-    assert stats.successful_calls == 2
-    assert {tool["tool_name"] for tool in stats.most_used_tools} == {"dept_a_tool", "dept_b_tool"}
+    assert stats.total_calls == 0
+    assert stats.successful_calls == 0
+    assert stats.most_used_tools == []
 
 
 async def test_dashboard_filters_to_token_tenant(dashboard_session, monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("HARNESS_TENANT_SCOPE", "true")
+    from yuxi.dashboard.stats import WeKnoraOverview
+
+    async def fake_overview(_db):
+        return WeKnoraOverview(users=1, sessions=1, messages=1, agents=1)
+
+    async def fake_active(_db, *, since, until=None):
+        return 1
+
+    async def fake_daily(_db, *, days=7):
+        return [{"date": "2026-09-01", "active_users": 1}]
+
+    monkeypatch.setattr("server.routers.dashboard_router.fetch_weknora_overview", fake_overview)
+    monkeypatch.setattr("server.routers.dashboard_router.count_weknora_active_users", fake_active)
+    monkeypatch.setattr("server.routers.dashboard_router.fetch_weknora_daily_active_users", fake_daily)
     bind_tenant_principal(TenantPrincipal(uid="superadmin", tenant_id=10000, role="superadmin"))
     try:
         conversations = await get_all_conversations(
@@ -195,8 +203,6 @@ async def test_dashboard_filters_to_token_tenant(dashboard_session, monkeypatch:
 async def test_p6_dashboard_split_does_not_count_h_users(dashboard_session, monkeypatch: pytest.MonkeyPatch):
     from yuxi.dashboard.stats import WeKnoraKnowledgeStats, WeKnoraOverview
 
-    monkeypatch.setenv("HARNESS_WEKNORA_DASHBOARD", "true")
-    monkeypatch.setenv("HARNESS_TENANT_SCOPE", "true")
     bind_tenant_principal(TenantPrincipal(uid="superadmin", tenant_id=10000, role="superadmin"))
 
     async def fake_overview(_db):

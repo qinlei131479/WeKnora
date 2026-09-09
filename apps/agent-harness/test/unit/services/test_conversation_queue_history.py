@@ -24,13 +24,14 @@ async def session():
 
 async def test_queue_history_keeps_each_request_with_its_reply(session):
     started_at = datetime(2026, 7, 12, 9, 0, 0)
-    session.add(Conversation(id=1, thread_id="thread-1", uid="user-1", agent_id="main", status="active"))
+    session.add(Conversation(id=1, thread_id="thread-1", uid="user-1", agent_id="main", status="active", tenant_id=1))
     session.add(
         AgentRun(
             id="run-a",
             conversation_thread_id="thread-1",
             agent_slug="main",
             uid="user-1",
+            tenant_id=1,
             request_id="request-a",
             conversation_id=1,
             input_payload={},
@@ -88,6 +89,7 @@ async def test_queue_history_keeps_each_request_with_its_reply(session):
             conversation_thread_id="thread-1",
             agent_slug="main",
             uid="user-1",
+            tenant_id=1,
             request_id="request-b",
             conversation_id=1,
             input_payload={},

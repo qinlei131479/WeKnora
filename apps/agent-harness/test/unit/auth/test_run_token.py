@@ -77,8 +77,6 @@ async def test_validate_stored_run_token_missing_is_none(monkeypatch: pytest.Mon
 @pytest.mark.asyncio
 async def test_validate_stored_run_token_revoked(monkeypatch: pytest.MonkeyPatch):
     token = _access_token(monkeypatch)
-    monkeypatch.setenv("HARNESS_RUN_TOKEN_STORE", "1")
-    monkeypatch.setenv("HARNESS_CHECK_AUTH_TOKENS", "1")
 
     async def fake_load(run_id: str):
         return token
@@ -100,10 +98,9 @@ async def test_validate_stored_run_token_revoked(monkeypatch: pytest.MonkeyPatch
 
 
 @pytest.mark.asyncio
-async def test_auth_token_check_skips_db_when_flag_off(monkeypatch: pytest.MonkeyPatch):
+async def test_auth_token_check_skips_db_when_session_missing(monkeypatch: pytest.MonkeyPatch):
     token = _access_token(monkeypatch)
-    monkeypatch.delenv("HARNESS_CHECK_AUTH_TOKENS", raising=False)
-    assert await is_weknora_access_token_active(token, db=SimpleNamespace()) is True
+    assert await is_weknora_access_token_active(token, db=None) is True
 
 
 class _FakeRedis:
@@ -139,7 +136,7 @@ async def test_run_token_store_roundtrip_and_ttl(monkeypatch: pytest.MonkeyPatch
 
 
 @pytest.mark.asyncio
-async def test_enqueue_saves_token_only_when_flag_on(monkeypatch: pytest.MonkeyPatch):
+async def test_enqueue_saves_token_when_request_has_jwt(monkeypatch: pytest.MonkeyPatch):
     saved: list[tuple[str, str]] = []
 
     class Queue:
@@ -156,11 +153,38 @@ async def test_enqueue_saves_token_only_when_flag_on(monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(agent_run_service, "get_arq_pool", fake_pool)
     monkeypatch.setattr("yuxi.auth.run_token_store.save_run_access_token", fake_save)
     bind_request_access_token("jwt-value")
-    monkeypatch.delenv("HARNESS_RUN_TOKEN_STORE", raising=False)
-    await agent_run_service.enqueue_agent_run("run-off")
-    assert saved == []
+    await agent_run_service.enqueue_agent_run("run-1")
+    assert saved == [("run-1", "jwt-value")]
     assert get_request_access_token() == "jwt-value"
 
-    monkeypatch.setenv("HARNESS_RUN_TOKEN_STORE", "1")
-    await agent_run_service.enqueue_agent_run("run-on")
-    assert saved == [("run-on", "jwt-value")]
+
+@pytest.mark.asyncio
+async def test_http_request_binds_jwt(monkeypatch: pytest.MonkeyPatch):
+    from server.utils.auth_middleware import get_current_user
+
+    bind_request_access_token(None)
+    monkeypatch.setattr(
+        "server.utils.auth_middleware.verify_weknora_access_token",
+        lambda token: {"user_id": "u1", "tenant_id": 1},
+    )
+
+    async def fake_tenant(*_args, **_kwargs):
+        return 1
+
+    async def fake_active(*_args, **_kwargs):
+        return True
+
+    async def fake_user(*_args, **_kwargs):
+        return SimpleNamespace(uid="u1", role="user", id="u1")
+
+    monkeypatch.setattr("server.utils.auth_middleware.resolve_request_tenant_id", fake_tenant)
+    monkeypatch.setattr("server.utils.auth_middleware.is_weknora_access_token_active", fake_active)
+    monkeypatch.setattr("server.utils.auth_middleware.load_user_from_claims", fake_user)
+
+    user = await get_current_user(
+        authorization="Bearer user-jwt-token",
+        x_tenant_id=None,
+        db=object(),
+    )
+    assert user.uid == "u1"
+    assert get_request_access_token() == "user-jwt-token"

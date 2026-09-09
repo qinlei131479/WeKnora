@@ -167,7 +167,10 @@ export function useAgentStreamHandler({
 
       case 'error':
         streamSmoother?.flushThread(threadId)
-        handleChatError({ message: chunkMessage }, 'stream')
+        handleChatError(
+          { message: chunk.error_message || chunkMessage || chunk.error_type },
+          'stream'
+        )
         // Stop the loading indicator
         if (threadState) {
           threadState.isStreaming = false

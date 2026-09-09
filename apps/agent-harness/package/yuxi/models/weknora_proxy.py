@@ -232,7 +232,7 @@ def request_access_token() -> str:
     auth = headers.get("Authorization") or ""
     token = auth.removeprefix("Bearer ").strip()
     if not token:
-        raise WeKnoraKBAuthError("缺少用户 JWT，无法调用 WeKnora 模型（请确认 HARNESS_RUN_TOKEN_STORE 已打开）")
+        raise WeKnoraKBAuthError("缺少用户 JWT，无法调用 WeKnora 模型")
     return token
 
 

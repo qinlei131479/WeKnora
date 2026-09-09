@@ -24,15 +24,11 @@ def get_tenant_principal() -> TenantPrincipal | None:
 
 
 class TenantScopeError(ValueError):
-    """租户开关已开，但当前上下文没有可写入的 tenant_id。"""
+    """当前上下文没有可写入的 tenant_id。"""
 
 
 def current_tenant_id() -> int | None:
-    """当前租户。开关关闭或无上下文时返回 None（查询应 fail-closed）。"""
-    from yuxi.tenancy.flags import is_tenant_scope_enabled
-
-    if not is_tenant_scope_enabled():
-        return None
+    """当前租户。无上下文时返回 None（查询应 fail-closed）。"""
     principal = get_tenant_principal()
     if principal is None:
         return None
@@ -41,10 +37,6 @@ def current_tenant_id() -> int | None:
 
 def stamp_tenant_id() -> int | None:
     """写入新行用的 tenant_id。超管也盖当前 token 空间，不写空。"""
-    from yuxi.tenancy.flags import is_tenant_scope_enabled
-
-    if not is_tenant_scope_enabled():
-        return None
     principal = get_tenant_principal()
     if principal is None or principal.tenant_id is None:
         raise TenantScopeError("写入需要当前空间 tenant_id")

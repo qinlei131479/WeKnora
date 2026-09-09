@@ -50,7 +50,8 @@ def test_normalize_title_trims_spaces():
 @pytest.mark.asyncio
 async def test_list_conversations_excludes_invocation_sources(conversation_session):
     now = utc_now_naive()
-    normal = Conversation(
+    normal =     Conversation(
+        tenant_id=1,
         thread_id="thread-normal",
         uid="user-a",
         agent_id="agent-a",
@@ -60,7 +61,8 @@ async def test_list_conversations_excludes_invocation_sources(conversation_sessi
         updated_at=now,
         extra_metadata={},
     )
-    agent_call = Conversation(
+    agent_call =     Conversation(
+        tenant_id=1,
         thread_id="thread-call",
         uid="user-a",
         agent_id="agent-a",
@@ -71,7 +73,8 @@ async def test_list_conversations_excludes_invocation_sources(conversation_sessi
         updated_at=now + timedelta(minutes=2),
         extra_metadata={"source": "agent_call"},
     )
-    agent_eval = Conversation(
+    agent_eval =     Conversation(
+        tenant_id=1,
         thread_id="thread-eval",
         uid="user-a",
         agent_id="agent-a",
@@ -98,7 +101,8 @@ async def test_list_conversations_excludes_invocation_sources(conversation_sessi
 @pytest.mark.asyncio
 async def test_search_conversations_by_message_content_filters_user_status_and_tool_messages(conversation_session):
     now = utc_now_naive()
-    active = Conversation(
+    active =     Conversation(
+        tenant_id=1,
         thread_id="thread-active",
         uid="user-a",
         agent_id="agent-a",
@@ -107,7 +111,8 @@ async def test_search_conversations_by_message_content_filters_user_status_and_t
         created_at=now,
         updated_at=now,
     )
-    deleted = Conversation(
+    deleted =     Conversation(
+        tenant_id=1,
         thread_id="thread-deleted",
         uid="user-a",
         agent_id="agent-a",
@@ -116,7 +121,8 @@ async def test_search_conversations_by_message_content_filters_user_status_and_t
         created_at=now,
         updated_at=now,
     )
-    other_user = Conversation(
+    other_user =     Conversation(
+        tenant_id=1,
         thread_id="thread-other-user",
         uid="user-b",
         agent_id="agent-a",
@@ -125,7 +131,8 @@ async def test_search_conversations_by_message_content_filters_user_status_and_t
         created_at=now,
         updated_at=now,
     )
-    tool_only = Conversation(
+    tool_only =     Conversation(
+        tenant_id=1,
         thread_id="thread-tool-only",
         uid="user-a",
         agent_id="agent-a",
@@ -188,7 +195,8 @@ async def test_search_conversations_by_message_content_filters_user_status_and_t
 @pytest.mark.asyncio
 async def test_search_conversations_by_message_content_excludes_invocation_sources(conversation_session):
     now = utc_now_naive()
-    normal = Conversation(
+    normal =     Conversation(
+        tenant_id=1,
         thread_id="thread-normal",
         uid="user-a",
         agent_id="agent-a",
@@ -198,7 +206,8 @@ async def test_search_conversations_by_message_content_excludes_invocation_sourc
         updated_at=now,
         extra_metadata={},
     )
-    agent_call = Conversation(
+    agent_call =     Conversation(
+        tenant_id=1,
         thread_id="thread-call",
         uid="user-a",
         agent_id="agent-a",
@@ -208,7 +217,8 @@ async def test_search_conversations_by_message_content_excludes_invocation_sourc
         updated_at=now + timedelta(minutes=2),
         extra_metadata={"source": "agent_call"},
     )
-    agent_eval = Conversation(
+    agent_eval =     Conversation(
+        tenant_id=1,
         thread_id="thread-eval",
         uid="user-a",
         agent_id="agent-a",
@@ -258,7 +268,8 @@ async def test_search_conversations_by_message_content_excludes_invocation_sourc
 async def test_search_conversations_by_message_content_filters_agent_and_paginates(conversation_session):
     now = utc_now_naive()
     old = now - timedelta(days=1)
-    first = Conversation(
+    first =     Conversation(
+        tenant_id=1,
         thread_id="thread-first",
         uid="user-a",
         agent_id="agent-a",
@@ -267,7 +278,8 @@ async def test_search_conversations_by_message_content_filters_agent_and_paginat
         created_at=old,
         updated_at=old,
     )
-    second = Conversation(
+    second =     Conversation(
+        tenant_id=1,
         thread_id="thread-second",
         uid="user-a",
         agent_id="agent-a",
@@ -276,7 +288,8 @@ async def test_search_conversations_by_message_content_filters_agent_and_paginat
         created_at=now,
         updated_at=now,
     )
-    other_agent = Conversation(
+    other_agent =     Conversation(
+        tenant_id=1,
         thread_id="thread-other-agent",
         uid="user-a",
         agent_id="agent-b",

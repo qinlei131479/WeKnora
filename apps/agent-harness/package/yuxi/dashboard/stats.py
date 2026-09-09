@@ -10,7 +10,6 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from yuxi.tenancy.context import current_tenant_id
-from yuxi.tenancy.flags import is_tenant_scope_enabled
 from yuxi.utils.datetime_utils import utc_now
 
 KB_TYPE_LABELS = {
@@ -83,9 +82,7 @@ def weknora_user_total(*, weknora_users: int, h_users: int = 0) -> int:
 
 
 def dashboard_tenant_id() -> int | None:
-    """WeKnora 表必须带当前空间。无 tenant（含开关关着）则不算，避免全平台 COUNT。"""
-    if not is_tenant_scope_enabled():
-        return None
+    """WeKnora 表必须带当前空间。无 tenant 则不算，避免全平台 COUNT。"""
     return current_tenant_id()
 
 

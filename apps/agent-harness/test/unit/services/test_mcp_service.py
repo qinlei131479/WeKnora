@@ -422,7 +422,6 @@ async def test_get_mcp_server_filters_to_token_tenant(mcp_session, monkeypatch: 
     )
     await mcp_session.commit()
 
-    monkeypatch.setenv("HARNESS_TENANT_SCOPE", "true")
     bind_tenant_principal(TenantPrincipal(uid="user-a", tenant_id=10000, role="user"))
     try:
         visible = await mcp_service.get_all_mcp_servers(mcp_session)

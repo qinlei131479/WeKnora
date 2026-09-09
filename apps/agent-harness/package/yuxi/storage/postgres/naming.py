@@ -7,10 +7,9 @@ applied at import time for ORM models and at execute time for raw SQL.
 
 from __future__ import annotations
 
-import os
 import re
 
-TABLE_PREFIX = os.getenv("HARNESS_TABLE_PREFIX", "h_")
+TABLE_PREFIX = "h_"
 
 # LangGraph AsyncPostgresSaver tables. Names are hardcoded in the library
 # (langgraph-checkpoint-postgres) and must stay unprefixed. WeKnora has no

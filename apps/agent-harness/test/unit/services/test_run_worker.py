@@ -85,6 +85,16 @@ def _patch_common(monkeypatch: pytest.MonkeyPatch, run_obj: SimpleNamespace):
     monkeypatch.setattr(run_worker.RunContext, "close", fake_noop)
     monkeypatch.setattr(run_worker.RunContext, "is_cancelled", fake_not_cancelled)
 
+    async def fake_validate_token(run_id: str, db=None):
+        del run_id, db
+        return "worker-jwt"
+
+    async def fake_delete_token(run_id: str):
+        del run_id
+
+    monkeypatch.setattr("yuxi.auth.run_token_store.validate_stored_run_token", fake_validate_token)
+    monkeypatch.setattr("yuxi.auth.run_token_store.delete_run_access_token", fake_delete_token)
+
 
 @pytest.mark.asyncio
 async def test_process_agent_run_restores_invocation_meta(monkeypatch: pytest.MonkeyPatch):
@@ -546,10 +556,9 @@ async def test_worker_startup_ensures_builtin_mcp_servers(monkeypatch: pytest.Mo
 
 
 @pytest.mark.asyncio
-async def test_process_agent_run_fails_on_expired_token_when_flag_on(monkeypatch: pytest.MonkeyPatch):
+async def test_process_agent_run_fails_on_expired_token(monkeypatch: pytest.MonkeyPatch):
     from yuxi.utils.weknora_auth import WeKnoraTokenError
 
-    monkeypatch.setenv("HARNESS_RUN_TOKEN_STORE", "1")
     run_obj = _build_run()
     _patch_common(monkeypatch, run_obj)
 
@@ -598,12 +607,11 @@ async def test_process_agent_run_fails_on_expired_token_when_flag_on(monkeypatch
 
 
 @pytest.mark.asyncio
-async def test_process_agent_run_allows_missing_token_when_flag_on(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setenv("HARNESS_RUN_TOKEN_STORE", "1")
+async def test_process_agent_run_fails_on_missing_token(monkeypatch: pytest.MonkeyPatch):
     run_obj = _build_run()
     _patch_common(monkeypatch, run_obj)
 
-    streamed = []
+    terminal_errors: list[dict] = []
     deleted: list[str] = []
 
     async def fake_validate(run_id: str, db=None):
@@ -613,24 +621,34 @@ async def test_process_agent_run_allows_missing_token_when_flag_on(monkeypatch: 
     async def fake_delete(run_id: str):
         deleted.append(run_id)
 
-    async def fake_append_event(run_id: str, event_type: str, payload: dict, **kwargs):
-        del run_id, event_type, payload, kwargs
-
     async def fake_mark_terminal(run_id: str, status: str, error_type=None, error_message=None):
-        del run_id, error_type, error_message
+        terminal_errors.append(
+            {
+                "run_id": run_id,
+                "status": status,
+                "error_type": error_type,
+                "error_message": error_message,
+            }
+        )
         return run_worker.TerminalTransition(status=status, changed=True)
 
-    def fake_stream_agent_chat(**kwargs):
-        streamed.append(True)
-        return _BytesAsyncIter([b'{"status":"finished","request_id":"req-1","thread_id":"thread-1"}\n'])
+    def fail_stream_agent_chat(**kwargs):
+        del kwargs
+        raise AssertionError("missing token must not enter chat stream")
 
     monkeypatch.setattr("yuxi.auth.run_token_store.validate_stored_run_token", fake_validate)
     monkeypatch.setattr("yuxi.auth.run_token_store.delete_run_access_token", fake_delete)
-    monkeypatch.setattr(run_worker, "append_run_event", fake_append_event)
     monkeypatch.setattr(run_worker, "mark_run_terminal", fake_mark_terminal)
-    monkeypatch.setattr(run_worker, "stream_agent_chat", fake_stream_agent_chat)
+    monkeypatch.setattr(run_worker, "stream_agent_chat", fail_stream_agent_chat)
 
     await run_worker.process_agent_run({"job_try": 1}, "run-1")
 
-    assert streamed == [True]
+    assert terminal_errors == [
+        {
+            "run_id": "run-1",
+            "status": "failed",
+            "error_type": "weknora_token_missing",
+            "error_message": "缺少用户 JWT，无法调用 WeKnora 知识库（run token 未写入 Redis）",
+        }
+    ]
     assert deleted == ["run-1"]

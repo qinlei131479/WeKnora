@@ -675,7 +675,7 @@ async def test_skill_upload_prepare_confirm_rewrites_conflicting_name(tmp_path: 
     assert results[0]["slug"] == "demo-v2"
     assert results[0]["success"] is True
     assert FakeRepo.created_item.slug == "demo-v2"
-    skill_md = (tmp_path / "skills" / "demo-v2" / "SKILL.md").read_text(encoding="utf-8")
+    skill_md = (tmp_path / "skills" / "t1" / "demo-v2" / "SKILL.md").read_text(encoding="utf-8")
     assert "name: demo-v2" in skill_md
 
 
@@ -725,7 +725,7 @@ async def test_skill_zip_import_uses_skill_md_name_not_zip_or_root_dir(tmp_path:
     assert results[0]["success"] is True
     assert results[0]["slug"] == "valid-skill"
     assert FakeRepo.created_item.slug == "valid-skill"
-    assert (tmp_path / "skills" / "valid-skill" / "SKILL.md").exists()
+    assert (tmp_path / "skills" / "t1" / "valid-skill" / "SKILL.md").exists()
 
 
 @pytest.mark.asyncio
@@ -873,7 +873,7 @@ async def test_skill_zip_import_rewrites_conflicting_slug_not_display_name(
     assert results[0]["slug"] == "word-docx-v2"
     assert results[0]["success"] is True
     assert FakeRepo.created_item.name == "Word / DOCX"
-    skill_md = (tmp_path / "skills" / "word-docx-v2" / "SKILL.md").read_text(encoding="utf-8")
+    skill_md = (tmp_path / "skills" / "t1" / "word-docx-v2" / "SKILL.md").read_text(encoding="utf-8")
     assert "name: Word / DOCX" in skill_md
     assert "slug: word-docx-v2" in skill_md
 
@@ -916,7 +916,7 @@ async def test_skill_md_prepare_confirm_creates_single_file_skill(tmp_path: Path
     assert results[0]["slug"] == "demo"
     assert results[0]["success"] is True
     assert FakeRepo.created_item.name == "demo"
-    assert (tmp_path / "skills" / "demo" / "SKILL.md").read_text(encoding="utf-8") == skill_md
+    assert (tmp_path / "skills" / "t1" / "demo" / "SKILL.md").read_text(encoding="utf-8") == skill_md
 
 
 @pytest.mark.asyncio

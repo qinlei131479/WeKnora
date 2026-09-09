@@ -2,31 +2,12 @@
 
 from __future__ import annotations
 
-import json
-import os
-
 from yuxi.weknora.ids import is_weknora_kb_id
 from yuxi.utils import logger
 
 
 def load_kb_id_map() -> dict[str, str]:
-    raw = os.environ.get("HARNESS_WEKNORA_KB_MAP", "").strip()
-    if not raw:
-        return {}
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError:
-        logger.warning("HARNESS_WEKNORA_KB_MAP 不是合法 JSON，已忽略")
-        return {}
-    if not isinstance(data, dict):
-        return {}
-    mapped: dict[str, str] = {}
-    for key, value in data.items():
-        src = str(key or "").strip()
-        dst = str(value or "").strip()
-        if src and dst:
-            mapped[src] = dst
-    return mapped
+    return {}
 
 
 def remap_knowledge_ids(ids: list[str] | None) -> tuple[list[str], list[str]]:
@@ -51,8 +32,7 @@ def remap_knowledge_ids(ids: list[str] | None) -> tuple[list[str], list[str]]:
         remapped.append(value)
     if unmapped:
         logger.warning(
-            "旧智能体知识库未映射到 WeKnora UUID，仍按 yuxi 原生 ID 保留: %s "
-            "（配置 HARNESS_WEKNORA_KB_MAP）",
+            "旧智能体知识库未映射到 WeKnora UUID，仍按 yuxi 原生 ID 保留: %s",
             unmapped,
         )
     return remapped, unmapped

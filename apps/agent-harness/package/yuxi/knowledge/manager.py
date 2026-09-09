@@ -416,9 +416,12 @@ class KnowledgeBaseManager:
 
         # 智能体配置 / list_kbs 只暴露 WeKnora 知识库。
         try:
+            from yuxi.weknora.errors import WeKnoraKBAuthError
             from yuxi.weknora.virtual import fetch_weknora_summaries
 
             all_databases = await fetch_weknora_summaries()
+        except WeKnoraKBAuthError:
+            raise
         except Exception as exc:
             logger.warning(f"WeKnora knowledge base list skipped: {exc}")
             all_databases = []
