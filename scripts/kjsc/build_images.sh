@@ -11,9 +11,9 @@ RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m' # 无颜色
 
-# 获取项目根目录（脚本所在目录的上一级）
+# 获取项目根目录（scripts/kjsc 的上两级）
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
 
 FRONTEND_ROOT="$PROJECT_ROOT/apps/frontend"
 IMAGE_PREFIX="kjsc/agent-middle"
@@ -34,6 +34,8 @@ show_help() {
     echo "  -f, --frontend 仅构建前端镜像"
     echo "  -s, --sandbox  仅构建沙箱镜像"
     echo "      --docs     仅构建文档站镜像 (VitePress → nginx)"
+    echo "      --harness  仅构建 Agent-Harness 镜像"
+    echo "      --sandbox-provisioner  仅构建 sandbox-provisioner 镜像"
     echo "  -c, --clean    清理所有本地 kjsc/agent-middle 镜像"
     echo "  -v, --version  显示版本信息"
     exit 0
@@ -224,13 +226,17 @@ build_docreader_image() {
     fi
 }
 
-# 构建前端镜像（源码与 Docker context 均为 apps/frontend）
+# 构建前端镜像（先在 apps/frontend 产出 dist，再以仓库根为 context）
 build_frontend_image() {
     log_info "构建前端镜像 (${IMAGE_PREFIX}-ui)..."
     log_info "前端源码目录: $FRONTEND_ROOT"
 
     if [ ! -d "$FRONTEND_ROOT" ]; then
         log_error "前端目录不存在: $FRONTEND_ROOT"
+        return 1
+    fi
+    if [ ! -f "$PROJECT_ROOT/docker/Dockerfile.frontend" ]; then
+        log_error "缺少 docker/Dockerfile.frontend"
         return 1
     fi
 
@@ -248,9 +254,9 @@ build_frontend_image() {
     cd "$PROJECT_ROOT"
     docker build \
         --platform $PLATFORM \
-        -f "$FRONTEND_ROOT/Dockerfile" \
+        -f docker/Dockerfile.frontend \
         -t ${IMAGE_PREFIX}-ui:latest \
-        "$FRONTEND_ROOT"
+        "$PROJECT_ROOT"
 
     if [ $? -eq 0 ]; then
         log_success "前端镜像构建成功: ${IMAGE_PREFIX}-ui:latest"
@@ -287,8 +293,8 @@ build_docs_image() {
     log_info "构建文档站镜像 (${IMAGE_PREFIX}-docs)..."
 
     local site_root="$PROJECT_ROOT/apps/docs"
-    if [ ! -f "$site_root/package.json" ] || [ ! -f "$site_root/Dockerfile" ]; then
-        log_error "docs 站点不完整: $site_root"
+    if [ ! -f "$site_root/package.json" ] || [ ! -f "$PROJECT_ROOT/docker/Dockerfile.docs" ]; then
+        log_error "docs 站点不完整: 需要 $site_root/package.json 与 docker/Dockerfile.docs"
         return 1
     fi
     if [ ! -f "$PROJECT_ROOT/VERSION" ]; then
@@ -299,7 +305,7 @@ build_docs_image() {
     cd "$PROJECT_ROOT"
     docker build \
         --platform $PLATFORM \
-        -f "$site_root/Dockerfile" \
+        -f docker/Dockerfile.docs \
         -t ${IMAGE_PREFIX}-docs:latest \
         "$PROJECT_ROOT"
 
@@ -310,6 +316,68 @@ build_docs_image() {
         log_error "文档站镜像构建失败"
         return 1
     fi
+}
+
+harness_image_tag() {
+    load_env_var AGENT_HARNESS_VERSION
+    echo "${AGENT_HARNESS_VERSION:-$VERSION}"
+}
+
+# 构建 Agent-Harness（不并入 -a；不含 sandbox-provisioner）
+build_harness_image() {
+    log_info "构建 Agent-Harness 镜像 (${IMAGE_PREFIX}-harness)..."
+
+    cd "$PROJECT_ROOT"
+    get_version_info
+    local harness_tag
+    harness_tag="$(harness_image_tag)"
+
+    if [ ! -f "$PROJECT_ROOT/docker/Dockerfile.agent-harness" ]; then
+        log_error "缺少 docker/Dockerfile.agent-harness"
+        return 1
+    fi
+    if [ ! -f "$PROJECT_ROOT/scripts/kjsc/docker-env.agent-harness.sh" ]; then
+        log_error "缺少 scripts/kjsc/docker-env.agent-harness.sh"
+        return 1
+    fi
+
+    docker build \
+        --platform $PLATFORM \
+        -f docker/Dockerfile.agent-harness \
+        -t ${IMAGE_PREFIX}-harness:${harness_tag} \
+        -t ${IMAGE_PREFIX}-harness:latest \
+        "$PROJECT_ROOT"
+
+    if [ $? -eq 0 ]; then
+        log_success "Agent-Harness 镜像构建成功: ${IMAGE_PREFIX}-harness:${harness_tag}"
+        return 0
+    fi
+    log_error "Agent-Harness 镜像构建失败"
+    return 1
+}
+
+# 构建 sandbox-provisioner（独立于 harness）
+build_sandbox_provisioner_image() {
+    log_info "构建 sandbox-provisioner 镜像..."
+
+    cd "$PROJECT_ROOT"
+    get_version_info
+    local harness_tag
+    harness_tag="$(harness_image_tag)"
+
+    docker build \
+        --platform $PLATFORM \
+        -f docker/sandbox_provisioner/Dockerfile \
+        -t sandbox-provisioner:${harness_tag} \
+        -t sandbox-provisioner:latest \
+        "$PROJECT_ROOT/docker/sandbox_provisioner"
+
+    if [ $? -eq 0 ]; then
+        log_success "sandbox-provisioner 镜像构建成功: sandbox-provisioner:${harness_tag}"
+        return 0
+    fi
+    log_error "sandbox-provisioner 镜像构建失败"
+    return 1
 }
 
 # 构建所有镜像
@@ -408,6 +476,8 @@ BUILD_DOCREADER=false
 BUILD_FRONTEND=false
 BUILD_SANDBOX=false
 BUILD_DOCS=false
+BUILD_HARNESS=false
+BUILD_SANDBOX_PROVISIONER=false
 CLEAN_IMAGES=false
 
 if [ $# -eq 0 ]; then
@@ -429,6 +499,10 @@ while [ "$1" != "" ]; do
         -s | --sandbox )    BUILD_SANDBOX=true
                             ;;
         --docs )            BUILD_DOCS=true
+                            ;;
+        --harness )         BUILD_HARNESS=true
+                            ;;
+        --sandbox-provisioner ) BUILD_SANDBOX_PROVISIONER=true
                             ;;
         -c | --clean )      CLEAN_IMAGES=true
                             ;;
@@ -480,6 +554,16 @@ fi
 
 if [ "$BUILD_DOCS" = true ]; then
     build_docs_image
+    exit $?
+fi
+
+if [ "$BUILD_HARNESS" = true ]; then
+    build_harness_image
+    exit $?
+fi
+
+if [ "$BUILD_SANDBOX_PROVISIONER" = true ]; then
+    build_sandbox_provisioner_image
     exit $?
 fi
 

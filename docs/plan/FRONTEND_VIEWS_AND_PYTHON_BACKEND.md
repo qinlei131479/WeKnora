@@ -65,7 +65,7 @@ F0 → F1 → … → F9 验收通过
 | --- | --- | --- |
 | WeKnora / app-core | `make dev-kjsc-app` | `:9980` |
 | 前端 | `make dev-kjsc-frontend` | `:9988` |
-| harness API/Worker | `make dev-kjsc-harness` | `:5050`（经前端 `/harness-api`） |
+| harness API/Worker | `make dev-kjsc-harness` | `:9990`（经前端 `/harness-api`） |
 | 基础设施 | `make dev-kjsc-infra` | postgres / redis / minio |
 
 库：`agent-middle`。身份已按 P1/P7 走 WeKnora `users` + 同一套 JWT。
@@ -168,7 +168,7 @@ F0 → F1 → … → F9 验收通过
 
 - [ ] **Step 1:** 建 `src/api/runtime/prefix.ts`，导出 `HARNESS_API_PREFIX = '/harness-api'`，与 `src/harness/apis/prefix.js` 一致。
 - [ ] **Step 2:** 把 `dashboard_api.js` 的请求函数原样迁到 `src/api/runtime/dashboard.ts`（仅加类型，不改 path）。
-- [ ] **Step 3:** 确认 `vite.config.ts` 里 `/harness-api` proxy 仍指向 `VITE_HARNESS_PROXY_TARGET`（默认 `http://127.0.0.1:5050`），本批不改 proxy。
+- [ ] **Step 3:** 确认 `vite.config.ts` 里 `/harness-api` proxy 仍指向 `VITE_HARNESS_PROXY_TARGET`（默认 `http://127.0.0.1:9990`），本批不改 proxy。
 - [ ] **Step 4:** 在 `router/index.ts` 顶部或 harness 子树处加约定注释：阶段一新页面禁止再挂 `@harness/views`。
 - [ ] **Step 5:** 本地 `cd apps/frontend && npm run type-check`（或项目惯用的 `vue-tsc`）通过。
 - [ ] **Step 6:** 提交：`chore(frontend): add runtime API home without changing harness-api URLs`
@@ -414,7 +414,7 @@ F3、F6–F8 一律遵守 §0.7：先 move 再改 TDesign、同批删旧入口�
 
 ## 阶段二 · 后端（前端冻结）
 
-原则：**契约不变，实现搬家。** 阶段一结束时前端既打 `/api/v1/*` 也打 `/harness-api/api/*`。阶段二把 Go 的 `/api/v1` 模块在 Python 实现后，用 nginx（`apps/frontend/nginx.conf`）或网关把对应 location 切到 agent-harness；**不改前端。**
+原则：**契约不变，实现搬家。** 阶段一结束时前端既打 `/api/v1/*` 也打 `/harness-api/api/*`。阶段二把 Go 的 `/api/v1` 模块在 Python 实现后，用 nginx（`docker/config/nginx.frontend.conf`）或网关把对应 location 切到 agent-harness；**不改前端。**
 
 已有 Python、不要重写当新项目：Skill / MCP / Workspace / Runtime Agent Run / Dashboard。这些在阶段一已经由正式 views 调用。阶段二重点是 **Go 独有的 `/api/v1` 域**。
 

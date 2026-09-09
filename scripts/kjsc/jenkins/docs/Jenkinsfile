@@ -32,7 +32,7 @@ pipeline {
         stage('构建') {
             when { expression { !params.SKIP_BUILD } }
             steps {
-                sh 'sh scripts/build_images_kjsc.sh --docs'
+                sh 'sh scripts/kjsc/build_images.sh --docs'
             }
         }
 

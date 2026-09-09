@@ -113,7 +113,7 @@ COPY --from=builder /root/.duckdb /home/appuser/.duckdb
 COPY --from=builder /app/WeKnora .
 
 # Copy and make entrypoint script executable
-COPY --from=builder /app/scripts/docker-entrypoint_kjsc.sh ./scripts/docker-entrypoint_kjsc.sh
+COPY --from=builder /app/scripts/kjsc/docker-entrypoint.app-core.sh ./scripts/docker-entrypoint.app-core.sh
 
 # Make scripts executable
 RUN chmod +x ./scripts/*.sh
@@ -122,5 +122,5 @@ RUN chmod +x ./scripts/*.sh
 EXPOSE 8080
 
 
-ENTRYPOINT ["./scripts/docker-entrypoint_kjsc.sh"]
+ENTRYPOINT ["./scripts/docker-entrypoint.app-core.sh"]
 CMD ["./WeKnora"]

@@ -1,6 +1,6 @@
-# Jenkins 部署（App / UI / Docs）— agent-middle / kjsc
+# Jenkins 部署（App-core / Frontend / Docs / Harness / Sandbox）— agent-middle / kjsc
 
-同机：用 `scripts/build_images_kjsc.sh` 本地构建镜像后，以 `docker-compose-kjsc.yml` 更新容器。**不要 pull 自研镜像**（无私有仓时会盖掉本地 `kjsc/agent-middle-*`）。
+同机：用 `scripts/kjsc/build_images.sh` 本地构建镜像后，以 `docker-compose-kjsc.yml` 更新容器。**不要 pull 自研镜像**（无私有仓时会盖掉本地 `kjsc/agent-middle-*`）。
 
 ## 命名约定
 
@@ -9,9 +9,10 @@
 | Compose | `docker-compose-kjsc.yml` |
 | 网络 | `agent-middle-network`（compose 中 `name:` 固定，不随目录/Jenkins 工作区变化） |
 | 容器 | `agent-middle-<角色>` |
-| 自研镜像 | `kjsc/agent-middle-{ui,app,docs,docreader,sandbox,...}` |
+| 自研镜像 | `kjsc/agent-middle-{ui,app,docs,docreader,sandbox,harness,...}` |
 | 前端源码 | `apps/frontend` |
 | 文档站源码 | `apps/docs/`（VitePress；由 `website-docs` fork，部署只构建本目录） |
+| 镜像定义 | `docker/Dockerfile.{frontend,docs,agent-harness}`；nginx 在 `docker/config/`；入口脚本在 `scripts/kjsc/` |
 
 第三方依赖（redis / postgres 等）继续使用公共镜像。
 
@@ -21,9 +22,11 @@ Jenkins：网络不存在则创建 `agent-middle-network`，再删同名容器�
 
 | 路径 | Job Script Path |
 |------|-----------------|
-| `app/Jenkinsfile` | `scripts/kjsc/jenkins/app/Jenkinsfile` |
-| `ui/Jenkinsfile` | `scripts/kjsc/jenkins/ui/Jenkinsfile` |
+| `app-core/Jenkinsfile` | `scripts/kjsc/jenkins/app-core/Jenkinsfile` |
+| `frontend/Jenkinsfile` | `scripts/kjsc/jenkins/frontend/Jenkinsfile` |
 | `docs/Jenkinsfile` | `scripts/kjsc/jenkins/docs/Jenkinsfile` |
+| `harness/Jenkinsfile` | `scripts/kjsc/jenkins/harness/Jenkinsfile` |
+| `sandbox/Jenkinsfile` | `scripts/kjsc/jenkins/sandbox/Jenkinsfile` |
 
 ## 前置
 
@@ -37,14 +40,14 @@ Jenkins：网络不存在则创建 `agent-middle-network`，再删同名容器�
 
 ```bash
 cp .env.kjsc.example .env   # 按需修改后再部署
-sh scripts/build_images_kjsc.sh -a
+sh scripts/kjsc/build_images.sh -a
 docker compose -f docker-compose-kjsc.yml up -d --pull never
 ```
 
 仅文档站：
 
 ```bash
-sh scripts/build_images_kjsc.sh --docs
+sh scripts/kjsc/build_images.sh --docs
 docker compose -f docker-compose-kjsc.yml --profile docs up -d --no-deps --pull never docs
 ```
 
@@ -55,14 +58,34 @@ docker compose -f docker-compose-kjsc.yml --profile docs up -d --no-deps --pull 
 - App：`APP_PORT=9980` → `http://127.0.0.1:9980/health`
 - UI：`FRONTEND_PORT=9988` → `http://127.0.0.1:9988/`
 - Docs：`DOCS_PORT=9900` → `http://127.0.0.1:9900/docs/`
+- Harness：`HARNESS_PORT=9990` → `http://127.0.0.1:9990/api/system/health`
+- Sandbox-provisioner：`SANDBOX_PROVISIONER_PORT=8002` → `http://127.0.0.1:8002/health`
 
 ## 参数
 
 - `SKIP_BUILD`：跳过构建，只重启容器
-- `OVERWRITE_ENV`（App / UI）：勾选后强制 `cp .env.kjsc.example .env`；覆盖前自动备份为 `.env.bak.<时间戳>`。适用于仓库更新了 example（如 SSRF 白名单）但 Jenkins 工作区仍保留旧 `.env` 的场景。**会覆盖**工作区内手工修改的密码、端口等，请谨慎勾选
+- `OVERWRITE_ENV`（App-core / Frontend / Harness / Sandbox）：勾选后强制 `cp .env.kjsc.example .env`；覆盖前自动备份为 `.env.bak.<时间戳>`。适用于仓库更新了 example（如 SSRF 白名单）但 Jenkins 工作区仍保留旧 `.env` 的场景。**会覆盖**工作区内手工修改的密码、端口等，请谨慎勾选
 
-建议有 API 变更时：先 App，后 UI。Docs 与业务服务解耦，可单独构建部署。
+建议有 API 变更时：先 App-core，后 Frontend。Docs 与业务服务解耦，可单独构建部署。Harness 依赖已常驻的 postgres/redis/minio，以及可访问的 WeKnora App（`WEKNORA_BASE_URL`）；现网必须 `--profile harness --profile minio` 且 `--no-deps`，不要把 postgres/minio 拉起来。
+
+Harness Job **只**起 `api` + `worker`。sandbox-provisioner 用独立 Job。
+
+仅 Harness：
+
+```bash
+sh scripts/kjsc/build_images.sh --harness
+docker compose -f docker-compose-kjsc.yml --profile harness --profile minio \
+  up -d --no-deps --pull never api worker
+```
+
+仅 sandbox-provisioner：
+
+```bash
+sh scripts/kjsc/build_images.sh --sandbox-provisioner
+docker compose -f docker-compose-kjsc.yml --profile harness --profile minio \
+  up -d --no-deps --pull never sandbox-provisioner
+```
 
 ## 超时
 
-流水线 `timeout` 为 **30 分钟**（测试用）。生产构建偏慢时可再调大。
+流水线 `timeout` 为 **30 分钟**（Harness 为 60 分钟）。生产构建偏慢时可再调大。

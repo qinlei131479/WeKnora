@@ -135,12 +135,12 @@ app.add_middleware(AccessLogMiddleware)
 app.add_middleware(LoginRateLimitMiddleware)
 
 if __name__ == "__main__":
-    # uvicorn.run(app, host="0.0.0.0", port=5050, threads=10, workers=10, reload=True)
+    # uvicorn.run(app, host="0.0.0.0", port=9990, threads=10, workers=10, reload=True)
 
     uvicorn.run(
         "server.main:app",
         host="0.0.0.0",
-        port=5050,
+        port=9990,
         reload=True,
         # 与 docker-compose 开发环境保持一致，避免 package 下代码变更不触发热重载。
         reload_dirs=["server", "package"],

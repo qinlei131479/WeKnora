@@ -4,7 +4,7 @@
 set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
 
 if [ -f "$PROJECT_ROOT/.env" ]; then
     echo "Loading .env file from $PROJECT_ROOT/.env"

@@ -1,20 +1,15 @@
-// 前端 UI 流水线（agent-middle / kjsc）
-// Jenkins Script Path: scripts/kjsc/jenkins/ui/Jenkinsfile
-// 依赖：建议 app 已健康。API 变更时先跑 App Job 再跑本 Job
+// sandbox-provisioner 流水线（agent-middle / kjsc）
+// Jenkins Script Path: scripts/kjsc/jenkins/sandbox/Jenkinsfile
+// 独立于 harness api/worker。现网必须 --profile harness --profile minio 且 --no-deps
 // 若无 .env，部署阶段会从 .env.kjsc.example 复制生成
 
 pipeline {
     agent any
 
     environment {
-        CONTAINER_NAME = 'agent-middle-frontend'
-        COMPOSE_SERVICE = 'frontend'
+        CONTAINER_NAME = 'sandbox-provisioner'
+        COMPOSE_SERVICE = 'sandbox-provisioner'
         COMPOSE_NETWORK = 'agent-middle-network'
-    }
-
-    // 与 manager/Web-Jenkinsfile 相同：依赖 Jenkins 全局工具 NodeJS（名称须一致）
-    tools {
-        nodejs 'node20.20.2'
     }
 
     options {
@@ -41,12 +36,11 @@ pipeline {
         }
 
         stage('构建') {
-            when { expression { !params.SKIP_BUILD } }
+            when {
+                expression { return params.SKIP_BUILD?.toString() != 'true' }
+            }
             steps {
-                sh 'node -v && npm -v'
-                withEnv(['NODE_OPTIONS=--max-old-space-size=4096']) {
-                    sh 'sh scripts/build_images_kjsc.sh -f'
-                }
+                sh 'sh scripts/kjsc/build_images.sh --sandbox-provisioner'
             }
         }
 
@@ -69,10 +63,12 @@ pipeline {
                         else
                           echo "保留现有 .env（未勾选覆盖）"
                         fi
-                        # 网络不存在则创建（compose 中 name: agent-middle-network）
                         docker network inspect "$COMPOSE_NETWORK" >/dev/null 2>&1 || docker network create "$COMPOSE_NETWORK"
                         docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
-                        docker compose -f docker-compose-kjsc.yml up -d --no-deps --force-recreate --pull never "$COMPOSE_SERVICE"
+                        docker compose -f docker-compose-kjsc.yml \
+                          --profile harness --profile minio \
+                          up -d --no-deps --force-recreate --pull never \
+                          "$COMPOSE_SERVICE"
                     '''
                 }
             }
@@ -82,17 +78,16 @@ pipeline {
             steps {
                 sh '''
                     set -e
-                    # 与 .env 中 FRONTEND_PORT 一致；未配置时默认 9988
-                    port=$(grep -E '^FRONTEND_PORT=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d ' "\t\r' || true)
-                    port=${port:-9988}
-                    echo "健康检查: http://127.0.0.1:${port}/"
+                    port=$(grep -E '^SANDBOX_PROVISIONER_PORT=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d ' "\t\r' || true)
+                    port=${port:-8002}
+                    echo "健康检查: http://127.0.0.1:${port}/health"
                     for i in $(seq 1 30); do
-                      code=$(curl -sS -o /dev/null -w "%{http_code}" "http://127.0.0.1:${port}/" || echo 000)
-                      # 401/403：服务已通，仅未登录（根路径可能走后端鉴权）
-                      case "$code" in 200|201|204|301|302|304|401|403) exit 0 ;; esac
+                      if curl -fsS "http://127.0.0.1:${port}/health"; then
+                        exit 0
+                      fi
                       sleep 2
                     done
-                    echo "健康检查失败，最后 HTTP code=${code:-unknown}"
+                    echo "健康检查失败"
                     docker logs --tail=50 "$CONTAINER_NAME" || true
                     exit 1
                 '''

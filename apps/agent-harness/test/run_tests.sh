@@ -4,13 +4,13 @@ set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_ROOT/docker-compose-mac.yml}"
-API_PORT="${AGENT_HARNESS_PORT:-5050}"
+API_PORT="${AGENT_HARNESS_PORT:-9990}"
 COMPOSE_CMD=("docker" "compose" "-f" "$COMPOSE_FILE" "--profile" "harness" "--profile" "minio" "--profile" "neo4j" "--profile" "milvus")
 
 echo "Agent-Harness 测试运行器"
 echo "========================"
 
-PYTEST_CMD=("${COMPOSE_CMD[@]}" "exec" "-T" "api" "python3" "/app/scripts/docker-env.py" "uv" "run" "--group" "test" "pytest")
+PYTEST_CMD=("${COMPOSE_CMD[@]}" "exec" "-T" "api" "/app/scripts/docker-env.sh" "uv" "run" "--group" "test" "pytest")
 
 check_server() {
     echo "检查测试服务器状态..."

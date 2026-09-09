@@ -27,7 +27,7 @@ from test.live_api_cleanup import cleanup_pytest_knowledge_resources  # noqa: E4
 load_dotenv(PROJECT_ROOT / ".env", override=False)
 load_dotenv(PROJECT_ROOT / "test/.env.test", override=False)
 
-API_BASE_URL = os.getenv("TEST_BASE_URL", "http://localhost:5050").rstrip("/")
+API_BASE_URL = os.getenv("TEST_BASE_URL", "http://localhost:9990").rstrip("/")
 ADMIN_LOGIN = os.getenv("TEST_USERNAME")
 ADMIN_PASSWORD = os.getenv("TEST_PASSWORD")
 LITE_MODE = os.getenv("LITE_MODE", "").lower() in {"true", "1"}

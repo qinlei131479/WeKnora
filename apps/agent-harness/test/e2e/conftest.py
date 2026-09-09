@@ -23,7 +23,7 @@ from test.live_api_cleanup import (  # noqa: E402
 load_dotenv(PROJECT_ROOT / ".env", override=False)
 load_dotenv(PROJECT_ROOT / "test/.env.test", override=False)
 
-E2E_BASE_URL = os.getenv("TEST_BASE_URL", os.getenv("API_BASE_URL", "http://localhost:5050")).rstrip("/")
+E2E_BASE_URL = os.getenv("TEST_BASE_URL", os.getenv("API_BASE_URL", "http://localhost:9990")).rstrip("/")
 E2E_USERNAME = os.getenv("E2E_USERNAME") or os.getenv("TEST_USERNAME")
 E2E_PASSWORD = os.getenv("E2E_PASSWORD") or os.getenv("TEST_PASSWORD")
 CLEANUP_USERNAME = E2E_USERNAME or os.getenv("TEST_USERNAME")

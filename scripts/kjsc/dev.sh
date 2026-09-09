@@ -9,7 +9,7 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
+PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
 
 log_info() {
     printf "%b\n" "${BLUE}[INFO]${NC} $1"
@@ -161,7 +161,6 @@ init_kjsc() {
 
     ensure_env_key "YUXI_INSTANCE_ID" "instance-$(generate_hex 8)"
     ensure_env_key "SANDBOX_PROVISIONER_TOKEN" "$(generate_hex 32)"
-    ensure_env_key "AGENT_HARNESS_DB_NAME" "agent_harness"
     if ! grep -Eq '^AGENT_HARNESS_REDIS_DB=' .env; then
         set_env_value "AGENT_HARNESS_REDIS_DB" "2"
         log_info "写入 AGENT_HARNESS_REDIS_DB=2"
@@ -310,7 +309,7 @@ urlencode_query() {
     python3 -c "import urllib.parse,sys; print(urllib.parse.quote_plus(sys.argv[1]))" "$1"
 }
 
-# 本机拼接 POSTGRES_URL / REDIS_URL；不调用 docker-env.py（其主机名为 postgres/redis）。
+# 本机拼接 POSTGRES_URL / REDIS_URL（走 DB_HOST / REDIS_ADDR）。容器入口见 scripts/kjsc/docker-env.agent-harness.sh。
 fill_harness_connection_urls() {
     local db_user db_password db_name db_port encoded_user encoded_pass
     local redis_addr redis_host redis_port redis_db encoded_redis_pass
@@ -318,7 +317,7 @@ fill_harness_connection_urls() {
 
     db_user="${DB_USER:-postgres}"
     db_password="${DB_PASSWORD:-postgres}"
-    db_name="${DB_NAME:-${AGENT_HARNESS_DB_NAME:-agent-middle}}"
+    db_name="${DB_NAME:-agent-middle}"
     db_port="${DB_PORT:-5432}"
     encoded_user="$(urlencode_query "$db_user")"
     encoded_pass="$(urlencode_query "$db_password")"
@@ -386,7 +385,7 @@ start_app() {
 
     log_info "加载环境配置..."
     if ! load_env_files; then
-        log_error ".env 文件不存在，请先运行: ./scripts/dev_kjsc.sh init"
+        log_error ".env 文件不存在，请先运行: ./scripts/kjsc/dev.sh init"
         return 1
     fi
 
@@ -453,7 +452,7 @@ start_frontend() {
     export APP_PORT="${APP_PORT:-9980}"
     export VITE_DEV_PORT="${VITE_DEV_PORT:-${FRONTEND_PORT:-9988}}"
     export VITE_DEV_PROXY_TARGET="${VITE_DEV_PROXY_TARGET:-${FRONTEND_BACKEND_URL:-http://localhost:${APP_PORT}}}"
-    export VITE_HARNESS_PROXY_TARGET="${VITE_HARNESS_PROXY_TARGET:-http://127.0.0.1:${AGENT_HARNESS_PORT:-5050}}"
+    export VITE_HARNESS_PROXY_TARGET="${VITE_HARNESS_PROXY_TARGET:-http://127.0.0.1:${AGENT_HARNESS_PORT:-${HARNESS_PORT:-9990}}}"
 
     log_info "启动 Vite 开发服务器..."
     log_info "前端将运行在 http://localhost:${VITE_DEV_PORT}"
@@ -466,7 +465,7 @@ start_frontend() {
 require_env_file() {
     cd "$PROJECT_ROOT"
     if [ ! -f ".env" ]; then
-        log_error "缺少 .env，请先运行: ./scripts/dev_kjsc.sh init"
+        log_error "缺少 .env，请先运行: ./scripts/kjsc/dev.sh init"
         return 1
     fi
 }
@@ -491,7 +490,7 @@ start_harness() {
 
     log_info "加载环境配置..."
     if ! load_env_files; then
-        log_error ".env 文件不存在，请先运行: ./scripts/dev_kjsc.sh init"
+        log_error ".env 文件不存在，请先运行: ./scripts/kjsc/dev.sh init"
         return 1
     fi
 
@@ -513,7 +512,7 @@ start_harness() {
     fi
 
     local harness_dir="$PROJECT_ROOT/apps/agent-harness"
-    local api_port="${AGENT_HARNESS_PORT:-5050}"
+    local api_port="${AGENT_HARNESS_PORT:-${HARNESS_PORT:-9990}}"
     local worker_pid=""
 
     cd "$harness_dir"
@@ -546,7 +545,7 @@ start_harness() {
 start_sandbox() {
     require_env_file || return 1
     if ! grep -Eq '^SANDBOX_PROVISIONER_TOKEN=.+' .env; then
-        log_error "SANDBOX_PROVISIONER_TOKEN 为空，请先运行: ./scripts/dev_kjsc.sh init"
+        log_error "SANDBOX_PROVISIONER_TOKEN 为空，请先运行: ./scripts/kjsc/dev.sh init"
         return 1
     fi
     log_info "启动 sandbox-provisioner..."
@@ -558,7 +557,7 @@ start_sandbox() {
 start_infra() {
     cd "$PROJECT_ROOT"
     log_info "启动官方开发基础设施（postgres/redis/docreader/minio）..."
-    "$SCRIPT_DIR/dev.sh" start --minio || return 1
+    "$PROJECT_ROOT/scripts/dev.sh" start --minio || return 1
     log_info "启动 sandbox-provisioner（已运行则跳过）..."
     start_sandbox
 }

@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 
-# Do not override container/docker-env.py values. An empty POSTGRES_URL=
+# Do not override container/docker-env.agent-harness.sh values. An empty POSTGRES_URL=
 # in a bind-mounted .env would otherwise wipe the filled connection string.
 load_dotenv(".env", override=False)
 

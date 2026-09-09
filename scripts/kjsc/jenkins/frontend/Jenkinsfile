@@ -1,0 +1,102 @@
+// 前端 UI 流水线（agent-middle / kjsc）
+// Jenkins Script Path: scripts/kjsc/jenkins/frontend/Jenkinsfile
+// 依赖：建议 app 已健康。API 变更时先跑 App Job 再跑本 Job
+// 若无 .env，部署阶段会从 .env.kjsc.example 复制生成
+
+pipeline {
+    agent any
+
+    environment {
+        CONTAINER_NAME = 'agent-middle-frontend'
+        COMPOSE_SERVICE = 'frontend'
+        COMPOSE_NETWORK = 'agent-middle-network'
+    }
+
+    // 与 manager/Web-Jenkinsfile 相同：依赖 Jenkins 全局工具 NodeJS（名称须一致）
+    tools {
+        nodejs 'node20.20.2'
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    parameters {
+        booleanParam(name: 'SKIP_BUILD', defaultValue: false, description: '跳过构建，仅重启容器')
+        booleanParam(
+            name: 'OVERWRITE_ENV',
+            defaultValue: false,
+            description: '强制用 .env.kjsc.example 覆盖 .env（覆盖前自动备份；会丢失工作区内对 .env 的手工修改）'
+        )
+    }
+
+    stages {
+        stage('检出') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('构建') {
+            when { expression { !params.SKIP_BUILD } }
+            steps {
+                sh 'node -v && npm -v'
+                withEnv(['NODE_OPTIONS=--max-old-space-size=4096']) {
+                    sh 'sh scripts/kjsc/build_images.sh -f'
+                }
+            }
+        }
+
+        stage('部署') {
+            steps {
+                withEnv(["OVERWRITE_ENV=${params.OVERWRITE_ENV?.toString()}"]) {
+                    sh '''
+                        set -e
+                        test -f .env.kjsc.example
+                        if [ "$OVERWRITE_ENV" = "true" ]; then
+                          if [ -f .env ]; then
+                            cp .env ".env.bak.$(date +%Y%m%d%H%M%S)"
+                            echo "已备份旧 .env"
+                          fi
+                          cp .env.kjsc.example .env
+                          echo "[OVERWRITE_ENV] 已强制从 .env.kjsc.example 覆盖 .env"
+                        elif [ ! -f .env ]; then
+                          cp .env.kjsc.example .env
+                          echo "已从 .env.kjsc.example 生成 .env"
+                        else
+                          echo "保留现有 .env（未勾选覆盖）"
+                        fi
+                        # 网络不存在则创建（compose 中 name: agent-middle-network）
+                        docker network inspect "$COMPOSE_NETWORK" >/dev/null 2>&1 || docker network create "$COMPOSE_NETWORK"
+                        docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
+                        docker compose -f docker-compose-kjsc.yml up -d --no-deps --force-recreate --pull never "$COMPOSE_SERVICE"
+                    '''
+                }
+            }
+        }
+
+        stage('检查') {
+            steps {
+                sh '''
+                    set -e
+                    # 与 .env 中 FRONTEND_PORT 一致；未配置时默认 9988
+                    port=$(grep -E '^FRONTEND_PORT=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d ' "\t\r' || true)
+                    port=${port:-9988}
+                    echo "健康检查: http://127.0.0.1:${port}/"
+                    for i in $(seq 1 30); do
+                      code=$(curl -sS -o /dev/null -w "%{http_code}" "http://127.0.0.1:${port}/" || echo 000)
+                      # 401/403：服务已通，仅未登录（根路径可能走后端鉴权）
+                      case "$code" in 200|201|204|301|302|304|401|403) exit 0 ;; esac
+                      sleep 2
+                    done
+                    echo "健康检查失败，最后 HTTP code=${code:-unknown}"
+                    docker logs --tail=50 "$CONTAINER_NAME" || true
+                    exit 1
+                '''
+            }
+        }
+    }
+}

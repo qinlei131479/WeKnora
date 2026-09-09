@@ -352,24 +352,24 @@ dev-frontend:
 #   6. make dev-kjsc-harness  本机 uvicorn + arq（另开终端，不启 Docker）
 # 已起过 make dev-start 时可从 3/4 开始；只补 sandbox: make dev-kjsc-sandbox
 dev-kjsc-init:
-	./scripts/dev_kjsc.sh init
+	./scripts/kjsc/dev.sh init
 
 dev-kjsc-infra:
-	./scripts/dev_kjsc.sh infra
+	./scripts/kjsc/dev.sh infra
 
 migrate-kjsc:
-	./scripts/migrate_kjsc.sh up
+	./scripts/kjsc/migrate.sh up
 
 dev-kjsc-app:
-	./scripts/dev_kjsc.sh app
+	./scripts/kjsc/dev.sh app
 
 dev-kjsc-frontend:
-	./scripts/dev_kjsc.sh frontend
+	./scripts/kjsc/dev.sh frontend
 
 dev-kjsc-harness:
-	./scripts/dev_kjsc.sh harness
+	./scripts/kjsc/dev.sh harness
 
 dev-kjsc-sandbox:
-	./scripts/dev_kjsc.sh sandbox
+	./scripts/kjsc/dev.sh sandbox
 
 

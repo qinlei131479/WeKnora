@@ -1,5 +1,5 @@
 // 后端 App 流水线（agent-middle / kjsc）
-// Jenkins Script Path: scripts/kjsc/jenkins/app/Jenkinsfile
+// Jenkins Script Path: scripts/kjsc/jenkins/app-core/Jenkinsfile
 // 依赖：postgres/redis/docreader 已运行；Jenkins 用户可执行 docker
 // 若无 .env，部署阶段会从 .env.kjsc.example 复制生成
 
@@ -41,7 +41,7 @@ pipeline {
                 expression { return params.SKIP_BUILD?.toString() != 'true' }
             }
             steps {
-                sh 'sh scripts/build_images_kjsc.sh -p'
+                sh 'sh scripts/kjsc/build_images.sh -p'
             }
         }
 

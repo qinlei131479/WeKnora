@@ -10,7 +10,7 @@
 
 ```bash
 # 1. 补齐 JWT / Sandbox Token（复用仓库根已有 .env，不覆盖 WeKnora 键）
-./scripts/dev_kjsc.sh init
+./scripts/kjsc/dev.sh init
 
 # 2. 启动（本机进程连当前 .env / .env.local；不拉 Docker api/worker）
 make dev-kjsc-harness     # 本机 uvicorn + arq
@@ -39,7 +39,7 @@ REDIS_ADDR=localhost:6379
 
 | 资源 | WeKnora | Agent-Harness |
 |------|---------|---------------|
-| PostgreSQL | `DB_NAME`（默认 `agent-middle`） | `AGENT_HARNESS_DB_NAME`（默认 `agent_harness`） |
+| PostgreSQL | `DB_NAME`（默认 `agent-middle`） | 同库，业务表 `h_` 前缀 |
 | Redis | DB 0 | DB 2 |
 | MinIO | 同一实例，账号仍用 `MINIO_ACCESS_KEY_ID` | 同一 `minio` 服务 |
 | 认证 | `JWT_SECRET` | `JWT_SECRET` |
@@ -48,5 +48,5 @@ REDIS_ADDR=localhost:6379
 
 - `make dev-kjsc-harness`（本机 api + worker，不启 Docker）
 - `make dev-kjsc-sandbox`（sandbox-provisioner，Docker）
-- 首次环境：`./scripts/dev_kjsc.sh init`
+- 首次环境：`./scripts/kjsc/dev.sh init`
 - Docker 编排仍可用：`docker compose -f docker-compose-mac.yml --profile harness up -d api worker`

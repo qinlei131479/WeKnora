@@ -1,0 +1,103 @@
+// Agent-Harness 流水线（agent-middle / kjsc）
+// Jenkins Script Path: scripts/kjsc/jenkins/harness/Jenkinsfile
+// 只部署 api + worker。sandbox-provisioner 走独立 Job：scripts/kjsc/jenkins/sandbox/Jenkinsfile
+// 依赖：postgres / redis / minio 已常驻；建议 App 已健康（WEKNORA_BASE_URL）
+// 现网不要 up postgres/minio/neo4j，必须 --profile minio 且 --no-deps
+// 若无 .env，部署阶段会从 .env.kjsc.example 复制生成
+
+pipeline {
+    agent any
+
+    environment {
+        CONTAINER_API = 'agent-middle-harness-api'
+        CONTAINER_WORKER = 'agent-middle-harness-worker'
+        COMPOSE_NETWORK = 'agent-middle-network'
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        timeout(time: 60, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    parameters {
+        booleanParam(name: 'SKIP_BUILD', defaultValue: false, description: '跳过构建，仅重启容器')
+        booleanParam(
+            name: 'OVERWRITE_ENV',
+            defaultValue: false,
+            description: '强制用 .env.kjsc.example 覆盖 .env（覆盖前自动备份；会丢失工作区内对 .env 的手工修改）'
+        )
+    }
+
+    stages {
+        stage('检出') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('构建') {
+            when {
+                expression { return params.SKIP_BUILD?.toString() != 'true' }
+            }
+            steps {
+                sh 'sh scripts/kjsc/build_images.sh --harness'
+            }
+        }
+
+        stage('部署') {
+            steps {
+                withEnv(["OVERWRITE_ENV=${params.OVERWRITE_ENV?.toString()}"]) {
+                    sh '''
+                        set -e
+                        test -f .env.kjsc.example
+                        if [ "$OVERWRITE_ENV" = "true" ]; then
+                          if [ -f .env ]; then
+                            cp .env ".env.bak.$(date +%Y%m%d%H%M%S)"
+                            echo "已备份旧 .env"
+                          fi
+                          cp .env.kjsc.example .env
+                          echo "[OVERWRITE_ENV] 已强制从 .env.kjsc.example 覆盖 .env"
+                        elif [ ! -f .env ]; then
+                          cp .env.kjsc.example .env
+                          echo "已从 .env.kjsc.example 生成 .env"
+                        else
+                          echo "保留现有 .env（未勾选覆盖）"
+                        fi
+                        docker network inspect "$COMPOSE_NETWORK" >/dev/null 2>&1 || docker network create "$COMPOSE_NETWORK"
+                        docker rm -f "$CONTAINER_API" "$CONTAINER_WORKER" 2>/dev/null || true
+                        docker compose -f docker-compose-kjsc.yml \
+                          --profile harness --profile minio \
+                          up -d --no-deps --force-recreate --pull never \
+                          api worker
+                    '''
+                }
+            }
+        }
+
+        stage('检查') {
+            steps {
+                sh '''
+                    set -e
+                    port=$(grep -E '^AGENT_HARNESS_PORT=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d ' "\t\r' || true)
+                    if [ -z "$port" ]; then
+                      port=$(grep -E '^HARNESS_PORT=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d ' "\t\r' || true)
+                    fi
+                    port=${port:-9990}
+                    echo "健康检查: http://127.0.0.1:${port}/api/system/health"
+                    for i in $(seq 1 60); do
+                      if curl -fsS "http://127.0.0.1:${port}/api/system/health"; then
+                        exit 0
+                      fi
+                      sleep 5
+                    done
+                    echo "健康检查失败"
+                    docker logs --tail=50 "$CONTAINER_API" || true
+                    docker logs --tail=50 "$CONTAINER_WORKER" || true
+                    exit 1
+                '''
+            }
+        }
+    }
+}

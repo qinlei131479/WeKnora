@@ -1,5 +1,5 @@
 #!/bin/bash
-# app-core / KJSC container entrypoint（官方请用 scripts/docker-entrypoint.sh）
+# app-core 容器入口（官方请用 scripts/docker-entrypoint.sh）
 set -e
 
 # ─── Fix ownership of bind-mounted directories ───

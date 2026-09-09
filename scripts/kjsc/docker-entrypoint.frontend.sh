@@ -13,7 +13,7 @@ export APP_HOST=${APP_HOST:-app}
 export APP_PORT=${APP_PORT:-8080}
 export APP_SCHEME=${APP_SCHEME:-http}
 export HARNESS_HOST=${HARNESS_HOST:-agent-harness}
-export HARNESS_PORT=${HARNESS_PORT:-5050}
+export HARNESS_PORT=${HARNESS_PORT:-9990}
 export HARNESS_SCHEME=${HARNESS_SCHEME:-http}
 envsubst '${MAX_FILE_SIZE} ${APP_HOST} ${APP_PORT} ${APP_SCHEME} ${HARNESS_HOST} ${HARNESS_PORT} ${HARNESS_SCHEME}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
 
