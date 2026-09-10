@@ -1,12 +1,6 @@
-from dotenv import load_dotenv
+from concurrent.futures import ThreadPoolExecutor
 
-# Do not override container/docker-env.agent-harness.sh values. An empty POSTGRES_URL=
-# in a bind-mounted .env would otherwise wipe the filled connection string.
-load_dotenv(".env", override=False)
-
-from concurrent.futures import ThreadPoolExecutor  # noqa: E402
-
-from yuxi.config import config as config  # noqa: E402
+from yuxi.config import config as config
 
 try:
     from importlib.metadata import version
@@ -15,7 +9,7 @@ try:
 except Exception:
     __version__ = "unknown"
 
-executor = ThreadPoolExecutor()  # noqa: E402
+executor = ThreadPoolExecutor()
 
 
 def get_version():

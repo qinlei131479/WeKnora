@@ -336,10 +336,6 @@ build_harness_image() {
         log_error "缺少 docker/Dockerfile.agent-harness"
         return 1
     fi
-    if [ ! -f "$PROJECT_ROOT/scripts/kjsc/docker-env.agent-harness.sh" ]; then
-        log_error "缺少 scripts/kjsc/docker-env.agent-harness.sh"
-        return 1
-    fi
 
     docker build \
         --platform $PLATFORM \

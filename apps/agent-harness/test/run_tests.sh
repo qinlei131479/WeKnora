@@ -10,7 +10,7 @@ COMPOSE_CMD=("docker" "compose" "-f" "$COMPOSE_FILE" "--profile" "harness" "--pr
 echo "Agent-Harness 测试运行器"
 echo "========================"
 
-PYTEST_CMD=("${COMPOSE_CMD[@]}" "exec" "-T" "api" "/app/scripts/docker-env.sh" "uv" "run" "--group" "test" "pytest")
+PYTEST_CMD=("${COMPOSE_CMD[@]}" "exec" "-T" "api" "uv" "run" "--group" "test" "pytest")
 
 check_server() {
     echo "检查测试服务器状态..."

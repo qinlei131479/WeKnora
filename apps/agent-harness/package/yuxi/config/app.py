@@ -11,6 +11,7 @@ import tomli_w
 from pydantic import BaseModel, Field, PrivateAttr
 
 from yuxi.config import cache as runtime_cache
+from yuxi.config.env import running_in_docker
 from yuxi.utils.logging_config import logger
 
 READONLY_CONFIG_FIELDS = frozenset({"save_dir"})
@@ -28,10 +29,6 @@ def _normalize_default_ocr_engine(value: Any) -> str:
     return engine
 
 
-def _running_in_docker() -> bool:
-    return Path("/.dockerenv").exists() or os.getenv("RUNNING_IN_DOCKER") == "true"
-
-
 def _repo_docker_saves() -> Path | None:
     # apps/agent-harness/package/yuxi/config/app.py → 仓库根；容器内路径更浅，不能写死 parents[5]。
     parts = Path(__file__).resolve().parents
@@ -44,7 +41,7 @@ def _default_save_dir() -> str:
     env = (os.getenv("YUXI_SAVE_DIR") or "").strip()
     if env:
         return env
-    if _running_in_docker():
+    if running_in_docker():
         return "saves"
     # 本机 uvicorn 默认相对路径 saves/ 会另起一套空目录；与 compose 挂载对齐。
     repo_saves = _repo_docker_saves()

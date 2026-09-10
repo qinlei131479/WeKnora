@@ -104,16 +104,15 @@ async def lifespan(app: FastAPI):
     await tasker.start()
     logger.info(f"""
 
-░██     ░██                       ░██
- ░██   ░██
-  ░██ ░██   ░██    ░██ ░██    ░██ ░██
-   ░████    ░██    ░██  ░██  ░██  ░██
-    ░██     ░██    ░██   ░█████   ░██
-    ░██     ░██   ░███  ░██  ░██  ░██
-    ░██      ░█████░██ ░██    ░██ ░██  v{get_version()}
+    _                    _     _   _
+   / \\   __ _  ___ _ __ | |_  | | | | __ _ _ __ _ __   ___  ___ ___
+  / _ \\ / _` |/ _ \\ '_ \\| __| | |_| |/ _` | '__| '_ \\ / _ \\/ __/ __|
+ / ___ \\ (_| |  __/ | | | |_  |  _  | (_| | |  | | | |  __/\\__ \\__ \\
+/_/   \\_\\__, |\\___|_| |_|\\__| |_| |_|\\__,_|_|  |_| |_|\\___||___/___/
+        |___/  Agent Harness  v{get_version()}
 
     """)
-    logger.info("Yuxi backend startup complete")
+    logger.info("Agent Harness startup complete")
     yield
     await tasker.shutdown()
     shutdown_sandbox_provider()

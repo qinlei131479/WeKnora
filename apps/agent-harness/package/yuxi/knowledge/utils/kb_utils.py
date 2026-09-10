@@ -227,7 +227,7 @@ def is_minio_url(file_path: str) -> bool:
 
     from yuxi.storage.minio.client import MinIOClient
 
-    known_buckets = set(MinIOClient.KB_BUCKETS.values()) | MinIOClient.PUBLIC_READ_BUCKETS
+    known_buckets = set(MinIOClient.KB_BUCKETS.values()) | MinIOClient.PUBLIC_READ_BUCKETS | {"knowledgebases"}
     return path_parts[0] in known_buckets
 
 

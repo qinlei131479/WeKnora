@@ -3,7 +3,7 @@
 源码来自独立仓库 Bubble-Weave，第一阶段保持接口独立：
 
 - 后端：本目录（FastAPI + LangGraph + ARQ）
-- 临时前端：`apps/agent-web`
+- 前端：仓库 `apps/frontend`（经 Nginx 反代 `HARNESS_HOST`）
 - 部署：`docker-compose-mac.yml` 或 `docker-compose-kjsc.yml` 的 `--profile harness`
 
 ## 启动
@@ -17,7 +17,7 @@ make dev-kjsc-harness     # 本机 uvicorn + arq
 make dev-kjsc-sandbox     # sandbox-provisioner（仍走 Docker）
 ```
 
-访问 `http://localhost:5174`。
+访问 `http://localhost:9988`（前端）或直接 `http://localhost:9990`（Harness API）。
 
 本机 PG/Redis 请用 `.env.local` 覆盖 Compose 主机名，例如：
 
@@ -40,9 +40,11 @@ REDIS_ADDR=localhost:6379
 | 资源 | WeKnora | Agent-Harness |
 |------|---------|---------------|
 | PostgreSQL | `DB_NAME`（默认 `agent-middle`） | 同库，业务表 `h_` 前缀 |
-| Redis | DB 0 | DB 2 |
+| Redis | DB `REDIS_DB`（默认 0） | 同 DB，key 前缀不同（ARQ `arq:*`） |
 | MinIO | 同一实例，账号仍用 `MINIO_ACCESS_KEY_ID` | 同一 `minio` 服务 |
 | 认证 | `JWT_SECRET` | `JWT_SECRET` |
+
+Postgres / Redis 连接由进程启动时 `yuxi.config.env` 按 B 段离散变量拼接。改仓库根 `.env` 后 `docker compose restart api worker` 即可，不必重建镜像。
 
 ## Make 目标
 

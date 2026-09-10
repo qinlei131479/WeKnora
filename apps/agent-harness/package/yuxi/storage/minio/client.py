@@ -13,6 +13,7 @@ from io import BytesIO
 from urllib.parse import quote, urlsplit
 
 from urllib3 import BaseHTTPResponse
+from yuxi.config.env import env_value, running_in_docker
 from yuxi.utils import logger
 
 from minio import Minio
@@ -56,30 +57,51 @@ def normalize_public_minio_url(value: str | None) -> str | None:
     return normalized
 
 
+def harness_minio_bucket() -> str:
+    """Harness 业务桶，与 WeKnora 的 MINIO_BUCKET_NAME 分开。"""
+    return env_value("HARNESS_MINIO_BUCKET_NAME", default="agent-harness")
+
+
+class _HarnessKBBuckets:
+    """KB_BUCKETS 按环境变量解析，避免和 WeKnora 共用 weknora 桶。"""
+
+    _KEYS = ("documents", "parsed", "images")
+
+    def _mapping(self) -> dict[str, str]:
+        name = harness_minio_bucket()
+        return {key: name for key in self._KEYS}
+
+    def __getitem__(self, key: str) -> str:
+        return self._mapping()[key]
+
+    def values(self):
+        return self._mapping().values()
+
+    def items(self):
+        return self._mapping().items()
+
+    def __contains__(self, key: object) -> bool:
+        return key in self._KEYS
+
+
 class MinIOClient:
     """
     简化的 MinIO 客户端类
     """
 
     PUBLIC_READ_BUCKETS = {"public"}
-
-    # 知识库相关的 bucket 名称
-    KB_BUCKETS = {
-        "documents": "knowledgebases",
-        "parsed": "knowledgebases",
-        "images": "public",
-    }
+    KB_BUCKETS = _HarnessKBBuckets()
 
     def __init__(self):
         """初始化 MinIO 客户端"""
-        self.endpoint = os.getenv("MINIO_URI") or "http://minio:9000"
-        self.access_key = os.getenv("MINIO_ACCESS_KEY") or "minioadmin"
-        self.secret_key = os.getenv("MINIO_SECRET_KEY") or "minioadmin"
+        self.endpoint = env_value("MINIO_URI", default="http://minio:9000")
+        self.access_key = env_value("MINIO_ACCESS_KEY", "MINIO_ACCESS_KEY_ID", default="minioadmin")
+        self.secret_key = env_value("MINIO_SECRET_KEY", "MINIO_SECRET_ACCESS_KEY", default="minioadmin")
         self.public_base_url = (os.getenv("MINIO_PUBLIC_URL") or "/minio").rstrip("/")
         self._client = None
 
         # 设置公开访问端点
-        if os.getenv("RUNNING_IN_DOCKER"):
+        if running_in_docker():
             host_ip = (os.getenv("HOST_IP") or "").strip()
             if not host_ip:
                 host_ip = "localhost"
@@ -100,8 +122,14 @@ class MinIOClient:
             if "://" in endpoint:
                 endpoint = endpoint.split("://")[-1]
 
+            secure = self.endpoint.startswith("https://") or env_value("MINIO_USE_SSL").lower() in {
+                "1",
+                "true",
+                "yes",
+                "on",
+            }
             self._client = Minio(
-                endpoint=endpoint, access_key=self.access_key, secret_key=self.secret_key, secure=False
+                endpoint=endpoint, access_key=self.access_key, secret_key=self.secret_key, secure=secure
             )
         return self._client
 

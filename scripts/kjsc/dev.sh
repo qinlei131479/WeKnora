@@ -161,10 +161,6 @@ init_kjsc() {
 
     ensure_env_key "YUXI_INSTANCE_ID" "instance-$(generate_hex 8)"
     ensure_env_key "SANDBOX_PROVISIONER_TOKEN" "$(generate_hex 32)"
-    if ! grep -Eq '^AGENT_HARNESS_REDIS_DB=' .env; then
-        set_env_value "AGENT_HARNESS_REDIS_DB" "2"
-        log_info "写入 AGENT_HARNESS_REDIS_DB=2"
-    fi
 
     local ver="0.7.2"
     if [ -f VERSION ]; then
@@ -181,9 +177,7 @@ init_kjsc() {
     fi
     for origin in \
         "http://localhost:5173" \
-        "http://127.0.0.1:5173" \
-        "http://localhost:5174" \
-        "http://127.0.0.1:5174"; do
+        "http://127.0.0.1:5173"; do
         case ",${current}," in
             *",${origin},"*) ;;
             *)
@@ -305,45 +299,12 @@ apply_host_dev_env() {
     export DOCREADER_TRANSPORT="${DOCREADER_TRANSPORT:-grpc}"
 }
 
-urlencode_query() {
-    python3 -c "import urllib.parse,sys; print(urllib.parse.quote_plus(sys.argv[1]))" "$1"
-}
-
-# 本机拼接 POSTGRES_URL / REDIS_URL（走 DB_HOST / REDIS_ADDR）。容器入口见 scripts/kjsc/docker-env.agent-harness.sh。
-fill_harness_connection_urls() {
-    local db_user db_password db_name db_port encoded_user encoded_pass
-    local redis_addr redis_host redis_port redis_db encoded_redis_pass
+# 本机覆盖 Docker 主机名；连接串由 yuxi.config.env 按 DB_* / REDIS_* 拼接，不要在此拼 POSTGRES_URL / REDIS_URL。
+apply_harness_host_overrides() {
     local app_port sandbox_port
 
-    db_user="${DB_USER:-postgres}"
-    db_password="${DB_PASSWORD:-postgres}"
-    db_name="${DB_NAME:-agent-middle}"
-    db_port="${DB_PORT:-5432}"
-    encoded_user="$(urlencode_query "$db_user")"
-    encoded_pass="$(urlencode_query "$db_password")"
-
-    if [ -z "${POSTGRES_URL:-}" ] || [[ "${POSTGRES_URL}" == *"@postgres:"* ]]; then
-        export POSTGRES_URL="postgresql+asyncpg://${encoded_user}:${encoded_pass}@${DB_HOST}:${db_port}/${db_name}"
-    fi
-
-    redis_addr="${REDIS_ADDR:-localhost:6379}"
-    redis_host="${redis_addr%%:*}"
-    redis_port="${redis_addr##*:}"
-    if [ "$redis_port" = "$redis_addr" ]; then
-        redis_port=6379
-    fi
-    redis_db="${AGENT_HARNESS_REDIS_DB:-2}"
-    if [ -z "${REDIS_URL:-}" ] || [[ "${REDIS_URL}" == *"@redis:"* ]] || [[ "${REDIS_URL}" == *"//redis:"* ]]; then
-        if [ -n "${REDIS_PASSWORD:-}" ]; then
-            encoded_redis_pass="$(urlencode_query "$REDIS_PASSWORD")"
-            export REDIS_URL="redis://:${encoded_redis_pass}@${redis_host}:${redis_port}/${redis_db}"
-        else
-            export REDIS_URL="redis://${redis_host}:${redis_port}/${redis_db}"
-        fi
-    fi
-
     app_port="${APP_PORT:-9980}"
-    if [ -z "${WEKNORA_BASE_URL:-}" ] || [[ "${WEKNORA_BASE_URL}" == *"host.docker.internal"* ]]; then
+    if [ -z "${WEKNORA_BASE_URL:-}" ] || [[ "${WEKNORA_BASE_URL}" == *"host.docker.internal"* ]] || [[ "${WEKNORA_BASE_URL}" == *"://app:"* ]]; then
         export WEKNORA_BASE_URL="http://127.0.0.1:${app_port}/api/v1"
     fi
 
@@ -352,9 +313,10 @@ fill_harness_connection_urls() {
         export SANDBOX_PROVISIONER_URL="http://127.0.0.1:${sandbox_port}"
     fi
 
-    if [ -z "${MINIO_URI:-}" ] || [[ "${MINIO_URI}" == *"//minio:"* ]]; then
-        export MINIO_URI="http://${MINIO_ENDPOINT:-localhost:9000}"
+    if [ -z "${MINIO_ENDPOINT:-}" ] || [[ "${MINIO_ENDPOINT}" == minio:* ]] || [[ "${MINIO_ENDPOINT}" == *"://minio:"* ]]; then
+        export MINIO_ENDPOINT="localhost:9000"
     fi
+    unset MINIO_URI
 
     # 与 Compose 挂载 ./docker/volumes/agent-harness:/app/saves 对齐，本机不另起一份 saves。
     if [ -z "${YUXI_SAVE_DIR:-}" ]; then
@@ -504,7 +466,7 @@ start_harness() {
     fi
 
     apply_host_dev_env
-    fill_harness_connection_urls
+    apply_harness_host_overrides
 
     if [ -z "${JWT_SECRET:-}" ]; then
         log_error "JWT_SECRET 为空，本机 harness 需要与 WeKnora 相同的密钥"
@@ -523,7 +485,7 @@ start_harness() {
 
     log_info "本机启动 harness api + worker（不启 Docker）..."
     log_info "数据库: ${DB_HOST}:${DB_PORT:-5432}/${DB_NAME:-agent-middle}"
-    log_info "Redis: ${REDIS_ADDR:-localhost:6379} DB ${AGENT_HARNESS_REDIS_DB:-2}"
+    log_info "Redis: ${REDIS_ADDR:-localhost:6379} DB ${REDIS_DB:-0}"
     log_info "工作区: ${YUXI_SAVE_DIR}"
     log_info "API: http://127.0.0.1:${api_port}"
     log_info "WeKnora: ${WEKNORA_BASE_URL}"
