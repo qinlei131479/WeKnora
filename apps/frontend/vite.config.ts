@@ -48,7 +48,7 @@ function embedHtmlDevFallback(): Plugin {
   };
 }
 const DEV_PROXY_TARGET = process.env.VITE_DEV_PROXY_TARGET || process.env.FRONTEND_BACKEND_URL || "http://localhost:9980";
-const HARNESS_PROXY_TARGET = process.env.VITE_HARNESS_PROXY_TARGET || "http://127.0.0.1:9990";
+const HARNESS_PROXY_TARGET = process.env.VITE_HARNESS_PROXY_TARGET || "http://localhost:9990";
 
 const harnessProxy = {
   "/harness-api": {

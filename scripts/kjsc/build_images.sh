@@ -319,8 +319,15 @@ build_docs_image() {
 }
 
 harness_image_tag() {
-    load_env_var AGENT_HARNESS_VERSION
-    echo "${AGENT_HARNESS_VERSION:-$VERSION}"
+    local ver=""
+    if [ -f "$PROJECT_ROOT/VERSION" ]; then
+        ver="$(tr -d '\n\r' < "$PROJECT_ROOT/VERSION")"
+    fi
+    if [ -z "$ver" ]; then
+        echo "latest"
+        return 0
+    fi
+    echo "$ver"
 }
 
 # 构建 Agent-Harness（不并入 -a；不含 sandbox-provisioner）
@@ -330,7 +337,7 @@ build_harness_image() {
     cd "$PROJECT_ROOT"
     get_version_info
     local harness_tag
-    harness_tag="$(harness_image_tag)"
+    harness_tag="$(harness_image_tag)" || return 1
 
     if [ ! -f "$PROJECT_ROOT/docker/Dockerfile.agent-harness" ]; then
         log_error "缺少 docker/Dockerfile.agent-harness"
@@ -359,7 +366,7 @@ build_sandbox_provisioner_image() {
     cd "$PROJECT_ROOT"
     get_version_info
     local harness_tag
-    harness_tag="$(harness_image_tag)"
+    harness_tag="$(harness_image_tag)" || return 1
 
     docker build \
         --platform $PLATFORM \

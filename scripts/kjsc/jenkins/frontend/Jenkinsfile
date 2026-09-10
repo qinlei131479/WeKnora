@@ -85,9 +85,9 @@ pipeline {
                     # 与 .env 中 FRONTEND_PORT 一致；未配置时默认 9988
                     port=$(grep -E '^FRONTEND_PORT=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d ' "\t\r' || true)
                     port=${port:-9988}
-                    echo "健康检查: http://127.0.0.1:${port}/"
+                    echo "健康检查: http://localhost:${port}/"
                     for i in $(seq 1 30); do
-                      code=$(curl -sS -o /dev/null -w "%{http_code}" "http://127.0.0.1:${port}/" || echo 000)
+                      code=$(curl -sS -o /dev/null -w "%{http_code}" "http://localhost:${port}/" || echo 000)
                       # 401/403：服务已通，仅未登录（根路径可能走后端鉴权）
                       case "$code" in 200|201|204|301|302|304|401|403) exit 0 ;; esac
                       sleep 2

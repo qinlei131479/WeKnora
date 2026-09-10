@@ -80,14 +80,11 @@ pipeline {
             steps {
                 sh '''
                     set -e
-                    port=$(grep -E '^AGENT_HARNESS_PORT=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d ' "\t\r' || true)
-                    if [ -z "$port" ]; then
-                      port=$(grep -E '^HARNESS_PORT=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d ' "\t\r' || true)
-                    fi
+                    port=$(grep -E '^HARNESS_PORT=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d ' "\t\r' || true)
                     port=${port:-9990}
-                    echo "健康检查: http://127.0.0.1:${port}/api/system/health"
+                    echo "健康检查: http://localhost:${port}/api/system/health"
                     for i in $(seq 1 60); do
-                      if curl -fsS "http://127.0.0.1:${port}/api/system/health"; then
+                      if curl -fsS "http://localhost:${port}/api/system/health"; then
                         exit 0
                       fi
                       sleep 5

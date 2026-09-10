@@ -55,11 +55,11 @@ docker compose -f docker-compose-kjsc.yml --profile docs up -d --no-deps --pull 
 
 健康检查端口（与 `.env` 保持一致）：
 
-- App：`APP_PORT=9980` → `http://127.0.0.1:9980/health`
-- UI：`FRONTEND_PORT=9988` → `http://127.0.0.1:9988/`
-- Docs：`DOCS_PORT=9900` → `http://127.0.0.1:9900/docs/`
-- Harness：`HARNESS_PORT=9990` → `http://127.0.0.1:9990/api/system/health`
-- Sandbox-provisioner：`SANDBOX_PROVISIONER_PORT=8002` → `http://127.0.0.1:8002/health`
+- App：`APP_PORT=9980` → `http://localhost:9980/health`
+- UI：`FRONTEND_PORT=9988` → `http://localhost:9988/`
+- Docs：`DOCS_PORT=9900` → `http://localhost:9900/docs/`
+- Harness：`HARNESS_PORT=9990` → `http://localhost:9990/api/system/health`
+- Sandbox-provisioner：`SANDBOX_PROVISIONER_PORT=8002` → `http://localhost:8002/health`
 
 ## 参数
 

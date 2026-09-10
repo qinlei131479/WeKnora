@@ -2,8 +2,8 @@
 
 Compose injects `.env` at container create time. This module re-reads the
 bind-mounted file on every process start so `restart` (without recreate) picks
-up non-empty updates, then derives POSTGRES_URL / REDIS_URL / MINIO_URI when those keys
-are blank.
+up non-empty updates. 连接串只认 B 段离散项：POSTGRES_URL / REDIS_URL / MINIO_URI
+一律现场重拼，不接受 .env 或进程残留值。
 """
 
 from __future__ import annotations
@@ -15,6 +15,30 @@ from urllib.parse import quote_plus
 from dotenv import dotenv_values
 
 _POSTGRES_DRIVERS = {"", "postgres", "postgresql"}
+_DERIVED_CONNECTION_KEYS = frozenset({"POSTGRES_URL", "REDIS_URL", "MINIO_URI"})
+_MOUNTED_DOTENV_AUTHORITATIVE_KEYS = {
+    "DB_DRIVER",
+    "DB_HOST",
+    "DB_PORT",
+    "DB_USER",
+    "DB_PASSWORD",
+    "DB_NAME",
+    "REDIS_ADDR",
+    "REDIS_USERNAME",
+    "REDIS_PASSWORD",
+    "REDIS_DB",
+    "MINIO_ENDPOINT",
+    "MINIO_USE_SSL",
+    "MINIO_ACCESS_KEY_ID",
+    "MINIO_SECRET_ACCESS_KEY",
+    "MINIO_ACCESS_KEY",
+    "MINIO_SECRET_KEY",
+    "HARNESS_MINIO_BUCKET_NAME",
+    "JWT_SECRET",
+    "WEKNORA_BASE_URL",
+    "SANDBOX_PROVISIONER_TOKEN",
+    "SANDBOX_PROVISIONER_URL",
+}
 
 
 def _is_blank(value: str | None) -> bool:
@@ -34,17 +58,20 @@ def running_in_docker() -> bool:
     return Path("/.dockerenv").exists() or os.getenv("RUNNING_IN_DOCKER") == "true"
 
 
-def _apply_dotenv_file(path: Path) -> None:
+def _apply_dotenv_file(path: Path) -> dict[str, str | None] | None:
     if not path.is_file():
-        return
-    for key, value in dotenv_values(path).items():
-        if key and not _is_blank(value):
-            os.environ[key] = str(value)
-
-
-def _drop_blank(key: str) -> None:
-    if _is_blank(os.environ.get(key)):
+        return None
+    values = dotenv_values(path)
+    for key in _MOUNTED_DOTENV_AUTHORITATIVE_KEYS.difference(values):
         os.environ.pop(key, None)
+    for key, value in values.items():
+        if not key or key in _DERIVED_CONNECTION_KEYS:
+            continue
+        if _is_blank(value):
+            os.environ.pop(key, None)
+        else:
+            os.environ[key] = str(value)
+    return values
 
 
 def _build_postgres_url() -> str:
@@ -101,13 +128,35 @@ def _build_minio_uri() -> str:
 def resolve_runtime_env(*, dotenv_path: str | Path | None = ".env") -> None:
     if dotenv_path is not None:
         _apply_dotenv_file(Path(dotenv_path))
-    _drop_blank("POSTGRES_URL")
-    _drop_blank("REDIS_URL")
-    _drop_blank("MINIO_URI")
-    if _is_blank(os.environ.get("POSTGRES_URL")):
-        os.environ["POSTGRES_URL"] = _build_postgres_url()
-    if _is_blank(os.environ.get("REDIS_URL")):
-        os.environ["REDIS_URL"] = _build_redis_url()
-    if _is_blank(os.environ.get("MINIO_URI")):
-        os.environ["MINIO_URI"] = _build_minio_uri()
+    for key in _DERIVED_CONNECTION_KEYS:
+        os.environ.pop(key, None)
+    os.environ["POSTGRES_URL"] = _build_postgres_url()
+    os.environ["REDIS_URL"] = _build_redis_url()
+    os.environ["MINIO_URI"] = _build_minio_uri()
+    if _is_blank(os.environ.get("HARNESS_MINIO_BUCKET_NAME")):
+        os.environ["HARNESS_MINIO_BUCKET_NAME"] = "agent-harness"
     _alias_minio_keys()
+
+
+def validate_required_runtime_env() -> None:
+    """Fail fast when Agent-Harness cannot start without a required setting."""
+    missing: list[str] = []
+    for key in (
+        "JWT_SECRET",
+        "WEKNORA_BASE_URL",
+        "SANDBOX_PROVISIONER_URL",
+    ):
+        if _is_blank(os.environ.get(key)):
+            missing.append(key)
+
+    token = env_value("SANDBOX_PROVISIONER_TOKEN")
+    if len(token) < 32:
+        missing.append("SANDBOX_PROVISIONER_TOKEN")
+
+    if _is_blank(env_value("MINIO_ACCESS_KEY", "MINIO_ACCESS_KEY_ID")) or _is_blank(
+        env_value("MINIO_SECRET_KEY", "MINIO_SECRET_ACCESS_KEY")
+    ):
+        missing.append("MINIO_ACCESS_KEY_ID/MINIO_SECRET_ACCESS_KEY")
+
+    if missing:
+        raise ValueError("Agent-Harness 缺少必须配置: " + ", ".join(missing))

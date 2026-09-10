@@ -14,11 +14,14 @@ from yuxi.utils import logger
 from yuxi.agents.backends.sandbox import init_sandbox_provider, shutdown_sandbox_provider
 from yuxi import get_version
 from yuxi.config import config
+from yuxi.config.env import validate_required_runtime_env
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """FastAPI lifespan事件管理器"""
+    validate_required_runtime_env()
+
     # 初始化数据库连接
     try:
         pg_manager.initialize()
@@ -27,6 +30,7 @@ async def lifespan(app: FastAPI):
         await pg_manager.ensure_knowledge_schema()
     except Exception as e:
         logger.error(f"Failed to initialize database during startup: {e}")
+        raise
 
     # 确保内置 MCP 服务器定义存在于数据库
     try:
@@ -71,13 +75,9 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.error(f"Failed to initialize knowledge base manager: {e}")
 
-    try:
-        from yuxi.weknora.flags import require_weknora_base_url
+    from yuxi.weknora.flags import require_weknora_base_url
 
-        url = require_weknora_base_url()
-        logger.info(f"WeKnora KB adapter enabled: {url}")
-    except Exception as e:
-        logger.error(f"WeKnora KB config invalid: {e}")
+    logger.info(f"WeKnora KB adapter enabled: {require_weknora_base_url()}")
 
     # 预热 Redis（run 队列）
     try:

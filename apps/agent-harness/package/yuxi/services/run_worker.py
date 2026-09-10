@@ -13,6 +13,7 @@ from sqlalchemy.exc import OperationalError
 from yuxi.agents.mcp.service import ensure_builtin_mcp_servers_in_db
 from yuxi.agents.skills.service import init_builtin_skills
 from yuxi.config import config as sys_config
+from yuxi.config.env import validate_required_runtime_env
 from yuxi.repositories.agent_run_repository import TERMINAL_RUN_STATUSES, AgentRunRepository
 from yuxi.services.agent_request_queue_service import (
     RUN_STATUS_TO_DELIVERY_STATUS,
@@ -696,6 +697,7 @@ async def _load_input_message(message_id: int | None) -> Message | None:
 async def _worker_startup(ctx):
     """初始化 worker 依赖。"""
 
+    validate_required_runtime_env()
     pg_manager.initialize()
     await pg_manager.create_business_tables()
     await pg_manager.ensure_business_schema()

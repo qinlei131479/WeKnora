@@ -154,7 +154,7 @@ async def backfill_tenant_scope(conn) -> dict[str, int]:
         f"catalog={summary['catalog']} unresolved={summary['unresolved']}"
     )
     try:
-        from yuxi.tenancy.integrity import scan_null_tenant_rows
+        from yuxi.tenancy.integrity import assert_backfill_complete, scan_null_tenant_rows
 
         integrity = await scan_null_tenant_rows(conn)
         if integrity.get("unresolved"):
@@ -167,6 +167,11 @@ async def backfill_tenant_scope(conn) -> dict[str, int]:
                 f"backfill integrity: catalog={integrity.get('catalog', 0)} "
                 f"user_scoped={integrity.get('user_scoped', 0)} unresolved=0"
             )
+        assert_backfill_complete(integrity)
     except Exception as exc:
+        from yuxi.tenancy.integrity import TenantBackfillIncomplete
+
+        if isinstance(exc, TenantBackfillIncomplete):
+            raise
         logger.warning(f"tenant backfill integrity scan skipped: {exc}")
     return summary

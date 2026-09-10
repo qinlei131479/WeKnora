@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
 
@@ -527,6 +528,10 @@ async def test_worker_startup_ensures_builtin_mcp_servers(monkeypatch: pytest.Mo
         del session
         calls.append("init_builtin_skills")
 
+    async def fake_ensure_options_in_db(session):
+        del session
+        calls.append("ensure_options_in_db")
+
     def fake_start_runtime_sync():
         calls.append("start_runtime_sync")
 
@@ -541,6 +546,9 @@ async def test_worker_startup_ensures_builtin_mcp_servers(monkeypatch: pytest.Mo
     monkeypatch.setattr(run_worker, "init_builtin_skills", fake_init_builtin_skills)
     monkeypatch.setattr(run_worker.sys_config, "start_runtime_sync", fake_start_runtime_sync)
     monkeypatch.setattr(run_worker, "recover_pending_dispatches", fake_recover_pending_dispatches)
+    monkeypatch.setattr(run_worker, "validate_required_runtime_env", lambda: None)
+    config_options = importlib.import_module("yuxi.config.options")
+    monkeypatch.setattr(config_options, "ensure_options_in_db", fake_ensure_options_in_db)
 
     await run_worker._worker_startup({})
 
@@ -550,6 +558,7 @@ async def test_worker_startup_ensures_builtin_mcp_servers(monkeypatch: pytest.Mo
         "ensure_business_schema",
         "ensure_builtin_mcp_servers_in_db",
         "init_builtin_skills",
+        "ensure_options_in_db",
         "start_runtime_sync",
         "recover_pending_dispatches",
     ]

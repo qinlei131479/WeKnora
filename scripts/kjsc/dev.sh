@@ -31,7 +31,7 @@ show_help() {
     printf "%b\n" "${GREEN}WeKnora KJSC 开发脚本${NC}"
     echo "用法: $0 [init|infra|app|frontend|harness|sandbox|help]"
     echo ""
-    echo "  init       补齐 .env 中 harness 键，并按需拉取构建镜像"
+    echo "  init       补齐 .env 中 harness 必须键，并按需拉取构建镜像"
     echo "  infra      启动 postgres/redis/docreader/minio（dev.sh --minio）+ sandbox-provisioner"
     echo "  app        启动后端（cmd/app-core）"
     echo "  frontend   启动前端（apps/frontend）"
@@ -152,22 +152,25 @@ init_kjsc() {
         return 1
     fi
 
-    if [ -n "${SILICONFLOW_API_KEY:-}" ] && ! env_has_value SILICONFLOW_API_KEY; then
-        set_env_value "SILICONFLOW_API_KEY" "$SILICONFLOW_API_KEY"
-        log_info "写入 SILICONFLOW_API_KEY（来自环境变量）"
-    elif ! env_has_value SILICONFLOW_API_KEY; then
-        log_warning "SILICONFLOW_API_KEY 未设置（harness 对话需要时可自行写入 .env）"
+    if ! env_has_value JWT_SECRET; then
+        log_error "JWT_SECRET 为空，必须与 app-core 使用同一密钥，请写入 .env 后重试"
+        return 1
     fi
 
-    ensure_env_key "YUXI_INSTANCE_ID" "instance-$(generate_hex 8)"
+    ensure_env_key "WEKNORA_BASE_URL" "http://app:8080/api/v1"
+    ensure_env_key "HARNESS_MINIO_BUCKET_NAME" "agent-harness"
     ensure_env_key "SANDBOX_PROVISIONER_TOKEN" "$(generate_hex 32)"
 
-    local ver="0.7.2"
-    if [ -f VERSION ]; then
-        ver=$(tr -d '\n\r' < VERSION)
+    local missing=""
+    for key in DB_HOST DB_NAME REDIS_ADDR MINIO_ENDPOINT MINIO_ACCESS_KEY_ID MINIO_SECRET_ACCESS_KEY; do
+        if ! env_has_value "$key"; then
+            missing="${missing:+${missing} }${key}"
+        fi
+    done
+    if [ -n "$missing" ]; then
+        log_error "缺少 B 段必须配置: $missing"
+        return 1
     fi
-    set_env_value "AGENT_HARNESS_VERSION" "$ver"
-    log_info "AGENT_HARNESS_VERSION=$ver"
 
     local current=""
     local origin
@@ -176,8 +179,7 @@ init_kjsc() {
         current=$(grep -E '^YUXI_CORS_ORIGINS=' .env | head -n 1 | cut -d= -f2-)
     fi
     for origin in \
-        "http://localhost:5173" \
-        "http://127.0.0.1:5173"; do
+        "http://localhost:5173"; do
         case ",${current}," in
             *",${origin},"*) ;;
             *)
@@ -202,7 +204,6 @@ init_kjsc() {
     for image in \
         "python:3.13-slim" \
         "node:24-slim" \
-        "node:24-alpine" \
         "ghcr.io/astral-sh/uv:0.11.26"; do
         if docker image inspect "$image" >/dev/null 2>&1; then
             log_info "已有 $image，跳过"
@@ -299,37 +300,30 @@ apply_host_dev_env() {
     export DOCREADER_TRANSPORT="${DOCREADER_TRANSPORT:-grpc}"
 }
 
-# 本机覆盖 Docker 主机名；连接串由 yuxi.config.env 按 DB_* / REDIS_* 拼接，不要在此拼 POSTGRES_URL / REDIS_URL。
+# 本机覆盖 Docker 主机名；连接串由 yuxi.config.env 按 B 段离散项拼接，不要写 POSTGRES_URL / REDIS_URL / MINIO_URI。
 apply_harness_host_overrides() {
     local app_port sandbox_port
 
     app_port="${APP_PORT:-9980}"
     if [ -z "${WEKNORA_BASE_URL:-}" ] || [[ "${WEKNORA_BASE_URL}" == *"host.docker.internal"* ]] || [[ "${WEKNORA_BASE_URL}" == *"://app:"* ]]; then
-        export WEKNORA_BASE_URL="http://127.0.0.1:${app_port}/api/v1"
+        export WEKNORA_BASE_URL="http://localhost:${app_port}/api/v1"
     fi
 
     sandbox_port="${SANDBOX_PROVISIONER_PORT:-8002}"
     if [ -z "${SANDBOX_PROVISIONER_URL:-}" ] || [[ "${SANDBOX_PROVISIONER_URL}" == *"sandbox-provisioner"* ]]; then
-        export SANDBOX_PROVISIONER_URL="http://127.0.0.1:${sandbox_port}"
+        export SANDBOX_PROVISIONER_URL="http://localhost:${sandbox_port}"
     fi
 
     if [ -z "${MINIO_ENDPOINT:-}" ] || [[ "${MINIO_ENDPOINT}" == minio:* ]] || [[ "${MINIO_ENDPOINT}" == *"://minio:"* ]]; then
         export MINIO_ENDPOINT="localhost:9000"
     fi
-    unset MINIO_URI
+    unset POSTGRES_URL REDIS_URL MINIO_URI
 
     # 与 Compose 挂载 ./docker/volumes/agent-harness:/app/saves 对齐，本机不另起一份 saves。
     if [ -z "${YUXI_SAVE_DIR:-}" ]; then
         export YUXI_SAVE_DIR="$PROJECT_ROOT/docker/volumes/agent-harness"
     fi
     mkdir -p "$YUXI_SAVE_DIR"
-
-    if [[ "${NEO4J_URI:-}" == *"://graph:"* ]]; then
-        export NEO4J_URI="bolt://localhost:7687"
-    fi
-    if [[ "${MILVUS_URI:-}" == *"//milvus:"* ]]; then
-        export MILVUS_URI="http://localhost:19530"
-    fi
 
     unset RUNNING_IN_DOCKER
     export YUXI_ENV="${YUXI_ENV:-development}"
@@ -414,7 +408,7 @@ start_frontend() {
     export APP_PORT="${APP_PORT:-9980}"
     export VITE_DEV_PORT="${VITE_DEV_PORT:-${FRONTEND_PORT:-9988}}"
     export VITE_DEV_PROXY_TARGET="${VITE_DEV_PROXY_TARGET:-${FRONTEND_BACKEND_URL:-http://localhost:${APP_PORT}}}"
-    export VITE_HARNESS_PROXY_TARGET="${VITE_HARNESS_PROXY_TARGET:-http://127.0.0.1:${AGENT_HARNESS_PORT:-${HARNESS_PORT:-9990}}}"
+    export VITE_HARNESS_PROXY_TARGET="${VITE_HARNESS_PROXY_TARGET:-http://localhost:${HARNESS_PORT:-9990}}"
 
     log_info "启动 Vite 开发服务器..."
     log_info "前端将运行在 http://localhost:${VITE_DEV_PORT}"
@@ -432,19 +426,23 @@ require_env_file() {
     fi
 }
 
-harness_version() {
-    if [ -f VERSION ]; then
-        tr -d '\n\r' < VERSION
-    else
-        echo "unknown"
+repo_version() {
+    local ver=""
+    if [ -f "$PROJECT_ROOT/VERSION" ]; then
+        ver="$(tr -d '\n\r' < "$PROJECT_ROOT/VERSION")"
     fi
+    if [ -z "$ver" ]; then
+        echo "latest"
+        return 0
+    fi
+    echo "$ver"
 }
 
 # COMPOSE_FILE 可覆盖，默认 docker-compose-mac.yml。--no-deps 不拉基础设施。
 harness_compose() {
     local compose_file="${COMPOSE_FILE:-docker-compose-mac.yml}"
-    AGENT_HARNESS_VERSION="$(harness_version)" docker compose -f "$compose_file" \
-        --profile harness --profile minio --profile neo4j "$@"
+    VERSION="$(repo_version)" docker compose -f "$compose_file" \
+        --profile harness --profile minio "$@"
 }
 
 start_harness() {
@@ -472,9 +470,17 @@ start_harness() {
         log_error "JWT_SECRET 为空，本机 harness 需要与 WeKnora 相同的密钥"
         return 1
     fi
+    if [ -z "${WEKNORA_BASE_URL:-}" ]; then
+        log_error "WEKNORA_BASE_URL 为空，请先运行: ./scripts/kjsc/dev.sh init"
+        return 1
+    fi
+    if [ "${#SANDBOX_PROVISIONER_TOKEN}" -lt 32 ]; then
+        log_error "SANDBOX_PROVISIONER_TOKEN 至少 32 字符，请先运行: ./scripts/kjsc/dev.sh init"
+        return 1
+    fi
 
     local harness_dir="$PROJECT_ROOT/apps/agent-harness"
-    local api_port="${AGENT_HARNESS_PORT:-${HARNESS_PORT:-9990}}"
+    local api_port="${HARNESS_PORT:-9990}"
     local worker_pid=""
 
     cd "$harness_dir"
@@ -487,7 +493,7 @@ start_harness() {
     log_info "数据库: ${DB_HOST}:${DB_PORT:-5432}/${DB_NAME:-agent-middle}"
     log_info "Redis: ${REDIS_ADDR:-localhost:6379} DB ${REDIS_DB:-0}"
     log_info "工作区: ${YUXI_SAVE_DIR}"
-    log_info "API: http://127.0.0.1:${api_port}"
+    log_info "API: http://localhost:${api_port}"
     log_info "WeKnora: ${WEKNORA_BASE_URL}"
 
     cleanup_harness() {

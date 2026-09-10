@@ -115,6 +115,29 @@ async def test_ensure_business_schema_creates_user_config_table():
 
 
 @pytest.mark.asyncio
+async def test_ensure_business_schema_fails_when_tenant_backfill_is_incomplete(monkeypatch):
+    from yuxi.tenancy.integrity import TenantBackfillIncomplete
+
+    manager = PostgresManager()
+    original_initialized = manager._initialized
+    original_engine = manager.async_engine
+    connection = _RecordingConnection()
+
+    async def fail_backfill(_conn):
+        raise TenantBackfillIncomplete("unresolved null tenant_id rows: 1")
+
+    monkeypatch.setattr("yuxi.tenancy.schema.backfill_tenant_scope", fail_backfill)
+    manager._initialized = True
+    manager.async_engine = _RecordingEngine(connection)
+    try:
+        with pytest.raises(TenantBackfillIncomplete, match="unresolved null tenant_id rows"):
+            await manager.ensure_business_schema()
+    finally:
+        manager._initialized = original_initialized
+        manager.async_engine = original_engine
+
+
+@pytest.mark.asyncio
 async def test_ensure_business_schema_creates_generic_config_options_table():
     manager = PostgresManager()
     original_initialized = manager._initialized

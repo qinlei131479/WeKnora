@@ -1,6 +1,5 @@
-# Agent-Harness 镜像 tag 使用 AGENT_HARNESS_VERSION（.env），须与仓库根 VERSION 一致：
-#   AGENT_HARNESS_VERSION=$(tr -d '\n\r' < VERSION)
-# 启动：docker compose -f docker-compose-kjsc.yml --profile harness --profile minio --profile neo4j --profile milvus up -d
+# Agent-Harness 镜像 tag 读仓库根 VERSION，读不到则 latest：VERSION=$(tr -d '\n\r' < VERSION)
+# 启动：docker compose -f docker-compose-kjsc.yml --profile harness --profile minio up -d
 # api/worker 只通过 env_file + 挂载 ./.env 注入变量；进程启动时由 yuxi.config.env 按 B 段拼连接串。
 services:
   frontend:
@@ -22,7 +21,6 @@ services:
       - APP_SCHEME=${APP_SCHEME:-http}
       - HARNESS_HOST=${HARNESS_HOST:-agent-harness}
       - HARNESS_PORT=${HARNESS_PORT:-9990}
-      - HARNESS_SCHEME=${HARNESS_SCHEME:-http}
     # NOTE: If using a remote App backend, comment out or remove the depends_on
     # block below and set APP_HOST/APP_BACKEND_PORT/APP_SCHEME in your .env file.
     depends_on:
@@ -1097,11 +1095,11 @@ services:
 
   # =====================================================================
   # Agent-Harness（profile: harness；OCR：profile all）
-  # postgres/minio/neo4j/milvus 仍用本文件原定义（现网容器名 postgres17/minio2025/neo4j/milvus2.6），此处不覆盖。
+  # postgres/minio 仍用本文件原定义（现网容器名 postgres17/minio2025），此处不覆盖。
   # =====================================================================
   # 幂等确认 DB_NAME（与 WeKnora 同库）存在；仅操作 catalog，不改动 postgres-data 卷。
   # 现网（postgres17 已在跑）必须 --no-deps，且要带 minio profile 才能通过 compose 校验：
-  #   docker compose -f docker-compose-kjsc.yml --profile harness --profile minio --profile neo4j \
+  #   docker compose -f docker-compose-kjsc.yml --profile harness --profile minio \
   #     up --no-deps --exit-code-from harness-db-init harness-db-init
   harness-db-init:
     profiles:
@@ -1134,7 +1132,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.agent-harness
-    image: kjsc/agent-middle-harness:${AGENT_HARNESS_VERSION:-0.7.2}
+    image: kjsc/agent-middle-harness:${VERSION:-latest}
     container_name: agent-middle-harness-api
     working_dir: /app
     volumes:
@@ -1148,7 +1146,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - nltk_data:/root/nltk_data
     ports:
-      - "${AGENT_HARNESS_BIND:-0.0.0.0}:${AGENT_HARNESS_PORT:-9990}:9990"
+      - "${HARNESS_PORT:-9990}:9990"
     networks:
       agent-middle-network:
         aliases:
@@ -1157,7 +1155,7 @@ services:
       - "host.docker.internal:host-gateway"
     env_file:
       - .env
-    entrypoint: [""]
+    entrypoint: []
     command: uv run --no-sync --no-dev uvicorn server.main:app --host 0.0.0.0 --port 9990 --reload --reload-dir /app/server --reload-dir /app/package --timeout-graceful-shutdown 5
     restart: unless-stopped
     healthcheck:
@@ -1177,7 +1175,7 @@ services:
   worker:
     profiles:
       - harness
-    image: kjsc/agent-middle-harness:${AGENT_HARNESS_VERSION:-0.7.2}
+    image: kjsc/agent-middle-harness:${VERSION:-latest}
     container_name: agent-middle-harness-worker
     working_dir: /app
     volumes:
@@ -1198,7 +1196,7 @@ services:
       - "host.docker.internal:host-gateway"
     env_file:
       - .env
-    entrypoint: [""]
+    entrypoint: []
     command: watchfiles --filter python "arq server.worker_main.WorkerSettings" /app/server /app/package
     restart: unless-stopped
     depends_on:
@@ -1215,7 +1213,7 @@ services:
     build:
       context: ./docker/sandbox_provisioner
       dockerfile: Dockerfile
-    image: sandbox-provisioner:${AGENT_HARNESS_VERSION:-0.7.2}
+    image: sandbox-provisioner:${VERSION:-latest}
     container_name: sandbox-provisioner
     volumes:
       - ./docker/volumes/agent-harness:/app/saves

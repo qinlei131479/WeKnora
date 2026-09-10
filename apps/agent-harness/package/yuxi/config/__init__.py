@@ -1,4 +1,4 @@
-from .env import env_value, resolve_runtime_env, running_in_docker
+from .env import env_value, resolve_runtime_env, running_in_docker, validate_required_runtime_env
 
 resolve_runtime_env()
 
@@ -12,4 +12,5 @@ __all__ = [
     "env_value",
     "resolve_runtime_env",
     "running_in_docker",
+    "validate_required_runtime_env",
 ]

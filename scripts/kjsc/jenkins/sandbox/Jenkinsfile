@@ -80,9 +80,9 @@ pipeline {
                     set -e
                     port=$(grep -E '^SANDBOX_PROVISIONER_PORT=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d ' "\t\r' || true)
                     port=${port:-8002}
-                    echo "健康检查: http://127.0.0.1:${port}/health"
+                    echo "健康检查: http://localhost:${port}/health"
                     for i in $(seq 1 30); do
-                      if curl -fsS "http://127.0.0.1:${port}/health"; then
+                      if curl -fsS "http://localhost:${port}/health"; then
                         exit 0
                       fi
                       sleep 2

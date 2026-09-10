@@ -108,7 +108,7 @@ async def test_upload_tmp_attachment_writes_user_scoped_minio_object(monkeypatch
 
     assert response["bucket_name"] == "knowledgebases"
     assert response["object_name"].startswith("tmp/chat_attachments/user-1/")
-    assert response["parse_methods"][0] == "disable"
+    assert response["parse_methods"][0] == "weknora"
     assert fake_minio.objects[("knowledgebases", response["object_name"])] == b"pdf-bytes"
 
 
@@ -130,7 +130,7 @@ async def test_parse_tmp_attachment_uses_selected_method_and_uploads_markdown(mo
     response = await service.parse_tmp_attachment_view(
         object_name=object_name,
         file_name="demo.pdf",
-        parse_method="disable",
+        parse_method="weknora",
         bucket_name="knowledgebases",
         current_uid="user-1",
     )
@@ -138,10 +138,36 @@ async def test_parse_tmp_attachment_uses_selected_method_and_uploads_markdown(mo
     assert parse_calls == [
         {
             "source": f"minio://knowledgebases/{object_name}",
-            "params": {"ocr_engine": "disable"},
+            "params": {"ocr_engine": "weknora"},
         }
     ]
     assert response["parsed_object_name"] == "tmp/chat_attachments/user-1/tmp-1/parsed/demo.md"
+    assert fake_minio.objects[("knowledgebases", response["parsed_object_name"])] == b"# parsed"
+
+
+@pytest.mark.asyncio
+async def test_parse_tmp_attachment_accepts_legacy_bucket_after_bucket_split(monkeypatch):
+    fake_minio = FakeMinioClient()
+    fake_minio.KB_BUCKETS = {"documents": "agent-harness"}
+    object_name = "tmp/chat_attachments/user-1/tmp-1/original/demo.pdf"
+    fake_minio.objects[("knowledgebases", object_name)] = b"pdf-bytes"
+    monkeypatch.setattr(service, "get_minio_client", lambda: fake_minio)
+
+    async def fake_parse(source: str, params: dict | None = None) -> str:
+        assert source == f"minio://knowledgebases/{object_name}"
+        return "# parsed"
+
+    monkeypatch.setattr(service, "parse_document", fake_parse)
+
+    response = await service.parse_tmp_attachment_view(
+        object_name=object_name,
+        file_name="demo.pdf",
+        parse_method="weknora",
+        bucket_name="knowledgebases",
+        current_uid="user-1",
+    )
+
+    assert response["bucket_name"] == "knowledgebases"
     assert fake_minio.objects[("knowledgebases", response["parsed_object_name"])] == b"# parsed"
 
 
@@ -215,7 +241,7 @@ async def test_parse_tmp_attachment_uses_object_name_for_type_validation(monkeyp
         await service.parse_tmp_attachment_view(
             object_name=object_name,
             file_name="demo.pdf",
-            parse_method="disable",
+            parse_method="weknora",
             bucket_name="knowledgebases",
             current_uid="user-1",
         )
@@ -242,7 +268,7 @@ async def test_parse_tmp_attachment_handles_url_metacharacters(monkeypatch):
     response = await service.parse_tmp_attachment_view(
         object_name=object_name,
         file_name="ignored.pdf",
-        parse_method="disable",
+        parse_method="weknora",
         bucket_name="knowledgebases",
         current_uid="user-1",
     )

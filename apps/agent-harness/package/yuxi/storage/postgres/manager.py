@@ -512,6 +512,10 @@ class PostgresManager(metaclass=SingletonMeta):
 
                 await backfill_tenant_scope(conn)
             except Exception as exc:
+                from yuxi.tenancy.integrity import TenantBackfillIncomplete
+
+                if isinstance(exc, TenantBackfillIncomplete):
+                    raise
                 logger.warning(f"tenant backfill skipped: {exc}")
 
     @property

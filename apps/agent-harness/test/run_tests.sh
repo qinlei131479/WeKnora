@@ -4,8 +4,8 @@ set -euo pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 COMPOSE_FILE="${COMPOSE_FILE:-$PROJECT_ROOT/docker-compose-mac.yml}"
-API_PORT="${AGENT_HARNESS_PORT:-9990}"
-COMPOSE_CMD=("docker" "compose" "-f" "$COMPOSE_FILE" "--profile" "harness" "--profile" "minio" "--profile" "neo4j" "--profile" "milvus")
+API_PORT="${HARNESS_PORT:-9990}"
+COMPOSE_CMD=("docker" "compose" "-f" "$COMPOSE_FILE" "--profile" "harness" "--profile" "minio")
 
 echo "Agent-Harness 测试运行器"
 echo "========================"
@@ -14,7 +14,7 @@ PYTEST_CMD=("${COMPOSE_CMD[@]}" "exec" "-T" "api" "uv" "run" "--group" "test" "p
 
 check_server() {
     echo "检查测试服务器状态..."
-    if curl -fsS "http://127.0.0.1:${API_PORT}/api/system/health" > /dev/null 2>&1; then
+    if curl -fsS "http://localhost:${API_PORT}/api/system/health" > /dev/null 2>&1; then
         echo "✓ 测试服务器运行正常"
         return 0
     fi

@@ -157,6 +157,11 @@ def _get_tmp_attachment_bucket() -> str:
     return get_minio_client().KB_BUCKETS["documents"]
 
 
+def _is_allowed_tmp_attachment_bucket(bucket_name: str, expected_bucket: str) -> bool:
+    """Allow the pre-split bucket only for existing attachment references."""
+    return bucket_name in {expected_bucket, "knowledgebases"}
+
+
 def _make_tmp_attachment_object(uid: str, file_name: str) -> tuple[str, str]:
     """生成用户隔离的 tmp 对象路径。"""
     tmp_file_id = uuid.uuid4().hex
@@ -636,7 +641,7 @@ async def parse_tmp_attachment_view(
     minio_client = get_minio_client()
     expected_bucket = _get_tmp_attachment_bucket()
     bucket_name = bucket_name or expected_bucket
-    if bucket_name != expected_bucket:
+    if not _is_allowed_tmp_attachment_bucket(bucket_name, expected_bucket):
         raise HTTPException(status_code=400, detail="无效的临时附件 bucket")
 
     tmp_file_id, safe_name = _require_tmp_object_section(object_name, str(current_uid), "original")
@@ -691,7 +696,7 @@ async def confirm_tmp_thread_attachments_view(
     for item in attachments:
         object_name = str(item.get("object_name") or "")
         bucket_name = str(item.get("bucket_name") or expected_bucket)
-        if bucket_name != expected_bucket:
+        if not _is_allowed_tmp_attachment_bucket(bucket_name, expected_bucket):
             raise HTTPException(status_code=400, detail="无效的临时附件 bucket")
 
         tmp_file_id, file_name = _require_tmp_object_section(object_name, str(current_uid), "original")
