@@ -203,10 +203,12 @@ def grouped_v2_models(models: list[dict[str, Any]], model_type: str) -> dict[str
             },
         )
         model_id = str(item.get("id") or "")
+        model_name = str(item.get("name") or "").strip()
         group["models"].append(
             {
                 "spec": model_id,
                 "model_id": model_id,
+                "name": model_name,
                 "display_name": model_display_name(item),
                 "dimension": model_dimension(item),
                 "batch_size": None,

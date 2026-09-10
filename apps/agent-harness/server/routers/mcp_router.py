@@ -112,6 +112,7 @@ async def get_mcp_servers(
         for s in servers:
             data.append(
                 {
+                    "slug": getattr(s, "slug", ""),
                     "name": getattr(s, "name", ""),
                     "description": getattr(s, "description", None),
                     "icon": getattr(s, "icon", None),

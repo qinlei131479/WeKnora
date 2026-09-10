@@ -5423,15 +5423,32 @@ export default {
         readonly: '읽기 전용 {scope}'
       },
       editor: {
-        other: '기타 설정',
-        basicInfoDesc: '에이전트 이름, 설명, 백엔드 및 공유 범위를 설정합니다',
+        other: '고급 설정',
+        advanced: '고급 설정',
+        advancedDesc: '모델, 프롬프트, 지식 베이스, 도구, MCP, 스킬, 하위 에이전트에 속하지 않는 나머지 설정',
+        navAdvanced: '고급',
+        basicInfoDesc: '에이전트 이름, 설명, 실행 백엔드를 설정합니다',
         defaultName: '새 에이전트',
         namePlaceholder: '에이전트 이름 입력',
         slug: '식별자',
         slugPlaceholder: '선택 사항, 비워 두면 자동 생성',
+        slugDesc: '생성 후 에이전트 ID로 사용됩니다. 비워 두면 자동 생성됩니다.',
         description: '설명',
         descriptionPlaceholder: '선택 사항',
-        backend: '에이전트 백엔드',
+        backend: '에이전트 유형',
+        backendDesc: '에이전트 유형을 선택합니다. 생성 후에는 변경할 수 없습니다.',
+        backendAssistant: '어시스턴트',
+        backendSubagent: '하위 에이전트',
+        backendDescAssistant: '도구, 지식 베이스, 하위 에이전트를 사용할 수 있는 대화형 작업 에이전트입니다.',
+        backendDescSubagent: '상위 에이전트가 단일 작업에 호출하는 하위 에이전트입니다.',
+        subagents: '하위 에이전트',
+        subagentsDesc: '이 에이전트가 호출할 수 있는 하위 에이전트를 구성합니다',
+        subagentsSelection: '하위 에이전트 범위',
+        subagentsSelectionDesc: '이 에이전트가 호출할 수 있는 하위 에이전트 범위를 선택합니다',
+        subagentsSelect: '하위 에이전트 선택',
+        subagentsSelectDesc: '사용할 하위 에이전트를 선택합니다',
+        noSubagentsAvailable: '사용 가능한 하위 에이전트가 없습니다',
+        builtinTools: '내장 도구',
         noBackend: '선택되지 않음',
         uploadIcon: '아이콘 업로드',
         changeIcon: '아이콘 변경',
@@ -5446,6 +5463,157 @@ export default {
         saved: '에이전트가 저장되었습니다',
         created: '에이전트가 생성되었습니다',
         saveFailed: '에이전트를 저장하지 못했습니다'
+      },
+      fields: {
+        system_prompt: {
+          name: '시스템 프롬프트',
+          desc: '에이전트의 역할과 동작을 설명합니다'
+        },
+        model: {
+          name: '모델',
+          desc: '이 에이전트를 구동하는 모델입니다. 비워 두면 시스템 기본 모델을 사용합니다.'
+        },
+        tool_approval_mode: {
+          name: '도구 승인 모드',
+          desc: '기본 승인은 파일 쓰기, 편집 또는 명령 실행 전에 확인합니다. 항상 신뢰는 이러한 도구를 자동으로 실행합니다.',
+          options: {
+            default: '기본 승인',
+            always_trust: '항상 신뢰'
+          }
+        },
+        tools: {
+          name: '도구',
+          desc: '내장 도구입니다. 현재 사용자가 사용할 수 있는 모든 도구가 기본으로 선택됩니다.'
+        },
+        knowledges: {
+          name: '지식 베이스',
+          desc: '지식 베이스는 WeKnora에서 가져옵니다. 지식 페이지에서 만드세요. 접근 가능한 모든 지식 베이스가 기본으로 선택됩니다.'
+        },
+        mcps: {
+          name: 'MCP 서비스',
+          desc: '현재 사용자가 사용할 수 있는 모든 MCP 서비스가 기본으로 선택됩니다.'
+        },
+        skills: {
+          name: 'Skills',
+          desc: '선택적 Skill입니다. 현재 사용자가 사용할 수 있는 모든 Skill이 기본으로 선택됩니다. Skill에 필요한 도구와 MCP 서비스는 자동으로 마운트됩니다.'
+        },
+        summary_threshold: {
+          name: '컨텍스트 요약 임계값 (K)',
+          desc: '컨텍스트 크기가 이 값을 초과하면 요약이 활성화됩니다. 단위는 K 토큰입니다. 기본값은 {default}K입니다.'
+        },
+        summary_keep_messages: {
+          name: '요약 후 유지 메시지 수',
+          desc: '요약 후 요약 외에 최근 메시지를 이 개수만큼 유지합니다. 기본값은 {default}입니다.'
+        },
+        summary_prompt: {
+          name: '컨텍스트 요약 프롬프트',
+          desc: '컨텍스트를 요약할 때 사용하는 프롬프트입니다. 요약할 메시지 자리 표시자로 {messages}를 받을 수 있어야 합니다.'
+        },
+        summary_tool_result_token_limit: {
+          name: '요약 도구 결과 토큰 한도',
+          desc: 'L1 정리 시 이 토큰 수를 넘는 도구 결과는 outputs에 기록되고, 컨텍스트에는 해당 길이의 미리보기만 남습니다. 기본값은 {default}입니다.'
+        },
+        summary_l2_trigger_ratio: {
+          name: 'L2 요약 트리거 비율',
+          desc: 'L1 압축 후 남은 컨텍스트가 요약 임계값 × 이 비율을 넘으면 L2 요약이 실행됩니다. 범위 0.1–1.0이며 값이 작을수록 L2가 더 빨리 트리거됩니다. 기본값은 {default}입니다.'
+        },
+        max_execution_steps: {
+          name: '최대 실행 스텝',
+          desc: '한 번의 에이전트 실행에서 허용되는 최대 LangGraph 스텝 수(recursion_limit)입니다. 기본값은 {default}입니다.'
+        },
+        model_retry_times: {
+          name: '모델 재시도 횟수',
+          desc: '모델 호출이 실패했을 때의 최대 재시도 횟수입니다. 기본값은 {default}입니다.'
+        }
+      },
+      form: {
+        emptyConfig: '이 에이전트에는 구성 항목이 없습니다',
+        knowledgeSkillWarning:
+          '지식 베이스가 활성화되어 있지만 knowledge-base Skill이 선택되지 않았습니다. 에이전트가 지식을 검색하거나 문서를 열지 못할 수 있습니다.',
+        defaultPlaceholder: '기본값: {value}'
+      },
+      builtinTools: {
+        install_skill: {
+          name: '스킬 설치',
+          desc: '현재 사용자의 개인 공간에 Skill을 설치하고 이 세션에서 활성화합니다.'
+        },
+        web_search: {
+          name: '웹 검색',
+          desc: '인터넷에서 실시간 웹 페이지, 뉴스 및 사이트 콘텐츠를 검색합니다.'
+        },
+        present_artifacts: {
+          name: '산출물 표시',
+          desc: '작업 공간 outputs 폴더의 결과 파일을 보여 주어 사용자가 다운로드하거나 미리볼 수 있게 합니다.'
+        },
+        ocr_parse_file: {
+          name: 'OCR 파일 파싱',
+          desc: 'PDF, Office 또는 이미지 파일을 Markdown 텍스트로 파싱합니다.'
+        },
+        ask_user_question: {
+          name: '사용자에게 질문',
+          desc: '중요한 결정이나 확인이 필요할 때 사용자에게 질문합니다.'
+        },
+        calculator: {
+          name: '계산기',
+          desc: '기본 수치 계산을 수행합니다.'
+        },
+        list_kbs: {
+          name: '지식 베이스 목록',
+          desc: '현재 사용자가 접근할 수 있는 지식 베이스를 나열합니다.'
+        },
+        get_mindmap: {
+          name: '마인드맵 가져오기',
+          desc: '지정한 지식 베이스의 마인드맵 구조를 가져옵니다.'
+        },
+        query_kb: {
+          name: '지식 베이스 검색',
+          desc: '지정한 지식 베이스에서 관련 내용을 검색합니다.'
+        },
+        open_kb_document: {
+          name: '문서 열기',
+          desc: '지식 베이스 문서를 행 창 단위로 엽니다.'
+        },
+        find_kb_document: {
+          name: '문서 내 찾기',
+          desc: '지식 베이스 파일에서 키워드 또는 정규식을 찾습니다.'
+        },
+        search_file: {
+          name: '파일 검색',
+          desc: '접근 가능한 지식 베이스에서 파일을 검색합니다.'
+        },
+        download_kb_file: {
+          name: '파일 다운로드',
+          desc: '지식 베이스 원본 파일을 작업 공간으로 다운로드합니다.'
+        }
+      },
+      toolCategories: {
+        knowledge: '지식 베이스',
+        mysql: 'MySQL',
+        debug: '디버그'
+      },
+      modelSelector: {
+        clear: '선택 지우기',
+        checking: '확인 중...',
+        check: '확인',
+        searchPlaceholder: '모델 검색',
+        refreshingCache: '새로 고치는 중...',
+        refreshCache: '캐시 새로 고침',
+        loading: '불러오는 중...',
+        empty: '일치하는 모델 없음',
+        vision: '이미지 입력 지원',
+        oneMillionContext: '약 1M 토큰 컨텍스트 창',
+        noModelHint: '적합한 모델이 없나요?',
+        configureModels: '모델 구성',
+        metadataPrefix: '일부 정보(가격, 기능 등)는',
+        metadataSuffix: '에서 보완됩니다. 참고용이며 공식 사이트와 다를 수 있습니다.',
+        dismissNotice: '다시 표시하지 않음',
+        closeNotice: '모델 정보 안내 닫기',
+        placeholder: '모델을 선택하세요',
+        statusUnknown: '상태 알 수 없음',
+        statusAvailable: '사용 가능',
+        statusUnavailable: '사용 불가',
+        statusError: '오류',
+        noDetails: '상세 정보 없음'
       }
     },
     createAgent: '에이전트 만들기',

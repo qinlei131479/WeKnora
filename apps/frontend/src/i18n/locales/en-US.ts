@@ -1227,15 +1227,32 @@ export default {
         readonly: 'Read-only {scope}'
       },
       editor: {
-        other: 'Other',
-        basicInfoDesc: 'Configure the agent name, description, backend, and sharing',
+        other: 'Advanced',
+        advanced: 'Advanced',
+        advancedDesc: 'Remaining settings not covered by model, prompt, knowledge, tools, MCP, skills, or subagents',
+        navAdvanced: 'Advanced',
+        basicInfoDesc: 'Configure the agent name, description, and backend',
         defaultName: 'New agent',
         namePlaceholder: 'Enter agent name',
         slug: 'ID',
         slugPlaceholder: 'Optional ID, generated if empty',
+        slugDesc: 'Used as the agent ID after creation. Leave empty to generate one.',
         description: 'Description',
         descriptionPlaceholder: 'Optional',
-        backend: 'Agent backend',
+        backend: 'Agent type',
+        backendDesc: 'Choose the agent type. This cannot be changed after creation.',
+        backendAssistant: 'Assistant',
+        backendSubagent: 'Subagent',
+        backendDescAssistant: 'A conversational work agent that can use tools, knowledge bases, and subagents.',
+        backendDescSubagent: 'A subagent invoked by a parent agent for a focused task.',
+        subagents: 'Subagents',
+        subagentsDesc: 'Choose subagents this agent can invoke',
+        subagentsSelection: 'Subagent scope',
+        subagentsSelectionDesc: 'Choose which subagents this agent can invoke',
+        subagentsSelect: 'Select subagents',
+        subagentsSelectDesc: 'Choose the subagents to enable',
+        noSubagentsAvailable: 'No subagents available',
+        builtinTools: 'Built-in tools',
         noBackend: 'Not selected',
         uploadIcon: 'Upload icon',
         changeIcon: 'Change icon',
@@ -1250,6 +1267,157 @@ export default {
         saved: 'Agent saved',
         created: 'Agent created',
         saveFailed: 'Failed to save agent'
+      },
+      fields: {
+        system_prompt: {
+          name: 'System prompt',
+          desc: 'Describe the agent’s role and behavior'
+        },
+        model: {
+          name: 'Model',
+          desc: 'The model that drives this agent. Leave empty to use the system default.'
+        },
+        tool_approval_mode: {
+          name: 'Tool approval mode',
+          desc: 'Default approval asks before writing files, editing files, or running commands. Always trust runs these tools automatically.',
+          options: {
+            default: 'Default approval',
+            always_trust: 'Always trust'
+          }
+        },
+        tools: {
+          name: 'Tools',
+          desc: 'Built-in tools. All tools available to the current user are selected by default.'
+        },
+        knowledges: {
+          name: 'Knowledge bases',
+          desc: 'Knowledge bases come from WeKnora. Create them on the Knowledge page. All accessible knowledge bases are selected by default.'
+        },
+        mcps: {
+          name: 'MCP services',
+          desc: 'All MCP services available to the current user are selected by default.'
+        },
+        skills: {
+          name: 'Skills',
+          desc: 'Optional Skills. All Skills available to the current user are selected by default. Tools and MCP services required by a Skill are mounted automatically.'
+        },
+        summary_threshold: {
+          name: 'Context summary threshold (K)',
+          desc: 'When context size exceeds this value, summarization is enabled to save context. Unit is K tokens. Default is {default}K.'
+        },
+        summary_keep_messages: {
+          name: 'Messages kept after summary',
+          desc: 'After summarization, keep this many recent messages in addition to the summary. Default is {default}.'
+        },
+        summary_prompt: {
+          name: 'Context summary prompt',
+          desc: 'Prompt used when summarizing context. It must accept {messages} as the placeholder for messages to summarize.'
+        },
+        summary_tool_result_token_limit: {
+          name: 'Summary tool-result token limit',
+          desc: 'During L1 cleanup, tool results over this token count are written to outputs and only a preview of that length is kept in context. Default is {default}.'
+        },
+        summary_l2_trigger_ratio: {
+          name: 'L2 summary trigger ratio',
+          desc: 'After L1 compaction, L2 summary runs when remaining context exceeds the summary threshold × this ratio. Range 0.1–1.0; lower values trigger L2 sooner. Default is {default}.'
+        },
+        max_execution_steps: {
+          name: 'Max execution steps',
+          desc: 'Maximum LangGraph steps allowed in a single agent run (recursion_limit). Default is {default}.'
+        },
+        model_retry_times: {
+          name: 'Model retry count',
+          desc: 'Maximum retries when a model call fails. Default is {default}.'
+        }
+      },
+      form: {
+        emptyConfig: 'This agent has no configuration items',
+        knowledgeSkillWarning:
+          'Knowledge bases are enabled, but the knowledge-base Skill is not selected. The agent may be unable to search knowledge or open documents.',
+        defaultPlaceholder: 'Default: {value}'
+      },
+      builtinTools: {
+        install_skill: {
+          name: 'Install skill',
+          desc: 'Install a Skill into the current user’s private space and activate it in this session.'
+        },
+        web_search: {
+          name: 'Web search',
+          desc: 'Search the internet for live web pages, news, and site content.'
+        },
+        present_artifacts: {
+          name: 'Present artifacts',
+          desc: 'Show result files from the workspace outputs folder so the user can download or preview them.'
+        },
+        ocr_parse_file: {
+          name: 'OCR parse file',
+          desc: 'Parse PDF, Office, or image files into Markdown text.'
+        },
+        ask_user_question: {
+          name: 'Ask user',
+          desc: 'Ask the user a question when a key decision or clarification is needed.'
+        },
+        calculator: {
+          name: 'Calculator',
+          desc: 'Perform basic numeric calculations.'
+        },
+        list_kbs: {
+          name: 'List knowledge bases',
+          desc: 'List knowledge bases the current user can access.'
+        },
+        get_mindmap: {
+          name: 'Get mind map',
+          desc: 'Get the mind-map structure of a knowledge base.'
+        },
+        query_kb: {
+          name: 'Search knowledge base',
+          desc: 'Search a knowledge base for relevant content.'
+        },
+        open_kb_document: {
+          name: 'Open document',
+          desc: 'Open a knowledge-base document by line window.'
+        },
+        find_kb_document: {
+          name: 'Find in document',
+          desc: 'Locate keywords or regex patterns inside a knowledge-base file.'
+        },
+        search_file: {
+          name: 'Search files',
+          desc: 'Search files across accessible knowledge bases.'
+        },
+        download_kb_file: {
+          name: 'Download file',
+          desc: 'Download an original knowledge-base file into the workspace.'
+        }
+      },
+      toolCategories: {
+        knowledge: 'Knowledge',
+        mysql: 'MySQL',
+        debug: 'Debug'
+      },
+      modelSelector: {
+        clear: 'Clear selection',
+        checking: 'Checking...',
+        check: 'Check',
+        searchPlaceholder: 'Search models',
+        refreshingCache: 'Refreshing...',
+        refreshCache: 'Refresh cache',
+        loading: 'Loading...',
+        empty: 'No matching models',
+        vision: 'Supports image input',
+        oneMillionContext: 'About 1M token context window',
+        noModelHint: 'No suitable model?',
+        configureModels: 'Configure models',
+        metadataPrefix: 'Some details (pricing, capabilities) are filled in from',
+        metadataSuffix: '. For reference only; they may differ from the official site.',
+        dismissNotice: 'Don’t show again',
+        closeNotice: 'Dismiss model info notice',
+        placeholder: 'Select a model',
+        statusUnknown: 'Status unknown',
+        statusAvailable: 'Available',
+        statusUnavailable: 'Unavailable',
+        statusError: 'Error',
+        noDetails: 'No details'
       }
     },
     createAgent: 'Create Agent',

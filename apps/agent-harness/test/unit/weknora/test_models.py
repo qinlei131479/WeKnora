@@ -69,6 +69,9 @@ def test_grouped_v2_uses_weknora_uuid_as_spec():
     specs = [item["spec"] for group in grouped.values() for item in group["models"]]
     assert CHAT_ID in specs
     assert all(len(spec) == 36 for spec in specs)
+    flash = next(item for group in grouped.values() for item in group["models"] if item["spec"] == CHAT_ID)
+    assert flash["name"] == "deepseek-v4-flash"
+    assert flash["display_name"] == "DeepSeek V4 Flash"
 
 
 def test_resolve_chat_model_spec_skips_empty_and_keeps_explicit():

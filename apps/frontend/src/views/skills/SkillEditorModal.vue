@@ -2,7 +2,7 @@
   <Teleport to="body">
     <Transition name="modal">
       <div v-if="visible" class="settings-overlay" @click.self="close">
-        <div class="settings-modal" role="dialog" aria-modal="true">
+        <div class="settings-modal skill-editor-modal" role="dialog" aria-modal="true">
           <button type="button" class="close-btn" :aria-label="t('common.close')" @click="close">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
               <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -328,7 +328,6 @@
                     :loading="exporting"
                     @click="handleExport"
                   >
-                    <template #icon><t-icon name="download" /></template>
                     {{ t('knowledgeList.extensions.skills.detail.export') }}
                   </t-button>
                 </div>
@@ -559,15 +558,26 @@ const syncDependencyFormFromSkill = (skillRecord) => {
   dependencyForm.skill_dependencies = [...(skillRecord?.skill_dependencies || [])]
 }
 
+const SKILL_TREE_NOISE_NAMES = new Set(['__pycache__', '.DS_Store', '.git', '.venv', 'venv'])
+const SKILL_TREE_NOISE_SUFFIXES = ['.pyc', '.pyo', '.pyd']
+
+const isSkillTreeNoise = (node) => {
+  const name = String(node?.name || '')
+  if (SKILL_TREE_NOISE_NAMES.has(name)) return true
+  return SKILL_TREE_NOISE_SUFFIXES.some((suffix) => name.endsWith(suffix))
+}
+
 const normalizeTree = (nodes) =>
-  (nodes || []).map((node) => ({
-    title: node.name,
-    key: node.path,
-    isLeaf: !node.is_dir,
-    path: node.path,
-    is_dir: node.is_dir,
-    children: node.is_dir ? normalizeTree(node.children || []) : undefined
-  }))
+  (nodes || [])
+    .filter((node) => !isSkillTreeNoise(node))
+    .map((node) => ({
+      title: node.name,
+      key: node.path,
+      isLeaf: !node.is_dir,
+      path: node.path,
+      is_dir: node.is_dir,
+      children: node.is_dir ? normalizeTree(node.children || []) : undefined
+    }))
 
 const expandAllKeys = (nodes) =>
   nodes.flatMap((node) => (node.is_dir ? [node.key, ...expandAllKeys(node.children || [])] : []))
@@ -854,27 +864,6 @@ onUnmounted(() => window.removeEventListener('keydown', handleEscape))
 
 .settings-modal {
   --page-padding: 28px;
-  --main-800: #027218;
-  --main-700: #038626;
-  --main-600: #049b38;
-  --main-500: #07c05f;
-  --main-bright: #07c05f;
-  --gray-2000: #0c0d0d;
-  --gray-1000: #151616;
-  --gray-900: #1e1f1f;
-  --gray-800: #323333;
-  --gray-700: #4c4d4d;
-  --gray-600: #697070;
-  --gray-500: #979999;
-  --gray-400: #bdbfbf;
-  --gray-300: #d7d9d9;
-  --gray-200: #e4e6e6;
-  --gray-150: #eef0f0;
-  --gray-100: #eff2f2;
-  --gray-50: #f5f7f7;
-  --gray-25: #f8fafa;
-  --gray-10: #fbfcfc;
-  --gray-0: #ffffff;
   --skill-chrome-header-height: 53px;
   position: relative;
   width: 90vw;
@@ -882,6 +871,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleEscape))
   height: 85vh;
   max-height: 780px;
   background: var(--td-bg-color-container);
+  color: var(--td-text-color-primary);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   display: flex;
@@ -1024,7 +1014,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleEscape))
 .tree-container {
   width: 240px;
   order: 2;
-  background: var(--gray-0);
+  background: var(--td-bg-color-container);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -1032,7 +1022,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleEscape))
   .tree-chrome {
     flex-shrink: 0;
     height: var(--skill-chrome-header-height);
-    background: var(--gray-0);
+    background: var(--td-bg-color-container);
     border-bottom: 1px solid var(--td-component-stroke);
   }
 
@@ -1104,7 +1094,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleEscape))
     flex: 1;
     min-height: 0;
     border-radius: 0;
-    background: var(--gray-0);
+    background: var(--td-bg-color-container);
   }
 
   :deep(.preview-header) {
@@ -1112,7 +1102,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleEscape))
     height: var(--skill-chrome-header-height);
     min-height: var(--skill-chrome-header-height);
     padding: 0 16px;
-    background: var(--gray-0);
+    background: var(--td-bg-color-container);
     border-bottom: 1px solid var(--td-component-stroke);
   }
 
@@ -1522,6 +1512,65 @@ onUnmounted(() => window.removeEventListener('keydown', handleEscape))
     color: var(--td-text-color-secondary);
     font-size: 13px;
     text-align: center;
+  }
+}
+</style>
+
+<style lang="less">
+/* Teleport 到 body 后不在 .harness-root 内，深色 --gray-* 不会自动继承。
+   必须用非 scoped 规则写在弹窗自己身上，预览/树组件才能跟技能列表一致。 */
+.skill-editor-modal {
+  --page-padding: 28px;
+  --main-800: #027218;
+  --main-700: #038626;
+  --main-600: #049b38;
+  --main-500: #07c05f;
+  --main-bright: #07c05f;
+  --main-color: #07c05f;
+  --gray-2000: #0c0d0d;
+  --gray-1000: #151616;
+  --gray-900: #1e1f1f;
+  --gray-800: #323333;
+  --gray-700: #4c4d4d;
+  --gray-600: #697070;
+  --gray-500: #979999;
+  --gray-400: #bdbfbf;
+  --gray-300: #d7d9d9;
+  --gray-200: #e4e6e6;
+  --gray-150: #eef0f0;
+  --gray-100: #eff2f2;
+  --gray-50: #f5f7f7;
+  --gray-25: #f8fafa;
+  --gray-10: #fbfcfc;
+  --gray-0: #ffffff;
+}
+
+html[theme-mode='dark'] .skill-editor-modal {
+  --main-bright: var(--td-brand-color, #06b04d);
+  --main-color: var(--td-brand-color, #06b04d);
+  --gray-2000: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  --gray-1000: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  --gray-900: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  --gray-800: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55));
+  --gray-700: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55));
+  --gray-600: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55));
+  --gray-500: var(--td-text-color-placeholder, rgba(255, 255, 255, 0.35));
+  --gray-400: var(--td-text-color-placeholder, rgba(255, 255, 255, 0.35));
+  --gray-300: var(--td-component-border, #5e5e5e);
+  --gray-200: var(--td-component-border, #5e5e5e);
+  --gray-150: rgba(255, 255, 255, 0.06);
+  --gray-100: rgba(255, 255, 255, 0.06);
+  --gray-50: var(--td-bg-color-container-hover, #2c2c2c);
+  --gray-25: var(--td-bg-color-page, #181818);
+  --gray-10: var(--td-bg-color-page, #181818);
+  --gray-0: var(--td-bg-color-container, #242424);
+
+  .ant-tree,
+  .ant-tree-list,
+  .ant-tree-list-holder,
+  .ant-tree-list-holder-inner {
+    background: transparent !important;
+    color: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
   }
 }
 </style>

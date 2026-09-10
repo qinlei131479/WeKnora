@@ -5423,15 +5423,32 @@ export default {
         readonly: '只读{scope}'
       },
       editor: {
-        other: '其他配置',
-        basicInfoDesc: '配置智能体的名称、描述、后端与共享范围',
+        other: '高级配置',
+        advanced: '高级配置',
+        advancedDesc: '未归入模型、提示词、知识库、工具、MCP、技能或子智能体的其余配置项',
+        navAdvanced: '高级',
+        basicInfoDesc: '配置智能体的名称、描述与运行后端',
         defaultName: '新建智能体',
         namePlaceholder: '点击输入智能体名称',
         slug: '标识',
         slugPlaceholder: '标识可选，留空自动生成',
+        slugDesc: '创建后作为智能体 ID 使用，留空则自动生成',
         description: '描述',
         descriptionPlaceholder: '可选',
-        backend: '智能体后端',
+        backend: '智能体类型',
+        backendDesc: '选择智能体类型，创建后不可更改。',
+        backendAssistant: '智能助手',
+        backendSubagent: '子智能体',
+        backendDescAssistant: '对话型工作智能体，可调度工具、知识库与子智能体。',
+        backendDescSubagent: '供主智能体调用的子智能体，专注单一任务。',
+        subagents: '子智能体',
+        subagentsDesc: '配置当前智能体可调度的子智能体',
+        subagentsSelection: '子智能体范围',
+        subagentsSelectionDesc: '选择当前智能体可调度的子智能体范围',
+        subagentsSelect: '选择子智能体',
+        subagentsSelectDesc: '选择要启用的子智能体',
+        noSubagentsAvailable: '暂无可用子智能体',
+        builtinTools: '内置工具',
         noBackend: '未选择',
         uploadIcon: '上传图标',
         changeIcon: '更换图标',
@@ -5446,6 +5463,157 @@ export default {
         saved: '智能体已保存',
         created: '智能体已创建',
         saveFailed: '保存智能体失败'
+      },
+      fields: {
+        system_prompt: {
+          name: '系统提示词',
+          desc: '用来描述智能体的角色和行为'
+        },
+        model: {
+          name: '智能体模型',
+          desc: '智能体的驱动模型，留空时使用系统默认模型。'
+        },
+        tool_approval_mode: {
+          name: '工具审批模式',
+          desc: '默认审批会在写文件、编辑文件或执行命令前询问；完全信任会自动执行这些工具。',
+          options: {
+            default: '默认审批',
+            always_trust: '完全信任'
+          }
+        },
+        tools: {
+          name: '工具',
+          desc: '内置工具。默认选择当前用户可用的全部工具。'
+        },
+        knowledges: {
+          name: '知识库',
+          desc: '知识库列表来自 WeKnora，请在左侧知识库页面创建。默认选择当前用户可访问的全部知识库。'
+        },
+        mcps: {
+          name: 'MCP 服务',
+          desc: '默认选择当前用户可用的全部 MCP 服务。'
+        },
+        skills: {
+          name: 'Skills',
+          desc: '可选 Skill 拓展列表，默认选择当前用户可用的全部 Skill。Skill 依赖的工具和 MCP 服务也会被自动挂载。'
+        },
+        summary_threshold: {
+          name: '上下文摘要触发阈值 (K)',
+          desc: '当上下文大小超过该值时，启用摘要功能以优化上下文使用。单位为 K，默认值为 {default}K。'
+        },
+        summary_keep_messages: {
+          name: '摘要后保留消息数',
+          desc: '上下文摘要触发后，除摘要消息外保留最近的消息数量，默认 {default} 条。'
+        },
+        summary_prompt: {
+          name: '上下文摘要提示词',
+          desc: '触发上下文摘要时使用的提示词，必须能接收 {messages} 作为待摘要消息占位符。'
+        },
+        summary_tool_result_token_limit: {
+          name: '摘要工具结果 token 上限',
+          desc: '上下文摘要 L1 清洗历史工具结果时，超过该 token 数的 ToolMessage 会写入 outputs，并在上下文中保留不超过该 token 数的预览；未超过则保持原样。默认 {default}。'
+        },
+        summary_l2_trigger_ratio: {
+          name: 'L2 摘要触发比例',
+          desc: 'L1 结构精简后，剩余上下文超过摘要触发阈值 × 该比例时才进入 L2 summary。建议范围 0.1 到 1.0，值越小越容易触发 L2，默认 {default}。'
+        },
+        max_execution_steps: {
+          name: '最大执行步数',
+          desc: '单次 Agent 运行允许的最大 LangGraph 执行步数，对应 recursion_limit，默认 {default}。'
+        },
+        model_retry_times: {
+          name: '模型重试次数',
+          desc: '模型调用失败时的最大重试次数，默认值为 {default}。'
+        }
+      },
+      form: {
+        emptyConfig: '该智能体没有配置项',
+        knowledgeSkillWarning:
+          '已启用知识库，但未选择 knowledge-base Skill。Agent 可能无法调用知识库检索、打开文档等工具。',
+        defaultPlaceholder: '默认: {value}'
+      },
+      builtinTools: {
+        install_skill: {
+          name: '安装技能',
+          desc: '安装新的 Skill 到当前用户的私有空间，并在当前会话中激活。'
+        },
+        web_search: {
+          name: '网页搜索',
+          desc: '搜索互联网获取实时网页内容、新闻和站点资料。'
+        },
+        present_artifacts: {
+          name: '展示交付物',
+          desc: '将工作区 outputs 中的结果文件展示给用户，便于下载或预览。'
+        },
+        ocr_parse_file: {
+          name: 'OCR 解析文件',
+          desc: '将 PDF、Office 文档或图片解析为 Markdown 文本。'
+        },
+        ask_user_question: {
+          name: '向用户提问',
+          desc: '在关键不确定时向用户提问，以澄清需求或做出选择。'
+        },
+        calculator: {
+          name: '计算器',
+          desc: '执行基础数值计算。'
+        },
+        list_kbs: {
+          name: '列出知识库',
+          desc: '列出当前用户可访问的知识库。'
+        },
+        get_mindmap: {
+          name: '获取思维导图',
+          desc: '获取指定知识库的思维导图结构。'
+        },
+        query_kb: {
+          name: '检索知识库',
+          desc: '在指定知识库中检索相关内容。'
+        },
+        open_kb_document: {
+          name: '打开知识库文档',
+          desc: '按行窗口打开知识库文档原文。'
+        },
+        find_kb_document: {
+          name: '文档内定位',
+          desc: '在知识库文件内做关键词或正则定位。'
+        },
+        search_file: {
+          name: '搜索文件',
+          desc: '在可访问的知识库中搜索文件。'
+        },
+        download_kb_file: {
+          name: '下载知识库文件',
+          desc: '将知识库原始文件下载到工作区。'
+        }
+      },
+      toolCategories: {
+        knowledge: '知识库',
+        mysql: 'MySQL',
+        debug: '调试'
+      },
+      modelSelector: {
+        clear: '清空选择',
+        checking: '检查中...',
+        check: '检查',
+        searchPlaceholder: '搜索模型',
+        refreshingCache: '刷新中...',
+        refreshCache: '刷新缓存',
+        loading: '加载中...',
+        empty: '暂无匹配模型',
+        vision: '支持图像输入',
+        oneMillionContext: '约 1M tokens 上下文窗口',
+        noModelHint: '没有合适的模型？',
+        configureModels: '配置模型',
+        metadataPrefix: '部分信息（价格、能力等）来自',
+        metadataSuffix: '填补。仅供参考，可能和官网有偏差。',
+        dismissNotice: '不再显示',
+        closeNotice: '关闭模型信息提示',
+        placeholder: '请选择模型',
+        statusUnknown: '状态未知',
+        statusAvailable: '可用',
+        statusUnavailable: '不可用',
+        statusError: '错误',
+        noDetails: '无详细信息'
       }
     },
     createAgent: '创建智能体',

@@ -1865,3 +1865,25 @@ def test_sync_thread_readable_skills_uses_final_source_mapping(
     (personal_dir / "SKILL.md").write_text("changed", encoding="utf-8")
     svc.sync_thread_readable_skills("thread-1", ["demo"], {"demo": personal_dir})
     assert (thread_root / "demo" / "SKILL.md").read_text(encoding="utf-8") == "changed"
+
+
+def test_skill_tree_skips_and_purges_pycache(tmp_path: Path):
+    skill_dir = tmp_path / "mysql-reporter"
+    scripts_dir = skill_dir / "scripts"
+    cache_dir = scripts_dir / "__pycache__"
+    cache_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text("# skill\n", encoding="utf-8")
+    (scripts_dir / "query.py").write_text("print(1)\n", encoding="utf-8")
+    (cache_dir / "query.cpython-313.pyc").write_bytes(b"pyc")
+    (scripts_dir / "query.pyc").write_bytes(b"pyc")
+
+    tree = svc._build_tree(skill_dir, skill_dir)
+    names = {node["name"] for node in tree}
+    assert names == {"SKILL.md", "scripts"}
+    script_names = {node["name"] for node in next(node["children"] for node in tree if node["name"] == "scripts")}
+    assert script_names == {"query.py"}
+
+    svc._purge_skill_tree_noise(skill_dir)
+    assert not cache_dir.exists()
+    assert not (scripts_dir / "query.pyc").exists()
+    assert (scripts_dir / "query.py").exists()

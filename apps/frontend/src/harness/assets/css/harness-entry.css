@@ -108,6 +108,15 @@ html[theme-mode="dark"] .ant-pagination-next .ant-pagination-item-link {
   border-color: var(--td-component-stroke, #383838);
 }
 
+html[theme-mode="dark"] .ant-tree,
+html[theme-mode="dark"] .ant-tree-list,
+html[theme-mode="dark"] .ant-tree-list-holder,
+html[theme-mode="dark"] .ant-tree-list-holder-inner {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+}
+
 /* 弹窗、菜单等浮层保留一级亮度，普通页面和卡片则跟随 #181818。 */
 html[theme-mode="dark"] .ant-modal-content,
 html[theme-mode="dark"] .ant-modal-header,

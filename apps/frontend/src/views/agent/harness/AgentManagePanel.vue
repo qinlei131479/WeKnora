@@ -1,21 +1,17 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
 import { DialogPlugin, MessagePlugin } from 'tdesign-vue-next'
 
 import { agentApi } from '@harness/apis/agent_api'
-import AgentEditModal from '@harness/components/model-management/AgentEditModal.vue'
-import PageShoulder from '@harness/components/shared/PageShoulder.vue'
+import AgentEditModal from './AgentEditModal.vue'
 import FallbackAvatar from '@harness/components/common/FallbackAvatar.vue'
 import { isBuiltinAgent, useAgentStore } from '@harness/stores/agent'
 import { generatePixelAvatar } from '@harness/utils/pixelAvatar'
 
 const { t } = useI18n()
 const agentStore = useAgentStore()
-const router = useRouter()
 const agentLoading = ref(false)
-const searchQuery = ref('')
 const openMoreAgentId = ref(null)
 const collapsedSections = ref(new Set())
 
@@ -36,17 +32,8 @@ const normalizeAgent = (agent) => {
 }
 
 const filteredAgents = computed(() => {
-  const keyword = searchQuery.value.trim().toLowerCase()
   const list = managedAgents.value || []
-  const filtered = keyword
-    ? list.filter(
-        (agent) =>
-          String(agent.name || '').toLowerCase().includes(keyword) ||
-          String(agent.id || '').toLowerCase().includes(keyword) ||
-          String(agent.backend_id || '').toLowerCase().includes(keyword)
-      )
-    : list
-  return [...filtered].sort((a, b) => {
+  return [...list].sort((a, b) => {
     if (isBuiltinAgent(a) !== isBuiltinAgent(b)) return isBuiltinAgent(a) ? -1 : 1
     return String(a.name || a.id).localeCompare(String(b.name || b.id), 'zh-CN')
   })
@@ -70,15 +57,6 @@ const groupedAgents = computed(() => {
     }
   ].filter((group) => group.agents.length > 0)
 })
-
-const agentStats = computed(() => ({
-  total: managedAgents.value.length,
-  builtin: managedAgents.value.filter(isBuiltinAgent).length,
-  manageable: managedAgents.value.filter((agent) => agent.can_manage).length,
-  global: managedAgents.value.filter(
-    (agent) => (agent.share_config?.read_scope || agent.share_config)?.access_level === 'global'
-  ).length
-}))
 
 const canManageAgent = (agent) => !!agent?.can_manage
 const getAgentDefaultIconSrc = (agent) => (agent.id ? generatePixelAvatar(agent.id) : '')
@@ -153,11 +131,6 @@ const openEditAgentModal = (agent) => {
   agentEditModalRef.value?.openEdit(agent)
 }
 
-const openAgentChat = (agent) => {
-  if (!agent?.id || agent.is_subagent) return
-  router.push({ name: 'harnessCreatChat', query: { agent_id: agent.id } })
-}
-
 const handleCardClick = (agent) => {
   if (openMoreAgentId.value === agent.id) return
   openEditAgentModal(agent)
@@ -200,7 +173,6 @@ onMounted(async () => {
 
 defineExpose({
   loading: agentLoading,
-  stats: agentStats,
   refresh: loadAgents,
   openCreate: openCreateAgentModal
 })
@@ -208,26 +180,8 @@ defineExpose({
 
 <template>
   <div class="agent-manage-panel">
-    <PageShoulder
-      v-model:search="searchQuery"
-      :search-placeholder="t('agent.runtimeManage.searchPlaceholder')"
-    >
-      <template #actions>
-        <div class="summary-strip">
-          <span>{{ t('agent.runtimeManage.agents', { count: agentStats.total || 0 }) }}</span>
-          <span>{{ t('agent.runtimeManage.global', { count: agentStats.global || 0 }) }}</span>
-          <span v-if="agentStats.builtin">
-            {{ t('agent.runtimeManage.builtin', { count: agentStats.builtin }) }}
-          </span>
-          <span>{{ t('agent.runtimeManage.manageable', { count: agentStats.manageable || 0 }) }}</span>
-        </div>
-      </template>
-    </PageShoulder>
-
     <div v-if="groupedAgents.length === 0" class="agent-empty-state">
-      <t-empty
-        :description="searchQuery ? t('agent.runtimeManage.noMatch') : t('agent.noAgents')"
-      />
+      <t-empty :description="t('agent.noAgents')" />
     </div>
 
     <div v-else class="agent-list-main">
@@ -320,14 +274,6 @@ defineExpose({
                       <span>{{ t('common.edit') }}</span>
                     </div>
                     <div
-                      v-if="group.key === 'agents'"
-                      class="popup-menu-item"
-                      @click.stop="openAgentChat(agent)"
-                    >
-                      <t-icon class="menu-icon" name="chat" />
-                      <span>{{ t('agent.runtimeManage.goToChat') }}</span>
-                    </div>
-                    <div
                       v-if="!isBuiltinAgent(agent)"
                       class="popup-menu-item delete"
                       @click.stop="deleteAgent(agent)"
@@ -357,15 +303,6 @@ defineExpose({
                   <span>{{ getAgentShareLabel(agent) }}</span>
                 </div>
               </div>
-              <button
-                v-if="group.key === 'agents'"
-                type="button"
-                class="agent-chat-entry"
-                @click.stop="openAgentChat(agent)"
-              >
-                {{ t('agent.runtimeManage.goToChat') }}
-                <t-icon name="chevron-right" size="14px" />
-              </button>
             </div>
           </div>
         </div>
@@ -386,34 +323,15 @@ defineExpose({
   flex-direction: column;
   height: 100%;
   min-height: 0;
-}
-
-:deep(.page-shoulder) {
-  padding: 0 28px 12px 0;
-}
-
-.summary-strip {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-
-  span {
-    padding: 4px 10px;
-    border: 1px solid var(--td-component-stroke);
-    border-radius: 7px;
-    background: var(--td-bg-color-secondarycontainer);
-    color: var(--td-text-color-secondary);
-    font-size: 12px;
-    line-height: 18px;
-  }
+  background: var(--gray-25, #f8fafa);
+  color: var(--td-text-color-primary, var(--gray-1000));
 }
 
 .agent-empty-state {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 100px 20px 40px 0;
+  padding: 100px var(--page-padding, 22px) 40px;
   text-align: center;
 }
 
@@ -422,7 +340,7 @@ defineExpose({
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 0 28px 8px 0;
+  padding: 0 var(--page-padding, 22px) 8px;
 }
 
 .agent-section-header {
@@ -434,8 +352,8 @@ defineExpose({
   position: sticky;
   top: 0;
   z-index: 5;
-  background: var(--td-bg-color-container);
-  box-shadow: 0 -8px 0 0 var(--td-bg-color-container);
+  background: var(--gray-25, #f8fafa);
+  box-shadow: 0 -8px 0 0 var(--gray-25, #f8fafa);
   padding: 6px 4px 6px 0;
   color: var(--td-text-color-secondary);
   font-family: var(--app-font-family);
@@ -683,25 +601,6 @@ defineExpose({
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.agent-chat-entry {
-  display: inline-flex;
-  align-items: center;
-  gap: 1px;
-  height: 24px;
-  padding: 0 2px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--td-text-color-secondary);
-  font-size: 12px;
-  cursor: pointer;
-  flex-shrink: 0;
-
-  &:hover {
-    color: var(--td-brand-color);
-  }
 }
 
 @media (min-width: 900px) {

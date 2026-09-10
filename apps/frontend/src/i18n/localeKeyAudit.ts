@@ -99,6 +99,9 @@ const EXTRA_PREFIXES = [
   'organization.role.',
   'inviteRegister.',
   'modelSettings.builtinModels.',
+  'agent.runtimeManage.fields.',
+  'agent.runtimeManage.builtinTools.',
+  'agent.runtimeManage.toolCategories.',
 ] as const
 
 /** Keys that must survive pruning even when static analysis misses them. */

@@ -63,6 +63,31 @@ TEXT_FILE_EXTENSIONS = {
     ".tsx",
 }
 
+SKILL_TREE_IGNORE_NAMES = {
+    "__pycache__",
+    ".DS_Store",
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+}
+SKILL_TREE_IGNORE_SUFFIXES = {".pyc", ".pyo", ".pyd"}
+_SKILL_COPY_IGNORE = shutil.ignore_patterns(
+    "__pycache__",
+    "*.pyc",
+    "*.pyo",
+    "*.pyd",
+    ".DS_Store",
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+)
+
 BUILTIN_SKILL_OPERATOR = "builtin-system"
 SKILL_SOURCE_TYPES = {"builtin", "upload", "remote"}
 ADMIN_ROLES = {"admin", "superadmin"}
@@ -400,7 +425,7 @@ def sync_thread_readable_skills(
 
             temp_target = thread_skills_root / f".{slug}.tmp-{uuid.uuid4().hex[:8]}"
             try:
-                shutil.copytree(source_dir, temp_target, symlinks=False)
+                shutil.copytree(source_dir, temp_target, symlinks=False, ignore=_SKILL_COPY_IGNORE)
                 temp_target.rename(target_dir)
             finally:
                 if temp_target.exists():
@@ -447,7 +472,7 @@ def _dirs_equal(dir1: Path, dir2: Path) -> bool:
 
 def _compute_dir_hash(source_dir: Path) -> str:
     hasher = hashlib.sha256()
-    file_paths = sorted(path for path in source_dir.rglob("*") if path.is_file())
+    file_paths = sorted(path for path in source_dir.rglob("*") if path.is_file() and not _is_skill_tree_noise(path))
     for file_path in file_paths:
         relative_path = file_path.relative_to(source_dir).as_posix()
         hasher.update(relative_path.encode("utf-8"))
@@ -471,7 +496,7 @@ def _replace_skill_target(
     if temp_target.exists():
         shutil.rmtree(temp_target, ignore_errors=True)
 
-    shutil.copytree(source_dir, temp_target, symlinks=False)
+    shutil.copytree(source_dir, temp_target, symlinks=False, ignore=_SKILL_COPY_IGNORE)
     try:
         if validate is not None:
             validate(temp_target)
@@ -1056,7 +1081,7 @@ async def _stage_skill_draft_item(
 ) -> dict[str, Any]:
     item_id = uuid.uuid4().hex
     item_dir = draft_items_dir / item_id
-    shutil.copytree(source_skill_dir, item_dir, symlinks=False)
+    shutil.copytree(source_skill_dir, item_dir, symlinks=False, ignore=_SKILL_COPY_IGNORE)
     parsed = _parse_skill_dir_metadata(item_dir)
     final_slug = await _generate_available_slug(repo, parsed["slug"])
     return {
@@ -1102,7 +1127,7 @@ async def _import_skill_dir_impl(
     final_slug = await _generate_available_slug(repo, parsed["slug"])
     with tempfile.TemporaryDirectory(prefix=".skill-import-", dir=str(skills_root.parent)) as temp_root:
         stage_dir = Path(temp_root) / "stage"
-        shutil.copytree(source_skill_dir, stage_dir)
+        shutil.copytree(source_skill_dir, stage_dir, ignore=_SKILL_COPY_IGNORE)
 
         if final_slug != parsed["slug"]:
             content = (stage_dir / "SKILL.md").read_text(encoding="utf-8")
@@ -1169,9 +1194,33 @@ def _is_text_path(path: Path) -> bool:
     return suffix in TEXT_FILE_EXTENSIONS
 
 
+def _is_skill_tree_noise(path: Path) -> bool:
+    if path.name in SKILL_TREE_IGNORE_NAMES or path.suffix.lower() in SKILL_TREE_IGNORE_SUFFIXES:
+        return True
+    return any(part in SKILL_TREE_IGNORE_NAMES for part in path.parts)
+
+
+def _purge_skill_tree_noise(root: Path) -> None:
+    """删除技能目录中由运行脚本产生的缓存文件，避免出现在详情树里。"""
+    if not root.is_dir():
+        return
+    for child in list(root.rglob("*")):
+        if not child.is_dir() or child.name not in SKILL_TREE_IGNORE_NAMES:
+            continue
+        shutil.rmtree(child, ignore_errors=True)
+    for child in list(root.rglob("*")):
+        if child.is_file() and _is_skill_tree_noise(child):
+            try:
+                child.unlink(missing_ok=True)
+            except OSError:
+                logger.warning(f"无法删除技能缓存文件: {child}")
+
+
 def _build_tree(path: Path, base_dir: Path) -> list[dict[str, Any]]:
     children: list[dict[str, Any]] = []
     for child in sorted(path.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
+        if _is_skill_tree_noise(child):
+            continue
         rel = child.relative_to(base_dir).as_posix()
         if child.is_dir():
             children.append(
@@ -1358,7 +1407,7 @@ async def confirm_skill_install_draft(
             parsed = _parse_skill_dir_metadata(source_dir)
             with tempfile.TemporaryDirectory(prefix=".skill-confirm-", dir=str(skills_root.parent)) as temp_root:
                 stage_dir = Path(temp_root) / "stage"
-                shutil.copytree(source_dir, stage_dir)
+                shutil.copytree(source_dir, stage_dir, ignore=_SKILL_COPY_IGNORE)
                 if parsed["slug"] != slug:
                     content = (stage_dir / "SKILL.md").read_text(encoding="utf-8")
                     (stage_dir / "SKILL.md").write_text(_rewrite_frontmatter_slug(content, slug), encoding="utf-8")
@@ -1545,6 +1594,7 @@ async def get_skill_tree(db: AsyncSession, slug: str) -> list[dict[str, Any]]:
     skill_dir = _resolve_skill_dir(item)
     if not skill_dir.exists() or not skill_dir.is_dir():
         raise ValueError(f"技能目录不存在: {item.dir_path}")
+    _purge_skill_tree_noise(skill_dir)
     return _build_tree(skill_dir, skill_dir)
 
 

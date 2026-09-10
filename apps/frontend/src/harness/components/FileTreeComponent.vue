@@ -166,6 +166,15 @@ const handleNodeClick = (data) => {
 <style scoped lang="less">
 .file-tree-wrapper {
   width: 100%;
+  background: transparent;
+
+  :deep(.ant-tree),
+  :deep(.ant-tree-list),
+  :deep(.ant-tree-list-holder),
+  :deep(.ant-tree-list-holder-inner) {
+    background: transparent !important;
+    color: var(--td-text-color-primary, var(--gray-900));
+  }
 
   /* 统一节点容器 */
   :deep(.ant-tree-treenode) {
@@ -258,7 +267,7 @@ const handleNodeClick = (data) => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
-  color: var(--gray-800);
+  color: var(--td-text-color-primary, var(--gray-800));
 }
 
 .folder-icon {

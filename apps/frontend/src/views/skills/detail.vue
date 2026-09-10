@@ -603,15 +603,26 @@ const syncDependencyFormFromSkill = (skillRecord) => {
   dependencyForm.skill_dependencies = [...(skillRecord?.skill_dependencies || [])]
 }
 
+const SKILL_TREE_NOISE_NAMES = new Set(['__pycache__', '.DS_Store', '.git', '.venv', 'venv'])
+const SKILL_TREE_NOISE_SUFFIXES = ['.pyc', '.pyo', '.pyd']
+
+const isSkillTreeNoise = (node) => {
+  const name = String(node?.name || '')
+  if (SKILL_TREE_NOISE_NAMES.has(name)) return true
+  return SKILL_TREE_NOISE_SUFFIXES.some((suffix) => name.endsWith(suffix))
+}
+
 const normalizeTree = (nodes) =>
-  (nodes || []).map((node) => ({
-    title: node.name,
-    key: node.path,
-    isLeaf: !node.is_dir,
-    path: node.path,
-    is_dir: node.is_dir,
-    children: node.is_dir ? normalizeTree(node.children || []) : undefined
-  }))
+  (nodes || [])
+    .filter((node) => !isSkillTreeNoise(node))
+    .map((node) => ({
+      title: node.name,
+      key: node.path,
+      isLeaf: !node.is_dir,
+      path: node.path,
+      is_dir: node.is_dir,
+      children: node.is_dir ? normalizeTree(node.children || []) : undefined
+    }))
 
 const resetFileState = () => {
   selectedPath.value = ''

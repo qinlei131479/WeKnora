@@ -1,22 +1,23 @@
 <template>
-  <div class="agent-list-container">
+  <div class="agent-list-container layout-container">
     <ListSpaceSidebar
+      v-if="SHOW_SCOPE_NAV"
       v-model="spaceSelection"
-      v-model:surface-value="surface"
-      :surface-items="surfaceNavItems"
       :show-scope-nav="SHOW_SCOPE_NAV"
       :count-all="allAgentsCount"
       :count-mine="agents.length" :count-by-org="effectiveSharedCountByOrg" :count-favorites="agentFavoritesCount"
       :count-recents="agentRecentsCount" />
     <div class="agent-list-content">
-      <div class="header" style="--wails-draggable: drag">
-        <div class="header-title" style="--wails-draggable: drag">
-          <h2 style="--wails-draggable: drag">{{ $t('agent.title') }}</h2>
-          <p class="header-subtitle" style="--wails-draggable: drag">{{
-            surface === 'runtime' ? $t('agent.runtimeSubtitle') : $t('agent.subtitle')
-          }}</p>
-        </div>
-        <div v-if="canCreateAgentFromHeader" class="header-actions" style="--wails-draggable: no-drag">
+      <PageHeader
+        :title="t('agent.title')"
+        :subtitle="surface === 'runtime' ? t('agent.runtimeSubtitle') : t('agent.subtitle')"
+        :active-key="surface"
+        :tabs="surfaceTabs"
+        :loading="loading"
+        :aria-label="t('agent.runtimeManage.viewSwitch')"
+        @change="onSurfaceTabChange"
+      >
+        <template v-if="canCreateAgentFromHeader" #actions>
           <t-button theme="primary" data-guide="agent-list-create" @click="handleCreateAgent">
             <template #icon>
               <span class="btn-icon-wrapper">
@@ -37,13 +38,13 @@
                 </svg>
               </span>
             </template>
-            {{ $t('agent.createAgent') }}
+            {{ t('agent.createAgent') }}
           </t-button>
-        </div>
+        </template>
+      </PageHeader>
+      <div v-if="surface === 'runtime'" class="surface-embed">
+        <AgentManagePanel ref="runtimeAgentManageRef" />
       </div>
-      <HarnessIsland v-if="surface === 'runtime'" class="surface-embed">
-        <AgentManageView ref="runtimeAgentManageRef" embedded />
-      </HarnessIsland>
       <div v-else class="agent-list-main">
         <!-- creator filter removed; see KnowledgeBaseList for rationale.
              Card-level creator display + URL-state field are retained. -->
@@ -844,14 +845,14 @@ import { useTenantModelReadiness } from '@/composables/useTenantModelReadiness'
 import { useUIStore } from '@/stores/ui'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import ListSpaceSidebar from '@/components/ListSpaceSidebar.vue'
+import PageHeader from '@harness/components/shared/PageHeader.vue'
 import ResourceOriginBadge from '@/components/ResourceOriginBadge.vue'
 import { shouldShowResourceOriginBadge } from '@/utils/card-list-badge'
 import { useAuthStore } from '@/stores/auth'
 import { useListUrlState } from '@/composables/useListUrlState'
 import { useListSurface } from '@/composables/useListSurface'
 import { useResourcePins } from '@/composables/useResourcePins'
-import HarnessIsland from '@harness/HarnessIsland.vue'
-import AgentManageView from '@harness/views/AgentManageView.vue'
+import AgentManagePanel from './harness/AgentManagePanel.vue'
 
 const { t } = useI18n()
 
@@ -898,10 +899,15 @@ const { surface } = useListSurface<'platform' | 'runtime'>(
 const canCreateAgentFromHeader = computed(
   () => surface.value === 'runtime' || authStore.hasRole('contributor')
 )
-const surfaceNavItems = computed(() => [
-  { value: 'platform', label: t('agent.tabs.platform'), icon: 'chat' },
-  { value: 'runtime', label: t('agent.tabs.runtime'), icon: 'tools' },
+const surfaceTabs = computed(() => [
+  { key: 'platform', label: t('agent.tabs.platform') },
+  { key: 'runtime', label: t('agent.tabs.runtime') },
 ])
+function onSurfaceTabChange(item: { key?: string }) {
+  if (item.key === 'platform' || item.key === 'runtime') {
+    surface.value = item.key
+  }
+}
 
 // Per-user favorites + recents (localStorage-backed). See useResourcePins.
 const pins = useResourcePins()
@@ -1624,6 +1630,32 @@ defineExpose({
 
 <style scoped lang="less">
 .agent-list-container {
+  --page-padding: 22px;
+  --main-800: #027218;
+  --main-700: #038626;
+  --main-600: #049b38;
+  --main-500: #07c05f;
+  --main-100: #b7ebc8;
+  --main-20: #f7fcf8;
+  --main-5: #fcfefd;
+  --main-color: #07c05f;
+  --shadow-1: rgba(0, 0, 0, 0.05);
+  --gray-2000: #0c0d0d;
+  --gray-1000: #151616;
+  --gray-900: #1e1f1f;
+  --gray-800: #323333;
+  --gray-700: #4c4d4d;
+  --gray-600: #697070;
+  --gray-500: #979999;
+  --gray-400: #bdbfbf;
+  --gray-300: #d7d9d9;
+  --gray-200: #e4e6e6;
+  --gray-150: #eef0f0;
+  --gray-100: #eff2f2;
+  --gray-50: #f5f7f7;
+  --gray-25: #f8fafa;
+  --gray-10: #fbfcfc;
+  --gray-0: #ffffff;
   margin: 0;
   height: 100%;
   box-sizing: border-box;
@@ -1631,6 +1663,7 @@ defineExpose({
   display: flex;
   position: relative;
   min-height: 0;
+  overflow: hidden;
   background: var(--gray-25, #f8fafa);
 }
 
@@ -1639,8 +1672,8 @@ defineExpose({
   display: flex;
   flex-direction: column;
   min-width: 0;
-  // 右侧不留 padding，让滚动条贴到内容区最右缘；内边距改到 header / main 内部
-  padding: 20px 0 0 28px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .agent-list-main {
@@ -1649,7 +1682,7 @@ defineExpose({
   overflow-y: auto;
   overflow-x: hidden;
   // 同 KB 列表：顶部去掉 padding，让 sticky 分组标题贴到容器最顶。
-  padding: 0 28px 8px 0;
+  padding: 0 var(--page-padding) 8px;
   scrollbar-width: auto;
   scrollbar-color: auto;
 }
@@ -1667,10 +1700,6 @@ defineExpose({
   flex: 1;
   min-height: 0;
   margin-right: 0;
-
-  :deep(.harness-root) {
-    --page-padding: 0;
-  }
 }
 
 .shared-by-me-badge {
@@ -1684,37 +1713,6 @@ defineExpose({
   margin-left: 6px;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
-  padding-right: 28px;
-
-  .header-title {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-  }
-
-  h2 {
-    margin: 0;
-    color: var(--td-text-color-primary);
-    font-family: var(--app-font-family);
-    font-size: 24px;
-    font-weight: 600;
-    line-height: 32px;
-  }
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
 
 :deep(.agent-create-btn) {
   --ripple-color: rgba(118, 75, 162, 0.3) !important;
@@ -1784,14 +1782,6 @@ defineExpose({
   }
 }
 
-.header-subtitle {
-  margin: 0;
-  color: var(--td-text-color-placeholder);
-  font-family: var(--app-font-family);
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 20px;
-}
 
 .agent-tabs {
   display: flex;
@@ -2415,6 +2405,24 @@ defineExpose({
   }
 }
 
+@media (min-width: 1440px) {
+  .agent-list-container {
+    --page-padding: 30px;
+  }
+}
+
+@media (max-width: 1199px) {
+  .agent-list-container {
+    --page-padding: 18px;
+  }
+}
+
+@media (max-width: 767px) {
+  .agent-list-container {
+    --page-padding: 14px;
+  }
+}
+
 // 响应式布局
 @media (min-width: 900px) {
   .agent-card-wrap {
@@ -2682,5 +2690,35 @@ defineExpose({
   .shared-detail-drawer {
     transform: translateX(100%);
   }
+}
+</style>
+
+<style lang="less">
+html[theme-mode="dark"] .agent-list-container {
+  --main-800: #07c05f;
+  --main-700: #07c05f;
+  --main-600: #06b04d;
+  --main-500: #06b04d;
+  --main-100: #015e0d;
+  --main-20: #06110a;
+  --main-5: var(--td-bg-color-container, #242424);
+  --main-color: var(--td-brand-color, #06b04d);
+  --shadow-1: rgba(255, 255, 255, 0.05);
+  --gray-2000: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  --gray-1000: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  --gray-900: var(--td-text-color-primary, rgba(255, 255, 255, 0.9));
+  --gray-800: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55));
+  --gray-700: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55));
+  --gray-600: var(--td-text-color-secondary, rgba(255, 255, 255, 0.55));
+  --gray-500: var(--td-text-color-placeholder, rgba(255, 255, 255, 0.35));
+  --gray-400: var(--td-text-color-placeholder, rgba(255, 255, 255, 0.35));
+  --gray-300: var(--td-component-border, #5e5e5e);
+  --gray-200: var(--td-component-border, #5e5e5e);
+  --gray-150: rgba(255, 255, 255, 0.06);
+  --gray-100: rgba(255, 255, 255, 0.06);
+  --gray-50: rgba(255, 255, 255, 0.06);
+  --gray-25: var(--td-bg-color-page, #181818);
+  --gray-10: var(--td-bg-color-page, #181818);
+  --gray-0: var(--td-bg-color-page, #181818);
 }
 </style>

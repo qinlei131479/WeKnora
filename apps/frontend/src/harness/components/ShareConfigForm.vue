@@ -1,9 +1,8 @@
 <template>
   <div class="share-config-form" :class="{ disabled }">
-    <a-alert
+    <t-alert
       v-if="hasManageScopeViolation"
-      type="warning"
-      show-icon
+      theme="warning"
       :message="t('knowledgeList.extensions.share.form.manageWider')"
     />
 
@@ -18,11 +17,13 @@
             <template v-else>{{ scope.description }}</template>
           </p>
         </div>
-        <a-switch
+        <t-switch
           v-if="scope.key !== 'read_scope' || !requireReadScope"
-          :checked="Boolean(scopes[scope.key])"
-          :checked-children="t('knowledgeList.extensions.share.form.on')"
-          :un-checked-children="t('knowledgeList.extensions.share.form.off')"
+          :value="Boolean(scopes[scope.key])"
+          :label="[
+            t('knowledgeList.extensions.share.form.on'),
+            t('knowledgeList.extensions.share.form.off')
+          ]"
           :disabled="disabled || (scope.key === 'read_scope' && requireReadScope)"
           @change="(enabled) => toggleScope(scope.key, enabled)"
         />
@@ -59,13 +60,14 @@
                   class="card-action"
                   @click.stop
                 >
-                  <a-dropdown
-                    :trigger="['click']"
-                    placement="bottomRight"
+                  <t-popup
+                    trigger="click"
+                    placement="bottom-right"
                     overlay-class-name="share-selection-popover"
                   >
-                    <a-button
+                    <t-button
                       size="small"
+                      variant="outline"
                       class="select-action lucide-icon-btn"
                       :aria-label="option.value === 'department' ? t('knowledgeList.extensions.share.form.pickDept') : t('knowledgeList.extensions.share.form.pickUser')"
                       :disabled="disabled"
@@ -74,8 +76,8 @@
                       <span class="access-count">{{
                         getAccessCount(scope.key, option.value)
                       }}</span>
-                    </a-button>
-                    <template #overlay>
+                    </t-button>
+                    <template #content>
                       <div class="selection-dropdown" @mousedown.stop @click.stop>
                         <div class="selection-dropdown-header">
                           <div class="selection-dropdown-title">
@@ -86,10 +88,10 @@
                             {{ getAccessSummary(scope.key, option.value) }}
                           </div>
                         </div>
-                        <a-input
-                          v-model:value="selectionSearch[scope.key][option.value]"
+                        <t-input
+                          v-model="selectionSearch[scope.key][option.value]"
                           size="small"
-                          allow-clear
+                          clearable
                           class="selection-search"
                           :placeholder="option.value === 'department' ? t('knowledgeList.extensions.share.form.searchDept') : t('knowledgeList.extensions.share.form.searchUser')"
                           @mousedown.stop
@@ -134,16 +136,17 @@
                             "
                           >
                             <span class="selection-item-content">
-                              <a-checkbox
+                              <t-checkbox
                                 :checked="isSelected(scope.key, option.value, item.value)"
                                 @click.stop
                                 @change="
-                                  toggleSelection(
-                                    scope.key,
-                                    option.value,
-                                    item.value,
-                                    $event.target.checked
-                                  )
+                                  (checked) =>
+                                    toggleSelection(
+                                      scope.key,
+                                      option.value,
+                                      item.value,
+                                      checked
+                                    )
                                 "
                               />
                               <span class="selection-label">{{ item.label }}</span>
@@ -153,7 +156,7 @@
                         <div v-else class="selection-empty">{{ t('knowledgeList.extensions.share.form.emptyOptions') }}</div>
                       </div>
                     </template>
-                  </a-dropdown>
+                  </t-popup>
                 </div>
               </div>
               <div class="card-description">{{ option.description }}</div>
@@ -172,10 +175,9 @@
       </p>
     </section>
 
-    <a-alert
+    <t-alert
       v-if="disabled && disabledReason"
-      type="info"
-      show-icon
+      theme="info"
       class="share-disabled-alert"
       :message="disabledReason"
     />
@@ -590,7 +592,7 @@ defineExpose({ scopes, validate })
   align-items: center;
   height: 20px;
 
-  :deep(.ant-btn) {
+  :deep(.select-action) {
     height: 20px;
     padding: 0 8px;
     font-size: 12px;

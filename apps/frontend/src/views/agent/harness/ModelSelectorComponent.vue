@@ -1,53 +1,78 @@
 <template>
-  <a-dropdown
+  <div v-if="resolvedSize !== 'nano'" class="runtime-model-selector-select">
+    <t-select
+      :value="props.model_spec || undefined"
+      :placeholder="placeholderText"
+      :disabled="props.disabled"
+      :loading="loadingV2Models"
+      :clearable="props.clearable"
+      filterable
+      style="width: 100%"
+      @change="handleFormModelChange"
+      @popup-visible-change="handleSelectPopupVisible"
+    >
+      <t-option
+        v-for="model in flatV2Models"
+        :key="model.spec"
+        :value="model.spec"
+        :label="modelSelectLabel(model)"
+      >
+        <div class="select-model-option">
+          <t-icon name="check-circle-filled" class="select-model-icon" />
+          <span class="select-model-name">{{ modelSelectLabel(model) }}</span>
+          <span v-if="modelSelectRawName(model)" class="select-model-raw">{{ modelSelectRawName(model) }}</span>
+        </div>
+      </t-option>
+      <t-option
+        v-if="!props.disabled"
+        :value="ADD_MODEL_VALUE"
+        :label="t('model.addModelInSettings')"
+        class="add-model-option"
+      >
+        <div class="select-model-option add">
+          <t-icon name="add" class="select-add-icon" />
+          <span class="select-model-name">{{ t('model.addModelInSettings') }}</span>
+        </div>
+      </t-option>
+    </t-select>
+  </div>
+  <t-popup
+    v-else
+    class="runtime-model-selector"
     trigger="click"
-    :open="dropdownOpen"
+    placement="bottom-left"
+    :visible="dropdownOpen"
     :disabled="props.disabled"
-    @open-change="handleOpenChange"
+    :destroy-on-close="false"
+    overlay-class-name="runtime-model-selector-popup"
+    overlay-inner-class-name="runtime-model-selector-popup-inner"
+    attach="body"
+    @visible-change="handleOpenChange"
   >
-    <div class="model-select" :class="modelSelectClasses" @click.prevent.stop @mousedown.stop>
+    <div class="model-select" :class="modelSelectClasses">
       <div class="model-select-content">
         <div class="model-info">
           <span class="model-text text" :title="displayModelTitle">{{ displayModelText }}</span>
           <button
             v-if="props.clearable && props.model_spec && !props.disabled"
+            type="button"
             class="model-clear-btn"
+            :title="t('agent.runtimeManage.modelSelector.clear')"
             @mousedown.prevent.stop
             @click.stop="handleClear"
-            title="清空选择"
           >
             <X :size="14" />
           </button>
         </div>
-        <div v-if="resolvedSize !== 'nano'" class="model-status-controls">
-          <span
-            v-if="state.currentModelStatus"
-            class="model-status-indicator"
-            :class="state.currentModelStatus.status"
-            :title="getCurrentModelStatusTitle()"
-          >
-            {{ modelStatusIcon }}
-          </span>
-          <a-button
-            :size="buttonSize"
-            type="text"
-            :loading="state.checkingStatus"
-            @click.stop="checkCurrentModelStatus"
-            :disabled="props.disabled || state.checkingStatus"
-            class="status-check-button"
-          >
-            {{ state.checkingStatus ? '检查中...' : '检查' }}
-          </a-button>
-        </div>
       </div>
     </div>
-    <template #overlay>
+    <template #content>
       <div class="model-dropdown" @click.stop>
         <div class="model-search">
-          <a-input
-            v-model:value="modelSearchKeyword"
-            placeholder="搜索模型"
-            allow-clear
+          <t-input
+            v-model="modelSearchKeyword"
+            :placeholder="t('agent.runtimeManage.modelSelector.searchPlaceholder')"
+            clearable
             autocomplete="off"
             autocapitalize="none"
             autocorrect="off"
@@ -56,8 +81,13 @@
           >
             <template #suffix>
               <button
+                type="button"
                 :disabled="props.disabled || state.refreshingCache"
-                :title="state.refreshingCache ? '刷新中...' : '刷新缓存'"
+                :title="
+                  state.refreshingCache
+                    ? t('agent.runtimeManage.modelSelector.refreshingCache')
+                    : t('agent.runtimeManage.modelSelector.refreshCache')
+                "
                 class="cache-refresh-button"
                 @mousedown.prevent.stop
                 @click.stop="refreshCache"
@@ -65,73 +95,84 @@
                 <RefreshCw :size="13" :class="{ spin: state.refreshingCache }" />
               </button>
             </template>
-          </a-input>
+          </t-input>
         </div>
-        <a-menu class="scrollable-menu">
-          <a-menu-item v-if="loadingV2Models" key="loading" disabled>加载中...</a-menu-item>
-          <a-menu-item v-else-if="!hasFilteredModels" key="empty" disabled
-            >暂无匹配模型</a-menu-item
-          >
+        <div class="scrollable-menu">
+          <div v-if="loadingV2Models" class="model-menu-status">
+            {{ t('agent.runtimeManage.modelSelector.loading') }}
+          </div>
+          <div v-else-if="!hasFilteredModels" class="model-menu-status">
+            {{ t('agent.runtimeManage.modelSelector.empty') }}
+          </div>
           <template v-else>
-            <a-menu-item-group
+            <div
               v-for="(providerData, providerId) in filteredV2Models"
               :key="`v2-${providerId}`"
+              class="model-provider-group"
             >
-              <template #title>
-                <span :title="providerId">{{
-                  getProviderDisplayName(providerId, providerData)
-                }}</span>
-              </template>
-              <a-menu-item
+              <div class="model-provider-title" :title="providerId">
+                {{ getProviderDisplayName(providerId, providerData) }}
+              </div>
+              <button
                 v-for="model in providerData.models"
                 :key="model.spec"
+                type="button"
+                class="model-option-item"
+                :class="{ selected: model.spec === props.model_spec }"
                 @click="handleSelectV2Model(model.spec)"
               >
                 <div class="model-option">
                   <span class="model-option-name">{{ model.display_name }}</span>
                   <div class="model-option-signals">
-                    <a-tooltip v-if="getModelInfo(model).vision" title="支持图像输入">
-                      <span class="model-signal-icon" role="img" aria-label="支持图像输入">
+                    <t-tooltip
+                      v-if="getModelInfo(model).vision"
+                      :content="t('agent.runtimeManage.modelSelector.vision')"
+                    >
+                      <span
+                        class="model-signal-icon"
+                        role="img"
+                        :aria-label="t('agent.runtimeManage.modelSelector.vision')"
+                      >
                         <Eye :size="13" />
                       </span>
-                    </a-tooltip>
-                    <a-tooltip
+                    </t-tooltip>
+                    <t-tooltip
                       v-if="getModelInfo(model).isOneMillionContext"
-                      title="约 1M tokens 上下文窗口"
+                      :content="t('agent.runtimeManage.modelSelector.oneMillionContext')"
                     >
                       <span class="model-context-badge">1M</span>
-                    </a-tooltip>
+                    </t-tooltip>
                   </div>
                 </div>
-              </a-menu-item>
-            </a-menu-item-group>
+              </button>
+            </div>
           </template>
-        </a-menu>
+        </div>
         <div
           v-if="!modelMetadataNoticeDismissed && ((userStore.isAdmin && !weknoraManaged) || hasModelMetadata)"
           class="model-metadata-source"
         >
           <div class="model-metadata-source-content">
             <template v-if="userStore.isAdmin && !weknoraManaged">
-              没有合适的模型？
-              <RouterLink :to="{ path: '/platform/harness/agents', query: { tab: 'providers' } }" @click.stop>
-                配置模型
+              {{ t('agent.runtimeManage.modelSelector.noModelHint') }}
+              <RouterLink :to="{ path: '/platform/agents', query: { surface: 'runtime' } }" @click.stop>
+                {{ t('agent.runtimeManage.modelSelector.configureModels') }}
               </RouterLink>
             </template>
             <template v-if="hasModelMetadata">
-              <span v-if="userStore.isAdmin">。 </span>
-              部分信息（价格、能力等）来自
+              <span v-if="userStore.isAdmin"> </span>
+              {{ t('agent.runtimeManage.modelSelector.metadataPrefix') }}
               <a href="https://models.dev" target="_blank" rel="noreferrer" @click.stop
                 >models.dev</a
               >
-              填补。仅供参考，可能和官网有偏差。
+              {{ t('agent.runtimeManage.modelSelector.metadataSuffix') }}
             </template>
           </div>
           <button
             type="button"
             class="model-metadata-source-close"
-            title="不再显示"
-            aria-label="关闭模型信息提示"
+            :title="t('agent.runtimeManage.modelSelector.dismissNotice')"
+            :aria-label="t('agent.runtimeManage.modelSelector.closeNotice')"
             @click.stop="dismissModelMetadataNotice"
           >
             <X :size="13" />
@@ -139,16 +180,17 @@
         </div>
       </div>
     </template>
-  </a-dropdown>
+  </t-popup>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 import { modelProviderApi } from '@harness/apis/system_api'
 import { Eye, RefreshCw, X } from 'lucide-vue-next'
-import { useModelStatus } from '@harness/composables/useModelStatus'
 import { useUserStore } from '@harness/stores/user'
+import { useUIStore } from '@/stores/ui'
 import { loadModelMetadataCatalog, resolveModelDisplayMetadata } from '@harness/utils/modelMetadata'
 
 const props = defineProps({
@@ -158,7 +200,7 @@ const props = defineProps({
   },
   placeholder: {
     type: String,
-    default: '请选择模型'
+    default: ''
   },
   size: {
     type: String,
@@ -181,7 +223,13 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['select-model'])
+const { t } = useI18n()
 const userStore = useUserStore()
+const uiStore = useUIStore()
+const ADD_MODEL_VALUE = '__add_model__'
+const placeholderText = computed(
+  () => props.placeholder || t('agent.runtimeManage.modelSelector.placeholder')
+)
 const MODEL_METADATA_NOTICE_DISMISSED_KEY = 'yuxi_model_metadata_notice_dismissed'
 
 // v2 模型数据：每次展开下拉时实时从后端拉取
@@ -212,6 +260,7 @@ const filteredV2Models = computed(() => {
         getProviderDisplayName(providerId, providerData),
         model.spec,
         model.model_id,
+        model.name,
         model.display_name
       ].some((value) =>
         String(value || '')
@@ -232,6 +281,39 @@ const hasFilteredModels = computed(() => {
   return Object.values(filteredV2Models.value).some((providerData) => providerData.models?.length)
 })
 
+const flatV2Models = computed(() => {
+  const list = []
+  for (const [providerId, providerData] of Object.entries(v2Models.value || {})) {
+    for (const model of providerData.models || []) {
+      if (!model?.spec) continue
+      list.push({
+        ...model,
+        providerId
+      })
+    }
+  }
+  return list
+})
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const isUuidLike = (value) => UUID_RE.test(String(value || '').trim())
+
+const modelSelectLabel = (model) => {
+  const alias = String(model.display_name || '').trim()
+  const name = String(model.name || '').trim()
+  if (alias && !isUuidLike(alias)) return alias
+  if (name && !isUuidLike(name)) return name
+  return alias || name || ''
+}
+
+const modelSelectRawName = (model) => {
+  const alias = String(model.display_name || '').trim()
+  const name = String(model.name || '').trim()
+  if (!alias || !name || isUuidLike(name) || name === alias) return ''
+  return name
+}
+
 const hasModelMetadata = computed(() => Object.keys(modelMetadataBySpec.value).length > 0)
 
 // spec -> 展示名映射。WeKnora 管理模式下 model.spec 是模型 UUID（保证可以精确
@@ -244,7 +326,7 @@ const specDisplayNameMap = computed(() => {
   for (const providerData of Object.values(v2Models.value)) {
     for (const model of providerData.models || []) {
       if (model?.spec) {
-        map[model.spec] = model.display_name || model.model_id || model.spec
+        map[model.spec] = modelSelectLabel(model) || model.spec
       }
     }
   }
@@ -337,21 +419,22 @@ const refreshCache = async () => {
 }
 
 // 状态管理
-useModelStatus()
 const state = reactive({
-  currentModelStatus: null,
-  checkingStatus: false,
   refreshingCache: false
 })
 
-watch(
-  () => props.model_spec,
-  (spec, previousSpec) => {
-    if (spec !== previousSpec) {
-      state.currentModelStatus = null
-    }
+const handleSelectPopupVisible = (visible) => {
+  if (visible) fetchV2Models()
+}
+
+const handleFormModelChange = (value) => {
+  if (props.disabled) return
+  if (value === ADD_MODEL_VALUE) {
+    uiStore.openSettings('models', 'llm')
+    return
   }
-)
+  emit('select-model', typeof value === 'string' ? value : '')
+}
 
 const resolvedSize = computed(() => props.size || 'small')
 const modelSelectClasses = computed(() => ({
@@ -360,11 +443,6 @@ const modelSelectClasses = computed(() => ({
   'model-select--large': resolvedSize.value === 'large',
   'model-select--disabled': props.disabled
 }))
-const buttonSize = computed(() => {
-  if (resolvedSize.value === 'large') return 'large'
-  if (resolvedSize.value === 'middle') return 'middle'
-  return 'small'
-})
 
 const extractModelName = (spec) => {
   const separatorIndex = spec.indexOf(':')
@@ -373,7 +451,7 @@ const extractModelName = (spec) => {
 
 const displayModelText = computed(() => {
   const spec = props.model_spec
-  if (!spec) return props.placeholder
+  if (!spec) return placeholderText.value
 
   // 优先用已拉取的模型列表把 spec 换成人类可读的 display_name。命中即用，
   // 不再区分 full/short/mini —— UUID 没有可切分的 "provider:model" 结构，
@@ -398,7 +476,7 @@ const displayModelText = computed(() => {
 
 // 悬浮提示保留原始 spec（UUID 或 provider:model），方便复制/核对，展示文案
 // 走 displayModelText。
-const displayModelTitle = computed(() => props.model_spec || props.placeholder)
+const displayModelTitle = computed(() => props.model_spec || placeholderText.value)
 
 // 预取一次模型列表，这样即使用户还没点开下拉框，已保存的 model_spec（如
 // agent 配置里存的 WeKnora UUID）也能立刻显示成可读名称，而不是等到下次
@@ -406,50 +484,6 @@ const displayModelTitle = computed(() => props.model_spec || props.placeholder)
 onMounted(() => {
   fetchV2Models()
 })
-
-// 检查当前模型状态
-const checkCurrentModelStatus = async () => {
-  if (props.disabled) return
-  const spec = props.model_spec
-  if (!spec) return
-
-  try {
-    state.checkingStatus = true
-    const response = await modelProviderApi.getModelStatusBySpec(spec)
-    if (response.data) {
-      state.currentModelStatus = response.data
-    } else {
-      state.currentModelStatus = null
-    }
-  } catch (error) {
-    console.error(`检查模型 ${spec} 状态失败:`, error)
-    state.currentModelStatus = { status: 'error', message: error.message }
-  } finally {
-    state.checkingStatus = false
-  }
-}
-
-const modelStatusIcon = computed(() => {
-  const status = state.currentModelStatus
-  if (!status) return '○'
-  if (status.status === 'available') return '✓'
-  if (status.status === 'unavailable') return '✗'
-  if (status.status === 'error') return '⚠'
-  return '○'
-})
-
-const getCurrentModelStatusTitle = () => {
-  const status = state.currentModelStatus
-  if (!status) return '状态未知'
-
-  let statusText = ''
-  if (status.status === 'available') statusText = '可用'
-  else if (status.status === 'unavailable') statusText = '不可用'
-  else if (status.status === 'error') statusText = '错误'
-
-  const message = status.message || '无详细信息'
-  return `${statusText}: ${message}`
-}
 
 // 选择 v2 模型的方法
 const handleSelectV2Model = (spec) => {
@@ -461,7 +495,6 @@ const handleSelectV2Model = (spec) => {
 // 清空选择
 const handleClear = () => {
   if (props.disabled) return
-  state.currentModelStatus = null
   emit('select-model', '')
   dropdownOpen.value = false
 }
@@ -470,10 +503,56 @@ const handleClear = () => {
 <style lang="less" scoped>
 @import '@harness/assets/css/model-selector-common.less';
 
-// 状态检查按钮
-.status-check-button {
-  font-size: 12px;
-  padding: 0 4px;
+.runtime-model-selector-select {
+  width: 100%;
+}
+
+.select-model-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .select-model-icon {
+    font-size: 14px;
+    color: var(--td-brand-color);
+  }
+
+  .select-add-icon {
+    font-size: 14px;
+    color: var(--td-brand-color);
+  }
+
+  .select-model-name {
+    flex: 0 1 auto;
+    min-width: 0;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .select-model-raw {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    color: var(--td-text-color-placeholder);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &.add {
+    .select-model-name {
+      color: var(--td-brand-color);
+      font-weight: 500;
+    }
+  }
+}
+
+.runtime-model-selector {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
 }
 
 // 缓存刷新按钮
@@ -560,41 +639,50 @@ const handleClear = () => {
   padding: 8px;
 }
 
-.model-search :deep(.ant-input-affix-wrapper) {
+.model-search :deep(.t-input) {
   border-color: var(--gray-0);
   background: var(--gray-25);
 }
 
-.model-search :deep(.ant-input) {
-  background: transparent;
+.scrollable-menu {
+  max-height: 260px;
+  overflow-y: auto;
 }
 
-:deep(.ant-dropdown-menu) {
-  &.scrollable-menu {
-    max-height: 260px;
-    overflow-y: auto;
-    box-shadow: none;
-  }
+.model-menu-status {
+  padding: 10px 12px;
+  color: var(--gray-500);
+  font-size: 13px;
+}
 
-  .ant-dropdown-menu-item-group-list {
-    margin: 0;
-  }
+.model-provider-group {
+  padding: 4px 0;
+}
 
-  .ant-dropdown-menu-item,
-  .ant-dropdown-menu-submenu-title {
-    border-radius: 6px;
-  }
+.model-provider-title {
+  padding: 6px 12px 4px;
+  overflow: hidden;
+  color: var(--gray-500);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
-  .ant-dropdown-menu-item:hover,
-  .ant-dropdown-menu-submenu-title:hover,
-  .ant-dropdown-menu-item-active,
-  .ant-dropdown-menu-submenu-title-active {
+.model-option-item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover {
     background: var(--gray-50);
   }
 
-  .ant-dropdown-menu-item-selected,
-  .ant-dropdown-menu-item-selected:hover,
-  .ant-dropdown-menu-item-selected.ant-dropdown-menu-item-active {
+  &.selected {
     color: var(--gray-1000);
     background: var(--main-50);
   }
@@ -691,5 +779,14 @@ const handleClear = () => {
     outline: 2px solid var(--main-400);
     outline-offset: 1px;
   }
+}
+</style>
+
+<style lang="less">
+.runtime-model-selector-popup-inner.t-popup__content,
+.runtime-model-selector-popup-inner {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 </style>

@@ -12,17 +12,25 @@
 
 ---
 
+
+
 ## 0. 边界与原则
+
+
 
 ### 0.1 改 / 不改
 
-| 目录 | 角色 | 本计划 |
-| --- | --- | --- |
-| `frontend/`、`internal/` | 上游开源 | **不改**，继续合上游 |
-| `apps/manager`、`apps/backend` | 另一条产品线 | **不改** |
-| `apps/frontend` | 企业前端 fork | **阶段一唯一改动面** |
-| `apps/app-core` | 企业 Go fork | **仅阶段二**：卸路由，不加新功能 |
-| `apps/agent-harness` | Python 落点 | **仅阶段二**：承接 `/api/v1` 实现 |
+
+| 目录                            | 角色         | 本计划                      |
+| ----------------------------- | ---------- | ------------------------ |
+| `frontend/`、`internal/`       | 上游开源       | **不改**，继续合上游             |
+| `apps/manager`、`apps/backend` | 另一条产品线     | **不改**                   |
+| `apps/frontend`               | 企业前端 fork  | **阶段一唯一改动面**             |
+| `apps/app-core`               | 企业 Go fork | **仅阶段二**：卸路由，不加新功能       |
+| `apps/agent-harness`          | Python 落点  | **仅阶段二**：承接 `/api/v1` 实现 |
+
+
+
 
 ### 0.2 两阶段锁
 
@@ -49,6 +57,8 @@ F0 → F1 → … → F9 验收通过
   - 新页面只用 TDesign，禁止新引入 `ant-design-vue` / `@ant-design/icons-vue`
 - 数据调用：原 `/harness-api/...` 原样保留。F0 只允许把 `src/harness/apis/` **搬家**到 `src/api/runtime/`，URL 不变。
 
+
+
 ### 0.4 「不再保留 harness 特征」完成态（F9）
 
 - `rg HarnessIsland apps/frontend/src` 为零
@@ -57,16 +67,20 @@ F0 → F1 → … → F9 验收通过
 - `src/harness/` 目录删除（API 已在 `src/api/runtime/`，工具函数已迁到 `src/utils/` 或随页面走）
 - `main.ts` 不再 `app.use(Antd)`，不再引入 `@harness/assets/css/harness-entry.css`
 
+
+
 ### 0.5 环境
 
 与现网 KJSC 开发一致：
 
-| 进程 | 启动 | 端口 |
-| --- | --- | --- |
-| WeKnora / app-core | `make dev-kjsc-app` | `:9980` |
-| 前端 | `make dev-kjsc-frontend` | `:9988` |
-| harness API/Worker | `make dev-kjsc-harness` | `:9990`（经前端 `/harness-api`） |
-| 基础设施 | `make dev-kjsc-infra` | postgres / redis / minio |
+
+| 进程                 | 启动                       | 端口                          |
+| ------------------ | ------------------------ | --------------------------- |
+| WeKnora / app-core | `make dev-kjsc-app`      | `:9980`                     |
+| 前端                 | `make dev-kjsc-frontend` | `:9988`                     |
+| harness API/Worker | `make dev-kjsc-harness`  | `:9990`（经前端 `/harness-api`） |
+| 基础设施               | `make dev-kjsc-infra`    | postgres / redis / minio    |
+
 
 库：`agent-middle`。身份已按 P1/P7 走 WeKnora `users` + 同一套 JWT。
 
@@ -80,80 +94,92 @@ F0 → F1 → … → F9 验收通过
 6. **完成后必须与旧实现深度比对，不得凭印象收工**（见 §0.7 第 7 条）。验收含配色、间距、标题栏、分隔线、空态。
 7. 验证用测试文件当场删除，不提交。提交后再开下一批。
 
+
+
 ### 0.7 阶段一工程纪律（F2 起强制）
 
-1. **功能与观感对齐**：正式页必须覆盖旧页全部可见能力（列表/详情/空态/加载/失败、图表、数字分色、图标语义色、图表调色盘）。允许换 TDesign 组件，**不允许少样式、少色相、少一块 UI**。做不到像素级（如 Ant Card 标题栏、Lucide 线宽）须在该批验收里写明；色相与数字颜色必须对齐旧语义 token（`--color-info/accent/warning/success/error`、`--chart-palette-*`），禁止只剩 `--td-brand-color` 一片绿。
+1. **功能与观感对齐**：正式页必须覆盖旧页全部可见能力（列表/详情/空态/加载/失败、图表、数字分色、图标语义色、图表调色盘）。允许换 TDesign 组件，**不允许少样式、少色相、少一块 UI**。做不到像素级（如 Ant Card 标题栏、Lucide 线宽）须在该批验收里写明；色相与数字颜色必须对齐旧语义 token（`--color-info/accent/warning/success/error`、`--chart-palette-`*），禁止只剩 `--td-brand-color` 一片绿。
 2. **先 move 再改，禁止复制留双份**：把 `@harness/views` / 专用组件 **移到** `views/<域>/` 再改 TDesign。`chartColors` / `cssVars` 等已有工具上移或复用，不得每个模块再拷一份。
 3. **本批删旧入口**：正式路由生效后，同 PR 删除该功能已无引用的 harness 页、组件、专用 api。禁止拖到 F9 再清死代码。
 4. **文件数**：优先 move（不算新增）。净增文件（新增 − 删除）**≤ 3**；不含 move 的硬上限 **≤ 5**。超限先抽共享或拆批。
 5. **不留测试文件**：验证用的 `*.test.ts` / 临时脚本验完即删，**不提交**。不为搬家补单测，除非改了契约。
 6. **禁止新引入** `ant-design-vue` / `@ant-design/icons-vue`。
 7. **完成后强制与原功能深度比对（F1 已因未执行本条返工 3 次，F2 起未比对不得标完成）**：
-   - **对照源**：`git show <迁前 commit>:<旧文件>` 或未删的 `@harness` 源，**禁止只靠记忆或截图印象**。
-   - **必须逐项对照并写进该批验收**（缺一项不算完成）：
-     1. 信息架构：标题、数字、拆分、空态/加载/失败、表格列、按钮/筛选项是否齐全
-     2. 图表 option：legend/grid/axisLine/splitLine/areaStyle/tooltip/圆角/emphasis，不得简化丢字段
-     3. 色相：语义色与 `--chart-palette-*`，含深色 `html[theme-mode=dark]`
-     4. **间距与版式**：`padding` / `gap` / `margin` / `min-height` 与旧页同一套；区块之间间隔必须一致，禁止一块挤死、一块被 min-height 撑开；标题栏分隔线与正文之间要有上内边距，禁止横线贴死内容
-     5. 卡片铬：标题字号/字重、header 高度、hover、响应式断点
-   - 发现不一致必须当场改，不能先交再等用户标红。
-   - 该批 PR/回复里用短表列出「旧值 → 新值」，无差异写「已对齐」。
+  - **对照源**：`git show <迁前 commit>:<旧文件>` 或未删的 `@harness` 源，**禁止只靠记忆或截图印象**。
+  - **必须逐项对照并写进该批验收**（缺一项不算完成）：
+  1. 信息架构：标题、数字、拆分、空态/加载/失败、表格列、按钮/筛选项是否齐全
+  2. 图表 option：legend/grid/axisLine/splitLine/areaStyle/tooltip/圆角/emphasis，不得简化丢字段
+  3. 色相：语义色与 `--chart-palette-*`，含深色 `html[theme-mode=dark]`
+  4. **间距与版式**：`padding` / `gap` / `margin` / `min-height` 与旧页同一套；区块之间间隔必须一致，禁止一块挤死、一块被 min-height 撑开；标题栏分隔线与正文之间要有上内边距，禁止横线贴死内容
+  5. 卡片铬：标题字号/字重、header 高度、hover、响应式断点
+    不一致必须当场改，不能先交再等用户标红。
+     PR/回复里用短表列出「旧值 → 新值」，无差异写「已对齐」。
 8. **最小改动（F1 因拆出独立 css / 两行 util / 重复 composable 返工；F2 起强制）**：
-   - 每次调整或新增功能只改完成该需求所必需的最少文件与最少行，禁止借机新建目录树。
-   - **禁止**为页面单独建 `*-tokens.css` / `*.module.css`；token 与该页专用铬写进该页 SFC 的 unscoped `<style>`（选择器挂页面根 class）。
-   - **禁止**为 1–2 个短函数新建 `utils/`、`composables/` 文件；并进已有模块，或复用 `@/composables/useTheme` 等现成能力。
-   - 能改现有文件就不新增；新增文件必须同时删掉等量或更多旧文件（move 除外）。
-   - 不为「结构整齐」预建空目录或占位文件。
+  - 每次调整或新增功能只改完成该需求所必需的最少文件与最少行，禁止借机新建目录树。
+  - **禁止**为页面单独建 `*-tokens.css` / `*.module.css`；token 与该页专用铬写进该页 SFC 的 unscoped `<style>`（选择器挂页面根 class）。
+  - **禁止**为 1–2 个短函数新建 `utils/`、`composables/` 文件；并进已有模块，或复用 `@/composables/useTheme` 等现成能力。
+  - 能改现有文件就不新增；新增文件必须同时删掉等量或更多旧文件（move 除外）。
+  - 不为「结构整齐」预建空目录或占位文件。
 
 ---
 
+
+
 ## 1. 阶段总览
 
-| 阶段 | 批次 | 内容 | 状态 |
-| --- | --- | --- | --- |
-| 一 | **F0** | 基建：runtime API 搬家、路由/菜单约定、禁止新 Ant | 完成 |
-| 一 | **F1** | 数据总览 → `views/dashboard` | 完成（已收束文件：无独立 css / 短 util） |
-| 一 | **F2** | 工作区 → `views/workspace` | 完成（`c43485fc`；后续修删除弹窗/深色表线/勾选主色） |
-| 一 | **F3** | 技能·工具：Skill / Tools / Runtime MCP 一并迁入正式 views（原 F3–F5 合并） | 完成（代码已落地，验收待用户） |
-| 一 | **F4** | （已并入 F3） | 取消 |
-| 一 | **F5** | （已并入 F3） | 取消 |
-| 一 | **F6** | Runtime 智能体并进 `views/agent` | 未开始 |
-| 一 | **F7** | Runtime 知识库并进 `views/knowledge`（开工前确认收口策略） | 未开始 |
-| 一 | **F8** | Runtime 对话并进 `views/chat` + `creatChat` + 侧栏历史 | 未开始 |
-| 一 | **F9** | 删除 `src/harness/`、Ant Design、`/platform/harness` 正式树 | 未开始 |
-| 闸门 | **G1** | 阶段一全量验收，才允许 B0 | 未开始 |
-| 二 | **B0** | 冻结阶段一实际调用的 OpenAPI 对照表 | 未开始 |
-| 二 | **B1** | Model / Initialization | 未开始 |
-| 二 | **B2** | Vector / Storage / WebSearch / Datasource | 未开始 |
-| 二 | **B3** | System / 队列 / 审计 | 未开始 |
-| 二 | **B4** | Organization / 分享 | 未开始 |
-| 二 | **B5** | Tenant / RBAC | 未开始 |
-| 二 | **B6** | Knowledge / Chunk / FAQ / Tag | 未开始 |
-| 二 | **B7** | Wiki | 未开始 |
-| 二 | **B8** | Agent 配置 + Embed + IM | 未开始 |
-| 二 | **B9** | Session / RAG / SSE | 未开始 |
-| 闸门 | **G2** | 阶段二全量验收；app-core 对应路由已卸 | 未开始 |
+
+| 阶段  | 批次     | 内容                                                         | 状态                               |
+| --- | ------ | ---------------------------------------------------------- | -------------------------------- |
+| 一   | **F0** | 基建：runtime API 搬家、路由/菜单约定、禁止新 Ant                          | 完成                               |
+| 一   | **F1** | 数据总览 → `views/dashboard`                                   | 完成（已收束文件：无独立 css / 短 util）       |
+| 一   | **F2** | 工作区 → `views/workspace`                                    | 完成（`c43485fc`；后续修删除弹窗/深色表线/勾选主色） |
+| 一   | **F3** | 技能·工具：Skill / Tools / Runtime MCP 一并迁入正式 views（原 F3–F5 合并） | 完成                               |
+| 一   | **F4** | （已并入 F3）                                                   | 取消                               |
+| 一   | **F5** | （已并入 F3）                                                   | 取消                               |
+| 一   | **F6** | Runtime 智能体并进 `views/agent/harness`                         | 完成（待验收）                       |
+| 一   | **F7** | 删除 yuxi 知识库管理面，只留 WeKnora KB（已锁定 **A**）                   | 未开始（依赖 F6）                       |
+| 一   | **F8** | Runtime 对话并进 `views/chat` + `creatChat` + 侧栏历史             | 未开始                              |
+| 一   | **F9** | 删除 `src/harness/`、Ant Design、`/platform/harness` 正式树       | 未开始                              |
+| 闸门  | **G1** | 阶段一全量验收，才允许 B0                                             | 未开始                              |
+| 二   | **B0** | 冻结阶段一实际调用的 OpenAPI 对照表                                     | 未开始                              |
+| 二   | **B1** | Model / Initialization                                     | 未开始                              |
+| 二   | **B2** | Vector / Storage / WebSearch / Datasource                  | 未开始                              |
+| 二   | **B3** | System / 队列 / 审计                                           | 未开始                              |
+| 二   | **B4** | Organization / 分享                                          | 未开始                              |
+| 二   | **B5** | Tenant / RBAC                                              | 未开始                              |
+| 二   | **B6** | Knowledge / Chunk / FAQ / Tag                              | 未开始                              |
+| 二   | **B7** | Wiki                                                       | 未开始                              |
+| 二   | **B8** | Agent 配置 + Embed + IM                                      | 未开始                              |
+| 二   | **B9** | Session / RAG / SSE                                        | 未开始                              |
+| 闸门  | **G2** | 阶段二全量验收；app-core 对应路由已卸                                    | 未开始                              |
+
 
 不在本计划：打开 `WeKnora_hide_features`、改 `apps/manager`、合 `frontend/` 与 `apps/frontend` 源码树、动上游 `internal/`。
 
 ---
 
+
+
 ## 阶段一 · 前端
+
+
 
 ### 现状对照（迁之前不要改这些后端）
 
-| 现状入口 | 组件 | HTTP |
-| --- | --- | --- |
-| `/platform/harness/dashboard` | `src/harness/views/DashboardView.vue` | `/harness-api` dashboard |
-| `/platform/harness/workspace` | `src/harness/views/WorkspaceView.vue` | workspace / knowledge |
-| KB 列表 `?surface=skills\|tools\|mcp\|runtime` | `KnowledgeBaseList.vue` 内 `HarnessIsland` | skill / tools / mcp / knowledge |
-| `/platform/harness/extensions/skill/:slug` | `SkillDetailView.vue` | skill_api |
-| `/platform/harness/extensions/mcp/:slug` | `McpDetailView.vue` | mcp_api |
-| Agent 列表 `?surface=runtime` | `AgentList.vue` 内 `AgentManageView` | agent_api |
-| `/platform/harness/chat`、`chat/:thread_id` | `AgentView.vue` | agent / chat SSE |
-| 侧栏 Runtime 历史 | `HarnessHistoryNav.vue` | chat threads |
+
+| 现状入口                                       | 组件                                        | HTTP                            |
+| ------------------------------------------ | ----------------------------------------- | ------------------------------- |
+| `/platform/harness/dashboard`              | `src/harness/views/DashboardView.vue`     | `/harness-api` dashboard        |
+| `/platform/harness/workspace`              | `src/harness/views/WorkspaceView.vue`     | workspace / knowledge           |
+| KB 列表 `?surface=runtime`（F7-A 将删除）      | `KnowledgeBaseList.vue` 内 `DataBaseView`  | yuxi knowledge_api              |
+| Agent 列表 `?surface=runtime`                | `AgentList.vue` 内 `views/agent/harness`   | `/harness-api/api/agent`        |
+| `/platform/harness/chat`、`chat/:thread_id` | `AgentView.vue`                           | agent / chat SSE                |
+| 侧栏 Runtime 历史                              | `HarnessHistoryNav.vue`                   | chat threads                    |
+
 
 ---
+
+
 
 ### F0 · 基建
 
@@ -180,6 +206,8 @@ F0 → F1 → … → F9 验收通过
 
 ---
 
+
+
 ### F1 · 数据总览
 
 **依赖:** F0。**后端:** 不动。
@@ -195,7 +223,7 @@ F0 → F1 → … → F9 验收通过
 - Modify: `apps/frontend/src/i18n/locales/zh-CN.ts`（及 en-US）— 菜单文案保持「数据总览」，不出现 harness
 - Delete（同批，已做）: `src/harness/views/DashboardView.vue`、`src/harness/components/dashboard/*`、`src/harness/apis/dashboard_api.js`；验证用 `prefix.test.ts` 验完即删、不提交
 
-**落地说明（F1 偏差，后续批不得再扩大）：** 已用 TDesign Card/Statistic，非 Ant Card 像素级；图标形状可为 TDesign。色相已挂 `.dashboard-page` 对齐旧 `--color-*` / `--chart-palette-*`。F2 起必须先 move 再改，禁止再整树复制。
+**落地说明（F1 偏差，后续批不得再扩大）：** 已用 TDesign Card/Statistic，非 Ant Card 像素级；图标形状可为 TDesign。色相已挂 `.dashboard-page` 对齐旧 `--color-`* / `--chart-palette-*`。F2 起必须先 move 再改，禁止再整树复制。
 
 - [x] **Step 1:** 用 TDesign 写 `views/dashboard/index.vue`：页头 + 概览数字 + 调用/用户/Agent/工具/KB 图，数据走 `src/api/runtime/dashboard.ts`。
 - [x] **Step 2:** 注册 `/platform/dashboard`；`/platform/harness/dashboard` redirect。
@@ -208,18 +236,20 @@ F0 → F1 → … → F9 验收通过
 - [x] 打开 `/platform/dashboard` 图表与旧页同一 `/harness-api`
 - [x] 旧 URL 自动跳到新 URL
 - [x] 页面 DOM 无 `ant-` 组件（`a-` 标签）
-- [ ] 与旧页并排：数字分色、图标语义色、图表调色盘对齐（人工再验一次）
-- [ ] 区块间距一致（概览↔卡片、卡片↔卡片均为 16px）；标题横线与正文有上内边距，无 min-height 撑出空洞
+- [x] 与旧页并排：数字分色、图标语义色、图表调色盘对齐（人工再验一次）
+- [x] 区块间距一致（概览↔卡片、卡片↔卡片均为 16px）；标题横线与正文有上内边距，无 min-height 撑出空洞
 - [x] 无后端仓库文件变更
 - [x] 无本批验证测试文件残留
 
 ---
 
+
+
 ### F2 · 工作区
 
 **依赖:** F1 验收。
 
-**纪律:** 遵守 §0.7。先 move `WorkspaceView` + `components/workspace/*` 到 `views/workspace/`，再改 TDesign。正式路由生效后同批删旧入口。净增文件 ≤ 3。不提交 `*.test.ts`。
+**纪律:** 遵守 §0.7。先 move `WorkspaceView` + `components/workspace/`* 到 `views/workspace/`，再改 TDesign。正式路由生效后同批删旧入口。净增文件 ≤ 3。不提交 `*.test.ts`。
 
 **Files:**
 
@@ -279,75 +309,148 @@ F3、F6–F8 一律遵守 §0.7：先 move 再改 TDesign、同批删旧入口�
 - [x] 侧栏一项「技能·工具」，四语 i18n；页内横向 tab 切技能/工具/MCP
 - [x] 列表、详情、安装/MCP 表单用 TDesign（对照迁前 harness 扩展页，不是对照知识库竖条）
 - [x] `KnowledgeBaseList` 不再渲染这三个岛
-- [ ] 提交：`feat(frontend): 将技能、工具与 MCP 迁入正式 views`
+- [x] 提交：`feat(frontend): 将技能、工具与 MCP 迁入正式 views`
 
 **验收**
 
-- [ ] 点菜单进 `/platform/skills`；三个横向 tab 能力/色相/组件块与旧扩展页同等
-- [ ] 旧 `/platform/harness/extensions`、`extensions/skill|mcp/:slug`、`?surface=skills|tools|mcp` 跳到新路由
-- [ ] 请求仍为 `/harness-api` skill / tools / mcp-servers
-- [ ] 设置里原 `/api/v1` MCP 页仍可用（回归）
-- [ ] 无 `HarnessIsland` 嵌这三个面、无新 Ant、无本批 `*.test.ts`
+- [x] 点菜单进 `/platform/skills`；三个横向 tab 能力/色相/组件块与旧扩展页同等
+- [x] 旧 `/platform/harness/extensions`、`extensions/skill|mcp/:slug`、`?surface=skills|tools|mcp` 跳到新路由
+- [x] 请求仍为 `/harness-api` skill / tools / mcp-servers
+- [x] 设置里原 `/api/v1` MCP 页仍可用（回归）
+- [x] 无 `HarnessIsland` 嵌这三个面、无新 Ant、无本批 `*.test.ts`
 
 **落地偏差（写明）：** 卡片栅格仍复用 harness `ExtensionCardGrid` / `InfoCard`；技能详情文件树仍用 `FileTreeComponent`（内部 Ant）。`PageShoulder` 搜索已改 TDesign。TDesign Dialog 铬与旧 Ant Modal 不同。图标形状可不同。设置 MCP 与 Runtime MCP 不合并。
 
 ---
 
-### F6 · Runtime 智能体并进 Agent 列表
 
-**依赖:** F3 验收。
 
-**Files:**
+### F6 · Runtime 智能体并进 Agent 列表（执行细节；先不执行）
 
-- Modify: `apps/frontend/src/views/agent/AgentList.vue` — 删除 `HarnessIsland` + `AgentManageView`；用 TDesign 卡片/表格展示 Runtime 智能体（数据 `src/api/runtime/agent.ts`）
-- Modify: `apps/frontend/src/views/agent/AgentEditorModal.vue` 或新建 `RuntimeAgentEditor.vue`（TDesign）承接 `AgentEditModal.vue` 能力
-- Modify: 去掉 `surface=runtime` 作为嵌岛开关；若仍需「平台智能体 / 运行时智能体」切换，用与 KB 无关的正式 tab（query 可用 `engine=runtime`，禁止再叫 surface=runtime 嵌 Ant）
-- Modify: `router/index.ts` — `harness/agents` 已 redirect 到 `agents?surface=runtime`，改为 `agents?engine=runtime` 或默认进正式列表
-- Source: `AgentManageView.vue`、`AgentManagePanel.vue`、`AgentEditModal.vue`
+**依赖:** F3 已完成。本批 **只搬家 + 拆岛**，不重写 UI、不改 query 名、不改后端。
 
-- [ ] 平台 Agent 原 `/api/v1/agents` 回归不能坏。
-- [ ] Runtime Agent 列表/编辑走原 `/harness-api` agent 接口。
-- [ ] 提交：`feat(frontend): fold runtime agents into official agent views`
+**前提（代码已核实，不要按旧稿重写）：**
+
+- 两套智能体继续并存：平台 `/api/v1/agents` vs Runtime `/harness-api/api/agent`。本批只去掉 `HarnessIsland`，不合并后端。
+- `AgentManagePanel.vue`、`AgentEditModal.vue` **已经是 TDesign**，Ant 只来自外层 `HarnessIsland`。执行策略是 **移动，不是重写**。
+- 不要动 `views/agent/AgentEditorModal.vue`（平台编辑器，约六千行）。
+- 不要把 `agent_api.js` 迁到 `src/api/runtime/`：它同时含 CRUD 和 chat SSE，F8 对话还要用。本批继续 `import … from '@harness/apis/agent_api'`。
+- 不要本批把 `?surface=runtime` 改成 `?engine=`。F7-A 会删 KB 的 `surface=runtime`，Agent 列表可继续用同一 query。
+- 卡片「对话」继续走 `harnessCreatChat` → `/platform/harness/chat`（F8 再改）。
+- `AgentRuntimeConfigForm`、`ShareConfigForm`、`stores/agent.js` 留在 harness，本批不搬。
+
+**净新增上限 3：** 目标 = 迁 2 个已有文件 + 改接线 − 删 1 个薄壳 View。不要新建第三份编辑器。
+
+#### 1. 移动文件（git mv）
+
+实际路径在 `components/model-management/`，**不是** `views/agent/`。
+
+| 从 | 到 | 说明 |
+| -- | -- | -- |
+| `src/harness/components/model-management/AgentManagePanel.vue` | `src/views/agent/harness/AgentManagePanel.vue` | 列表+创建/删除/卡片；已 TDesign |
+| `src/harness/components/model-management/AgentEditModal.vue` | `src/views/agent/harness/AgentEditModal.vue` | 子目录与平台 `AgentEditorModal.vue` 区分 |
+| `src/harness/views/AgentManageView.vue` | **删除** | 薄壳：包 Panel + 转发 `openCreate` |
+
+#### 2. `AgentList.vue`
+
+- 删 `HarnessIsland`、`AgentManageView` 的 import 与模板。
+- `surface === 'runtime'` 时直接 `<AgentManagePanel ref="runtimeAgentManageRef" />`。`handleCreateAgent` 已有 `runtimeAgentManageRef.value?.openCreate?.()`，Panel 已 `defineExpose({ openCreate })`，转发链不断。
+- `surfaceNavItems` 的 runtime 项保留（仍 `?surface=runtime`）。
+- 平台 `surface === 'platform'` 分支一行不改。
+- `.surface-embed` 保留 `flex:1; min-height:0`，删 `:deep(.harness-root)`（岛没了）。
+- 旧 `AgentManageView` 的背景/色可并进 Panel 根 class，避免拆岛后露底。
+
+#### 3. 迁入文件内部改动（最小）
+
+`AgentManagePanel.vue`：
+
+- `from '@harness/components/model-management/AgentEditModal.vue'` → `from './AgentEditModal.vue'`
+- 其它 `@harness/…`（`agent_api`、`PageShoulder`、`stores/agent`）保持。
+- 卡片对话继续 `name: 'harnessCreatChat'`。
+
+`AgentEditModal.vue`（`views/agent/harness/`）：
+
+- 仍引用 `@harness/components/AgentRuntimeConfigForm.vue`、`ShareConfigForm`、`@harness/stores/agent`。
+- 不改表单字段、不改保存 payload。
+
+`AgentRuntimeConfigForm.vue`（留 harness，本批只改跳转）：
+
+- `knowledges`：`knowledgeBasesLocation('runtime')` → `knowledgeBasesLocation('platform')`（或 `/platform/knowledge-bases`）。后端 `get_databases_by_user` 已只暴露 WeKnora KB。
+- `subagents`：`/platform/harness/agents` → `/platform/agents?surface=runtime`（router 已有 redirect，改正式 path 避免绕一圈）。
+- `tools` / `mcps` / `skills` 已指向 `/platform/tools|mcp|skills`，不动。
+
+#### 4. `AgentView.vue`（对话页，本批只改 import）
+
+现路径是 `@harness/components/model-management/AgentEditModal.vue`。搬走后：
+
+`import AgentEditModal from '@/views/agent/harness/AgentEditModal.vue'`
+
+本地名仍叫 `AgentEditModal`，不改模板。不要把对话页迁出 harness。
+
+#### 5. 路由 / 菜单 / 历史
+
+- `router/index.ts`：`harness/agents` → `/platform/agents?surface=runtime` **已存在，保持**。
+- 不改 `creatChat.ts`、不改 `HarnessHistoryNav`。
+- 全局搜 `AgentManageView`、`model-management/AgentEditModal`、`model-management/AgentManagePanel`，引用清零。
+
+#### 6. 明确不做
+
+- 不改 `apps/app-core` / `apps/agent-harness` API。
+- 不把 Runtime 智能体写进平台 `AgentEditorModal`。
+- 不引入新的 Ant 组件。
+- 不提交 `*.test.ts`。
+- 不删 `src/harness/` 目录（F9）。
+- 不执行 F7（本批之后单独做）。
+
+**提交（执行时）：** `feat(frontend): fold runtime agents into official agent views`
 
 **验收**
 
-- [ ] `/platform/agents` 可管理两套智能体（或 tab 切换），无 Ant 岛
-- [ ] 创建/编辑/删除 Runtime Agent 与旧页能力/色相/组件块一致
-- [ ] 平台 Agent 编辑器（6000 行级）无回归
-- [ ] 同批无死代码、无本批 `*.test.ts`
+- [ ] `/platform/agents` 平台列表与编辑器与迁前一致
+- [ ] `/platform/agents?surface=runtime` 列表/创建/编辑/删除与迁前一致，DOM 无 `.harness-island`
+- [ ] 卡片「对话」仍打开 `/platform/harness/chat`
+- [ ] 运行时配置里「知识库」进 WeKnora KB 列表；「子智能体」留在 runtime 智能体列表
+- [ ] `AgentManageView.vue` 已删；无悬空 import
+- [ ] 无本批 `*.test.ts`；`pnpm --filter frontend build` 过
 
 ---
 
-### F7 · Runtime 知识库并进 knowledge views
+### F7 · 删除 yuxi 知识库管理面（已锁定 A；F6 验收后执行）
 
-**依赖:** F6 验收。**开工前门禁：** 产品二选一写进本批 PR 描述。
+**依赖:** F6 验收。**已确认 A：** 不再做 yuxi 知识库管理 UI；工作区 / 对话 / Runtime 智能体绑库一律用 **同一个 WeKnora 知识库**（`/platform/knowledge-bases`）。
 
-| 选项 | 含义 |
-| --- | --- |
-| **A 收口（默认，对齐 P4）** | 不再做 yuxi 库管理 UI；`surface=runtime` 入口删除；工作区/对话里用 WeKnora KB |
-| **B 并入正式 KB** | 把 `DataBaseView` / `DataBaseInfoView` 用 TDesign 做成 `views/knowledge/` 下的正式页（仍打 knowledge_api） |
+不要把 `DataBaseView` / `DataBaseInfoView` 做成正式页。本批仍不改后端。
 
-未书面确认前 **禁止开工 F7**。
+**已是 WeKnora、不必再换数据源：**
 
-**若选 A**
+- Harness `get_databases_by_user` / `/api/knowledge/databases/accessible` 已只返回 WeKnora 摘要。
+- 工作区 `loadDatabases()`、智能体 `fetchMentionResources()` 已走该接口。
+- F7 删的是 **管理面**（Ant 的 `DataBaseView` 创建/列表岛），不是把绑库从 yuxi 切到 WeKnora（那一步 P4 已做）。
 
-- [ ] 删除 `KnowledgeBaseList` 对 `DataBaseView` 的嵌入与 `surface=runtime` 导航项
-- [ ] `HIDDEN_KB_SURFACES` 的 runtime 相关逻辑改为无入口而非藏岛
+**Files（执行时，不在本回复落地）：**
+
+- Modify: `KnowledgeBaseList.vue` — 删 `HarnessIsland` + `DataBaseView`；`KB_SURFACES` / `surfaceNavItems` 去掉 `runtime`；侧栏无 runtime 项后 `showKbSpaceSidebar` 随现逻辑收起
+- Modify: `useListSurface` 允许值只留 `platform`；直开 `?surface=runtime` 回落 `platform`（可继续用现有 `beforeEach` 剥 query，但改为 **无条件**，不靠 `isHiddenKbSurface`）
+- Modify: `weknoraFeatures.ts` — `HIDDEN_KB_SURFACES` 的 `'runtime'` 与 `shouldHideYuxiKnowledgeAdmin()` 改为无入口：`knowledgeBasesLocation('runtime')` 恒等 platform；删除「藏岛」语义
+- Modify: `router/index.ts` — `harness/extensions?tab=knowledge` 现跳 `knowledge-bases?surface=runtime`，改为 `/platform/knowledge-bases`；`/platform/harness/extensions/knowledgebase/:id` **无条件** `weknoraKnowledgeBaseLocation`（现在只在 hide flag 为真时跳）
+- Modify: `AgentRuntimeConfigForm` — 若 F6 已改 knowledges 跳转则核对，禁止再出现 `surface=runtime` / yuxi 详情
+- Delete when unreferenced: `DataBaseView.vue`、`DataBaseInfoView.vue`（后者目前已无 import，只剩 `QuerySection` 注释）。按引用清专用组件；**不要**删工作区仍用的 `knowledge_api` / `getWorkspaceKnowledgeTree`
+- 不要改 `AgentList` 的 `?surface=runtime`（那是智能体两套列表，不是 KB）
+
 - [ ] 提交：`feat(frontend): remove runtime KB management surface`
 
-**若选 B**
+**验收（执行时）**
 
-- [ ] TDesign 重写列表/详情（文件表、图谱、思维导图、评测 tab 按 P7 后仍存在的能力保留）
-- [ ] 正式路由例如 `/platform/knowledge-bases` 内 tab `engine=runtime` 或独立 path，无 HarnessIsland
-- [ ] 提交：`feat(frontend): move runtime KB into official knowledge views`
-
-**验收（共同）**
-
+- [ ] `/platform/knowledge-bases` 只有 WeKnora KB，无 runtime tab / 无 DataBase 岛 / 无 `.harness-island`
+- [ ] 直开 `?surface=runtime` 落到平台 KB，不 404、不嵌 Ant
+- [ ] 工作区侧栏知识库仍是 WeKnora 库；点进目录不进 yuxi 管理页
+- [ ] Runtime 智能体绑库选项仍是 WeKnora id；配置里「知识库」进正式 KB 列表
 - [ ] WeKnora KB 列表/详情/上传/Wiki 回归通过
-- [ ] 无 `DataBaseView` 的 Ant 嵌入
-- [ ] 后端接口未改
+- [ ] 后端接口未改；`knowledge_api.js` 可仍被工作区引用
 
 ---
+
+
 
 ### F8 · Runtime 对话并进正式 chat
 
@@ -373,6 +476,8 @@ F3、F6–F8 一律遵守 §0.7：先 move 再改 TDesign、同批删旧入口�
 - [ ] 无 `AgentView` 路由、无 Ant 聊天岛
 
 ---
+
+
 
 ### F9 · 拆除 harness 产品目录
 
@@ -401,29 +506,33 @@ F3、F6–F8 一律遵守 §0.7：先 move 再改 TDesign、同批删旧入口�
 
 ---
 
+
+
 ### G1 · 阶段一闸门（进入阶段二之前）
 
 - [ ] F0–F9 全部勾选
 - [ ] 对照清单：无 harness 菜单 path、无 HarnessIsland、无 Ant 依赖
 - [ ] 两套 HTTP 前缀行为与改造前一致（抓包或日志对比 path）
-- [ ] 书面确认：**此后冻结 `apps/frontend` 页面与请求 URL**，阶段二不得改 Vue 业务页
+- [ ] 书面确认：**此后冻结** `apps/frontend` **页面与请求 URL**，阶段二不得改 Vue 业务页
 
 未过 G1 **禁止** 修改 `apps/app-core`、`apps/agent-harness` 业务接口。
 
 ---
 
+
+
 ## 阶段二 · 后端（前端冻结）
 
-原则：**契约不变，实现搬家。** 阶段一结束时前端既打 `/api/v1/*` 也打 `/harness-api/api/*`。阶段二把 Go 的 `/api/v1` 模块在 Python 实现后，用 nginx（`docker/config/nginx.frontend.conf`）或网关把对应 location 切到 agent-harness；**不改前端。**
+原则：**契约不变，实现搬家。** 阶段一结束时前端既打 `/api/v1/`* 也打 `/harness-api/api/*`。阶段二把 Go 的 `/api/v1` 模块在 Python 实现后，用 nginx（`docker/config/nginx.frontend.conf`）或网关把对应 location 切到 agent-harness；**不改前端。**
 
-已有 Python、不要重写当新项目：Skill / MCP / Workspace / Runtime Agent Run / Dashboard。这些在阶段一已经由正式 views 调用。阶段二重点是 **Go 独有的 `/api/v1` 域**。
+已有 Python、不要重写当新项目：Skill / MCP / Workspace / Runtime Agent Run / Dashboard。这些在阶段一已经由正式 views 调用。阶段二重点是 **Go 独有的** `/api/v1` **域**。
 
-今天 Python 对知识库/模型仍是 **HTTP 客户端**（`apps/agent-harness/package/yuxi/p3/client.py`）。B6 要把透传改成本进程，再让 `/api/v1/knowledge-bases*` 落到 Python。
+今天 Python 对知识库/模型仍是 **HTTP 客户端**（`apps/agent-harness/package/yuxi/p3/client.py`）。B6 要把透传改成本进程，再让 `/api/v1/knowledge-bases`* 落到 Python。
 
 ### 每批固定工序（B1–B9）
 
 1. 列出本模块全部 method+path（以 B0 对照表为准）。
-2. 在 `apps/agent-harness/server/routers/` 增加 **与 `/api/v1` 兼容的路由**（或内部 mount 同一 path）。
+2. 在 `apps/agent-harness/server/routers/` 增加 **与** `/api/v1` **兼容的路由**（或内部 mount 同一 path）。
 3. 契约测试：同一请求旧 Go vs 新 Python。
 4. 改 nginx：该前缀切到 harness；前端不改。
 5. 手工走对应正式 views。
@@ -431,6 +540,8 @@ F3、F6–F8 一律遵守 §0.7：先 move 再改 TDesign、同批删旧入口�
 7. 提交后再开下一批。
 
 ---
+
+
 
 ### B0 · 契约冻结
 
@@ -451,6 +562,8 @@ F3、F6–F8 一律遵守 §0.7：先 move 再改 TDesign、同批删旧入口�
 
 ---
 
+
+
 ### B1 · Model / Initialization
 
 **Files（实现时再精确到函数）:**
@@ -464,6 +577,8 @@ F3、F6–F8 一律遵守 §0.7：先 move 再改 TDesign、同批删旧入口�
 
 ---
 
+
+
 ### B2 · Vector / Storage / WebSearch / Datasource
 
 连接器类 CRUD + test。Python SDK 已有方向（minio、各检索）。nginx 按 path 前缀切。
@@ -471,6 +586,8 @@ F3、F6–F8 一律遵守 §0.7：先 move 再改 TDesign、同批删旧入口�
 **验收:** 设置里向量库/存储/搜索/数据源列表、创建、测试连接。
 
 ---
+
+
 
 ### B3 · System / 队列 / 审计
 
@@ -480,6 +597,8 @@ Go: system / runtime queues / audit。读多写少。
 
 ---
 
+
+
 ### B4 · Organization / 分享
 
 Go: organization + KB/Agent shares。无 SSE。
@@ -487,6 +606,8 @@ Go: organization + KB/Agent shares。无 SSE。
 **验收:** 共享空间 CRUD、邀请、KB/Agent 分享；viewer/admin 权限与现网一致。
 
 ---
+
+
 
 ### B5 · Tenant / RBAC
 
@@ -496,6 +617,8 @@ Go: organization + KB/Agent shares。无 SSE。
 
 ---
 
+
+
 ### B6 · Knowledge / Chunk / FAQ / Tag
 
 最大批次。将 `yuxi/p3/client.py` 的透传改为本进程写 WeKnora 表（`knowledge_bases` 等，与现网同库 `agent-middle`）。nginx 切 `/api/v1/knowledge-bases`、`/knowledge`、`/chunks`、FAQ、tag、`/knowledge-search`。
@@ -503,6 +626,8 @@ Go: organization + KB/Agent shares。无 SSE。
 **验收:** KB 全流程：创建、上传、解析进度、切片、FAQ、标签、检索。docreader 仍走现有 gRPC，不重写解析器。
 
 ---
+
+
 
 ### B7 · Wiki
 
@@ -512,6 +637,8 @@ Go wiki_page 服务。nginx 切 `/api/v1/knowledgebase/:id/wiki/*`。
 
 ---
 
+
+
 ### B8 · Agent 配置 + Embed + IM
 
 平台 Agent（`/api/v1/agents`）与 Runtime `h_agents` 不是同一对象。本批迁 **平台 Agent 配置、Embed 渠道、IM 九渠道回调**。不要把 Runtime Run 协议改成 Go QA 协议。
@@ -519,6 +646,8 @@ Go wiki_page 服务。nginx 切 `/api/v1/knowledgebase/:id/wiki/*`。
 **验收:** 平台 Agent CRUD、Embed 聊天页、至少一个 IM 渠道（钉钉或企微）收发。
 
 ---
+
+
 
 ### B9 · Session / RAG / SSE
 
@@ -528,6 +657,8 @@ Go wiki_page 服务。nginx 切 `/api/v1/knowledgebase/:id/wiki/*`。
 
 ---
 
+
+
 ### G2 · 阶段二闸门
 
 - [ ] B0–B9 完成；前端仍无业务页改动（允许 nginx/env）
@@ -536,20 +667,26 @@ Go wiki_page 服务。nginx 切 `/api/v1/knowledgebase/:id/wiki/*`。
 
 ---
 
+
+
 ## 2. 风险与回滚
 
-| 风险 | 缓解 |
-| --- | --- |
+
+| 风险                 | 缓解                                                                           |
+| ------------------ | ---------------------------------------------------------------------------- |
 | 合上游 `frontend/` 冲突 | 阶段一只动新增 `views/` 与 router 增量；少改上游同名大文件（WikiBrowser、AgentEditorModal 尽量只删嵌入岛） |
-| F8 聊天回归面大 | 独立 PR；平台对话与 Runtime 对话分两次手工清单 |
-| F7 产品未定 | 未确认禁止开工 |
-| B6/B9 一次切太大 | 可按子 path 再拆 PR，但仍属同一批次门禁内 |
-| 阶段二改坏契约 | 先契约测试再切 nginx；保留 Go 镜像回切 |
+| F8 聊天回归面大          | 独立 PR；平台对话与 Runtime 对话分两次手工清单                                                |
+| F7 产品未定            | **已锁定 A**；F6 验收前不开工                                                        |
+| B6/B9 一次切太大        | 可按子 path 再拆 PR，但仍属同一批次门禁内                                                    |
+| 阶段二改坏契约            | 先契约测试再切 nginx；保留 Go 镜像回切                                                     |
+
 
 阶段一回滚：revert 该批前端 commit，后端无改。  
 阶段二回滚：nginx 前缀切回 app-core。
 
 ---
+
+
 
 ## 3. 建议的第一个实现 PR
 

@@ -146,6 +146,7 @@ def test_get_mcp_servers_normal_user_is_stripped(monkeypatch):
     assert "headers" not in data_user
     assert "transport" not in data_user  # NOTE: 进一步验证连 transport 等配置层元数据也一并过滤
     assert data_user["name"] == "test-mcp"
+    assert data_user["slug"] == "test-mcp"
     assert data_user["description"] == "test mcp description"
     assert data_user["enabled"] is True
 
