@@ -1019,7 +1019,7 @@
         "table.createdAt": "创建时间",
         "table.description": "智能体说明",
         "table.name": "智能体名称",
-        "table.tenantName": "所属工作空间（租户）",
+        "table.tenantName": "租户",
         "table.updatedAt": "更新时间",
         "tag.builtin": "内置"
       },
@@ -1067,7 +1067,7 @@
         "table.id": "对话 ID",
         "table.newSession": "新对话",
         "table.status": "对话状态",
-        "table.tenantName": "所属工作空间（租户）",
+        "table.tenantName": "租户",
         "table.title": "对话标题",
         "table.updatedAt": "更新时间",
         "table.username": "所属用户"
@@ -1158,7 +1158,7 @@
         "table.status": "状态",
         "table.status_active": "活动",
         "table.status_disabled": "禁用",
-        "table.tenantName": "所属工作空间（租户）",
+        "table.tenantName": "租户",
         "table.updatedAt": "更新时间"
       },
       "vectorStores": {
@@ -1177,7 +1177,7 @@
         "table.createdAt": "创建时间",
         "table.engineType": "引擎类型",
         "table.name": "名称",
-        "table.tenantName": "所属工作空间（租户）",
+        "table.tenantName": "租户",
         "table.updatedAt": "更新时间"
       },
       "webSearch": {
@@ -1273,7 +1273,7 @@
         "table.agentName": "智能体",
         "table.createdAt": "创建时间",
         "table.name": "名称",
-        "table.tenantName": "所属工作空间（租户）",
+        "table.tenantName": "租户",
         "table.updatedAt": "更新时间"
       },
       "imChannels": {
@@ -1308,7 +1308,7 @@
         "table.createdAt": "创建时间",
         "table.name": "名称",
         "table.platform": "平台",
-        "table.tenantName": "所属工作空间（租户）",
+        "table.tenantName": "租户",
         "table.updatedAt": "更新时间"
       }
     },

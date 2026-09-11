@@ -85,7 +85,7 @@ onMounted(() => {
         <el-table-column prop="name" :label="$t('page.data.storage.table.name', '名称')" :min-width="$dim('page.data.storage.table.name', 220)" />
         <el-table-column
           prop="tenantName"
-          :label="$t('page.data.storage.table.tenantName', '所属工作空间（租户）')"
+          :label="$t('page.data.storage.table.tenantName', '租户')"
           :min-width="$dim('page.data.storage.table.tenantName', 300)"
         />
         <el-table-column

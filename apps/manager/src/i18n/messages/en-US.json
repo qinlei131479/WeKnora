@@ -201,7 +201,7 @@
         "table.createdAt": "Created Time",
         "table.description": "Agent Description",
         "table.name": "Agent Name",
-        "table.tenantName": "Workspace (Tenant)",
+        "table.tenantName": "Tenant",
         "table.updatedAt": "Updated Time",
         "tag.builtin": "Built-in"
       },
@@ -249,7 +249,7 @@
         "table.id": "Conversation ID",
         "table.newSession": "New session",
         "table.status": "Session Status",
-        "table.tenantName": "Workspace (Tenant)",
+        "table.tenantName": "Tenant",
         "table.title": "Session Title",
         "table.updatedAt": "Updated Time",
         "table.username": "User"
@@ -495,7 +495,7 @@
         "table.status": "Status",
         "table.status_active": "Active",
         "table.status_disabled": "Disabled",
-        "table.tenantName": "Tenant Name",
+        "table.tenantName": "Tenant",
         "table.updatedAt": "Updated Time"
       },
       "vectorStores": {
@@ -514,7 +514,7 @@
         "table.createdAt": "Created Time",
         "table.engineType": "Engine Type",
         "table.name": "Name",
-        "table.tenantName": "Tenant Name",
+        "table.tenantName": "Tenant",
         "table.updatedAt": "Updated Time"
       },
       "webSearch": {
@@ -610,7 +610,7 @@
         "table.agentName": "Agent",
         "table.createdAt": "Created Time",
         "table.name": "Name",
-        "table.tenantName": "Workspace (Tenant)",
+        "table.tenantName": "Tenant",
         "table.updatedAt": "Updated Time"
       },
       "imChannels": {
@@ -645,7 +645,7 @@
         "table.createdAt": "Created Time",
         "table.name": "Name",
         "table.platform": "Platform",
-        "table.tenantName": "Workspace (Tenant)",
+        "table.tenantName": "Tenant",
         "table.updatedAt": "Updated Time"
       }
     },

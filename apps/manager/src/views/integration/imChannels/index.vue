@@ -165,7 +165,7 @@ onMounted(() => {
         </el-table-column>
         <el-table-column
           prop="tenant.name"
-          :label="$t('page.integration.imChannels.table.tenantName', '所属工作空间（租户）')"
+          :label="$t('page.integration.imChannels.table.tenantName', '租户')"
           :min-width="$dim('page.integration.imChannels.table.tenantName', 300)"
         >
           <template #default="{ row }">{{ row.tenant?.name }}</template>

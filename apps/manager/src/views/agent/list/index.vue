@@ -137,7 +137,7 @@ onMounted(() => {
         />
         <el-table-column
           prop="tenant.name"
-          :label="$t('page.agent.list.table.tenantName', '所属工作空间（租户）')"
+          :label="$t('page.agent.list.table.tenantName', '租户')"
           :min-width="$dim('page.agent.list.table.tenantName', 250)"
         >
           <template #default="{ row }">{{ row.tenant?.name }}</template>
