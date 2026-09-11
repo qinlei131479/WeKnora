@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { API } from '@/api';
-import type { CustomAgentsPageDTO, CustomAgentsVO, PageDomain, TenantsPageDTO, TenantsVO } from '@/types';
+import type { CustomAgentsPageDTO, CustomAgentsVO, PageDomain, TenantsVO } from '@/types';
 import { Search } from 'lucide-vue-next';
 import DetailDrawer from './components/DetailDrawer.vue';
 
 const state = reactive({
-  tenantKeyword: '',
-  tenantsDto: {} as TenantsPageDTO,
   tenantsVOs: [] as TenantsVO[],
   customAgentsDto: {} as CustomAgentsPageDTO,
   page: { pageNum: 1, pageSize: 10, orderByColumn: 'createdAt', isAsc: 'desc' } as PageDomain,
@@ -18,41 +16,15 @@ const state = reactive({
   total: 0
 });
 
-const handleAutocompleteKeydown = (event: KeyboardEvent) => {
-  if (!(event.target instanceof HTMLInputElement)) return;
-  if (event.altKey) return;
-
-  if (event.key === 'Home' || event.key === 'End') {
-    event.stopPropagation();
-  }
-};
-
-const getTenants = (): Promise<TenantsVO[]> => {
-  state.tenantsVOs.length = 0;
-
-  if (!state.tenantKeyword) {
-    delete state.tenantsDto.name;
-    return Promise.resolve(state.tenantsVOs);
-  }
-
-  state.tenantsDto.name = state.tenantKeyword;
+const getTenants = () => {
   const page = { pageNum: 1, pageSize: 99999, orderByColumn: 'createdAt', isAsc: 'asc' } as PageDomain;
-  return API.Tenants.list(state.tenantsDto, page)
+  API.Tenants.list({}, page)
     .then((res) => {
-      state.tenantsVOs.push(...res.rows);
+      state.tenantsVOs = res.rows;
     })
     .catch((error) => {
       console.error('--> --> Error:', error);
-    })
-    .then(() => state.tenantsVOs);
-};
-
-const onSelectTenant = (tenant: TenantsVO) => {
-  state.customAgentsDto.tenantId = tenant.id;
-};
-
-const onTenantInput = () => {
-  delete state.customAgentsDto.tenantId;
+    });
 };
 
 const getCustomAgents = () => {
@@ -84,14 +56,12 @@ const handleQuery = () => {
 };
 
 const resetQuery = () => {
-  state.tenantKeyword = '';
   state.dateRange = [];
-  state.tenantsVOs.length = 0;
-  delete state.tenantsDto.name;
   delete state.customAgentsDto.name;
   delete state.customAgentsDto.tenantId;
   delete state.customAgentsDto.createdAtStart;
   delete state.customAgentsDto.createdAtEnd;
+  handleQuery();
 };
 
 const showDetail = (row: CustomAgentsVO) => {
@@ -100,6 +70,7 @@ const showDetail = (row: CustomAgentsVO) => {
 };
 
 onMounted(() => {
+  getTenants();
   getCustomAgents();
 });
 </script>
@@ -110,7 +81,7 @@ onMounted(() => {
 
     <page-content>
       <template #header>
-        <div class="search-bar" @keydown.capture="handleAutocompleteKeydown">
+        <div class="search-bar">
           <el-input
             v-model="state.customAgentsDto.name"
             class="search-bar__input"
@@ -120,21 +91,16 @@ onMounted(() => {
             :placeholder="$t('page.agent.list.search.namePlaceholder', '输入智能体名称查询')"
           />
 
-          <!-- <el-autocomplete
-            v-model="state.tenantKeyword"
+          <el-select
+            v-model="state.customAgentsDto.tenantId"
             class="search-bar__input"
             style="max-width: 300px"
-            value-key="name"
             clearable
-            hide-loading
-            :suffix-icon="Search"
-            :trigger-on-focus="false"
-            :placeholder="$t('page.agent.list.search.tenantPlaceholder', '输入租户名称查询')"
-            :fetch-suggestions="getTenants"
-            @select="onSelectTenant"
-            @clear="onTenantInput"
-            @input="onTenantInput"
-          /> -->
+            filterable
+            :placeholder="$t('page.agent.list.search.tenantPlaceholder', '选择租户名称')"
+          >
+            <el-option v-for="tenant in state.tenantsVOs" :key="tenant.id" :label="tenant.name" :value="tenant.id!" />
+          </el-select>
 
           <el-date-picker
             v-model="state.dateRange"

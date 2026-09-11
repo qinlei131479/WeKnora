@@ -1,15 +1,11 @@
 <script setup lang="ts">
 import { API } from '@/api';
-import type { CustomAgentsPageDTO, CustomAgentsVO, EmbedChannelsPageDTO, EmbedChannelsVO, PageDomain, TenantsPageDTO, TenantsVO } from '@/types';
+import type { CustomAgentsVO, EmbedChannelsPageDTO, EmbedChannelsVO, PageDomain, TenantsVO } from '@/types';
 import { Search } from 'lucide-vue-next';
 import DetailDrawer from './components/DetailDrawer.vue';
 
 const state = reactive({
-  tenantKeyword: '',
-  agentKeyword: '',
-  tenantsDto: {} as TenantsPageDTO,
   tenantsVOs: [] as TenantsVO[],
-  agentsDto: {} as CustomAgentsPageDTO,
   agentsVOs: [] as CustomAgentsVO[],
   embedChannelsDto: {} as EmbedChannelsPageDTO,
   page: { pageNum: 1, pageSize: 10, orderByColumn: 'createdAt', isAsc: 'desc' } as PageDomain,
@@ -20,70 +16,26 @@ const state = reactive({
   total: 0
 });
 
-const handleAutocompleteKeydown = (event: KeyboardEvent) => {
-  if (!(event.target instanceof HTMLInputElement)) return;
-  if (event.altKey) return;
-
-  if (event.key === 'Home' || event.key === 'End') {
-    event.stopPropagation();
-  }
-};
-
-const getTenants = (): Promise<TenantsVO[]> => {
-  state.tenantsVOs.length = 0;
-
-  if (!state.tenantKeyword) {
-    delete state.tenantsDto.name;
-    return Promise.resolve(state.tenantsVOs);
-  }
-
-  state.tenantsDto.name = state.tenantKeyword;
+const getTenants = () => {
   const page = { pageNum: 1, pageSize: 99999, orderByColumn: 'createdAt', isAsc: 'asc' } as PageDomain;
-  return API.Tenants.list(state.tenantsDto, page)
+  API.Tenants.list({}, page)
     .then((res) => {
-      state.tenantsVOs.push(...res.rows);
+      state.tenantsVOs = res.rows;
     })
     .catch((error) => {
       console.error('--> --> Error:', error);
-      state.total = 0;
-    })
-    .then(() => state.tenantsVOs);
+    });
 };
 
-const getAgents = (): Promise<CustomAgentsVO[]> => {
-  state.agentsVOs.length = 0;
-
-  if (!state.agentKeyword) {
-    delete state.agentsDto.name;
-    return Promise.resolve(state.agentsVOs);
-  }
-
-  state.agentsDto.name = state.agentKeyword;
+const getAgents = () => {
   const page = { pageNum: 1, pageSize: 99999, orderByColumn: 'createdAt', isAsc: 'asc' } as PageDomain;
-  return API.CustomAgents.list(state.agentsDto, page)
+  API.CustomAgents.list({}, page)
     .then((res) => {
-      state.agentsVOs.push(...res.rows);
+      state.agentsVOs = res.rows;
     })
     .catch((error) => {
       console.error('--> --> Error:', error);
-    })
-    .then(() => state.agentsVOs);
-};
-
-const onSelectTenant = (tenant: TenantsVO) => {
-  state.embedChannelsDto.tenantId = tenant.id;
-};
-
-const onTenantInput = () => {
-  delete state.embedChannelsDto.tenantId;
-};
-
-const onSelectAgent = (agent: CustomAgentsVO) => {
-  state.embedChannelsDto.agentId = agent.id;
-};
-
-const onAgentInput = () => {
-  delete state.embedChannelsDto.agentId;
+    });
 };
 
 const getEmbedChannels = () => {
@@ -108,15 +60,10 @@ const handleQuery = () => {
 };
 
 const resetQuery = () => {
-  state.tenantKeyword = '';
-  state.agentKeyword = '';
-  state.tenantsVOs.length = 0;
-  state.agentsVOs.length = 0;
-  delete state.tenantsDto.name;
-  delete state.agentsDto.name;
   delete state.embedChannelsDto.name;
   delete state.embedChannelsDto.tenantId;
   delete state.embedChannelsDto.agentId;
+  handleQuery();
 };
 
 const showDetail = (row: EmbedChannelsVO) => {
@@ -125,6 +72,8 @@ const showDetail = (row: EmbedChannelsVO) => {
 };
 
 onMounted(() => {
+  getTenants();
+  getAgents();
   getEmbedChannels();
 });
 </script>
@@ -135,7 +84,7 @@ onMounted(() => {
 
     <page-content>
       <template #header>
-        <div class="search-bar" @keydown.capture="handleAutocompleteKeydown">
+        <div class="search-bar">
           <el-input
             v-model="state.embedChannelsDto.name"
             class="search-bar__input"
@@ -145,39 +94,28 @@ onMounted(() => {
             :placeholder="$t('page.integration.embedChannels.search.namePlaceholder', '输入嵌入渠道名称查询')"
           />
 
-          <!-- <el-autocomplete
-            v-if="false"
-            v-model="state.tenantKeyword"
+          <el-select
+            v-model="state.embedChannelsDto.tenantId"
             class="search-bar__input"
             style="max-width: 300px"
-            value-key="name"
             clearable
-            hide-loading
-            :suffix-icon="Search"
-            :trigger-on-focus="false"
-            :placeholder="$t('page.integration.embedChannels.search.tenantPlaceholder', '输入租户名称查询')"
-            :fetch-suggestions="getTenants"
-            @select="onSelectTenant"
-            @clear="onTenantInput"
-            @input="onTenantInput"
-          /> -->
+            filterable
+            :placeholder="$t('page.integration.embedChannels.search.tenantPlaceholder', '选择租户名称')"
+          >
+            <el-option v-for="tenant in state.tenantsVOs" :key="tenant.id" :label="tenant.name" :value="tenant.id!" />
+          </el-select>
 
-          <!-- <el-autocomplete
+          <el-select
             v-if="false"
-            v-model="state.agentKeyword"
+            v-model="state.embedChannelsDto.agentId"
             class="search-bar__input"
             style="max-width: 300px"
-            value-key="name"
             clearable
-            hide-loading
-            :suffix-icon="Search"
-            :trigger-on-focus="false"
-            :placeholder="$t('page.integration.embedChannels.search.agentPlaceholder', '输入智能体名称查询')"
-            :fetch-suggestions="getAgents"
-            @select="onSelectAgent"
-            @clear="onAgentInput"
-            @input="onAgentInput"
-          /> -->
+            filterable
+            :placeholder="$t('page.integration.embedChannels.search.agentPlaceholder', '选择智能体名称')"
+          >
+            <el-option v-for="agent in state.agentsVOs" :key="agent.id" :label="agent.name" :value="agent.id!" />
+          </el-select>
 
           <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
           <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>

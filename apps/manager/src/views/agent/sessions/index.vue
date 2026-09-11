@@ -1,16 +1,12 @@
 <script setup lang="ts">
 import { API } from '@/api';
-import type { PageDomain, SessionsPageDTO, SessionsVO, TenantsPageDTO, TenantsVO, UsersPageDTO, UsersVO } from '@/types';
+import type { PageDomain, SessionsPageDTO, SessionsVO, TenantsVO, UsersVO } from '@/types';
 import { Search } from 'lucide-vue-next';
 import DetailDrawer from './components/DetailDrawer.vue';
 import MessagesDrawer from './components/MessagesDrawer.vue';
 
 const state = reactive({
-  userKeyword: '',
-  tenantKeyword: '',
-  usersDto: {} as UsersPageDTO,
   usersVOs: [] as UsersVO[],
-  tenantsDto: {} as TenantsPageDTO,
   tenantsVOs: [] as TenantsVO[],
   sessionsDto: {} as SessionsPageDTO,
   page: { pageNum: 1, pageSize: 10, orderByColumn: 'createdAt', isAsc: 'desc' } as PageDomain,
@@ -23,69 +19,26 @@ const state = reactive({
   total: 0
 });
 
-const handleAutocompleteKeydown = (event: KeyboardEvent) => {
-  if (!(event.target instanceof HTMLInputElement)) return;
-  if (event.altKey) return;
-
-  if (event.key === 'Home' || event.key === 'End') {
-    event.stopPropagation();
-  }
-};
-
-const getUsers = (): Promise<UsersVO[]> => {
-  state.usersVOs.length = 0;
-
-  if (!state.userKeyword) {
-    delete state.usersDto.name;
-    return Promise.resolve(state.usersVOs);
-  }
-
-  state.usersDto.name = state.userKeyword;
+const getUsers = () => {
   const page = { pageNum: 1, pageSize: 99999, orderByColumn: 'createdAt', isAsc: 'asc' } as PageDomain;
-  return API.Users.list(state.usersDto, page)
+  API.Users.list({}, page)
     .then((res) => {
-      state.usersVOs.push(...res.rows);
+      state.usersVOs = res.rows;
     })
     .catch((error) => {
       console.error('--> --> Error:', error);
-    })
-    .then(() => state.usersVOs);
+    });
 };
 
-const getTenants = (): Promise<TenantsVO[]> => {
-  state.tenantsVOs.length = 0;
-
-  if (!state.tenantKeyword) {
-    delete state.tenantsDto.name;
-    return Promise.resolve(state.tenantsVOs);
-  }
-
-  state.tenantsDto.name = state.tenantKeyword;
+const getTenants = () => {
   const page = { pageNum: 1, pageSize: 99999, orderByColumn: 'createdAt', isAsc: 'asc' } as PageDomain;
-  return API.Tenants.list(state.tenantsDto, page)
+  API.Tenants.list({}, page)
     .then((res) => {
-      state.tenantsVOs.push(...res.rows);
+      state.tenantsVOs = res.rows;
     })
     .catch((error) => {
       console.error('--> --> Error:', error);
-    })
-    .then(() => state.tenantsVOs);
-};
-
-const onSelectUser = (user: UsersVO) => {
-  state.sessionsDto.userId = user.id;
-};
-
-const onUserInput = () => {
-  delete state.sessionsDto.userId;
-};
-
-const onSelectTenant = (tenant: TenantsVO) => {
-  state.sessionsDto.tenantId = tenant.id;
-};
-
-const onTenantInput = () => {
-  delete state.sessionsDto.tenantId;
+    });
 };
 
 const getSessions = () => {
@@ -117,18 +70,13 @@ const handleQuery = () => {
 };
 
 const resetQuery = () => {
-  state.userKeyword = '';
-  state.tenantKeyword = '';
   state.dateRange = [];
-  state.usersVOs.length = 0;
-  state.tenantsVOs.length = 0;
-  delete state.usersDto.name;
-  delete state.tenantsDto.name;
   delete state.sessionsDto.title;
   delete state.sessionsDto.userId;
   delete state.sessionsDto.tenantId;
   delete state.sessionsDto.createdAtStart;
   delete state.sessionsDto.createdAtEnd;
+  handleQuery();
 };
 
 const showDetail = (row: SessionsVO) => {
@@ -142,6 +90,8 @@ const showMessages = (row: SessionsVO) => {
 };
 
 onMounted(() => {
+  getUsers();
+  getTenants();
   getSessions();
 });
 </script>
@@ -152,7 +102,7 @@ onMounted(() => {
 
     <page-content>
       <template #header>
-        <div class="search-bar" @keydown.capture="handleAutocompleteKeydown">
+        <div class="search-bar">
           <el-input
             v-model="state.sessionsDto.title"
             class="search-bar__input"
@@ -162,37 +112,27 @@ onMounted(() => {
             :placeholder="$t('page.agent.sessions.search.titlePlaceholder', '输入标题查询')"
           />
 
-          <!-- <el-autocomplete
-            v-model="state.tenantKeyword"
+          <el-select
+            v-model="state.sessionsDto.tenantId"
             class="search-bar__input"
             style="max-width: 300px"
-            value-key="name"
             clearable
-            hide-loading
-            :suffix-icon="Search"
-            :trigger-on-focus="false"
-            :placeholder="$t('page.agent.sessions.search.tenantPlaceholder', '输入租户名称查询')"
-            :fetch-suggestions="getTenants"
-            @select="onSelectTenant"
-            @clear="onTenantInput"
-            @input="onTenantInput"
-          /> -->
+            filterable
+            :placeholder="$t('page.agent.sessions.search.tenantPlaceholder', '选择租户名称')"
+          >
+            <el-option v-for="tenant in state.tenantsVOs" :key="tenant.id" :label="tenant.name" :value="tenant.id!" />
+          </el-select>
 
-          <!-- <el-autocomplete
-            v-model="state.userKeyword"
+          <el-select
+            v-model="state.sessionsDto.userId"
             style="max-width: 300px"
             class="search-bar__input"
-            value-key="username"
             clearable
-            hide-loading
-            :suffix-icon="Search"
-            :trigger-on-focus="false"
-            :placeholder="$t('page.agent.sessions.search.userPlaceholder', '输入用户名查询')"
-            :fetch-suggestions="getUsers"
-            @select="onSelectUser"
-            @clear="onUserInput"
-            @input="onUserInput"
-          /> -->
+            filterable
+            :placeholder="$t('page.agent.sessions.search.userPlaceholder', '选择用户名')"
+          >
+            <el-option v-for="user in state.usersVOs" :key="user.id" :label="user.username" :value="user.id!" />
+          </el-select>
 
           <el-date-picker
             v-model="state.dateRange"

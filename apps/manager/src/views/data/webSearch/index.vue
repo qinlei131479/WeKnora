@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { API } from '@/api';
-import type { PageDomain, TenantsPageDTO, TenantsVO, WebSearchProviderTypeVO, WebSearchProvidersPageDTO, WebSearchProvidersVO } from '@/types';
+import type { PageDomain, TenantsVO, WebSearchProviderTypeVO, WebSearchProvidersPageDTO, WebSearchProvidersVO } from '@/types';
 import { Search } from 'lucide-vue-next';
 import WebSearchFormDialog from './components/WebSearchFormDialog.vue';
 
@@ -15,8 +15,6 @@ const testingId = ref('');
 const providerTypes = ref<WebSearchProviderTypeVO[]>([]);
 
 const state = reactive({
-  keyword: '',
-  tenantsDto: {} as TenantsPageDTO,
   tenantsVOs: [] as TenantsVO[],
   providersDto: {} as WebSearchProvidersPageDTO,
   page: { pageNum: 1, pageSize: 10, orderByColumn: 'createdAt', isAsc: 'desc' } as PageDomain,
@@ -37,16 +35,6 @@ const providerLabel = (provider?: string) => {
 };
 
 const isCredentialConfigured = (row: WebSearchProvidersVO) => !!row.credentials?.api_key?.configured;
-
-/** el-autocomplete 在弹出建议时会吞掉 Home/End，这里放行给输入框自己处理 */
-const handleAutocompleteKeydown = (event: KeyboardEvent) => {
-  if (!(event.target instanceof HTMLInputElement)) return;
-  if (event.altKey) return;
-
-  if (event.key === 'Home' || event.key === 'End') {
-    event.stopPropagation();
-  }
-};
 
 const getProviders = () => {
   loading.value = true;
@@ -76,43 +64,15 @@ const loadProviderTypes = () => {
     });
 };
 
-const getTenants = (): Promise<TenantsVO[]> => {
-  state.tenantsVOs.length = 0;
-
-  if (!state.keyword) {
-    delete state.tenantsDto.name;
-    return Promise.resolve(state.tenantsVOs);
-  }
-
-  state.tenantsDto.name = state.keyword;
+const getTenants = () => {
   const page = { pageNum: 1, pageSize: 99999, orderByColumn: 'createdAt', isAsc: 'asc' } as PageDomain;
-  return API.Tenants.list(state.tenantsDto, page)
+  API.Tenants.list({}, page)
     .then((res) => {
-      state.tenantsVOs.push(...res.rows);
+      state.tenantsVOs = res.rows;
     })
     .catch((error) => {
       console.error('[WebSearch] load tenants failed:', error);
-    })
-    .then(() => state.tenantsVOs);
-};
-
-const onSelectTenants = (tenant: TenantsVO) => {
-  state.providersDto.tenantId = tenant.id;
-  state.page.pageNum = 1;
-  getProviders();
-};
-
-const onClearTenants = () => {
-  delete state.providersDto.tenantId;
-  state.page.pageNum = 1;
-  getProviders();
-};
-
-const onInput = (value: string) => {
-  if (value) return;
-  delete state.providersDto.tenantId;
-  state.page.pageNum = 1;
-  getProviders();
+    });
 };
 
 const handleQuery = () => {
@@ -121,8 +81,6 @@ const handleQuery = () => {
 };
 
 const resetQuery = () => {
-  state.keyword = '';
-  state.tenantsDto = {};
   state.providersDto = {};
   state.page.pageNum = 1;
   getProviders();
@@ -178,6 +136,7 @@ const handleTest = (row: WebSearchProvidersVO) => {
 };
 
 onMounted(() => {
+  getTenants();
   loadProviderTypes();
   getProviders();
 });
@@ -193,22 +152,18 @@ onMounted(() => {
 
     <page-content>
       <template #header>
-        <div class="search-bar" @keydown.capture="handleAutocompleteKeydown">
-          <!-- <el-autocomplete
-            v-model="state.keyword"
-            value-key="name"
+        <div class="search-bar">
+          <el-select
+            v-model="state.providersDto.tenantId"
             class="search-bar__input"
             style="max-width: 300px"
             clearable
-            hide-loading
-            :suffix-icon="Search"
-            :trigger-on-focus="false"
-            :placeholder="$t('page.data.vectorStores.search.tenantPlaceholder', '输入租户名称查询')"
-            :fetch-suggestions="getTenants"
-            @select="onSelectTenants"
-            @clear="onClearTenants"
-            @input="onInput"
-          /> -->
+            filterable
+            :placeholder="$t('page.data.vectorStores.search.tenantPlaceholder', '选择租户名称')"
+            @change="handleQuery"
+          >
+            <el-option v-for="tenant in state.tenantsVOs" :key="tenant.id" :label="tenant.name" :value="tenant.id!" />
+          </el-select>
           <el-input
             v-model="state.providersDto.name"
             class="search-bar__input"

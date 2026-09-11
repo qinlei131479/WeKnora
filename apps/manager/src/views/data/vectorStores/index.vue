@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import { API } from '@/api';
-import type { PageDomain, TenantsPageDTO, TenantsVO, VectorStoresPageDTO, VectorStoresVO } from '@/types';
-import { Search } from 'lucide-vue-next';
+import type { PageDomain, TenantsVO, VectorStoresPageDTO, VectorStoresVO } from '@/types';
 import DetailDrawer from './components/DetailDrawer.vue';
 
 const state = reactive({
-  keyword: '',
-  tenantsDto: {} as TenantsPageDTO,
   tenantsVOs: [] as TenantsVO[],
   vectorStoresDto: {} as VectorStoresPageDTO,
   page: { pageNum: 1, pageSize: 10, orderByColumn: 'createdAt', isAsc: 'desc' } as PageDomain,
@@ -16,45 +13,15 @@ const state = reactive({
   total: 0
 });
 
-const handleAutocompleteKeydown = (event: KeyboardEvent) => {
-  if (!(event.target instanceof HTMLInputElement)) return;
-  if (event.altKey) return;
-
-  if (event.key === 'Home' || event.key === 'End') {
-    event.stopPropagation();
-  }
-};
-
-const getTenants = (): Promise<TenantsVO[]> => {
-  state.tenantsVOs.length = 0;
-
-  if (!state.keyword) {
-    delete state.tenantsDto.name;
-    return Promise.resolve(state.tenantsVOs);
-  }
-
-  state.tenantsDto.name = state.keyword;
+const getTenants = () => {
   const page = { pageNum: 1, pageSize: 99999, orderByColumn: 'createdAt', isAsc: 'asc' } as PageDomain;
-  return API.Tenants.list(state.tenantsDto, page)
+  API.Tenants.list({}, page)
     .then((res) => {
-      state.tenantsVOs.push(...res.rows);
+      state.tenantsVOs = res.rows;
     })
     .catch((error) => {
       console.error('--> --> Error:', error);
-    })
-    .then(() => state.tenantsVOs);
-};
-
-const onSelectTenants = (tenant: TenantsVO) => {
-  state.vectorStoresDto.tenantId = tenant.id;
-};
-
-const onClearTenants = () => {
-  delete state.vectorStoresDto.tenantId;
-};
-
-const onInput = () => {
-  delete state.vectorStoresDto.tenantId;
+    });
 };
 
 const getVectorStores = () => {
@@ -75,10 +42,8 @@ const handleQuery = () => {
 };
 
 const resetQuery = () => {
-  state.keyword = '';
-  state.tenantsVOs.length = 0;
-  delete state.tenantsDto.name;
   delete state.vectorStoresDto.tenantId;
+  handleQuery();
 };
 
 const handleDetail = (row: VectorStoresVO) => {
@@ -87,6 +52,7 @@ const handleDetail = (row: VectorStoresVO) => {
 };
 
 onMounted(() => {
+  getTenants();
   getVectorStores();
 });
 </script>
@@ -95,26 +61,21 @@ onMounted(() => {
   <section>
     <page-name />
     <page-content>
-      <!-- <template #header> -->
-      <!-- <div class="search-bar" @keydown.capture="handleAutocompleteKeydown"> -->
-      <!-- <el-autocomplete
-            v-model="state.keyword"
-            value-key="name"
+      <template #header>
+        <div class="search-bar">
+          <el-select
+            v-model="state.vectorStoresDto.tenantId"
             class="search-bar__input"
             clearable
-            hide-loading
-            :suffix-icon="Search"
-            :trigger-on-focus="false"
-            :placeholder="$t('page.data.vectorStores.search.tenantPlaceholder', '输入租户名称查询')"
-            :fetch-suggestions="getTenants"
-            @select="onSelectTenants"
-            @clear="onClearTenants"
-            @input="onInput"
-          /> -->
-      <!-- <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button> -->
-      <!-- <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button> -->
-      <!-- </div> -->
-      <!-- </template> -->
+            filterable
+            :placeholder="$t('page.data.vectorStores.search.tenantPlaceholder', '选择租户名称')"
+          >
+            <el-option v-for="tenant in state.tenantsVOs" :key="tenant.id" :label="tenant.name" :value="tenant.id!" />
+          </el-select>
+          <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
+          <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
+        </div>
+      </template>
 
       <el-table :data="state.vectorStoresVOs" show-overflow-tooltip height="100%" style="width: 100%">
         <template #empty>
@@ -168,5 +129,3 @@ onMounted(() => {
     <DetailDrawer v-model="state.detailVisible" :row="state.detail" />
   </section>
 </template>
-
-<style lang="scss" scoped></style>
