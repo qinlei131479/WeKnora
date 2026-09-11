@@ -15,7 +15,7 @@
                 <h2 class="sidebar-title">{{ modalTitle }}</h2>
               </div>
               <div class="settings-nav">
-                <div class="nav-group-title">{{ t('knowledgeList.extensions.mcp.form.navGroup') }}</div>
+                <div class="nav-group-title">{{ t('ext.mcp.form.navGroup') }}</div>
                 <div
                   :class="['nav-item', { active: currentSection === 'config' }]"
                   @click="currentSection = 'config'"
@@ -29,7 +29,7 @@
                   @click="currentSection = 'tools'"
                 >
                   <t-icon name="tools" class="nav-icon" />
-                  <span class="nav-label">{{ t('knowledgeList.extensions.mcp.form.navTools') }}</span>
+                  <span class="nav-label">{{ t('ext.mcp.form.navTools') }}</span>
                 </div>
               </div>
             </div>
@@ -45,10 +45,10 @@
                         <p class="section-description">
                           {{
                             isReadonly
-                              ? t('knowledgeList.extensions.mcp.detail.builtinConfigHint')
+                              ? t('ext.mcp.detail.builtinConfigHint')
                               : editMode
-                                ? t('knowledgeList.extensions.mcp.detail.editHint')
-                                : t('knowledgeList.extensions.mcp.form.createHint')
+                                ? t('ext.mcp.detail.editHint')
+                                : t('ext.mcp.form.createHint')
                           }}
                         </p>
                       </div>
@@ -61,7 +61,7 @@
                         @click="handleTestServer"
                       >
                         <template #icon><t-icon name="play-circle-stroke" /></template>
-                        {{ t('knowledgeList.extensions.mcp.detail.test') }}
+                        {{ t('ext.mcp.detail.test') }}
                       </t-button>
                     </div>
                   </div>
@@ -69,7 +69,7 @@
                   <t-alert
                     v-if="activeServer?.requires_migration"
                     theme="warning"
-                    :message="t('knowledgeList.extensions.mcp.detail.migrateAlert')"
+                    :message="t('ext.mcp.detail.migrateAlert')"
                     style="margin-bottom: 16px"
                   />
 
@@ -77,15 +77,15 @@
                     <div class="setting-row">
                       <div class="setting-info">
                         <label>
-                          {{ t('knowledgeList.extensions.mcp.form.slug') }}
+                          {{ t('ext.mcp.form.slug') }}
                           <span class="required">*</span>
                         </label>
-                        <p class="desc">{{ t('knowledgeList.extensions.mcp.form.slugDesc') }}</p>
+                        <p class="desc">{{ t('ext.mcp.form.slugDesc') }}</p>
                       </div>
                       <div class="setting-control">
                         <t-input
                           v-model="form.slug"
-                          :placeholder="t('knowledgeList.extensions.mcp.form.slugPlaceholder')"
+                          :placeholder="t('ext.mcp.form.slugPlaceholder')"
                           :disabled="editMode || isReadonly"
                         />
                       </div>
@@ -93,28 +93,28 @@
                     <div class="setting-row">
                       <div class="setting-info">
                         <label>
-                          {{ t('knowledgeList.extensions.mcp.form.name') }}
+                          {{ t('ext.mcp.form.name') }}
                           <span class="required">*</span>
                         </label>
-                        <p class="desc">{{ t('knowledgeList.extensions.mcp.form.nameDesc') }}</p>
+                        <p class="desc">{{ t('ext.mcp.form.nameDesc') }}</p>
                       </div>
                       <div class="setting-control">
                         <t-input
                           v-model="form.name"
-                          :placeholder="t('knowledgeList.extensions.mcp.form.namePlaceholder')"
+                          :placeholder="t('ext.mcp.form.namePlaceholder')"
                           :disabled="isReadonly"
                         />
                       </div>
                     </div>
                     <div class="setting-row setting-row-vertical">
                       <div class="setting-info">
-                        <label>{{ t('knowledgeList.extensions.mcp.form.description') }}</label>
-                        <p class="desc">{{ t('knowledgeList.extensions.mcp.form.descriptionDesc') }}</p>
+                        <label>{{ t('ext.mcp.form.description') }}</label>
+                        <p class="desc">{{ t('ext.mcp.form.descriptionDesc') }}</p>
                       </div>
                       <div class="setting-control setting-control-full">
                         <t-textarea
                           v-model="form.description"
-                          :placeholder="t('knowledgeList.extensions.mcp.form.descPlaceholder')"
+                          :placeholder="t('ext.mcp.form.descPlaceholder')"
                           :autosize="{ minRows: 2, maxRows: 4 }"
                           :disabled="isReadonly"
                         />
@@ -123,10 +123,10 @@
                     <div class="setting-row">
                       <div class="setting-info">
                         <label>
-                          {{ t('knowledgeList.extensions.mcp.form.transport') }}
+                          {{ t('ext.mcp.form.transport') }}
                           <span class="required">*</span>
                         </label>
-                        <p class="desc">{{ t('knowledgeList.extensions.mcp.form.transportDesc') }}</p>
+                        <p class="desc">{{ t('ext.mcp.form.transportDesc') }}</p>
                       </div>
                       <div class="setting-control">
                         <t-select v-model="form.transport" :disabled="isReadonly">
@@ -138,13 +138,13 @@
                     </div>
                     <div class="setting-row">
                       <div class="setting-info">
-                        <label>{{ t('knowledgeList.extensions.mcp.form.icon') }}</label>
-                        <p class="desc">{{ t('knowledgeList.extensions.mcp.form.iconDesc') }}</p>
+                        <label>{{ t('ext.mcp.form.icon') }}</label>
+                        <p class="desc">{{ t('ext.mcp.form.iconDesc') }}</p>
                       </div>
                       <div class="setting-control">
                         <t-input
                           v-model="form.icon"
-                          :placeholder="t('knowledgeList.extensions.mcp.form.iconPlaceholder')"
+                          :placeholder="t('ext.mcp.form.iconPlaceholder')"
                           :maxlength="2"
                           :disabled="isReadonly"
                         />
@@ -154,10 +154,10 @@
                       <div class="setting-row">
                         <div class="setting-info">
                           <label>
-                            {{ t('knowledgeList.extensions.mcp.form.url') }}
+                            {{ t('ext.mcp.form.url') }}
                             <span class="required">*</span>
                           </label>
-                          <p class="desc">{{ t('knowledgeList.extensions.mcp.form.urlDesc') }}</p>
+                          <p class="desc">{{ t('ext.mcp.form.urlDesc') }}</p>
                         </div>
                         <div class="setting-control">
                           <t-input v-model="form.url" placeholder="https://example.com/mcp" :disabled="isReadonly" />
@@ -165,13 +165,13 @@
                       </div>
                       <div class="setting-row setting-row-vertical">
                         <div class="setting-info">
-                          <label>{{ t('knowledgeList.extensions.mcp.form.headers') }}</label>
-                          <p class="desc">{{ t('knowledgeList.extensions.mcp.form.headersDesc') }}</p>
+                          <label>{{ t('ext.mcp.form.headers') }}</label>
+                          <p class="desc">{{ t('ext.mcp.form.headersDesc') }}</p>
                         </div>
                         <div class="setting-control setting-control-full">
                           <t-textarea
                             v-model="form.headersText"
-                            :placeholder="t('knowledgeList.extensions.mcp.form.headersPlaceholder')"
+                            :placeholder="t('ext.mcp.form.headersPlaceholder')"
                             :autosize="{ minRows: 3 }"
                             :disabled="isReadonly"
                           />
@@ -179,8 +179,8 @@
                       </div>
                       <div class="setting-row">
                         <div class="setting-info">
-                          <label>{{ t('knowledgeList.extensions.mcp.form.httpTimeout') }}</label>
-                          <p class="desc">{{ t('knowledgeList.extensions.mcp.form.httpTimeoutDesc') }}</p>
+                          <label>{{ t('ext.mcp.form.httpTimeout') }}</label>
+                          <p class="desc">{{ t('ext.mcp.form.httpTimeoutDesc') }}</p>
                         </div>
                         <div class="setting-control">
                           <t-input-number
@@ -194,8 +194,8 @@
                       </div>
                       <div class="setting-row">
                         <div class="setting-info">
-                          <label>{{ t('knowledgeList.extensions.mcp.form.sseTimeout') }}</label>
-                          <p class="desc">{{ t('knowledgeList.extensions.mcp.form.sseTimeoutDesc') }}</p>
+                          <label>{{ t('ext.mcp.form.sseTimeout') }}</label>
+                          <p class="desc">{{ t('ext.mcp.form.sseTimeoutDesc') }}</p>
                         </div>
                         <div class="setting-control">
                           <t-input-number
@@ -211,7 +211,7 @@
                     <template v-if="form.transport === 'stdio'">
                       <div v-if="activeServer?.command" class="setting-row">
                         <div class="setting-info">
-                          <label>{{ t('knowledgeList.extensions.mcp.detail.command') }}</label>
+                          <label>{{ t('ext.mcp.detail.command') }}</label>
                         </div>
                         <div class="setting-control">
                           <t-input :model-value="activeServer.command" disabled />
@@ -219,7 +219,7 @@
                       </div>
                       <div v-if="activeServer?.args?.length" class="setting-row">
                         <div class="setting-info">
-                          <label>{{ t('knowledgeList.extensions.mcp.detail.args') }}</label>
+                          <label>{{ t('ext.mcp.detail.args') }}</label>
                         </div>
                         <div class="setting-control">
                           <div class="wk-chip-row">
@@ -236,8 +236,8 @@
                     </template>
                     <div class="setting-row">
                       <div class="setting-info">
-                        <label>{{ t('knowledgeList.extensions.mcp.form.tags') }}</label>
-                        <p class="desc">{{ t('knowledgeList.extensions.mcp.form.tagsDesc') }}</p>
+                        <label>{{ t('ext.mcp.form.tags') }}</label>
+                        <p class="desc">{{ t('ext.mcp.form.tagsDesc') }}</p>
                       </div>
                       <div class="setting-control">
                         <t-select
@@ -245,7 +245,7 @@
                           multiple
                           creatable
                           filterable
-                          :placeholder="t('knowledgeList.extensions.mcp.form.tagsPlaceholder')"
+                          :placeholder="t('ext.mcp.form.tagsPlaceholder')"
                           class="mcp-tags-select"
                           :disabled="isReadonly"
                         />
@@ -256,26 +256,26 @@
 
                 <div v-show="currentSection === 'tools'" class="section tools-section">
                   <div class="section-header">
-                    <h2>{{ t('knowledgeList.extensions.mcp.form.navTools') }}</h2>
-                    <p class="section-description">{{ t('knowledgeList.extensions.mcp.form.toolsHint') }}</p>
+                    <h2>{{ t('ext.mcp.form.navTools') }}</h2>
+                    <p class="section-description">{{ t('ext.mcp.form.toolsHint') }}</p>
                   </div>
                   <div class="tools-toolbar">
                     <t-input
                       v-model="toolSearchText"
-                      :placeholder="t('knowledgeList.extensions.mcp.detail.searchTools')"
+                      :placeholder="t('ext.mcp.detail.searchTools')"
                       style="width: 240px"
                       clearable
                     />
                     <span class="tools-count">
-                      {{ t('knowledgeList.extensions.mcp.detail.tabTools', { count: tools.length }) }}
+                      {{ t('ext.mcp.detail.tabTools', { count: tools.length }) }}
                     </span>
                     <t-button variant="outline" :loading="toolsLoading" @click="fetchTools">
-                      {{ t('knowledgeList.extensions.mcp.detail.refresh') }}
+                      {{ t('ext.mcp.detail.refresh') }}
                     </t-button>
                   </div>
                   <t-loading :loading="toolsLoading">
                     <div v-if="filteredTools.length === 0" class="empty-tools">
-                      <t-empty :description="toolsError || t('knowledgeList.extensions.mcp.detail.noTools')" />
+                      <t-empty :description="toolsError || t('ext.mcp.detail.noTools')" />
                     </div>
                     <div v-else class="tools-list">
                       <div
@@ -322,7 +322,7 @@
                     {{ t('common.cancel') }}
                   </t-button>
                   <t-button v-if="!isReadonly" theme="primary" :loading="formLoading" @click="handleFormSubmit">
-                    {{ t('knowledgeList.extensions.mcp.form.saveAndClose') }}
+                    {{ t('ext.mcp.form.saveAndClose') }}
                   </t-button>
                 </div>
               </div>
@@ -361,16 +361,16 @@ const detailServer = ref(null)
 const activeServer = computed(() => detailServer.value || props.editData)
 const isReadonly = computed(() => props.editMode && !!activeServer.value?.is_builtin)
 const configNavLabel = computed(() => {
-  if (!props.editMode) return t('knowledgeList.extensions.mcp.form.navCreate')
+  if (!props.editMode) return t('ext.mcp.form.navCreate')
   return isReadonly.value
-    ? t('knowledgeList.extensions.mcp.form.navView')
-    : t('knowledgeList.extensions.mcp.form.navConfig')
+    ? t('ext.mcp.form.navView')
+    : t('ext.mcp.form.navConfig')
 })
 const modalTitle = computed(() => {
-  if (!props.editMode) return t('knowledgeList.extensions.mcp.form.addTitle')
+  if (!props.editMode) return t('ext.mcp.form.addTitle')
   return isReadonly.value
-    ? t('knowledgeList.extensions.mcp.form.viewTitle')
-    : t('knowledgeList.extensions.mcp.form.editTitle')
+    ? t('ext.mcp.form.viewTitle')
+    : t('ext.mcp.form.editTitle')
 })
 const testLoading = ref(false)
 const tools = ref([])
@@ -478,11 +478,11 @@ const fetchTools = async () => {
     if (result.success) {
       tools.value = result.data || []
     } else {
-      toolsError.value = t('knowledgeList.extensions.mcp.detail.fetchToolsFailed')
+      toolsError.value = t('ext.mcp.detail.fetchToolsFailed')
       tools.value = []
     }
   } catch {
-    toolsError.value = t('knowledgeList.extensions.mcp.detail.fetchToolsFailed')
+    toolsError.value = t('ext.mcp.detail.fetchToolsFailed')
     tools.value = []
   } finally {
     toolsLoading.value = false
@@ -498,18 +498,18 @@ const handleToggleTool = async (tool) => {
       MessagePlugin.success(
         t(
           result.enabled
-            ? 'knowledgeList.extensions.mcp.detail.toolEnabled'
-            : 'knowledgeList.extensions.mcp.detail.toolDisabled',
+            ? 'ext.mcp.detail.toolEnabled'
+            : 'ext.mcp.detail.toolDisabled',
           { name: tool.name }
         )
       )
       const target = tools.value.find((item) => item.name === tool.name)
       if (target) target.enabled = result.enabled
     } else {
-      MessagePlugin.error(t('knowledgeList.extensions.mcp.form.actionFailed'))
+      MessagePlugin.error(t('ext.mcp.form.actionFailed'))
     }
   } catch {
-    MessagePlugin.error(t('knowledgeList.extensions.mcp.form.actionFailed'))
+    MessagePlugin.error(t('ext.mcp.form.actionFailed'))
   } finally {
     toggleToolLoading.value = null
   }
@@ -518,9 +518,9 @@ const handleToggleTool = async (tool) => {
 const copyToolName = async (toolName) => {
   try {
     await navigator.clipboard.writeText(toolName)
-    MessagePlugin.success(t('knowledgeList.extensions.mcp.detail.copied'))
+    MessagePlugin.success(t('ext.mcp.detail.copied'))
   } catch {
-    MessagePlugin.error(t('knowledgeList.extensions.mcp.detail.copyFailed'))
+    MessagePlugin.error(t('ext.mcp.detail.copyFailed'))
   }
 }
 
@@ -531,14 +531,14 @@ const handleTestServer = async () => {
     const result = await mcpApi.testMcpServer(activeServer.value.slug)
     if (result.success) {
       MessagePlugin.success(
-        t('knowledgeList.extensions.mcp.detail.testOk', { count: result.tool_count ?? 0 })
+        t('ext.mcp.detail.testOk', { count: result.tool_count ?? 0 })
       )
       if (currentSection.value === 'tools') await fetchTools()
     } else {
-      MessagePlugin.warning(t('knowledgeList.extensions.mcp.detail.connectFailed'))
+      MessagePlugin.warning(t('ext.mcp.detail.connectFailed'))
     }
   } catch {
-    MessagePlugin.error(t('knowledgeList.extensions.mcp.detail.testFailed'))
+    MessagePlugin.error(t('ext.mcp.detail.testFailed'))
   } finally {
     testLoading.value = false
   }
@@ -552,7 +552,7 @@ const handleFormSubmit = async () => {
       try {
         headers = JSON.parse(form.headersText)
       } catch {
-        MessagePlugin.error(t('knowledgeList.extensions.mcp.form.badHeaders'))
+        MessagePlugin.error(t('ext.mcp.form.badHeaders'))
         return false
       }
     }
@@ -569,43 +569,43 @@ const handleFormSubmit = async () => {
       icon: form.icon || null
     }
     if (!data.slug?.trim()) {
-      MessagePlugin.error(t('knowledgeList.extensions.mcp.form.slugRequired'))
+      MessagePlugin.error(t('ext.mcp.form.slugRequired'))
       return false
     }
     if (!data.name?.trim()) {
-      MessagePlugin.error(t('knowledgeList.extensions.mcp.form.nameRequired'))
+      MessagePlugin.error(t('ext.mcp.form.nameRequired'))
       return false
     }
     if (!data.transport) {
-      MessagePlugin.error(t('knowledgeList.extensions.mcp.form.transportRequired'))
+      MessagePlugin.error(t('ext.mcp.form.transportRequired'))
       return false
     }
     if (['sse', 'streamable_http'].includes(data.transport) && !data.url?.trim()) {
-      MessagePlugin.error(t('knowledgeList.extensions.mcp.form.urlRequired'))
+      MessagePlugin.error(t('ext.mcp.form.urlRequired'))
       return false
     }
     if (props.editMode) {
       const { slug, ...updateData } = data
       const result = await mcpApi.updateMcpServer(activeServer.value?.slug || slug, updateData)
       if (result.success) {
-        MessagePlugin.success(t('knowledgeList.extensions.mcp.form.updated'))
+        MessagePlugin.success(t('ext.mcp.form.updated'))
       } else {
-        MessagePlugin.error(t('knowledgeList.extensions.mcp.form.updateFailed'))
+        MessagePlugin.error(t('ext.mcp.form.updateFailed'))
         return false
       }
     } else {
       const result = await mcpApi.createMcpServer(data)
       if (result.success) {
-        MessagePlugin.success(t('knowledgeList.extensions.mcp.form.created'))
+        MessagePlugin.success(t('ext.mcp.form.created'))
       } else {
-        MessagePlugin.error(t('knowledgeList.extensions.mcp.form.createFailed'))
+        MessagePlugin.error(t('ext.mcp.form.createFailed'))
         return false
       }
     }
     visible.value = false
     emit('submitted')
   } catch {
-    MessagePlugin.error(t('knowledgeList.extensions.mcp.form.actionFailed'))
+    MessagePlugin.error(t('ext.mcp.form.actionFailed'))
     return false
   } finally {
     formLoading.value = false

@@ -3,7 +3,7 @@
     <t-alert
       v-if="hasManageScopeViolation"
       theme="warning"
-      :message="t('knowledgeList.extensions.share.form.manageWider')"
+      :message="t('ext.share.form.manageWider')"
     />
 
     <section v-for="scope in scopeOptions" :key="scope.key" class="permission-scope-section">
@@ -21,8 +21,8 @@
           v-if="scope.key !== 'read_scope' || !requireReadScope"
           :value="Boolean(scopes[scope.key])"
           :label="[
-            t('knowledgeList.extensions.share.form.on'),
-            t('knowledgeList.extensions.share.form.off')
+            t('ext.share.form.on'),
+            t('ext.share.form.off')
           ]"
           :disabled="disabled || (scope.key === 'read_scope' && requireReadScope)"
           @change="(enabled) => toggleScope(scope.key, enabled)"
@@ -69,7 +69,7 @@
                       size="small"
                       variant="outline"
                       class="select-action lucide-icon-btn"
-                      :aria-label="option.value === 'department' ? t('knowledgeList.extensions.share.form.pickDept') : t('knowledgeList.extensions.share.form.pickUser')"
+                      :aria-label="option.value === 'department' ? t('ext.share.form.pickDept') : t('ext.share.form.pickUser')"
                       :disabled="disabled"
                     >
                       <UserPlus class="select-action-icon" :size="14" />
@@ -81,8 +81,8 @@
                       <div class="selection-dropdown" @mousedown.stop @click.stop>
                         <div class="selection-dropdown-header">
                           <div class="selection-dropdown-title">
-                            {{ scope.key === 'manage_scope' ? t('knowledgeList.extensions.share.form.manageable') : t('knowledgeList.extensions.share.form.readable')
-                            }}{{ option.value === 'department' ? t('knowledgeList.extensions.share.form.dept') : t('knowledgeList.extensions.share.form.users') }}
+                            {{ scope.key === 'manage_scope' ? t('ext.share.form.manageable') : t('ext.share.form.readable')
+                            }}{{ option.value === 'department' ? t('ext.share.form.dept') : t('ext.share.form.users') }}
                           </div>
                           <div class="selection-dropdown-subtitle">
                             {{ getAccessSummary(scope.key, option.value) }}
@@ -93,7 +93,7 @@
                           size="small"
                           clearable
                           class="selection-search"
-                          :placeholder="option.value === 'department' ? t('knowledgeList.extensions.share.form.searchDept') : t('knowledgeList.extensions.share.form.searchUser')"
+                          :placeholder="option.value === 'department' ? t('ext.share.form.searchDept') : t('ext.share.form.searchUser')"
                           @mousedown.stop
                           @click.stop
                         />
@@ -153,7 +153,7 @@
                             </span>
                           </div>
                         </div>
-                        <div v-else class="selection-empty">{{ t('knowledgeList.extensions.share.form.emptyOptions') }}</div>
+                        <div v-else class="selection-empty">{{ t('ext.share.form.emptyOptions') }}</div>
                       </div>
                     </template>
                   </t-popup>
@@ -168,9 +168,9 @@
         {{
           scope.key === 'read_scope'
             ? scopes.manage_scope
-              ? t('knowledgeList.extensions.share.form.noExtraRead')
-              : t('knowledgeList.extensions.share.form.noRead')
-            : t('knowledgeList.extensions.share.form.noManage')
+              ? t('ext.share.form.noExtraRead')
+              : t('ext.share.form.noRead')
+            : t('ext.share.form.noManage')
         }}
       </p>
     </section>
@@ -222,27 +222,27 @@ const emit = defineEmits(['update:modelValue'])
 const scopeOptions = computed(() => [
   {
     key: 'read_scope',
-    title: t('knowledgeList.extensions.share.form.readTitle'),
-    description: t('knowledgeList.extensions.share.form.readDesc')
+    title: t('ext.share.form.readTitle'),
+    description: t('ext.share.form.readDesc')
   },
   {
     key: 'manage_scope',
-    title: t('knowledgeList.extensions.share.form.manageTitle'),
-    description: t('knowledgeList.extensions.share.form.manageDesc')
+    title: t('ext.share.form.manageTitle'),
+    description: t('ext.share.form.manageDesc')
   }
 ])
 
 const baseShareModeOptions = computed(() => [
   {
     value: 'global',
-    title: t('knowledgeList.extensions.share.form.globalTitle'),
-    description: t('knowledgeList.extensions.share.form.globalDesc'),
+    title: t('ext.share.form.globalTitle'),
+    description: t('ext.share.form.globalDesc'),
     icon: Globe
   },
   {
     value: 'user',
-    title: t('knowledgeList.extensions.share.form.userTitle'),
-    description: t('knowledgeList.extensions.share.form.userDesc'),
+    title: t('ext.share.form.userTitle'),
+    description: t('ext.share.form.userDesc'),
     icon: Users
   }
 ])
@@ -380,7 +380,7 @@ const departmentOptions = computed(() =>
 const userOptions = computed(() =>
   users.value.map((user) => ({
     label: user.department_name
-      ? t('knowledgeList.extensions.share.form.userWithDept', {
+      ? t('ext.share.form.userWithDept', {
           name: user.username,
           dept: user.department_name
         })
@@ -398,13 +398,13 @@ const getAccessCount = (scopeKey, accessLevel) => {
 }
 const getAccessSummary = (scopeKey, accessLevel) => {
   const scope = scopes[scopeKey]
-  if (accessLevel === 'global') return t('knowledgeList.extensions.share.form.allUsers')
+  if (accessLevel === 'global') return t('ext.share.form.allUsers')
   if (accessLevel === 'department') {
-    return t('knowledgeList.extensions.share.form.deptCount', {
+    return t('ext.share.form.deptCount', {
       count: scope?.department_ids.length || 0
     })
   }
-  return t('knowledgeList.extensions.share.form.userCount', { count: scope?.user_uids.length || 0 })
+  return t('ext.share.form.userCount', { count: scope?.user_uids.length || 0 })
 }
 const getSelectionOptions = (scopeKey, accessLevel) => {
   let options = accessLevel === 'department' ? departmentOptions.value : userOptions.value
@@ -462,21 +462,21 @@ watch(
 const validateScope = (scope, title) => {
   if (!scope || scope.access_level === 'global') return { valid: true, message: '' }
   if (scope.access_level === 'department' && !scope.department_ids.length) {
-    return { valid: false, message: t('knowledgeList.extensions.share.form.needDept', { title }) }
+    return { valid: false, message: t('ext.share.form.needDept', { title }) }
   }
   if (scope.access_level === 'user' && !scope.user_uids.length) {
-    return { valid: false, message: t('knowledgeList.extensions.share.form.needUser', { title }) }
+    return { valid: false, message: t('ext.share.form.needUser', { title }) }
   }
   return { valid: true, message: '' }
 }
 
 const validate = () => {
-  const readResult = validateScope(scopes.read_scope, t('knowledgeList.extensions.share.form.readTitle'))
+  const readResult = validateScope(scopes.read_scope, t('ext.share.form.readTitle'))
   if (!readResult.valid) return readResult
-  const manageResult = validateScope(scopes.manage_scope, t('knowledgeList.extensions.share.form.manageTitleShort'))
+  const manageResult = validateScope(scopes.manage_scope, t('ext.share.form.manageTitleShort'))
   if (!manageResult.valid) return manageResult
   if (!isManageScopeWithinRead(scopes.manage_scope)) {
-    return { valid: false, message: t('knowledgeList.extensions.share.form.manageMustSubset') }
+    return { valid: false, message: t('ext.share.form.manageMustSubset') }
   }
   return manageResult
 }

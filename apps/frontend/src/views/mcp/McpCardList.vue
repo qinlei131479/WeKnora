@@ -3,11 +3,11 @@
     <Teleport defer to="#extension-page-header-actions">
       <t-button theme="primary" @click="handleMcpAdd">
         <template #icon><t-icon name="add" /></template>
-        {{ t('knowledgeList.extensions.mcp.create') }}
+        {{ t('ext.mcp.create') }}
       </t-button>
     </Teleport>
 
-    <PageShoulder :search-placeholder="t('knowledgeList.extensions.mcp.searchPlaceholder')" v-model:search="searchQuery" />
+    <PageShoulder :search-placeholder="t('ext.mcp.searchPlaceholder')" v-model:search="searchQuery" />
 
     <div class="extension-page-body">
     <div
@@ -15,7 +15,7 @@
       class="extension-card-grid-empty-state"
     >
       <t-empty
-        :description="searchQuery ? t('knowledgeList.extensions.mcp.emptySearch') : t('knowledgeList.extensions.mcp.empty')"
+        :description="searchQuery ? t('ext.mcp.emptySearch') : t('ext.mcp.empty')"
       />
     </div>
 
@@ -27,7 +27,7 @@
           layout="kb"
           :title="formatExtensionCardTitle(server.name)"
           :subtitle="server.slug"
-          :description="server.description || t('knowledgeList.extensions.noDescription')"
+          :description="server.description || t('ext.noDescription')"
           :tags="mcpCardTags(server)"
           @click="handleCardClick(server)"
         >
@@ -39,7 +39,7 @@
               type="button"
               class="mcp-enabled-action enabled"
               :disabled="isActionLoading(server)"
-              :aria-label="server.is_builtin ? t('knowledgeList.extensions.mcp.remove') : t('knowledgeList.extensions.mcp.delete')"
+              :aria-label="server.is_builtin ? t('ext.mcp.remove') : t('ext.mcp.delete')"
               @click.stop="handleRemoveServer(server)"
             >
               <Check :size="15" class="action-icon action-icon-check" />
@@ -56,7 +56,7 @@
           layout="kb"
           :title="formatExtensionCardTitle(server.name)"
           :subtitle="server.slug"
-          :description="server.requires_migration ? t('knowledgeList.extensions.mcp.needsMigration') : server.description || t('knowledgeList.extensions.noDescription')"
+          :description="server.requires_migration ? t('ext.mcp.needsMigration') : server.description || t('ext.noDescription')"
           :tags="mcpCardTags(server)"
           @click="handleCardClick(server)"
         >
@@ -69,7 +69,7 @@
               class="mcp-enabled-action"
               :class="{ enabled: server.requires_migration }"
               :disabled="isActionLoading(server)"
-              :aria-label="server.requires_migration ? t('knowledgeList.extensions.mcp.delete') : t('knowledgeList.extensions.mcp.add')"
+              :aria-label="server.requires_migration ? t('ext.mcp.delete') : t('ext.mcp.add')"
               @click.stop="
                 server.requires_migration
                   ? handleRemoveServer(server)
@@ -108,9 +108,9 @@
               {{ formatExtensionCardTitle(previewServer.name) }}
             </div>
             <div class="mcp-basic-info-meta">
-              <span>{{ previewServer.transport || t('knowledgeList.extensions.mcp.unknownTransport') }}</span>
+              <span>{{ previewServer.transport || t('ext.mcp.unknownTransport') }}</span>
               <span v-if="previewServer.is_builtin" class="mcp-basic-info-tag">
-                {{ t('knowledgeList.extensions.mcp.builtin') }}
+                {{ t('ext.mcp.builtin') }}
               </span>
             </div>
           </div>
@@ -118,30 +118,30 @@
 
         <div class="mcp-basic-info-body">
           <div class="mcp-basic-info-row">
-            <label>{{ t('knowledgeList.extensions.mcp.description') }}</label>
-            <span>{{ previewServer.description || t('knowledgeList.extensions.noDescription') }}</span>
+            <label>{{ t('ext.mcp.description') }}</label>
+            <span>{{ previewServer.description || t('ext.noDescription') }}</span>
           </div>
           <div class="mcp-basic-info-row">
-            <label>{{ t('knowledgeList.extensions.mcp.transport') }}</label>
+            <label>{{ t('ext.mcp.transport') }}</label>
             <span>{{ previewServer.transport || '-' }}</span>
           </div>
           <div
             v-if="Array.isArray(previewServer.tags) && previewServer.tags.length > 0"
             class="mcp-basic-info-row"
           >
-            <label>{{ t('knowledgeList.extensions.mcp.tags') }}</label>
+            <label>{{ t('ext.mcp.tags') }}</label>
             <span class="mcp-basic-info-tags wk-chip-row">
               <t-tag v-for="tag in previewServer.tags" :key="tag" size="small" variant="light-outline" class="wk-chip">{{ tag }}</t-tag>
             </span>
           </div>
           <div class="mcp-basic-info-row">
-            <label>{{ t('knowledgeList.extensions.mcp.creator') }}</label>
+            <label>{{ t('ext.mcp.creator') }}</label>
             <span>{{ previewServer.created_by || '-' }}</span>
           </div>
         </div>
 
         <div class="mcp-basic-info-footer">
-          <t-button @click="closeBasicInfo">{{ t('knowledgeList.extensions.close') }}</t-button>
+          <t-button @click="closeBasicInfo">{{ t('ext.close') }}</t-button>
           <t-button
             theme="primary"
             class="lucide-icon-btn"
@@ -149,7 +149,7 @@
             @click="handleSetServerEnabled(previewServer, true)"
           >
             <template #icon><Plus :size="14" /></template>
-            {{ t('knowledgeList.extensions.mcp.add') }}
+            {{ t('ext.mcp.add') }}
           </t-button>
         </div>
       </div>
@@ -234,7 +234,7 @@ const isActionLoading = (server) => actionLoadingSlug.value === server?.slug
 
 const mcpCardTags = (server) => {
   const tags = []
-  if (server?.is_builtin) tags.push(t('knowledgeList.extensions.mcp.builtin'))
+  if (server?.is_builtin) tags.push(t('ext.mcp.builtin'))
   if (server?.transport) tags.push(server.transport)
   ;(server?.tags || []).slice(0, 2).forEach((tag) => {
     if (tag && !tags.includes(tag)) tags.push(tag)
@@ -258,14 +258,14 @@ const handleSetServerEnabled = async (server, enabled) => {
     actionLoadingSlug.value = server.slug
     const result = await mcpApi.updateMcpServerStatus(server.slug, enabled)
     if (result.success) {
-      MessagePlugin.success(t(enabled ? 'knowledgeList.extensions.mcp.addedOk' : 'knowledgeList.extensions.mcp.removedOk'))
+      MessagePlugin.success(t(enabled ? 'ext.mcp.addedOk' : 'ext.mcp.removedOk'))
       if (enabled) closeBasicInfo()
       await fetchServers()
     } else {
-      MessagePlugin.error(t('knowledgeList.extensions.mcp.actionFailed'))
+      MessagePlugin.error(t('ext.mcp.actionFailed'))
     }
   } catch {
-    MessagePlugin.error(t('knowledgeList.extensions.mcp.actionFailed'))
+    MessagePlugin.error(t('ext.mcp.actionFailed'))
   } finally {
     actionLoadingSlug.value = ''
   }
@@ -283,22 +283,22 @@ const confirmDeleteServer = (server) => {
   const dialog = DialogPlugin.confirm({
     attach: 'body',
     placement: 'center',
-    header: t('knowledgeList.extensions.mcp.deleteTitle'),
-    body: t('knowledgeList.extensions.mcp.deleteContent', { name: server.name }),
-    confirmBtn: { content: t('knowledgeList.extensions.mcp.delete'), theme: 'danger' },
-    cancelBtn: t('knowledgeList.extensions.cancel'),
+    header: t('ext.mcp.deleteTitle'),
+    body: t('ext.mcp.deleteContent', { name: server.name }),
+    confirmBtn: { content: t('ext.mcp.delete'), theme: 'danger' },
+    cancelBtn: t('ext.cancel'),
     onConfirm: async () => {
       try {
         actionLoadingSlug.value = server.slug
         const result = await mcpApi.deleteMcpServer(server.slug)
         if (result.success) {
-          MessagePlugin.success(t('knowledgeList.extensions.mcp.deleted'))
+          MessagePlugin.success(t('ext.mcp.deleted'))
           await fetchServers()
         } else {
-          MessagePlugin.error(t('knowledgeList.extensions.mcp.deleteFailed'))
+          MessagePlugin.error(t('ext.mcp.deleteFailed'))
         }
       } catch {
-        MessagePlugin.error(t('knowledgeList.extensions.mcp.deleteFailed'))
+        MessagePlugin.error(t('ext.mcp.deleteFailed'))
       } finally {
         actionLoadingSlug.value = ''
         dialog.hide()
@@ -315,7 +315,7 @@ const fetchServers = async () => {
       servers.value = result.data || []
     }
   } catch {
-    MessagePlugin.error(t('knowledgeList.extensions.mcp.loadFailed'))
+    MessagePlugin.error(t('ext.mcp.loadFailed'))
   } finally {
     loading.value = false
   }

@@ -137,7 +137,7 @@ F0 → F1 → … → F9 验收通过
 | 一   | **F4** | （已并入 F3）                                                   | 取消                               |
 | 一   | **F5** | （已并入 F3）                                                   | 取消                               |
 | 一   | **F6** | Runtime 智能体并进 `views/agent/harness`                         | 完成（待验收）                       |
-| 一   | **F7** | 删除 yuxi 知识库管理面，只留 WeKnora KB（已锁定 **A**）                   | 未开始（依赖 F6）                       |
+| 一   | **F7** | 删除 yuxi 知识库管理面，只留 WeKnora KB（已锁定 **A**）                   | 完成                               |
 | 一   | **F8** | Runtime 对话并进 `views/chat` + `creatChat` + 侧栏历史             | 未开始                              |
 | 一   | **F9** | 删除 `src/harness/`、Ant Design、`/platform/harness` 正式树       | 未开始                              |
 | 闸门  | **G1** | 阶段一全量验收，才允许 B0                                             | 未开始                              |
@@ -171,7 +171,7 @@ F0 → F1 → … → F9 验收通过
 | ------------------------------------------ | ----------------------------------------- | ------------------------------- |
 | `/platform/harness/dashboard`              | `src/harness/views/DashboardView.vue`     | `/harness-api` dashboard        |
 | `/platform/harness/workspace`              | `src/harness/views/WorkspaceView.vue`     | workspace / knowledge           |
-| KB 列表 `?surface=runtime`（F7-A 将删除）      | `KnowledgeBaseList.vue` 内 `DataBaseView`  | yuxi knowledge_api              |
+| KB 列表 `/platform/knowledge-bases`        | `KnowledgeBaseList.vue`（无 runtime 岛）   | WeKnora `/api/v1`               |
 | Agent 列表 `?surface=runtime`                | `AgentList.vue` 内 `views/agent/harness`   | `/harness-api/api/agent`        |
 | `/platform/harness/chat`、`chat/:thread_id` | `AgentView.vue`                           | agent / chat SSE                |
 | 侧栏 Runtime 历史                              | `HarnessHistoryNav.vue`                   | chat threads                    |
@@ -437,16 +437,18 @@ F3、F6–F8 一律遵守 §0.7：先 move 再改 TDesign、同批删旧入口�
 - Delete when unreferenced: `DataBaseView.vue`、`DataBaseInfoView.vue`（后者目前已无 import，只剩 `QuerySection` 注释）。按引用清专用组件；**不要**删工作区仍用的 `knowledge_api` / `getWorkspaceKnowledgeTree`
 - 不要改 `AgentList` 的 `?surface=runtime`（那是智能体两套列表，不是 KB）
 
-- [ ] 提交：`feat(frontend): remove runtime KB management surface`
+- [x] 提交：`feat(frontend): remove runtime KB management surface`
 
 **验收（执行时）**
 
-- [ ] `/platform/knowledge-bases` 只有 WeKnora KB，无 runtime tab / 无 DataBase 岛 / 无 `.harness-island`
-- [ ] 直开 `?surface=runtime` 落到平台 KB，不 404、不嵌 Ant
-- [ ] 工作区侧栏知识库仍是 WeKnora 库；点进目录不进 yuxi 管理页
-- [ ] Runtime 智能体绑库选项仍是 WeKnora id；配置里「知识库」进正式 KB 列表
-- [ ] WeKnora KB 列表/详情/上传/Wiki 回归通过
-- [ ] 后端接口未改；`knowledge_api.js` 可仍被工作区引用
+- [x] `/platform/knowledge-bases` 只有 WeKnora KB，无 runtime tab / 无 DataBase 岛 / 无 `.harness-island`
+- [x] 直开 `?surface=runtime` 落到平台 KB，不 404、不嵌 Ant（`beforeEach` 无条件剥 query）
+- [x] 工作区侧栏知识库仍是 WeKnora 库；点进目录不进 yuxi 管理页（`DataBaseView` / `DataBaseInfoView` 已删）
+- [x] Runtime 智能体绑库选项仍是 WeKnora id；配置里无 `surface=runtime` / yuxi 详情跳转
+- [ ] WeKnora KB 列表/详情/上传/Wiki 回归（手工）
+- [x] 后端接口未改；`knowledge_api.js` 仍被工作区 / 对话工具引用
+
+**落地对照（删面，不是换铬）：** 知识库列表去掉 runtime 侧栏项与 HarnessIsland；标题/创建按钮/卡片栅格与原先 platform 面相同。`DataBaseView` / `DataBaseInfoView` / `QuerySection` 删除。Agent 列表 `?surface=runtime` 未改。
 
 ---
 

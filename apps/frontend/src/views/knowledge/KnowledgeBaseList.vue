@@ -3,8 +3,6 @@
     <ListSpaceSidebar
       v-if="showKbSpaceSidebar"
       v-model="spaceSelection"
-      v-model:surface-value="surface"
-      :surface-items="surfaceNavItems"
       :show-scope-nav="SHOW_SCOPE_NAV"
       :count-all="allKnowledgeBases"
       :count-mine="kbs.length" :count-by-org="effectiveSharedCountByOrg" :count-favorites="kbFavoritesCount"
@@ -13,14 +11,10 @@
       <div class="header" style="--wails-draggable: drag">
         <div class="header-title" style="--wails-draggable: drag">
           <h2 style="--wails-draggable: drag">{{ $t('knowledgeBase.title') }}</h2>
-          <p class="header-subtitle" style="--wails-draggable: drag">{{
-            surface === 'runtime'
-              ? $t('knowledgeList.runtimeSubtitle')
-              : $t('knowledgeList.subtitle')
-          }}</p>
+          <p class="header-subtitle" style="--wails-draggable: drag">{{ $t('knowledgeList.subtitle') }}</p>
         </div>
         <div
-          v-if="authStore.hasRole('contributor') && surface === 'platform'"
+          v-if="authStore.hasRole('contributor')"
           class="header-actions"
           style="--wails-draggable: no-drag"
         >
@@ -30,10 +24,7 @@
           </t-button>
         </div>
       </div>
-      <HarnessIsland v-if="surface !== 'platform'" class="surface-embed">
-        <DataBaseView v-if="surface === 'runtime'" embedded />
-      </HarnessIsland>
-      <div v-else class="kb-list-main">
+      <div class="kb-list-main">
         <!-- creator filter intentionally removed from chrome: every card
              already shows its creator via ResourceOriginBadge / avatar, so
              a dedicated horizontal switch added more noise than signal.
@@ -813,15 +804,11 @@ import ListSpaceSidebar from '@/components/ListSpaceSidebar.vue'
 import ResourceOriginBadge from '@/components/ResourceOriginBadge.vue'
 import { shouldShowResourceOriginBadge } from '@/utils/card-list-badge'
 import { useListUrlState } from '@/composables/useListUrlState'
-import { useListSurface } from '@/composables/useListSurface'
-import HarnessIsland from '@harness/HarnessIsland.vue'
-import DataBaseView from '@harness/views/DataBaseView.vue'
 import ContextualGuide from '@/components/ContextualGuide.vue'
 import { isContextualGuideDone, markContextualGuideDone } from '@/config/contextualGuides'
 import { useTenantModelReadiness } from '@/composables/useTenantModelReadiness'
 import { useI18n } from 'vue-i18n'
 import { useResourcePins } from '@/composables/useResourcePins'
-import { isHiddenKbSurface } from '@/utils/weknoraFeatures'
 
 const router = useRouter()
 const route = useRoute()
@@ -849,16 +836,7 @@ const { scope: spaceSelection, creator: creatorFilter } = useListUrlState({
   defaultScope,
   defaultCreator: 'all',
 })
-type KbSurface = 'platform' | 'runtime'
-const KB_SURFACES: KbSurface[] = ['platform', 'runtime']
-const { surface } = useListSurface<KbSurface>(
-  () => KB_SURFACES.filter((item) => !isHiddenKbSurface(item)),
-  'platform',
-)
-const surfaceNavItems = computed(() => [
-  { value: 'runtime', label: t('knowledgeList.tabs.runtime'), shortLabel: t('knowledgeList.tabs.short.runtime'), icon: 'server' },
-].filter((item) => !isHiddenKbSurface(item.value)))
-const showKbSpaceSidebar = computed(() => SHOW_SCOPE_NAV || surfaceNavItems.value.length > 0)
+const showKbSpaceSidebar = computed(() => SHOW_SCOPE_NAV)
 
 // Per-user favorites + recents (localStorage-backed). isFavorite & touchRecent
 // are wired into card render and click handlers below.
@@ -1896,19 +1874,6 @@ const handleUploadFinishedEvent = (event: Event) => {
   min-height: 200px;
   padding: 12px;
   background: var(--gray-25, #f8fafa);
-}
-
-.surface-embed {
-  flex: 1;
-  min-height: 0;
-  margin-right: 0;
-  padding-right: 28px;
-
-  // class="surface-embed" lands on .harness-shell; --page-padding is
-  // redefined on the inner .harness-root (22px / 30px at ≥1440px).
-  :deep(.harness-root) {
-    --page-padding: 0;
-  }
 }
 
 .shared-by-me-badge {

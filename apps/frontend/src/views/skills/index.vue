@@ -2,7 +2,7 @@
   <div class="skills-tools-page layout-container">
     <PageHeader
       :title="t('menu.skillsTools')"
-      :subtitle="t('knowledgeList.extensionsSubtitle')"
+      :subtitle="t('ext.subtitle')"
       :active-key="activeTab"
       :tabs="tabs"
       :loading="listLoading"
@@ -40,9 +40,9 @@ const activeTab = computed(() => {
 
 const tabs = computed(() =>
   [
-    { key: 'skills', label: t('knowledgeList.tabs.skills'), path: '/platform/skills' },
-    { key: 'tools', label: t('knowledgeList.tabs.tools'), path: '/platform/tools' },
-    { key: 'mcp', label: t('knowledgeList.tabs.mcp'), path: '/platform/mcp' },
+    { key: 'skills', label: t('ext.tabs.skills'), path: '/platform/skills' },
+    { key: 'tools', label: t('ext.tabs.tools'), path: '/platform/tools' },
+    { key: 'mcp', label: t('ext.tabs.mcp'), path: '/platform/mcp' },
   ].filter((item) => !isHiddenKbSurface(item.key)),
 )
 </script>

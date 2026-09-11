@@ -1,14 +1,14 @@
 <template>
   <div class="tools-cards-page extension-page-root">
-    <PageShoulder :search-placeholder="t('knowledgeList.extensions.tools.searchPlaceholder')" v-model:search="searchQuery">
+    <PageShoulder :search-placeholder="t('ext.tools.searchPlaceholder')" v-model:search="searchQuery">
       <template #filters>
         <t-select
           v-model="selectedCategory"
           style="width: 120px"
-          :placeholder="t('knowledgeList.extensions.tools.allCategories')"
+          :placeholder="t('ext.tools.allCategories')"
           clearable
         >
-          <t-option value="" :label="t('knowledgeList.extensions.tools.allCategories')" />
+          <t-option value="" :label="t('ext.tools.allCategories')" />
           <t-option v-for="cat in categories" :key="cat" :value="cat" :label="categoryLabels[cat] || cat" />
         </t-select>
       </template>
@@ -16,7 +16,7 @@
 
     <div class="extension-page-body">
     <div v-if="filteredTools.length === 0" class="extension-card-grid-empty-state">
-      <t-empty :description="searchQuery ? t('knowledgeList.extensions.tools.emptySearch') : t('knowledgeList.extensions.tools.empty')" />
+      <t-empty :description="searchQuery ? t('ext.tools.emptySearch') : t('ext.tools.empty')" />
     </div>
 
     <ExtensionCardGrid v-else :min-width="240" :gap="12">
@@ -26,7 +26,7 @@
         layout="kb"
         :title="formatExtensionCardTitle(tool.name)"
         :subtitle="getToolSlug(tool)"
-        :description="tool.description || t('knowledgeList.extensions.tools.noDescription')"
+        :description="tool.description || t('ext.tools.noDescription')"
         :default-icon="getToolIcon(getToolSlug(tool)) || WrenchIcon"
         :tags="toolTags(tool)"
         @click="selectTool(tool)"
@@ -47,23 +47,23 @@
 
             <div class="tool-detail-body">
               <div class="section-header">
-                <h2>{{ formatExtensionCardTitle(currentTool.name) || t('knowledgeList.extensions.tools.detail') }}</h2>
+                <h2>{{ formatExtensionCardTitle(currentTool.name) || t('ext.tools.detail') }}</h2>
                 <p class="section-description">
-                  {{ formatToolRichText(currentTool.description) || t('knowledgeList.extensions.tools.noDescription') }}
+                  {{ formatToolRichText(currentTool.description) || t('ext.tools.noDescription') }}
                 </p>
               </div>
 
               <div class="settings-group">
                 <div v-if="currentTool.config_guide" class="setting-row setting-row--stack">
                   <div class="setting-info">
-                    <label>{{ t('knowledgeList.extensions.tools.configGuide') }}</label>
+                    <label>{{ t('ext.tools.configGuide') }}</label>
                     <p class="desc config-guide">{{ currentTool.config_guide }}</p>
                   </div>
                 </div>
 
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label>{{ t('knowledgeList.extensions.tools.category') }}</label>
+                    <label>{{ t('ext.tools.category') }}</label>
                   </div>
                   <div class="setting-control wk-chip-row">
                     <t-tag theme="success" size="small" variant="light-outline" class="wk-chip">
@@ -74,7 +74,7 @@
 
                 <div class="setting-row">
                   <div class="setting-info">
-                    <label>{{ t('knowledgeList.extensions.tools.tags') }}</label>
+                    <label>{{ t('ext.tools.tags') }}</label>
                   </div>
                   <div class="setting-control wk-chip-row">
                     <t-tag
@@ -84,13 +84,13 @@
                       variant="light-outline"
                       class="wk-chip"
                     >{{ tag }}</t-tag>
-                    <span v-if="!currentTool.tags?.length" class="setting-empty">{{ t('knowledgeList.extensions.tools.none') }}</span>
+                    <span v-if="!currentTool.tags?.length" class="setting-empty">{{ t('ext.tools.none') }}</span>
                   </div>
                 </div>
 
                 <div v-if="currentTool.args?.length" class="setting-row setting-row--stack">
                   <div class="setting-info">
-                    <label>{{ t('knowledgeList.extensions.tools.args') }}</label>
+                    <label>{{ t('ext.tools.args') }}</label>
                   </div>
                   <t-table
                     :data="currentTool.args"
@@ -139,10 +139,10 @@ watch(loading, (v) => emit('loading-change', v), { immediate: true })
 
 const categories = ['buildin', 'knowledge', 'mysql', 'debug']
 const categoryLabels = computed(() => ({
-  buildin: t('knowledgeList.extensions.tools.catBuiltin'),
-  knowledge: t('knowledgeList.extensions.tools.catKnowledge'),
-  mysql: t('knowledgeList.extensions.tools.catMysql'),
-  debug: t('knowledgeList.extensions.tools.catDebug')
+  buildin: t('ext.tools.catBuiltin'),
+  knowledge: t('ext.tools.catKnowledge'),
+  mysql: t('ext.tools.catMysql'),
+  debug: t('ext.tools.catDebug')
 }))
 const getToolSlug = (tool) => tool?.slug || tool?.id || ''
 
@@ -166,9 +166,9 @@ const toolTags = (tool) => {
 }
 
 const argColumns = computed(() => [
-  { title: t('knowledgeList.extensions.tools.argName'), colKey: 'name', width: 160, ellipsis: true },
-  { title: t('knowledgeList.extensions.tools.argType'), colKey: 'type', width: 80 },
-  { title: t('knowledgeList.extensions.tools.argDesc'), colKey: 'description' }
+  { title: t('ext.tools.argName'), colKey: 'name', width: 160, ellipsis: true },
+  { title: t('ext.tools.argType'), colKey: 'type', width: 80 },
+  { title: t('ext.tools.argDesc'), colKey: 'description' }
 ])
 
 const filteredTools = computed(() => {
@@ -210,7 +210,7 @@ const fetchTools = async () => {
     const result = await toolApi.getTools()
     tools.value = result?.data || []
   } catch {
-    MessagePlugin.error(t('knowledgeList.extensions.tools.loadFailed'))
+    MessagePlugin.error(t('ext.tools.loadFailed'))
   } finally {
     loading.value = false
   }

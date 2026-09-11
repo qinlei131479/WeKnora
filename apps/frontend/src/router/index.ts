@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { autoSetup, getCurrentUser, userInfoFromApi } from '@/api/auth'
-import { getFeatureFlags, isHiddenKbSurface, isHiddenMenuPath, shouldHideYuxiKnowledgeAdmin, weknoraKnowledgeBaseLocation } from '@/utils/weknoraFeatures'
+import { getFeatureFlags, isHiddenMenuPath, weknoraKnowledgeBaseLocation } from '@/utils/weknoraFeatures'
 
 /** Lite /桌面 WebView 硬刷新时可能只打开 `/`，用 session 记住上次页面以便恢复 */
 const LITE_LAST_PATH_KEY = 'weknora_lite_last_path'
@@ -297,7 +297,7 @@ const router = createRouter({
                     const tab = String(to.query.tab || 'skills')
                     if (tab === 'tools') return { path: '/platform/tools' }
                     if (tab === 'mcp') return { path: '/platform/mcp' }
-                    if (tab === 'knowledge') return { path: '/platform/knowledge-bases', query: { surface: 'runtime' } }
+                    if (tab === 'knowledge') return { path: '/platform/knowledge-bases' }
                     if (tab === 'platform') return { path: '/platform/knowledge-bases' }
                     return { path: '/platform/skills' }
                   }
@@ -549,13 +549,13 @@ router.beforeEach(async (to, from, next) => {
     next('/platform/creatChat')
     return
   }
-  if (to.path === '/platform/knowledge-bases' && isHiddenKbSurface(String(to.query.surface || ''))) {
+  if (to.path === '/platform/knowledge-bases' && String(to.query.surface || '') === 'runtime') {
     const query = { ...to.query }
     delete query.surface
     next({ path: '/platform/knowledge-bases', query, replace: true })
     return
   }
-  if (shouldHideYuxiKnowledgeAdmin() && to.path.startsWith('/platform/harness/extensions/knowledgebase/')) {
+  if (to.path.startsWith('/platform/harness/extensions/knowledgebase/')) {
     const kbId = String(to.params.kbId || to.path.split('/').pop() || '')
     next({ ...weknoraKnowledgeBaseLocation(kbId), replace: true })
     return

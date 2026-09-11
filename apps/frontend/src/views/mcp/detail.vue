@@ -6,7 +6,7 @@
     <div class="detail-top-bar">
       <button class="detail-back-btn" @click="goBack">
         <ArrowLeft :size="16" />
-        <span>{{ t('knowledgeList.extensions.mcp.detail.back') }}</span>
+        <span>{{ t('ext.mcp.detail.back') }}</span>
       </button>
       <div class="detail-title-area">
         <div class="detail-icon">{{ server?.icon || '🔌' }}</div>
@@ -21,21 +21,21 @@
             type="button"
             @click="handleTestServer"
             :disabled="testLoading || server?.requires_migration"
-            :title="server?.requires_migration ? t('knowledgeList.extensions.mcp.detail.migrateFirst') : ''"
+            :title="server?.requires_migration ? t('ext.mcp.detail.migrateFirst') : ''"
             class="lucide-icon-btn extension-panel-action extension-panel-action-secondary"
           >
             <Zap :size="14" v-if="!testLoading" />
-            <span>{{ t('knowledgeList.extensions.mcp.detail.test') }}</span>
+            <span>{{ t('ext.mcp.detail.test') }}</span>
           </button>
           <button
             type="button"
             @click="startEdit"
             :disabled="isEditing || !server || server.is_builtin"
-            :title="server?.is_builtin ? t('knowledgeList.extensions.mcp.detail.builtinConfigHint') : ''"
+            :title="server?.is_builtin ? t('ext.mcp.detail.builtinConfigHint') : ''"
             class="lucide-icon-btn extension-panel-action extension-panel-action-secondary"
           >
             <Pencil :size="14" />
-            <span>{{ t('knowledgeList.extensions.mcp.detail.edit') }}</span>
+            <span>{{ t('ext.mcp.detail.edit') }}</span>
           </button>
           <button
             type="button"
@@ -62,32 +62,32 @@
           <t-alert
             v-if="server.requires_migration"
             theme="warning"
-            :message="t('knowledgeList.extensions.mcp.detail.migrateAlert')"
+            :message="t('ext.mcp.detail.migrateAlert')"
           />
           <t-tabs v-model="detailTab" class="detail-tabs">
             <t-tab-panel value="general">
               <template #label>
-                <span class="tab-title"><Settings2 :size="14" />{{ t('knowledgeList.extensions.mcp.detail.tabInfo') }}</span>
+                <span class="tab-title"><Settings2 :size="14" />{{ t('ext.mcp.detail.tabInfo') }}</span>
               </template>
               <div class="tab-content">
                 <div v-if="isEditing" class="edit-panel">
                   <div class="edit-panel-header">
                     <div>
-                      <h3>{{ t('knowledgeList.extensions.mcp.detail.editHeading') }}</h3>
-                      <p>{{ t('knowledgeList.extensions.mcp.detail.editHint') }}</p>
+                      <h3>{{ t('ext.mcp.detail.editHeading') }}</h3>
+                      <p>{{ t('ext.mcp.detail.editHint') }}</p>
                     </div>
                   </div>
 
                   <t-form label-align="top" class="extension-form inline-edit-form">
                     <section class="form-section">
                       <div class="form-section-title">
-                        <span>{{ t('knowledgeList.extensions.mcp.detail.basicTitle') }}</span>
-                        <small>{{ t('knowledgeList.extensions.mcp.detail.basicHint') }}</small>
+                        <span>{{ t('ext.mcp.detail.basicTitle') }}</span>
+                        <small>{{ t('ext.mcp.detail.basicHint') }}</small>
                       </div>
                       <t-form-item required class="form-item">
                         <template #label>
                           <span class="wk-bilingual-label">
-                            <span>{{ t('knowledgeList.extensions.mcp.form.slug') }}</span>
+                            <span>{{ t('ext.mcp.form.slug') }}</span>
                             <small v-if="showEnHint">Identifier</small>
                           </span>
                         </template>
@@ -96,19 +96,19 @@
                       <t-form-item required class="form-item">
                         <template #label>
                           <span class="wk-bilingual-label">
-                            <span>{{ t('knowledgeList.extensions.mcp.form.name') }}</span>
+                            <span>{{ t('ext.mcp.form.name') }}</span>
                             <small v-if="showEnHint">Name</small>
                           </span>
                         </template>
                         <t-input
                           v-model="editForm.name"
-                          :placeholder="t('knowledgeList.extensions.mcp.form.namePlaceholder')"
+                          :placeholder="t('ext.mcp.form.namePlaceholder')"
                         />
                       </t-form-item>
                       <t-form-item required class="form-item">
                         <template #label>
                           <span class="wk-bilingual-label">
-                            <span>{{ t('knowledgeList.extensions.mcp.form.transport') }}</span>
+                            <span>{{ t('ext.mcp.form.transport') }}</span>
                             <small v-if="showEnHint">Transport</small>
                           </span>
                         </template>
@@ -120,26 +120,26 @@
                       <t-form-item class="form-item">
                         <template #label>
                           <span class="wk-bilingual-label">
-                            <span>{{ t('knowledgeList.extensions.mcp.form.icon') }}</span>
+                            <span>{{ t('ext.mcp.form.icon') }}</span>
                             <small v-if="showEnHint">Icon</small>
                           </span>
                         </template>
                         <t-input
                           v-model="editForm.icon"
-                          :placeholder="t('knowledgeList.extensions.mcp.form.iconPlaceholder')"
+                          :placeholder="t('ext.mcp.form.iconPlaceholder')"
                           :maxlength="2"
                         />
                       </t-form-item>
                       <t-form-item class="form-item">
                         <template #label>
                           <span class="wk-bilingual-label">
-                            <span>{{ t('knowledgeList.extensions.mcp.form.description') }}</span>
+                            <span>{{ t('ext.mcp.form.description') }}</span>
                             <small v-if="showEnHint">Description</small>
                           </span>
                         </template>
                         <t-textarea
                           v-model="editForm.description"
-                          :placeholder="t('knowledgeList.extensions.mcp.form.descPlaceholder')"
+                          :placeholder="t('ext.mcp.form.descPlaceholder')"
                           :autosize="{ minRows: 2 }"
                         />
                       </t-form-item>
@@ -147,8 +147,8 @@
 
                     <section class="form-section">
                       <div class="form-section-title">
-                        <span>{{ t('knowledgeList.extensions.mcp.detail.connTitle') }}</span>
-                        <small>{{ t('knowledgeList.extensions.mcp.detail.connHint') }}</small>
+                        <span>{{ t('ext.mcp.detail.connTitle') }}</span>
+                        <small>{{ t('ext.mcp.detail.connHint') }}</small>
                       </div>
                       <template
                         v-if="
@@ -158,7 +158,7 @@
                         <t-form-item required class="form-item">
                           <template #label>
                             <span class="wk-bilingual-label">
-                              <span>{{ t('knowledgeList.extensions.mcp.form.url') }}</span>
+                              <span>{{ t('ext.mcp.form.url') }}</span>
                               <small v-if="showEnHint">URL</small>
                             </span>
                           </template>
@@ -170,7 +170,7 @@
                         <t-form-item class="form-item">
                           <template #label>
                             <span class="wk-bilingual-label">
-                              <span>{{ t('knowledgeList.extensions.mcp.form.httpTimeout') }}</span>
+                              <span>{{ t('ext.mcp.form.httpTimeout') }}</span>
                               <small v-if="showEnHint">HTTP Timeout</small>
                             </span>
                           </template>
@@ -184,7 +184,7 @@
                         <t-form-item class="form-item">
                           <template #label>
                             <span class="wk-bilingual-label">
-                              <span>{{ t('knowledgeList.extensions.mcp.form.sseTimeout') }}</span>
+                              <span>{{ t('ext.mcp.form.sseTimeout') }}</span>
                               <small v-if="showEnHint">SSE Read Timeout</small>
                             </span>
                           </template>
@@ -199,7 +199,7 @@
                       <t-form-item class="form-item">
                         <template #label>
                           <span class="wk-bilingual-label">
-                            <span>{{ t('knowledgeList.extensions.mcp.form.tags') }}</span>
+                            <span>{{ t('ext.mcp.form.tags') }}</span>
                             <small v-if="showEnHint">Tags</small>
                           </span>
                         </template>
@@ -208,7 +208,7 @@
                           multiple
                           creatable
                           filterable
-                          :placeholder="t('knowledgeList.extensions.mcp.form.tagsPlaceholder')"
+                          :placeholder="t('ext.mcp.form.tagsPlaceholder')"
                           class="mcp-tags-select"
                           style="width: 100%"
                         />
@@ -217,23 +217,23 @@
 
                     <section class="form-section">
                       <div class="form-section-title">
-                        <span>{{ t('knowledgeList.extensions.mcp.detail.advancedTitle') }}</span>
-                        <small>{{ t('knowledgeList.extensions.mcp.detail.advancedHint') }}</small>
+                        <span>{{ t('ext.mcp.detail.advancedTitle') }}</span>
+                        <small>{{ t('ext.mcp.detail.advancedHint') }}</small>
                       </div>
                       <template
                         v-if="
                           editForm.transport === 'streamable_http' || editForm.transport === 'sse'
                         "
                       >
-                        <t-form-item :label="t('knowledgeList.extensions.mcp.form.headers')" class="form-item form-item-full">
+                        <t-form-item :label="t('ext.mcp.form.headers')" class="form-item form-item-full">
                           <t-textarea
                             v-model="editForm.headersText"
-                            :placeholder="t('knowledgeList.extensions.mcp.form.headersPlaceholder')"
+                            :placeholder="t('ext.mcp.form.headersPlaceholder')"
                             :autosize="{ minRows: 4 }"
                             class="config-textarea"
                           />
                           <div class="form-helper">
-                            {{ t('knowledgeList.extensions.mcp.detail.headersHelp') }}
+                            {{ t('ext.mcp.detail.headersHelp') }}
                           </div>
                         </t-form-item>
                       </template>
@@ -243,7 +243,7 @@
                   <div class="edit-panel-actions">
                     <t-button @click="cancelEdit" :disabled="editLoading" class="lucide-icon-btn">
                       <template #icon><X :size="14" /></template>
-                      {{ t('knowledgeList.extensions.mcp.detail.cancel') }}
+                      {{ t('ext.mcp.detail.cancel') }}
                     </t-button>
                     <t-button
                       theme="primary"
@@ -252,18 +252,18 @@
                       class="lucide-icon-btn"
                     >
                       <template #icon><Save :size="14" /></template>
-                      {{ t('knowledgeList.extensions.mcp.detail.save') }}
+                      {{ t('ext.mcp.detail.save') }}
                     </t-button>
                   </div>
                 </div>
 
                 <div v-else class="info-grid">
                   <div class="info-item" v-if="server.description">
-                    <label>{{ t('knowledgeList.extensions.mcp.form.description') }}</label>
+                    <label>{{ t('ext.mcp.form.description') }}</label>
                     <span>{{ server.description }}</span>
                   </div>
                   <div class="info-item">
-                    <label>{{ t('knowledgeList.extensions.mcp.form.transport') }}</label>
+                    <label>{{ t('ext.mcp.form.transport') }}</label>
                     <span>
                       <t-tag :theme="getTransportTheme(server.transport)" size="small" variant="light-outline" class="wk-chip">{{
                         server.transport
@@ -274,7 +274,7 @@
                     class="info-item"
                     v-if="Array.isArray(server.tags) && server.tags.length > 0"
                   >
-                    <label>{{ t('knowledgeList.extensions.mcp.form.tags') }}</label>
+                    <label>{{ t('ext.mcp.form.tags') }}</label>
                     <span class="wk-chip-row">
                       <t-tag v-for="tag in server.tags" :key="tag" size="small" variant="light-outline" class="wk-chip">{{ tag }}</t-tag>
                     </span>
@@ -283,32 +283,32 @@
                     v-if="server.transport === 'streamable_http' || server.transport === 'sse'"
                   >
                     <div class="info-item" v-if="server.url">
-                      <label>{{ t('knowledgeList.extensions.mcp.form.url') }}</label>
+                      <label>{{ t('ext.mcp.form.url') }}</label>
                       <span class="code-inline text-break-all">{{ server.url }}</span>
                     </div>
                     <div
                       class="info-item"
                       v-if="server.headers && Object.keys(server.headers).length > 0"
                     >
-                      <label>{{ t('knowledgeList.extensions.mcp.form.headers') }}</label>
+                      <label>{{ t('ext.mcp.form.headers') }}</label>
                       <pre class="code-pre">{{ JSON.stringify(server.headers, null, 2) }}</pre>
                     </div>
                     <div class="info-item" v-if="server.timeout">
-                      <label>{{ t('knowledgeList.extensions.mcp.form.httpTimeout') }}</label>
-                      <span>{{ t('knowledgeList.extensions.mcp.detail.seconds', { count: server.timeout }) }}</span>
+                      <label>{{ t('ext.mcp.form.httpTimeout') }}</label>
+                      <span>{{ t('ext.mcp.detail.seconds', { count: server.timeout }) }}</span>
                     </div>
                     <div class="info-item" v-if="server.sse_read_timeout">
-                      <label>{{ t('knowledgeList.extensions.mcp.form.sseTimeout') }}</label>
-                      <span>{{ t('knowledgeList.extensions.mcp.detail.seconds', { count: server.sse_read_timeout }) }}</span>
+                      <label>{{ t('ext.mcp.form.sseTimeout') }}</label>
+                      <span>{{ t('ext.mcp.detail.seconds', { count: server.sse_read_timeout }) }}</span>
                     </div>
                   </template>
                   <template v-if="server.transport === 'stdio'">
                     <div class="info-item" v-if="server.command">
-                      <label>{{ t('knowledgeList.extensions.mcp.detail.command') }}</label>
+                      <label>{{ t('ext.mcp.detail.command') }}</label>
                       <span class="code-inline">{{ server.command }}</span>
                     </div>
                     <div class="info-item" v-if="server.args && server.args.length > 0">
-                      <label>{{ t('knowledgeList.extensions.mcp.detail.args') }}</label>
+                      <label>{{ t('ext.mcp.detail.args') }}</label>
                       <span class="wk-chip-row">
                         <t-tag v-for="(arg, index) in server.args" :key="index" size="small" variant="light-outline" class="wk-chip">{{
                           arg
@@ -316,20 +316,20 @@
                       </span>
                     </div>
                     <div class="info-item" v-if="server.env && Object.keys(server.env).length > 0">
-                      <label>{{ t('knowledgeList.extensions.mcp.detail.env') }}</label>
+                      <label>{{ t('ext.mcp.detail.env') }}</label>
                       <pre class="code-pre">{{ JSON.stringify(server.env, null, 2) }}</pre>
                     </div>
                   </template>
                   <div class="info-item">
-                    <label>{{ t('knowledgeList.extensions.mcp.detail.createdAt') }}</label>
+                    <label>{{ t('ext.mcp.detail.createdAt') }}</label>
                     <span>{{ formatTime(server.created_at) }}</span>
                   </div>
                   <div class="info-item">
-                    <label>{{ t('knowledgeList.extensions.mcp.detail.updatedAt') }}</label>
+                    <label>{{ t('ext.mcp.detail.updatedAt') }}</label>
                     <span>{{ formatTime(server.updated_at) }}</span>
                   </div>
                   <div class="info-item">
-                    <label>{{ t('knowledgeList.extensions.mcp.detail.creator') }}</label>
+                    <label>{{ t('ext.mcp.detail.creator') }}</label>
                     <span>{{ server.created_by }}</span>
                   </div>
                 </div>
@@ -338,24 +338,24 @@
 
             <t-tab-panel v-if="!server.requires_migration" value="tools">
               <template #label>
-                <span class="tab-title"><Wrench :size="14" />{{ t('knowledgeList.extensions.mcp.detail.tabTools', { count: tools.length }) }}</span>
+                <span class="tab-title"><Wrench :size="14" />{{ t('ext.mcp.detail.tabTools', { count: tools.length }) }}</span>
               </template>
               <div class="tab-content tools-tab">
                 <div class="tools-toolbar">
                   <t-input
                     v-model="toolSearchText"
-                    :placeholder="t('knowledgeList.extensions.mcp.detail.searchTools')"
+                    :placeholder="t('ext.mcp.detail.searchTools')"
                     style="width: 200px"
                     clearable
                   />
                   <t-button @click="fetchTools" :loading="toolsLoading" class="lucide-icon-btn">
                     <RotateCw :size="14" />
-                    <span>{{ t('knowledgeList.extensions.mcp.detail.refresh') }}</span>
+                    <span>{{ t('ext.mcp.detail.refresh') }}</span>
                   </t-button>
                 </div>
                 <t-loading :loading="toolsLoading">
                   <div v-if="filteredTools.length === 0" class="empty-tools">
-                    <t-empty :description="toolsError || t('knowledgeList.extensions.mcp.detail.noTools')" />
+                    <t-empty :description="toolsError || t('ext.mcp.detail.noTools')" />
                   </div>
                   <div v-else class="tools-list">
                     <div
@@ -378,7 +378,7 @@
                             :loading="toggleToolLoading === tool.name"
                             size="small"
                           />
-                          <t-tooltip :content="t('knowledgeList.extensions.mcp.detail.copyToolName')">
+                          <t-tooltip :content="t('ext.mcp.detail.copyToolName')">
                             <t-button
                               variant="text"
                               size="small"
@@ -397,7 +397,7 @@
                         v-if="tool.parameters && Object.keys(tool.parameters).length > 0"
                         borderless
                       >
-                        <t-collapse-panel value="params" :header="t('knowledgeList.extensions.mcp.detail.params')">
+                        <t-collapse-panel value="params" :header="t('ext.mcp.detail.params')">
                           <div class="params-list">
                             <div
                               v-for="(param, paramName) in tool.parameters"
@@ -409,7 +409,7 @@
                                 <span
                                   class="param-required"
                                   v-if="tool.required?.includes(paramName)"
-                                  >{{ t('knowledgeList.extensions.mcp.detail.required') }}</span
+                                  >{{ t('ext.mcp.detail.required') }}</span
                                 >
                                 <span class="param-type">{{ param.type || 'any' }}</span>
                               </div>
@@ -428,7 +428,7 @@
           </t-tabs>
         </div>
         <div v-else-if="!loading" class="detail-empty">
-          <t-empty :description="t('knowledgeList.extensions.mcp.detail.notFound')" />
+          <t-empty :description="t('ext.mcp.detail.notFound')" />
         </div>
       </t-loading>
     </div>
@@ -492,11 +492,11 @@ const editForm = reactive({
 })
 
 const actionLabel = computed(() => {
-  if (server.value?.requires_migration) return t('knowledgeList.extensions.mcp.detail.delete')
-  if (server.value?.enabled === false) return t('knowledgeList.extensions.mcp.detail.add')
+  if (server.value?.requires_migration) return t('ext.mcp.detail.delete')
+  if (server.value?.enabled === false) return t('ext.mcp.detail.add')
   return server.value?.is_builtin
-    ? t('knowledgeList.extensions.mcp.detail.remove')
-    : t('knowledgeList.extensions.mcp.detail.delete')
+    ? t('ext.mcp.detail.remove')
+    : t('ext.mcp.detail.delete')
 })
 
 const filteredTools = computed(() => {
@@ -553,7 +553,7 @@ const buildEditPayload = () => {
     try {
       headers = JSON.parse(editForm.headersText)
     } catch {
-      MessagePlugin.error(t('knowledgeList.extensions.mcp.form.badHeaders'))
+      MessagePlugin.error(t('ext.mcp.form.badHeaders'))
       return null
     }
   }
@@ -573,15 +573,15 @@ const buildEditPayload = () => {
 
 const validateEditPayload = (data) => {
   if (!data.name?.trim()) {
-    MessagePlugin.error(t('knowledgeList.extensions.mcp.form.nameRequired'))
+    MessagePlugin.error(t('ext.mcp.form.nameRequired'))
     return false
   }
   if (!data.transport) {
-    MessagePlugin.error(t('knowledgeList.extensions.mcp.form.transportRequired'))
+    MessagePlugin.error(t('ext.mcp.form.transportRequired'))
     return false
   }
   if (['sse', 'streamable_http'].includes(data.transport) && !data.url?.trim()) {
-    MessagePlugin.error(t('knowledgeList.extensions.mcp.form.urlRequired'))
+    MessagePlugin.error(t('ext.mcp.form.urlRequired'))
     return false
   }
   return true
@@ -596,14 +596,14 @@ const handleSaveEdit = async () => {
     editLoading.value = true
     const result = await mcpApi.updateMcpServer(server.value.slug, data)
     if (result.success) {
-      MessagePlugin.success(t('knowledgeList.extensions.mcp.form.updated'))
+      MessagePlugin.success(t('ext.mcp.form.updated'))
       isEditing.value = false
       await fetchServer()
     } else {
-      MessagePlugin.error(t('knowledgeList.extensions.mcp.form.updateFailed'))
+      MessagePlugin.error(t('ext.mcp.form.updateFailed'))
     }
   } catch {
-    MessagePlugin.error(t('knowledgeList.extensions.mcp.form.updateFailed'))
+    MessagePlugin.error(t('ext.mcp.form.updateFailed'))
   } finally {
     editLoading.value = false
   }
@@ -616,16 +616,16 @@ const fetchServer = async () => {
     if (result.success) {
       if (result.data?.enabled === false && !result.data?.requires_migration) {
         server.value = null
-        MessagePlugin.info(t('knowledgeList.extensions.mcp.detail.addFirst'))
+        MessagePlugin.info(t('ext.mcp.detail.addFirst'))
         router.replace(knowledgeBasesLocation('mcp'))
         return
       }
       server.value = result.data
     } else {
-      MessagePlugin.error(t('knowledgeList.extensions.mcp.detail.fetchFailed'))
+      MessagePlugin.error(t('ext.mcp.detail.fetchFailed'))
     }
   } catch {
-    MessagePlugin.error(t('knowledgeList.extensions.mcp.detail.fetchFailed'))
+    MessagePlugin.error(t('ext.mcp.detail.fetchFailed'))
   } finally {
     loading.value = false
   }
@@ -640,11 +640,11 @@ const fetchTools = async () => {
     if (result.success) {
       tools.value = result.data || []
     } else {
-      toolsError.value = t('knowledgeList.extensions.mcp.detail.fetchToolsFailed')
+      toolsError.value = t('ext.mcp.detail.fetchToolsFailed')
       tools.value = []
     }
   } catch {
-    toolsError.value = t('knowledgeList.extensions.mcp.detail.fetchToolsFailed')
+    toolsError.value = t('ext.mcp.detail.fetchToolsFailed')
     tools.value = []
   } finally {
     toolsLoading.value = false
@@ -660,18 +660,18 @@ const handleToggleTool = async (tool) => {
       MessagePlugin.success(
         t(
           result.enabled
-            ? 'knowledgeList.extensions.mcp.detail.toolEnabled'
-            : 'knowledgeList.extensions.mcp.detail.toolDisabled',
+            ? 'ext.mcp.detail.toolEnabled'
+            : 'ext.mcp.detail.toolDisabled',
           { name: tool.name }
         )
       )
       const targetTool = tools.value.find((t) => t.name === tool.name)
       if (targetTool) targetTool.enabled = result.enabled
     } else {
-      MessagePlugin.error(t('knowledgeList.extensions.mcp.form.actionFailed'))
+      MessagePlugin.error(t('ext.mcp.form.actionFailed'))
     }
   } catch {
-    MessagePlugin.error(t('knowledgeList.extensions.mcp.form.actionFailed'))
+    MessagePlugin.error(t('ext.mcp.form.actionFailed'))
   } finally {
     toggleToolLoading.value = null
   }
@@ -680,9 +680,9 @@ const handleToggleTool = async (tool) => {
 const copyToolName = async (toolName) => {
   try {
     await navigator.clipboard.writeText(toolName)
-    MessagePlugin.success(t('knowledgeList.extensions.mcp.detail.copied'))
+    MessagePlugin.success(t('ext.mcp.detail.copied'))
   } catch {
-    MessagePlugin.error(t('knowledgeList.extensions.mcp.detail.copyFailed'))
+    MessagePlugin.error(t('ext.mcp.detail.copyFailed'))
   }
 }
 
@@ -693,13 +693,13 @@ const handleTestServer = async () => {
     const result = await mcpApi.testMcpServer(server.value.slug)
     if (result.success) {
       MessagePlugin.success(
-        t('knowledgeList.extensions.mcp.detail.testOk', { count: result.tool_count ?? 0 })
+        t('ext.mcp.detail.testOk', { count: result.tool_count ?? 0 })
       )
     } else {
-      MessagePlugin.warning(t('knowledgeList.extensions.mcp.detail.connectFailed'))
+      MessagePlugin.warning(t('ext.mcp.detail.connectFailed'))
     }
   } catch {
-    MessagePlugin.error(t('knowledgeList.extensions.mcp.detail.testFailed'))
+    MessagePlugin.error(t('ext.mcp.detail.testFailed'))
   } finally {
     testLoading.value = null
   }
@@ -727,14 +727,14 @@ const handleSetServerEnabled = async (srv, enabled) => {
     const result = await mcpApi.updateMcpServerStatus(srv.slug, enabled)
     if (result.success) {
       MessagePlugin.success(
-        t(enabled ? 'knowledgeList.extensions.mcp.detail.added' : 'knowledgeList.extensions.mcp.detail.removed')
+        t(enabled ? 'ext.mcp.detail.added' : 'ext.mcp.detail.removed')
       )
       await fetchServer()
     } else {
-      MessagePlugin.error(t('knowledgeList.extensions.mcp.form.actionFailed'))
+      MessagePlugin.error(t('ext.mcp.form.actionFailed'))
     }
   } catch {
-    MessagePlugin.error(t('knowledgeList.extensions.mcp.form.actionFailed'))
+    MessagePlugin.error(t('ext.mcp.form.actionFailed'))
   }
 }
 
@@ -742,21 +742,21 @@ const confirmDeleteServer = (srv) => {
   const dialog = DialogPlugin.confirm({
     attach: 'body',
     placement: 'center',
-    header: t('knowledgeList.extensions.mcp.deleteTitle'),
-    body: t('knowledgeList.extensions.mcp.deleteContent', { name: srv.name }),
-    confirmBtn: { content: t('knowledgeList.extensions.mcp.delete'), theme: 'danger' },
-    cancelBtn: t('knowledgeList.extensions.cancel'),
+    header: t('ext.mcp.deleteTitle'),
+    body: t('ext.mcp.deleteContent', { name: srv.name }),
+    confirmBtn: { content: t('ext.mcp.delete'), theme: 'danger' },
+    cancelBtn: t('ext.cancel'),
     onConfirm: async () => {
       try {
         const result = await mcpApi.deleteMcpServer(srv.slug)
         if (result.success) {
-          MessagePlugin.success(t('knowledgeList.extensions.mcp.deleted'))
+          MessagePlugin.success(t('ext.mcp.deleted'))
           router.push(knowledgeBasesLocation('mcp'))
         } else {
-          MessagePlugin.error(t('knowledgeList.extensions.mcp.deleteFailed'))
+          MessagePlugin.error(t('ext.mcp.deleteFailed'))
         }
       } catch {
-        MessagePlugin.error(t('knowledgeList.extensions.mcp.deleteFailed'))
+        MessagePlugin.error(t('ext.mcp.deleteFailed'))
       } finally {
         dialog.hide()
       }

@@ -209,9 +209,9 @@ def normalize_skill_share_config(
         return {"version": 2, "read_scope": BUILTIN_SKILL_SHARE_CONFIG.copy(), "manage_scope": None}
 
     default_scope = {
-        "access_level": "user",
+        "access_level": "global",
         "department_ids": [],
-        "user_uids": [operator_uid],
+        "user_uids": [],
     }
     return normalize_permission_config(
         share_config or {"version": 2, "read_scope": default_scope, "manage_scope": None},
@@ -1105,7 +1105,6 @@ def _build_default_share_payload(operator: User) -> dict[str, Any]:
     default_share_config = normalize_skill_share_config(
         None,
         operator_uid=operator.uid,
-        allowed_access_levels=set(get_allowed_skill_access_levels(operator)),
     )
     return {
         "default_share_config": default_share_config,

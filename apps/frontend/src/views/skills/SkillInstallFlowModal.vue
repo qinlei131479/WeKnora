@@ -23,7 +23,7 @@
         </div>
       </header>
 
-      <ol class="install-flow-steps" :aria-label="t('knowledgeList.extensions.skills.install.stepsAria')">
+      <ol class="install-flow-steps" :aria-label="t('ext.skills.install.stepsAria')">
         <li
           v-for="(label, index) in stepLabels"
           :key="label"
@@ -43,10 +43,10 @@
           <slot v-if="flow?.kind === 'remote'" name="selection" />
           <template v-else>
             <div class="selection-toolbar">
-              <span>{{ t('knowledgeList.extensions.skills.install.pickToLoad') }}</span>
+              <span>{{ t('ext.skills.install.pickToLoad') }}</span>
               <div>
-                <t-button variant="text" size="small" @click="selectAllAvailable">{{ t('knowledgeList.extensions.skills.selectAll') }}</t-button>
-                <t-button variant="text" size="small" @click="selectedSlugs = []">{{ t('knowledgeList.extensions.skills.clear') }}</t-button>
+                <t-button variant="text" size="small" @click="selectAllAvailable">{{ t('ext.skills.selectAll') }}</t-button>
+                <t-button variant="text" size="small" @click="selectedSlugs = []">{{ t('ext.skills.clear') }}</t-button>
               </div>
             </div>
             <div class="flow-item-list selection-list">
@@ -65,7 +65,7 @@
                   <strong>{{ skill.name }}</strong>
                   <small>{{ skill.description || skill.slug }}</small>
                 </span>
-                <span v-if="isInstalled(skill.slug)" class="status-badge neutral">{{ t('knowledgeList.extensions.skills.install.installed') }}</span>
+                <span v-if="isInstalled(skill.slug)" class="status-badge neutral">{{ t('ext.skills.install.installed') }}</span>
               </label>
             </div>
           </template>
@@ -80,14 +80,14 @@
             <strong>
               {{
                 flowError
-                  ? t('knowledgeList.extensions.skills.install.loadFailed')
-                  : t('knowledgeList.extensions.skills.install.loadingCount', { count: progressItems.length })
+                  ? t('ext.skills.install.loadFailed')
+                  : t('ext.skills.install.loadingCount', { count: progressItems.length })
               }}
             </strong>
             <span>
               {{
                 flowError ||
-                t('knowledgeList.extensions.skills.install.loadingHint', { count: loadingSourceCount })
+                t('ext.skills.install.loadingHint', { count: loadingSourceCount })
               }}
             </span>
           </div>
@@ -95,8 +95,8 @@
 
         <section v-else-if="phase === 'reviewing'" class="flow-section">
           <div class="review-heading">
-            <strong>{{ t('knowledgeList.extensions.skills.install.confirmTitle') }}</strong>
-            <span>{{ t('knowledgeList.extensions.skills.install.confirmHint', { count: readyItems.length }) }}</span>
+            <strong>{{ t('ext.skills.install.confirmTitle') }}</strong>
+            <span>{{ t('ext.skills.install.confirmHint', { count: readyItems.length }) }}</span>
           </div>
           <div class="review-list">
             <div
@@ -107,13 +107,13 @@
             >
               <span class="review-title">
                 <strong>{{ item.name || item.slug }}</strong>
-                <small>{{ item.description || item.error || t('knowledgeList.extensions.noDescription') }}</small>
+                <small>{{ item.description || item.error || t('ext.noDescription') }}</small>
               </span>
-              <span v-if="item.success === false" class="status-badge error">{{ t('knowledgeList.extensions.skills.install.parseFailed') }}</span>
+              <span v-if="item.success === false" class="status-badge error">{{ t('ext.skills.install.parseFailed') }}</span>
               <button
                 type="button"
                 class="review-remove-button"
-                :aria-label="t('knowledgeList.extensions.skills.install.removeAria', { name: item.name || item.slug })"
+                :aria-label="t('ext.skills.install.removeAria', { name: item.name || item.slug })"
                 @click="removeReviewItem(item)"
               >
                 <XIcon :size="15" />
@@ -128,7 +128,7 @@
             </div>
           </div>
           <div class="install-target-section">
-            <h3>{{ t('knowledgeList.extensions.skills.install.installPlace') }}</h3>
+            <h3>{{ t('ext.skills.install.installPlace') }}</h3>
             <div class="install-target-options">
               <button
                 type="button"
@@ -137,8 +137,8 @@
                 :aria-pressed="installTarget === 'personal'"
                 @click="installTarget = 'personal'"
               >
-                <span class="install-target-title">{{ t('knowledgeList.extensions.skills.install.personalTitle') }} <b>{{ t('knowledgeList.extensions.skills.install.recommended') }}</b></span>
-                <span>{{ t('knowledgeList.extensions.skills.install.personalDesc') }}</span>
+                <span class="install-target-title">{{ t('ext.skills.install.personalTitle') }}</span>
+                <span>{{ t('ext.skills.install.personalDesc') }}</span>
               </button>
               <button
                 v-if="userStore.isAdmin"
@@ -148,16 +148,16 @@
                 :aria-pressed="installTarget === 'shared'"
                 @click="installTarget = 'shared'"
               >
-                <span class="install-target-title">{{ t('knowledgeList.extensions.skills.install.sharedTitle') }}</span>
-                <span>{{ t('knowledgeList.extensions.skills.install.sharedDesc') }}</span>
+                <span class="install-target-title">{{ t('ext.skills.install.sharedTitle') }} <b>{{ t('ext.skills.install.recommended') }}</b></span>
+                <span>{{ t('ext.skills.install.sharedDesc') }}</span>
               </button>
             </div>
             <div v-if="installTarget === 'personal'" class="personal-install-note">
-              {{ t('knowledgeList.extensions.skills.install.personalNote') }}
+              {{ t('ext.skills.install.personalNote') }}
             </div>
           </div>
           <div v-if="installTarget === 'shared'" class="share-config-section">
-            <h3>{{ t('knowledgeList.extensions.skills.install.scopeTitle') }}</h3>
+            <h3>{{ t('ext.skills.install.scopeTitle') }}</h3>
             <ShareConfigForm
               ref="shareConfigFormRef"
               v-model="shareConfig"
@@ -172,8 +172,8 @@
             <div class="loading-state-icon">
               <LoaderCircle :size="20" class="spin" />
             </div>
-            <strong>{{ t('knowledgeList.extensions.skills.install.installingCount', { count: installItems.length }) }}</strong>
-            <span>{{ t('knowledgeList.extensions.skills.install.installingTo', { target: installTargetLabel }) }}</span>
+            <strong>{{ t('ext.skills.install.installingCount', { count: installItems.length }) }}</strong>
+            <span>{{ t('ext.skills.install.installingTo', { target: installTargetLabel }) }}</span>
           </div>
         </section>
 
@@ -181,7 +181,7 @@
           <div class="result-heading">
             <strong>{{ resultTitle }}</strong>
             <span
-              >{{ t('knowledgeList.extensions.skills.install.resultCount', { success: successfulInstallCount, fail: failedInstallItems.length }) }}</span
+              >{{ t('ext.skills.install.resultCount', { success: successfulInstallCount, fail: failedInstallItems.length }) }}</span
             >
           </div>
           <StatusItemList :items="installItems" />
@@ -195,29 +195,29 @@
           <span class="footer-summary">{{ footerSummary }}</span>
           <div class="footer-actions">
             <template v-if="phase === 'selecting'">
-              <t-button variant="outline" @click="handleClose">{{ t('knowledgeList.extensions.skills.install.cancel') }}</t-button>
+              <t-button variant="outline" @click="handleClose">{{ t('ext.skills.install.cancel') }}</t-button>
               <t-button theme="primary" :disabled="selectedSlugs.length === 0" @click="prepareSuite">
-                {{ t('knowledgeList.extensions.skills.install.loadSelected') }}
+                {{ t('ext.skills.install.loadSelected') }}
               </t-button>
             </template>
             <template v-else-if="phase === 'preparing'">
-              <t-button v-if="flowError" @click="handleClose">{{ t('knowledgeList.extensions.skills.install.close') }}</t-button>
-              <t-button v-else loading disabled>{{ t('knowledgeList.extensions.skills.install.loading') }}</t-button>
+              <t-button v-if="flowError" @click="handleClose">{{ t('ext.skills.install.close') }}</t-button>
+              <t-button v-else loading disabled>{{ t('ext.skills.install.loading') }}</t-button>
             </template>
             <template v-else-if="phase === 'reviewing'">
-              <t-button variant="outline" @click="handleClose">{{ t('knowledgeList.extensions.skills.install.cancel') }}</t-button>
+              <t-button variant="outline" @click="handleClose">{{ t('ext.skills.install.cancel') }}</t-button>
               <t-button theme="primary" :disabled="readyItems.length === 0" @click="installDrafts">
-                {{ t('knowledgeList.extensions.skills.install.confirmInstall', { count: readyItems.length, target: installTargetLabel }) }}
+                {{ t('ext.skills.install.confirmInstall', { count: readyItems.length, target: installTargetLabel }) }}
               </t-button>
             </template>
             <template v-else-if="phase === 'installing'">
-              <t-button theme="primary" loading disabled>{{ t('knowledgeList.extensions.skills.install.installing') }}</t-button>
+              <t-button theme="primary" loading disabled>{{ t('ext.skills.install.installing') }}</t-button>
             </template>
             <template v-else>
               <t-button v-if="failedInstallItems.length" @click="retryFailedItems">
-                {{ t('knowledgeList.extensions.skills.install.retryFailed') }}
+                {{ t('ext.skills.install.retryFailed') }}
               </t-button>
-              <t-button theme="primary" @click="finishFlow">{{ t('knowledgeList.extensions.skills.install.finish') }}</t-button>
+              <t-button theme="primary" @click="finishFlow">{{ t('ext.skills.install.finish') }}</t-button>
             </template>
           </div>
         </template>
@@ -251,10 +251,10 @@ const { t } = useI18n()
 const userStore = useUserStore()
 
 const stepLabels = computed(() => [
-  t('knowledgeList.extensions.skills.install.stepSelect'),
-  t('knowledgeList.extensions.skills.install.stepLoad'),
-  t('knowledgeList.extensions.skills.install.stepPlace'),
-  t('knowledgeList.extensions.skills.install.stepDone')
+  t('ext.skills.install.stepSelect'),
+  t('ext.skills.install.stepLoad'),
+  t('ext.skills.install.stepPlace'),
+  t('ext.skills.install.stepDone')
 ])
 const phase = ref('selecting')
 const selectedSlugs = ref([])
@@ -264,10 +264,11 @@ const reviewItems = ref([])
 const installItems = ref([])
 const shareConfig = ref({
   version: 2,
-  read_scope: { access_level: 'user', department_ids: [], user_uids: [] },
+  read_scope: { access_level: 'global', department_ids: [], user_uids: [] },
   manage_scope: null
 })
-const installTarget = ref('personal')
+const defaultInstallTarget = () => (userStore.isAdmin ? 'shared' : 'personal')
+const installTarget = ref(defaultInstallTarget())
 const allowedAccessLevels = ref(['user'])
 const flowError = ref('')
 const shareConfigFormRef = ref(null)
@@ -284,10 +285,10 @@ const StatusItemList = defineComponent({
     }
     const labelFor = (status) =>
       ({
-        waiting: translate('knowledgeList.extensions.skills.install.waiting'),
-        active: translate('knowledgeList.extensions.skills.install.active'),
-        success: translate('knowledgeList.extensions.skills.install.success'),
-        failed: translate('knowledgeList.extensions.skills.install.failed')
+        waiting: translate('ext.skills.install.waiting'),
+        active: translate('ext.skills.install.active'),
+        success: translate('ext.skills.install.success'),
+        failed: translate('ext.skills.install.failed')
       })[status] || status
     return () =>
       h(
@@ -329,15 +330,15 @@ const shareScopeLabel = computed(() => {
   const scope = shareConfig.value.read_scope || shareConfig.value.manage_scope || shareConfig.value
   return (
     {
-      global: t('knowledgeList.extensions.skills.install.scopeGlobal'),
-      department: t('knowledgeList.extensions.skills.install.scopeDept'),
-      user: t('knowledgeList.extensions.skills.install.scopeUser')
-    }[scope.access_level] || t('knowledgeList.extensions.skills.install.scopeUser')
+      global: t('ext.skills.install.scopeGlobal'),
+      department: t('ext.skills.install.scopeDept'),
+      user: t('ext.skills.install.scopeUser')
+    }[scope.access_level] || t('ext.skills.install.scopeUser')
   )
 })
 const installTargetLabel = computed(() =>
   installTarget.value === 'personal'
-    ? t('knowledgeList.extensions.skills.install.personalWorkspace')
+    ? t('ext.skills.install.personalWorkspace')
     : shareScopeLabel.value
 )
 const failedInstallItems = computed(() =>
@@ -347,37 +348,37 @@ const successfulInstallCount = computed(
   () => installItems.value.filter((item) => item.status === 'success').length
 )
 const resultTitle = computed(() => {
-  if (!failedInstallItems.value.length) return t('knowledgeList.extensions.skills.install.allDone')
-  if (successfulInstallCount.value) return t('knowledgeList.extensions.skills.install.partialDone')
-  return t('knowledgeList.extensions.skills.install.allFailed')
+  if (!failedInstallItems.value.length) return t('ext.skills.install.allDone')
+  if (successfulInstallCount.value) return t('ext.skills.install.partialDone')
+  return t('ext.skills.install.allFailed')
 })
 const modalTitle = computed(() =>
   props.flow?.kind === 'suite'
-    ? t('knowledgeList.extensions.skills.install.installNamed', { name: props.flow.suite.name })
-    : props.flow?.title || t('knowledgeList.extensions.skills.install.installSkill')
+    ? t('ext.skills.install.installNamed', { name: props.flow.suite.name })
+    : props.flow?.title || t('ext.skills.install.installSkill')
 )
 const modalDescription = computed(() => {
   if (props.flow?.kind === 'suite')
     return `${props.flow.suite.provider} · ${props.flow.suite.description}`
-  return props.flow?.description || t('knowledgeList.extensions.skills.install.defaultDesc')
+  return props.flow?.description || t('ext.skills.install.defaultDesc')
 })
 const footerSummary = computed(() => {
   if (phase.value === 'selecting') {
-    return t('knowledgeList.extensions.skills.install.willLoad', { count: selectedSlugs.value.length })
+    return t('ext.skills.install.willLoad', { count: selectedSlugs.value.length })
   }
   if (phase.value === 'preparing') {
     return flowError.value
-      ? t('knowledgeList.extensions.skills.install.cleanedDrafts')
-      : t('knowledgeList.extensions.skills.install.finishingLoad')
+      ? t('ext.skills.install.cleanedDrafts')
+      : t('ext.skills.install.finishingLoad')
   }
   if (phase.value === 'reviewing') {
-    return t('knowledgeList.extensions.skills.install.readySummary', {
+    return t('ext.skills.install.readySummary', {
       count: readyItems.value.length,
       target: installTargetLabel.value
     })
   }
-  if (phase.value === 'installing') return t('knowledgeList.extensions.skills.install.noRollback')
-  return t('knowledgeList.extensions.skills.install.resultCount', {
+  if (phase.value === 'installing') return t('ext.skills.install.noRollback')
+  return t('ext.skills.install.resultCount', {
     success: successfulInstallCount.value,
     fail: failedInstallItems.value.length
   })
@@ -453,14 +454,14 @@ const prepareRequests = async (requests) => {
       })
       if (result?.data?.draft_id) drafts.value.push(result.data)
     }
-    if (!drafts.value.length) throw new Error(t('knowledgeList.extensions.skills.install.noInstallable'))
+    if (!drafts.value.length) throw new Error(t('ext.skills.install.noInstallable'))
 
     openReview(drafts.value)
   } catch (error) {
     await discardDrafts()
     flowError.value = error?.response
-      ? t('knowledgeList.extensions.skills.install.loadSkillFailed')
-      : error.message || t('knowledgeList.extensions.skills.install.loadSkillFailed')
+      ? t('ext.skills.install.loadSkillFailed')
+      : error.message || t('ext.skills.install.loadSkillFailed')
   }
 }
 
@@ -491,7 +492,7 @@ const installDrafts = async () => {
   if (installTarget.value === 'shared') {
     const validation = shareConfigFormRef.value?.validate?.()
     if (validation && !validation.valid) {
-      flowError.value = validation.message || t('knowledgeList.extensions.skills.install.needScope')
+      flowError.value = validation.message || t('ext.skills.install.needScope')
       return
     }
   }
@@ -524,8 +525,8 @@ const installDrafts = async () => {
   } catch (error) {
     await discardDrafts()
     flowError.value = error?.response
-      ? t('knowledgeList.extensions.skills.install.installFailed')
-      : error.message || t('knowledgeList.extensions.skills.install.installFailed')
+      ? t('ext.skills.install.installFailed')
+      : error.message || t('ext.skills.install.installFailed')
     installItems.value
       .filter((item) => item.status === 'waiting')
       .forEach((item) => Object.assign(item, { status: 'failed', error: flowError.value }))
@@ -577,7 +578,7 @@ const retryFailedItems = () => {
   })
   const requests = [...requestsBySource].map(([source, skills]) => ({ source, skills }))
   if (!requests.length) {
-    flowError.value = t('knowledgeList.extensions.skills.install.reuploadFailed')
+    flowError.value = t('ext.skills.install.reuploadFailed')
     return
   }
   prepareRequests(requests)
@@ -599,7 +600,7 @@ watch(
     drafts.value = []
     reviewItems.value = []
     installItems.value = []
-    installTarget.value = 'personal'
+    installTarget.value = defaultInstallTarget()
 
     if (props.flow.kind === 'suite') {
       phase.value = 'selecting'

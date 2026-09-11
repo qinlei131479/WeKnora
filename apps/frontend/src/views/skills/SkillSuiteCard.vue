@@ -10,7 +10,7 @@
 
     <p class="suite-card-description">{{ suite.description }}</p>
 
-    <div class="suite-card-members" :aria-label="t('knowledgeList.extensions.skills.suite.membersAria')">
+    <div class="suite-card-members" :aria-label="t('ext.skills.suite.membersAria')">
       <t-tag v-for="skill in visibleSkills" :key="skill.slug" size="small" variant="light-outline" class="wk-chip">
         {{ skill.name }}
       </t-tag>
@@ -22,8 +22,8 @@
       <span class="suite-card-action">
         {{
           installedCount === suite.skills.length
-            ? t('knowledgeList.extensions.skills.suite.viewSuite')
-            : t('knowledgeList.extensions.skills.suite.viewAndInstall')
+            ? t('ext.skills.suite.viewSuite')
+            : t('ext.skills.suite.viewAndInstall')
         }}
         <ChevronRight :size="15" />
       </span>
@@ -58,15 +58,15 @@ const hiddenCount = computed(() =>
 )
 const statusText = computed(() => {
   if (installedCount.value === props.suite.skills.length) {
-    return t('knowledgeList.extensions.skills.suite.allInstalled')
+    return t('ext.skills.suite.allInstalled')
   }
   if (installedCount.value > 0) {
-    return t('knowledgeList.extensions.skills.suite.partialInstalled', {
+    return t('ext.skills.suite.partialInstalled', {
       installed: installedCount.value,
       total: props.suite.skills.length
     })
   }
-  return t('knowledgeList.extensions.skills.suite.installable', {
+  return t('ext.skills.suite.installable', {
     count: props.suite.skills.length
   })
 })

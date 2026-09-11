@@ -272,9 +272,19 @@ async def test_runtime_access_still_excludes_disabled_shared_skill(monkeypatch: 
     assert await svc.list_accessible_skills(None, _user("root", role="user")) == []
 
 
+@pytest.mark.parametrize(
+    ("role", "allowed_access_levels"),
+    [
+        ("user", ["user"]),
+        ("admin", ["global", "department", "user"]),
+    ],
+)
 @pytest.mark.asyncio
-async def test_normal_user_skill_upload_draft_defaults_to_personal_read_scope(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+async def test_skill_upload_draft_defaults_to_global_share_config(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    role: str,
+    allowed_access_levels: list[str],
 ):
     monkeypatch.setattr(svc.sys_config, "save_dir", str(tmp_path))
 
@@ -291,15 +301,59 @@ async def test_normal_user_skill_upload_draft_defaults_to_personal_read_scope(
         None,
         filename="SKILL.md",
         file_bytes=b"---\nname: demo\ndescription: demo skill\n---\n# Demo\n",
-        operator=_user("normal-user", role="user"),
+        operator=_user("operator", role=role),
     )
 
     assert draft["default_share_config"] == {
         "version": 2,
-        "read_scope": {"access_level": "user", "department_ids": [], "user_uids": ["normal-user"]},
+        "read_scope": {"access_level": "global", "department_ids": [], "user_uids": []},
         "manage_scope": None,
     }
-    assert draft["allowed_access_levels"] == ["user"]
+    assert draft["allowed_access_levels"] == allowed_access_levels
+
+
+@pytest.mark.asyncio
+async def test_confirm_skill_install_draft_defaults_share_config_to_global(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setattr(svc.sys_config, "save_dir", str(tmp_path))
+
+    class FakeRepo:
+        created_payload: dict | None = None
+
+        def __init__(self, _db):
+            pass
+
+        async def exists_slug(self, _slug: str) -> bool:
+            return False
+
+        async def create(self, **kwargs) -> Skill:
+            self.__class__.created_payload = kwargs
+            return Skill(**kwargs, updated_by=kwargs["created_by"])
+
+    FakeRepo.created_payload = None
+    monkeypatch.setattr(svc, "SkillRepository", FakeRepo)
+    operator = _user("root")
+    draft = await svc.prepare_skill_upload(
+        None,
+        filename="SKILL.md",
+        file_bytes=b"---\nname: demo\ndescription: demo skill\n---\n# Demo\n",
+        operator=operator,
+    )
+
+    results = await svc.confirm_skill_install_draft(
+        None,
+        draft_id=draft["draft_id"],
+        share_config=None,
+        operator=operator,
+    )
+
+    assert results[0]["success"] is True
+    assert FakeRepo.created_payload["share_config"] == {
+        "version": 2,
+        "read_scope": {"access_level": "global", "department_ids": [], "user_uids": []},
+        "manage_scope": None,
+    }
 
 
 @pytest.mark.parametrize(

@@ -78,9 +78,8 @@ const HIDDEN_MENU_PATHS = new Set([
 //   'harness/dashboard',
 ])
 
-/** 知识库页右侧 surface 在 hide 模式下要藏的值 */
-const HIDDEN_KB_SURFACES = new Set([
-  'runtime', // P4：下线 yuxi 知识库管理面，只留 WeKnora 入口
+/** 知识库页右侧 surface 在 hide 模式下要藏的值（runtime 管理面已删除，不再作为藏岛开关） */
+const HIDDEN_KB_SURFACES = new Set<string>([
   // 'skills',
   // 'tools',
   // 'mcp',
@@ -226,24 +225,21 @@ export function isHiddenKbSurface(surface: string): boolean {
   return readHide() && HIDDEN_KB_SURFACES.has(surface)
 }
 
-/** P4：隐藏 yuxi 知识库管理（列表 / 工作区树 / Extension 详情） */
+/** yuxi 知识库管理面已删除，入口恒为 WeKnora KB */
 export function shouldHideYuxiKnowledgeAdmin(): boolean {
-  return isHiddenKbSurface('runtime')
+  return true
 }
 
 export function isWeKnoraKbId(kbId: string | undefined | null): boolean {
   return WEKNORA_KB_ID_RE.test(String(kbId || '').trim())
 }
 
-/** 跳转知识库列表；被隐藏的 surface 不带 query */
+/** 跳转知识库列表；runtime 管理面已删除，恒回平台 KB */
 export function knowledgeBasesLocation(surface?: string): { path: string; query?: Record<string, string> } {
   if (surface === 'skills' || surface === 'tools' || surface === 'mcp') {
     return { path: `/platform/${surface}` }
   }
-  if (!surface || surface === 'platform' || isHiddenKbSurface(surface)) {
-    return { path: '/platform/knowledge-bases' }
-  }
-  return { path: '/platform/knowledge-bases', query: { surface } }
+  return { path: '/platform/knowledge-bases' }
 }
 
 /** WeKnora 知识库详情；旧 yuxi kb_* 没有对应页，回到列表避免白屏 */

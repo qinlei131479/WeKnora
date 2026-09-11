@@ -8,7 +8,7 @@
             @click="isBatchDeleteMode = true"
             :disabled="loading || importing || filteredDeletableSkills.length === 0"
           >
-            {{ t('knowledgeList.extensions.skills.batchManage') }}
+            {{ t('ext.skills.batchManage') }}
           </t-button>
           <t-button
             variant="outline"
@@ -16,7 +16,7 @@
             :disabled="loading || importing"
           >
             <template #icon><t-icon name="cloud-download" /></template>
-            {{ t('knowledgeList.extensions.skills.remoteInstall') }}
+            {{ t('ext.skills.remoteInstall') }}
           </t-button>
           <t-button
             theme="primary"
@@ -25,22 +25,22 @@
             @click="skillFileInput?.click()"
           >
             <template #icon><t-icon name="upload" /></template>
-            {{ t('knowledgeList.extensions.skills.upload') }}
+            {{ t('ext.skills.upload') }}
           </t-button>
         </template>
         <template v-else>
-          <t-button size="small" variant="text" @click="handleBatchSelectAll">{{ t('knowledgeList.extensions.skills.selectAll') }}</t-button>
-          <t-button size="small" variant="text" @click="handleBatchSelectInvert">{{ t('knowledgeList.extensions.skills.invert') }}</t-button>
-          <t-button size="small" variant="text" @click="handleBatchSelectNone">{{ t('knowledgeList.extensions.skills.clear') }}</t-button>
+          <t-button size="small" variant="text" @click="handleBatchSelectAll">{{ t('ext.skills.selectAll') }}</t-button>
+          <t-button size="small" variant="text" @click="handleBatchSelectInvert">{{ t('ext.skills.invert') }}</t-button>
+          <t-button size="small" variant="text" @click="handleBatchSelectNone">{{ t('ext.skills.clear') }}</t-button>
           <t-button
             theme="danger"
             :disabled="selectedCardSlugs.length === 0"
             :loading="loading"
             @click="handleBatchDelete"
           >
-            {{ t('knowledgeList.extensions.skills.batchDelete', { count: selectedCardSlugs.length }) }}
+            {{ t('ext.skills.batchDelete', { count: selectedCardSlugs.length }) }}
           </t-button>
-          <t-button variant="outline" :disabled="loading" @click="exitBatchDeleteMode">{{ t('knowledgeList.extensions.skills.exitManage') }}</t-button>
+          <t-button variant="outline" :disabled="loading" @click="exitBatchDeleteMode">{{ t('ext.skills.exitManage') }}</t-button>
         </template>
       </div>
     </Teleport>
@@ -54,7 +54,7 @@
       @change="onSkillFileChange"
     />
 
-    <PageShoulder :search-placeholder="t('knowledgeList.extensions.skills.searchPlaceholder')" v-model:search="searchQuery" />
+    <PageShoulder :search-placeholder="t('ext.skills.searchPlaceholder')" v-model:search="searchQuery" />
 
     <div
       v-if="visibleSkillGroups.length === 0"
@@ -65,13 +65,13 @@
           <WandSparkles :size="22" />
         </div>
         <div class="skill-empty-title">
-          {{ searchQuery ? t('knowledgeList.extensions.skills.emptySearchTitle') : t('knowledgeList.extensions.skills.emptyTitle') }}
+          {{ searchQuery ? t('ext.skills.emptySearchTitle') : t('ext.skills.emptyTitle') }}
         </div>
         <div class="skill-empty-desc">
           {{
             searchQuery
-              ? t('knowledgeList.extensions.skills.emptySearchDesc')
-              : t('knowledgeList.extensions.skills.emptyDesc')
+              ? t('ext.skills.emptySearchDesc')
+              : t('ext.skills.emptyDesc')
           }}
         </div>
       </div>
@@ -124,7 +124,7 @@
                 layout="kb"
                 :title="formatExtensionCardTitle(skill.name)"
                 :subtitle="skill.slug"
-                :description="skill.description || t('knowledgeList.extensions.noDescription')"
+                :description="skill.description || t('ext.noDescription')"
                 :tags="skillCardTags(skill)"
                 :default-icon="getSkillIcon(skill.slug)"
                 @click="handleCardClick(skill)"
@@ -137,7 +137,7 @@
                     class="skill-enabled-action"
                     :class="{ enabled: skill.enabled !== false }"
                     :disabled="!canManageSkill(skill) || isSkillToggling(skill.slug)"
-                    :aria-label="skill.enabled === false ? t('knowledgeList.extensions.skills.enable') : t('knowledgeList.extensions.skills.disable')"
+                    :aria-label="skill.enabled === false ? t('ext.skills.enable') : t('ext.skills.disable')"
                     @click.stop="handleToggleSkillEnabled(skill)"
                   >
                     <Plus v-if="skill.enabled === false" :size="15" class="action-icon" />
@@ -170,14 +170,14 @@
         <div class="remote-install-panel">
           <t-tabs v-model="activeTab" class="install-tabs">
             <!-- Tab 1: 按仓库拉取 -->
-            <t-tab-panel value="repo" :label="t('knowledgeList.extensions.skills.pullTab')">
+            <t-tab-panel value="repo" :label="t('ext.skills.pullTab')">
               <div class="tab-content-wrapper">
                 <t-form layout="vertical" class="remote-install-form">
                   <div class="repo-input-row">
                     <div class="repo-input-field">
                       <t-input
                         v-model="remoteInstallForm.source"
-                        :placeholder="t('knowledgeList.extensions.skills.repoPlaceholder')"
+                        :placeholder="t('ext.skills.repoPlaceholder')"
                       >
                         <template #suffix>
                           <t-dropdown
@@ -186,7 +186,7 @@
                             :popup-props="{ overlayClassName: 'history-dropdown-menu' }"
                           >
                             <div class="history-trigger-wrapper">
-                              <t-tooltip :content="t('knowledgeList.extensions.skills.repoHistory')">
+                              <t-tooltip :content="t('ext.skills.repoHistory')">
                                 <History
                                   :size="14"
                                   class="history-icon-trigger"
@@ -197,7 +197,7 @@
                             <template #dropdown>
                             <t-dropdown-menu>
                               <t-dropdown-item v-if="repoHistory.length === 0" disabled>
-                                <span class="history-empty-text">{{ t('knowledgeList.extensions.skills.noHistory') }}</span>
+                                <span class="history-empty-text">{{ t('ext.skills.noHistory') }}</span>
                               </t-dropdown-item>
                               <template v-else>
                                 <t-dropdown-item
@@ -226,7 +226,7 @@
                                 >
                                   <div class="clear-history-btn-content">
                                     <Trash2 :size="12" class="clear-icon" />
-                                    <span>{{ t('knowledgeList.extensions.skills.clearHistory') }}</span>
+                                    <span>{{ t('ext.skills.clearHistory') }}</span>
                                   </div>
                                 </t-dropdown-item>
                               </template>
@@ -241,19 +241,19 @@
                       :loading="listingRemoteSkills"
                       @click="handleListRemoteSkills"
                     >
-                      {{ t('knowledgeList.extensions.skills.pullSkills') }}
+                      {{ t('ext.skills.pullSkills') }}
                     </t-button>
                   </div>
                   <div class="repo-hint-text">
-                    {{ t('knowledgeList.extensions.skills.repoHintBefore') }}
+                    {{ t('ext.skills.repoHintBefore') }}
                     <a href="https://skills.sh/" target="_blank" rel="noopener noreferrer"
                       >skills.sh</a
                     >
-                    {{ t('knowledgeList.extensions.skills.repoHintAfterLink') }}
+                    {{ t('ext.skills.repoHintAfterLink') }}
                     <a href="https://modelscope.cn/skills" target="_blank" rel="noopener noreferrer">{{
-                      t('knowledgeList.extensions.skills.repoHintMarket')
+                      t('ext.skills.repoHintMarket')
                     }}</a>
-                    {{ t('knowledgeList.extensions.skills.repoHintAfterMarket') }}
+                    {{ t('ext.skills.repoHintAfterMarket') }}
                   </div>
 
                   <!-- 仓库技能多选列表 -->
@@ -262,7 +262,7 @@
                       <div class="single-remote-skill-card">
                         <div class="single-remote-skill-name">{{ singleRepoSkill.name }}</div>
                         <div class="single-remote-skill-meta">
-                          {{ singleRepoSkill.description || t('knowledgeList.extensions.noDescription') }}
+                          {{ singleRepoSkill.description || t('ext.noDescription') }}
                         </div>
                       </div>
                     </template>
@@ -270,18 +270,18 @@
                       <div class="list-operations-bar">
                         <div class="op-buttons">
                           <t-button size="small" variant="text" @click="handleRepoSelectAll"
-                            >{{ t('knowledgeList.extensions.skills.selectAll') }}</t-button
+                            >{{ t('ext.skills.selectAll') }}</t-button
                           >
                           <t-button size="small" variant="text" @click="handleRepoSelectInvert"
-                            >{{ t('knowledgeList.extensions.skills.invert') }}</t-button
+                            >{{ t('ext.skills.invert') }}</t-button
                           >
                           <t-button size="small" variant="text" @click="handleRepoSelectNone"
-                            >{{ t('knowledgeList.extensions.skills.clear') }}</t-button
+                            >{{ t('ext.skills.clear') }}</t-button
                           >
                         </div>
                         <t-input
                           v-model="repoFilterKeyword"
-                          :placeholder="t('knowledgeList.extensions.skills.localFilter')"
+                          :placeholder="t('ext.skills.localFilter')"
                           size="small"
                           style="width: 180px"
                           clearable
@@ -310,7 +310,7 @@
                             <div class="remote-skill-row-content">
                               <span class="skill-item-name">{{ item.name }}</span>
                               <span class="skill-item-desc">{{
-                                item.description || t('knowledgeList.extensions.noDescription')
+                                item.description || t('ext.noDescription')
                               }}</span>
                             </div>
                           </div>
@@ -323,14 +323,14 @@
             </t-tab-panel>
 
             <!-- Tab 2: 全局搜索发现 -->
-            <t-tab-panel value="search" :label="t('knowledgeList.extensions.skills.searchTab')">
+            <t-tab-panel value="search" :label="t('ext.skills.searchTab')">
               <div class="tab-content-wrapper">
                 <t-form layout="vertical" class="remote-install-form">
                   <div class="repo-input-row">
                     <div class="repo-input-field">
                       <t-input
                         v-model="searchKeyword"
-                        :placeholder="t('knowledgeList.extensions.skills.searchPlaceholderRemote')"
+                        :placeholder="t('ext.skills.searchPlaceholderRemote')"
                         @enter="handleSearchRemoteSkills"
                       />
                     </div>
@@ -339,11 +339,11 @@
                       :loading="searchingRemoteSkills"
                       @click="handleSearchRemoteSkills"
                     >
-                      {{ t('knowledgeList.extensions.skills.findSkills') }}
+                      {{ t('ext.skills.findSkills') }}
                     </t-button>
                   </div>
                   <div class="repo-hint-text">
-                    {{ t('knowledgeList.extensions.skills.searchHint') }}
+                    {{ t('ext.skills.searchHint') }}
                   </div>
 
                   <!-- 搜索结果列表 -->
@@ -367,13 +367,13 @@
                       <div class="list-operations-bar">
                         <div class="op-buttons">
                           <t-button size="small" variant="text" @click="handleSearchSelectAll"
-                            >{{ t('knowledgeList.extensions.skills.selectAll') }}</t-button
+                            >{{ t('ext.skills.selectAll') }}</t-button
                           >
                           <t-button size="small" variant="text" @click="handleSearchSelectInvert"
-                            >{{ t('knowledgeList.extensions.skills.invert') }}</t-button
+                            >{{ t('ext.skills.invert') }}</t-button
                           >
                           <t-button size="small" variant="text" @click="handleSearchSelectNone"
-                            >{{ t('knowledgeList.extensions.skills.clear') }}</t-button
+                            >{{ t('ext.skills.clear') }}</t-button
                           >
                         </div>
                       </div>
@@ -419,7 +419,7 @@
       <template #selection-footer>
         <span class="modal-footer-summary">{{ remoteSelectionSummary }}</span>
         <div class="modal-footer-buttons">
-          <t-button variant="outline" @click="closeInstallFlow">{{ t('knowledgeList.extensions.cancel') }}</t-button>
+          <t-button variant="outline" @click="closeInstallFlow">{{ t('ext.cancel') }}</t-button>
           <t-button
             theme="primary"
             :disabled="
@@ -429,7 +429,7 @@
             "
             @click="startInstallRemoteSkills"
           >
-            {{ t('knowledgeList.extensions.skills.confirmParse') }}
+            {{ t('ext.skills.confirmParse') }}
           </t-button>
         </div>
       </template>
@@ -469,30 +469,30 @@ const emit = defineEmits(['loading-change'])
 const recommendedSuites = computed(() => [
   {
     id: 'anthropic-documents',
-    name: t('knowledgeList.extensions.skills.suite.anthropicName'),
+    name: t('ext.skills.suite.anthropicName'),
     provider: 'Anthropic',
-    description: t('knowledgeList.extensions.skills.suite.anthropicDesc'),
+    description: t('ext.skills.suite.anthropicDesc'),
     source: 'anthropics/skills',
     skills: [
       {
         slug: 'pdf',
         name: 'PDF',
-        description: t('knowledgeList.extensions.skills.suite.pdfDesc')
+        description: t('ext.skills.suite.pdfDesc')
       },
       {
         slug: 'docx',
         name: 'Docs',
-        description: t('knowledgeList.extensions.skills.suite.docxDesc')
+        description: t('ext.skills.suite.docxDesc')
       },
       {
         slug: 'xlsx',
         name: 'XLSX',
-        description: t('knowledgeList.extensions.skills.suite.xlsxDesc')
+        description: t('ext.skills.suite.xlsxDesc')
       },
       {
         slug: 'pptx',
         name: 'PPTX',
-        description: t('knowledgeList.extensions.skills.suite.pptxDesc')
+        description: t('ext.skills.suite.pptxDesc')
       }
     ]
   }
@@ -533,15 +533,15 @@ const hasSingleSearchedSkill = computed(() => searchedSkills.value.length === 1)
 const singleSearchedSkill = computed(() => searchedSkills.value[0] || null)
 const remoteSelectionSummary = computed(() => {
   if (activeTab.value === 'repo') {
-    if (!remoteSkillOptions.value.length) return t('knowledgeList.extensions.skills.pickRepoFirst')
-    return t('knowledgeList.extensions.skills.repoSelected', {
+    if (!remoteSkillOptions.value.length) return t('ext.skills.pickRepoFirst')
+    return t('ext.skills.repoSelected', {
       selected: selectedRepoSkills.value.length,
       total: remoteSkillOptions.value.length
     })
   }
 
-  if (!searchedSkills.value.length) return t('knowledgeList.extensions.skills.typeKeywordFirst')
-  return t('knowledgeList.extensions.skills.searchSelected', {
+  if (!searchedSkills.value.length) return t('ext.skills.typeKeywordFirst')
+  return t('ext.skills.searchSelected', {
     selected: selectedSearchSkills.value.length,
     total: searchedSkills.value.length
   })
@@ -594,24 +594,24 @@ const filteredInstalledSkills = computed(() => installedSkillCards.value.filter(
 const skillGroups = computed(() => [
   {
     key: 'recommended',
-    title: t('knowledgeList.extensions.skills.groupRecommended'),
+    title: t('ext.skills.groupRecommended'),
     skills: isBatchDeleteMode.value ? [] : recommendedSuiteCards.value.filter(matchesSearch)
   },
   {
     key: 'personal',
-    title: t('knowledgeList.extensions.skills.groupPersonal'),
+    title: t('ext.skills.groupPersonal'),
     skills: isBatchDeleteMode.value
       ? []
       : filteredInstalledSkills.value.filter((skill) => skill.sourceScope === 'personal')
   },
   {
     key: 'builtin',
-    title: t('knowledgeList.extensions.skills.groupBuiltin'),
+    title: t('ext.skills.groupBuiltin'),
     skills: filteredInstalledSkills.value.filter((skill) => skill.sourceType === 'builtin')
   },
   {
     key: 'uploaded',
-    title: t('knowledgeList.extensions.skills.groupShared'),
+    title: t('ext.skills.groupShared'),
     skills: filteredInstalledSkills.value.filter(
       (skill) => skill.sourceType !== 'builtin' && skill.sourceScope !== 'personal'
     )
@@ -725,13 +725,13 @@ const getSkillShareLabel = (skill) => getShareConfigLabel(skill?.share_config, t
 const skillCardTags = (skill) => {
   if (skill.sourceScope === 'personal') {
     return [
-      { name: t('knowledgeList.extensions.skills.sourcePersonal'), color: 'gray' },
-      ...(skill.overrides_shared ? [{ name: t('knowledgeList.extensions.skills.tagOverrideShared'), color: 'orange' }] : [])
+      { name: t('ext.skills.sourcePersonal'), color: 'gray' },
+      ...(skill.overrides_shared ? [{ name: t('ext.skills.tagOverrideShared'), color: 'orange' }] : [])
     ]
   }
   return [
     { name: getSkillShareLabel(skill), color: 'gray' },
-    ...(skill.shadowed_by_personal ? [{ name: t('knowledgeList.extensions.skills.tagShadowed'), color: 'orange' }] : [])
+    ...(skill.shadowed_by_personal ? [{ name: t('ext.skills.tagShadowed'), color: 'orange' }] : [])
   ]
 }
 
@@ -789,9 +789,9 @@ const handleToggleSkillEnabled = async (skill) => {
         ? { ...updatedSkill, sourceType: updatedSkill.source_type || 'upload' }
         : { ...previewSkill.value, enabled }
     }
-    MessagePlugin.success(t(enabled ? 'knowledgeList.extensions.skills.enabled' : 'knowledgeList.extensions.skills.disabledOk'))
+    MessagePlugin.success(t(enabled ? 'ext.skills.enabled' : 'ext.skills.disabledOk'))
   } catch (error) {
-    MessagePlugin.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.toggleFailed'))
+    MessagePlugin.error(error?.response?.data?.detail || error.message || t('ext.skills.toggleFailed'))
   } finally {
     togglingSkillSlugs.value = togglingSkillSlugs.value.filter((slug) => slug !== skill.slug)
   }
@@ -833,10 +833,10 @@ const handleBatchDelete = () => {
   const dialog = DialogPlugin.confirm({
     attach: 'body',
     placement: 'center',
-    header: t('knowledgeList.extensions.skills.batchDeleteTitle'),
-    body: t('knowledgeList.extensions.skills.batchDeleteContent', { count: deletableSlugs.length }),
-    confirmBtn: { content: t('knowledgeList.extensions.skills.batchDeleteOk'), theme: 'danger' },
-    cancelBtn: t('knowledgeList.extensions.cancel'),
+    header: t('ext.skills.batchDeleteTitle'),
+    body: t('ext.skills.batchDeleteContent', { count: deletableSlugs.length }),
+    confirmBtn: { content: t('ext.skills.batchDeleteOk'), theme: 'danger' },
+    cancelBtn: t('ext.cancel'),
     onConfirm: async () => {
       try {
         loading.value = true
@@ -846,15 +846,15 @@ const handleBatchDelete = () => {
         const failList = results.filter((r) => !r.success)
 
         if (failList.length === 0) {
-          MessagePlugin.success(t('knowledgeList.extensions.skills.batchDeleteSuccess', { count: successList.length }))
+          MessagePlugin.success(t('ext.skills.batchDeleteSuccess', { count: successList.length }))
         } else {
-          MessagePlugin.warning(t('knowledgeList.extensions.skills.batchDeletePartial', { success: successList.length, fail: failList.length }))
+          MessagePlugin.warning(t('ext.skills.batchDeletePartial', { success: successList.length, fail: failList.length }))
         }
 
         exitBatchDeleteMode()
         await fetchSkills()
       } catch (error) {
-        MessagePlugin.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.batchDeleteFailed'))
+        MessagePlugin.error(error?.response?.data?.detail || error.message || t('ext.skills.batchDeleteFailed'))
       } finally {
         loading.value = false
         dialog.hide()
@@ -869,7 +869,7 @@ const fetchSkills = async ({ refreshPersonal = false } = {}) => {
     const skillResult = await skillApi.listSkillCards({ refreshPersonal })
     skills.value = skillResult?.data || []
   } catch {
-    MessagePlugin.error(t('knowledgeList.extensions.skills.loadFailed'))
+    MessagePlugin.error(t('ext.skills.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -878,7 +878,7 @@ const fetchSkills = async ({ refreshPersonal = false } = {}) => {
 const beforeSkillUpload = (file) => {
   const lower = file.name.toLowerCase()
   if (!lower.endsWith('.zip') && lower !== 'skill.md') {
-    MessagePlugin.error(t('knowledgeList.extensions.skills.uploadType'))
+    MessagePlugin.error(t('ext.skills.uploadType'))
     return false
   }
   return true
@@ -922,8 +922,8 @@ const openRecommendedSuite = (suite) => {
 }
 
 const handleInstallFlowCompleted = async ({ success, failed }) => {
-  if (failed === 0) MessagePlugin.success(t('knowledgeList.extensions.skills.addedCount', { count: success }))
-  else MessagePlugin.warning(t('knowledgeList.extensions.skills.installPartial', { success, failed }))
+  if (failed === 0) MessagePlugin.success(t('ext.skills.addedCount', { count: success }))
+  else MessagePlugin.warning(t('ext.skills.installPartial', { success, failed }))
   await fetchSkills()
 }
 
@@ -933,13 +933,13 @@ const handleImportUpload = async ({ file, onSuccess, onError }) => {
     const result = await skillApi.prepareSkillUpload(file)
     openInstallFlow({
       kind: 'draft',
-      title: t('knowledgeList.extensions.skills.installFile', { name: file.name }),
-      description: t('knowledgeList.extensions.skills.installFileDesc'),
+      title: t('ext.skills.installFile', { name: file.name }),
+      description: t('ext.skills.installFileDesc'),
       drafts: [result?.data]
     })
     onSuccess?.(result)
   } catch (e) {
-    MessagePlugin.error(e?.response?.data?.detail || e.message || t('knowledgeList.extensions.skills.parseFailed'))
+    MessagePlugin.error(e?.response?.data?.detail || e.message || t('ext.skills.parseFailed'))
     onError?.(e)
   } finally {
     importing.value = false
@@ -950,8 +950,8 @@ const handleOpenRemoteInstall = () => {
   resetRemoteSelection()
   openInstallFlow({
     kind: 'remote',
-    title: t('knowledgeList.extensions.skills.remoteTitle'),
-    description: t('knowledgeList.extensions.skills.remoteDesc')
+    title: t('ext.skills.remoteTitle'),
+    description: t('ext.skills.remoteDesc')
   })
 }
 
@@ -969,7 +969,7 @@ const rememberRemoteSource = (source) => {
 const handleListRemoteSkills = async () => {
   const source = remoteInstallForm.source.trim()
   if (!source) {
-    MessagePlugin.warning(t('knowledgeList.extensions.skills.remoteNeedSource'))
+    MessagePlugin.warning(t('ext.skills.remoteNeedSource'))
     return
   }
   listingRemoteSkills.value = true
@@ -979,18 +979,18 @@ const handleListRemoteSkills = async () => {
     selectedRepoSkills.value =
       remoteSkillOptions.value.length === 1 ? [remoteSkillOptions.value[0].name] : []
     if (!remoteSkillOptions.value.length) {
-      MessagePlugin.warning(t('knowledgeList.extensions.skills.remoteNone'))
+      MessagePlugin.warning(t('ext.skills.remoteNone'))
       return
     }
     if (remoteSkillOptions.value.length === 1) {
-      MessagePlugin.success(t('knowledgeList.extensions.skills.remoteFoundOne'))
+      MessagePlugin.success(t('ext.skills.remoteFoundOne'))
     } else {
-      MessagePlugin.success(t('knowledgeList.extensions.skills.remoteFoundMany', { count: remoteSkillOptions.value.length }))
+      MessagePlugin.success(t('ext.skills.remoteFoundMany', { count: remoteSkillOptions.value.length }))
     }
 
     rememberRemoteSource(source)
   } catch (error) {
-    MessagePlugin.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.remoteFetchFailed'))
+    MessagePlugin.error(error?.response?.data?.detail || error.message || t('ext.skills.remoteFetchFailed'))
   } finally {
     listingRemoteSkills.value = false
   }
@@ -1015,7 +1015,7 @@ const deleteHistoryItem = (item) => {
 const clearAllHistory = () => {
   repoHistory.value = []
   localStorage.removeItem('yuxi_remote_repo_history')
-  MessagePlugin.success(t('knowledgeList.extensions.skills.historyCleared'))
+  MessagePlugin.success(t('ext.skills.historyCleared'))
 }
 
 const handleSelectHistory = ({ key }) => {
@@ -1029,7 +1029,7 @@ const handleSelectHistory = ({ key }) => {
 const handleSearchRemoteSkills = async () => {
   const query = searchKeyword.value.trim()
   if (!query) {
-    MessagePlugin.warning(t('knowledgeList.extensions.skills.needKeyword'))
+    MessagePlugin.warning(t('ext.skills.needKeyword'))
     return
   }
   searchingRemoteSkills.value = true
@@ -1038,14 +1038,14 @@ const handleSearchRemoteSkills = async () => {
     searchedSkills.value = result?.data || []
     selectedSearchSkills.value = searchedSkills.value.length === 1 ? [...searchedSkills.value] : []
     if (!searchedSkills.value.length) {
-      MessagePlugin.warning(t('knowledgeList.extensions.skills.searchNone'))
+      MessagePlugin.warning(t('ext.skills.searchNone'))
     } else if (searchedSkills.value.length === 1) {
-      MessagePlugin.success(t('knowledgeList.extensions.skills.searchFoundOne'))
+      MessagePlugin.success(t('ext.skills.searchFoundOne'))
     } else {
-      MessagePlugin.success(t('knowledgeList.extensions.skills.searchFoundMany', { count: searchedSkills.value.length }))
+      MessagePlugin.success(t('ext.skills.searchFoundMany', { count: searchedSkills.value.length }))
     }
   } catch (error) {
-    MessagePlugin.error(error?.response?.data?.detail || error.message || t('knowledgeList.extensions.skills.searchFailed'))
+    MessagePlugin.error(error?.response?.data?.detail || error.message || t('ext.skills.searchFailed'))
   } finally {
     searchingRemoteSkills.value = false
   }
@@ -1078,8 +1078,8 @@ const startInstallRemoteSkills = () => {
 
   openInstallFlow({
     kind: 'remote',
-    title: t('knowledgeList.extensions.skills.remoteTitle'),
-    description: t('knowledgeList.extensions.skills.remoteSummary', {
+    title: t('ext.skills.remoteTitle'),
+    description: t('ext.skills.remoteSummary', {
       sources: requests.length,
       count: requests.reduce((total, item) => total + item.skills.length, 0)
     }),

@@ -190,7 +190,7 @@ export const useDatabaseStore = defineStore('database', () => {
         try {
           const data = await databaseApi.deleteDatabase(kbId.value)
           message.success(data.message || '删除成功')
-          router.push(knowledgeBasesLocation('runtime'))
+          router.push(knowledgeBasesLocation())
         } catch (error) {
           console.error(error)
           message.error(error.message || '删除失败')
