@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { threadApi } from '@/api/chat-work/agent'
-import { handleChatError } from '@harness/utils/errorHandler'
+import { handleChatError } from '@/utils/harness/errorHandler'
 
 const PAGE_SIZE = 100
 

@@ -105,19 +105,19 @@
 
           <t-tab-panel value="settings">
             <template #label>
-              <span class="tab-title"><Settings :size="14" />{{ t('ext.skills.detail.tabScope') }}</span>
+              <span class="tab-title"><Settings :size="14" />{{ t('ext.skills.detail.enabledTitle') }}</span>
             </template>
             <div class="config-view">
               <div class="config-header">
                 <div class="text">
-                  <h3>{{ t('ext.skills.detail.shareTitle') }}</h3>
-                  <p>{{ t('ext.skills.detail.shareDesc') }}</p>
+                  <h3>{{ t('ext.skills.detail.enabledTitle') }}</h3>
+                  <p>{{ t('ext.skills.detail.enabledDesc') }}</p>
                 </div>
                 <t-button
                   v-if="canManageCurrentSkill"
                   theme="primary"
-                  :loading="savingShareConfig"
-                  @click="saveShareConfig"
+                  :loading="savingSkillSettings"
+                  @click="saveSkillSettings"
                   class="lucide-icon-btn"
                 >
                   <Save :size="14" />
@@ -140,27 +140,6 @@
                   </div>
                 </section>
 
-                <section class="settings-card scope-card">
-                  <div class="settings-card-main">
-                    <div class="settings-card-title">{{ t('ext.skills.detail.scopeTitle') }}</div>
-                    <div class="settings-card-desc">
-                      {{ t('ext.skills.detail.scopeDesc') }}
-                    </div>
-                  </div>
-                  <div v-if="isBuiltinInstalledSkill" class="readonly-scope-hint">
-                    {{ t('ext.skills.detail.builtinScopeHint') }}
-                  </div>
-                  <div v-else-if="isReadOnlySkill" class="readonly-scope-hint">
-                    {{ t('ext.skills.detail.readonlyScopeHint') }}
-                  </div>
-                  <ShareConfigForm
-                    v-else
-                    ref="shareConfigFormRef"
-                    v-model="shareConfigForm"
-                    :auto-select-user-dept="true"
-                    :allowed-access-levels="allowedSkillAccessLevels"
-                  />
-                </section>
               </div>
             </div>
           </t-tab-panel>
@@ -363,9 +342,8 @@ import {
   ChevronDown
 } from 'lucide-vue-next'
 import { skillApi } from '@/api/chat-work/skill'
-import AgentFilePreview from '@harness/components/AgentFilePreview.vue'
-import FileTreeComponent from '@harness/components/FileTreeComponent.vue'
-import ShareConfigForm from '@harness/components/ShareConfigForm.vue'
+import AgentFilePreview from '@/components/harness/AgentFilePreview.vue'
+import FileTreeComponent from '@/components/harness/FileTreeComponent.vue'
 import { knowledgeBasesLocation } from '@/utils/weknoraFeatures'
 
 const { t } = useI18n()
@@ -384,20 +362,13 @@ const fileContent = ref('')
 const savingFile = ref(false)
 const creatingNode = ref(false)
 const savingDependencies = ref(false)
-const savingShareConfig = ref(false)
+const savingSkillSettings = ref(false)
 const activeTab = ref('editor')
 
 const skills = ref([])
 const createModalVisible = ref(false)
 const createForm = reactive({ path: '', isDir: false, content: '' })
-const allowedSkillAccessLevels = ref(['user'])
 const enabledForm = ref(true)
-const shareConfigFormRef = ref(null)
-const shareConfigForm = ref({
-  version: 2,
-  read_scope: { access_level: 'user', department_ids: [], user_uids: [] },
-  manage_scope: null
-})
 const dependencyOptions = reactive({ tools: [], mcps: [], skills: [] })
 const dependencyForm = reactive({
   tool_dependencies: [],
@@ -531,35 +502,8 @@ const goBack = () => {
   router.push(knowledgeBasesLocation('skills'))
 }
 
-const cloneShareConfig = (config) => ({
-  version: 2,
-  read_scope:
-    config?.version === 2
-      ? config.read_scope
-        ? {
-            access_level: config.read_scope.access_level || 'global',
-            department_ids: [...(config.read_scope.department_ids || [])],
-            user_uids: [...(config.read_scope.user_uids || [])]
-          }
-        : null
-      : {
-          access_level: config?.access_level || 'user',
-          department_ids: [...(config?.department_ids || [])],
-          user_uids: [...(config?.user_uids || [])]
-        },
-  manage_scope:
-    config?.version === 2 && config.manage_scope
-      ? {
-          access_level: config.manage_scope.access_level || 'global',
-          department_ids: [...(config.manage_scope.department_ids || [])],
-          user_uids: [...(config.manage_scope.user_uids || [])]
-        }
-      : null
-})
-
-const syncShareConfigFromSkill = (skillRecord) => {
+const syncSkillEnabledFromRecord = (skillRecord) => {
   enabledForm.value = skillRecord?.enabled !== false
-  shareConfigForm.value = cloneShareConfig(skillRecord?.share_config)
 }
 
 const fetchSkillDetail = async () => {
@@ -567,13 +511,12 @@ const fetchSkillDetail = async () => {
   try {
     const skillResult = await skillApi.listSkills()
     skills.value = skillResult?.data || []
-    allowedSkillAccessLevels.value = skillResult?.allowed_access_levels || ['user']
 
     const found = skills.value.find((s) => s.slug === slug.value)
     if (found) {
       currentSkill.value = found
       syncDependencyFormFromSkill(found)
-      syncShareConfigFromSkill(found)
+      syncSkillEnabledFromRecord(found)
       await reloadTree()
       await loadSkillFile(found.slug)
     }
@@ -774,31 +717,21 @@ const handleCreateNode = async () => {
   }
 }
 
-const saveShareConfig = async () => {
+const saveSkillSettings = async () => {
   if (!currentSkill.value || !isInstalledSkill.value || !canManageCurrentSkill.value) return
-  if (!isBuiltinInstalledSkill.value) {
-    const validation = shareConfigFormRef.value?.validate?.()
-    if (validation && !validation.valid) {
-      MessagePlugin.warning(validation.message || t('ext.skills.detail.needScope'))
-      return
-    }
-  }
 
-  savingShareConfig.value = true
+  savingSkillSettings.value = true
   try {
-    if (!isBuiltinInstalledSkill.value) {
-      await skillApi.updateSkillShareConfig(currentSkill.value.slug, shareConfigForm.value)
-    }
     const result = await skillApi.updateSkillEnabled(currentSkill.value.slug, enabledForm.value)
     if (result?.data) {
       currentSkill.value = result.data
-      syncShareConfigFromSkill(result.data)
+      syncSkillEnabledFromRecord(result.data)
     }
     MessagePlugin.success(t('ext.skills.detail.settingsSaved'))
   } catch {
     MessagePlugin.error(t('ext.skills.detail.settingsSaveFailed'))
   } finally {
-    savingShareConfig.value = false
+    savingSkillSettings.value = false
   }
 }
 
@@ -831,8 +764,8 @@ onMounted(() => {
 </script>
 
 <style lang="less" scoped>
-@import '@harness/assets/css/extensions.less';
-@import '@harness/assets/css/extension-detail.less';
+@import '@/assets/harness/css/extensions.less';
+@import '@/assets/harness/css/extension-detail.less';
 
 .skill-detail {
   .detail-content-wrapper {

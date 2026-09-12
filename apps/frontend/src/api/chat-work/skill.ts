@@ -3,6 +3,13 @@ import { apiDelete, apiGet, apiPost, apiPut } from './base'
 const BASE_URL = '/api/system/skills'
 const USER_BASE_URL = '/api/skills'
 
+// 技能不再支持资源分享/权限配置，统一按租户全局共享安装。
+export const TENANT_GLOBAL_SHARE_CONFIG = {
+  version: 2,
+  read_scope: { access_level: 'global', department_ids: [], user_uids: [] },
+  manage_scope: null,
+}
+
 export const listSkills = () => apiGet(BASE_URL)
 
 export const listSkillCards = ({ refreshPersonal = false } = {}) => {
@@ -24,14 +31,11 @@ export const prepareRemoteSkills = (payload: unknown) => apiPost(`${USER_BASE_UR
 
 export const searchRemoteSkills = (query: string) => apiPost(`${USER_BASE_URL}/remote/search`, { query })
 
-export const confirmSkillInstallDraft = (draftId: string, shareConfig: unknown, slugs: unknown) =>
+export const confirmSkillInstallDraft = (draftId: string, slugs: unknown) =>
   apiPost(`${USER_BASE_URL}/install-drafts/${encodeURIComponent(draftId)}/confirm`, {
-    share_config: shareConfig,
+    share_config: TENANT_GLOBAL_SHARE_CONFIG,
     slugs,
   })
-
-export const confirmPersonalSkillInstallDraft = (draftId: string, slugs: unknown) =>
-  apiPost(`${USER_BASE_URL}/personal/install-drafts/${encodeURIComponent(draftId)}/confirm`, { slugs })
 
 export const discardSkillInstallDraft = (draftId: string) =>
   apiDelete(`${USER_BASE_URL}/install-drafts/${encodeURIComponent(draftId)}`)
@@ -58,9 +62,6 @@ export const updateSkillFile = (slug: string, payload: unknown) =>
 export const updateSkillDependencies = (slug: string, payload: unknown) =>
   apiPut(`${BASE_URL}/${encodeURIComponent(slug)}/dependencies`, payload)
 
-export const updateSkillShareConfig = (slug: string, shareConfig: unknown) =>
-  apiPut(`${BASE_URL}/${encodeURIComponent(slug)}/share-config`, { share_config: shareConfig })
-
 export const updateSkillEnabled = (slug: string, enabled: boolean) =>
   apiPut(`${BASE_URL}/${encodeURIComponent(slug)}/enabled`, { enabled })
 
@@ -86,7 +87,6 @@ export const skillApi = {
   prepareRemoteSkills,
   searchRemoteSkills,
   confirmSkillInstallDraft,
-  confirmPersonalSkillInstallDraft,
   discardSkillInstallDraft,
   getSkillDependencyOptions,
   getSkillTree,
@@ -95,7 +95,6 @@ export const skillApi = {
   createSkillFile,
   updateSkillFile,
   updateSkillDependencies,
-  updateSkillShareConfig,
   updateSkillEnabled,
   deleteSkillFile,
   exportSkill,

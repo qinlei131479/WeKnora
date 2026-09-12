@@ -41,9 +41,9 @@
 import { computed } from 'vue'
 import { FileSearch } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
-import AgentFilePreview from '@harness/components/AgentFilePreview.vue'
+import AgentFilePreview from '@/components/harness/AgentFilePreview.vue'
 import WorkspaceKnowledgePreview from './WorkspaceKnowledgePreview.vue'
-import { resolveKnowledgePreviewFileType } from '@harness/utils/file_preview'
+import { resolveKnowledgePreviewFileType } from '@/utils/harness/file_preview'
 
 const { t } = useI18n()
 

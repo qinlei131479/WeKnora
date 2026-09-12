@@ -5,7 +5,7 @@ import i18n from '@/i18n'
 import { getApiBaseUrl } from './api-base';
 import { localizeBackendErrorMessage } from './backendErrorMessage';
 
-const t = (key: string, params?: Record<string, string>) => i18n.global.t(key, params)
+const t = (key: string, params: Record<string, string> = {}) => i18n.global.t(key, params)
 
 function localizeApiErrorMessage(message: string | undefined): string | undefined {
   return localizeBackendErrorMessage(message, t)

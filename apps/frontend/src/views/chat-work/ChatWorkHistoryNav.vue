@@ -43,7 +43,7 @@ import { storeToRefs } from 'pinia'
 import { Icon as TIcon } from 'tdesign-icons-vue-next'
 import SessionSidebarRow from '@/components/SessionSidebarRow.vue'
 import { useChatThreadsStore } from '@/stores/chatWork'
-import { parseToShanghai } from '@harness/utils/time'
+import { parseToShanghai } from '@/utils/harness/time'
 
 const { t } = useI18n()
 const router = useRouter()

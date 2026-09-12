@@ -170,11 +170,11 @@ import { useI18n } from 'vue-i18n'
 import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
 import { Check, Minus, Plus } from 'lucide-vue-next'
 import { mcpApi } from '@/api/chat-work/mcp'
-import ExtensionCardGrid from '@harness/components/extensions/ExtensionCardGrid.vue'
-import InfoCard from '@harness/components/shared/InfoCard.vue'
-import PageShoulder from '@harness/components/shared/PageShoulder.vue'
+import ExtensionCardGrid from '@/components/harness/extensions/ExtensionCardGrid.vue'
+import InfoCard from '@/components/harness/shared/InfoCard.vue'
+import PageShoulder from '@/components/harness/shared/PageShoulder.vue'
 import McpFormModal from './McpFormModal.vue'
-import { formatExtensionCardTitle } from '@harness/utils/extensionDisplayName'
+import { formatExtensionCardTitle } from '@/utils/harness/extensionDisplayName'
 
 const { t } = useI18n()
 
@@ -329,7 +329,7 @@ defineExpose({ fetchServers, loading })
 </script>
 
 <style lang="less" scoped>
-@import '@harness/assets/css/extensions.less';
+@import '@/assets/harness/css/extensions.less';
 
 .info-card-emoji-icon {
   font-size: 18px;

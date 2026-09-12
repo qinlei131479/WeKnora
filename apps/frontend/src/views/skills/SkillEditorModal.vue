@@ -109,8 +109,8 @@
                   <div v-show="currentSection === 'enable'" class="config-view">
                     <div class="config-header">
                       <div class="text">
-                        <h3>{{ t('ext.skills.detail.shareTitle') }}</h3>
-                        <p>{{ t('ext.skills.detail.shareDesc') }}</p>
+                        <h3>{{ t('ext.skills.detail.enabledTitle') }}</h3>
+                        <p>{{ t('ext.skills.detail.enabledDesc') }}</p>
                       </div>
                     </div>
                     <div class="settings-stack">
@@ -131,27 +131,6 @@
                           </span>
                           <t-switch v-model="enabledForm" :disabled="!canManage" />
                         </div>
-                      </section>
-                      <section class="settings-card scope-card">
-                        <div class="settings-card-main">
-                          <div class="settings-card-title">{{ t('ext.skills.detail.scopeTitle') }}</div>
-                          <div class="settings-card-desc">
-                            {{ t('ext.skills.detail.scopeDesc') }}
-                          </div>
-                        </div>
-                        <div v-if="isBuiltin" class="readonly-scope-hint">
-                          {{ t('ext.skills.detail.builtinScopeHint') }}
-                        </div>
-                        <div v-else-if="!canManage" class="readonly-scope-hint">
-                          {{ t('ext.skills.detail.readonlyScopeHint') }}
-                        </div>
-                        <ShareConfigForm
-                          v-else
-                          ref="shareConfigFormRef"
-                          v-model="shareConfigForm"
-                          :auto-select-user-dept="true"
-                          :allowed-access-levels="allowedSkillAccessLevels"
-                        />
                       </section>
                     </div>
                   </div>
@@ -308,8 +287,8 @@
                   <t-button
                     v-if="showSaveAndClose"
                     theme="primary"
-                    :loading="savingShareConfig"
-                    @click="saveShareConfigAndClose"
+                    :loading="savingSkillSettings"
+                    @click="saveSkillSettingsAndClose"
                   >
                     {{ t('ext.skills.form.saveAndClose') }}
                   </t-button>
@@ -371,10 +350,9 @@ import { useI18n } from 'vue-i18n'
 import { DialogPlugin, MessagePlugin } from 'tdesign-vue-next'
 import { ChevronDown, FilePlus, FolderPlus, Plus, X } from 'lucide-vue-next'
 import { skillApi } from '@/api/chat-work/skill'
-import AgentFilePreview from '@harness/components/AgentFilePreview.vue'
-import FileTreeComponent from '@harness/components/FileTreeComponent.vue'
-import ShareConfigForm from '@harness/components/ShareConfigForm.vue'
-import { getPreviewTypeByPath } from '@harness/utils/file_preview'
+import AgentFilePreview from '@/components/harness/AgentFilePreview.vue'
+import FileTreeComponent from '@/components/harness/FileTreeComponent.vue'
+import { getPreviewTypeByPath } from '@/utils/harness/file_preview'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -394,20 +372,13 @@ const detailLoading = ref(false)
 const exporting = ref(false)
 const deleting = ref(false)
 const savingFile = ref(false)
-const savingShareConfig = ref(false)
+const savingSkillSettings = ref(false)
 const savingDependencies = ref(false)
 const creatingNode = ref(false)
 const createModalVisible = ref(false)
 const createForm = reactive({ path: '', isDir: false, content: '' })
 const currentSkill = ref(null)
 const enabledForm = ref(true)
-const shareConfigFormRef = ref(null)
-const allowedSkillAccessLevels = ref(['user'])
-const shareConfigForm = ref({
-  version: 2,
-  read_scope: { access_level: 'user', department_ids: [], user_uids: [] },
-  manage_scope: null
-})
 const treeData = ref([])
 const selectedTreeKeys = ref([])
 const expandedKeys = ref([])
@@ -521,35 +492,8 @@ const toggleDependency = (group, value, checked) => {
 }
 const removeDependency = (group, value) => toggleDependency(group, value, false)
 
-const cloneShareConfig = (config) => ({
-  version: 2,
-  read_scope:
-    config?.version === 2
-      ? config.read_scope
-        ? {
-            access_level: config.read_scope.access_level || 'global',
-            department_ids: [...(config.read_scope.department_ids || [])],
-            user_uids: [...(config.read_scope.user_uids || [])]
-          }
-        : null
-      : {
-          access_level: config?.access_level || 'user',
-          department_ids: [...(config?.department_ids || [])],
-          user_uids: [...(config?.user_uids || [])]
-        },
-  manage_scope:
-    config?.version === 2 && config.manage_scope
-      ? {
-          access_level: config.manage_scope.access_level || 'global',
-          department_ids: [...(config.manage_scope.department_ids || [])],
-          user_uids: [...(config.manage_scope.user_uids || [])]
-        }
-      : null
-})
-
-const syncShareConfigFromSkill = (skillRecord) => {
+const syncSkillEnabledFromRecord = (skillRecord) => {
   enabledForm.value = skillRecord?.enabled !== false
-  shareConfigForm.value = cloneShareConfig(skillRecord?.share_config)
 }
 
 const syncDependencyFormFromSkill = (skillRecord) => {
@@ -688,25 +632,15 @@ const handleCreateNode = async () => {
   }
 }
 
-const saveShareConfig = async () => {
+const saveSkillSettings = async () => {
   const slug = currentSkill.value?.slug || props.skill?.slug
   if (!slug || !canManage.value) return false
-  if (!isBuiltin.value) {
-    const validation = shareConfigFormRef.value?.validate?.()
-    if (validation && !validation.valid) {
-      MessagePlugin.warning(validation.message || t('ext.skills.detail.needScope'))
-      return false
-    }
-  }
-  savingShareConfig.value = true
+  savingSkillSettings.value = true
   try {
-    if (!isBuiltin.value) {
-      await skillApi.updateSkillShareConfig(slug, shareConfigForm.value)
-    }
     const result = await skillApi.updateSkillEnabled(slug, enabledForm.value)
     if (result?.data) {
       currentSkill.value = result.data
-      syncShareConfigFromSkill(result.data)
+      syncSkillEnabledFromRecord(result.data)
     }
     MessagePlugin.success(t('ext.skills.detail.settingsSaved'))
     emit('submitted')
@@ -715,12 +649,12 @@ const saveShareConfig = async () => {
     MessagePlugin.error(t('ext.skills.detail.settingsSaveFailed'))
     return false
   } finally {
-    savingShareConfig.value = false
+    savingSkillSettings.value = false
   }
 }
 
-const saveShareConfigAndClose = async () => {
-  const saved = await saveShareConfig()
+const saveSkillSettingsAndClose = async () => {
+  const saved = await saveSkillSettings()
   if (saved) close()
 }
 
@@ -806,16 +740,15 @@ const loadDetail = async () => {
   currentSkill.value = skill
   resetFileState()
   treeData.value = []
-  syncShareConfigFromSkill(skill)
+  syncSkillEnabledFromRecord(skill)
   syncDependencyFormFromSkill(skill)
   try {
     if (!isPersonal.value) {
       const skillResult = await skillApi.listSkills()
-      allowedSkillAccessLevels.value = skillResult?.allowed_access_levels || ['user']
       const found = (skillResult?.data || []).find((item) => item.slug === skill.slug)
       if (found) {
         currentSkill.value = found
-        syncShareConfigFromSkill(found)
+        syncSkillEnabledFromRecord(found)
         syncDependencyFormFromSkill(found)
       }
       await reloadTree()

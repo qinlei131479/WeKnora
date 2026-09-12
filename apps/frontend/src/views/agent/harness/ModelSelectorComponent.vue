@@ -106,7 +106,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { modelProviderApi } from '@harness/apis/system_api'
+import { modelProviderApi } from '@/api/harness/system_api'
 import { ChevronDown, X } from 'lucide-vue-next'
 import { useUIStore } from '@/stores/ui'
 import { getRootZoom, rectToCssPx, cssViewportSize } from '@/utils/zoom'
@@ -364,7 +364,7 @@ const handleClear = () => {
 </script>
 
 <style lang="less" scoped>
-@import '@harness/assets/css/model-selector-common.less';
+@import '@/assets/harness/css/model-selector-common.less';
 
 .work-model-selector-select {
   width: 100%;

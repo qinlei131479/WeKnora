@@ -272,83 +272,73 @@ const router = createRouter({
           meta: { requiresInit: true, requiresAuth: true, requiresSystemAdmin: true },
         },
         // Phase 1: new product pages mount under views/. /platform/harness/*
-        // remains only as compatibility redirects until F9 removes the tree.
+        // remains only as compatibility redirects; the harness island is gone.
         {
           path: "harness",
-          component: () => import("@harness/HarnessRoot.vue"),
+          redirect: () =>
+            isHiddenMenuPath('harness/workspace') || isHiddenMenuPath('workspace')
+              ? '/platform/creatChat'
+              : '/platform/workspace',
           meta: { requiresInit: true, requiresAuth: true },
-          children: [
-            { path: "", redirect: () => (
-              isHiddenMenuPath('harness/workspace') || isHiddenMenuPath('workspace')
-                ? '/platform/creatChat'
-                : '/platform/workspace'
-            ) },
-            {
-              path: "chat",
-              redirect: (to) => ({ path: "/platform/chat-work", query: to.query }),
-              meta: { requiresInit: true, requiresAuth: true }
-            },
-            {
-              path: "chat/:thread_id",
-              redirect: (to) => ({
-                path: `/platform/chat-work/${to.params.thread_id}`,
-                query: to.query
-              }),
-              meta: { requiresInit: true, requiresAuth: true }
-            },
-            {
-              path: "agents",
-              name: "harnessAgents",
-              redirect: (to) => ({
-                path: "/platform/agents",
-                query: { surface: "work", ...(to.query.tab ? { tab: String(to.query.tab) } : {}) }
-              }),
-              meta: { requiresInit: true, requiresAuth: true }
-            },
-            {
-              path: "workspace",
-              name: "harnessWorkspace",
-              redirect: { path: "/platform/workspace" },
-              meta: { requiresInit: true, requiresAuth: true }
-            },
-            {
-              path: "extensions",
-              component: () => import("@harness/layouts/BlankLayout.vue"),
-              meta: { requiresInit: true, requiresAuth: true },
-              children: [
-                {
-                  path: "",
-                  name: "harnessExtensions",
-                  redirect: (to) => {
-                    const tab = String(to.query.tab || 'skills')
-                    if (tab === 'tools') return { path: '/platform/tools' }
-                    if (tab === 'mcp') return { path: '/platform/mcp' }
-                    if (tab === 'knowledge') return { path: '/platform/knowledge-bases' }
-                    if (tab === 'platform') return { path: '/platform/knowledge-bases' }
-                    return { path: '/platform/skills' }
-                  }
-                },
-                {
-                  path: "mcp/:slug",
-                  name: "harnessExtensionMcp",
-                  redirect: (to) => ({ name: 'mcpDetail', params: { slug: to.params.slug } }),
-                  meta: { requiresInit: true, requiresAuth: true }
-                },
-                {
-                  path: "skill/:slug",
-                  name: "harnessExtensionSkill",
-                  redirect: (to) => ({ name: 'skillDetail', params: { slug: to.params.slug } }),
-                  meta: { requiresInit: true, requiresAuth: true }
-                }
-              ]
-            },
-            {
-              path: "dashboard",
-              name: "harnessDashboard",
-              redirect: { path: "/platform/dashboard" },
-              meta: { requiresInit: true, requiresAuth: true }
-            }
-          ]
+        },
+        {
+          path: "harness/chat",
+          redirect: (to) => ({ path: "/platform/chat-work", query: to.query }),
+          meta: { requiresInit: true, requiresAuth: true },
+        },
+        {
+          path: "harness/chat/:thread_id",
+          redirect: (to) => ({
+            path: `/platform/chat-work/${to.params.thread_id}`,
+            query: to.query,
+          }),
+          meta: { requiresInit: true, requiresAuth: true },
+        },
+        {
+          path: "harness/agents",
+          name: "harnessAgents",
+          redirect: (to) => ({
+            path: "/platform/agents",
+            query: { surface: "work", ...(to.query.tab ? { tab: String(to.query.tab) } : {}) },
+          }),
+          meta: { requiresInit: true, requiresAuth: true },
+        },
+        {
+          path: "harness/workspace",
+          name: "harnessWorkspace",
+          redirect: { path: "/platform/workspace" },
+          meta: { requiresInit: true, requiresAuth: true },
+        },
+        {
+          path: "harness/extensions",
+          name: "harnessExtensions",
+          redirect: (to) => {
+            const tab = String(to.query.tab || 'skills')
+            if (tab === 'tools') return { path: '/platform/tools' }
+            if (tab === 'mcp') return { path: '/platform/mcp' }
+            if (tab === 'knowledge') return { path: '/platform/knowledge-bases' }
+            if (tab === 'platform') return { path: '/platform/knowledge-bases' }
+            return { path: '/platform/skills' }
+          },
+          meta: { requiresInit: true, requiresAuth: true },
+        },
+        {
+          path: "harness/extensions/mcp/:slug",
+          name: "harnessExtensionMcp",
+          redirect: (to) => ({ name: 'mcpDetail', params: { slug: to.params.slug } }),
+          meta: { requiresInit: true, requiresAuth: true },
+        },
+        {
+          path: "harness/extensions/skill/:slug",
+          name: "harnessExtensionSkill",
+          redirect: (to) => ({ name: 'skillDetail', params: { slug: to.params.slug } }),
+          meta: { requiresInit: true, requiresAuth: true },
+        },
+        {
+          path: "harness/dashboard",
+          name: "harnessDashboard",
+          redirect: { path: "/platform/dashboard" },
+          meta: { requiresInit: true, requiresAuth: true },
         },
       ],
     },

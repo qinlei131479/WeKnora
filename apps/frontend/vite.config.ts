@@ -129,7 +129,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
-      "@harness": fileURLToPath(new URL("./src/harness", import.meta.url)),
       "@vue-office/pptx": resolveVueOfficePptxEntry()
     }
   },

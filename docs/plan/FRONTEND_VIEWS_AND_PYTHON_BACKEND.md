@@ -139,7 +139,7 @@ F0 → F1 → … → F9 验收通过
 | 一   | **F6** | Runtime 智能体并进 `views/agent/harness`                         | 完成（已验收）                       |
 | 一   | **F7** | 删除 yuxi 知识库管理面，只留 WeKnora KB（已锁定 **A**）                   | 完成（已手工回归）                   |
 | 一   | **F8** | 工作模式（Runtime）对话 + 侧栏历史去 Ant；平台对话冻结                     | 完成（已手工回归）                     |
-| 一   | **F9** | 删除 `src/harness/`、Ant Design、`/platform/harness` 正式树       | 未开始（按下述逐项流程执行）               |
+| 一   | **F9** | 删除 `src/harness/`、Ant Design、`/platform/harness` 正式树       | 完成（代码迁移；手工回归待补）                |
 | 闸门  | **G1** | 阶段一全量验收，才允许 B0                                             | 未开始                              |
 | 二   | **B0** | 冻结阶段一实际调用的 OpenAPI 对照表                                     | 未开始                              |
 | 二   | **B1** | Model / Initialization                                     | 未开始                              |
@@ -711,6 +711,107 @@ API：`harness/apis/agent_api.js`（含 thread SSE）→ `src/api/runtime/agent.
 - 禁止用复制方式保留新旧两份 harness 实现。
 - 禁止改后端接口、请求 URL、SSE 字段。
 - 禁止把 F9 的迁移、删除、依赖清理压进同一个无法回滚的提交。
+
+#### F9 落地记录（2026-09-12）
+
+实际执行采用「整体搬迁 + 全局 alias 改写」以保证行为不变：harness 子树整体搬入各层的 `harness` 子目录，内部相对导入保持不变，仅跨子树引用统一改为 `@/…`。
+
+| 旧位置 | 新位置 | 文件数 |
+| --- | --- | --- |
+| `src/harness/apis/` | `src/api/harness/` | 10 |
+| `src/harness/assets/` | `src/assets/harness/` | 38 |
+| `src/harness/components/` | `src/components/harness/` | 61 |
+| `src/harness/composables/` | `src/composables/harness/` | 7 |
+| `src/harness/stores/` | `src/stores/harness/` | 8 |
+| `src/harness/utils/` | `src/utils/harness/` | 31 |
+| `src/harness/HarnessRoot.vue`、`HarnessIsland.vue`、`layouts/BlankLayout.vue` | 删除（router 改扁平 redirect） | 3 |
+| 静态不可达代码 | 删除（18 个代码文件） | 18 |
+
+验证结果：
+
+- [x] `rg "@harness" apps/frontend/src` 为零；`src/harness/` 目录不存在。
+- [x] `rg "ant-design-vue" apps/frontend`（排除 `node_modules`/`dist`）为零；`package.json` / `package-lock.json` 已移除 antd。
+- [x] 模板 `<a-*>` 为零；`TodoListTool.vue` 图标改用 lucide。
+- [x] `npm run type-check` 通过（顺带修复 `src/utils/request.ts` 既有类型错误）。
+- [x] `npm run build` 通过。
+- [x] `npm test`：341 通过 / 344，3 个失败均为既有 i18n 文案测试（`knowledgeBase.mindmap*` 缺 ko/ru；租户术语），与本次迁移无关。
+- [ ] 手工回归 F1–F8 全部入口（待补）。
+
+> 命名遗留（不影响验收）：入口样式文件名仍为 `src/assets/harness/css/harness-entry.css`；`views/agent/harness/` 为 F6 既定目录，保留。
+
+#### F9 未引用文件与旧 harness 知识库清理
+
+对迁移后的文件做了「import 图可达性 + 文本引用」双向检查，以下 11 个完全无引用的文件已删除：
+
+| 文件 | 类型 | 说明 |
+| --- | --- | --- |
+| `src/components/harness/TaskCenterDrawer.vue` | Vue 组件 | 任务中心抽屉；唯一挂载点 HarnessIsland 已删除，且 `openDrawer()` 无调用方 |
+| `src/assets/harness/defaults/agent.png` | 图片 | 无引用 |
+| `src/assets/harness/icons/files/folder.svg` | 图标 | 目录图标已改用 TDesign folder，无引用 |
+| `src/assets/harness/icons/files/folder-agent.svg` | 图标 | 无引用 |
+| `src/assets/harness/icons/files/folder-enterprise.svg` | 图标 | 无引用 |
+| `src/assets/harness/icons/files/folder-favorite.svg` | 图标 | 无引用 |
+| `src/assets/harness/icons/files/folder-knowledge.svg` | 图标 | 无引用 |
+| `src/assets/harness/icons/files/folder-personal.svg` | 图标 | 无引用 |
+| `src/assets/harness/icons/files/folder-trash.svg` | 图标 | 无引用 |
+| `src/assets/harness/icons/sidebar_left.svg` | 图标 | 无引用 |
+| `src/assets/harness/icons/sidebar_right.svg` | 图标 | 无引用 |
+
+> 16 个文件类型 SVG（`archive`/`audio`/`cad`/`code`/`file`/`image`/`markdown`/`pdf`/`ppt`/`psd`/`python`/`spreadsheet`/`text`/`video`/`web`/`word`）由 `src/utils/harness/file_icon.js` 通过 `?url` 动态 import，属于**已引用**，保留。
+
+**旧 harness 知识库管理面清理（本批删除）:**
+
+| 文件 | 说明 |
+| --- | --- |
+| `src/stores/harness/database.js` | 旧 yuxi 知识库管理 store（库/文档增删改、解析、入库、分块、任务登记）；`loadDatabases()` 无调用方，`getDatabaseNameById()` 实际恒为空 |
+| `src/stores/harness/tasker.js` | 旧任务中心 store（知识库导入/解析/入库任务轮询） |
+| `src/api/harness/tasker.js` | 旧任务中心 API |
+| `src/api/harness/knowledge_api.js` | 旧 harness 知识库接口（`/harness-api/api/knowledge/...`），整文件删除 |
+
+**知识库 API 已统一改为原生 WeKnora 接口（`@/api/knowledge-base`）：**
+
+| 原 harness 调用 | 新 WeKnora 调用 | 消费方 |
+| --- | --- | --- |
+| `databaseApi.getAccessibleDatabases()` | `listKnowledgeBases()` | `stores/harness/agent.js`（工作模式智能体资源）、`views/workspace/index.vue`（工作区知识库来源） |
+| `documentApi.getDocumentBasicInfo()` | `getKnowledgeDetails()` | `FileDetailModal` 基本信息 |
+| `documentApi.getDocumentContent()` | `getKnowledgeDetailsCon()`（分页拉全量后适配为 `lines`） | `FileDetailModal` 解析/分块视图 |
+| `documentApi.downloadDocument()` | `downKnowledgeDetails()`（Blob） | `FileDetailModal` 下载原文 |
+
+**明确保留（不动当前对话 / 工作模式的知识库能力）:**
+
+- `src/components/harness/ToolCallingResult/tools/*Kb*.vue` 等工作模式知识库工具卡
+- `src/components/harness/sources/KbResultGroupedList.vue`、`KbChunkDetailModal.vue`、`KnowledgeSourceSection.vue`
+- `src/components/harness/FileDetailModal.vue` 及其 `chunkUtils` / `knowledge_file_policy` 依赖（已改接 WeKnora 接口，并补响应适配）
+- 平台对话使用的 `/api/v1` 知识库链路，未做任何改动
+- agent-harness 后端工作模式 KB 工具已经通过 `yuxi.weknora.*` 只读适配 WeKnora，本轮不改后端
+
+**技能 / 工具 / MCP 分享与权限清理（本批）:**
+
+技能、工具、MCP 不再保留资源分享/权限概念，统一按租户全局共享处理；智能体分享保留，不在本次范围。
+
+| 文件 | 调整 |
+| --- | --- |
+| `views/skills/SkillEditorModal.vue` | 移除分享卡片与 `share_config` 保存，仅保留启用/禁用与依赖配置 |
+| `views/skills/detail.vue` | 同上，设置页只保留启用/禁用 |
+| `views/skills/SkillInstallFlowModal.vue` | 移除 personal/shared 安装目标与分享表单，统一全局安装 |
+| `views/skills/SkillCardList.vue` | 移除分享范围标签 |
+| `api/chat-work/skill.ts` | 新增 `TENANT_GLOBAL_SHARE_CONFIG`（`read_scope.access_level=global`）；删除 `updateSkillShareConfig`、`confirmPersonalSkillInstallDraft` |
+
+> 工具 / MCP 本就没有 `share_config`/权限字段，无需改动。
+
+删除文件（7 个）：
+
+- `src/components/harness/ShareConfigForm.vue`
+- `src/utils/harness/shareConfig.js`
+- `src/api/harness/auth_api.js`
+- `src/api/harness/mention_api.js`
+- `src/assets/harness/css/dashboard.css`
+- `src/assets/harness/css/sigma.css`
+- `src/assets/harness/css/shorts.css`
+
+> 数据总览功能保留，但新 `views/dashboard/**` 已无 harness 依赖，因此旧 `dashboard.css` 一并删除。工作区保留，其 harness 依赖（`FileBrowserTable` / `FileTypeIcon` / `AgentFilePreview` / `file_preview` / `file_utils` / `time` / `PageHeader` / `user` store）不删。
+
+清理后复验：harness 文件 133 个，import 可达 116 个，完全无引用 0 个；`npm run type-check`、`npm run build` 通过；`npm test` 341/344（3 个既有 i18n 失败）。
 
 ---
 

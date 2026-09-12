@@ -1,0 +1,1022 @@
+<template>
+  <div
+    class="agent-file-preview"
+    :class="[
+      containerClass,
+      {
+        'is-full-height': fullHeight,
+        'is-borderless': borderless,
+        'has-preview-header': showHeader
+      }
+    ]"
+  >
+    <div v-if="showHeader" class="preview-header">
+      <div class="file-title">
+        <FileTypeIcon v-if="showFileIcon" :name="filePath" :size="16" />
+        <span class="file-path-title">{{ filePath }}</span>
+      </div>
+      <div class="modal-actions">
+        <div v-if="isHtmlFile" class="preview-mode-switch">
+          <button
+            class="preview-mode-btn"
+            :class="{ active: htmlPreviewMode === 'render' }"
+            @click="htmlPreviewMode = 'render'"
+            :title="t('harness.chat.preview')"
+          >
+            <Globe :size="16" />
+          </button>
+          <button
+            class="preview-mode-btn"
+            :class="{ active: htmlPreviewMode === 'source' }"
+            @click="htmlPreviewMode = 'source'"
+            :title="t('harness.chat.source')"
+          >
+            <Code2 :size="16" />
+          </button>
+        </div>
+        <button
+          v-if="showDownload && file"
+          class="modal-action-btn"
+          @click="$emit('download', file)"
+          :title="t('harness.chat.download')"
+        >
+          <Download :size="16" />
+        </button>
+        <button
+          v-if="showFullscreen && file"
+          class="modal-action-btn"
+          @click="openFullscreenPreview"
+          :title="t('harness.chat.fullscreenPreview')"
+        >
+          <Maximize :size="16" />
+        </button>
+        <button
+          v-if="showClose"
+          class="modal-action-btn"
+          @click="$emit('close')"
+          :title="closeTitle"
+          :aria-label="closeTitle"
+        >
+          <component :is="closeIconComponent" :size="16" />
+        </button>
+      </div>
+    </div>
+
+    <div
+      v-if="showInlineHtmlControls && !showHeader && isHtmlFile"
+      class="preview-mode-switch inline-html-preview-switch"
+    >
+      <button
+        class="preview-mode-btn"
+        :class="{ active: htmlPreviewMode === 'render' }"
+        @click="htmlPreviewMode = 'render'"
+        :title="t('harness.chat.preview')"
+      >
+        <Globe :size="16" />
+      </button>
+      <button
+        class="preview-mode-btn"
+        :class="{ active: htmlPreviewMode === 'source' }"
+        @click="htmlPreviewMode = 'source'"
+        :title="t('harness.chat.source')"
+      >
+        <Code2 :size="16" />
+      </button>
+    </div>
+
+    <div v-if="canEdit" class="edit-floating-actions">
+      <button
+        v-if="editMode !== 'edit'"
+        class="edit-floating-btn lucide-icon-btn"
+        @click="editMode = 'edit'"
+        :title="t('harness.chat.edit')"
+        :aria-label="t('harness.chat.edit')"
+      >
+        <FilePen :size="14" :stroke-width="2" />
+      </button>
+      <template v-else>
+        <span v-if="draftChanged" class="edit-status-badge">{{ t('harness.chat.unsaved') }}</span>
+        <button
+          v-if="draftChanged"
+          class="edit-floating-btn edit-floating-btn-primary lucide-icon-btn"
+          :disabled="saving"
+          @click="requestSave"
+          :title="saving ? t('harness.chat.saving') : t('harness.chat.save')"
+          :aria-label="saving ? t('harness.chat.saving') : t('harness.chat.save')"
+        >
+          <Save :size="14" :stroke-width="2" />
+        </button>
+        <button
+          class="edit-floating-btn lucide-icon-btn"
+          :class="{ 'edit-floating-btn-danger': draftChanged }"
+          :disabled="saving"
+          @click="cancelEdit"
+          :title="t('harness.chat.cancel')"
+          :aria-label="t('harness.chat.cancel')"
+        >
+          <X :size="14" :stroke-width="2" />
+        </button>
+      </template>
+    </div>
+
+    <div
+      class="file-content"
+      :class="[
+        contentClass,
+        {
+          'is-editing': canEdit && editMode === 'edit',
+          'is-iframe-preview':
+            file?.previewType === 'pdf' || (isHtmlFile && htmlPreviewMode === 'render')
+        }
+      ]"
+    >
+      <template v-if="canEdit && editMode === 'edit'">
+        <textarea
+          v-model="draftContent"
+          class="file-edit-textarea"
+          :disabled="saving"
+          spellcheck="false"
+        />
+      </template>
+      <template v-else-if="file?.previewType === 'image' && file?.previewUrl">
+        <div class="image-preview-wrapper">
+          <img
+            :src="file.previewUrl"
+            :alt="filePath"
+            class="image-preview is-zoomable"
+            @click="openFullscreenPreview"
+          />
+        </div>
+      </template>
+      <template v-else-if="file?.previewType === 'pdf' && file?.previewUrl">
+        <iframe :src="file.previewUrl" class="pdf-preview" :title="filePath" />
+      </template>
+      <template v-else-if="isHtmlFile && htmlPreviewMode === 'render'">
+        <iframe
+          :key="`embedded-${htmlPreviewRenderKey}`"
+          class="html-preview"
+          :srcdoc="htmlPreviewSrcdoc"
+          :title="filePath"
+          sandbox="allow-scripts"
+        />
+      </template>
+      <template v-else-if="isMarkdown">
+        <MarkdownPreview :content="formatContent(file?.content)" />
+      </template>
+      <template v-else-if="file?.supported === false">
+        <div class="unsupported-preview">
+          {{ file?.message || t('harness.chat.previewUnsupported') }}
+        </div>
+      </template>
+      <template v-else>
+        <pre v-if="Array.isArray(file?.content)" class="file-content-pre">{{
+          formatContent(file.content)
+        }}</pre>
+        <pre
+          v-else-if="isCodePreview && typeof file?.content === 'string'"
+          :class="['file-content-pre', 'code-highlight', codeThemeClass]"
+        ><code class="hljs" v-html="highlightedCodeContent"></code></pre>
+        <pre v-else-if="typeof file?.content === 'string'" class="file-content-pre">{{
+          file.content
+        }}</pre>
+        <pre v-else>{{ JSON.stringify(file, null, 2) }}</pre>
+      </template>
+    </div>
+
+    <t-image-viewer
+      v-if="imagePreviewUrls.length"
+      v-model:visible="fullscreenPreviewVisible"
+      close-on-overlay
+      close-on-esc-keydown
+      :images="imagePreviewUrls"
+      :image-scale="imageViewerScale"
+      @close="closeFullscreenPreview"
+    />
+    <Teleport to="body">
+      <div
+        v-if="fullscreenPreviewVisible && file && !isImagePreview"
+        class="fullscreen-preview-overlay harness-root"
+        :class="{ dark: themeStore.isDark }"
+      >
+        <div class="fullscreen-preview-actions">
+          <div v-if="isHtmlFile" class="preview-mode-switch fullscreen-preview-switch">
+            <button
+              class="preview-mode-btn"
+              :class="{ active: htmlPreviewMode === 'render' }"
+              @click="htmlPreviewMode = 'render'"
+              :title="t('harness.chat.preview')"
+            >
+              <Globe :size="16" />
+            </button>
+            <button
+              class="preview-mode-btn"
+              :class="{ active: htmlPreviewMode === 'source' }"
+              @click="htmlPreviewMode = 'source'"
+              :title="t('harness.chat.source')"
+            >
+              <Code2 :size="16" />
+            </button>
+          </div>
+          <button
+            v-if="showDownload && file"
+            class="modal-action-btn fullscreen-action-btn"
+            @click="$emit('download', file)"
+            :title="t('harness.chat.download')"
+            :aria-label="t('harness.chat.download')"
+          >
+            <Download :size="18" />
+          </button>
+          <button
+            class="modal-action-btn fullscreen-action-btn"
+            @click="closeFullscreenPreview"
+            :title="t('harness.chat.close')"
+            :aria-label="t('harness.chat.close')"
+          >
+            <X :size="18" />
+          </button>
+        </div>
+        <div class="fullscreen-preview-content">
+          <div class="file-content fullscreen-file-content">
+            <template v-if="file?.previewType === 'pdf' && file?.previewUrl">
+              <iframe
+                :src="file.previewUrl"
+                class="pdf-preview fullscreen-embed-preview"
+                :title="filePath"
+              />
+            </template>
+            <template v-else-if="isHtmlFile && htmlPreviewMode === 'render'">
+              <iframe
+                :key="`fullscreen-${htmlPreviewRenderKey}`"
+                class="html-preview fullscreen-embed-preview"
+                :srcdoc="htmlPreviewFullscreenSrcdoc"
+                :title="filePath"
+                sandbox="allow-scripts"
+              />
+            </template>
+            <template v-else-if="isMarkdown">
+              <MarkdownPreview :content="formatContent(file?.content)" />
+            </template>
+            <template v-else-if="file?.supported === false">
+              <div class="unsupported-preview fullscreen-unsupported-preview">
+                {{ file?.message || t('harness.chat.previewUnsupported') }}
+              </div>
+            </template>
+            <template v-else>
+              <pre v-if="Array.isArray(file?.content)" class="file-content-pre">{{
+                formatContent(file.content)
+              }}</pre>
+              <pre
+                v-else-if="isCodePreview && typeof file?.content === 'string'"
+                :class="['file-content-pre', 'code-highlight', codeThemeClass]"
+              ><code class="hljs" v-html="highlightedCodeContent"></code></pre>
+              <pre v-else-if="typeof file?.content === 'string'" class="file-content-pre">{{
+                file.content
+              }}</pre>
+              <pre v-else>{{ JSON.stringify(file, null, 2) }}</pre>
+            </template>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+  </div>
+</template>
+
+<script setup>
+import { computed, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import {
+  Code2,
+  Download,
+  Globe,
+  Maximize,
+  PanelRight,
+  FilePen,
+  Save,
+  X
+} from 'lucide-vue-next'
+import hljs from 'highlight.js/lib/common'
+import MarkdownPreview from '@/components/harness/common/MarkdownPreview.vue'
+import FileTypeIcon from '@/components/harness/common/FileTypeIcon.vue'
+import { useThemeStore } from '@/stores/harness/theme'
+import { escapeHtml } from '@/utils/harness/html'
+import {
+  getCodeLanguageByPath,
+  getPreviewFileExtension,
+  isHtmlPreview,
+  isMarkdownPreview
+} from '@/utils/harness/file_preview'
+
+const EDITABLE_EXTENSIONS = new Set(['.md', '.markdown', '.mdx', '.txt'])
+const HTML_PREVIEW_SCALE = 0.75
+const HTML_PREVIEW_FULLSCREEN_SCALE = 1
+
+const props = defineProps({
+  file: {
+    type: Object,
+    default: null
+  },
+  filePath: {
+    type: String,
+    default: ''
+  },
+  showHeader: {
+    type: Boolean,
+    default: true
+  },
+  showDownload: {
+    type: Boolean,
+    default: true
+  },
+  showClose: {
+    type: Boolean,
+    default: false
+  },
+  showFullscreen: {
+    type: Boolean,
+    default: false
+  },
+  showInlineHtmlControls: {
+    type: Boolean,
+    default: false
+  },
+  closeVariant: {
+    type: String,
+    default: 'close',
+    validator: (value) => ['close', 'collapse-right'].includes(value)
+  },
+  fullHeight: {
+    type: Boolean,
+    default: false
+  },
+  showFileIcon: {
+    type: Boolean,
+    default: true
+  },
+  borderless: {
+    type: Boolean,
+    default: false
+  },
+  editable: {
+    type: Boolean,
+    default: false
+  },
+  editAllText: {
+    type: Boolean,
+    default: false
+  },
+  saving: {
+    type: Boolean,
+    default: false
+  },
+  containerClass: {
+    type: [String, Array, Object],
+    default: ''
+  },
+  contentClass: {
+    type: [String, Array, Object],
+    default: ''
+  }
+})
+
+const emit = defineEmits(['close', 'download', 'save'])
+
+const { t } = useI18n()
+const themeStore = useThemeStore()
+const closeTitle = computed(() =>
+  props.closeVariant === 'collapse-right' ? t('harness.chat.collapsePreview') : t('harness.chat.closePreview')
+)
+const closeIconComponent = computed(() =>
+  props.closeVariant === 'collapse-right' ? PanelRight : X
+)
+const htmlPreviewMode = ref('render')
+const editMode = ref('preview')
+const draftContent = ref('')
+const fullscreenPreviewVisible = ref(false)
+const htmlPreviewRenderKey = ref(0)
+
+const isImagePreview = computed(
+  () => props.file?.previewType === 'image' && Boolean(props.file?.previewUrl)
+)
+const imagePreviewUrls = computed(() => (isImagePreview.value ? [props.file.previewUrl] : []))
+const imageViewerScale = {
+  max: 8,
+  min: 0.2,
+  step: 0.25
+}
+const isMarkdown = computed(() => isMarkdownPreview(props.filePath, props.file?.previewType))
+const canEdit = computed(() => {
+  const previewType = props.file?.previewType
+  return (
+    props.editable &&
+    props.file?.supported !== false &&
+    typeof props.file?.content === 'string' &&
+    (previewType === 'text' || previewType === 'markdown') &&
+    (props.editAllText || EDITABLE_EXTENSIONS.has(getPreviewFileExtension(props.filePath)))
+  )
+})
+const savedContent = computed(() => formatContent(props.file?.content))
+const draftChanged = computed(() => draftContent.value !== savedContent.value)
+const isHtmlFile = computed(
+  () =>
+    ['text', 'html'].includes(props.file?.previewType) &&
+    typeof props.file?.content === 'string' &&
+    isHtmlPreview(props.filePath)
+)
+const htmlPreviewSrcdoc = computed(() =>
+  buildHtmlPreviewSrcdoc(props.file?.content, HTML_PREVIEW_SCALE)
+)
+const htmlPreviewFullscreenSrcdoc = computed(() =>
+  buildHtmlPreviewSrcdoc(props.file?.content, HTML_PREVIEW_FULLSCREEN_SCALE)
+)
+const codeThemeClass = computed(() => (themeStore.isDark ? 'hljs-theme-dark' : 'hljs-theme-light'))
+const codeLanguage = computed(() => getCodeLanguageByPath(props.filePath))
+const isCodePreview = computed(
+  () =>
+    props.file?.previewType === 'text' &&
+    typeof props.file?.content === 'string' &&
+    !isHtmlFile.value &&
+    Boolean(codeLanguage.value)
+)
+
+const highlightedCodeContent = computed(() => {
+  const content = props.file?.content
+  if (!isCodePreview.value || typeof content !== 'string') {
+    return ''
+  }
+
+  try {
+    if (codeLanguage.value) {
+      return hljs.highlight(content, { language: codeLanguage.value }).value
+    }
+    return hljs.highlightAuto(content).value
+  } catch (error) {
+    console.warn('代码高亮失败:', error)
+    return escapeHtml(content)
+  }
+})
+
+const formatContent = (content) => {
+  if (Array.isArray(content)) return content.join('\n')
+  if (content === undefined || content === null) return ''
+  return String(content)
+}
+
+const serializeDoctype = (doctype) => {
+  if (!doctype) return ''
+  const publicId = doctype.publicId ? ` PUBLIC "${doctype.publicId}"` : ''
+  const systemId = doctype.systemId ? ` "${doctype.systemId}"` : ''
+  return `<!DOCTYPE ${doctype.name}${publicId}${systemId}>`
+}
+
+const buildHtmlPreviewSrcdoc = (content, scale = HTML_PREVIEW_SCALE) => {
+  const html = formatContent(content)
+  if (!html.trim() || typeof DOMParser === 'undefined') return html
+
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  if (scale !== 1) {
+    const style = doc.createElement('style')
+    style.setAttribute('data-yuxi-html-preview-scale', String(scale))
+    style.textContent = `html { zoom: ${scale} !important; }`
+    doc.head.append(style)
+  }
+
+  return `${serializeDoctype(doc.doctype)}${doc.documentElement.outerHTML}`
+}
+
+const syncDraftContent = () => {
+  draftContent.value = savedContent.value
+  editMode.value = 'preview'
+}
+
+const requestSave = () => {
+  if (!canEdit.value || props.saving) return
+  emit('save', draftContent.value)
+}
+
+const cancelEdit = () => {
+  syncDraftContent()
+}
+
+const openFullscreenPreview = () => {
+  if (!props.file) return
+  fullscreenPreviewVisible.value = true
+}
+
+const closeFullscreenPreview = () => {
+  fullscreenPreviewVisible.value = false
+}
+
+watch(
+  () => props.filePath,
+  () => {
+    htmlPreviewMode.value = 'render'
+  }
+)
+
+watch([() => props.filePath, () => props.file?.content, canEdit], syncDraftContent, {
+  immediate: true
+})
+
+watch([() => props.filePath, () => props.file?.previewType, () => props.file?.content], () => {
+  if (isHtmlFile.value) {
+    htmlPreviewRenderKey.value += 1
+  }
+})
+
+const handleFullscreenKeydown = (event) => {
+  if (event.key === 'Escape' && fullscreenPreviewVisible.value && !isImagePreview.value) {
+    closeFullscreenPreview()
+  }
+}
+
+watch(fullscreenPreviewVisible, (visible) => {
+  document.body.style.overflow = visible ? 'hidden' : ''
+  if (visible) {
+    window.addEventListener('keydown', handleFullscreenKeydown)
+  } else {
+    window.removeEventListener('keydown', handleFullscreenKeydown)
+  }
+})
+
+onUnmounted(() => {
+  document.body.style.overflow = ''
+  window.removeEventListener('keydown', handleFullscreenKeydown)
+})
+</script>
+
+<style scoped lang="less">
+.agent-file-preview {
+  position: relative;
+  min-width: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.agent-file-preview.is-full-height {
+  max-height: 100vh;
+}
+
+.agent-file-preview.is-full-height .file-content {
+  min-height: 0;
+}
+
+.agent-file-preview.is-borderless {
+  border-radius: 0;
+}
+
+.preview-header {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px calc(var(--page-padding) - 4px);
+  border-bottom: 1px solid var(--gray-150);
+  background: var(--gray-25);
+}
+
+.file-title,
+.modal-actions,
+.preview-mode-switch {
+  display: flex;
+  align-items: center;
+}
+
+.file-title {
+  gap: 8px;
+  min-width: 0;
+}
+
+.modal-actions,
+.preview-mode-switch {
+  gap: 8px;
+}
+
+.preview-mode-switch {
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--gray-100);
+}
+
+.inline-html-preview-switch {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 5;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.file-path-title {
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--gray-700);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-action-btn,
+.preview-mode-btn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+
+  svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    stroke: currentColor;
+    fill: none;
+  }
+}
+
+.modal-action-btn:hover,
+.preview-mode-btn:hover {
+  background: var(--gray-100);
+  color: var(--gray-900);
+}
+
+.modal-action-btn:disabled,
+.preview-mode-btn:disabled {
+  color: var(--gray-300);
+  cursor: not-allowed;
+}
+
+.modal-action-btn:disabled:hover,
+.preview-mode-btn:disabled:hover {
+  background: transparent;
+  color: var(--gray-300);
+}
+
+.preview-mode-btn.active {
+  background: var(--gray-0);
+  color: var(--gray-900);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+}
+
+.text-mode-btn {
+  width: auto;
+  min-width: 48px;
+  padding: 0 8px;
+  font-size: 12px;
+}
+
+.file-content {
+  flex: 1 1 auto;
+  min-height: 300px;
+  min-width: 0;
+  overflow-y: auto;
+  border-radius: 0px;
+
+  &.is-editing {
+    overflow: hidden;
+  }
+
+  &.is-iframe-preview {
+    overflow: hidden;
+  }
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: var(--gray-50);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 4px;
+
+    &:hover {
+      background: var(--gray-400);
+    }
+  }
+
+  .flat-md-preview {
+    padding: 16px calc(var(--page-padding) - 4px);
+    font-size: 0.85rem;
+  }
+}
+
+.edit-floating-actions {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.agent-file-preview.has-preview-header .edit-floating-actions {
+  top: 68px;
+}
+
+.edit-status-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--color-warning-100);
+  border-radius: 999px;
+  background: var(--color-warning-50);
+  font-size: 11px;
+  line-height: 1;
+  color: var(--color-warning-700);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  pointer-events: auto;
+  white-space: nowrap;
+}
+
+.edit-floating-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--gray-150);
+  border-radius: 50%;
+  background: var(--gray-0);
+  color: var(--gray-700);
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.14);
+  pointer-events: auto;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+
+  svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    stroke: currentColor;
+    fill: none;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: var(--gray-250);
+    background: var(--gray-50);
+    color: var(--gray-900);
+  }
+
+  &:disabled {
+    color: var(--gray-300);
+    cursor: not-allowed;
+    opacity: 0.7;
+
+    &:hover {
+      border-color: var(--gray-150);
+      background: var(--gray-0);
+    }
+  }
+}
+
+.edit-floating-btn-primary {
+  background: var(--main-500, var(--color-primary-500, #07c05f));
+  border-color: var(--main-500, var(--color-primary-500, #07c05f));
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    background: var(--main-700, var(--color-primary-700, #038626));
+    border-color: var(--main-700, var(--color-primary-700, #038626));
+    color: #fff;
+  }
+
+  &:disabled {
+    background: var(--main-500, var(--color-primary-500, #07c05f));
+    border-color: var(--main-500, var(--color-primary-500, #07c05f));
+    color: rgba(255, 255, 255, 0.5);
+    cursor: not-allowed;
+
+    &:hover {
+      background: var(--main-500, var(--color-primary-500, #07c05f));
+      border-color: var(--main-500, var(--color-primary-500, #07c05f));
+      color: rgba(255, 255, 255, 0.5);
+    }
+  }
+}
+
+.edit-floating-btn-danger {
+  &:hover:not(:disabled) {
+    border-color: var(--color-error-500);
+    background: var(--color-error-50);
+    color: var(--color-error-700);
+  }
+}
+
+.file-edit-textarea {
+  width: 100%;
+  min-height: 100%;
+  padding: 12px;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: var(--gray-0);
+  color: var(--gray-1000);
+  font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.file-edit-textarea:disabled {
+  color: var(--gray-600);
+  background: var(--gray-25);
+}
+
+.file-content pre,
+.file-content-pre {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: var(--gray-1000);
+  background: transparent;
+  padding: 12px;
+}
+
+.file-content-pre.code-highlight {
+  border-radius: 8px;
+  background: var(--gray-0);
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.file-content-pre.code-highlight code {
+  display: block;
+  white-space: pre;
+  color: inherit;
+  min-height: calc(80vh - 40px);
+  background: var(--gray-0);
+}
+
+.image-preview-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.image-preview {
+  display: block;
+  max-width: 100%;
+  height: 100%;
+  max-height: calc(80vh - 32px);
+  object-fit: contain;
+  border-radius: 6px;
+
+  &.is-zoomable {
+    cursor: zoom-in;
+  }
+}
+
+.pdf-preview {
+  width: 100%;
+  height: 100%;
+  min-height: calc(80vh - 40px);
+  border: none;
+  border-radius: 6px;
+  background: var(--gray-25);
+}
+
+.html-preview {
+  display: block; // 消除 iframe 行内基线间隙导致的底部白边
+  width: 100%;
+  height: 100%; // 适应父容器高度，而非固定 100vh
+  min-height: 0; // 移除固定最小高度，避免短内容白边
+  border: none;
+  border-radius: 0px;
+  background: var(--gray-0); // 跟随主题：亮色为白、暗色为近黑，避免暗色 HTML 底部露出白边
+}
+
+.unsupported-preview {
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--gray-600);
+  font-size: 14px;
+  line-height: 1.6;
+  height: 100%;
+  white-space: pre-wrap;
+}
+
+.fullscreen-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  flex-direction: column;
+  isolation: isolate;
+  background: var(--gray-0, var(--td-bg-color-container, #ffffff));
+  color: var(--gray-1000, var(--td-text-color-primary, #151616));
+}
+
+.fullscreen-preview-actions {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fullscreen-preview-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 40px;
+  padding: 4px;
+  border: 1px solid var(--gray-200, var(--td-component-stroke, #e4e6e6));
+  border-radius: 999px;
+  background: var(--color-trans-light, var(--gray-0, #ffffff));
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
+
+  .preview-mode-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    color: var(--gray-700, var(--td-text-color-secondary, #4c4d4d));
+  }
+}
+
+.fullscreen-action-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  color: var(--gray-800, var(--td-text-color-primary, #323333));
+  background: var(--color-trans-light, var(--gray-0, #ffffff));
+  border: 1px solid var(--gray-200, var(--td-component-stroke, #d7d9d9));
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+
+  &:hover {
+    color: var(--gray-1000, var(--td-text-color-primary, #151616));
+    background: var(--gray-0, var(--td-bg-color-container, #ffffff));
+    border-color: var(--gray-300, var(--td-component-border, #bdbfbf));
+  }
+}
+
+.fullscreen-preview-content {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.fullscreen-file-content {
+  height: 100%;
+  max-height: none;
+  min-height: 100%;
+  min-width: 0;
+  padding: 16px 72px 24px 24px;
+  border-radius: 0;
+  overflow: auto;
+}
+
+.fullscreen-image-preview-wrapper {
+  min-height: calc(100vh - 48px);
+  align-items: center;
+}
+
+.fullscreen-embed-preview {
+  width: 100%;
+  height: 100%;
+  min-height: calc(100vh - 40px);
+  border-radius: 0;
+}
+
+.fullscreen-unsupported-preview {
+  min-height: calc(100vh - 48px);
+}
+
+.fullscreen-file-content .file-content-pre.code-highlight code {
+  min-height: calc(100vh - 48px);
+}
+
+.fullscreen-file-content .image-preview {
+  max-height: calc(100vh - 48px);
+}
+</style>

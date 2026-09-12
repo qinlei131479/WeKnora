@@ -455,7 +455,7 @@ import {
   X
 } from 'lucide-vue-next'
 import { mcpApi } from '@/api/chat-work/mcp'
-import { formatFullDateTime } from '@harness/utils/time'
+import { formatFullDateTime } from '@/utils/harness/time'
 import { knowledgeBasesLocation } from '@/utils/weknoraFeatures'
 
 const { t, locale } = useI18n()
@@ -776,8 +776,8 @@ onMounted(() => {
 </script>
 
 <style lang="less" scoped>
-@import '@harness/assets/css/extensions.less';
-@import '@harness/assets/css/extension-detail.less';
+@import '@/assets/harness/css/extensions.less';
+@import '@/assets/harness/css/extension-detail.less';
 
 .edit-panel {
   background: var(--gray-0);

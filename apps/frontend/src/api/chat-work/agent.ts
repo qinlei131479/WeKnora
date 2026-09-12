@@ -1,7 +1,7 @@
 // @ts-nocheck
-import { harnessUrl } from '@harness/apis/prefix'
-import { apiGet, apiPost, apiDelete, apiPut, apiRequest } from '@harness/apis/base'
-import { useUserStore } from '@harness/stores/user'
+import { harnessUrl } from '@/api/harness/prefix'
+import { apiGet, apiPost, apiDelete, apiPut, apiRequest } from '@/api/harness/base'
+import { useUserStore } from '@/stores/harness/user'
 
 /**
  * 智能体API模块

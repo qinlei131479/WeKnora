@@ -96,10 +96,10 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Download, ListChecks, MoreHorizontal, Trash2 } from 'lucide-vue-next'
-import FileBrowserTable from '@harness/components/common/FileBrowserTable.vue'
-import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
-import { formatFileSize } from '@harness/utils/file_utils'
-import { formatDateTime } from '@harness/utils/time'
+import FileBrowserTable from '@/components/harness/common/FileBrowserTable.vue'
+import FileTypeIcon from '@/components/harness/common/FileTypeIcon.vue'
+import { formatFileSize } from '@/utils/harness/file_utils'
+import { formatDateTime } from '@/utils/harness/time'
 
 const { t } = useI18n()
 

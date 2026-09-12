@@ -221,14 +221,14 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { DialogPlugin, MessagePlugin } from 'tdesign-vue-next'
 import { ChevronLeft, ChevronRight, CircleHelp, LibraryBig } from 'lucide-vue-next'
-import PageHeader from '@harness/components/shared/PageHeader.vue'
-import AgentFilePreview from '@harness/components/AgentFilePreview.vue'
+import PageHeader from '@/components/harness/shared/PageHeader.vue'
+import AgentFilePreview from '@/components/harness/AgentFilePreview.vue'
 import WorkspaceFileList from './components/WorkspaceFileList.vue'
 import WorkspaceKnowledgePreview from './components/WorkspaceKnowledgePreview.vue'
 import WorkspacePreviewPane from './components/WorkspacePreviewPane.vue'
 import WorkspaceSidebar from './components/WorkspaceSidebar.vue'
-import { databaseApi } from '@harness/apis/knowledge_api'
-import { useUserStore } from '@harness/stores/user'
+import { listKnowledgeBases } from '@/api/knowledge-base'
+import { useUserStore } from '@/stores/harness/user'
 import { useAuthStore } from '@/stores/auth'
 import {
   createWorkspaceDirectory,
@@ -241,7 +241,7 @@ import {
   saveWorkspaceFileContent,
   uploadWorkspaceFiles
 } from '@/api/chat-work/workspace'
-import { normalizePreviewResponse, resolveKnowledgePreviewFileType } from '@harness/utils/file_preview'
+import { normalizePreviewResponse, resolveKnowledgePreviewFileType } from '@/utils/harness/file_preview'
 
 const { t } = useI18n()
 const userStore = useUserStore()
@@ -580,10 +580,16 @@ const loadKnowledgeEntries = async (
 const loadDatabases = async () => {
   loadingDatabases.value = true
   try {
-    const response = await databaseApi.getAccessibleDatabases()
-    databases.value = (response?.databases || []).filter((database) => {
-      return database?.supports_documents !== false
-    })
+    const response = await listKnowledgeBases()
+    const items = Array.isArray(response?.data) ? response.data : []
+    databases.value = items
+      .filter((database) => database?.type !== 'faq' && database?.supports_documents !== false)
+      .map((database) => ({
+        ...database,
+        kb_id: database.kb_id || database.id,
+        created_by: database.created_by || database.creator_id,
+        supports_documents: database.supports_documents !== false && database.type !== 'faq'
+      }))
   } catch (error) {
     console.warn('加载可访问知识库失败:', error)
     databases.value = []

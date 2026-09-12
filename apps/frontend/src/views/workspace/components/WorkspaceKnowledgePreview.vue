@@ -33,7 +33,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { PanelRight, X } from 'lucide-vue-next'
 import DocumentPreview from '@/components/document-preview.vue'
-import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
+import FileTypeIcon from '@/components/harness/common/FileTypeIcon.vue'
 
 const props = defineProps({
   knowledgeId: { type: String, required: true },

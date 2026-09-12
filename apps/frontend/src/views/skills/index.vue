@@ -22,7 +22,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import PageHeader from '@harness/components/shared/PageHeader.vue'
+import PageHeader from '@/components/harness/shared/PageHeader.vue'
 import SkillCardList from './SkillCardList.vue'
 import ToolsCardList from '../tools/ToolsCardList.vue'
 import McpCardList from '../mcp/McpCardList.vue'

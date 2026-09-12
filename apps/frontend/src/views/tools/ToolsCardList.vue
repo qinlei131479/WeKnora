@@ -117,11 +117,11 @@ import { useI18n } from 'vue-i18n'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { Wrench } from 'lucide-vue-next'
 import { toolApi } from '@/api/chat-work/tool'
-import { getToolIcon } from '@harness/components/ToolCallingResult/toolRegistry'
-import ExtensionCardGrid from '@harness/components/extensions/ExtensionCardGrid.vue'
-import InfoCard from '@harness/components/shared/InfoCard.vue'
-import PageShoulder from '@harness/components/shared/PageShoulder.vue'
-import { formatExtensionCardTitle } from '@harness/utils/extensionDisplayName'
+import { getToolIcon } from '@/components/harness/ToolCallingResult/toolRegistry'
+import ExtensionCardGrid from '@/components/harness/extensions/ExtensionCardGrid.vue'
+import InfoCard from '@/components/harness/shared/InfoCard.vue'
+import PageShoulder from '@/components/harness/shared/PageShoulder.vue'
+import { formatExtensionCardTitle } from '@/utils/harness/extensionDisplayName'
 
 const WrenchIcon = Wrench
 const { t } = useI18n()
@@ -229,7 +229,7 @@ defineExpose({ fetchTools, loading })
 </script>
 
 <style lang="less" scoped>
-@import '@harness/assets/css/extensions.less';
+@import '@/assets/harness/css/extensions.less';
 
 .tool-detail-overlay {
   position: fixed;

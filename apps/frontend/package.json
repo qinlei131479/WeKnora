@@ -16,7 +16,6 @@
     "regenerate-i18n-locales": "tsx src/i18n/regeneratePrunedLocales.ts"
   },
   "dependencies": {
-    "@ant-design/icons-vue": "^7.0.1",
     "@antv/g6": "^5.1.1",
     "@microsoft/fetch-event-source": "^2.0.1",
     "@opencode-ai/models": "0.0.15",
@@ -25,7 +24,6 @@
     "@vscode/markdown-it-katex": "^1.1.2",
     "@vue-office/pptx": "^1.0.1",
     "@vueuse/core": "^14.3.0",
-    "ant-design-vue": "^4.2.6",
     "axios": "^1.16.0",
     "dayjs": "^1.11.20",
     "echarts": "^6.0.0",

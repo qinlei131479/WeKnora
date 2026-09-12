@@ -374,7 +374,7 @@ import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import PromptTemplateSelector from '@/components/PromptTemplateSelector.vue'
 import ModelSelectorComponent from './ModelSelectorComponent.vue'
-import { useAgentStore } from '@harness/stores/agent'
+import { useAgentStore } from '@/stores/harness/agent'
 import { toolApi } from '@/api/chat-work/tool'
 import {
   getAgentConfigOptionDescription as getOptionDescription,
@@ -383,7 +383,7 @@ import {
   getAgentConfigOptionValue as getOptionValue,
   isDefaultAllAgentResourceKind,
   isSingleSelectAgentConfig
-} from '@harness/utils/agentConfigUtils'
+} from '@/utils/harness/agentConfigUtils'
 
 const props = defineProps({
   segment: {

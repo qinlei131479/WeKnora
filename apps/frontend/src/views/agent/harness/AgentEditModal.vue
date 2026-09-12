@@ -4,12 +4,12 @@ import { useI18n } from 'vue-i18n'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { RefreshCw, Upload } from 'lucide-vue-next'
 
-import { userApi } from '@harness/apis/user_api'
+import { userApi } from '@/api/harness/user_api'
 import AgentWorkConfigForm from './AgentWorkConfigForm.vue'
-import FallbackAvatar from '@harness/components/common/FallbackAvatar.vue'
-import { isBuiltinAgent, useAgentStore } from '@harness/stores/agent'
-import { generatePixelAvatar } from '@harness/utils/pixelAvatar'
-import { MAX_IMAGE_UPLOAD_SIZE_BYTES, MAX_IMAGE_UPLOAD_SIZE_MB } from '@harness/utils/upload_limits'
+import FallbackAvatar from '@/components/harness/common/FallbackAvatar.vue'
+import { isBuiltinAgent, useAgentStore } from '@/stores/harness/agent'
+import { generatePixelAvatar } from '@/utils/harness/pixelAvatar'
+import { MAX_IMAGE_UPLOAD_SIZE_BYTES, MAX_IMAGE_UPLOAD_SIZE_MB } from '@/utils/harness/upload_limits'
 
 const props = defineProps({
   backendOptions: { type: Array, default: () => [] }

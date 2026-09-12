@@ -64,7 +64,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
+import FileTypeIcon from '@/components/harness/common/FileTypeIcon.vue'
 
 const { t } = useI18n()
 

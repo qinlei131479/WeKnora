@@ -662,9 +662,9 @@ import {
 } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useI18n } from 'vue-i18n'
-import { formatFileSize } from '@harness/utils/file_utils'
-import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
-import { generatePixelAvatar } from '@harness/utils/pixelAvatar'
+import { formatFileSize } from '@/utils/harness/file_utils'
+import FileTypeIcon from '@/components/harness/common/FileTypeIcon.vue'
+import { generatePixelAvatar } from '@/utils/harness/pixelAvatar'
 import {
   ChevronDown,
   CheckCircle,
@@ -679,40 +679,40 @@ import {
   Trash2,
   XCircle
 } from 'lucide-vue-next'
-import AgentInputArea from '@harness/components/AgentInputArea.vue'
+import AgentInputArea from '@/components/harness/AgentInputArea.vue'
 import ChatEngineSegmented from '@/components/ChatEngineSegmented.vue'
 import { useChatEngineNav } from '@/composables/useChatEngineNav'
 import { useStickyBottomOnResize } from '@/composables/useStickyBottomOnResize'
-import ToolApprovalModeSelector from '@harness/components/ToolApprovalModeSelector.vue'
+import ToolApprovalModeSelector from '@/components/harness/ToolApprovalModeSelector.vue'
 import ModelSelectorComponent from '@/views/agent/harness/ModelSelectorComponent.vue'
-import AgentMessageComponent from '@harness/components/AgentMessageComponent.vue'
-import RefsComponent from '@harness/components/RefsComponent.vue'
-import ToolCallsGroupComponent from '@harness/components/ToolCallsGroupComponent.vue'
-import { handleChatError, handleValidationError } from '@harness/utils/errorHandler'
-import { ScrollController } from '@harness/utils/scrollController'
-import { AgentValidator } from '@harness/utils/agentValidator'
-import { useAgentStore } from '@harness/stores/agent'
+import AgentMessageComponent from '@/components/harness/AgentMessageComponent.vue'
+import RefsComponent from '@/components/harness/RefsComponent.vue'
+import ToolCallsGroupComponent from '@/components/harness/ToolCallsGroupComponent.vue'
+import { handleChatError, handleValidationError } from '@/utils/harness/errorHandler'
+import { ScrollController } from '@/utils/harness/scrollController'
+import { AgentValidator } from '@/utils/harness/agentValidator'
+import { useAgentStore } from '@/stores/harness/agent'
 import { useChatThreadsStore } from '@/stores/chatWork'
-import { useChatUIStore } from '@harness/stores/chatUI'
-import { useConfigStore } from '@harness/stores/config'
+import { useChatUIStore } from '@/stores/harness/chatUI'
+import { useConfigStore } from '@/stores/harness/config'
 import { storeToRefs } from 'pinia'
-import { MessageProcessor } from '@harness/utils/messageProcessor'
+import { MessageProcessor } from '@/utils/harness/messageProcessor'
 import { agentApi, threadApi } from '@/api/chat-work/agent'
-import HumanApprovalModal from '@harness/components/HumanApprovalModal.vue'
-import { extractPendingInterrupt, useApproval } from '@harness/composables/useApproval'
-import { useAgentThreadState, IDLE_QUEUE_SNAPSHOT } from '@harness/composables/useAgentThreadState'
-import { useAgentRunStream } from '@harness/composables/useAgentRunStream'
-import { useAgentStreamHandler } from '@harness/composables/useAgentStreamHandler'
-import { useStreamSmoother } from '@harness/composables/useStreamSmoother'
-import { useAgentRequestQueue } from '@harness/composables/useAgentRequestQueue'
-import { useAgentMentionConfig } from '@harness/composables/useAgentMentionConfig'
-import AgentArtifactsCard from '@harness/components/AgentArtifactsCard.vue'
-import AgentPanel from '@harness/components/AgentPanel.vue'
-import SubagentThreadModal from '@harness/components/SubagentThreadModal.vue'
-import FallbackAvatar from '@harness/components/common/FallbackAvatar.vue'
-import { enrichTaskToolCalls, parseToolCallArgs } from '@harness/components/ToolCallingResult/toolRegistry'
-import { getConversationDisplayItems } from '@harness/utils/messageGrouping'
-import { makeChildThreadId } from '@harness/utils/subagentThread'
+import HumanApprovalModal from '@/components/harness/HumanApprovalModal.vue'
+import { extractPendingInterrupt, useApproval } from '@/composables/harness/useApproval'
+import { useAgentThreadState, IDLE_QUEUE_SNAPSHOT } from '@/composables/harness/useAgentThreadState'
+import { useAgentRunStream } from '@/composables/harness/useAgentRunStream'
+import { useAgentStreamHandler } from '@/composables/harness/useAgentStreamHandler'
+import { useStreamSmoother } from '@/composables/harness/useStreamSmoother'
+import { useAgentRequestQueue } from '@/composables/harness/useAgentRequestQueue'
+import { useAgentMentionConfig } from '@/composables/harness/useAgentMentionConfig'
+import AgentArtifactsCard from '@/components/harness/AgentArtifactsCard.vue'
+import AgentPanel from '@/components/harness/AgentPanel.vue'
+import SubagentThreadModal from '@/components/harness/SubagentThreadModal.vue'
+import FallbackAvatar from '@/components/harness/common/FallbackAvatar.vue'
+import { enrichTaskToolCalls, parseToolCallArgs } from '@/components/harness/ToolCallingResult/toolRegistry'
+import { getConversationDisplayItems } from '@/utils/harness/messageGrouping'
+import { makeChildThreadId } from '@/utils/harness/subagentThread'
 import {
   isRunInterruptedConflict,
   isThreadWaitingForUserAction,
@@ -720,7 +720,7 @@ import {
   readToolApprovalModePreference,
   resolveToolApprovalMode,
   writeToolApprovalModePreference
-} from '@harness/utils/toolApproval'
+} from '@/utils/harness/toolApproval'
 
 // ==================== PROPS & EMITS ====================
 const props = defineProps({
@@ -3229,8 +3229,8 @@ watch(currentChatId, (threadId, oldThreadId) => {
 </script>
 
 <style lang="less" scoped>
-@import '@harness/assets/css/main.css';
-@import '@harness/assets/css/animations.less';
+@import '@/assets/harness/css/main.css';
+@import '@/assets/harness/css/animations.less';
 
 .chat-container {
   display: flex;

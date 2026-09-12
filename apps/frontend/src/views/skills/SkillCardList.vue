@@ -452,15 +452,14 @@ import {
   ChevronRight
 } from 'lucide-vue-next'
 import { skillApi } from '@/api/chat-work/skill'
-import ExtensionCardGrid from '@harness/components/extensions/ExtensionCardGrid.vue'
+import ExtensionCardGrid from '@/components/harness/extensions/ExtensionCardGrid.vue'
 import SkillInstallFlowModal from './SkillInstallFlowModal.vue'
 import SkillEditorModal from './SkillEditorModal.vue'
 import SkillSuiteCard from './SkillSuiteCard.vue'
-import InfoCard from '@harness/components/shared/InfoCard.vue'
-import PageShoulder from '@harness/components/shared/PageShoulder.vue'
-import { formatExtensionCardTitle } from '@harness/utils/extensionDisplayName'
-import { getShareConfigLabel } from '@harness/utils/shareConfig'
-import { getSkillIcon } from '@harness/utils/skill_icon_utils'
+import InfoCard from '@/components/harness/shared/InfoCard.vue'
+import PageShoulder from '@/components/harness/shared/PageShoulder.vue'
+import { formatExtensionCardTitle } from '@/utils/harness/extensionDisplayName'
+import { getSkillIcon } from '@/utils/harness/skill_icon_utils'
 
 const { t } = useI18n()
 
@@ -719,9 +718,6 @@ const toggleSearchSkillFromRow = (item) => {
   handleToggleSearchSkill(item, !isSearchSkillSelected(item))
 }
 
-/** 返回 Skill 共享范围的简短展示文案。 */
-const getSkillShareLabel = (skill) => getShareConfigLabel(skill?.share_config, t)
-
 const skillCardTags = (skill) => {
   if (skill.sourceScope === 'personal') {
     return [
@@ -730,7 +726,6 @@ const skillCardTags = (skill) => {
     ]
   }
   return [
-    { name: getSkillShareLabel(skill), color: 'gray' },
     ...(skill.shadowed_by_personal ? [{ name: t('ext.skills.tagShadowed'), color: 'orange' }] : [])
   ]
 }
@@ -1106,7 +1101,7 @@ defineExpose({
 </script>
 
 <style lang="less" scoped>
-@import '@harness/assets/css/extensions.less';
+@import '@/assets/harness/css/extensions.less';
 
 :deep(.t-button) {
   display: inline-flex;

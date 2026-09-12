@@ -118,52 +118,10 @@
               >
                 <XIcon :size="15" />
               </button>
-              <div
-                v-if="installTarget === 'shared' && item.warnings?.length"
-                class="review-warning"
-                role="alert"
-              >
+              <div v-if="item.warnings?.length" class="review-warning" role="alert">
                 {{ item.warnings.join('；') }}
               </div>
             </div>
-          </div>
-          <div class="install-target-section">
-            <h3>{{ t('ext.skills.install.installPlace') }}</h3>
-            <div class="install-target-options">
-              <button
-                type="button"
-                class="install-target-option"
-                :class="{ selected: installTarget === 'personal' }"
-                :aria-pressed="installTarget === 'personal'"
-                @click="installTarget = 'personal'"
-              >
-                <span class="install-target-title">{{ t('ext.skills.install.personalTitle') }}</span>
-                <span>{{ t('ext.skills.install.personalDesc') }}</span>
-              </button>
-              <button
-                v-if="userStore.isAdmin"
-                type="button"
-                class="install-target-option"
-                :class="{ selected: installTarget === 'shared' }"
-                :aria-pressed="installTarget === 'shared'"
-                @click="installTarget = 'shared'"
-              >
-                <span class="install-target-title">{{ t('ext.skills.install.sharedTitle') }} <b>{{ t('ext.skills.install.recommended') }}</b></span>
-                <span>{{ t('ext.skills.install.sharedDesc') }}</span>
-              </button>
-            </div>
-            <div v-if="installTarget === 'personal'" class="personal-install-note">
-              {{ t('ext.skills.install.personalNote') }}
-            </div>
-          </div>
-          <div v-if="installTarget === 'shared'" class="share-config-section">
-            <h3>{{ t('ext.skills.install.scopeTitle') }}</h3>
-            <ShareConfigForm
-              ref="shareConfigFormRef"
-              v-model="shareConfig"
-              :auto-select-user-dept="true"
-              :allowed-access-levels="allowedAccessLevels"
-            />
           </div>
         </section>
 
@@ -237,9 +195,7 @@ import {
   X as XIcon,
   XCircle
 } from 'lucide-vue-next'
-import ShareConfigForm from '@harness/components/ShareConfigForm.vue'
 import { skillApi } from '@/api/chat-work/skill'
-import { useUserStore } from '@harness/stores/user'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -248,7 +204,6 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'completed'])
 const { t } = useI18n()
-const userStore = useUserStore()
 
 const stepLabels = computed(() => [
   t('ext.skills.install.stepSelect'),
@@ -262,16 +217,7 @@ const progressItems = ref([])
 const drafts = ref([])
 const reviewItems = ref([])
 const installItems = ref([])
-const shareConfig = ref({
-  version: 2,
-  read_scope: { access_level: 'global', department_ids: [], user_uids: [] },
-  manage_scope: null
-})
-const defaultInstallTarget = () => (userStore.isAdmin ? 'shared' : 'personal')
-const installTarget = ref(defaultInstallTarget())
-const allowedAccessLevels = ref(['user'])
 const flowError = ref('')
-const shareConfigFormRef = ref(null)
 
 const StatusItemList = defineComponent({
   props: { items: { type: Array, default: () => [] } },
@@ -326,21 +272,8 @@ const readyItems = computed(() => reviewItems.value.filter((item) => item.succes
 const loadingSourceCount = computed(
   () => new Set(progressItems.value.map((item) => item.source).filter(Boolean)).size
 )
-const shareScopeLabel = computed(() => {
-  const scope = shareConfig.value.read_scope || shareConfig.value.manage_scope || shareConfig.value
-  return (
-    {
-      global: t('ext.skills.install.scopeGlobal'),
-      department: t('ext.skills.install.scopeDept'),
-      user: t('ext.skills.install.scopeUser')
-    }[scope.access_level] || t('ext.skills.install.scopeUser')
-  )
-})
-const installTargetLabel = computed(() =>
-  installTarget.value === 'personal'
-    ? t('ext.skills.install.personalWorkspace')
-    : shareScopeLabel.value
-)
+// 技能安装不再区分个人/共享目标，统一安装为租户全局共享。
+const installTargetLabel = computed(() => t('ext.skills.install.scopeGlobal'))
 const failedInstallItems = computed(() =>
   installItems.value.filter((item) => item.status === 'failed')
 )
@@ -382,32 +315,6 @@ const footerSummary = computed(() => {
     success: successfulInstallCount.value,
     fail: failedInstallItems.value.length
   })
-})
-
-const cloneShareConfig = (config) => ({
-  version: 2,
-  read_scope:
-    config?.version === 2
-      ? config.read_scope
-        ? {
-            access_level: config.read_scope.access_level || 'user',
-            department_ids: [...(config.read_scope.department_ids || [])],
-            user_uids: [...(config.read_scope.user_uids || [])]
-          }
-        : null
-      : {
-          access_level: config?.access_level || 'user',
-          department_ids: [...(config?.department_ids || [])],
-          user_uids: [...(config?.user_uids || [])]
-        },
-  manage_scope:
-    config?.version === 2 && config.manage_scope
-      ? {
-          access_level: config.manage_scope.access_level || 'global',
-          department_ids: [...(config.manage_scope.department_ids || [])],
-          user_uids: [...(config.manage_scope.user_uids || [])]
-        }
-      : null
 })
 
 const isInstalled = (slug) => installedSet.value.has(String(slug).toLowerCase())
@@ -475,9 +382,6 @@ const openReview = (draftPayloads) => {
       draft_id: draft.draft_id
     }))
   )
-  const first = drafts.value[0] || {}
-  shareConfig.value = cloneShareConfig(first.default_share_config)
-  allowedAccessLevels.value = first.allowed_access_levels || ['user']
   phase.value = 'reviewing'
 }
 
@@ -489,14 +393,6 @@ const prepareSuite = () => {
 }
 
 const installDrafts = async () => {
-  if (installTarget.value === 'shared') {
-    const validation = shareConfigFormRef.value?.validate?.()
-    if (validation && !validation.valid) {
-      flowError.value = validation.message || t('ext.skills.install.needScope')
-      return
-    }
-  }
-
   phase.value = 'installing'
   flowError.value = ''
   installItems.value = readyItems.value.map((item) => ({ ...item, status: 'waiting' }))
@@ -511,10 +407,7 @@ const installDrafts = async () => {
         continue
       }
 
-      const result =
-        installTarget.value === 'personal'
-          ? await skillApi.confirmPersonalSkillInstallDraft(draft.draft_id, slugs)
-          : await skillApi.confirmSkillInstallDraft(draft.draft_id, shareConfig.value, slugs)
+      const result = await skillApi.confirmSkillInstallDraft(draft.draft_id, slugs)
       const results = result?.data || []
       applyInstallResults(results, draft.source)
       if (!results.some((item) => item.success)) {
@@ -600,7 +493,6 @@ watch(
     drafts.value = []
     reviewItems.value = []
     installItems.value = []
-    installTarget.value = defaultInstallTarget()
 
     if (props.flow.kind === 'suite') {
       phase.value = 'selecting'
