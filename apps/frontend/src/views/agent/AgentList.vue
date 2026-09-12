@@ -10,11 +10,11 @@
     <div class="agent-list-content">
       <PageHeader
         :title="t('agent.title')"
-        :subtitle="surface === 'runtime' ? t('agent.runtimeSubtitle') : t('agent.subtitle')"
+        :subtitle="surface === 'work' ? t('agent.workSubtitle') : t('agent.subtitle')"
         :active-key="surface"
         :tabs="surfaceTabs"
         :loading="loading"
-        :aria-label="t('agent.runtimeManage.viewSwitch')"
+        :aria-label="t('agent.workManage.viewSwitch')"
         @change="onSurfaceTabChange"
       >
         <template v-if="canCreateAgentFromHeader" #actions>
@@ -42,7 +42,7 @@
           </t-button>
         </template>
       </PageHeader>
-      <div v-if="surface === 'runtime'" class="surface-embed">
+      <div v-if="surface === 'work'" class="surface-embed">
         <AgentManagePanel ref="runtimeAgentManageRef" />
       </div>
       <div v-else class="agent-list-main">
@@ -862,7 +862,7 @@ function localizedAgentName(agent: { id?: string; name?: string }) {
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const runtimeAgentManageRef = ref<{ openCreate?: () => void } | null>(null)
+const runtimeAgentManageRef = ref<{ openCreate?: () => void; openEdit?: (id: string) => void } | null>(null)
 const uiStore = useUIStore()
 const orgStore = useOrganizationStore()
 const chatResources = useChatResourcesStore()
@@ -892,19 +892,19 @@ const { scope: spaceSelection, creator: creatorFilter } = useListUrlState({
   defaultScope,
   defaultCreator: 'all',
 })
-const { surface } = useListSurface<'platform' | 'runtime'>(
-  () => ['platform', 'runtime'],
+const { surface } = useListSurface<'platform' | 'work'>(
+  () => ['platform', 'work'],
   'platform',
 )
 const canCreateAgentFromHeader = computed(
-  () => surface.value === 'runtime' || authStore.hasRole('contributor')
+  () => surface.value === 'work' || authStore.hasRole('contributor')
 )
 const surfaceTabs = computed(() => [
   { key: 'platform', label: t('agent.tabs.platform') },
-  { key: 'runtime', label: t('agent.tabs.runtime') },
+  { key: 'work', label: t('agent.tabs.work') },
 ])
 function onSurfaceTabChange(item: { key?: string }) {
-  if (item.key === 'platform' || item.key === 'runtime') {
+  if (item.key === 'platform' || item.key === 'work') {
     surface.value = item.key
   }
 }
@@ -1176,6 +1176,8 @@ const resolveAgentForEdit = (editId: string, sourceTenantId?: string): CustomAge
 }
 
 const checkAndOpenEditModal = () => {
+  // 工作模式智能体由 AgentManagePanel 消费 ?edit=，避免误开对话侧编辑器
+  if (surface.value === 'work') return
   const editId = route.query.edit as string
   const section = route.query.section as string
   const sourceTenantId = route.query.sourceTenantId as string | undefined
@@ -1610,7 +1612,7 @@ const openCreateModal = () => {
 
 // 创建智能体
 const handleCreateAgent = () => {
-  if (surface.value === 'runtime') {
+  if (surface.value === 'work') {
     runtimeAgentManageRef.value?.openCreate?.()
     return
   }

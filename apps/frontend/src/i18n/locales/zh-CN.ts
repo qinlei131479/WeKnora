@@ -5356,8 +5356,8 @@ export default {
     stepSummarySeparator: ' · ',
     title: '智能体',
     subtitle: '配置和管理您的智能体，自定义对话行为和能力',
-    runtimeSubtitle: '管理工作智能体。它们会在过程中产生中间文件与产物。',
-    runtimeManage: {
+    workSubtitle: '管理工作智能体。它们会在过程中产生中间文件与产物。',
+    workManage: {
       agents: '{count} 个智能体',
       global: '{count} 个全局',
       builtin: '{count} 个内置',
@@ -5780,7 +5780,7 @@ export default {
     },
     tabs: {
       platform: '对话',
-      runtime: '工作',
+      work: '工作',
       providers: '模型供应商',
       sharedToMe: '共享给我'
     },
@@ -6879,7 +6879,6 @@ export default {
       attachment: '附件',
       approvalSaveFailed: '审批模式保存失败',
       createFailed: '创建对话失败，请重试',
-      configChangeHint: '在运行过程中切换或修改配置可能会影响最终效果，建议新建一个对话。',
       queuedDeleted: '已删除排队请求',
       steered: '已设为下一条引导请求',
       queueContinued: '队列已继续',
@@ -6900,6 +6899,17 @@ export default {
       uploadedImage: '用户上传的图片',
       thinking: '思考中...',
       reasoning: '推理过程',
+      calledTool: '调用: {name}',
+      calledTools: '已调用 {count} 个工具',
+      toolCompleted: '已完成',
+      toolFailedCount: '{count} 失败',
+      toolRunningCount: '{count} 进行中',
+      toolSucceeded: '工具 {name} 执行完成',
+      toolFailed: '工具 {name} 执行失败',
+      toolCalling: '正在调用工具: {name}',
+      toolParams: '参数',
+      toolFailedStatus: '失败',
+      toolRunningStatus: '运行中',
       errorInterrupted: '回答生成已中断',
       errorGuard: '检测到敏感内容，已中断输出',
       errorUnexpected: '生成过程中出现异常',
@@ -6908,7 +6918,6 @@ export default {
       stoppedHint: '你停止生成了本次回答',
       reedit: '重新编辑问题',
       builtin: '内置',
-      boundHint: '当前对话已绑定智能体，新对话可切换。',
       editAgent: '编辑智能体',
       createAgent: '新建智能体',
       switchBound: '当前对话已绑定智能体，请新建对话后切换',
@@ -6979,7 +6988,7 @@ export default {
   chatEngine: {
     switchLabel: '选择类型',
     platform: '对话',
-    runtime: '工作',
+    chatWork: '工作',
     lockedHint: '已有对话内容，无法更改类型'
   }
 }

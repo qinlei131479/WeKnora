@@ -154,6 +154,31 @@ const router = createRouter({
           meta: { requiresInit: true, requiresAuth: true }
         },
         {
+          path: "chat-work",
+          name: "chatWorkCreat",
+          component: () => import("../views/chat-work/ChatWorkView.vue"),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
+          path: "chat-work/:thread_id",
+          name: "chatWork",
+          component: () => import("../views/chat-work/ChatWorkView.vue"),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
+          path: "work-chat",
+          redirect: (to) => ({ path: "/platform/chat-work", query: to.query }),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
+          path: "work-chat/:thread_id",
+          redirect: (to) => ({
+            path: `/platform/chat-work/${to.params.thread_id}`,
+            query: to.query
+          }),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
           path: "creatChat",
           name: "globalCreatChat",
           component: () => import("../views/creatChat/creatChat.vue"),
@@ -260,14 +285,15 @@ const router = createRouter({
             ) },
             {
               path: "chat",
-              name: "harnessCreatChat",
-              component: () => import("@harness/views/AgentView.vue"),
+              redirect: (to) => ({ path: "/platform/chat-work", query: to.query }),
               meta: { requiresInit: true, requiresAuth: true }
             },
             {
               path: "chat/:thread_id",
-              name: "harnessChat",
-              component: () => import("@harness/views/AgentView.vue"),
+              redirect: (to) => ({
+                path: `/platform/chat-work/${to.params.thread_id}`,
+                query: to.query
+              }),
               meta: { requiresInit: true, requiresAuth: true }
             },
             {
@@ -275,7 +301,7 @@ const router = createRouter({
               name: "harnessAgents",
               redirect: (to) => ({
                 path: "/platform/agents",
-                query: { surface: "runtime", ...(to.query.tab ? { tab: String(to.query.tab) } : {}) }
+                query: { surface: "work", ...(to.query.tab ? { tab: String(to.query.tab) } : {}) }
               }),
               meta: { requiresInit: true, requiresAuth: true }
             },

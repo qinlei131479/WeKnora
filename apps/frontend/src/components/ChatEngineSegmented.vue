@@ -43,7 +43,7 @@ const { t } = useI18n()
 
 const items = computed(() => [
   { value: 'platform' as const, label: t('chatEngine.platform'), icon: 'chat' },
-  { value: 'runtime' as const, label: t('chatEngine.runtime'), icon: 'tools' },
+  { value: 'chat-work' as const, label: t('chatEngine.chatWork'), icon: 'tools' },
 ])
 
 const onSelect = (value: ChatEngine) => {

@@ -6,11 +6,11 @@
 // 导出API模块
 export * from './system_api' // 系统管理API
 export * from './knowledge_api' // 知识库管理API
-export * from './agent_api' // 智能体API
+export * from '@/api/chat-work/agent' // 智能体API（含 thread SSE）
 export * from './tasker' // 任务管理API
-export { mcpApi } from '@/api/runtime/mcp'
-export { skillApi } from '@/api/runtime/skill'
-export { toolApi } from '@/api/runtime/tool'
+export { mcpApi } from '@/api/chat-work/mcp'
+export { skillApi } from '@/api/chat-work/skill'
+export { toolApi } from '@/api/chat-work/tool'
 export * from './mention_api' // 提及搜索 API
 export * from './user_api' // 用户资源 API
 

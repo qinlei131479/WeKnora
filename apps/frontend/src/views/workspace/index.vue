@@ -237,7 +237,7 @@ import {
   getWorkspaceTree,
   saveWorkspaceFileContent,
   uploadWorkspaceFiles
-} from '@/api/runtime/workspace'
+} from '@/api/chat-work/workspace'
 import { normalizePreviewResponse, resolveKnowledgePreviewFileType } from '@harness/utils/file_preview'
 
 const { t } = useI18n()

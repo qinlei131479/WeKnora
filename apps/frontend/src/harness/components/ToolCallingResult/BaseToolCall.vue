@@ -32,7 +32,7 @@
             :tool-name="toolName"
             :result-content="resultContent"
           >
-            工具&nbsp; <span class="tool-name">{{ toolName }}</span> &nbsp; 执行完成
+            <span class="tool-name">{{ t('harness.chat.toolSucceeded', { name: toolName }) }}</span>
           </slot>
 
           <slot
@@ -41,12 +41,12 @@
             :tool-name="toolName"
             :error-message="toolCall.error_message"
           >
-            工具&nbsp; <span class="tool-name">{{ toolName }}</span> &nbsp; 执行失败
+            <span class="tool-name">{{ t('harness.chat.toolFailed', { name: toolName }) }}</span>
             <span v-if="toolCall.error_message">（{{ toolCall.error_message }}）</span>
           </slot>
 
           <slot name="header-running" v-else :tool-name="toolName">
-            正在调用工具: &nbsp; <span class="tool-name">{{ toolName }}</span>
+            <span class="tool-name">{{ t('harness.chat.toolCalling', { name: toolName }) }}</span>
           </slot>
         </template>
       </div>
@@ -64,7 +64,7 @@
       <div class="tool-params" v-if="hasParams && !hideParams">
         <slot name="params" :tool-call="toolCall" :args="formattedArgs">
           <div class="tool-params-content">
-            <strong>参数: </strong>
+            <strong>{{ t('harness.chat.toolParams') }}: </strong>
             <span>{{ formattedArgs }}</span>
           </div>
         </slot>
@@ -91,6 +91,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Loader, ChevronsUpDown, ChevronsDownUp, XCircle, CheckCircle } from 'lucide-vue-next'
 import { useAgentStore } from '@harness/stores/agent'
 import { storeToRefs } from 'pinia'
@@ -125,6 +126,7 @@ const props = defineProps({
   }
 })
 
+const { t } = useI18n()
 const agentStore = useAgentStore()
 const { availableTools } = storeToRefs(agentStore)
 
@@ -388,20 +390,20 @@ const formatResultData = (data) => {
       padding: 4px 0;
       background-color: transparent;
       border-bottom: none;
-      color: var(--gray-500);
+      color: var(--td-text-color-secondary, var(--gray-500));
       gap: 10px;
 
       &:hover {
         background-color: transparent;
-        color: var(--gray-700);
+        color: var(--td-text-color-primary, var(--gray-700));
       }
 
       .tool-name {
-        color: var(--gray-600);
+        color: var(--td-text-color-secondary, var(--gray-600));
       }
 
       .tool-loader {
-        color: var(--gray-600);
+        color: var(--td-text-color-secondary, var(--gray-600));
       }
 
       .tool-expand-icon {
@@ -410,7 +412,7 @@ const formatResultData = (data) => {
 
       .tool-header-content {
         font-size: 13px;
-        color: var(--gray-500);
+        color: var(--td-text-color-secondary, var(--gray-500));
       }
     }
 

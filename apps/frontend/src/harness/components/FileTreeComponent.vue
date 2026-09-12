@@ -1,50 +1,52 @@
 <template>
   <div class="file-tree-wrapper" :class="treeClass">
-    <a-tree
-      :selected-keys="selectedKeys"
-      :expanded-keys="expandedKeys"
-      :tree-data="treeData"
-      :load-data="loadData ? internalLoadData : undefined"
-      :show-icon="showIcon"
-      :block-node="blockNode"
-      :show-line="showLine"
+    <t-tree
       class="custom-file-tree"
-      @update:selected-keys="handleSelectedUpdate"
-      @update:expanded-keys="handleExpandedUpdate"
-      @select="handleSelect"
+      :data="treeData"
+      :keys="treeKeys"
+      :activable="true"
+      :actived="selectedKeys"
+      :expanded="expandedKeys"
+      :icon="showIcon"
+      :label="true"
+      :line="showLine"
+      :expand-on-click-node="false"
+      :lazy="Boolean(loadData)"
+      :load="loadData ? handleLoad : undefined"
+      @active="handleActive"
     >
-      <!-- Custom Icon Slot -->
-      <template #icon="{ data, expanded }">
-        <slot name="icon" :node="data" :expanded="expanded">
-          <template v-if="data.isLeaf">
-            <FileTypeIcon v-if="useFileIcons" :name="data.key" :size="16" />
-            <FileText v-else :size="16" class="file-icon" />
-          </template>
-          <template v-else>
-            <span
-              v-if="isNodeLoading(data.key)"
-              class="folder-loading-icon"
-              :aria-label="t('harness.chat.loading')"
-            ></span>
-            <FileTypeIcon v-else is-dir :size="18" />
-          </template>
-        </slot>
+      <template #icon="{ node }">
+        <span class="tree-node-icon" @click.stop>
+          <slot name="icon" :node="node.data" :expanded="node.expanded">
+            <template v-if="node.data.isLeaf">
+              <FileTypeIcon v-if="useFileIcons" :name="node.data.key" :size="16" />
+              <FileText v-else :size="16" class="file-icon" />
+            </template>
+            <template v-else>
+              <span
+                v-if="isNodeLoading(node.data.key)"
+                class="folder-loading-icon"
+                :aria-label="t('harness.chat.loading')"
+              ></span>
+              <FileTypeIcon v-else is-dir :size="18" />
+            </template>
+          </slot>
+        </span>
       </template>
 
-      <!-- Custom Title Slot -->
-      <template #title="{ data }">
-        <div class="tree-node-wrapper" @click="handleNodeClick(data)">
+      <template #label="{ node }">
+        <div class="tree-node-wrapper" @click="handleNodeClick(node.data)">
           <div class="tree-node-content">
-            <slot name="title" :node="data">
-              <span class="node-title-text" :title="data.title">{{ data.title }}</span>
+            <slot name="title" :node="node.data">
+              <span class="node-title-text" :title="node.data.title">{{ node.data.title }}</span>
             </slot>
           </div>
-          <div class="node-actions" @click.stop v-if="$slots.actions">
-            <slot name="actions" :node="data"></slot>
+          <div v-if="$slots.actions" class="node-actions" @click.stop>
+            <slot name="actions" :node="node.data"></slot>
           </div>
         </div>
       </template>
-    </a-tree>
+    </t-tree>
   </div>
 </template>
 
@@ -103,6 +105,7 @@ const emit = defineEmits([
 ])
 
 const { t } = useI18n()
+const treeKeys = { value: 'key', label: 'title' }
 const loadingKeys = ref(new Set())
 
 const setNodeLoading = (key, isLoading) => {
@@ -117,39 +120,38 @@ const setNodeLoading = (key, isLoading) => {
 
 const isNodeLoading = (key) => loadingKeys.value.has(key)
 
-const internalLoadData = async (treeNode) => {
-  if (!props.loadData) return
+const handleActive = (selectedKeys, info) => {
+  emit('update:selectedKeys', selectedKeys)
+  emit('select', selectedKeys, { node: info?.node?.data })
+}
 
-  const key = treeNode?.key
+// Same as the previous a-tree: title click toggles expand. TDesign then
+// invokes `load` for unloaded folders (children === true), equivalent to
+// ant-design-vue's load-data on expand.
+const handleLoad = async (node) => {
+  const rawNode = node?.data
+  if (!rawNode || rawNode.isLeaf || !props.loadData) return []
+
+  const key = rawNode.key
   if (key) setNodeLoading(key, true)
   try {
-    await props.loadData(treeNode)
+    const result = await props.loadData(rawNode)
+    return Array.isArray(result) ? result : []
   } finally {
     if (key) setNodeLoading(key, false)
   }
 }
 
-const handleSelectedUpdate = (keys) => {
-  emit('update:selectedKeys', keys)
-}
-
-const handleExpandedUpdate = (keys) => {
-  emit('update:expandedKeys', keys)
-}
-
-const handleSelect = (selectedKeys, info) => {
-  emit('select', selectedKeys, info)
-}
-
 const handleNodeClick = (data) => {
   emit('nodeClick', data)
 
-  const isFolder = data.isLeaf === false || (data.children && Array.isArray(data.children))
+  const isFolder = data.isLeaf === false || Array.isArray(data.children) || data.children === true
 
   if (isFolder) {
     const key = data.key
     const newExpandedKeys = [...props.expandedKeys]
     const index = newExpandedKeys.indexOf(key)
+    const expanding = index === -1
 
     if (index > -1) {
       newExpandedKeys.splice(index, 1)
@@ -158,7 +160,7 @@ const handleNodeClick = (data) => {
     }
 
     emit('update:expandedKeys', newExpandedKeys)
-    emit('toggleFolder', data, newExpandedKeys.indexOf(key) > -1)
+    emit('toggleFolder', data, expanding)
   }
 }
 </script>
@@ -168,82 +170,68 @@ const handleNodeClick = (data) => {
   width: 100%;
   background: transparent;
 
-  :deep(.ant-tree),
-  :deep(.ant-tree-list),
-  :deep(.ant-tree-list-holder),
-  :deep(.ant-tree-list-holder-inner) {
+  :deep(.t-tree),
+  :deep(.t-tree__list) {
     background: transparent !important;
     color: var(--td-text-color-primary, var(--gray-900));
   }
 
-  /* 统一节点容器 */
-  :deep(.ant-tree-treenode) {
-    display: flex;
+  /* Do not set display/min-height on .t-tree__item.
+     TDesign keeps collapsed children in the DOM as .t-tree__item--hidden
+     (max-height: 0). A min-height here leaves the empty gap after collapse. */
+  :deep(.t-tree__item) {
     align-items: center;
     width: 100%;
-    padding: 0;
-    height: 32px;
 
-    /* 隐藏切换器 */
-    .ant-tree-switcher {
+    .t-icon-caret-right-small,
+    .t-fake-arrow {
       display: none;
     }
 
-    /* 缩进单元 */
-    .ant-tree-indent {
+    .t-tree__icon {
       display: flex;
       align-items: center;
-      align-self: stretch;
-      &-unit {
-        width: 14px;
+      justify-content: center;
+      width: 24px;
+      margin-right: 4px;
+      flex-shrink: 0;
+
+      .t-icon {
+        display: flex;
+        align-items: center;
       }
     }
 
-    /* 内容区域容器 */
-    .ant-tree-node-content-wrapper {
+    .t-tree__label {
       display: flex;
       align-items: center;
       flex: 1;
       min-width: 0;
       height: 32px;
       line-height: 32px;
+      margin-left: 0;
       padding: 0 4px;
       border-radius: 4px;
+      background-color: transparent;
       transition: background-color 0.2s;
-
-      /* 图标容器 */
-      .ant-tree-iconEle {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 24px;
-        height: 100%;
-        margin-right: 4px;
-        flex-shrink: 0;
-
-        .anticon {
-          display: flex;
-          align-items: center;
-        }
-      }
-
-      /* 标题文字容器 */
-      .ant-tree-title {
-        display: flex;
-        align-items: center;
-        flex: 1;
-        min-width: 0;
-        height: 100%;
-      }
 
       &:hover {
         background-color: var(--gray-50);
       }
-
-      &.ant-tree-node-selected {
-        background-color: var(--gray-100);
-      }
     }
+
+    &.t-is-active .t-tree__label {
+      background-color: var(--gray-100);
+    }
+
+    .t-tree__operations {
+      flex-shrink: 0;
+    }
+  }
+
+  :deep(.t-tree__item--hidden) {
+    min-height: 0 !important;
+    max-height: 0 !important;
   }
 }
 
@@ -298,7 +286,7 @@ const handleNodeClick = (data) => {
   flex-shrink: 0;
 }
 
-.ant-tree-node-content-wrapper:hover .node-actions {
+.tree-node-wrapper:hover .node-actions {
   display: flex;
 }
 </style>

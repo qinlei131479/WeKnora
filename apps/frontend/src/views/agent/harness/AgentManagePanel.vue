@@ -1,15 +1,18 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import { DialogPlugin, MessagePlugin } from 'tdesign-vue-next'
 
-import { agentApi } from '@harness/apis/agent_api'
+import { agentApi } from '@/api/chat-work/agent'
 import AgentEditModal from './AgentEditModal.vue'
 import FallbackAvatar from '@harness/components/common/FallbackAvatar.vue'
 import { isBuiltinAgent, useAgentStore } from '@harness/stores/agent'
 import { generatePixelAvatar } from '@harness/utils/pixelAvatar'
 
 const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
 const agentStore = useAgentStore()
 const agentLoading = ref(false)
 const openMoreAgentId = ref(null)
@@ -45,13 +48,13 @@ const groupedAgents = computed(() => {
   return [
     {
       key: 'agents',
-      title: t('agent.runtimeManage.sectionAgents'),
+      title: t('agent.workManage.sectionAgents'),
       icon: SECTION_META.agents.icon,
       agents
     },
     {
       key: 'subagents',
-      title: t('agent.runtimeManage.sectionSubagents'),
+      title: t('agent.workManage.sectionSubagents'),
       icon: SECTION_META.subagents.icon,
       agents: subagents
     }
@@ -66,22 +69,22 @@ const getAgentShareLabel = (agent) => {
   const readScope = config.version === 2 ? config.read_scope : config
   const manageScope = config.manage_scope
   if (config.version === 2 && !config.read_scope && !manageScope) {
-    return t('agent.runtimeManage.share.ownerOnly')
+    return t('agent.workManage.share.ownerOnly')
   }
   const scopeLabel = (scope) => {
-    if (!scope) return t('agent.runtimeManage.share.none')
-    if (scope.access_level === 'global') return t('agent.runtimeManage.share.global')
+    if (!scope) return t('agent.workManage.share.none')
+    if (scope.access_level === 'global') return t('agent.workManage.share.global')
     if (scope.access_level === 'department') {
-      return t('agent.runtimeManage.share.department', { count: scope.department_ids?.length || 0 })
+      return t('agent.workManage.share.department', { count: scope.department_ids?.length || 0 })
     }
-    return t('agent.runtimeManage.share.user', { count: scope.user_uids?.length || 0 })
+    return t('agent.workManage.share.user', { count: scope.user_uids?.length || 0 })
   }
   return manageScope
-    ? t('agent.runtimeManage.share.readManage', {
+    ? t('agent.workManage.share.readManage', {
         read: scopeLabel(readScope),
         manage: scopeLabel(manageScope)
       })
-    : t('agent.runtimeManage.share.readonly', { scope: scopeLabel(readScope) })
+    : t('agent.workManage.share.readonly', { scope: scopeLabel(readScope) })
 }
 
 const isSectionCollapsed = (key) => collapsedSections.value.has(key)
@@ -105,7 +108,7 @@ const loadAgentBackends = async () => {
       value: backend.backend_id
     }))
   } catch (error) {
-    MessagePlugin.error(error.message || t('agent.runtimeManage.loadBackendsFailed'))
+    MessagePlugin.error(error.message || t('agent.workManage.loadBackendsFailed'))
   }
 }
 
@@ -115,7 +118,7 @@ const loadAgents = async () => {
     const response = await agentApi.getAgents({ includeSubagents: true })
     managedAgents.value = (response.agents || []).map(normalizeAgent)
   } catch (error) {
-    MessagePlugin.error(error.message || t('agent.runtimeManage.loadFailed'))
+    MessagePlugin.error(error.message || t('agent.workManage.loadFailed'))
   } finally {
     agentLoading.value = false
   }
@@ -131,6 +134,27 @@ const openEditAgentModal = (agent) => {
   agentEditModalRef.value?.openEdit(agent)
 }
 
+const findManagedAgent = (agentId) =>
+  managedAgents.value.find((agent) => agent.id === agentId || agent.agent_id === agentId || agent.slug === agentId)
+
+const openEdit = async (agentId) => {
+  if (!agentId) return
+  let agent = findManagedAgent(agentId)
+  if (!agent) {
+    await loadAgents()
+    agent = findManagedAgent(agentId)
+  }
+  if (agent) openEditAgentModal(agent)
+}
+
+const consumeEditQuery = async () => {
+  const editId = typeof route.query.edit === 'string' ? route.query.edit : ''
+  if (!editId) return
+  const { edit: _edit, ...rest } = route.query
+  await router.replace({ path: route.path, query: rest })
+  await openEdit(editId)
+}
+
 const handleCardClick = (agent) => {
   if (openMoreAgentId.value === agent.id) return
   openEditAgentModal(agent)
@@ -142,14 +166,14 @@ const refreshAgentLists = async () => {
 
 const deleteAgent = (agent) => {
   if (isBuiltinAgent(agent)) {
-    MessagePlugin.warning(t('agent.runtimeManage.deleteBuiltinWarning'))
+    MessagePlugin.warning(t('agent.workManage.deleteBuiltinWarning'))
     return
   }
   openMoreAgentId.value = null
   const dialog = DialogPlugin.confirm({
     attach: 'body',
-    header: t('agent.runtimeManage.deleteConfirmTitle', { name: agent.name }),
-    body: t('agent.runtimeManage.deleteConfirmContent'),
+    header: t('agent.workManage.deleteConfirmTitle', { name: agent.name }),
+    body: t('agent.workManage.deleteConfirmContent'),
     confirmBtn: t('common.delete'),
     cancelBtn: t('common.cancel'),
     theme: 'warning',
@@ -157,9 +181,9 @@ const deleteAgent = (agent) => {
       try {
         await agentApi.deleteAgent(agent.id)
         await refreshAgentLists()
-        MessagePlugin.success(t('agent.runtimeManage.deleted'))
+        MessagePlugin.success(t('agent.workManage.deleted'))
       } catch (error) {
-        MessagePlugin.error(error.message || t('agent.runtimeManage.deleteFailed'))
+        MessagePlugin.error(error.message || t('agent.workManage.deleteFailed'))
       } finally {
         dialog.hide()
       }
@@ -169,12 +193,21 @@ const deleteAgent = (agent) => {
 
 onMounted(async () => {
   await Promise.all([loadAgentBackends(), loadAgents()])
+  await consumeEditQuery()
 })
+
+watch(
+  () => route.query.edit,
+  (value) => {
+    if (value) consumeEditQuery()
+  }
+)
 
 defineExpose({
   loading: agentLoading,
   refresh: loadAgents,
-  openCreate: openCreateAgentModal
+  openCreate: openCreateAgentModal,
+  openEdit
 })
 </script>
 

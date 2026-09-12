@@ -454,7 +454,7 @@ import {
   Save,
   X
 } from 'lucide-vue-next'
-import { mcpApi } from '@/api/runtime/mcp'
+import { mcpApi } from '@/api/chat-work/mcp'
 import { formatFullDateTime } from '@harness/utils/time'
 import { knowledgeBasesLocation } from '@/utils/weknoraFeatures'
 

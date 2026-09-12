@@ -40,6 +40,7 @@
 
 <script setup>
 import { computed, ref, watch, inject } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ChevronDown, ChevronRight, Atom } from 'lucide-vue-next'
 import { ToolCallRenderer } from '@harness/components/ToolCallingResult'
 import {
@@ -48,6 +49,7 @@ import {
   normalizeToolCalls
 } from '@harness/components/ToolCallingResult/toolRegistry'
 
+const { t } = useI18n()
 const activeSubagentToolCallIds = inject('activeSubagentToolCallIds', null)
 
 // task 工具结果不随流式返回，不能用 tool_call_result 判断运行中：只有「活跃」的 task 才算运行中。
@@ -111,9 +113,9 @@ const getToolCallLabel = (toolCall) => {
 
 const toolCallsSummaryTitle = computed(() => {
   if (normalizedToolCalls.value.length === 1) {
-    return `调用: ${getToolCallLabel(normalizedToolCalls.value[0])}`
+    return t('harness.chat.calledTool', { name: getToolCallLabel(normalizedToolCalls.value[0]) })
   }
-  return `已调用 ${normalizedToolCalls.value.length} 个工具`
+  return t('harness.chat.calledTools', { count: normalizedToolCalls.value.length })
 })
 
 const toolCallsNamesMeta = computed(() => {
@@ -134,10 +136,10 @@ const statusSummary = computed(() => {
 
   const parts = []
   if (successCount > 0 && successCount === normalizedToolCalls.value.length) {
-    return '已完成'
+    return t('harness.chat.toolCompleted')
   }
-  if (errorCount > 0) parts.push(`${errorCount} 失败`)
-  if (runningCount > 0) parts.push(`${runningCount} 进行中`)
+  if (errorCount > 0) parts.push(t('harness.chat.toolFailedCount', { count: errorCount }))
+  if (runningCount > 0) parts.push(t('harness.chat.toolRunningCount', { count: runningCount }))
 
   return parts.join(' · ')
 })
@@ -160,7 +162,7 @@ const toggleToolCallsExpanded = () => {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    color: var(--gray-700);
+    color: var(--td-text-color-secondary, var(--gray-700));
     text-align: left;
     cursor: pointer;
     outline: none;
@@ -171,18 +173,18 @@ const toggleToolCallsExpanded = () => {
     background: transparent;
 
     &:hover {
-      color: var(--gray-800);
+      color: var(--td-text-color-primary, var(--gray-800));
     }
 
     &.is-expanded {
-      color: var(--gray-800);
+      color: var(--td-text-color-primary, var(--gray-800));
       margin-bottom: 4px;
     }
 
     .summary-leading {
       display: inline-flex;
       align-items: center;
-      color: var(--gray-700);
+      color: var(--td-text-color-secondary, var(--gray-700));
       flex-shrink: 0;
     }
 
@@ -201,12 +203,12 @@ const toggleToolCallsExpanded = () => {
     }
 
     .summary-separator {
-      color: var(--gray-500);
+      color: var(--td-text-color-placeholder, var(--gray-500));
       flex-shrink: 0;
     }
 
     .summary-meta {
-      color: var(--gray-600);
+      color: var(--td-text-color-secondary, var(--gray-600));
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -217,7 +219,7 @@ const toggleToolCallsExpanded = () => {
       font-size: 11px;
       padding: 0px 4px;
       // background: var(--gray-25);
-      color: var(--gray-600);
+      color: var(--td-text-color-secondary, var(--gray-600));
       border-radius: 4px;
       white-space: nowrap;
       font-weight: normal;
@@ -226,13 +228,13 @@ const toggleToolCallsExpanded = () => {
     .summary-trailing {
       display: inline-flex;
       align-items: center;
-      color: var(--gray-500);
+      color: var(--td-text-color-placeholder, var(--gray-500));
       flex-shrink: 0;
     }
   }
 
   .tool-calls-panel {
-    border-top: 1px solid var(--gray-100);
+    border-top: 1px solid var(--td-component-stroke, var(--gray-100));
     padding-top: 4px;
     margin-top: 4px;
     margin-bottom: 8px;

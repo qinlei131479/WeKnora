@@ -3,14 +3,12 @@
     <div class="section-content">
       <!-- 加载状态 -->
       <div v-if="loading" class="loading-state">
-        <a-spin size="small" />
-        <span>加载中...</span>
+        <t-loading size="small" text="加载中..." />
       </div>
 
       <!-- 生成中状态 -->
       <div v-else-if="generating" class="generating-state">
-        <a-spin size="small" />
-        <span>AI 正在生成思维导图...</span>
+        <t-loading size="small" text="AI 正在生成思维导图..." />
       </div>
 
       <!-- 空状态 -->
@@ -36,7 +34,7 @@
       <!-- 思维导图显示 -->
       <div v-else class="mindmap-container">
         <div class="mindmap-toolbar">
-          <a-space :size="8">
+          <div class="mindmap-toolbar-actions">
             <button
               v-if="!readonly"
               type="button"
@@ -71,7 +69,7 @@
               <Maximize2 :size="14" />
               <span class="toolbar-text">适应视图</span>
             </button>
-          </a-space>
+          </div>
         </div>
         <div class="mindmap-svg-container">
           <svg ref="mindmapSvg" class="mindmap-svg"></svg>
@@ -83,7 +81,7 @@
 
 <script setup>
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { message } from 'ant-design-vue'
+import { MessagePlugin } from 'tdesign-vue-next'
 import { RefreshCw, Map as MapIcon, Sparkles, Maximize2, Plus } from 'lucide-vue-next'
 import { mindmapApi } from '@harness/apis/knowledge_api'
 import { Markmap } from 'markmap-view'
@@ -176,7 +174,7 @@ const loadMindmap = async () => {
     } else {
       console.error('加载思维导图失败:', error)
       const errorMsg = error?.message || String(error)
-      message.error('加载思维导图失败: ' + errorMsg)
+      MessagePlugin.error('加载思维导图失败: ' + errorMsg)
     }
   } finally {
     loading.value = false
@@ -206,14 +204,14 @@ const generateMindmap = async () => {
     // 再延迟一点，确保SVG元素完全渲染
     setTimeout(() => {
       renderMindmap(response.mindmap)
-      message.success('思维导图生成成功！')
+      MessagePlugin.success('思维导图生成成功！')
     }, 100)
 
     await checkMindmapDiff()
   } catch (error) {
     console.error('生成思维导图失败:', error)
     const errorMsg = error?.message || String(error)
-    message.error('生成失败: ' + errorMsg)
+    MessagePlugin.error('生成失败: ' + errorMsg)
   } finally {
     generating.value = false
   }
@@ -263,9 +261,9 @@ const incrementalUpdate = async () => {
     setTimeout(() => {
       renderMindmap(response.mindmap)
       if (response.no_ai_needed) {
-        message.success('思维导图已更新（自动清理已删除文件）')
+        MessagePlugin.success('思维导图已更新（自动清理已删除文件）')
       } else {
-        message.success('增量更新完成！')
+        MessagePlugin.success('增量更新完成！')
       }
     }, 100)
 
@@ -273,7 +271,7 @@ const incrementalUpdate = async () => {
   } catch (error) {
     console.error('增量更新失败:', error)
     const errorMsg = error?.message || String(error)
-    message.error('增量更新失败: ' + errorMsg)
+    MessagePlugin.error('增量更新失败: ' + errorMsg)
   } finally {
     generating.value = false
   }
@@ -472,7 +470,7 @@ const renderMindmap = async (data, retryCount = 0) => {
       return
     } else {
       console.error('无法获取SVG容器，渲染失败')
-      message.error('渲染失败：无法找到SVG容器')
+      MessagePlugin.error('渲染失败：无法找到SVG容器')
       return
     }
   }
@@ -514,7 +512,7 @@ const renderMindmap = async (data, retryCount = 0) => {
     }, 300)
   } catch (error) {
     console.error('渲染思维导图失败:', error)
-    message.error('渲染失败: ' + error.message)
+    MessagePlugin.error('渲染失败: ' + error.message)
   }
 }
 
@@ -698,6 +696,12 @@ onUnmounted(() => {
     margin-left: 4px;
     font-size: 13px;
   }
+}
+
+.mindmap-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .mindmap-toolbar-btn {

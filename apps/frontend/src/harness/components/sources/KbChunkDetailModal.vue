@@ -1,12 +1,14 @@
 <template>
-  <a-modal
-    v-model:open="visible"
-    :title="modalTitle"
-    width="960px"
-    :footer="null"
-    :destroyOnClose="true"
-    wrap-class-name="chunk-detail-modal"
-    :bodyStyle="{ maxHeight: '72vh', overflowY: 'auto', padding: '0' }"
+  <t-dialog
+    :visible="visible"
+    :header="modalTitle"
+    attach="body"
+    placement="center"
+    :width="960"
+    :footer="false"
+    :destroy-on-close="true"
+    dialog-class-name="chunk-detail-modal"
+    @close="visible = false"
   >
     <div v-if="chunk" class="detail-meta">
       <span v-if="typeof chunk.score === 'number'" class="score"
@@ -18,13 +20,15 @@
       <span v-if="lineRange" class="meta-item">{{ lineRange }}</span>
     </div>
 
-    <MarkdownPreview
-      v-if="chunk?.content"
-      :content="chunk.content"
-      class="chunk-markdown-content"
-    />
-    <div v-else class="empty-text">暂无内容</div>
-  </a-modal>
+    <div class="chunk-detail-body">
+      <MarkdownPreview
+        v-if="chunk?.content"
+        :content="chunk.content"
+        class="chunk-markdown-content"
+      />
+      <div v-else class="empty-text">暂无内容</div>
+    </div>
+  </t-dialog>
 </template>
 
 <script setup>
@@ -67,6 +71,11 @@ const lineRange = computed(() => {
 </script>
 
 <style scoped lang="less">
+.chunk-detail-body {
+  max-height: 72vh;
+  overflow-y: auto;
+}
+
 .detail-meta {
   margin-bottom: 8px;
   font-size: 12px;

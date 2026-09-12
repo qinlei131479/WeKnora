@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { message } from 'ant-design-vue'
+import { MessagePlugin } from 'tdesign-vue-next'
 import { taskerApi } from '@harness/apis/tasker'
 import { useUserStore } from '@harness/stores/user'
 import { parseToShanghai } from '@harness/utils/time'
@@ -131,11 +131,11 @@ export const useTaskerStore = defineStore('tasker', () => {
     if (!taskId) return
     try {
       await taskerApi.cancelTask(taskId)
-      message.success('取消请求已提交')
+      MessagePlugin.success('取消请求已提交')
       await refreshTask(taskId)
     } catch (error) {
       console.error(`取消任务 ${taskId} 失败`, error)
-      message.error(error?.message || '取消任务失败')
+      MessagePlugin.error(error?.message || '取消任务失败')
     }
   }
 
@@ -143,7 +143,7 @@ export const useTaskerStore = defineStore('tasker', () => {
     if (!taskId) return
     try {
       await taskerApi.deleteTask(taskId)
-      message.success('删除任务成功')
+      MessagePlugin.success('删除任务成功')
       // 从本地列表中移除
       const index = tasks.value.findIndex((item) => item.id === taskId)
       if (index >= 0) {
@@ -151,7 +151,7 @@ export const useTaskerStore = defineStore('tasker', () => {
       }
     } catch (error) {
       console.error(`删除任务 ${taskId} 失败`, error)
-      message.error(error?.message || '删除任务失败')
+      MessagePlugin.error(error?.message || '删除任务失败')
     }
   }
 

@@ -16,16 +16,6 @@
         <span class="file-path-title">{{ filePath }}</span>
       </div>
       <div class="modal-actions">
-        <button
-          v-if="canEdit && editMode !== 'edit'"
-          class="modal-action-btn"
-          @click="editMode = 'edit'"
-          :title="t('harness.chat.edit')"
-          :aria-label="t('harness.chat.edit')"
-        >
-          <FilePen :size="16" />
-        </button>
-
         <div v-if="isHtmlFile" class="preview-mode-switch">
           <button
             class="preview-mode-btn"
@@ -94,28 +84,39 @@
       </button>
     </div>
 
-    <div v-if="canEdit && editMode === 'edit'" class="edit-floating-actions">
-      <span v-if="draftChanged" class="edit-status-badge">{{ t('harness.chat.unsaved') }}</span>
+    <div v-if="canEdit" class="edit-floating-actions">
       <button
-        v-if="draftChanged"
-        class="edit-floating-btn edit-floating-btn-primary"
-        :disabled="saving"
-        @click="requestSave"
-        :title="saving ? t('harness.chat.saving') : t('harness.chat.save')"
-        :aria-label="saving ? t('harness.chat.saving') : t('harness.chat.save')"
+        v-if="editMode !== 'edit'"
+        class="edit-floating-btn lucide-icon-btn"
+        @click="editMode = 'edit'"
+        :title="t('harness.chat.edit')"
+        :aria-label="t('harness.chat.edit')"
       >
-        <Save :size="14" />
+        <FilePen :size="14" :stroke-width="2" />
       </button>
-      <button
-        class="edit-floating-btn"
-        :class="{ 'edit-floating-btn-danger': draftChanged }"
-        :disabled="saving"
-        @click="cancelEdit"
-        :title="t('harness.chat.cancel')"
-        :aria-label="t('harness.chat.cancel')"
-      >
-        <X :size="14" />
-      </button>
+      <template v-else>
+        <span v-if="draftChanged" class="edit-status-badge">{{ t('harness.chat.unsaved') }}</span>
+        <button
+          v-if="draftChanged"
+          class="edit-floating-btn edit-floating-btn-primary lucide-icon-btn"
+          :disabled="saving"
+          @click="requestSave"
+          :title="saving ? t('harness.chat.saving') : t('harness.chat.save')"
+          :aria-label="saving ? t('harness.chat.saving') : t('harness.chat.save')"
+        >
+          <Save :size="14" :stroke-width="2" />
+        </button>
+        <button
+          class="edit-floating-btn lucide-icon-btn"
+          :class="{ 'edit-floating-btn-danger': draftChanged }"
+          :disabled="saving"
+          @click="cancelEdit"
+          :title="t('harness.chat.cancel')"
+          :aria-label="t('harness.chat.cancel')"
+        >
+          <X :size="14" :stroke-width="2" />
+        </button>
+      </template>
     </div>
 
     <div
@@ -139,7 +140,12 @@
       </template>
       <template v-else-if="file?.previewType === 'image' && file?.previewUrl">
         <div class="image-preview-wrapper">
-          <img :src="file.previewUrl" :alt="filePath" class="image-preview" />
+          <img
+            :src="file.previewUrl"
+            :alt="filePath"
+            class="image-preview is-zoomable"
+            @click="openFullscreenPreview"
+          />
         </div>
       </template>
       <template v-else-if="file?.previewType === 'pdf' && file?.previewUrl">
@@ -177,8 +183,21 @@
       </template>
     </div>
 
+    <t-image-viewer
+      v-if="imagePreviewUrls.length"
+      v-model:visible="fullscreenPreviewVisible"
+      close-on-overlay
+      close-on-esc-keydown
+      :images="imagePreviewUrls"
+      :image-scale="imageViewerScale"
+      @close="closeFullscreenPreview"
+    />
     <Teleport to="body">
-      <div v-if="fullscreenPreviewVisible && file" class="fullscreen-preview-overlay">
+      <div
+        v-if="fullscreenPreviewVisible && file && !isImagePreview"
+        class="fullscreen-preview-overlay harness-root"
+        :class="{ dark: themeStore.isDark }"
+      >
         <div class="fullscreen-preview-actions">
           <div v-if="isHtmlFile" class="preview-mode-switch fullscreen-preview-switch">
             <button
@@ -203,25 +222,22 @@
             class="modal-action-btn fullscreen-action-btn"
             @click="$emit('download', file)"
             :title="t('harness.chat.download')"
+            :aria-label="t('harness.chat.download')"
           >
-            <Download :size="16" />
+            <Download :size="18" />
           </button>
           <button
             class="modal-action-btn fullscreen-action-btn"
             @click="closeFullscreenPreview"
             :title="t('harness.chat.close')"
+            :aria-label="t('harness.chat.close')"
           >
-            <X :size="16" />
+            <X :size="18" />
           </button>
         </div>
         <div class="fullscreen-preview-content">
           <div class="file-content fullscreen-file-content">
-            <template v-if="file?.previewType === 'image' && file?.previewUrl">
-              <div class="image-preview-wrapper fullscreen-image-preview-wrapper">
-                <img :src="file.previewUrl" :alt="filePath" class="image-preview" />
-              </div>
-            </template>
-            <template v-else-if="file?.previewType === 'pdf' && file?.previewUrl">
+            <template v-if="file?.previewType === 'pdf' && file?.previewUrl">
               <iframe
                 :src="file.previewUrl"
                 class="pdf-preview fullscreen-embed-preview"
@@ -378,6 +394,15 @@ const draftContent = ref('')
 const fullscreenPreviewVisible = ref(false)
 const htmlPreviewRenderKey = ref(0)
 
+const isImagePreview = computed(
+  () => props.file?.previewType === 'image' && Boolean(props.file?.previewUrl)
+)
+const imagePreviewUrls = computed(() => (isImagePreview.value ? [props.file.previewUrl] : []))
+const imageViewerScale = {
+  max: 8,
+  min: 0.2,
+  step: 0.25
+}
 const isMarkdown = computed(() => isMarkdownPreview(props.filePath, props.file?.previewType))
 const canEdit = computed(() => {
   const previewType = props.file?.previewType
@@ -498,12 +523,24 @@ watch([() => props.filePath, () => props.file?.previewType, () => props.file?.co
   }
 })
 
+const handleFullscreenKeydown = (event) => {
+  if (event.key === 'Escape' && fullscreenPreviewVisible.value && !isImagePreview.value) {
+    closeFullscreenPreview()
+  }
+}
+
 watch(fullscreenPreviewVisible, (visible) => {
   document.body.style.overflow = visible ? 'hidden' : ''
+  if (visible) {
+    window.addEventListener('keydown', handleFullscreenKeydown)
+  } else {
+    window.removeEventListener('keydown', handleFullscreenKeydown)
+  }
 })
 
 onUnmounted(() => {
   document.body.style.overflow = ''
+  window.removeEventListener('keydown', handleFullscreenKeydown)
 })
 </script>
 
@@ -596,6 +633,15 @@ onUnmounted(() => {
   cursor: pointer;
   transition: all 0.15s ease;
   padding: 0;
+
+  svg {
+    display: block;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    stroke: currentColor;
+    fill: none;
+  }
 }
 
 .modal-action-btn:hover,
@@ -670,8 +716,8 @@ onUnmounted(() => {
 
 .edit-floating-actions {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 16px;
+  right: 16px;
   z-index: 5;
   display: flex;
   align-items: center;
@@ -680,7 +726,7 @@ onUnmounted(() => {
 }
 
 .agent-file-preview.has-preview-header .edit-floating-actions {
-  top: 52px;
+  top: 68px;
 }
 
 .edit-status-badge {
@@ -718,6 +764,15 @@ onUnmounted(() => {
     border-color 0.15s ease,
     color 0.15s ease;
 
+  svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    stroke: currentColor;
+    fill: none;
+  }
+
   &:hover:not(:disabled) {
     border-color: var(--gray-250);
     background: var(--gray-50);
@@ -737,25 +792,25 @@ onUnmounted(() => {
 }
 
 .edit-floating-btn-primary {
-  background: var(--color-primary-500);
-  border-color: var(--color-primary-500);
+  background: var(--main-500, var(--color-primary-500, #07c05f));
+  border-color: var(--main-500, var(--color-primary-500, #07c05f));
   color: #fff;
 
   &:hover:not(:disabled) {
-    background: var(--color-primary-700);
-    border-color: var(--color-primary-700);
+    background: var(--main-700, var(--color-primary-700, #038626));
+    border-color: var(--main-700, var(--color-primary-700, #038626));
     color: #fff;
   }
 
   &:disabled {
-    background: var(--color-primary-500);
-    border-color: var(--color-primary-500);
+    background: var(--main-500, var(--color-primary-500, #07c05f));
+    border-color: var(--main-500, var(--color-primary-500, #07c05f));
     color: rgba(255, 255, 255, 0.5);
     cursor: not-allowed;
 
     &:hover {
-      background: var(--color-primary-500);
-      border-color: var(--color-primary-500);
+      background: var(--main-500, var(--color-primary-500, #07c05f));
+      border-color: var(--main-500, var(--color-primary-500, #07c05f));
       color: rgba(255, 255, 255, 0.5);
     }
   }
@@ -829,6 +884,10 @@ onUnmounted(() => {
   max-height: calc(80vh - 32px);
   object-fit: contain;
   border-radius: 6px;
+
+  &.is-zoomable {
+    cursor: zoom-in;
+  }
 }
 
 .pdf-preview {
@@ -866,15 +925,19 @@ onUnmounted(() => {
 .fullscreen-preview-overlay {
   position: fixed;
   inset: 0;
-  z-index: 1200;
-  background: var(--gray-0);
+  z-index: 4000;
+  display: flex;
+  flex-direction: column;
+  isolation: isolate;
+  background: var(--gray-0, var(--td-bg-color-container, #ffffff));
+  color: var(--gray-1000, var(--td-text-color-primary, #151616));
 }
 
 .fullscreen-preview-actions {
-  position: fixed;
+  position: absolute;
   top: 16px;
   right: 16px;
-  z-index: 2;
+  z-index: 3;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -886,16 +949,16 @@ onUnmounted(() => {
   gap: 2px;
   min-height: 40px;
   padding: 4px;
-  border: 1px solid var(--gray-200);
+  border: 1px solid var(--gray-200, var(--td-component-stroke, #e4e6e6));
   border-radius: 999px;
-  background: var(--color-trans-light);
+  background: var(--color-trans-light, var(--gray-0, #ffffff));
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
-  backdrop-filter: blur(10px);
 
   .preview-mode-btn {
     width: 32px;
     height: 32px;
     border-radius: 999px;
+    color: var(--gray-700, var(--td-text-color-secondary, #4c4d4d));
   }
 }
 
@@ -903,24 +966,34 @@ onUnmounted(() => {
   width: 40px;
   height: 40px;
   border-radius: 999px;
-  background: var(--color-trans-light);
-  border: 1px solid var(--gray-200);
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.14);
-  backdrop-filter: blur(10px);
+  color: var(--gray-800, var(--td-text-color-primary, #323333));
+  background: var(--color-trans-light, var(--gray-0, #ffffff));
+  border: 1px solid var(--gray-200, var(--td-component-stroke, #d7d9d9));
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+
+  &:hover {
+    color: var(--gray-1000, var(--td-text-color-primary, #151616));
+    background: var(--gray-0, var(--td-bg-color-container, #ffffff));
+    border-color: var(--gray-300, var(--td-component-border, #bdbfbf));
+  }
 }
 
 .fullscreen-preview-content {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  flex: 1;
+  min-width: 0;
   min-height: 0;
+  overflow: auto;
 }
 
 .fullscreen-file-content {
-  height: 100vh;
+  height: 100%;
   max-height: none;
-  min-height: 100vh;
-  padding: 0px;
+  min-height: 100%;
+  min-width: 0;
+  padding: 16px 72px 24px 24px;
   border-radius: 0;
+  overflow: auto;
 }
 
 .fullscreen-image-preview-wrapper {
@@ -929,9 +1002,10 @@ onUnmounted(() => {
 }
 
 .fullscreen-embed-preview {
-  height: 100vh; // 全屏时填满视口
-  min-height: 100vh; // 确保全屏时不塌陷
-  border-radius: 0px;
+  width: 100%;
+  height: 100%;
+  min-height: calc(100vh - 40px);
+  border-radius: 0;
 }
 
 .fullscreen-unsupported-preview {

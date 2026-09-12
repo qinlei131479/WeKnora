@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { type ChatEngine, useChatEngineStore } from '@/stores/chatEngine'
-import { useChatThreadsStore } from '@harness/stores/chatThreads'
+import { useChatThreadsStore } from '@/stores/chatWork'
 import { isNewChatRouteName } from './chatEngineRoutes'
 
 export { isNewChatRouteName } from './chatEngineRoutes'
@@ -11,8 +11,13 @@ export function useChatEngineNav() {
   const route = useRoute()
   const router = useRouter()
 
-  const isRuntimeChatRoute = computed(() =>
-    route.path === '/platform/harness/chat' || route.path.startsWith('/platform/harness/chat/'),
+  const isChatWorkRoute = computed(() =>
+    route.path === '/platform/chat-work' ||
+    route.path.startsWith('/platform/chat-work/') ||
+    route.path === '/platform/work-chat' ||
+    route.path.startsWith('/platform/work-chat/') ||
+    route.path === '/platform/harness/chat' ||
+    route.path.startsWith('/platform/harness/chat/'),
   )
 
   const isPlatformChatRoute = computed(() => {
@@ -20,15 +25,15 @@ export function useChatEngineNav() {
     return name === 'chat' || name === 'globalCreatChat' || name === 'kbCreatChat'
   })
 
-  const isChatSurface = computed(() => isRuntimeChatRoute.value || isPlatformChatRoute.value)
+  const isChatSurface = computed(() => isChatWorkRoute.value || isPlatformChatRoute.value)
   const isNewChatRoute = computed(() => isNewChatRouteName(route.name))
 
   const syncFromRoute = () => {
-    if (isRuntimeChatRoute.value) {
-      store.setEngine('runtime')
+    if (isChatWorkRoute.value) {
+      store.setEngine('chat-work')
       const threadId = route.params.thread_id
       if (typeof threadId === 'string' && threadId) {
-        store.setLastRuntimeThreadId(threadId)
+        store.setLastChatWorkThreadId(threadId)
       }
       return
     }
@@ -42,16 +47,16 @@ export function useChatEngineNav() {
   }
 
   const goToEngine = (engine: ChatEngine) => {
-    const alreadyOnEngine = engine === 'runtime' ? isRuntimeChatRoute.value : isPlatformChatRoute.value
+    const alreadyOnEngine = engine === 'chat-work' ? isChatWorkRoute.value : isPlatformChatRoute.value
     store.setEngine(engine)
     if (alreadyOnEngine) return
-    if (engine === 'runtime') {
-      const threadId = store.lastRuntimeThreadId
+    if (engine === 'chat-work') {
+      const threadId = store.lastChatWorkThreadId
       if (threadId) {
-        void router.push({ name: 'harnessChat', params: { thread_id: threadId } })
+        void router.push({ name: 'chatWork', params: { thread_id: threadId } })
         return
       }
-      void router.push({ name: 'harnessCreatChat' })
+      void router.push({ name: 'chatWorkCreat' })
       return
     }
     const chatId = store.lastPlatformChatId
@@ -59,12 +64,12 @@ export function useChatEngineNav() {
   }
 
   const goToNewChat = () => {
-    const useRuntime = isRuntimeChatRoute.value || (!isPlatformChatRoute.value && store.engine === 'runtime')
-    if (useRuntime) {
-      store.setEngine('runtime')
-      store.setLastRuntimeThreadId('')
+    const useChatWork = isChatWorkRoute.value || (!isPlatformChatRoute.value && store.engine === 'chat-work')
+    if (useChatWork) {
+      store.setEngine('chat-work')
+      store.setLastChatWorkThreadId('')
       useChatThreadsStore().setCurrentThreadId(null)
-      void router.push({ name: 'harnessCreatChat' })
+      void router.push({ name: 'chatWorkCreat' })
       return
     }
     store.setEngine('platform')
@@ -83,9 +88,9 @@ export function useChatEngineNav() {
 
   return {
     engine: computed(() => store.engine),
-    isRuntime: computed(() => store.engine === 'runtime'),
+    isChatWork: computed(() => store.engine === 'chat-work'),
     isChatSurface,
-    isRuntimeChatRoute,
+    isChatWorkRoute,
     isPlatformChatRoute,
     isNewChatRoute,
     syncFromRoute,

@@ -136,10 +136,10 @@ F0 → F1 → … → F9 验收通过
 | 一   | **F3** | 技能·工具：Skill / Tools / Runtime MCP 一并迁入正式 views（原 F3–F5 合并） | 完成                               |
 | 一   | **F4** | （已并入 F3）                                                   | 取消                               |
 | 一   | **F5** | （已并入 F3）                                                   | 取消                               |
-| 一   | **F6** | Runtime 智能体并进 `views/agent/harness`                         | 完成（待验收）                       |
-| 一   | **F7** | 删除 yuxi 知识库管理面，只留 WeKnora KB（已锁定 **A**）                   | 完成                               |
-| 一   | **F8** | Runtime 对话并进 `views/chat` + `creatChat` + 侧栏历史             | 未开始                              |
-| 一   | **F9** | 删除 `src/harness/`、Ant Design、`/platform/harness` 正式树       | 未开始                              |
+| 一   | **F6** | Runtime 智能体并进 `views/agent/harness`                         | 完成（已验收）                       |
+| 一   | **F7** | 删除 yuxi 知识库管理面，只留 WeKnora KB（已锁定 **A**）                   | 完成（已手工回归）                   |
+| 一   | **F8** | 工作模式（Runtime）对话 + 侧栏历史去 Ant；平台对话冻结                     | 完成（已手工回归）                     |
+| 一   | **F9** | 删除 `src/harness/`、Ant Design、`/platform/harness` 正式树       | 未开始（按下述逐项流程执行）               |
 | 闸门  | **G1** | 阶段一全量验收，才允许 B0                                             | 未开始                              |
 | 二   | **B0** | 冻结阶段一实际调用的 OpenAPI 对照表                                     | 未开始                              |
 | 二   | **B1** | Model / Initialization                                     | 未开始                              |
@@ -173,8 +173,10 @@ F0 → F1 → … → F9 验收通过
 | `/platform/harness/workspace`              | `src/harness/views/WorkspaceView.vue`     | workspace / knowledge           |
 | KB 列表 `/platform/knowledge-bases`        | `KnowledgeBaseList.vue`（无 runtime 岛）   | WeKnora `/api/v1`               |
 | Agent 列表 `?surface=runtime`                | `AgentList.vue` 内 `views/agent/harness`   | `/harness-api/api/agent`        |
-| `/platform/harness/chat`、`chat/:thread_id` | `AgentView.vue`                           | agent / chat SSE                |
-| 侧栏 Runtime 历史                              | `HarnessHistoryNav.vue`                   | chat threads                    |
+| `/platform/harness/chat`、`chat/:thread_id` | `AgentView.vue` + `AgentChatComponent.vue` | `/harness-api` agent / thread SSE |
+| 侧栏 Runtime 历史                              | `HarnessHistoryNav` + `ConversationNavSection`（Ant） | `/harness-api` threads     |
+| 平台对话 `/platform/chat/:chatid`、`creatChat` | `views/chat`、`views/creatChat`（**F8 冻结**） | WeKnora `/api/v1`               |
+| 侧栏平台历史来源（网页 / API / IM / 嵌入）              | `SessionSourceFilter`（仅 `chatEngine === 'platform'`） | `/api/v1` sessions by `source` |
 
 
 ---
@@ -445,7 +447,7 @@ F3、F6–F8 一律遵守 §0.7：先 move 再改 TDesign、同批删旧入口�
 - [x] 直开 `?surface=runtime` 落到平台 KB，不 404、不嵌 Ant（`beforeEach` 无条件剥 query）
 - [x] 工作区侧栏知识库仍是 WeKnora 库；点进目录不进 yuxi 管理页（`DataBaseView` / `DataBaseInfoView` 已删）
 - [x] Runtime 智能体绑库选项仍是 WeKnora id；配置里无 `surface=runtime` / yuxi 详情跳转
-- [ ] WeKnora KB 列表/详情/上传/Wiki 回归（手工）
+- [x] WeKnora KB 列表/详情/上传/Wiki 回归（手工）
 - [x] 后端接口未改；`knowledge_api.js` 仍被工作区 / 对话工具引用
 
 **落地对照（删面，不是换铬）：** 知识库列表去掉 runtime 侧栏项与 HarnessIsland；标题/创建按钮/卡片栅格与原先 platform 面相同。`DataBaseView` / `DataBaseInfoView` / `QuerySection` 删除。Agent 列表 `?surface=runtime` 未改。
@@ -454,57 +456,261 @@ F3、F6–F8 一律遵守 §0.7：先 move 再改 TDesign、同批删旧入口�
 
 
 
-### F8 · Runtime 对话并进正式 chat
+### F8 · 工作模式对话 + 历史去 Ant（平台对话冻结）
 
-**依赖:** F7 验收。最重一批，单独 PR，禁止夹带删目录。
+**依赖:** F7 已完成且已手工回归。单独 PR，禁止夹带删 `src/harness/`（F9）。本批 **不改** `apps/app-core` / `apps/agent-harness` 契约。
 
-**Files:**
+**产品边界（已锁定，不要按旧稿把两套对话揉进 `views/chat/index.vue`）：**
 
-- Modify: `apps/frontend/src/views/chat/index.vue`、`views/creatChat/creatChat.vue` — Runtime 会话走同一套正式壳，消息区用 TDesign 重写自 `AgentChatComponent.vue`（可拆 `views/chat/runtime/` 子组件，但仍在 views 下）
-- Modify: `apps/frontend/src/components/menu.vue` — 用正式历史列表替换 `HarnessHistoryNav`；`ChatEngineSegmented` 可保留「平台 / 运行时」切换，文案不要 harness
-- Modify: `apps/frontend/src/composables/useChatEngineNav.ts` — 去掉 `@harness/stores`，store 迁到 `src/stores/runtimeChat.ts`
-- Modify: `router/index.ts` — `/platform/harness/chat` → `/platform/chat/:id` 或现有 `chat/:chatid` 带 `engine=runtime`；禁止正式入口仍挂 `AgentView.vue`
-- API: agent_api / chat 相关 → `src/api/runtime/agent.ts`、`chat.ts`，SSE URL 不变
-- Source: `AgentView.vue`、`AgentChatComponent.vue`（约 4700 行）
+| 面 | F8 是否改 | 说明 |
+| -- | -- | -- |
+| 平台对话（对话模式） | **冻结** | `views/chat/index.vue`、`views/creatChat/creatChat.vue`、消息气泡、RAG/工具卡、`/api/v1` 会话表 **一行业务逻辑不改** |
+| 工作模式对话（Runtime / harness 智能体） | **本批** | `AgentView` + `AgentChatComponent` 迁出 harness，去 Ant，**外观对齐平台对话**（顶栏 / 消息区 / 底栏输入 / 空态引擎切换位置） |
+| 侧栏历史：工作模式 | **本批** | 替换 `HarnessHistoryNav` + Ant 的 `ConversationNavSection`，行样式对齐平台 `SessionSidebarRow` |
+| 侧栏历史：平台来源切换（网页 / API / IM / 网页嵌入） | **只排查+放开可见性** | 逻辑已在 `SessionSourceFilter`；疑似被引擎切换条挡住。不改筛选规则、不改 session API |
+| Agent 列表 `?surface=runtime` | 不动 | F6 已定 |
+| 嵌入页 `views/embed/*`、IM 渠道设置 | 不动 | 那是发布面，不是工作模式对话 |
 
-- [ ] 平台对话（`/api/v1/agent-chat`、`knowledge-chat`）回归。
-- [ ] Runtime 对话 SSE 事件处理与旧页一致（只换 UI）。
-- [ ] 提交：`feat(frontend): fold runtime chat into official chat views`
+旧稿「Runtime 会话走同一套正式壳、`chat/:chatid?engine=runtime`」**作废**：平台 `chat/:chatid` 挂的是 WeKnora 会话，和工作模式 `thread_id` 不是一张表（P7）。
+
+**对照源（§0.7，执行时必须 `git show`，禁止凭印象）：**
+
+- 工作模式现页：`src/harness/views/AgentView.vue`、`src/harness/components/AgentChatComponent.vue`（约 4700 行）
+- 外观参照（只抄布局 token，不抄数据）：`views/chat/index.vue` 顶栏 `ChatHeader`、空态 `ChatEngineSegmented`、底栏 `InputField`；侧栏 `SessionSidebarRow`
+- 历史现页：`src/harness/HarnessHistoryNav.vue`、`src/harness/components/ConversationNavSection.vue`（`a-dropdown` / `a-menu` / `a-button` / `Modal`）
+
+**现码要点（不要按记忆重写）：**
+
+- 正式入口仍是 `/platform/harness/chat`、`/platform/harness/chat/:thread_id`，组件 `@harness/views/AgentView.vue`。
+- 进入工作模式对话的主路径是侧栏 `ChatEngineSegmented`（`useChatEngineNav` → `harnessCreatChat` / `harnessChat`），以及对话空态上的同一组件。Runtime 智能体卡片点击目前进 **编辑**（`AgentManagePanel.handleCardClick` → `openEditAgentModal`），本批不新加卡片「对话」按钮。
+- `AgentView` 输入区左侧是 Ant `a-dropdown` 切智能体，并下挂已迁走的 `views/agent/harness/AgentEditModal.vue`。编辑器本批继续复用，不重写。
+- `AgentChatComponent` 直接 Ant：`message`、`@ant-design/icons-vue`；模板里少 `a-*`，图标和 toast 仍是 Ant。子树（`AgentInputArea`、`ToolCallingResult/*`、文件面板）大量仍在 harness，本批 **不** 整树改工具卡（与 F3 文件树仍 Ant 同一类落地偏差）。
+- JWT 已是 `weknora_token`。侧栏 `hasHarnessToken` 门在已登录时不应挡住历史；若仍出现，当 bug 修掉文案里的 harness，不要再造第二套 token。
+- `agent_api.js` / `threadApi` 仍在 `@harness/apis`。F6 故意留给本批再迁；URL 不变。
+
+#### 0. 平台历史来源切换：先诊断，再决定是否改 CSS
+
+用户记得侧栏可切 **API 对话 / IM 对话 / 网页嵌入**。这块 **只属于平台历史**（`chatEngine !== 'runtime'` 的 `v-else`），工作模式历史没有这些桶。
+
+现码三层叠加，执行时按顺序核对，**先不要改筛选逻辑**：
+
+1. **样式遮挡（优先怀疑）：** `.history-engine-switch`（`ChatEngineSegmented`）`position: sticky; z-index: 3`。`.session-list-scope-header` 是 `position: absolute; top: 4px; right: 10px; z-index: 2`，注释写的是叠在「近30天」第一行右侧。引擎切换条加在 `.submenu` 顶部之后，过滤器的 `top: 4px` 正好叠在切换条上，再被更高 z-index 盖住。
+2. **Hover 才显形：** inline 过滤器默认 `opacity: 0`，仅 `.submenu:hover` / 非默认来源 `emphasized` 时 `opacity: 1`。未悬停时看起来像「没了」。
+3. **无渠道桶则整控件不挂：** `shouldShowSessionSourceFilter(visibleChannelCount)` 在 `visibleChannelCount === 0` 时为 false。IM / embed / `api` 桶还要求 `countKnown && total > 0`（`bucketVisible`），管理员才探测这些文件夹。只有网页会话时，产品设计就是不显示切换。
+
+**放开规则：**
+
+- 若 1/2：只改 `menu.vue` 里平台历史分支的定位（过滤器改到引擎条 **下方** 自己的一行，或提高 z-index 并避开 sticky 条），去掉「必须 hover 才看见」若验收认为应该常显。**不改** `SessionSourceFilter.vue` 选项算法、不改 `sessionSidebarBuckets.ts`、不改 `/api/v1` sessions。
+- 若 3：环境里确实没有 API/IM/嵌入会话，控件隐藏是预期。验收写明「有对应会话才出现」；不要为了演示假造桶。
+- 工作模式历史 **不要** 复用这套来源切换（Runtime thread 不是 WeKnora session source）。
+
+#### 1. 路由（独立 path，禁止挂进平台 chat）
+
+| 正式 path | name | 组件 |
+| --------- | ---- | ---- |
+| `/platform/chat-work` | `runtimeCreatChat`（可保留旧 name 作 alias） | `views/chat-work/RuntimeChatView.vue`（由 `AgentView` move） |
+| `/platform/chat-work/:thread_id` | `runtimeChat` | 同上 |
+
+- `/platform/harness/chat`、`/platform/harness/chat/:thread_id` **只 redirect** 到上表，query（如 `agent_id`）原样带走。禁止正式入口继续 `import AgentView`。
+- **禁止** ` /platform/chat/:chatid?engine=runtime`。
+- `useChatEngineNav` / `chatEngineRoutes.ts`：`harnessCreatChat` → 新 name；`isRuntimeChatRoute` 认 `/platform/chat-work`。`views/chat/index.vue` 与 `creatChat.vue` 已走 composable，**不要**为改 path 去改这两页模板。
+- `ChatEngineSegmented` 文案继续 `chatEngine.*`（平台 / 运行时），不要写 harness。
+
+#### 2. 搬家（git mv），再去 Ant
+
+| 从 | 到 |
+| -- | -- |
+| `harness/views/AgentView.vue` | `views/chat-work/RuntimeChatView.vue` |
+| `harness/components/AgentChatComponent.vue` | `views/chat-work/RuntimeChatPanel.vue` |
+| `harness/HarnessHistoryNav.vue` + `ConversationNavSection.vue` | **合并**为 `views/chat-work/RuntimeHistoryNav.vue` 后删两份旧文件 |
+
+`chatThreads` store → `src/stores/runtimeChat.ts`（move/改名，行为不变）。`useChatEngineNav` 改从这里读，去掉 `@harness/stores/chatThreads`。
+
+API：`harness/apis/agent_api.js`（含 thread SSE）→ `src/api/runtime/agent.ts`，**path/method/事件字段不变**。`AgentManagePanel` / `AgentEditModal` 的 import 改指向 runtime API，不改 payload。
+
+`AgentEditModal`、`AgentRuntimeConfigForm`、`ShareConfigForm`、`stores/agent.js` **继续留 harness**（F6 已定，F9 再清）。
+
+**去 Ant（本批必须清零的文件）：** 迁入的 View / Panel / HistoryNav，以及对话页直接引用、用户一眼看到的输入铬（若 `AgentInputArea` 仍 Ant 按钮/下拉，同批改 TDesign，算 move 后的最小跟随，不要新建第三份输入框）。
+
+| 旧 | 新 |
+| -- | -- |
+| `a-dropdown` / `a-menu` | `t-popup` / `t-dropdown`（对照平台会话行菜单） |
+| `a-button` | `t-button` |
+| `message` / `Modal` | `MessagePlugin` / `DialogPlugin` |
+| `@ant-design/icons-vue` | 已有 lucide 或 `t-icon` |
+
+**外观对齐平台对话（能力不缩水）：**
+
+- 空会话：引擎切换放在标题区附近（现 Runtime 在 header 中；平台在空消息区上方）。本批以平台空态为参照，把工作模式空态的切换条放到同等视觉位置，不要两个 Segmented 叠在侧栏又叠在顶栏还错位。
+- 有会话：顶栏标题 + 右侧状态/文件入口保留（平台没有的「状态 / 文件」是工作模式能力，**必须留下**，色相用现有 semantic token，禁止只剩品牌绿）。
+- 底栏：输入、附件、停止生成、工具审批入口保留；铬用 TDesign，间距对照平台 `input-container`。
+- 侧栏历史：日期/列表/置顶/重命名/删除/加载更多与旧 `ConversationNavSection` 能力齐；行高、左内边距对齐 `session-list-row`。
+
+**明确不做：**
+
+- 不改 `views/chat/index.vue` / `creatChat.vue` 的消息列表、推荐问题、SSE。
+- 不合并两套会话表。
+- 不把 `ToolCallingResult/*`、文件树、MindMap 本批改 TDesign（F9 或后续；验收写偏差）。
+- 不删 `src/harness/`、不拆 `ant-design-vue` 依赖（F9）。
+- 不提交 `*.test.ts`。净增文件 ≤ 3（move 不算；History 合并是减文件）。
+
+#### 3. 侧栏接线（`menu.vue`）
+
+- `v-if="chatEngine === 'runtime'"` 分支：`HarnessHistoryNav` → `RuntimeHistoryNav`；去掉 `harness-root` / 为 Ant 准备的 wrap class。
+- 平台 `v-else`：会话列表、批量管理、**来源过滤器**原样保留；只允许为 §0 遮挡做 CSS。
+- `ChatEngineSegmented` 保留在历史区顶部（平台/工作模式切换）。过滤器不要再 `absolute: top: 4px` 叠到这条上。
+
+#### 4. 提交
+
+`feat(frontend): 将工作模式对话与历史迁入正式 views 并去掉 Ant`
 
 **验收**
 
-- [ ] 新建 Runtime 对话、历史恢复、停止生成、工具卡片、附件
-- [ ] 引擎切换后平台会话不丢
-- [ ] 无 `AgentView` 路由、无 Ant 聊天岛
+- [x] 平台对话：`views/chat/index.vue` / `creatChat.vue` / session API 本批无 diff；来源过滤器 CSS 已从引擎条上挪到下方常显（筛选算法未改）
+- [x] 工作模式：`/platform/chat-work` 新建、选智能体、发消息、停止、刷新进原 thread、工具卡/附件/状态与文件面板与迁前一致（已手工回归）
+- [x] 旧 `/platform/harness/chat`、`chat/:thread_id` redirect 到 `/platform/chat-work`，query（含 `agent_id`）原样带走
+- [x] 侧栏工作模式历史：`RuntimeHistoryNav` 列表/置顶/重命名/删除/加载更多；TDesign 行菜单；wrap 无 `harness-root` / `harness-island`
+- [x] 来源切换：**遮挡已修**（`.session-list-scope-header` 改为引擎条下方独立行，去掉 hover 才显）。无 API/IM/嵌入桶时控件仍不挂，属原逻辑
+- [x] 迁入的 View/Panel/HistoryNav 无 `ant-design-vue` / `@ant-design/icons-vue` import
+- [x] 无本批 `*.test.ts`；`apps/frontend` `npm run build` 通过
+
+**落地偏差（核对）：** 工具调用卡、文件树、子智能体线程弹窗、审批弹窗、附件上传相关组件仍在 `src/harness/` 内，统一交由 F9 逐项迁移。错误 toast 已走 TDesign `MessagePlugin`；输入铬（发送/加号/工具审批下拉）已改 TDesign。路由 name 已改为 `chatWork` / `chatWorkCreat`，`/platform/harness/chat` 兼容 redirect 保留至 F9 清理。
 
 ---
 
 
 
-### F9 · 拆除 harness 产品目录
 
-**依赖:** F8 验收。此时 `@harness/views` 应已无路由引用。
+### F9 · 拆除 harness 产品目录（逐项影响评估后删除）
 
-**Files:**
+**依赖:** F8 已完成并验收。`@harness/views` 已无路由引用。
 
-- Modify: `apps/frontend/src/main.ts` — 删除 `app.use(Antd)`、`ant-design-vue` CSS、`@harness/assets/css/harness-entry.css`
-- Modify: `apps/frontend/src/App.vue` — 确认仅 `t-config-provider`
-- Modify: `apps/frontend/vite.config.ts`、`tsconfig.app.json` — 删除 `@harness` alias
-- Modify: `apps/frontend/package.json` — 移除 `ant-design-vue`、`@ant-design/icons-vue`；lucide 若仅 harness 使用则移除
-- Delete: `apps/frontend/src/harness/` 整树
-- Modify: `router/index.ts` — 删除 `path: 'harness'` 子树，或整段只留兼容 redirect 表（可另文件 `router/legacyHarnessRedirects.ts`，限期）
-- Modify: `nginx.conf` **不改**（阶段二才动分流）；前端仍请求 `/harness-api`
+**目标:** `src/harness/` 归零、`@harness` alias 归零、antd 依赖归零，F1–F8 全部入口行为不变，前端仍请求 `/harness-api`（nginx 本批不改）。
 
-- [ ] `rg "@harness" apps/frontend/src` 为零
-- [ ] `rg "ant-design-vue" apps/frontend` 为零
-- [ ] `npm run type-check`、`npm run build` 通过
-- [ ] 提交：`chore(frontend): remove harness island and ant-design-vue`
+**总原则（禁止整树直接删除）:**
 
-**验收**
+1. **禁止** `rm -rf apps/frontend/src/harness/` 或一次性 `git rm -r` 整树。必须按 F9.0 → F9.5 顺序推进，每一步可单独回滚。
+2. 每个文件/目录删除前，先跑引用检查；有引用先迁走或改指向，**调整并构建通过后**才能删旧文件。
+3. 迁移优先 `git mv`，禁止复制留双份；同一批不得既迁移又删除未验证的调用方。
+4. 每批结束跑 `npm run build`；涉及 `.ts`/store/alias 的批次追加 `npm run type-check`。
+5. 若调用方依赖 harness 内部实现（样式类、全局注册、alias、Ant 运行时），先补齐等价实现再删，禁止用「先删后修」。
+6. 不改 `apps/app-core` / `apps/agent-harness` 契约，不改请求 path / method / body / SSE 事件字段。
 
-- [ ] F1–F8 全部入口仍可用
-- [ ] 登录、KB、平台 Agent、组织、设置、Embed、系统管理回归
-- [ ] bundle 不再包含 antd
+#### 当前基线（执行前快照，2026-09-12）
+
+| 指标 | 当前值 | F9 目标 |
+| --- | --- | --- |
+| `src/harness/` 文件数 | 176 | 0 |
+| `rg "@harness" apps/frontend/src` 命中 | 265 处 / 83 文件 | 0 |
+| 其中 `src/harness/` 外部引用 | 93 处 / 22 文件 | 0 |
+| `@harness/views` | 0 | 0 |
+| 模板 `<a-*>` | 0 | 0 |
+| `app.use(Antd)` | 已移除（随 F8 收尾） | 保持移除 |
+| 源码 import `ant-design-vue` / `@ant-design/icons-vue` | 1 文件（`ToolCallingResult/tools/TodoListTool.vue`） | 0 |
+| `npm run build` | 通过 | 通过 |
+| `npm run type-check` | 失败（`src/utils/request.ts:8` 既有错误） | 通过 |
+
+> `src/utils/request.ts` 的类型错误与 harness 无关，但会挡住 G1；在 F9.4 之前作为独立小修处理，不夹带业务改动。
+
+#### 统一删除五步法（每个文件/目录都要走）
+
+| 步骤 | 动作 | 判定 |
+| --- | --- | --- |
+| 1 检查 | `rg -n "<模块名或路径>" apps/frontend/src` | 记录命中文件与数量 |
+| 2 判定 | 区分「无引用 / 仅 harness 内部引用 / harness 外部引用」 | 仅内部引用可随所属批次删；有外部引用必须先处理 |
+| 3 调整 | 迁移到正式目录或改指新实现，保持 props / 事件 / URL 不变 | 调整后调用方无 `@harness` |
+| 4 验证 | `npm run build`；涉及 `.ts` 追加 `npm run type-check` | 两者通过才继续 |
+| 5 删除 | `git rm` 旧文件，再跑一次 `rg` 确认零引用 | 记录到删除清单 |
+
+#### F9.0 · 冻结与基线快照（只读）
+
+- [ ] 记录上文基线命令输出，写入本批 PR 描述或 `docs/plan/`（不留临时 `*.test.ts`）。
+- [ ] 声明冻结：F9 期间不得新增任何 `@harness` import；发现新增则先迁走。
+- [ ] 生成外部依赖清单：`rg -n "@harness" apps/frontend/src -g '!**/harness/**'`。
+- [ ] 生成路由引用清单：`rg -n "HarnessRoot|BlankLayout|path: \"harness\"" apps/frontend/src/router`。
+- [ ] 生成样式/全局注册清单：`rg -n "@harness/assets|harness-root|ant-" apps/frontend/src`。
+
+#### F9.1 · 迁移 harness 外部依赖（只迁不删目录）
+
+按类别小步迁移，每类迁移完即构建；**此时 harness 目录保留**，仅把外部调用方指向新位置。
+
+| 类别 | 现存外部引用（示例） | 迁移落点 | 检查命令 |
+| --- | --- | --- | --- |
+| API | `apis/prefix`、`apis/base`、`apis/knowledge_api` | `src/api/chat-work/`（已有 `base.ts`/`agent.ts` 可复用） | `rg -n "@harness/apis" apps/frontend/src -g '!**/harness/**'` |
+| Store | `stores/user`、`stores/agent`、`stores/chatUI`、`stores/config` | `src/stores/` | `rg -n "@harness/stores" apps/frontend/src -g '!**/harness/**'` |
+| Utils | `errorHandler`、`file_utils`、`time`、`pixelAvatar`、`file_preview`、`extensionDisplayName`、`shareConfig`、`skill_icon_utils`、`scrollController`、`agentValidator`、`messageProcessor`、`messageGrouping`、`subagentThread`、`toolApproval` | `src/utils/` | `rg -n "@harness/utils" apps/frontend/src -g '!**/harness/**'` |
+| Composables | `useApproval`、`useAgentThreadState`、`useAgentRunStream`、`useAgentStreamHandler`、`useStreamSmoother`、`useAgentRequestQueue`、`useAgentMentionConfig` | `src/composables/agent/` | `rg -n "@harness/composables" apps/frontend/src -g '!**/harness/**'` |
+| 工作模式组件 | `AgentInputArea`、`ToolApprovalModeSelector`、`AgentMessageComponent`、`RefsComponent`、`ToolCallsGroupComponent`、`HumanApprovalModal`、`AgentArtifactsCard`、`AgentPanel`、`SubagentThreadModal`、`ToolCallingResult/toolRegistry`、`common/FallbackAvatar`、`common/FileTypeIcon` | `src/views/chat-work/components/` | `rg -n "@harness/components/(Agent|Tool|Refs|Human|Subagent|common)" apps/frontend/src -g '!**/harness/**'` |
+| 共享 UI | `PageHeader`、`InfoCard`、`PageShoulder`、`ExtensionCardGrid`、`ShareConfigForm`、`AgentFilePreview`、`FileTreeComponent`、`FileBrowserTable` | `src/components/shared/`（或各 views 私有目录） | `rg -n "@harness/components/(shared|extensions|common|File|Share|AgentFilePreview)" apps/frontend/src -g '!**/harness/**'` |
+| 样式 | `harness-entry.css`、`main.css`、`animations.less`、`extensions.less`、`extension-detail.less` | `src/assets/styles/` 并按需拆分 | `rg -n "@harness/assets" apps/frontend/src` |
+
+每个类别完成后：
+
+- [ ] 调用方不再出现对应 `@harness/*`。
+- [ ] `npm run build` 通过。
+- [ ] 不改变请求 URL（仍为 `/harness-api/api/...`）、props、事件名、SSE 字段。
+- [ ] 记录旧→新路径，供 F9.3 删除时核对。
+
+#### F9.2 · 拆除 `/platform/harness` 路由子树
+
+现状：harness 子树只剩 redirect，但父级仍挂 `@harness/HarnessRoot.vue`，`extensions` 仍挂 `@harness/layouts/BlankLayout.vue`。
+
+- [ ] 检查：`rg -n "HarnessRoot|BlankLayout|path: \"harness\"" apps/frontend/src/router/index.ts`。
+- [ ] 调整：把 9 条兼容 redirect 提升为顶层 `path: '/platform/harness/...'` 记录，或集中到 `router/legacyHarnessRedirects.ts`（限期）；父级不再需要渲染组件。
+- [ ] 逐条核对仍可跳转：`/platform/harness`、`/platform/harness/agents`、`/platform/harness/workspace`、`/platform/harness/extensions`、`/platform/harness/extensions/mcp/:slug`、`/platform/harness/extensions/skill/:slug`、`/platform/harness/dashboard`、`/platform/harness/chat`、`/platform/harness/chat/:thread_id`。
+- [ ] 影响判定：`HarnessRoot.vue`、`layouts/BlankLayout.vue` 仅当 `rg` 零引用后才删。
+- [ ] `npm run build` 通过。
+
+#### F9.3 · 目录内逐文件删除（引用检查优先）
+
+删除顺序：`assets → utils → apis → stores → composables → components → layouts → 根级 HarnessRoot/HarnessIsland`。每删一批都走统一五步法。
+
+- [ ] 每批只删「`rg` 确认零外部引用」的文件；仍有外部引用的回到 F9.1 迁移。
+- [ ] 仅被 harness 内部引用的文件，按依赖叶到根成组删除（先删无下游的文件）。
+- [ ] 每批建议 ≤ 20 个文件，批后 `npm run build`；涉及共享 UI/store 的批次追加 `npm run type-check`。
+- [ ] 删除 `components/ToolCallingResult/tools/TodoListTool.vue` 前，先处理其 `@ant-design/icons-vue` 依赖（换 lucide 或 `t-icon`）。
+- [ ] 删除 `assets/css/harness-entry.css` 前，确认 `main.ts` 与所有 `@import` 已无引用，且被正式页面使用的样式已迁入 `src/assets/styles/`。
+- [ ] 每批记录：删除文件、`rg` 证据、构建结果、回滚点（commit SHA）。
+- [ ] 目录清空后确认：`rg --files apps/frontend/src/harness` 无输出。
+
+#### F9.4 · 清理入口、alias 与依赖（必须在 `@harness` 归零之后）
+
+- [ ] `apps/frontend/src/main.ts`：删除 `@harness/assets/css/harness-entry.css` import；确认无 `app.use(Antd)`、无 antd CSS。
+- [ ] `apps/frontend/src/App.vue`：确认仅 `t-config-provider`，无 Ant 全局配置。
+- [ ] `apps/frontend/vite.config.ts`、`tsconfig.app.json`：删除 `@harness` alias。
+- [ ] `apps/frontend/package.json` + `package-lock.json`：移除 `ant-design-vue`、`@ant-design/icons-vue`；确认 lucide 仍被正式页面使用后再决定是否保留。
+- [ ] 修复 `apps/frontend/src/utils/request.ts:8` 既有类型错误（独立小修）。
+- [ ] `nginx.conf` **不改**；前端仍请求 `/harness-api`。
+- [ ] 提交：`chore(frontend): remove harness island and ant-design-vue`。
+
+#### F9.5 · 最终验收
+
+- [ ] `rg "@harness" apps/frontend/src` 为零。
+- [ ] `rg "ant-design-vue" apps/frontend`（排除 `node_modules`/`dist`）为零。
+- [ ] `npm run type-check`、`npm run build` 通过。
+- [ ] F1–F8 全部入口仍可用：Dashboard、Workspace、Skills/Tools/MCP、Agent、chat-work、平台对话、旧 `/platform/harness/*` redirect。
+- [ ] 登录、KB、平台 Agent、组织、设置、Embed、系统管理回归。
+- [ ] bundle 不再包含 antd；Network 中工作模式请求仍为 `/harness-api/api/...`。
+- [ ] 删除清单与 `rg` 证据留档。
+
+#### 影响类型与处理策略
+
+| 影响类型 | 检查方式 | 处理策略 |
+| --- | --- | --- |
+| 直接 import | `rg "@harness/<path>"` | 迁移到正式目录并改 import |
+| 样式依赖 | `rg "@harness/assets|harness-root|ant-"` | 拆分并迁入 `src/assets/styles/`，用 TDesign token 替换 Ant 覆盖 |
+| 路由/懒加载 | `rg "HarnessRoot|BlankLayout"` | 改成顶层 redirect 或集中 legacy 文件 |
+| 全局注册 | `rg "app.use\\(Antd\\)|ant-design-vue"` | 源码清零后移除 package 依赖 |
+| 构建 alias | `vite.config.ts` / `tsconfig.app.json` | 最后一步删除，删前 `@harness` 必须归零 |
+| 运行时行为 | 页面手工回归 + 构建 | 行为不一致则回滚该批次，先补实现再删 |
+
+#### 禁止事项
+
+- 禁止一次性删除 `src/harness/` 整树。
+- 禁止在存在外部引用时删除被引用文件。
+- 禁止用复制方式保留新旧两份 harness 实现。
+- 禁止改后端接口、请求 URL、SSE 字段。
+- 禁止把 F9 的迁移、删除、依赖清理压进同一个无法回滚的提交。
 
 ---
 
@@ -677,7 +883,7 @@ Go wiki_page 服务。nginx 切 `/api/v1/knowledgebase/:id/wiki/*`。
 | 风险                 | 缓解                                                                           |
 | ------------------ | ---------------------------------------------------------------------------- |
 | 合上游 `frontend/` 冲突 | 阶段一只动新增 `views/` 与 router 增量；少改上游同名大文件（WikiBrowser、AgentEditorModal 尽量只删嵌入岛） |
-| F8 聊天回归面大          | 独立 PR；平台对话与 Runtime 对话分两次手工清单                                                |
+| F8 聊天回归面大          | **平台对话冻结**；只迁工作模式对话/历史；来源切换先查遮挡再改 CSS；独立 PR，禁止夹带 F9 |
 | F7 产品未定            | **已锁定 A**；F6 验收前不开工                                                        |
 | B6/B9 一次切太大        | 可按子 path 再拆 PR，但仍属同一批次门禁内                                                    |
 | 阶段二改坏契约            | 先契约测试再切 nginx；保留 Go 镜像回切                                                     |

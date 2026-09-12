@@ -1,14 +1,9 @@
 <script setup>
 import { onMounted, onBeforeMount, onUnmounted, ref, computed, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import zhCN from 'ant-design-vue/es/locale/zh_CN'
-import enUS from 'ant-design-vue/es/locale/en_US'
-import ruRU from 'ant-design-vue/es/locale/ru_RU'
-import koKR from 'ant-design-vue/es/locale/ko_KR'
 import { useUserStore } from '@harness/stores/user'
 import { useAgentStore } from '@harness/stores/agent'
-import { useChatThreadsStore } from '@harness/stores/chatThreads'
+import { useChatThreadsStore } from '@/stores/chatWork'
 import { useThemeStore } from '@harness/stores/theme'
 import { useDatabaseStore } from '@harness/stores/database'
 import { useConfigStore } from '@harness/stores/config'
@@ -18,14 +13,7 @@ import TaskCenterDrawer from '@harness/components/TaskCenterDrawer.vue'
 
 const HARNESS_THEME_CLASS = 'harness-theme'
 const HARNESS_DARK_CLASS = 'harness-dark'
-const ANTD_LOCALES = {
-  'zh-CN': zhCN,
-  'en-US': enUS,
-  'ru-RU': ruRU,
-  'ko-KR': koKR
-}
 
-const { locale } = useI18n()
 const router = useRouter()
 const userStore = useUserStore()
 const agentStore = useAgentStore()
@@ -41,17 +29,6 @@ const rootClass = computed(() => ({
   'harness-root': true,
   dark: themeStore.isDark
 }))
-
-const antdLocale = computed(() => ANTD_LOCALES[locale.value] || zhCN)
-
-const getPopupContainer = (trigger) => {
-  if (!trigger || typeof trigger.closest !== 'function') return document.body
-  return (
-    trigger.closest('.ant-modal-wrap') ||
-    trigger.closest('.ant-drawer-content-wrapper') ||
-    document.body
-  )
-}
 
 const syncOverlayTheme = () => {
   document.body.classList.add(HARNESS_THEME_CLASS)
@@ -93,22 +70,16 @@ onMounted(async () => {
 
 <template>
   <div class="harness-shell">
-    <a-config-provider
-      :theme="themeStore.currentTheme"
-      :locale="antdLocale"
-      :get-popup-container="getPopupContainer"
-    >
-      <div :class="rootClass">
-        <div v-if="booting" class="harness-root-body" />
-        <div v-else-if="!userStore.token" class="harness-root-body" />
-        <template v-else>
-          <div class="harness-root-body">
-            <slot />
-          </div>
-          <TaskCenterDrawer />
-        </template>
-      </div>
-    </a-config-provider>
+    <div :class="rootClass">
+      <div v-if="booting" class="harness-root-body" />
+      <div v-else-if="!userStore.token" class="harness-root-body" />
+      <template v-else>
+        <div class="harness-root-body">
+          <slot />
+        </div>
+        <TaskCenterDrawer />
+      </template>
+    </div>
   </div>
 </template>
 

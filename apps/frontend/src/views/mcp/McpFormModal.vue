@@ -338,7 +338,7 @@
 import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { MessagePlugin } from 'tdesign-vue-next'
-import { mcpApi } from '@/api/runtime/mcp'
+import { mcpApi } from '@/api/chat-work/mcp'
 
 const { t } = useI18n()
 const props = defineProps({

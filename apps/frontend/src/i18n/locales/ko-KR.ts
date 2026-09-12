@@ -5356,8 +5356,8 @@ export default {
     stepSummarySeparator: ' · ',
     title: '에이전트',
     subtitle: '에이전트 구성 및 관리, 대화 동작 및 기능 맞춤화',
-    runtimeSubtitle: '작업 에이전트를 관리합니다. 과정에서 중간 파일과 산출물을 생성합니다.',
-    runtimeManage: {
+    workSubtitle: '작업 에이전트를 관리합니다. 과정에서 중간 파일과 산출물을 생성합니다.',
+    workManage: {
       agents: '에이전트 {count}개',
       global: '전역 {count}개',
       builtin: '내장 {count}개',
@@ -5780,7 +5780,7 @@ export default {
     },
     tabs: {
       platform: '대화',
-      runtime: '작업',
+      work: '작업',
       providers: '모델 공급자',
       sharedToMe: '나와 공유됨'
     },
@@ -6867,7 +6867,6 @@ export default {
       attachment: '첨부',
       approvalSaveFailed: '승인 모드를 저장하지 못했습니다',
       createFailed: '대화를 만들지 못했습니다. 다시 시도하세요.',
-      configChangeHint: '실행 중에 설정을 바꾸면 결과에 영향을 줄 수 있습니다. 새 대화를 만드는 것이 좋습니다.',
       queuedDeleted: '대기 요청이 삭제되었습니다',
       steered: '다음 우선 요청으로 설정했습니다',
       queueContinued: '대기열이 재개되었습니다',
@@ -6888,6 +6887,17 @@ export default {
       uploadedImage: '업로드한 이미지',
       thinking: '생각 중...',
       reasoning: '추론 과정',
+      calledTool: '호출: {name}',
+      calledTools: '도구 {count}개 호출됨',
+      toolCompleted: '완료',
+      toolFailedCount: '{count} 실패',
+      toolRunningCount: '{count} 진행 중',
+      toolSucceeded: '도구 {name} 실행 완료',
+      toolFailed: '도구 {name} 실행 실패',
+      toolCalling: '도구 호출 중: {name}',
+      toolParams: '매개변수',
+      toolFailedStatus: '실패',
+      toolRunningStatus: '실행 중',
       errorInterrupted: '생성이 중단되었습니다',
       errorGuard: '민감한 내용이 감지되어 출력이 중단되었습니다.',
       errorUnexpected: '생성 중 오류가 발생했습니다',
@@ -6896,7 +6906,6 @@ export default {
       stoppedHint: '이번 답변 생성을 중지했습니다',
       reedit: '질문 다시 편집',
       builtin: '내장',
-      boundHint: '이 대화는 에이전트에 연결되어 있습니다. 새 대화에서 전환하세요.',
       editAgent: '에이전트 편집',
       createAgent: '새 에이전트',
       switchBound: '이 대화는 에이전트에 연결되어 있습니다. 새 대화에서 전환하세요.',
@@ -6967,7 +6976,7 @@ export default {
   chatEngine: {
     switchLabel: '유형 선택',
     platform: '대화',
-    runtime: '작업',
+    chatWork: '작업',
     lockedHint: '이미 대화 내용이 있어 유형을 변경할 수 없습니다'
   }
 }

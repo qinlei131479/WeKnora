@@ -35,7 +35,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
-import { dashboardApi } from '@/api/runtime/dashboard'
+import { dashboardApi } from '@/api/chat-work/dashboard'
 import { useTheme } from '@/composables/useTheme'
 import { getColorByIndex, getCSSVariable, initColorPalette, truncateLegend } from '../chart'
 

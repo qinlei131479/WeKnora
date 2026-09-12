@@ -5356,8 +5356,8 @@ export default {
     stepSummarySeparator: ' · ',
     title: 'Agents',
     subtitle: 'Configure and manage your agents to customize conversation behavior and capabilities',
-    runtimeSubtitle: 'Управление рабочими агентами. Они создают промежуточные файлы и артефакты.',
-    runtimeManage: {
+    workSubtitle: 'Управление рабочими агентами. Они создают промежуточные файлы и артефакты.',
+    workManage: {
       agents: '{count} агентов',
       global: '{count} глобальных',
       builtin: '{count} встроенных',
@@ -5780,7 +5780,7 @@ export default {
     },
     tabs: {
       platform: 'Диалог',
-      runtime: 'Работа',
+      work: 'Работа',
       providers: 'Поставщики моделей',
       sharedToMe: 'Shared to Me'
     },
@@ -6867,7 +6867,6 @@ export default {
       attachment: 'Вложение',
       approvalSaveFailed: 'Не удалось сохранить режим подтверждения',
       createFailed: 'Не удалось создать диалог. Попробуйте ещё раз.',
-      configChangeHint: 'Изменение настроек во время выполнения может повлиять на результат. Лучше создать новый диалог.',
       queuedDeleted: 'Запрос удалён из очереди',
       steered: 'Назначен следующим приоритетным запросом',
       queueContinued: 'Очередь возобновлена',
@@ -6888,6 +6887,17 @@ export default {
       uploadedImage: 'Загруженное изображение',
       thinking: 'Думаю...',
       reasoning: 'Рассуждение',
+      calledTool: 'Вызов: {name}',
+      calledTools: 'Вызвано инструментов: {count}',
+      toolCompleted: 'Завершено',
+      toolFailedCount: '{count} с ошибкой',
+      toolRunningCount: '{count} выполняется',
+      toolSucceeded: 'Инструмент {name} выполнен',
+      toolFailed: 'Инструмент {name} завершился с ошибкой',
+      toolCalling: 'Вызов инструмента: {name}',
+      toolParams: 'Параметры',
+      toolFailedStatus: 'Ошибка',
+      toolRunningStatus: 'Выполняется',
       errorInterrupted: 'Генерация прервана',
       errorGuard: 'Обнаружено чувствительное содержимое. Вывод остановлен.',
       errorUnexpected: 'Ошибка при генерации',
@@ -6896,7 +6906,6 @@ export default {
       stoppedHint: 'Вы остановили этот ответ',
       reedit: 'Изменить вопрос',
       builtin: 'Встроенный',
-      boundHint: 'Этот диалог привязан к агенту. Чтобы сменить агента, создайте новый диалог.',
       editAgent: 'Изменить агента',
       createAgent: 'Новый агент',
       switchBound: 'Этот диалог привязан к агенту. Создайте новый диалог, чтобы сменить агента.',
@@ -6967,7 +6976,7 @@ export default {
   chatEngine: {
     switchLabel: 'Выбор типа',
     platform: 'Диалог',
-    runtime: 'Работа',
+    chatWork: 'Работа',
     lockedHint: 'В этом диалоге уже есть сообщения, тип изменить нельзя'
   }
 }

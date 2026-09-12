@@ -451,7 +451,7 @@ import {
   ChevronDown,
   ChevronRight
 } from 'lucide-vue-next'
-import { skillApi } from '@/api/runtime/skill'
+import { skillApi } from '@/api/chat-work/skill'
 import ExtensionCardGrid from '@harness/components/extensions/ExtensionCardGrid.vue'
 import SkillInstallFlowModal from './SkillInstallFlowModal.vue'
 import SkillEditorModal from './SkillEditorModal.vue'

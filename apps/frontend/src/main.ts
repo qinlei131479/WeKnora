@@ -1,7 +1,6 @@
 import { createApp } from "vue";
 import { createPinia } from "pinia";
 import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
-import Antd from "ant-design-vue";
 import App from "./App.vue";
 import router from "./router";
 import "./assets/fonts.css";
@@ -43,7 +42,6 @@ const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);
 
 app.use(TDesign);
-app.use(Antd);
 app.use(pinia);
 app.use(router);
 app.use(i18n);

@@ -96,7 +96,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ArrowLeft, ChevronRight, Database, FileText, Image, WandSparkles } from 'lucide-vue-next'
-import { message } from 'ant-design-vue'
+import { MessagePlugin } from 'tdesign-vue-next'
 import { uploadMultimodalImage } from '@harness/utils/multimodal_image_upload'
 import { getMentionIconComponent } from '@harness/utils/mention_icon_utils'
 import { buildMentionResourceItems } from '@harness/utils/mention_resource_items'
@@ -183,10 +183,7 @@ const processImageUpload = async (file) => {
     emit('upload-image-success')
   } catch (error) {
     console.error('图片上传失败:', error)
-    message.error({
-      content: `图片上传失败: ${error.message || '未知错误'}`,
-      key: 'image-upload'
-    })
+    MessagePlugin.error(`图片上传失败: ${error.message || '未知错误'}`)
   }
 }
 </script>

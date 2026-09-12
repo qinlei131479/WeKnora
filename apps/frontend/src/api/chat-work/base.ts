@@ -15,14 +15,14 @@ export function harnessUrl(url: string): string {
 
 type ResponseType = 'json' | 'text' | 'blob'
 
-export class RuntimeApiError extends Error {
+export class ChatWorkApiError extends Error {
   status: number
   statusText: string
   data: unknown
 
   constructor(message: string, status: number, statusText: string, data: unknown) {
     super(message)
-    this.name = 'RuntimeApiError'
+    this.name = 'ChatWorkApiError'
     this.status = status
     this.statusText = statusText
     this.data = data
@@ -76,7 +76,7 @@ export async function apiRequest(
   }
 
   if (requiresAuth && !localStorage.getItem('weknora_token')) {
-    throw new RuntimeApiError('用户未登录', 401, 'Unauthorized', null)
+    throw new ChatWorkApiError('用户未登录', 401, 'Unauthorized', null)
   }
 
   const response = await fetch(resolvedUrl, requestOptions)
@@ -92,7 +92,7 @@ export async function apiRequest(
     if (response.status === 403) {
       errorMessage = '没有权限执行此操作'
     }
-    throw new RuntimeApiError(errorMessage, response.status, response.statusText, errorData)
+    throw new ChatWorkApiError(errorMessage, response.status, response.statusText, errorData)
   }
 
   if (responseType === 'blob') return response

@@ -1,14 +1,17 @@
 <template>
-  <a-modal
-    v-model:open="visible"
-    width="800px"
-    :footer="null"
-    :closable="false"
-    wrap-class-name="file-detail"
-    @after-open-change="afterOpenChange"
-    :bodyStyle="{ height: '80vh', padding: '0' }"
+  <t-dialog
+    :visible="visible"
+    attach="body"
+    placement="top"
+    top="20px"
+    :width="800"
+    :footer="false"
+    :destroy-on-close="true"
+    dialog-class-name="file-detail-modal"
+    @close="visible = false"
+    @closed="handleModalClosed"
   >
-    <template #title>
+    <template #header>
       <div class="modal-title-wrapper">
         <!-- 左侧：文件名和图标 -->
         <div class="file-title">
@@ -22,28 +25,33 @@
 
           <!-- 视图模式切换 -->
           <div class="view-controls" v-if="file && viewModeOptions.length > 1">
-            <a-segmented v-model:value="viewMode" :options="viewModeOptions" />
+            <t-radio-group v-model="viewMode">
+              <t-radio-button
+                v-for="opt in viewModeOptions"
+                :key="opt.value"
+                :value="opt.value"
+                :title="opt.label"
+                :aria-label="opt.label"
+              >
+                <component :is="opt.icon" :size="15" />
+              </t-radio-button>
+            </t-radio-group>
           </div>
 
           <!-- 下载按钮下拉菜单 -->
-          <a-dropdown trigger="click" v-if="file">
-            <a-button type="default" class="download-btn" title="下载" aria-label="下载">
+          <t-dropdown
+            v-if="file"
+            :options="downloadMenuOptions"
+            trigger="click"
+            placement="bottom-right"
+            attach="body"
+            @click="(data) => handleDownloadMenuClick({ key: data.value })"
+          >
+            <t-button theme="default" variant="outline" class="download-btn" title="下载" aria-label="下载">
               <Download :size="16" />
               <ChevronDown :size="14" />
-            </a-button>
-            <template #overlay>
-              <a-menu @click="handleDownloadMenuClick">
-                <a-menu-item key="original" :disabled="!file.file_id">
-                  <template #icon><Download :size="16" /></template>
-                  下载原文
-                </a-menu-item>
-                <a-menu-item key="markdown" :disabled="contentState.loading || !mergedContent">
-                  <template #icon><FileText :size="16" /></template>
-                  下载 Markdown
-                </a-menu-item>
-              </a-menu>
-            </template>
-          </a-dropdown>
+            </t-button>
+          </t-dropdown>
 
           <!-- 自定义关闭按钮 -->
           <button class="custom-close-btn" @click="visible = false">
@@ -53,7 +61,7 @@
       </div>
     </template>
     <div v-if="basicLoading" class="loading-container">
-      <a-spin tip="正在加载文档内容..." />
+      <t-loading text="正在加载文档内容..." />
     </div>
     <div v-else-if="detailError" class="empty-content">
       <p>{{ detailError }}</p>
@@ -61,7 +69,7 @@
     <div v-else-if="file && hasAvailableView" class="file-detail-content">
       <div v-if="viewMode === 'source'" class="content-panel source-panel">
         <div v-if="sourcePreview.loading" class="loading-container">
-          <a-spin tip="正在加载源文件预览..." />
+          <t-loading text="正在加载源文件预览..." />
         </div>
         <AgentFilePreview
           v-else
@@ -80,7 +88,7 @@
       <!-- Markdown 模式 -->
       <div v-else-if="viewMode === 'markdown'" class="content-panel flat-md-preview">
         <div v-if="contentState.loading" class="loading-container">
-          <a-spin tip="正在加载解析内容..." />
+          <t-loading text="正在加载解析内容..." />
         </div>
         <MarkdownPreview
           v-else-if="mergedContent"
@@ -95,7 +103,7 @@
       <!-- Chunks 模式：使用 Grid 布局 -->
       <div v-else-if="viewMode === 'chunks'" class="chunks-panel">
         <div v-if="contentState.loading" class="loading-container">
-          <a-spin tip="正在加载分块内容..." />
+          <t-loading text="正在加载分块内容..." />
         </div>
         <div v-else class="chunk-grid">
           <div v-for="chunk in mappedChunks" :key="chunk.id" class="chunk-card">
@@ -116,14 +124,14 @@
     <div v-else-if="file" class="empty-content">
       <p>暂无文件内容</p>
     </div>
-  </a-modal>
+  </t-dialog>
 </template>
 
 <script setup>
 import { computed, h, onBeforeUnmount, ref, watch } from 'vue'
-import { message } from 'ant-design-vue'
+import { MessagePlugin } from 'tdesign-vue-next'
 import { documentApi } from '@harness/apis/knowledge_api'
-import { getWorkspaceKnowledgeFileContent } from '@/api/runtime/workspace'
+import { getWorkspaceKnowledgeFileContent } from '@/api/chat-work/workspace'
 import { mergeChunks } from '@harness/utils/chunkUtils'
 import { getPreviewTypeByPath, normalizePreviewResponse } from '@harness/utils/file_preview'
 import {
@@ -284,16 +292,9 @@ const availableViewModes = computed(() => {
 const hasAvailableView = computed(() => availableViewModes.value.length > 0)
 
 const makeViewModeOption = (label, value, icon) => ({
-  label: h(
-    'span',
-    {
-      class: 'view-option-icon',
-      title: label,
-      'aria-label': label
-    },
-    [h(icon, { size: 15 })]
-  ),
-  value
+  label,
+  value,
+  icon
 })
 
 const viewModeOptions = computed(() => {
@@ -304,6 +305,22 @@ const viewModeOptions = computed(() => {
   }
   return availableViewModes.value.map((mode) => optionMap[mode])
 })
+
+// 下载菜单选项
+const downloadMenuOptions = computed(() => [
+  {
+    content: '下载原文',
+    value: 'original',
+    disabled: !file.value?.file_id,
+    prefixIcon: () => h(Download, { size: 16 })
+  },
+  {
+    content: '下载 Markdown',
+    value: 'markdown',
+    disabled: contentState.value.loading || !mergedContent.value,
+    prefixIcon: () => h(FileText, { size: 16 })
+  }
+])
 
 const loadBasicInfo = async () => {
   const kbId = String(props.kbId || '')
@@ -336,7 +353,7 @@ const loadBasicInfo = async () => {
     if (requestId !== basicRequestSeq) return
     console.error('加载文件基本信息失败:', error)
     detailError.value = error.message || '加载文件信息失败'
-    message.error(detailError.value)
+    MessagePlugin.error(detailError.value)
   } finally {
     if (requestId === basicRequestSeq) {
       basicLoading.value = false
@@ -377,7 +394,7 @@ const loadParsedContent = async () => {
       content: '',
       error: errorMessage
     }
-    message.error(errorMessage)
+    MessagePlugin.error(errorMessage)
   }
 }
 
@@ -466,11 +483,9 @@ function formatTextLength(length) {
   }
 }
 
-const afterOpenChange = (open) => {
-  if (!open) {
-    resetLocalState()
-    emit('closed')
-  }
+const handleModalClosed = () => {
+  resetLocalState()
+  emit('closed')
 }
 
 const loadSourcePreview = async () => {
@@ -499,7 +514,7 @@ const loadSourcePreview = async () => {
     console.error('加载源文件预览失败:', error)
     sourcePreview.value.message = error.message || '加载源文件预览失败'
     sourcePreview.value.supported = false
-    message.error(sourcePreview.value.message)
+    MessagePlugin.error(sourcePreview.value.message)
   } finally {
     if (requestId === sourceRequestSeq) {
       sourcePreview.value.loading = false
@@ -519,7 +534,7 @@ const handleDownloadMenuClick = ({ key }) => {
 // 下载原文
 const handleDownloadOriginal = async () => {
   if (!file.value || !props.kbId || !props.fileId) {
-    message.error('文件信息不完整')
+    MessagePlugin.error('文件信息不完整')
     return
   }
 
@@ -565,10 +580,10 @@ const handleDownloadOriginal = async () => {
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
-    message.success('下载成功')
+    MessagePlugin.success('下载成功')
   } catch (error) {
     console.error('下载文件时出错:', error)
-    message.error(error.message || '下载文件失败')
+    MessagePlugin.error(error.message || '下载文件失败')
   } finally {
     downloadingOriginal.value = false
   }
@@ -579,7 +594,7 @@ const handleDownloadMarkdown = () => {
   const content = mergedContent.value
 
   if (!content) {
-    message.error('没有可下载的 Markdown 内容')
+    MessagePlugin.error('没有可下载的 Markdown 内容')
     return
   }
 
@@ -608,10 +623,10 @@ const handleDownloadMarkdown = () => {
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
-    message.success('下载成功')
+    MessagePlugin.success('下载成功')
   } catch (error) {
     console.error('下载 Markdown 时出错:', error)
-    message.error(error.message || '下载 Markdown 失败')
+    MessagePlugin.error(error.message || '下载 Markdown 失败')
   } finally {
     downloadingMarkdown.value = false
   }
@@ -721,16 +736,13 @@ onBeforeUnmount(resetLocalState)
 </style>
 
 <style lang="less">
-.file-detail {
-  .ant-modal {
-    top: 20px;
-  }
+.file-detail-modal .t-dialog__body {
+  height: 80vh;
+  padding: 0;
+}
 
-  .ant-modal-header {
-    .ant-modal-title {
-      width: 100%;
-    }
-  }
+.file-detail-modal .t-dialog__header {
+  width: 100%;
 }
 
 .modal-title-wrapper {
@@ -827,15 +839,15 @@ onBeforeUnmount(resetLocalState)
   align-items: center;
   flex: 0 0 auto;
 
-  .ant-segmented {
+  .t-radio-group {
     padding: 2px;
   }
 
-  .ant-segmented-item {
+  .t-radio-button {
     min-width: 30px;
   }
 
-  .ant-segmented-item-label {
+  .t-radio-button__label {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -859,22 +871,5 @@ onBeforeUnmount(resetLocalState)
   font-size: 12px;
   color: var(--gray-500);
   white-space: nowrap;
-}
-
-/* 下拉菜单样式 */
-.ant-dropdown-menu {
-  border-radius: 8px;
-  padding: 4px;
-}
-
-.ant-dropdown-menu-item {
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  padding: 8px 12px;
-
-  svg {
-    margin-right: 8px;
-  }
 }
 </style>

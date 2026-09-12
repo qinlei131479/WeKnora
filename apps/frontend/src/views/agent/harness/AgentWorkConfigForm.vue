@@ -1,6 +1,6 @@
 <template>
-  <div class="agent-runtime-config-form">
-    <div class="runtime-config-content">
+  <div class="agent-work-config-form">
+    <div class="work-config-content">
       <div v-if="selectedAgent" class="agent-info">
         <div v-if="props.showSegmented && !isEmptyConfig" class="config-segment">
           <t-segmented v-model="currentSegment" :options="segmentOptions" class="config-segmented" />
@@ -9,7 +9,7 @@
         <t-alert
           v-if="isEmptyConfig"
           theme="warning"
-          :message="t('agent.runtimeManage.form.emptyConfig')"
+          :message="t('agent.workManage.form.emptyConfig')"
           class="config-alert"
         />
         <t-empty v-else-if="isCurrentSegmentEmpty" :description="t('common.noData')" class="config-empty" />
@@ -168,7 +168,7 @@
 
               <div v-if="shouldShowKnowledgeSkillWarning(key)" class="knowledge-skill-warning">
                 <t-icon name="error-circle" />
-                <span>{{ t('agent.runtimeManage.form.knowledgeSkillWarning') }}</span>
+                <span>{{ t('agent.workManage.form.knowledgeSkillWarning') }}</span>
               </div>
             </template>
 
@@ -375,7 +375,7 @@ import { storeToRefs } from 'pinia'
 import PromptTemplateSelector from '@/components/PromptTemplateSelector.vue'
 import ModelSelectorComponent from './ModelSelectorComponent.vue'
 import { useAgentStore } from '@harness/stores/agent'
-import { toolApi } from '@/api/runtime/tool'
+import { toolApi } from '@/api/chat-work/tool'
 import {
   getAgentConfigOptionDescription as getOptionDescription,
   getAgentConfigOptionLabel as getOptionLabel,
@@ -432,8 +432,8 @@ const segmentOptions = computed(() => [
   { label: t('agent.editor.toolsConfig'), value: 'tools' },
   { label: t('agentEditor.mcp.label'), value: 'mcps' },
   { label: t('agent.editor.skillsConfig'), value: 'skills' },
-  { label: t('agent.runtimeManage.editor.subagents'), value: 'subagents' },
-  { label: t('agent.runtimeManage.editor.navAdvanced'), value: 'advanced' }
+  { label: t('agent.workManage.editor.subagents'), value: 'subagents' },
+  { label: t('agent.workManage.editor.navAdvanced'), value: 'advanced' }
 ])
 
 const activeSegment = computed(() => (props.showSegmented ? currentSegment.value : props.segment))
@@ -697,7 +697,7 @@ const getResourceModeLabel = (kind) => {
   if (kind === 'knowledges') return t('agent.editor.knowledgeBases')
   if (kind === 'mcps') return t('agentEditor.mcp.label')
   if (kind === 'skills') return t('agent.editor.skillsSelection')
-  if (kind === 'subagents') return t('agent.runtimeManage.editor.subagentsSelection')
+  if (kind === 'subagents') return t('agent.workManage.editor.subagentsSelection')
   return kind
 }
 
@@ -705,7 +705,7 @@ const getResourceModeDesc = (kind, value) => {
   if (kind === 'knowledges') return t('agentEditor.desc.kbScope')
   if (kind === 'mcps') return t('agentEditor.mcp.desc')
   if (kind === 'skills') return t('agent.editor.skillsSelectionDesc')
-  if (kind === 'subagents') return t('agent.runtimeManage.editor.subagentsSelectionDesc')
+  if (kind === 'subagents') return t('agent.workManage.editor.subagentsSelectionDesc')
   return value?.description || ''
 }
 
@@ -719,7 +719,7 @@ const getResourceSelectLabel = (kind) => {
   if (kind === 'knowledges') return t('agent.editor.selectKnowledgeBases')
   if (kind === 'mcps') return t('agentEditor.mcp.selectLabel')
   if (kind === 'skills') return t('agent.editor.selectSkills')
-  if (kind === 'subagents') return t('agent.runtimeManage.editor.subagentsSelect')
+  if (kind === 'subagents') return t('agent.workManage.editor.subagentsSelect')
   return t('common.add')
 }
 
@@ -727,13 +727,13 @@ const getResourceSelectDesc = (kind) => {
   if (kind === 'knowledges') return t('agent.editor.selectKnowledgeBasesDesc')
   if (kind === 'mcps') return t('agentEditor.mcp.selectDesc')
   if (kind === 'skills') return t('agent.editor.selectSkillsDesc')
-  if (kind === 'subagents') return t('agent.runtimeManage.editor.subagentsSelectDesc')
+  if (kind === 'subagents') return t('agent.workManage.editor.subagentsSelectDesc')
   return ''
 }
 
 const getResourceEmptyLabel = (kind) => {
   if (kind === 'skills') return t('agent.editor.noSkillsAvailable')
-  if (kind === 'subagents') return t('agent.runtimeManage.editor.noSubagentsAvailable')
+  if (kind === 'subagents') return t('agent.workManage.editor.noSubagentsAvailable')
   return t('common.noData')
 }
 
@@ -748,9 +748,9 @@ const getToolGroupKey = (option) => {
 
 const getToolGroupLabel = (groupKey) => {
   if (groupKey === 'buildin' || groupKey === 'builtin') {
-    return t('agent.runtimeManage.editor.builtinTools')
+    return t('agent.workManage.editor.builtinTools')
   }
-  const i18nKey = `agent.runtimeManage.toolCategories.${groupKey}`
+  const i18nKey = `agent.workManage.toolCategories.${groupKey}`
   if (te(i18nKey)) return t(i18nKey)
   return groupKey
 }
@@ -798,10 +798,10 @@ const updateConfigValue = (key, value) => {
 const tx = (key, fallback, params) => (te(key) ? t(key, params) : fallback)
 
 const getConfigLabel = (key, value) =>
-  tx(`agent.runtimeManage.fields.${key}.name`, value?.name || key)
+  tx(`agent.workManage.fields.${key}.name`, value?.name || key)
 
 const getConfigDescription = (key, value) =>
-  tx(`agent.runtimeManage.fields.${key}.desc`, value?.description || '', {
+  tx(`agent.workManage.fields.${key}.desc`, value?.description || '', {
     default: value?.default,
     messages: '{messages}'
   })
@@ -809,7 +809,7 @@ const getConfigDescription = (key, value) =>
 const getLocalizedOptionLabel = (configKey, option) => {
   const optVal = getOptionValue(option)
   if (optVal == null || optVal === '') return getOptionLabel(option)
-  const fieldOptKey = `agent.runtimeManage.fields.${configKey}.options.${optVal}`
+  const fieldOptKey = `agent.workManage.fields.${configKey}.options.${optVal}`
   if (te(fieldOptKey)) return t(fieldOptKey)
   return getOptionLabel(option)
 }
@@ -818,7 +818,7 @@ const getLocalizedOptionDescription = (configKey, option) => getOptionDescriptio
 
 const getPlaceholder = (_key, value) => {
   if (value?.default === undefined || value?.default === null || value.default === '') return ''
-  return t('agent.runtimeManage.form.defaultPlaceholder', { value: value.default })
+  return t('agent.workManage.form.defaultPlaceholder', { value: value.default })
 }
 
 const handleModelChange = (key, spec) => {
@@ -890,11 +890,11 @@ defineExpose({ validateAndFilterConfig })
 </script>
 
 <style lang="less" scoped>
-.agent-runtime-config-form {
+.agent-work-config-form {
   background: transparent;
 }
 
-.runtime-config-content {
+.work-config-content {
   min-width: 0;
 }
 
@@ -969,9 +969,9 @@ defineExpose({ validateAndFilterConfig })
   :deep(.t-select),
   :deep(.t-input),
   :deep(.t-textarea),
-  :deep(.runtime-model-selector),
-  :deep(.runtime-model-selector .model-select),
-  :deep(.runtime-model-selector-select),
+  :deep(.work-model-selector),
+  :deep(.work-model-selector .model-select),
+  :deep(.work-model-selector-select),
   :deep(.t-radio-group) {
     width: 100%;
     min-width: 0;

@@ -13,38 +13,31 @@
       <slot name="top"></slot>
     </div>
 
-    <div class="expand-options" v-if="hasOptionsLeft">
-      <a-dropdown
-        v-model:open="optionsExpanded"
-        :trigger="['click']"
-        placement="topLeft"
-        overlay-class-name="config-dropdown-overlay"
+    <div v-if="selectedMentions.length" class="selected-tags-inline">
+      <span
+        v-for="item in selectedMentions"
+        :key="mentionKey(item)"
+        class="mention-chip"
+        :class="getMentionChipClass(item)"
       >
-        <template #overlay>
-          <div ref="optionsPanelRef" class="options-dropdown-content">
-            <slot name="options-left">
-              <div class="no-options">没有配置 options</div>
-            </slot>
-          </div>
-        </template>
-        <button
-          ref="optionsTriggerRef"
-          type="button"
-          class="expand-btn"
-          :class="{ active: optionsExpanded }"
-          :aria-label="t('harness.chat.addContent')"
-          aria-haspopup="menu"
-          :aria-expanded="optionsExpanded"
-        >
-          <Plus :size="17" />
-        </button>
-      </a-dropdown>
-      <slot name="actions-left"></slot>
+        <span class="mention-chip__icon-wrap">
+          <span class="mention-chip__icon">
+            <t-icon :name="mentionItemIcon(item)" />
+          </span>
+        </span>
+        <span class="mention-chip__name" :title="item.label">{{ item.label }}</span>
+        <span
+          class="mention-chip__remove"
+          :aria-label="t('common.remove')"
+          @click.stop="removeSelectedMention(item)"
+        >×</span>
+      </span>
     </div>
 
     <div
       ref="inputRef"
       class="user-input mention-editor"
+      :class="{ 'is-empty': isEditorEmpty }"
       role="textbox"
       aria-multiline="true"
       :aria-label="inputPlaceholder"
@@ -60,225 +53,176 @@
       @compositionend="handleCompositionEnd"
     ></div>
 
-    <!-- @ 提及选择弹窗 -->
-    <div v-if="mentionPopupVisible" ref="mentionDropdownRef" class="mention-dropdown-wrapper">
-      <div class="mention-popup" @mousedown.prevent>
-        <!-- 文件列表 -->
-        <div v-if="mentionItems.files.length > 0 || showFileSearchPrompt" class="mention-group">
-          <div class="mention-group-title">文件</div>
-          <div v-if="showFileSearchPrompt" class="mention-search-placeholder">
-            输入相关内容以搜索文件
-          </div>
-          <template v-else>
-            <div
-              v-for="(item, index) in mentionItems.files"
-              :key="'file-' + item.value"
-              :class="['mention-item', 'file-item', { active: isItemSelected('file', index) }]"
-              @click="insertMention(item)"
-            >
-              <div class="file-info-left">
-                <FileTypeIcon
-                  :name="item.label"
-                  :is-dir="item.is_dir"
-                  :size="16"
-                  class="file-type-icon"
-                />
-                <span class="file-name" :title="item.label">
-                  <span
-                    v-for="(part, pIdx) in splitTextByQuery(item.label, mentionQuery)"
-                    :key="pIdx"
-                    :class="{ 'query-match': part.isMatch }"
-                    >{{ part.text }}</span
-                  >
-                </span>
-              </div>
-              <span
-                v-if="formatMentionPath(item.description)"
-                class="file-parent-dir"
-                :title="formatMentionPath(item.description)"
-              >
-                <span
-                  v-for="(part, pIdx) in splitTextByQuery(
-                    formatMentionPath(item.description),
-                    mentionQuery
-                  )"
-                  :key="pIdx"
-                  :class="{ 'query-match': part.isMatch }"
-                  >{{ part.text }}</span
-                >
-              </span>
-            </div>
-          </template>
-        </div>
-
-        <!-- 知识库列表 -->
-        <div v-if="mentionItems.knowledgeBases.length > 0" class="mention-group">
-          <div class="mention-group-title">知识库</div>
-          <div
-            v-for="(item, index) in mentionItems.knowledgeBases"
-            :key="'kb-' + item.value"
-            :class="[
-              'mention-item',
-              'resource-item',
-              { active: isItemSelected('knowledge', index) }
-            ]"
-            @click="insertMention(item)"
+    <div class="control-bar">
+      <div class="expand-options" v-if="hasToolbarLeft">
+        <slot name="actions-left"></slot>
+        <t-tooltip v-if="imageUploadEnabled" placement="top" :content="t('chat.imageUploadTooltip')">
+          <button
+            type="button"
+            class="toolbar-icon-btn"
+            :class="{ active: imageCount > 0 }"
+            :disabled="disabled"
+            :aria-label="t('chat.imageUploadTooltip')"
+            @click.stop="handleImageClick"
           >
-            <div class="resource-name">
-              <span
-                v-for="(part, pIdx) in splitTextByQuery(item.label, mentionQuery)"
-                :key="pIdx"
-                :class="{ 'query-match': part.isMatch }"
-                >{{ part.text }}</span
-              >
-            </div>
-            <div
-              v-if="getMentionDescription(item.description)"
-              class="resource-description"
-              :title="getMentionDescription(item.description)"
-            >
-              <span
-                v-for="(part, pIdx) in splitTextByQuery(
-                  getMentionDescription(item.description),
-                  mentionQuery
-                )"
-                :key="pIdx"
-                :class="{ 'query-match': part.isMatch }"
-                >{{ part.text }}</span
-              >
-            </div>
-          </div>
-        </div>
-
-        <!-- MCP 列表 -->
-        <div v-if="mentionItems.mcps.length > 0" class="mention-group">
-          <div class="mention-group-title">MCP</div>
-          <div
-            v-for="(item, index) in mentionItems.mcps"
-            :key="'mcp-' + item.value"
-            :class="['mention-item', 'resource-item', { active: isItemSelected('mcp', index) }]"
-            @click="insertMention(item)"
+            <svg width="18" height="18" viewBox="0 0 1024 1024" fill="currentColor">
+              <path
+                d="M896 128H128c-35.3 0-64 28.7-64 64v640c0 35.3 28.7 64 64 64h768c35.3 0 64-28.7 64-64V192c0-35.3-28.7-64-64-64zM128 832V192h768l0.1 640H128z" />
+              <path d="M352 448a96 96 0 1 0 0-192 96 96 0 0 0 0 192z" />
+              <path d="M128 768l224-288 160 160 192-256L896 640v128H128z" />
+            </svg>
+            <span v-if="imageCount > 0" class="toolbar-count">{{ imageCount }}</span>
+          </button>
+        </t-tooltip>
+        <t-tooltip
+          v-if="fileUploadEnabled"
+          placement="top"
+          :content="attachmentCount > 0
+            ? t('chat.attachmentWithCount', { count: attachmentCount })
+            : t('chat.attachmentUploadTooltip')"
+        >
+          <button
+            type="button"
+            class="toolbar-icon-btn"
+            :class="{ active: attachmentCount > 0 }"
+            :disabled="disabled"
+            :aria-label="t('chat.attachmentUploadTooltip')"
+            @click.stop="handleAttachClick"
           >
-            <div class="resource-name">
-              <span
-                v-for="(part, pIdx) in splitTextByQuery(item.label, mentionQuery)"
-                :key="pIdx"
-                :class="{ 'query-match': part.isMatch }"
-                >{{ part.text }}</span
-              >
-            </div>
-            <div
-              v-if="getMentionDescription(item.description)"
-              class="resource-description"
-              :title="getMentionDescription(item.description)"
-            >
-              <span
-                v-for="(part, pIdx) in splitTextByQuery(
-                  getMentionDescription(item.description),
-                  mentionQuery
-                )"
-                :key="pIdx"
-                :class="{ 'query-match': part.isMatch }"
-                >{{ part.text }}</span
-              >
-            </div>
-          </div>
-        </div>
-
-        <!-- Skills 列表 -->
-        <div v-if="mentionItems.skills.length > 0" class="mention-group">
-          <div class="mention-group-title">Skills</div>
-          <div
-            v-for="(item, index) in mentionItems.skills"
-            :key="'skill-' + item.value"
-            :class="['mention-item', 'resource-item', { active: isItemSelected('skill', index) }]"
-            @click="insertMention(item)"
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path
+                d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+            </svg>
+            <span v-if="attachmentCount > 0" class="toolbar-count">{{ attachmentCount }}</span>
+          </button>
+        </t-tooltip>
+        <t-tooltip
+          v-if="mentionEnabled"
+          placement="top"
+          :content="selectedMentions.length > 0
+            ? t('input.knowledgeBaseWithCount', { count: selectedMentions.length })
+            : t('input.knowledgeBase')"
+        >
+          <button
+            ref="mentionButtonRef"
+            type="button"
+            class="toolbar-icon-btn"
+            :class="{ active: mentionPopupVisible || selectedMentions.length > 0 }"
+            :disabled="disabled"
+            :aria-label="t('input.knowledgeBase')"
+            @click.stop="openMentionPicker"
           >
-            <div class="resource-name">
-              <span
-                v-for="(part, pIdx) in splitTextByQuery(item.label, mentionQuery)"
-                :key="pIdx"
-                :class="{ 'query-match': part.isMatch }"
-                >{{ part.text }}</span
-              >
-            </div>
-            <div
-              v-if="getMentionDescription(item.description)"
-              class="resource-description"
-              :title="getMentionDescription(item.description)"
-            >
-              <span
-                v-for="(part, pIdx) in splitTextByQuery(
-                  getMentionDescription(item.description),
-                  mentionQuery
-                )"
-                :key="pIdx"
-                :class="{ 'query-match': part.isMatch }"
-                >{{ part.text }}</span
-              >
-            </div>
-          </div>
-        </div>
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="10" cy="10" r="3.5" stroke="currentColor" stroke-width="1.8" />
+              <path
+                d="M13.5 10V11.5C13.5 12.163 13.7634 12.7989 14.2322 13.2678C14.7011 13.7366 15.337 14 16 14C16.663 14 17.2989 13.7366 17.7678 13.2678C18.2366 12.7989 18.5 12.163 18.5 11.5V10C18.5 7.74566 17.6045 5.58365 16.0104 3.98959C14.4163 2.39553 12.2543 1.5 10 1.5C7.74566 1.5 5.58365 2.39553 3.98959 3.98959C2.39553 5.58365 1.5 7.74566 1.5 10C1.5 12.2543 2.39553 14.4163 3.98959 16.0104C5.58365 17.6045 7.74566 18.5 10 18.5H12"
+                stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <span v-if="selectedMentions.length > 0" class="toolbar-count">{{ selectedMentions.length }}</span>
+          </button>
+        </t-tooltip>
+      </div>
 
-        <!-- Subagents 列表 -->
-        <div v-if="mentionItems.subagents.length > 0" class="mention-group">
-          <div class="mention-group-title">Subagents</div>
-          <div
-            v-for="(item, index) in mentionItems.subagents"
-            :key="'subagent-' + item.value"
-            :class="[
-              'mention-item',
-              'resource-item',
-              { active: isItemSelected('subagent', index) }
-            ]"
-            @click="insertMention(item)"
-          >
-            <div class="resource-name">
-              <span
-                v-for="(part, pIdx) in splitTextByQuery(item.label, mentionQuery)"
-                :key="pIdx"
-                :class="{ 'query-match': part.isMatch }"
-                >{{ part.text }}</span
-              >
-            </div>
-            <div
-              v-if="getMentionDescription(item.description)"
-              class="resource-description"
-              :title="getMentionDescription(item.description)"
-            >
-              <span
-                v-for="(part, pIdx) in splitTextByQuery(
-                  getMentionDescription(item.description),
-                  mentionQuery
-                )"
-                :key="pIdx"
-                :class="{ 'query-match': part.isMatch }"
-                >{{ part.text }}</span
-              >
-            </div>
-          </div>
-        </div>
-
-        <!-- 无结果 -->
-        <div v-if="!hasAnyItems" class="mention-empty">{{ t('harness.chat.mentionEmpty') }}</div>
+      <div class="send-button-container">
+        <slot name="actions-right"></slot>
+        <t-tooltip v-if="isLoading" :content="t('input.stopGeneration')" placement="top">
+          <button type="button" class="stop-button" @click="handleSendOrStop"></button>
+        </t-tooltip>
+        <button
+          v-else
+          type="button"
+          class="send-button"
+          :class="{ disabled: isSendDisabled }"
+          :disabled="isSendDisabled"
+          :aria-label="t('input.send')"
+          @click="handleSendOrStop"
+        >
+          <img src="@/assets/img/sending-aircraft.svg" :alt="t('input.send')" />
+        </button>
       </div>
     </div>
 
-    <div class="send-button-container">
-      <slot name="actions-right"></slot>
-      <a-tooltip :title="isLoading ? t('input.stopGeneration') : ''">
-        <a-button
-          @click="handleSendOrStop"
-          :disabled="sendButtonDisabled"
-          type="link"
-          class="send-button"
+    <input
+      ref="fileInputRef"
+      type="file"
+      multiple
+      hidden
+      @change="handleFileInputChange"
+    />
+    <input
+      ref="imageInputRef"
+      type="file"
+      accept="image/jpeg,image/png,image/gif,image/webp"
+      hidden
+      @change="handleImageInputChange"
+    />
+
+    <Teleport to="body">
+      <div v-if="mentionPopupVisible" class="kb-overlay" @click="closeMentionOverlay">
+        <div
+          ref="mentionDropdownRef"
+          class="mention-menu"
+          :style="mentionDropdownStyle"
+          @click.stop
+          @mousedown.prevent
         >
-          <template #icon>
-            <component :is="getIcon" class="send-btn" />
-          </template>
-        </a-button>
-      </a-tooltip>
-    </div>
+          <div class="mention-list">
+            <template v-if="!mentionCurrentGroup && !mentionFlatMode">
+              <button
+                v-for="(group, index) in mentionGroupRows"
+                :key="group.type"
+                type="button"
+                class="mention-group-entry"
+                :class="{ active: index === mentionGroupActiveIndex }"
+                @click.stop="enterMentionGroup(group.type)"
+                @mouseenter="mentionGroupActiveIndex = index"
+              >
+                <span class="mention-group-entry__icon">
+                  <t-icon :name="group.icon" />
+                </span>
+                <span class="mention-group-entry__label">{{ group.label }}</span>
+                <span class="mention-group-entry__count">{{ group.count }}</span>
+                <t-icon class="mention-group-entry__arrow" name="chevron-right" />
+              </button>
+              <div v-if="!mentionGroupRows.length" class="kb-empty">{{ t('harness.chat.mentionEmpty') }}</div>
+            </template>
+            <template v-else>
+              <button
+                v-if="!mentionFlatMode"
+                type="button"
+                class="mention-back-row"
+                @click.stop="leaveMentionGroup"
+              >
+                <t-icon name="chevron-left" />
+                <span>{{ currentMentionGroup?.label }}</span>
+              </button>
+              <div
+                v-for="(item, index) in visibleMentionItems"
+                :key="mentionKey(item)"
+                class="mention-item"
+                :class="{
+                  active: index === mentionSelectedIndex,
+                  picked: isMentionPicked(item)
+                }"
+                @click="toggleMention(item)"
+                @mouseenter="mentionSelectedIndex = index"
+              >
+                <div class="icon-wrap">
+                  <div class="icon" :class="item.type === 'skill' ? 'skill-icon' : 'kb-icon'">
+                    <t-icon :name="mentionItemIcon(item)" />
+                  </div>
+                </div>
+                <div class="item-main">
+                  <span class="name">{{ item.label }}</span>
+                </div>
+              </div>
+              <div v-if="!visibleMentionItems.length" class="kb-empty">{{ t('harness.chat.mentionEmpty') }}</div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <div class="bottom-slot">
       <slot name="bottom"></slot>
@@ -298,12 +242,8 @@ import {
   h,
   render
 } from 'vue'
-import { SendOutlined, ArrowUpOutlined, PauseOutlined } from '@ant-design/icons-vue'
-import { Plus } from 'lucide-vue-next'
-import { searchMentionFiles } from '@harness/apis/mention_api'
-import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
-import { useOutsidePointerdown } from '@harness/composables/useOutsidePointerdown'
 import { buildMentionResourceItems } from '@harness/utils/mention_resource_items'
+import { getRootZoom, rectToCssPx, cssViewportSize } from '@/utils/zoom'
 import { useI18n } from 'vue-i18n'
 import {
   getMentionIconComponent,
@@ -325,17 +265,73 @@ const { t } = useI18n()
 
 // 点击外部关闭下拉框
 const mentionDropdownRef = ref(null)
+const mentionButtonRef = ref(null)
+const mentionDropdownStyle = ref({})
+const mentionPinned = ref(false)
+const fileInputRef = ref(null)
+const imageInputRef = ref(null)
+const selectedMentions = ref([])
+const mentionCurrentGroup = ref(null)
+const mentionGroupActiveIndex = ref(0)
+const mentionKey = (item) => `${item?.type || ''}:${item?.insertValue || item?.value || item?.label || ''}`
+let mentionRepositionHandler = null
+
+const closeMentionOverlay = () => {
+  mentionPopupVisible.value = false
+  mentionPinned.value = false
+  mentionCurrentGroup.value = null
+  mentionGroupActiveIndex.value = 0
+}
+
 const closeMentionPopup = (e) => {
   if (!mentionPopupVisible.value) return
   if (inputRef.value?.contains(e.target)) return
+  if (mentionButtonRef.value?.contains(e.target)) return
   if (mentionDropdownRef.value?.contains(e.target)) return
-  mentionPopupVisible.value = false
+  closeMentionOverlay()
+}
+
+const updateMentionDropdownPosition = () => {
+  const anchor = mentionButtonRef.value
+  if (!anchor) return
+
+  const zoom = getRootZoom()
+  const rect = rectToCssPx(anchor.getBoundingClientRect(), zoom)
+  const { width: vw, height: vh } = cssViewportSize(zoom)
+  const dropdownWidth = 220
+  const offsetY = 8
+  let left = Math.floor(rect.left)
+  left = Math.max(16, Math.min(Math.max(16, vw - dropdownWidth - 16), left))
+
+  const preferredDropdownHeight = 320
+  const minDropdownHeight = 160
+  const spaceBelow = vh - rect.bottom
+  const spaceAbove = rect.top
+
+  if (spaceBelow >= minDropdownHeight + offsetY) {
+    mentionDropdownStyle.value = {
+      position: 'fixed',
+      width: `${dropdownWidth}px`,
+      left: `${left}px`,
+      top: `${Math.floor(rect.bottom + offsetY)}px`,
+      maxHeight: `${Math.min(preferredDropdownHeight, spaceBelow - offsetY - 16)}px`,
+      zIndex: '10001'
+    }
+    return
+  }
+
+  const availableHeight = spaceAbove - offsetY - 20
+  mentionDropdownStyle.value = {
+    position: 'fixed',
+    width: `${dropdownWidth}px`,
+    left: `${left}px`,
+    bottom: `${vh - rect.top + offsetY}px`,
+    maxHeight: `${availableHeight >= preferredDropdownHeight ? preferredDropdownHeight : Math.max(minDropdownHeight, availableHeight)}px`,
+    zIndex: '10001'
+  }
 }
 
 const inputRef = ref(null)
-const optionsExpanded = ref(false)
-const optionsTriggerRef = ref(null)
-const optionsPanelRef = ref(null)
 // 用于防抖的定时器
 const debounceTimer = ref(null)
 const props = defineProps({
@@ -383,15 +379,34 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  imageUploadEnabled: {
+    type: Boolean,
+    default: false
+  },
+  imageCount: {
+    type: Number,
+    default: 0
+  },
+  attachmentCount: {
+    type: Number,
+    default: 0
+  },
   showOptionsLeft: {
     type: Boolean,
     default: true
   }
 })
 
-const emit = defineEmits(['update:modelValue', 'send', 'keydown', 'paste-image', 'drop-files'])
+const emit = defineEmits(['update:modelValue', 'send', 'keydown', 'paste-image', 'drop-files', 'attach'])
 const slots = useSlots()
 const inputPlaceholder = computed(() => props.placeholder || t('input.placeholder'))
+const isSendDisabled = computed(() => {
+  if (props.disabled) return true
+  const hasExtras =
+    selectedMentions.value.length > 0 || props.imageCount > 0 || props.attachmentCount > 0
+  if (hasExtras) return false
+  return props.sendButtonDisabled
+})
 
 // @ 提及功能是否启用
 const mentionEnabled = computed(() => {
@@ -400,6 +415,13 @@ const mentionEnabled = computed(() => {
 
 const mentionDisplayLabels = computed(() => buildMentionDisplayLabels(props.mention || {}))
 const mentionResourceItems = computed(() => buildMentionResourceItems(props.mention || {}))
+
+watch(mentionResourceItems, (resources) => {
+  const available = new Set(
+    [...(resources.knowledgeBases || []), ...(resources.skills || [])].map((item) => mentionKey(item))
+  )
+  selectedMentions.value = selectedMentions.value.filter((item) => available.has(mentionKey(item)))
+})
 
 let lastRawSelectionRange = null
 let lastSyncedEditorValue = props.modelValue || ''
@@ -707,6 +729,7 @@ const checkMentionTrigger = () => {
 
   const activeMention = findActiveMentionQuery(getEditorRawValue(), selectionRange.end)
   if (activeMention) {
+    mentionPinned.value = false
     const sameQuery = mentionPopupVisible.value && mentionQuery.value === activeMention.query
     mentionQuery.value = activeMention.query
     mentionPopupVisible.value = true
@@ -717,21 +740,15 @@ const checkMentionTrigger = () => {
     return true
   }
 
-  mentionPopupVisible.value = false
+  if (!mentionPinned.value) {
+    mentionPopupVisible.value = false
+  }
   return false
 }
 
 // 更新提及候选项
 const updateMentionItems = (query = '') => {
   const normalizedQuery = String(query || '')
-  if (!normalizedQuery) {
-    clearTimeout(mentionSearchTimer)
-    if (activeAbortController) {
-      activeAbortController.abort()
-      activeAbortController = null
-    }
-    searchRequestId.value++
-  }
 
   if (!props.mention) {
     mentionItems.value = { files: [], knowledgeBases: [], mcps: [], skills: [], subagents: [] }
@@ -739,10 +756,9 @@ const updateMentionItems = (query = '') => {
   }
 
   const lowerQuery = normalizedQuery.toLowerCase()
-  const { files = [] } = props.mention
-
   const filterItems = (list) =>
     list.filter((item) => {
+      if (!lowerQuery) return true
       const searchTexts = [
         item.label,
         item.value,
@@ -758,254 +774,229 @@ const updateMentionItems = (query = '') => {
       )
     })
 
-  // 本地临时文件/附件候选项过滤
-  const localFileItems = files.map((f) => {
-    const path = f.path || ''
-    const fileName = path.split('/').pop() || path
-    return {
-      value: path,
-      label: fileName,
-      type: 'file',
-      insertValue: path || fileName,
-      tokenLabel: formatMentionToken('file', fileName),
-      description: path
-    }
-  })
+  const { knowledgeBases: knowledgeItems, skills: skillItems } = mentionResourceItems.value
 
-  const filteredLocalFiles = normalizedQuery ? filterItems(localFileItems) : []
-
-  const {
-    knowledgeBases: knowledgeItems,
-    mcps: mcpItems,
-    skills: skillItems,
-    subagents: subagentItems
-  } = mentionResourceItems.value
-
-  // 初始化设置 mentionItems 状态（使用前端已有的本地过滤结果，瞬间更新，达到零卡顿）
   mentionItems.value = {
-    files: filteredLocalFiles,
+    files: [],
     knowledgeBases: filterItems(knowledgeItems),
-    mcps: filterItems(mcpItems),
+    mcps: [],
     skills: filterItems(skillItems),
-    subagents: filterItems(subagentItems)
-  }
-
-  if (normalizedQuery) {
-    const activeThreadId = props.threadId || ''
-    clearTimeout(mentionSearchTimer)
-    if (activeAbortController) {
-      activeAbortController.abort()
-      activeAbortController = null
-    }
-    searchRequestId.value++
-    const currentId = searchRequestId.value
-
-    mentionSearchTimer = setTimeout(async () => {
-      activeAbortController = new AbortController()
-
-      try {
-        const responseData = await searchMentionFiles(
-          activeThreadId,
-          normalizedQuery,
-          activeAbortController.signal
-        )
-
-        // 竞态校验锁，确保是当前最新响应
-        if (currentId === searchRequestId.value && Array.isArray(responseData)) {
-          const remoteFileItems = responseData.map((f) => {
-            const path = f.path || ''
-            const fileName = f.name || path.split('/').pop() || path
-            return {
-              value: path,
-              label: fileName,
-              type: 'file',
-              insertValue: path || fileName,
-              tokenLabel: formatMentionToken('file', fileName),
-              description: path,
-              is_dir: f.is_dir,
-              source: f.source
-            }
-          })
-
-          // 合并本地临时文件与后端高匹配度文件（使用 Set 进行去重，防止重复展示）
-          const seenValues = new Set(filteredLocalFiles.map((x) => x.value))
-          const mergedFiles = [...filteredLocalFiles]
-
-          remoteFileItems.forEach((item) => {
-            if (!seenValues.has(item.value)) {
-              seenValues.add(item.value)
-              mergedFiles.push(item)
-            }
-          })
-
-          mentionItems.value.files = mergedFiles
-        }
-      } catch (error) {
-        // 主动取消的请求我们不作为错误抛出
-        if (error.name !== 'AbortError') {
-          console.error('Mention search error:', error)
-        }
-      } finally {
-        if (currentId === searchRequestId.value) {
-          activeAbortController = null
-        }
-      }
-    }, 250) // 250ms 经典防抖时间
+    subagents: []
   }
 }
 
-// 检查项是否被选中
-const isItemSelected = (type, index) => {
-  if (mentionSelectedIndex.value < 0) return false
-
-  const filesLen = mentionItems.value.files.length
-  const kbLen = mentionItems.value.knowledgeBases.length
-  const mcpLen = mentionItems.value.mcps.length
-  const skillsLen = mentionItems.value.skills.length
-
-  if (type === 'file') {
-    return mentionSelectedIndex.value === index
-  } else if (type === 'knowledge') {
-    return mentionSelectedIndex.value === filesLen + index
-  } else if (type === 'mcp') {
-    return mentionSelectedIndex.value === filesLen + kbLen + index
-  } else if (type === 'skill') {
-    return mentionSelectedIndex.value === filesLen + kbLen + mcpLen + index
-  } else {
-    return mentionSelectedIndex.value === filesLen + kbLen + mcpLen + skillsLen + index
-  }
+const mentionItemIcon = (item) => {
+  if (item?.type === 'skill') return 'bookmark'
+  if (item?.kbType === 'faq') return 'chat-bubble-help'
+  return 'folder'
 }
 
-// 是否有任何候选项
-const showFileSearchPrompt = computed(() => {
-  return Boolean(props.mention?.files?.length) && !mentionQuery.value
+const getMentionChipClass = (item) => {
+  if (item?.type === 'skill') return 'mention-chip--skill'
+  if (item?.kbType === 'faq') return 'mention-chip--faq'
+  return 'mention-chip--kb'
+}
+
+const mentionFlatMode = computed(() => String(mentionQuery.value || '').trim().length > 0)
+
+const mentionGroupRows = computed(() => {
+  const groups = []
+  const kbCount = mentionItems.value.knowledgeBases.length
+  const skillCount = mentionItems.value.skills.length
+  if (kbCount) {
+    groups.push({
+      type: 'knowledge',
+      label: t('input.knowledgeBase'),
+      icon: 'folder',
+      count: kbCount
+    })
+  }
+  if (skillCount) {
+    groups.push({
+      type: 'skill',
+      label: t('ext.tabs.skills'),
+      icon: 'bookmark',
+      count: skillCount
+    })
+  }
+  return groups
 })
 
-const hasAnyItems = computed(() => {
-  const items = mentionItems.value
-  return (
-    showFileSearchPrompt.value ||
-    items.files.length > 0 ||
-    items.knowledgeBases.length > 0 ||
-    items.mcps.length > 0 ||
-    items.skills.length > 0 ||
-    items.subagents.length > 0
-  )
+const currentMentionGroup = computed(() =>
+  mentionGroupRows.value.find((group) => group.type === mentionCurrentGroup.value)
+)
+
+const visibleMentionItems = computed(() => {
+  if (mentionFlatMode.value) {
+    return [...mentionItems.value.knowledgeBases, ...mentionItems.value.skills]
+  }
+  if (mentionCurrentGroup.value === 'skill') return mentionItems.value.skills
+  if (mentionCurrentGroup.value === 'knowledge') return mentionItems.value.knowledgeBases
+  return []
 })
 
-const commitMention = (item, range = null) => {
-  if (!inputRef.value || props.disabled) return
-  const mentionValue = item?.insertValue || item?.value
-  if (!item?.type || !mentionValue) return
+const isMentionPicked = (item) =>
+  selectedMentions.value.some((selected) => mentionKey(selected) === mentionKey(item))
 
-  const mentionText = `${formatMentionToken(item.type, mentionValue)} `
-  mentionPopupVisible.value = false
-  mentionQuery.value = ''
-
-  if (range) {
-    const currentValue = getEditorRawValue()
-    const newValue = replaceRawRange(currentValue, range.start, range.end, mentionText)
-    updateRawValue(newValue, range.start + mentionText.length)
-    return
-  }
-  replaceCurrentRawSelection(mentionText)
+const enterMentionGroup = (type) => {
+  mentionCurrentGroup.value = type
+  mentionSelectedIndex.value = 0
 }
 
-const insertMention = (item) => {
+const leaveMentionGroup = () => {
+  const rowIndex = mentionGroupRows.value.findIndex((group) => group.type === mentionCurrentGroup.value)
+  mentionGroupActiveIndex.value = Math.max(0, rowIndex)
+  mentionCurrentGroup.value = null
+}
+
+const removeSelectedMention = (item) => {
+  selectedMentions.value = selectedMentions.value.filter((selected) => mentionKey(selected) !== mentionKey(item))
+}
+
+const consumeActiveMentionQuery = () => {
   if (!inputRef.value) return
-
   const currentValue = getEditorRawValue()
   const selectionRange = getRawSelectionRange()
   const activeMention = findActiveMentionQuery(currentValue, selectionRange.end)
   if (!activeMention) return
-
-  commitMention(item, { start: activeMention.start, end: activeMention.end })
+  const nextValue = replaceRawRange(currentValue, activeMention.start, activeMention.end, '')
+  updateRawValue(nextValue, activeMention.start)
+  mentionQuery.value = ''
 }
 
-// 滚动到选中项
+const toggleMention = (item) => {
+  if (!item?.type || !(item.insertValue || item.value)) return
+  if (isMentionPicked(item)) {
+    removeSelectedMention(item)
+  } else {
+    selectedMentions.value = [...selectedMentions.value, item]
+  }
+  if (mentionFlatMode.value || findActiveMentionQuery(getEditorRawValue(), getRawSelectionRange().end)) {
+    consumeActiveMentionQuery()
+    if (!mentionPinned.value) closeMentionOverlay()
+  }
+}
+
+const flushSelectedMentions = () => {
+  if (!selectedMentions.value.length) return
+  let raw = getEditorRawValue()
+  const tokens = selectedMentions.value
+    .map((item) => formatMentionToken(item.type, item.insertValue || item.value))
+    .filter(Boolean)
+  tokens.forEach((token) => {
+    raw = raw.split(token).join('')
+  })
+  raw = raw.replace(/\s+/g, ' ').trim()
+  const next = [tokens.join(' '), raw].filter(Boolean).join(' ')
+  updateRawValue(next, next.length)
+  selectedMentions.value = []
+}
+
 const scrollToItem = (index) => {
   nextTick(() => {
-    const popup = mentionDropdownRef.value?.querySelector('.mention-popup')
+    const popup = mentionDropdownRef.value
     if (!popup) return
-
-    // 查找所有 mention-item 元素
     const items = popup.querySelectorAll('.mention-item')
-    const selectedItem = items[index]
-
-    if (selectedItem) {
-      // 检查元素是否在可视区域内
-      const popupRect = popup.getBoundingClientRect()
-      const itemRect = selectedItem.getBoundingClientRect()
-
-      if (itemRect.bottom > popupRect.bottom) {
-        selectedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-      } else if (itemRect.top < popupRect.top) {
-        selectedItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-      }
-    }
+    items[index]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   })
 }
 
-// 处理键盘导航
+const handleMentionArrow = (dir) => {
+  if (!mentionCurrentGroup.value && !mentionFlatMode.value) {
+    const total = mentionGroupRows.value.length
+    if (!total) return
+    mentionGroupActiveIndex.value = (mentionGroupActiveIndex.value + dir + total) % total
+    return
+  }
+  const total = visibleMentionItems.value.length
+  if (!total) return
+  mentionSelectedIndex.value = (mentionSelectedIndex.value + dir + total) % total
+  scrollToItem(mentionSelectedIndex.value)
+}
+
+const handleMentionEnter = () => {
+  if (!mentionCurrentGroup.value && !mentionFlatMode.value) {
+    const group = mentionGroupRows.value[mentionGroupActiveIndex.value]
+    if (group) enterMentionGroup(group.type)
+    return
+  }
+  const item = visibleMentionItems.value[mentionSelectedIndex.value]
+  if (item) toggleMention(item)
+}
+
 const handleMentionNavigation = (e) => {
   if (!mentionPopupVisible.value) return
 
-  const allItems = [
-    ...mentionItems.value.files,
-    ...mentionItems.value.knowledgeBases,
-    ...mentionItems.value.mcps,
-    ...mentionItems.value.skills,
-    ...mentionItems.value.subagents
-  ]
-
-  const total = allItems.length
-  if (total === 0) return
-
   if (e.key === 'ArrowDown') {
     e.preventDefault()
-    mentionSelectedIndex.value = (mentionSelectedIndex.value + 1) % total
-    scrollToItem(mentionSelectedIndex.value)
+    handleMentionArrow(1)
   } else if (e.key === 'ArrowUp') {
     e.preventDefault()
-    mentionSelectedIndex.value = (mentionSelectedIndex.value - 1 + total) % total
-    scrollToItem(mentionSelectedIndex.value)
+    handleMentionArrow(-1)
   } else if (e.key === 'Enter' || e.key === 'Tab') {
-    if (mentionSelectedIndex.value >= 0 && mentionSelectedIndex.value < total) {
-      e.preventDefault()
-      insertMention(allItems[mentionSelectedIndex.value])
-    }
+    e.preventDefault()
+    handleMentionEnter()
   } else if (e.key === 'Escape') {
     e.preventDefault()
-    mentionPopupVisible.value = false
+    if (mentionCurrentGroup.value && !mentionFlatMode.value) {
+      leaveMentionGroup()
+      return
+    }
+    closeMentionOverlay()
   }
 }
 
-const hasOptionsLeft = computed(() => {
-  if (!props.showOptionsLeft) {
-    return false
-  }
-  const slot = slots['options-left']
-  if (!slot) {
-    return false
-  }
+const isEditorEmpty = computed(() => !String(props.modelValue || '').trim())
+
+const hasActionsLeft = computed(() => {
+  const slot = slots['actions-left']
+  if (!slot) return false
   const renderedNodes = slot()
   return Boolean(renderedNodes && renderedNodes.length)
 })
 
-// 图标映射
-const iconComponents = {
-  SendOutlined: SendOutlined,
-  ArrowUpOutlined: ArrowUpOutlined,
-  PauseOutlined: PauseOutlined
+const hasToolbarLeft = computed(
+  () => hasActionsLeft.value || props.fileUploadEnabled || props.imageUploadEnabled || mentionEnabled.value
+)
+
+const handleFileInputChange = (event) => {
+  const files = Array.from(event.target?.files || [])
+  event.target.value = ''
+  if (files.length) emit('attach', files)
 }
 
-// 根据传入的图标名动态获取组件
-const getIcon = computed(() => {
-  if (props.isLoading) {
-    return PauseOutlined
+const handleAttachClick = () => {
+  if (props.disabled) return
+  fileInputRef.value?.click()
+}
+
+const handleImageClick = () => {
+  if (props.disabled) return
+  imageInputRef.value?.click()
+}
+
+const handleImageInputChange = (event) => {
+  const file = event.target?.files?.[0]
+  event.target.value = ''
+  if (file) emit('paste-image', file)
+}
+
+const openMentionPicker = () => {
+  if (props.disabled || !mentionEnabled.value) return
+  const nextOpen = !mentionPopupVisible.value
+  mentionPinned.value = nextOpen
+  mentionPopupVisible.value = nextOpen
+  mentionCurrentGroup.value = null
+  if (nextOpen) {
+    mentionQuery.value = ''
+    mentionSelectedIndex.value = 0
+    mentionGroupActiveIndex.value = 0
+    updateMentionItems('')
+    nextTick(() => {
+      updateMentionDropdownPosition()
+    })
   }
-  return iconComponents[props.sendIcon] || ArrowUpOutlined
-})
+}
 
 // 创建本地引用以进行双向绑定
 const inputValue = computed({
@@ -1172,6 +1163,7 @@ const handleCompositionEnd = () => {
 
 // 处理发送按钮点击
 const handleSendOrStop = () => {
+  if (!props.isLoading) flushSelectedMentions()
   emit('send')
 }
 
@@ -1180,18 +1172,23 @@ const mentionPopupVisible = ref(false)
 const mentionQuery = ref('')
 const mentionItems = ref({ files: [], knowledgeBases: [], mcps: [], skills: [], subagents: [] })
 const mentionSelectedIndex = ref(0)
-const searchRequestId = ref(0)
 const isComposing = ref(false)
-let activeAbortController = null
-let mentionSearchTimer = null
 
-watch(optionsExpanded, (open) => {
-  if (open) {
-    mentionPopupVisible.value = false
+watch(mentionPopupVisible, (visible) => {
+  if (mentionRepositionHandler) {
+    window.removeEventListener('resize', mentionRepositionHandler)
+    window.removeEventListener('scroll', mentionRepositionHandler, { capture: true })
+    mentionRepositionHandler = null
   }
+  if (!visible) return
+  nextTick(() => {
+    updateMentionDropdownPosition()
+    requestAnimationFrame(() => updateMentionDropdownPosition())
+  })
+  mentionRepositionHandler = () => updateMentionDropdownPosition()
+  window.addEventListener('resize', mentionRepositionHandler, { passive: true })
+  window.addEventListener('scroll', mentionRepositionHandler, { passive: true, capture: true })
 })
-
-useOutsidePointerdown(optionsExpanded, [optionsTriggerRef, optionsPanelRef])
 
 const adjustTextareaHeight = () => {
   if (!inputRef.value) {
@@ -1200,7 +1197,8 @@ const adjustTextareaHeight = () => {
 
   const textarea = inputRef.value
   textarea.style.height = 'auto'
-  textarea.style.height = `${textarea.scrollHeight}px`
+  const nextHeight = Math.min(200, Math.max(120, textarea.scrollHeight))
+  textarea.style.height = `${nextHeight}px`
 }
 
 // 聚焦输入框
@@ -1268,12 +1266,6 @@ onBeforeUnmount(() => {
   if (debounceTimer.value) {
     clearTimeout(debounceTimer.value)
   }
-  if (mentionSearchTimer) {
-    clearTimeout(mentionSearchTimer)
-  }
-  if (activeAbortController) {
-    activeAbortController.abort()
-  }
   isDraggingFiles.value = false
   document.removeEventListener('click', closeMentionPopup)
 })
@@ -1281,60 +1273,171 @@ onBeforeUnmount(() => {
 // 公开方法供父组件调用
 defineExpose({
   focus: () => inputRef.value?.focus(),
-  insertMention: commitMention,
+  insertMention: toggleMention,
+  flushSelectedMentions,
   closeOptions: () => {
-    optionsExpanded.value = false
-  }
+    mentionPopupVisible.value = false
+    mentionPinned.value = false
+    mentionCurrentGroup.value = null
+  },
+  openMentionPicker,
+  isSendDisabled
 })
 </script>
 
 <style lang="less" scoped>
+@import '@/components/css/chat-resource-chips.less';
+
 .input-box {
   container-type: inline-size;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   margin: 0 auto;
   border: 1px solid var(--td-component-stroke, var(--gray-150));
   border-radius: 12px;
-  box-shadow: 0 2px 8px var(--shadow-1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 8px 16px -4px rgba(0, 0, 0, 0.06);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   background: var(--td-bg-color-container, var(--gray-0));
-  gap: 0px;
   position: relative;
-
-  /* Default: Multi-line layout with top/bottom slots */
-  padding: 0.8rem 0.75rem 0.6rem 0.75rem;
-  grid-template-columns: auto 1fr;
-  grid-template-rows: auto auto auto;
-  grid-template-areas:
-    'top top'
-    'input input'
-    'options send';
 
   .top-slot {
     display: flex;
-    grid-area: top;
+
+    &:empty {
+      display: none;
+    }
+
+    &:not(:empty) {
+      padding: 10px 12px 0;
+    }
+  }
+
+  .selected-tags-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--td-component-stroke, #dcdcdc);
+    background: var(--td-bg-color-container, #fff);
+    border-radius: 11px 11px 0 0;
+  }
+
+  .mention-chip {
+    .chat-resource-chip-surface();
+
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 26px;
+    padding: 3px 7px 3px 6px;
+    border-radius: var(--td-radius-medium, 6px);
+    box-sizing: border-box;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: default;
+    transition: background 0.15s, border-color 0.15s;
+    line-height: 18px;
+
+    &:hover {
+      .chat-resource-chip-hover();
+    }
+  }
+
+  .mention-chip__icon-wrap {
+    display: inline-flex;
+    width: 16px;
+    height: 16px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .mention-chip__icon {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+  }
+
+  .mention-chip__name {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: currentColor;
+  }
+
+  .mention-chip__remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin-left: 1px;
+    border-radius: 50%;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.5;
+    color: currentColor;
+    flex-shrink: 0;
+  }
+
+  .mention-chip:hover .mention-chip__remove {
+    opacity: 0.85;
+  }
+
+  .mention-chip--kb {
+    color: var(--td-text-color-primary);
+  }
+
+  .mention-chip--kb .mention-chip__icon-wrap {
+    color: var(--td-brand-color, #07c05f);
+  }
+
+  .mention-chip--faq {
+    color: var(--td-text-color-primary);
+  }
+
+  .mention-chip--faq .mention-chip__icon-wrap {
+    color: var(--weknora-faq-color, #0052d9);
+  }
+
+  .mention-chip--skill {
+    color: var(--td-text-color-primary);
+  }
+
+  .mention-chip--skill .mention-chip__icon-wrap {
+    color: #7c3aed;
   }
 
   .expand-options {
-    grid-area: options;
-    justify-self: start;
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
+    flex: 1;
+    flex-wrap: wrap;
   }
 
   .user-input {
-    grid-area: input;
+    min-height: 120px;
   }
 
   .send-button-container {
-    grid-area: send;
-    justify-self: end;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: auto;
   }
 
-  .bottom-slot {
-    grid-column: 1 / -1;
+  .bottom-slot:empty {
+    display: none;
   }
 
   &:focus-within {
@@ -1365,32 +1468,52 @@ defineExpose({
   }
 }
 
+.control-bar {
+  position: absolute;
+  bottom: 12px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  max-height: 56px;
+  z-index: 10;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0%,
+    var(--td-bg-color-container, #fff) 40%,
+    var(--td-bg-color-container, #fff) 100%
+  );
+  pointer-events: auto;
+  padding-top: 8px;
+}
+
 .expand-options {
-  grid-area: options;
   display: flex;
   align-items: center;
 }
 
 .user-input {
-  grid-area: input;
   width: 100%;
-  padding: 0;
+  padding: 16px 16px 56px;
   background-color: transparent;
   border: none;
   margin: 0;
-  margin-bottom: 0.5rem;
   color: var(--td-text-color-primary, var(--gray-1000));
   font-size: 16px;
   outline: none;
   resize: none;
   line-height: 24px;
   font-family: var(--app-font-family, inherit);
-  min-height: 44px; /* Default min-height for multi-line */
+  min-height: 120px;
   max-height: 200px;
   overflow-y: auto;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   cursor: text;
+  box-sizing: border-box;
 
   &:focus {
     outline: none;
@@ -1398,18 +1521,19 @@ defineExpose({
   }
 
   &::placeholder {
-    color: var(--gray-400);
+    color: var(--td-text-color-placeholder, #00000066);
   }
 
   &.mention-editor {
     position: relative;
 
+    &.is-empty::before,
     &:empty::before {
       content: attr(data-placeholder);
       position: absolute;
-      left: 0;
-      top: 0;
-      color: var(--gray-400);
+      left: 16px;
+      top: 16px;
+      color: var(--td-text-color-placeholder, #00000066);
       pointer-events: none;
     }
   }
@@ -1455,37 +1579,61 @@ defineExpose({
 }
 
 .send-button-container {
-  grid-area: send;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.expand-btn {
+.toolbar-icon-btn {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--gray-600);
+  color: var(--td-text-color-secondary, #666);
   padding: 0;
   cursor: pointer;
-  transition:
-    color 0.15s ease,
-    background-color 0.15s ease;
-  border: 1px solid transparent;
-  background-color: transparent;
+  transition: background 0.12s, color 0.12s;
+  border: none;
+  background: transparent;
+  flex-shrink: 0;
+  position: relative;
 
-  &:hover {
-    color: var(--gray-900);
-    background: var(--gray-50);
+  &:hover:not(:disabled) {
+    background: var(--td-bg-color-secondarycontainer-hover, #e6e6e6);
+    color: var(--td-text-color-primary, #333);
   }
 
   &.active {
-    color: var(--gray-900);
-    background: var(--gray-100);
+    background: rgba(16, 185, 129, 0.1);
+    color: #07c05f;
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.toolbar-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  background: var(--td-brand-color);
+  color: var(--td-text-color-anti, #fff);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 15px;
+  border: 2px solid var(--td-bg-color-container);
+  border-radius: var(--td-radius-round, 999px);
+  box-sizing: content-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 // Popover 选项样式
@@ -1523,231 +1671,372 @@ defineExpose({
   }
 }
 
-.send-button.ant-btn-icon-only {
-  height: 32px;
-  width: 32px;
-  cursor: pointer;
-  background-color: var(--main-500);
-  border-radius: 50%;
-  border: none;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 6px var(--shadow-2);
-  color: var(--gray-0);
+.send-button {
+  width: 28px;
+  height: 28px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  cursor: pointer;
+  background-color: var(--td-brand-color);
+  border-radius: 6px;
+  border: none;
+  flex-shrink: 0;
+
+  &:hover:not(:disabled) {
+    background-color: var(--td-brand-color-active);
+  }
+
+  &:disabled,
+  &.disabled {
+    cursor: not-allowed;
+    background-color: var(--td-success-color-light, rgba(7, 192, 95, 0.35));
+    opacity: 1;
+    box-shadow: none;
+  }
+
+  img {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.stop-button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1.5px solid rgba(16, 185, 129, 0.2);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
   &:hover {
-    background-color: var(--main-color);
-    box-shadow: 0 4px 8px var(--shadow-3);
-    color: var(--gray-0);
+    background: rgba(16, 185, 129, 0.12);
+    border-color: var(--td-brand-color);
   }
 
-  &:active {
-    box-shadow: 0 2px 4px var(--shadow-2);
-    // 移除点击动画效果
+  &::before {
+    content: '';
+    width: 12px;
+    height: 12px;
+    background: var(--td-brand-color);
+    border-radius: 50%;
+    display: block;
+    animation: stopBtnPulse 1.5s ease-in-out infinite;
   }
+}
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+@keyframes stopBtnPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.75);
+    opacity: 0.6;
   }
 }
 
 @media (max-width: 520px) {
   .input-box {
-    border-radius: 15px;
-    padding: 0.625rem 0.875rem;
+    border-radius: 12px;
   }
 }
 
-// @ 提及弹窗样式
-.mention-dropdown-wrapper {
-  position: absolute;
-  bottom: 100%;
-  left: 0;
-  right: 0;
-  margin-bottom: 8px;
-  z-index: 1000;
+.kb-overlay,
+.kb-overlay *,
+.kb-overlay *::before,
+.kb-overlay *::after {
+  box-sizing: border-box;
 }
 
-.mention-popup {
+.kb-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: transparent;
+  touch-action: none;
+}
+
+.mention-menu,
+.kb-dropdown {
+  position: fixed !important;
+  background: var(--td-bg-color-container, #fff);
+  border: 1px solid var(--td-component-stroke, #e7e9eb);
+  border-radius: var(--td-radius-extraLarge, 12px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  animation: mentionFadeIn 0.15s ease-out;
+  z-index: 10000;
+  margin: 0;
+  transform-origin: top left;
+  display: flex;
+  flex-direction: column;
+  width: 220px;
+  max-height: 388px;
+}
+
+@keyframes mentionFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.kb-search {
+  padding: 8px 10px;
+  border-bottom: 0.5px solid var(--td-component-stroke);
+}
+
+.kb-search-input {
   width: 100%;
-  max-height: 280px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border: 0.5px solid var(--td-component-stroke);
+  border-radius: 6px;
+  background: var(--td-bg-color-secondarycontainer);
+  outline: none;
+}
+
+.kb-search-input:focus {
+  border-color: var(--td-success-color);
+  background: var(--td-bg-color-container);
+}
+
+.mention-list,
+.kb-list {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  background: var(--gray-0);
-  border-radius: 8px;
-  box-shadow:
-    0 -4px 16px rgba(0, 0, 0, 0.08),
-    0 4px 16px rgba(0, 0, 0, 0.12);
-  border: 1px solid var(--gray-200);
-  padding: 8px 0;
+  padding: 4px 0;
+  overscroll-behavior: contain;
+}
 
-  .mention-group {
-    margin-bottom: 4px;
+.mention-group-entry,
+.mention-back-row {
+  width: calc(100% - 12px);
+  min-height: 32px;
+  margin: 1px 6px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--td-radius-medium, 6px);
+  background: transparent;
+  color: var(--td-text-color-primary, #333);
+  font-family: var(--app-font-family);
+  font-size: var(--td-font-size-body-medium, 14px);
+  font-weight: 400;
+  line-height: 20px;
+  cursor: pointer;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
-    &:last-child {
-      margin-bottom: 0;
-    }
+.mention-group-entry:hover,
+.mention-group-entry.active,
+.mention-back-row:hover {
+  background: var(--td-bg-color-secondarycontainer, #f3f3f3);
+}
+
+.mention-group-entry__icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--td-text-color-secondary, #666);
+  font-size: 16px;
+}
+
+.mention-group-entry__label,
+.mention-back-row span {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mention-group-entry__count {
+  flex-shrink: 0;
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--td-bg-color-secondarycontainer, #f3f3f3);
+  color: var(--td-text-color-placeholder, #999);
+  font-size: var(--td-font-size-mark-small, 12px);
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.mention-group-entry__arrow {
+  flex-shrink: 0;
+  color: var(--td-text-color-placeholder, #999);
+  font-size: 16px;
+}
+
+.mention-back-row {
+  min-height: 30px;
+  margin-bottom: 4px;
+  color: var(--td-text-color-secondary, #666);
+  border-bottom: 1px solid var(--td-component-stroke, #f0f0f0);
+  border-radius: 0;
+}
+
+.mention-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 8px;
+  margin: 1px 6px;
+  box-sizing: border-box;
+  cursor: pointer;
+  border-radius: var(--td-radius-medium, 6px);
+  color: var(--td-text-color-primary, #333);
+  font-size: var(--td-font-size-body-medium, 14px);
+}
+
+.mention-item:hover,
+.mention-item.active {
+  background: var(--td-bg-color-secondarycontainer, #f3f3f3);
+}
+
+.mention-item.picked {
+  background: var(--td-brand-color-light, rgba(7, 192, 95, 0.12));
+  color: var(--td-text-color-primary, #333);
+}
+
+.mention-item .icon-wrap,
+.mention-item .icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.mention-item .kb-icon {
+  color: var(--td-brand-color, #07c05f);
+}
+
+.mention-item .skill-icon {
+  color: #7c3aed;
+}
+
+.mention-item .item-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.mention-item .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mention-group:not(:last-child) {
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 0.5px solid var(--td-component-stroke);
+}
+
+.mention-group-title {
+  font-size: 11px;
+  color: var(--td-text-color-placeholder);
+  padding: 8px 8px 4px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.kb-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s;
+  margin-bottom: 4px;
+}
+
+.kb-item:last-child {
+  margin-bottom: 0;
+}
+
+.kb-item:hover,
+.kb-item.highlighted {
+  background: var(--td-bg-color-secondarycontainer);
+}
+
+.kb-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.kb-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--td-brand-color-active);
+
+  &.skill {
+    color: #9f7aea;
   }
+}
 
-  .mention-group-title {
-    font-size: 12px;
-    color: var(--gray-500);
-    padding: 4px 8px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    border-bottom: 1px solid var(--gray-100);
-    margin-bottom: 2px;
-  }
+.kb-name-wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
 
-  .mention-item {
-    padding: 4px 8px;
-    cursor: pointer;
-    font-size: 13px;
-    color: var(--gray-700);
-    transition: all 0.15s ease;
-    margin: 1px 4px;
-    border-radius: 4px;
+.kb-name {
+  font-size: 12px;
+  color: var(--td-text-color-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
 
-    &.resource-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      min-width: 0;
-      padding: 6px 10px;
+.kb-docs {
+  font-size: 11px;
+  color: var(--td-text-color-placeholder);
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
-      .resource-name {
-        color: var(--gray-800);
-        font-weight: 500;
-        flex: 0 0 auto;
-        white-space: nowrap;
-      }
-
-      .resource-description {
-        color: var(--gray-500);
-        font-size: 12px;
-        line-height: 1.35;
-        flex: 1 1 auto;
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-    }
-
-    &.file-item {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 0;
-      padding: 6px 10px;
-
-      .file-info-left {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex-shrink: 1;
-        min-width: 0;
-
-        .file-type-icon {
-          font-size: 15px;
-          flex-shrink: 0;
-          display: flex;
-          align-items: center;
-        }
-
-        .file-name {
-          font-weight: 500;
-          color: var(--gray-800);
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          font-size: 13px;
-        }
-      }
-
-      .file-parent-dir {
-        font-size: 11px;
-        color: var(--gray-400);
-        margin-left: 8px;
-        flex-shrink: 1;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        transition: color 0.15s ease;
-      }
-    }
-
-    &:hover {
-      background-color: var(--main-10);
-      color: var(--main-600);
-
-      &.resource-item {
-        .resource-name {
-          color: var(--main-600);
-        }
-        .resource-description {
-          color: var(--main-400);
-        }
-      }
-
-      &.file-item {
-        .file-info-left .file-name {
-          color: var(--main-600);
-        }
-        .file-parent-dir {
-          color: var(--main-400);
-        }
-      }
-    }
-
-    &.active {
-      background-color: var(--gray-50);
-      color: var(--main-600);
-
-      &.resource-item {
-        .resource-name {
-          color: var(--main-600);
-        }
-        .resource-description {
-          color: var(--main-400);
-        }
-      }
-
-      &.file-item {
-        .file-info-left .file-name {
-          color: var(--main-600);
-        }
-        .file-parent-dir {
-          color: var(--main-400);
-        }
-      }
-    }
-  }
-
-  .query-match {
-    color: #fa8c16; /* 明亮温润的金橘色 */
-    font-weight: 700;
-  }
-
-  .mention-empty {
-    text-align: center;
-    padding: 12px 8px;
-    color: var(--gray-400);
-    font-size: 13px;
-  }
-
-  .mention-search-placeholder {
-    padding: 4px 8px;
-    color: var(--gray-400);
-    font-size: 13px;
-  }
+.kb-empty {
+  padding: 20px 8px;
+  text-align: center;
+  color: var(--td-text-color-placeholder);
+  font-size: 12px;
 }
 </style>

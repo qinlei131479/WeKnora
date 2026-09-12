@@ -10,11 +10,14 @@
     :mention="mention"
     :thread-id="threadId"
     :file-upload-enabled="supportsFileUpload"
-    :show-options-left="showInputOptions"
+    :image-upload-enabled="supportsFileUpload"
+    :image-count="currentImage ? 1 : 0"
+    :attachment-count="previewAttachments.length"
     @send="handleSend"
     @keydown="handleKeyDown"
     @paste-image="handlePastedImage"
     @drop-files="handleDroppedFiles"
+    @attach="handleAttachmentUpload"
   >
     <template #top>
       <div v-if="currentImage || previewAttachments.length" class="input-top-stack">
@@ -50,17 +53,6 @@
         </div>
       </div>
     </template>
-    <template #options-left>
-      <AttachmentOptionsComponent
-        :disabled="disabled"
-        :file-upload-enabled="supportsFileUpload"
-        :mention="mention"
-        @upload="handleAttachmentUpload"
-        @upload-image="handleImageUpload"
-        @upload-image-success="handleImageUploadSuccess"
-        @select-mention="handleMentionSelect"
-      />
-    </template>
     <template #actions-left>
       <div class="input-actions-left">
         <slot name="actions-left-extra"></slot>
@@ -79,7 +71,6 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MessageInputComponent from '@harness/components/MessageInputComponent.vue'
 import ImagePreviewComponent from '@harness/components/ImagePreviewComponent.vue'
-import AttachmentOptionsComponent from '@harness/components/AttachmentOptionsComponent.vue'
 import { X } from 'lucide-vue-next'
 import { normalizeAttachmentPreviews } from '@harness/utils/file_utils'
 import { uploadMultimodalImage } from '@harness/utils/multimodal_image_upload'
@@ -113,12 +104,6 @@ const currentImage = ref(null)
 const placeholder = computed(() => t('input.placeholder'))
 
 const previewAttachments = computed(() => normalizeAttachmentPreviews(props.attachments))
-const showInputOptions = computed(
-  () =>
-    props.supportsFileUpload ||
-    Boolean(props.mention?.knowledgeBases?.length) ||
-    Boolean(props.mention?.skills?.length)
-)
 
 const updateValue = (val) => {
   emit('update:modelValue', val)
@@ -150,23 +135,10 @@ const handleDroppedFiles = (files = []) => {
   handleAttachmentUpload(files)
 }
 
-const handleImageUploadSuccess = () => {
-  if (inputRef.value) {
-    inputRef.value.closeOptions()
-  }
-}
-
-const handleMentionSelect = (item) => {
-  inputRef.value?.insertMention(item)
-  inputRef.value?.closeOptions()
-}
-
 const handleImageRemoved = () => {
   currentImage.value = null
 }
 
-// 发送被后端拒绝时把旧图片恢复到输入区，覆盖等待期间可能新选的图片，
-// 避免旧图片被悄悄丢弃；用户可重新选择新图片。
 const restoreImage = (image) => {
   currentImage.value = image || null
 }
@@ -176,12 +148,16 @@ const handleAttachmentRemoved = (attachment) => {
 }
 
 const handleSend = () => {
+  inputRef.value?.flushSelectedMentions?.()
   emit('send', { image: currentImage.value })
   currentImage.value = null
 }
 
 const handleKeyDown = (e) => {
-  if (props.sendButtonDisabled) {
+  // 与发送按钮保持一致：只要有已选中的 @ 提及、待发图片或待发附件，
+  // 即便正文为空也允许 Enter 发送（否则点击发送按钮能发，敲 Enter 却没反应）。
+  const isSendDisabled = inputRef.value?.isSendDisabled?.value ?? props.sendButtonDisabled
+  if (isSendDisabled) {
     return
   }
 
@@ -309,27 +285,27 @@ defineExpose({
 :deep(.input-action-btn) {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  height: 30px;
-  border-radius: 8px;
+  gap: 4px;
+  padding: 0 10px;
+  height: 28px;
+  border-radius: 6px;
   font-size: 13px;
-  color: var(--gray-600);
+  font-weight: 500;
+  color: var(--td-text-color-secondary, #666);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.12s, color 0.12s;
   user-select: none;
   background: transparent;
-  border: none;
+  border: 0.5px solid var(--td-component-border, #e7e7e7);
 
-  &:hover {
-    color: var(--gray-900);
-    background: var(--gray-50);
+  &:hover:not(.disabled) {
+    color: var(--td-text-color-primary, #333);
+    background: var(--td-bg-color-secondarycontainer-hover, #e6e6e6);
   }
 
   &.active {
-    color: var(--gray-900);
-    background: var(--gray-100);
-    font-weight: 500;
+    color: var(--td-text-color-primary);
+    background: var(--td-bg-color-secondarycontainer);
   }
 
   &.disabled {

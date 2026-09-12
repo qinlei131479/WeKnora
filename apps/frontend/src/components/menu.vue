@@ -91,17 +91,16 @@
                     />
                 </div>
                 <div
-                    v-if="chatEngine === 'runtime'"
-                    class="harness-history-wrap harness-root"
-                    :class="{ dark: themeIsDark }"
+                    v-if="chatEngine === 'chat-work'"
+                    class="chat-work-history-wrap"
                 >
                     <div v-if="!hasHarnessToken" class="harness-history-gate">
                         <p>{{ t('harness.tokenGate.sidebarHint') }}</p>
-                        <button type="button" class="harness-history-gate__action" @click="goToEngine('runtime')">
+                        <button type="button" class="harness-history-gate__action" @click="goToEngine('chat-work')">
                             {{ t('harness.tokenGate.sidebarAction') }}
                         </button>
                     </div>
-                    <HarnessHistoryNav v-else />
+                    <ChatWorkHistoryNav v-else />
                 </div>
                 <template v-else>
                 <!-- Stable, always-mounted source filter: reserving its row here
@@ -249,13 +248,12 @@ import { useOrganizationStore } from '@/stores/organization';
 import { useUIStore } from '@/stores/ui';
 import { MessagePlugin, DialogPlugin, Icon as TIcon } from "tdesign-vue-next";
 import TenantSelector from '@/components/TenantSelector.vue';
-import HarnessHistoryNav from '@harness/HarnessHistoryNav.vue';
+import ChatWorkHistoryNav from '@/views/chat-work/ChatWorkHistoryNav.vue';
 import ChatEngineSegmented from '@/components/ChatEngineSegmented.vue';
 import { FolderKanban, BarChart3, MessageCirclePlus, Blocks } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 import { getSystemInfo } from '@/api/system';
 import { useChatEngineNav } from '@/composables/useChatEngineNav';
-import { useTheme } from '@/composables/useTheme';
 import brandLogo from '@/assets/img/logo@1x.png';
 
 const chatResources = useChatResourcesStore();
@@ -300,7 +298,6 @@ const {
     syncFromRoute,
     isNewChatRoute,
 } = useChatEngineNav();
-const { isDark: themeIsDark } = useTheme();
 watch(() => route.fullPath, syncFromRoute, { immediate: true });
 const hasHarnessToken = computed(() => {
     route.fullPath;
@@ -1526,19 +1523,21 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
         overflow-x: hidden;
     }
 
-    .harness-history-wrap.harness-root {
+    .chat-work-history-wrap {
         min-width: 0;
         max-width: 100%;
         width: 100%;
         min-height: 0;
-        height: auto;
-        flex: none;
-        padding: 0 4px 8px;
         overflow-x: hidden;
         box-sizing: border-box;
-        background: transparent;
-        --min-width: 0;
-        --scrollbar-width: 0px;
+
+        :deep(.submenu_empty) {
+            padding: 24px 14px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--td-text-color-placeholder);
+            user-select: none;
+        }
     }
 
     .history-engine-switch {
@@ -1601,7 +1600,8 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
     }
 
     // 列表行统一栅格：左缘 inset-x + 图标槽 18px + 间距 8px → 文案列与主菜单文字对齐
-    .session-list-row {
+    // :deep 让工作模式 ChatWorkHistoryNav 子组件也吃到同一套缩进
+    :deep(.session-list-row) {
         display: flex;
         align-items: center;
         gap: var(--sidebar-icon-gap);
@@ -1610,7 +1610,7 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
         box-sizing: border-box;
     }
 
-    .session-list-row__icon {
+    :deep(.session-list-row__icon) {
         flex: 0 0 var(--sidebar-icon-size);
         width: var(--sidebar-icon-size);
         height: var(--sidebar-icon-size);
@@ -1620,26 +1620,26 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
         flex-shrink: 0;
     }
 
-    .session-list-row__body {
+    :deep(.session-list-row__body) {
         flex: 1 1 auto;
         min-width: 0;
         overflow: hidden;
     }
 
     // 聊天区分组标题 / 会话行：与「聊天」节标题同列左对齐，不再预留图标槽
-    .session-list-row--flat {
+    :deep(.session-list-row--flat) {
         padding-left: var(--sidebar-inset-x);
         gap: 0;
     }
 
-    .session-list-loading {
+    :deep(.session-list-loading) {
         display: flex;
         align-items: center;
         min-height: 26px;
         color: var(--td-text-color-placeholder);
     }
 
-    .timeline_header {
+    :deep(.timeline_header) {
         font-family: var(--app-font-family);
         font-size: 11px;
         font-weight: 600;
@@ -1651,40 +1651,28 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
         user-select: none;
     }
 
-    .timeline_header-label {
+    :deep(.timeline_header-label) {
         white-space: nowrap;
     }
 
-    // Stable filter control: always mounted and absolutely pinned to the list's
-    // top-right so it visually sits on the first row (e.g. beside "近30天") and
-    // never jumps when switching session type reloads a bucket. It overlays the
-    // empty right side of the first header row, so it needs no reserved height.
+    // Source filter sits on its own row under the engine switch, not overlaid on it.
     .session-list-scope-header {
-        position: absolute;
-        top: 4px;
-        right: 10px;
-        z-index: 2;
+        position: relative;
+        z-index: 1;
         display: flex;
         justify-content: flex-end;
-        max-width: calc(100% - var(--sidebar-inset-x) - 10px);
+        padding: 0 10px 6px var(--sidebar-inset-x);
+        max-width: 100%;
 
         :deep(.session-source-filter--inline) {
             flex: 0 1 auto;
             min-width: 0;
             max-width: 100%;
-            opacity: 0;
-            transition: opacity 0.15s ease;
+            opacity: 1;
         }
     }
 
-    .submenu:hover .session-list-scope-header :deep(.session-source-filter--inline),
-    .session-list-scope-header:hover :deep(.session-source-filter--inline),
-    .session-list-scope-header:focus-within :deep(.session-source-filter--inline),
-    .session-list-scope-header :deep(.session-source-filter--inline.session-source-filter--emphasized) {
-        opacity: 1;
-    }
-
-    .submenu_item_p {
+    :deep(.submenu_item_p) {
         padding: 0;
         box-sizing: border-box;
         min-width: 0;
@@ -1699,11 +1687,11 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
         &.session-chat-row:hover .session-list-row {
             background: var(--td-bg-color-container-hover);
 
-            :deep(.menu-more) {
+            .menu-more {
                 color: var(--td-text-color-primary);
             }
 
-            :deep(.menu-more-wrap) {
+            .menu-more-wrap {
                 opacity: 1;
             }
         }
@@ -1711,15 +1699,15 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
         &.session-chat-row--active .session-list-row {
             background: var(--td-bg-color-container-hover);
 
-            :deep(.submenu_item) {
+            .submenu_item {
                 color: var(--td-brand-color);
             }
 
-            :deep(.menu-more) {
+            .menu-more {
                 color: var(--td-text-color-primary);
             }
 
-            :deep(.menu-more-wrap) {
+            .menu-more-wrap {
                 opacity: 1;
             }
         }

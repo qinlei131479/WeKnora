@@ -8,7 +8,11 @@ export function useListSurface<T extends string>(getAllowed: () => T[], fallback
   const surface = computed({
     get(): T {
       const allowed = getAllowed()
-      const raw = String(route.query.surface || '')
+      let raw = String(route.query.surface || '')
+      // 旧链接 ?surface=runtime 与工作模式 surface=work 对齐
+      if (raw === 'runtime' && (allowed as string[]).includes('work')) {
+        raw = 'work'
+      }
       return allowed.includes(raw as T) ? (raw as T) : fallback
     },
     set(next: T) {

@@ -1,5 +1,5 @@
 <template>
-  <div v-if="resolvedSize !== 'nano'" class="runtime-model-selector-select">
+  <div v-if="resolvedSize !== 'nano'" class="work-model-selector-select">
     <t-select
       :value="props.model_spec || undefined"
       :placeholder="placeholderText"
@@ -36,28 +36,22 @@
       </t-option>
     </t-select>
   </div>
-  <t-popup
-    v-else
-    class="runtime-model-selector"
-    trigger="click"
-    placement="bottom-left"
-    :visible="dropdownOpen"
-    :disabled="props.disabled"
-    :destroy-on-close="false"
-    overlay-class-name="runtime-model-selector-popup"
-    overlay-inner-class-name="runtime-model-selector-popup-inner"
-    attach="body"
-    @visible-change="handleOpenChange"
-  >
-    <div class="model-select" :class="modelSelectClasses">
+  <div v-else class="work-model-selector">
+    <div
+      ref="modelButtonRef"
+      class="model-select"
+      :class="[modelSelectClasses, { open: dropdownOpen }]"
+      @click.stop="toggleNanoDropdown"
+    >
       <div class="model-select-content">
         <div class="model-info">
           <span class="model-text text" :title="displayModelTitle">{{ displayModelText }}</span>
+          <ChevronDown :size="12" class="model-dropdown-arrow" :class="{ rotate: dropdownOpen }" />
           <button
             v-if="props.clearable && props.model_spec && !props.disabled"
             type="button"
             class="model-clear-btn"
-            :title="t('agent.runtimeManage.modelSelector.clear')"
+            :title="t('agent.workManage.modelSelector.clear')"
             @mousedown.prevent.stop
             @click.stop="handleClear"
           >
@@ -66,132 +60,56 @@
         </div>
       </div>
     </div>
-    <template #content>
-      <div class="model-dropdown" @click.stop>
-        <div class="model-search">
-          <t-input
-            v-model="modelSearchKeyword"
-            :placeholder="t('agent.runtimeManage.modelSelector.searchPlaceholder')"
-            clearable
-            autocomplete="off"
-            autocapitalize="none"
-            autocorrect="off"
-            spellcheck="false"
-            @keydown.stop
-          >
-            <template #suffix>
-              <button
-                type="button"
-                :disabled="props.disabled || state.refreshingCache"
-                :title="
-                  state.refreshingCache
-                    ? t('agent.runtimeManage.modelSelector.refreshingCache')
-                    : t('agent.runtimeManage.modelSelector.refreshCache')
-                "
-                class="cache-refresh-button"
-                @mousedown.prevent.stop
-                @click.stop="refreshCache"
-              >
-                <RefreshCw :size="13" :class="{ spin: state.refreshingCache }" />
-              </button>
-            </template>
-          </t-input>
-        </div>
-        <div class="scrollable-menu">
-          <div v-if="loadingV2Models" class="model-menu-status">
-            {{ t('agent.runtimeManage.modelSelector.loading') }}
+    <Teleport to="body">
+      <div v-if="dropdownOpen" class="model-selector-overlay" @click="dropdownOpen = false">
+        <div class="model-selector-dropdown" :style="modelDropdownStyle" @click.stop>
+          <div class="model-selector-header">
+            <span>{{ t('conversationSettings.models.chatGroupLabel') }}</span>
+            <button class="model-selector-add" type="button" @click="handleAddModel">
+              <span class="add-icon">+</span>
+              <span class="add-text">{{ t('input.addModel') }}</span>
+            </button>
           </div>
-          <div v-else-if="!hasFilteredModels" class="model-menu-status">
-            {{ t('agent.runtimeManage.modelSelector.empty') }}
-          </div>
-          <template v-else>
-            <div
-              v-for="(providerData, providerId) in filteredV2Models"
-              :key="`v2-${providerId}`"
-              class="model-provider-group"
-            >
-              <div class="model-provider-title" :title="providerId">
-                {{ getProviderDisplayName(providerId, providerData) }}
-              </div>
-              <button
-                v-for="model in providerData.models"
+          <div class="model-selector-content">
+            <div v-if="loadingV2Models" class="model-option empty">
+              {{ t('agent.workManage.modelSelector.loading') }}
+            </div>
+            <template v-else>
+              <div
+                v-for="model in flatV2Models"
                 :key="model.spec"
-                type="button"
-                class="model-option-item"
+                class="model-option"
                 :class="{ selected: model.spec === props.model_spec }"
                 @click="handleSelectV2Model(model.spec)"
               >
-                <div class="model-option">
-                  <span class="model-option-name">{{ model.display_name }}</span>
-                  <div class="model-option-signals">
-                    <t-tooltip
-                      v-if="getModelInfo(model).vision"
-                      :content="t('agent.runtimeManage.modelSelector.vision')"
-                    >
-                      <span
-                        class="model-signal-icon"
-                        role="img"
-                        :aria-label="t('agent.runtimeManage.modelSelector.vision')"
-                      >
-                        <Eye :size="13" />
-                      </span>
-                    </t-tooltip>
-                    <t-tooltip
-                      v-if="getModelInfo(model).isOneMillionContext"
-                      :content="t('agent.runtimeManage.modelSelector.oneMillionContext')"
-                    >
-                      <span class="model-context-badge">1M</span>
-                    </t-tooltip>
+                <div class="model-option-left">
+                  <div class="model-option-icon">
+                    <t-icon name="chat" size="14px" />
+                  </div>
+                  <div class="model-option-name-wrap">
+                    <span class="model-option-name">{{ modelSelectLabel(model) }}</span>
+                    <span v-if="model.display_name" class="model-option-raw-name">{{ model.name }}</span>
                   </div>
                 </div>
-              </button>
-            </div>
-          </template>
-        </div>
-        <div
-          v-if="!modelMetadataNoticeDismissed && ((userStore.isAdmin && !weknoraManaged) || hasModelMetadata)"
-          class="model-metadata-source"
-        >
-          <div class="model-metadata-source-content">
-            <template v-if="userStore.isAdmin && !weknoraManaged">
-              {{ t('agent.runtimeManage.modelSelector.noModelHint') }}
-              <RouterLink :to="{ path: '/platform/agents', query: { surface: 'runtime' } }" @click.stop>
-                {{ t('agent.runtimeManage.modelSelector.configureModels') }}
-              </RouterLink>
-            </template>
-            <template v-if="hasModelMetadata">
-              <span v-if="userStore.isAdmin"> </span>
-              {{ t('agent.runtimeManage.modelSelector.metadataPrefix') }}
-              <a href="https://models.dev" target="_blank" rel="noreferrer" @click.stop
-                >models.dev</a
-              >
-              {{ t('agent.runtimeManage.modelSelector.metadataSuffix') }}
+              </div>
+              <div v-if="!flatV2Models.length" class="model-option empty">
+                {{ t('input.noModel') }}
+              </div>
             </template>
           </div>
-          <button
-            type="button"
-            class="model-metadata-source-close"
-            :title="t('agent.runtimeManage.modelSelector.dismissNotice')"
-            :aria-label="t('agent.runtimeManage.modelSelector.closeNotice')"
-            @click.stop="dismissModelMetadataNotice"
-          >
-            <X :size="13" />
-          </button>
         </div>
       </div>
-    </template>
-  </t-popup>
+    </Teleport>
+  </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { RouterLink } from 'vue-router'
 import { modelProviderApi } from '@harness/apis/system_api'
-import { Eye, RefreshCw, X } from 'lucide-vue-next'
-import { useUserStore } from '@harness/stores/user'
+import { ChevronDown, X } from 'lucide-vue-next'
 import { useUIStore } from '@/stores/ui'
-import { loadModelMetadataCatalog, resolveModelDisplayMetadata } from '@harness/utils/modelMetadata'
+import { getRootZoom, rectToCssPx, cssViewportSize } from '@/utils/zoom'
 
 const props = defineProps({
   model_spec: {
@@ -224,62 +142,18 @@ const props = defineProps({
 
 const emit = defineEmits(['select-model'])
 const { t } = useI18n()
-const userStore = useUserStore()
 const uiStore = useUIStore()
 const ADD_MODEL_VALUE = '__add_model__'
 const placeholderText = computed(
-  () => props.placeholder || t('agent.runtimeManage.modelSelector.placeholder')
+  () => props.placeholder || t('agent.workManage.modelSelector.placeholder')
 )
-const MODEL_METADATA_NOTICE_DISMISSED_KEY = 'yuxi_model_metadata_notice_dismissed'
-
 // v2 模型数据：每次展开下拉时实时从后端拉取
 const v2Models = ref({})
-const weknoraManaged = ref(false)
 const loadingV2Models = ref(false)
 const dropdownOpen = ref(false)
-const modelSearchKeyword = ref('')
-const modelMetadataBySpec = ref({})
-const modelMetadataNoticeDismissed = ref(
-  localStorage.getItem(MODEL_METADATA_NOTICE_DISMISSED_KEY) === 'true'
-)
+const modelButtonRef = ref(null)
+const modelDropdownStyle = ref({})
 let fetchV2ModelsPromise = null
-
-const dismissModelMetadataNotice = () => {
-  modelMetadataNoticeDismissed.value = true
-  localStorage.setItem(MODEL_METADATA_NOTICE_DISMISSED_KEY, 'true')
-}
-
-const filteredV2Models = computed(() => {
-  const keyword = modelSearchKeyword.value.trim().toLowerCase()
-  if (!keyword) return v2Models.value
-
-  return Object.entries(v2Models.value).reduce((result, [providerId, providerData]) => {
-    const models = (providerData.models || []).filter((model) => {
-      return [
-        providerId,
-        getProviderDisplayName(providerId, providerData),
-        model.spec,
-        model.model_id,
-        model.name,
-        model.display_name
-      ].some((value) =>
-        String(value || '')
-          .toLowerCase()
-          .includes(keyword)
-      )
-    })
-
-    if (models.length) {
-      result[providerId] = { ...providerData, models }
-    }
-
-    return result
-  }, {})
-})
-
-const hasFilteredModels = computed(() => {
-  return Object.values(filteredV2Models.value).some((providerData) => providerData.models?.length)
-})
 
 const flatV2Models = computed(() => {
   const list = []
@@ -314,8 +188,6 @@ const modelSelectRawName = (model) => {
   return name
 }
 
-const hasModelMetadata = computed(() => Object.keys(modelMetadataBySpec.value).length > 0)
-
 // spec -> 展示名映射。WeKnora 管理模式下 model.spec 是模型 UUID（保证可以精确
 // 解析到唯一模型，见 resolve_weknora_model），不再是可读的 "provider:model"
 // 字符串。UUID 本身不能用来展示，必须回查一次拉到的模型列表拿 display_name，
@@ -333,34 +205,15 @@ const specDisplayNameMap = computed(() => {
   return map
 })
 
-const getProviderDisplayName = (providerId, providerData = {}) => {
-  return (
-    providerData.provider_display_name ||
-    providerData.display_name ||
-    providerData.name ||
-    providerId
-  )
-}
-
-// 拉取 v2 模型列表
 const fetchV2Models = async () => {
   if (fetchV2ModelsPromise) return fetchV2ModelsPromise
 
   loadingV2Models.value = true
   fetchV2ModelsPromise = (async () => {
     try {
-      const catalogRequest = loadModelMetadataCatalog().catch((error) => {
-        console.warn('Failed to load model metadata catalog:', error)
-        return null
-      })
       const response = await modelProviderApi.getV2Models('chat')
       if (response.success) {
         v2Models.value = response.data || {}
-        weknoraManaged.value = Boolean(response.weknora_managed)
-        const catalog = await catalogRequest
-        modelMetadataBySpec.value = catalog
-          ? buildModelMetadataBySpec(v2Models.value, catalog.providers)
-          : {}
       }
     } catch (error) {
       console.warn('Failed to load v2 models:', error)
@@ -373,54 +226,64 @@ const fetchV2Models = async () => {
   return fetchV2ModelsPromise
 }
 
-const buildModelMetadataBySpec = (modelsByProvider, providers) => {
-  return Object.entries(modelsByProvider).reduce((result, [providerId, providerData]) => {
-    for (const model of providerData.models || []) {
-      const info = resolveModelDisplayMetadata(providers, providerId, model)
-      if (info.matched) result[model.spec] = info
-    }
-    return result
-  }, {})
-}
-
-const getModelInfo = (model) => modelMetadataBySpec.value[model.spec] || {}
-
-// 下拉展开前先刷新模型列表，避免弹层打开后再因数据加载发生高度跳变。
-const handleOpenChange = async (open) => {
-  if (props.disabled) {
+const toggleNanoDropdown = async () => {
+  if (props.disabled) return
+  if (dropdownOpen.value) {
     dropdownOpen.value = false
     return
   }
-
-  if (!open) {
-    dropdownOpen.value = false
-    return
-  }
-
   await fetchV2Models()
-  if (!props.disabled) {
-    dropdownOpen.value = true
+  if (props.disabled) return
+  dropdownOpen.value = true
+}
+
+const handleAddModel = () => {
+  dropdownOpen.value = false
+  uiStore.openSettings('models', 'llm')
+}
+
+const updateModelDropdownPosition = () => {
+  const anchor = modelButtonRef.value
+  if (!anchor) return
+  const zoom = getRootZoom()
+  const rect = rectToCssPx(anchor.getBoundingClientRect(), zoom)
+  const { width: vw, height: vh } = cssViewportSize(zoom)
+  const dropdownWidth = 280
+  const offsetY = 8
+  let left = Math.floor(rect.left)
+  left = Math.max(16, Math.min(Math.max(16, vw - dropdownWidth - 16), left))
+  const preferredDropdownHeight = 280
+  const minDropdownHeight = 160
+  const spaceBelow = vh - rect.bottom
+  const spaceAbove = rect.top
+  if (spaceBelow >= minDropdownHeight + offsetY) {
+    modelDropdownStyle.value = {
+      position: 'fixed',
+      width: `${dropdownWidth}px`,
+      left: `${left}px`,
+      top: `${Math.floor(rect.bottom + offsetY)}px`,
+      maxHeight: `${Math.min(preferredDropdownHeight, spaceBelow - offsetY - 16)}px`,
+      zIndex: '10001'
+    }
+    return
+  }
+  const availableHeight = spaceAbove - offsetY - 20
+  modelDropdownStyle.value = {
+    position: 'fixed',
+    width: `${dropdownWidth}px`,
+    left: `${left}px`,
+    bottom: `${vh - rect.top + offsetY}px`,
+    maxHeight: `${availableHeight >= preferredDropdownHeight ? preferredDropdownHeight : Math.max(minDropdownHeight, availableHeight)}px`,
+    zIndex: '10001'
   }
 }
 
-// 强制刷新缓存
-const refreshCache = async () => {
-  if (props.disabled || state.refreshingCache) return
-  state.refreshingCache = true
-  try {
-    await modelProviderApi.refreshModelCache()
-    // 刷新后重新拉取模型列表
-    await fetchV2Models()
-  } catch (error) {
-    console.error('Failed to refresh cache:', error)
-  } finally {
-    state.refreshingCache = false
-  }
-}
-
-// 状态管理
-const state = reactive({
-  refreshingCache: false
+watch(dropdownOpen, (open) => {
+  if (!open) return
+  nextTick(() => {
+    updateModelDropdownPosition()
+    requestAnimationFrame(() => updateModelDropdownPosition())
+  })
 })
 
 const handleSelectPopupVisible = (visible) => {
@@ -503,7 +366,7 @@ const handleClear = () => {
 <style lang="less" scoped>
 @import '@harness/assets/css/model-selector-common.less';
 
-.runtime-model-selector-select {
+.work-model-selector-select {
   width: 100%;
 }
 
@@ -549,31 +412,10 @@ const handleClear = () => {
   }
 }
 
-.runtime-model-selector {
+.work-model-selector {
   display: inline-block;
   max-width: 100%;
   vertical-align: middle;
-}
-
-// 缓存刷新按钮
-.cache-refresh-button {
-  font-size: 12px;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  background-color: transparent;
-  border: none;
-  outline: none;
-  color: var(--gray-400);
-  cursor: pointer;
-  transition: color 0.15s ease;
-
-  &:hover:not(:disabled) {
-    color: var(--gray-600);
-  }
 }
 
 .model-select--nano {
@@ -588,15 +430,25 @@ const handleClear = () => {
   background: transparent;
   transition: all 0.2s ease;
   user-select: none;
+
+  &:hover {
+    color: var(--gray-900);
+    background: var(--gray-50);
+  }
+
+  .model-text {
+    color: currentColor;
+  }
 }
 
-.model-select--nano:hover {
-  color: var(--gray-900);
-  background: var(--gray-50);
-}
+.model-dropdown-arrow {
+  flex-shrink: 0;
+  color: var(--td-text-color-placeholder, #999);
+  transition: transform 0.12s;
 
-.model-select--nano .model-text {
-  color: currentColor;
+  &.rotate {
+    transform: rotate(180deg);
+  }
 }
 
 .model-clear-btn {
@@ -626,167 +478,160 @@ const handleClear = () => {
   opacity: 0.55;
 }
 
-.model-dropdown {
-  width: min(360px, calc(100vw - 24px));
-  padding: 8px 0;
-  overflow: hidden;
-  background: var(--gray-0);
-  border-radius: 8px;
-  box-shadow: 0 0 18px rgba(0, 0, 0, 0.1);
-}
-
-.model-search {
-  padding: 8px;
-}
-
-.model-search :deep(.t-input) {
-  border-color: var(--gray-0);
-  background: var(--gray-25);
-}
-
-.scrollable-menu {
-  max-height: 260px;
-  overflow-y: auto;
-}
-
-.model-menu-status {
-  padding: 10px 12px;
-  color: var(--gray-500);
-  font-size: 13px;
-}
-
-.model-provider-group {
-  padding: 4px 0;
-}
-
-.model-provider-title {
-  padding: 6px 12px 4px;
-  overflow: hidden;
-  color: var(--gray-500);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.model-option-item {
-  display: block;
-  width: 100%;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--gray-50);
-  }
-
-  &.selected {
-    color: var(--gray-1000);
-    background: var(--main-50);
-  }
-}
-
-.model-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
-}
-
-.model-option-name {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  color: var(--gray-1000);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.model-option-signals {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  flex-shrink: 0;
-  color: var(--gray-500);
-}
-
-.model-context-badge {
-  display: inline-flex;
-  align-items: center;
-  height: 17px;
-  padding: 0 5px;
-  border-radius: 4px;
-  color: var(--gray-600);
-  background: var(--gray-100);
-  font-size: 10px;
-  font-weight: 600;
-}
-
-.model-signal-icon {
-  display: inline-flex;
-  align-items: center;
-}
-
-.model-metadata-source {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 7px 10px;
-  border-top: 1px solid var(--gray-100);
-  color: var(--gray-500);
-  background: var(--gray-25);
-  font-size: 11px;
-  line-height: 16px;
-
-  a {
-    color: var(--main-600);
-  }
-}
-
-.model-metadata-source-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.model-metadata-source-close {
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  margin: -2px -3px 0 0;
-  padding: 0;
-  border: none;
-  border-radius: 4px;
-  color: var(--gray-500);
-  background: transparent;
-  cursor: pointer;
-  transition:
-    color 0.15s ease,
-    background-color 0.15s ease;
-
-  &:hover {
-    color: var(--gray-800);
-    background: var(--gray-100);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--main-400);
-    outline-offset: 1px;
-  }
-}
 </style>
 
 <style lang="less">
-.runtime-model-selector-popup-inner.t-popup__content,
-.runtime-model-selector-popup-inner {
+.model-selector-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: transparent;
+  touch-action: none;
+}
+
+.model-selector-dropdown {
+  position: fixed !important;
+  z-index: 10000;
+  background: var(--td-bg-color-container);
+  border: 0.5px solid var(--td-component-border);
+  border-radius: 10px;
+  box-shadow: var(--td-shadow-2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  margin: 0 !important;
   padding: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
+  transform: none !important;
+  transform-origin: top left;
+  animation: modelSelectorFadeIn 0.15s ease-out;
+}
+
+@keyframes modelSelectorFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.model-selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 0.5px solid var(--td-component-stroke);
+  background: var(--td-bg-color-container);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--td-text-color-secondary);
+}
+
+.model-selector-content {
+  flex: 1;
+  min-height: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px 8px;
+}
+
+.model-selector-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 0.5px solid transparent;
+  background: transparent;
+  color: var(--td-brand-color);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+
+  .add-icon {
+    font-size: 14px;
+    line-height: 1;
+    font-weight: 400;
+  }
+
+  &:hover {
+    color: var(--td-brand-color-hover);
+    background: var(--td-bg-color-secondarycontainer);
+  }
+}
+
+.model-selector-dropdown .model-option {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-radius: 6px;
+  margin-bottom: 4px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &:hover,
+  &.selected {
+    background: var(--td-bg-color-secondarycontainer);
+  }
+
+  &.empty {
+    color: var(--td-text-color-placeholder);
+    cursor: default;
+    text-align: center;
+    padding: 20px 8px;
+    font-size: 12px;
+
+    &:hover {
+      background: transparent;
+    }
+  }
+}
+
+.model-option-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.model-option-icon {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--td-text-color-secondary);
+}
+
+.model-option-name-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.model-option-name {
+  font-size: 12px;
+  color: var(--td-text-color-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.model-option-raw-name {
+  font-size: 11px;
+  color: var(--td-text-color-placeholder);
+  flex-shrink: 0;
 }
 </style>

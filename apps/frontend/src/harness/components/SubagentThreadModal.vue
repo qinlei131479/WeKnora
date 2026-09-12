@@ -1,12 +1,15 @@
 <template>
-  <a-modal
-    :open="open"
-    :footer="null"
+  <t-dialog
+    :visible="open"
+    attach="body"
+    placement="center"
     :width="800"
-    :destroyOnClose="true"
-    @cancel="$emit('update:open', false)"
+    :footer="false"
+    :destroy-on-close="true"
+    dialog-class-name="subagent-thread-modal"
+    @close="$emit('update:open', false)"
   >
-    <template #title>
+    <template #header>
       <div class="subagent-thread-modal-title">
         <FallbackAvatar
           class="subagent-thread-modal-avatar"
@@ -36,7 +39,7 @@
         />
       </div>
     </div>
-  </a-modal>
+  </t-dialog>
 </template>
 
 <script setup>

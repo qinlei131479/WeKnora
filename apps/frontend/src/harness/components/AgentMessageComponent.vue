@@ -29,9 +29,9 @@
       <Check v-if="isCopied" size="14" />
       <Copy v-else size="14" />
     </div>
-    <p v-if="message.type === 'human'" class="message-text">
+    <div v-if="message.type === 'human'" class="message-text">
       <MentionTextRenderer :content="message.content" :display-labels="mentionDisplayLabels" />
-    </p>
+    </div>
 
     <p v-else-if="message.type === 'system'" class="message-text-system">{{ message.content }}</p>
 
@@ -364,12 +364,20 @@ const parsedData = computed(() => {
 
   &.human,
   &.sent {
-    max-width: 95%;
-    color: var(--gray-1000);
-    background-color: var(--main-50);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    width: max-content;
+    max-width: min(76%, 820px);
+    color: var(--td-text-color-primary, var(--gray-1000));
+    background: var(--td-bg-color-secondarycontainer, var(--gray-50));
     align-self: flex-end;
-    border-radius: 0.5rem;
-    padding: 0.5rem 1rem;
+    margin: 16px 0 0 auto;
+    border-radius: 8px;
+    padding: 8px 12px;
+    line-height: 1.6;
+    letter-spacing: normal;
   }
 
   &.assistant,
@@ -386,8 +394,9 @@ const parsedData = computed(() => {
 
   .message-text {
     max-width: 100%;
-    margin-bottom: 0;
-    white-space: pre-line;
+    margin: 0;
+    white-space: pre-wrap;
+    line-height: inherit;
   }
 
   &.human.has-attachments,
@@ -470,7 +479,7 @@ const parsedData = computed(() => {
       padding: 0;
       border: none;
       background: transparent;
-      color: var(--gray-700);
+      color: var(--td-text-color-secondary, var(--gray-700));
       font-size: 13px;
       line-height: 20px;
       text-align: left;
@@ -569,9 +578,9 @@ const parsedData = computed(() => {
   align-items: center;
   gap: 0.625rem;
   padding: 0.625rem 0.75rem;
-  border: 1px solid var(--gray-200);
+  border: 1px solid var(--gray-200, var(--td-component-stroke, #e4e6e6));
   border-radius: 0.625rem;
-  background: var(--gray-0);
+  background: var(--gray-0, var(--td-bg-color-container, #ffffff));
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
@@ -583,8 +592,8 @@ const parsedData = computed(() => {
   justify-content: center;
   flex-shrink: 0;
   border-radius: 0.5rem;
-  color: var(--main-color);
-  background: var(--main-50);
+  color: var(--main-color, var(--td-brand-color));
+  background: var(--main-50, var(--td-brand-color-light));
 }
 
 .message-attachment-body {
@@ -594,7 +603,7 @@ const parsedData = computed(() => {
 
 .message-attachment-name {
   overflow: hidden;
-  color: var(--gray-900);
+  color: var(--gray-900, var(--td-text-color-primary));
   font-size: 0.875rem;
   line-height: 1.25rem;
   text-overflow: ellipsis;
@@ -603,7 +612,7 @@ const parsedData = computed(() => {
 
 .message-attachment-meta {
   margin-top: 0.125rem;
-  color: var(--gray-500);
+  color: var(--gray-500, var(--td-text-color-secondary));
   font-size: 0.75rem;
   line-height: 1rem;
 }

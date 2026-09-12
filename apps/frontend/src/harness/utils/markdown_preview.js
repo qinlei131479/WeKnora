@@ -209,11 +209,14 @@ const setCachedHtml = (cacheKey, html) => {
   renderedHtmlCache.set(cacheKey, html)
 }
 
+const unwrapTableLinks = (tableHtml) =>
+  tableHtml.replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1')
+
 const wrapMarkdownTables = (html) => {
   if (!html || !html.includes('<table')) return html
   return html.replace(
     /<table\b[\s\S]*?<\/table>/gi,
-    (tableHtml) => `<div class="chat-markdown-table">${tableHtml}</div>`
+    (tableHtml) => `<div class="chat-markdown-table">${unwrapTableLinks(tableHtml)}</div>`
   )
 }
 

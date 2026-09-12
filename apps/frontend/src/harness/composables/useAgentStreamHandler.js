@@ -1,4 +1,4 @@
-import { message } from 'ant-design-vue'
+import { MessagePlugin } from 'tdesign-vue-next'
 import { handleChatError } from '@harness/utils/errorHandler'
 import { unref } from 'vue'
 import { extractPendingInterrupt } from '@harness/composables/useApproval'
@@ -275,13 +275,13 @@ export function useAgentStreamHandler({
         }
         // 如果有 message 字段，显示提示（例如：敏感内容检测）
         if (chunkMessage) {
-          message.info(chunkMessage)
+          MessagePlugin.info(chunkMessage)
         }
         return true
 
       case 'warning':
         if (chunkMessage) {
-          message.warning(chunkMessage)
+          MessagePlugin.warning(chunkMessage)
         }
         return false
     }

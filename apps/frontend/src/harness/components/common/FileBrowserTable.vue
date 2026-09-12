@@ -23,86 +23,55 @@
 
       <div class="file-browser-actions">
         <slot name="toolbar-actions" />
-        <a-tooltip v-if="refreshable" :title="t('workspacePage.refresh')">
-          <a-button
-            type="text"
+        <t-tooltip v-if="refreshable" :content="t('workspacePage.refresh')">
+          <t-button
+            variant="text"
+            shape="square"
             class="file-browser-icon-button"
             :loading="refreshing"
             :aria-label="t('workspacePage.refresh')"
             @click="$emit('refresh')"
           >
             <template #icon><RotateCw :size="16" /></template>
-          </a-button>
-        </a-tooltip>
+          </t-button>
+        </t-tooltip>
       </div>
     </div>
 
     <slot name="before-table" />
 
-    <a-table
-      :columns="columns"
-      :data-source="rows"
-      :row-key="rowKey"
+    <t-table
+      class="file-browser-td-table"
+      :columns="tableColumns"
+      :data="rows"
+      :row-key="resolvedRowKey"
       :loading="loading"
       :pagination="tablePagination"
-      :row-selection="tableSelection"
-      :row-class-name="resolveRowClassName"
-      :custom-row="resolveCustomRow"
-      class="file-browser-ant-table"
+      :selected-row-keys="selectedRowKeys"
+      :reserve-selected-row-on-paginate="reserveSelectedRowOnPaginate"
+      :row-class-name="resolveRowClassNameTd"
+      :row-attributes="resolveRowAttributes"
       size="small"
+      @select-change="handleSelectChange"
       @change="handleTableChange"
     >
-      <template #bodyCell="{ column, text, record, index }">
-        <slot
-          :name="cellSlotName(column)"
-          :row="record"
-          :record="record"
-          :column="column"
-          :text="text"
-          :index="index"
-        >
-          <template v-if="isNameColumn(column)">
-            <slot name="name" :row="record" :record="record" :text="text" :index="index">
-              <span class="file-browser-default-name">
-                <FileTypeIcon :name="resolveRowName(record)" :is-dir="resolveRowIsDir(record)" />
-                <span class="file-browser-name-text" :title="resolveRowName(record)">
-                  {{ resolveRowName(record) }}
-                </span>
-              </span>
-            </slot>
-          </template>
-          <template v-else-if="isStatusColumn(column)">
-            <slot name="status" :row="record" :record="record" :text="text" :index="index">
-              {{ text || '-' }}
-            </slot>
-          </template>
-          <template v-else-if="isActionColumn(column)">
-            <div class="file-browser-row-actions" @click.stop>
-              <slot name="row-actions" :row="record" :record="record" :index="index" />
-            </div>
-          </template>
-          <template v-else>
-            {{ text ?? '-' }}
-          </template>
-        </slot>
-      </template>
-
-      <template #emptyText>
+      <template #empty>
         <slot name="empty">
-          <a-empty :description="resolvedEmptyText" />
+          <t-empty :description="resolvedEmptyText" />
         </slot>
       </template>
-    </a-table>
+    </t-table>
   </section>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, h, useSlots } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RotateCw } from 'lucide-vue-next'
 import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
 
 const { t } = useI18n()
+const slots = useSlots()
 
 const props = defineProps({
   rows: { type: Array, default: () => [] },
@@ -138,43 +107,70 @@ const resolvedBreadcrumbs = computed(() => {
   return [{ key: 'root', name: resolvedRootLabel.value, path: '/' }]
 })
 
+// TDesign's `row-key` prop only accepts a field-name string (unlike antd,
+// which also allowed a resolver function). The `rowKey` prop stays
+// `[String, Function]` for API compatibility with existing/future callers,
+// but a function value can only be used internally (see `resolveRowKey`)
+// and falls back to `'key'` for the value actually handed to `<t-table>`.
+const resolvedRowKey = computed(() => (typeof props.rowKey === 'string' ? props.rowKey : 'key'))
+
+const resolveRowKey = (row) => {
+  if (typeof props.rowKey === 'function') return props.rowKey(row)
+  return row?.[props.rowKey]
+}
+
 const tablePagination = computed(() => {
-  if (!props.pagination) return false
+  if (!props.pagination) return null
+  const { showSizeChanger, pageSizeOptions, ...rest } = props.pagination
   return {
     size: 'small',
-    hideOnSinglePage: true,
-    ...props.pagination
+    ...rest,
+    ...(showSizeChanger !== undefined ? { showPageSize: showSizeChanger } : {}),
+    ...(pageSizeOptions
+      ? { pageSizeOptions: pageSizeOptions.map((option) => (typeof option === 'string' ? Number(option) : option)) }
+      : {})
   }
 })
 
-const tableSelection = computed(() => {
+// TDesign models row selection as a dedicated checkbox column (`type:
+// 'multiple'`) plus table-level `selected-row-keys` / `@select-change`,
+// rather than antd's single `row-selection` config object. The public
+// `selection` prop keeps its antd-shaped API (selectedRowKeys/selectedKeys,
+// getCheckboxProps, onChange, disabledKeys, preserveSelectedRowKeys) and is
+// translated into that shape here. Note: antd's `hideSelectAll` has no
+// direct TDesign equivalent and is not currently applied by any caller.
+const rowSelectionColumn = computed(() => {
   if (!props.selection) return null
 
   const disabledKeys = new Set(props.selection.disabledKeys || [])
   const getCheckboxProps = props.selection.getCheckboxProps
 
   return {
-    selectedRowKeys: props.selection.selectedRowKeys || props.selection.selectedKeys || [],
-    preserveSelectedRowKeys: Boolean(props.selection.preserveSelectedRowKeys),
-    hideSelectAll: Boolean(props.selection.hideSelectAll),
-    getCheckboxProps: (row) => {
+    colKey: 'row-select',
+    type: 'multiple',
+    width: 44,
+    checkProps: ({ row }) => {
       if (typeof getCheckboxProps === 'function') {
         return getCheckboxProps(row)
       }
       return { disabled: disabledKeys.has(resolveRowKey(row)) }
-    },
-    onChange: (keys, selectedRows, info) => {
-      if (typeof props.selection.onChange === 'function') {
-        props.selection.onChange(keys, selectedRows, info)
-      }
-      emit('update:selectedKeys', keys)
     }
   }
 })
 
-const resolveRowKey = (row) => {
-  if (typeof props.rowKey === 'function') return props.rowKey(row)
-  return row?.[props.rowKey]
+const selectedRowKeys = computed(() => {
+  if (!props.selection) return undefined
+  return props.selection.selectedRowKeys || props.selection.selectedKeys || []
+})
+
+const reserveSelectedRowOnPaginate = computed(() => Boolean(props.selection?.preserveSelectedRowKeys))
+
+const handleSelectChange = (keys, context) => {
+  if (!props.selection) return
+  if (typeof props.selection.onChange === 'function') {
+    props.selection.onChange(keys, context?.selectedRowData || [], context)
+  }
+  emit('update:selectedKeys', keys)
 }
 
 const resolveRowName = (row) => row?.name || row?.filename || row?.displayName || ''
@@ -190,6 +186,56 @@ const isNameColumn = (column) => ['name', 'filename'].includes(columnKey(column)
 const isStatusColumn = (column) => columnKey(column) === 'status'
 
 const isActionColumn = (column) => ['action', 'actions'].includes(columnKey(column))
+
+// Mirrors the previous antd `<template #bodyCell>` dispatch: prefer a
+// caller-provided `cell-<key>` slot, otherwise fall back to the well-known
+// `name` / `status` / `row-actions` slots, otherwise render the raw text.
+const renderCell = (column, row, rowIndex) => {
+  const dataIndex = column.dataIndex || columnKey(column)
+  const text = row?.[dataIndex]
+  const scope = { row, record: row, column, text, index: rowIndex }
+
+  const genericSlot = slots[cellSlotName(column)]
+  if (genericSlot) return genericSlot(scope)
+
+  if (isNameColumn(column)) {
+    if (slots.name) return slots.name(scope)
+    return h('span', { class: 'file-browser-default-name' }, [
+      h(FileTypeIcon, { name: resolveRowName(row), isDir: resolveRowIsDir(row) }),
+      h('span', { class: 'file-browser-name-text', title: resolveRowName(row) }, resolveRowName(row))
+    ])
+  }
+
+  if (isStatusColumn(column)) {
+    if (slots.status) return slots.status(scope)
+    return text || '-'
+  }
+
+  if (isActionColumn(column)) {
+    return h(
+      'div',
+      { class: 'file-browser-row-actions', onClick: (event) => event.stopPropagation() },
+      slots['row-actions']?.({ row, record: row, index: rowIndex })
+    )
+  }
+
+  return text ?? '-'
+}
+
+// TDesign columns use `colKey` (not antd's `dataIndex`/`key`) and render
+// custom cell content via a per-column `cell` function rather than a
+// dispatched `<template #bodyCell>` slot. Columns still arrive from the
+// parent in antd shape (`title`/`dataIndex`/`key`/`width`/`align`/
+// `ellipsis`) and are transformed here via computed so the parent
+// (WorkspaceFileList.vue) doesn't need to change.
+const tableColumns = computed(() => {
+  const cols = props.columns.map((column) => ({
+    ...column,
+    colKey: columnKey(column),
+    cell: (_h, { row, rowIndex }) => renderCell(column, row, rowIndex)
+  }))
+  return rowSelectionColumn.value ? [rowSelectionColumn.value, ...cols] : cols
+})
 
 const isCurrentBreadcrumb = (index) => index === resolvedBreadcrumbs.value.length - 1
 
@@ -217,41 +263,51 @@ const resolveRowClassName = (row, index) => {
   return classes.join(' ')
 }
 
+// TDesign passes a single `{ row, rowIndex }` params object to
+// `row-class-name` instead of antd's `(row, index)` positional arguments.
+const resolveRowClassNameTd = ({ row, rowIndex }) => resolveRowClassName(row, rowIndex)
+
 const isInteractiveTarget = (event) => {
   return Boolean(
-    event.target?.closest?.(
-      'button,a,input,textarea,select,[role="button"],.ant-checkbox-wrapper,.ant-dropdown-trigger,.ant-popover'
-    )
+    event.target?.closest?.('button,a,input,textarea,select,[role="button"],.t-checkbox,.t-dropdown,.t-popup')
   )
 }
 
-const resolveCustomRow = (row, index) => {
+// TDesign has no direct equivalent of antd's `customRow`; the same
+// click/keydown-driven row activation is reproduced via the `row-attributes`
+// prop, whose returned object is spread directly onto the rendered `<tr>`.
+const resolveRowAttributes = ({ row, rowIndex }) => {
   if (!props.rowClickable) return {}
 
   return {
     tabindex: 0,
     onClick: (event) => {
       if (isInteractiveTarget(event)) return
-      emit('open-row', row, index)
+      emit('open-row', row, rowIndex)
     },
     onKeydown: (event) => {
       if (event.key !== 'Enter') return
       if (isInteractiveTarget(event)) return
       event.preventDefault()
-      emit('open-row', row, index)
+      emit('open-row', row, rowIndex)
     }
   }
 }
 
-const handleTableChange = (pagination, filters, sorter, extra) => {
-  emit('table-change', { pagination, filters, sorter, extra })
+// TDesign's `<t-table>` emits a single `@change` event (covering sorter,
+// filter and pagination changes) instead of antd's `onChange(pagination,
+// filters, sorter, extra)`. This preserves the same `table-change` /
+// `page-change` external emit contract as before.
+const handleTableChange = (data, context) => {
+  const pagination = data?.pagination || null
+  emit('table-change', { pagination, filters: data?.filter, sorter: data?.sorter, extra: context })
 
   if (!props.pagination || !pagination) return
   const current = pagination.current
   const pageSize = pagination.pageSize
   if (current === props.pagination.current && pageSize === props.pagination.pageSize) return
 
-  emit('page-change', { page: current, pageSize, pagination, filters, sorter, extra })
+  emit('page-change', { page: current, pageSize, pagination, filters: data?.filter, sorter: data?.sorter, extra: context })
 }
 </script>
 
@@ -370,7 +426,7 @@ const handleTableChange = (pagination, filters, sorter, extra) => {
   }
 }
 
-.file-browser-ant-table {
+.file-browser-td-table {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -379,28 +435,21 @@ const handleTableChange = (pagination, filters, sorter, extra) => {
   background: var(--gray-0);
 }
 
-.file-browser-ant-table :deep(.ant-spin-nested-loading),
-.file-browser-ant-table :deep(.ant-spin-container) {
+.file-browser-td-table :deep(.t-table) {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
   min-height: 0;
 }
 
-.file-browser-ant-table :deep(.ant-table) {
+.file-browser-td-table :deep(.t-table__content) {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
   background: var(--gray-0);
 }
 
-.file-browser-ant-table :deep(.ant-table-container),
-.file-browser-ant-table :deep(.ant-table-content),
-.file-browser-ant-table :deep(table) {
-  min-width: 100%;
-}
-
-.file-browser-ant-table :deep(.ant-table-thead > tr > th) {
+.file-browser-td-table :deep(thead th) {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -414,53 +463,42 @@ const handleTableChange = (pagination, filters, sorter, extra) => {
   background: var(--gray-0);
 }
 
-.file-browser-ant-table :deep(.ant-table-tbody > tr > td) {
+.file-browser-td-table :deep(.t-table td) {
   padding: 7px 10px;
   background: var(--gray-0);
   color: var(--gray-700);
   font-size: 13px;
   line-height: 20px;
+  vertical-align: middle;
   border-bottom: 1px solid var(--gray-50);
   transition:
     background-color 0.16s ease,
     color 0.16s ease;
 }
 
-.file-browser-ant-table :deep(.ant-table-tbody > tr.file-browser-row-clickable) {
+.file-browser-td-table :deep(tbody tr.file-browser-row-clickable) {
   cursor: pointer;
 }
 
-.file-browser-ant-table :deep(.ant-table-tbody > tr:hover > td) {
+.file-browser-td-table :deep(tbody tr:hover > td) {
   background: var(--main-20);
   color: var(--gray-1000);
 }
 
-.file-browser-ant-table :deep(.ant-table-tbody > tr.file-browser-row-selected > td) {
+.file-browser-td-table :deep(tbody tr.file-browser-row-selected > td) {
   background: var(--main-20);
   color: var(--gray-1000);
 }
 
-.file-browser-ant-table :deep(.ant-table-tbody > tr.file-browser-row-selected > td:first-child) {
-  box-shadow: none;
-}
-
-.file-browser-ant-table :deep(.ant-table-tbody > tr.ant-table-row-selected > td) {
-  background: var(--main-5);
-}
-
-.file-browser-ant-table :deep(.ant-table-tbody > tr.ant-table-row-selected:hover > td) {
-  background: var(--main-20);
-}
-
-.file-browser-ant-table :deep(.ant-table-tbody > tr.is-deleting > td) {
+.file-browser-td-table :deep(tbody tr.is-deleting > td) {
   opacity: 0.62;
 }
 
-.file-browser-ant-table :deep(.ant-table-cell) {
-  vertical-align: middle;
+.file-browser-td-table :deep(.t-table__body tr:last-child td) {
+  border-bottom: 0;
 }
 
-.file-browser-ant-table :deep(.ant-table-pagination) {
+.file-browser-td-table :deep(.t-table__pagination) {
   margin: 10px 0;
   padding: 0 6px;
 }

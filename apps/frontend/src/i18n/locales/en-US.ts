@@ -290,7 +290,6 @@ export default {
       attachment: 'Attachment',
       approvalSaveFailed: 'Failed to save approval mode',
       createFailed: 'Failed to create conversation. Please try again.',
-      configChangeHint: 'Changing settings while a run is in progress can affect the result. Start a new conversation instead.',
       queuedDeleted: 'Queued request deleted',
       steered: 'Set as the next steered request',
       queueContinued: 'Queue resumed',
@@ -311,6 +310,17 @@ export default {
       uploadedImage: 'Uploaded image',
       thinking: 'Thinking...',
       reasoning: 'Reasoning',
+      calledTool: 'Called: {name}',
+      calledTools: 'Called {count} tools',
+      toolCompleted: 'Completed',
+      toolFailedCount: '{count} failed',
+      toolRunningCount: '{count} running',
+      toolSucceeded: 'Tool {name} completed',
+      toolFailed: 'Tool {name} failed',
+      toolCalling: 'Calling tool: {name}',
+      toolParams: 'Parameters',
+      toolFailedStatus: 'Failed',
+      toolRunningStatus: 'Running',
       errorInterrupted: 'Generation was interrupted',
       errorGuard: 'Sensitive content detected. Output stopped.',
       errorUnexpected: 'An error occurred while generating',
@@ -319,7 +329,6 @@ export default {
       stoppedHint: 'You stopped this reply',
       reedit: 'Edit the question',
       builtin: 'Built-in',
-      boundHint: 'This conversation is bound to an agent. Start a new chat to switch.',
       editAgent: 'Edit agent',
       createAgent: 'New agent',
       switchBound: 'This conversation is bound to an agent. Start a new chat to switch.',
@@ -390,7 +399,7 @@ export default {
   chatEngine: {
     switchLabel: 'Choose type',
     platform: 'Chat',
-    runtime: 'Work',
+    chatWork: 'Work',
     lockedHint: 'This conversation already has messages, so its type cannot be changed.'
   },
   chatHeader: {
@@ -1194,8 +1203,8 @@ export default {
     stepSummarySeparator: ' · ',
     title: 'Agents',
     subtitle: 'Configure and manage your agents to customize conversation behavior and capabilities',
-    runtimeSubtitle: 'Manage work agents. They produce intermediate files and artifacts.',
-    runtimeManage: {
+    workSubtitle: 'Manage work agents. They produce intermediate files and artifacts.',
+    workManage: {
       agents: '{count} agents',
       global: '{count} global',
       builtin: '{count} built-in',
@@ -1455,7 +1464,7 @@ export default {
     },
     tabs: {
       platform: 'Chat',
-      runtime: 'Work',
+      work: 'Work',
       providers: 'Model providers',
       sharedToMe: 'Shared to Me'
     },

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, reactive } from 'vue'
-import { message, Modal } from 'ant-design-vue'
+import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
 import { databaseApi, documentApi, queryApi } from '@harness/apis/knowledge_api'
 import { useTaskerStore } from '@harness/stores/tasker'
 import { useUserStore } from '@harness/stores/user'
@@ -101,7 +101,7 @@ export const useDatabaseStore = defineStore('database', () => {
     } catch (error) {
       console.error('加载数据库列表失败:', error)
       if (error.message.includes('权限')) {
-        message.error('没有权限访问知识库')
+        MessagePlugin.error('没有权限访问知识库')
       }
       throw error
     } finally {
@@ -112,24 +112,24 @@ export const useDatabaseStore = defineStore('database', () => {
   async function createDatabase(formData) {
     // 验证
     if (!formData.database_name?.trim()) {
-      message.error('数据库名称不能为空')
+      MessagePlugin.error('数据库名称不能为空')
       return false
     }
 
     if (!formData.kb_type) {
-      message.error('请选择知识库类型')
+      MessagePlugin.error('请选择知识库类型')
       return false
     }
 
     state.creating = true
     try {
       const data = await databaseApi.createDatabase(formData)
-      message.success('创建成功')
+      MessagePlugin.success('创建成功')
       await loadDatabases() // 刷新列表
       return data
     } catch (error) {
       console.error('创建数据库失败:', error)
-      message.error(error.message || '创建失败')
+      MessagePlugin.error(error.message || '创建失败')
       throw error
     } finally {
       state.creating = false
@@ -156,7 +156,7 @@ export const useDatabaseStore = defineStore('database', () => {
       }
     } catch (error) {
       console.error(error)
-      message.error(error.message || '获取数据库信息失败')
+      MessagePlugin.error(error.message || '获取数据库信息失败')
     } finally {
       if (!isBackground) {
         state.lock = false
@@ -169,33 +169,35 @@ export const useDatabaseStore = defineStore('database', () => {
     try {
       state.lock = true
       await databaseApi.updateDatabase(kbId.value, formData)
-      message.success('知识库信息更新成功')
+      MessagePlugin.success('知识库信息更新成功')
       await getDatabaseInfo() // Load query params after updating database info
     } catch (error) {
       console.error(error)
-      message.error(error.message || '更新失败')
+      MessagePlugin.error(error.message || '更新失败')
     } finally {
       state.lock = false
     }
   }
 
   function deleteDatabase() {
-    Modal.confirm({
-      title: '删除数据库',
-      content: '确定要删除该数据库吗？',
-      okText: '确认',
-      cancelText: '取消',
-      onOk: async () => {
+    const dialog = DialogPlugin.confirm({
+      header: '删除数据库',
+      body: '确定要删除该数据库吗？',
+      confirmBtn: { content: '确认', theme: 'danger' },
+      cancelBtn: '取消',
+      theme: 'warning',
+      onConfirm: async () => {
         state.lock = true
         try {
           const data = await databaseApi.deleteDatabase(kbId.value)
-          message.success(data.message || '删除成功')
+          MessagePlugin.success(data.message || '删除成功')
           router.push(knowledgeBasesLocation())
         } catch (error) {
           console.error(error)
-          message.error(error.message || '删除失败')
+          MessagePlugin.error(error.message || '删除失败')
         } finally {
           state.lock = false
+          dialog.destroy()
         }
       }
     })
@@ -209,7 +211,7 @@ export const useDatabaseStore = defineStore('database', () => {
       await loadDocumentFiles({ isBackground: true })
     } catch (error) {
       console.error(error)
-      message.error(error.message || '删除失败')
+      MessagePlugin.error(error.message || '删除失败')
       throw error
     } finally {
       state.lock = false
@@ -217,12 +219,19 @@ export const useDatabaseStore = defineStore('database', () => {
   }
 
   function handleDeleteFile(fileId) {
-    Modal.confirm({
-      title: '删除文件',
-      content: '确定要删除该文件吗？',
-      okText: '确认',
-      cancelText: '取消',
-      onOk: () => deleteFile(fileId)
+    const dialog = DialogPlugin.confirm({
+      header: '删除文件',
+      body: '确定要删除该文件吗？',
+      confirmBtn: { content: '确认', theme: 'danger' },
+      cancelBtn: '取消',
+      theme: 'warning',
+      onConfirm: async () => {
+        try {
+          await deleteFile(fileId)
+        } finally {
+          dialog.destroy()
+        }
+      }
     })
   }
 
@@ -234,23 +243,26 @@ export const useDatabaseStore = defineStore('database', () => {
     })
 
     if (validFileIds.length === 0) {
-      message.info('没有可删除的文件')
+      MessagePlugin.info('没有可删除的文件')
       return
     }
 
-    Modal.confirm({
-      title: '批量删除文件',
-      content: `确定要删除选中的 ${validFileIds.length} 个文件吗？`,
-      okText: '确认',
-      cancelText: '取消',
-      onOk: async () => {
+    const confirmDialog = DialogPlugin.confirm({
+      header: '批量删除文件',
+      body: `确定要删除选中的 ${validFileIds.length} 个文件吗？`,
+      confirmBtn: { content: '确认', theme: 'danger' },
+      cancelBtn: '取消',
+      theme: 'warning',
+      onConfirm: async () => {
+        confirmDialog.destroy()
         state.batchDeleting = true
         let successCount = 0
         let failureCount = 0
         let processedCount = 0
         const totalCount = validFileIds.length
-        const progressKey = `batch-delete-${Date.now()}`
-        message.loading({ content: `正在删除文件 0/${totalCount}`, key: progressKey, duration: 0 })
+        // TDesign 的 MessagePlugin 没有 antd 那种按 key 原地更新同一条消息的能力，
+        // 这里改为持有当前进度提示的句柄，每次进度更新时先关旧的再开新的。
+        let progressMessage = MessagePlugin.loading(`正在删除文件 0/${totalCount}`, 0)
 
         try {
           const CHUNK_SIZE = 50
@@ -268,30 +280,27 @@ export const useDatabaseStore = defineStore('database', () => {
               failureCount += chunk.length
             } finally {
               processedCount += chunk.length
-              message.loading({
-                content: `正在删除文件 ${processedCount}/${totalCount}`,
-                key: progressKey,
-                duration: 0
-              })
+              MessagePlugin.close(progressMessage)
+              progressMessage = MessagePlugin.loading(`正在删除文件 ${processedCount}/${totalCount}`, 0)
             }
           }
 
-          message.destroy(progressKey)
+          MessagePlugin.close(progressMessage)
           if (successCount > 0 && failureCount === 0) {
-            message.success(`成功删除 ${successCount} 个文件`)
+            MessagePlugin.success(`成功删除 ${successCount} 个文件`)
           } else if (successCount > 0 && failureCount > 0) {
-            message.warning(`成功删除 ${successCount} 个文件，${failureCount} 个文件删除失败`)
+            MessagePlugin.warning(`成功删除 ${successCount} 个文件，${failureCount} 个文件删除失败`)
           } else if (failureCount > 0) {
-            message.error(`${failureCount} 个文件删除失败`)
+            MessagePlugin.error(`${failureCount} 个文件删除失败`)
           }
 
           selectedRowKeys.value = []
           await getDatabaseInfo(undefined, true) // Skip query params for batch deletion
           await loadDocumentFiles({ isBackground: true })
         } catch (error) {
-          message.destroy(progressKey)
+          MessagePlugin.close(progressMessage)
           console.error('批量删除出错:', error)
-          message.error(error.message || '批量删除过程中发生错误')
+          MessagePlugin.error(error.message || '批量删除过程中发生错误')
         } finally {
           state.batchDeleting = false
         }
@@ -415,7 +424,7 @@ export const useDatabaseStore = defineStore('database', () => {
     } catch (error) {
       console.error(error)
       if (!options.isBackground) {
-        message.error(error.message || '加载文件列表失败')
+        MessagePlugin.error(error.message || '加载文件列表失败')
       }
     } finally {
       if (!options.isBackground && contextId === fileBrowserContextId) {
@@ -465,7 +474,7 @@ export const useDatabaseStore = defineStore('database', () => {
 
   async function addFiles({ items, contentType, params, parentId }) {
     if (items.length === 0) {
-      message.error(contentType === 'file' ? '请先上传文件' : '请输入有效的网页链接')
+      MessagePlugin.error(contentType === 'file' ? '请先上传文件' : '请输入有效的网页链接')
       return
     }
 
@@ -479,7 +488,7 @@ export const useDatabaseStore = defineStore('database', () => {
       if (data.status === 'success' || data.status === 'queued') {
         const itemType = contentType === 'file' ? '文件' : 'URL'
         enableAutoRefresh('auto')
-        message.success(data.message || `${itemType}已提交处理，请在任务中心查看进度`)
+        MessagePlugin.success(data.message || `${itemType}已提交处理，请在任务中心查看进度`)
         if (data.task_id) {
           taskerStore.registerQueuedTask({
             task_id: data.task_id,
@@ -496,12 +505,12 @@ export const useDatabaseStore = defineStore('database', () => {
         await delayedRefresh() // 延迟1秒后刷新
         return true // Indicate success
       } else {
-        message.error(data.message || '处理失败')
+        MessagePlugin.error(data.message || '处理失败')
         return false
       }
     } catch (error) {
       console.error(error)
-      message.error(error.message || '处理请求失败')
+      MessagePlugin.error(error.message || '处理请求失败')
       return false
     } finally {
       state.chunkLoading = false
@@ -515,7 +524,7 @@ export const useDatabaseStore = defineStore('database', () => {
       const data = await documentApi.parseDocuments(kbId.value, fileIds)
       if (data.status === 'success' || data.status === 'queued') {
         enableAutoRefresh('auto')
-        message.success(data.message || '解析任务已提交')
+        MessagePlugin.success(data.message || '解析任务已提交')
         if (data.task_id) {
           taskerStore.registerQueuedTask({
             task_id: data.task_id,
@@ -528,12 +537,12 @@ export const useDatabaseStore = defineStore('database', () => {
         await delayedRefresh() // 延迟1秒后刷新
         return true
       } else {
-        message.error(data.message || '提交失败')
+        MessagePlugin.error(data.message || '提交失败')
         return false
       }
     } catch (error) {
       console.error(error)
-      message.error(error.message || '请求失败')
+      MessagePlugin.error(error.message || '请求失败')
       return false
     } finally {
       state.chunkLoading = false
@@ -546,7 +555,7 @@ export const useDatabaseStore = defineStore('database', () => {
       const data = await documentApi.parsePendingDocuments(kbId.value)
       if (data.status === 'success' || data.status === 'queued') {
         enableAutoRefresh('auto')
-        message.success(data.message || '解析任务已提交')
+        MessagePlugin.success(data.message || '解析任务已提交')
         if (data.task_id) {
           taskerStore.registerQueuedTask({
             task_id: data.task_id,
@@ -559,12 +568,12 @@ export const useDatabaseStore = defineStore('database', () => {
         await delayedRefresh()
         return true
       } else {
-        message.error(data.message || '提交失败')
+        MessagePlugin.error(data.message || '提交失败')
         return false
       }
     } catch (error) {
       console.error(error)
-      message.error(error.message || '请求失败')
+      MessagePlugin.error(error.message || '请求失败')
       return false
     } finally {
       state.chunkLoading = false
@@ -578,7 +587,7 @@ export const useDatabaseStore = defineStore('database', () => {
       const data = await documentApi.indexDocuments(kbId.value, fileIds, params)
       if (data.status === 'success' || data.status === 'queued') {
         enableAutoRefresh('auto')
-        message.success(data.message || '入库任务已提交')
+        MessagePlugin.success(data.message || '入库任务已提交')
         if (data.task_id) {
           taskerStore.registerQueuedTask({
             task_id: data.task_id,
@@ -591,12 +600,12 @@ export const useDatabaseStore = defineStore('database', () => {
         await delayedRefresh() // 延迟1秒后刷新
         return true
       } else {
-        message.error(data.message || '提交失败')
+        MessagePlugin.error(data.message || '提交失败')
         return false
       }
     } catch (error) {
       console.error(error)
-      message.error(error.message || '请求失败')
+      MessagePlugin.error(error.message || '请求失败')
       return false
     } finally {
       state.chunkLoading = false
@@ -609,7 +618,7 @@ export const useDatabaseStore = defineStore('database', () => {
       const data = await documentApi.indexPendingDocuments(kbId.value, params)
       if (data.status === 'success' || data.status === 'queued') {
         enableAutoRefresh('auto')
-        message.success(data.message || '入库任务已提交')
+        MessagePlugin.success(data.message || '入库任务已提交')
         if (data.task_id) {
           taskerStore.registerQueuedTask({
             task_id: data.task_id,
@@ -622,12 +631,12 @@ export const useDatabaseStore = defineStore('database', () => {
         await delayedRefresh()
         return true
       } else {
-        message.error(data.message || '提交失败')
+        MessagePlugin.error(data.message || '提交失败')
         return false
       }
     } catch (error) {
       console.error(error)
-      message.error(error.message || '请求失败')
+      MessagePlugin.error(error.message || '请求失败')
       return false
     } finally {
       state.chunkLoading = false
@@ -637,7 +646,7 @@ export const useDatabaseStore = defineStore('database', () => {
   function openFileDetail(fileId) {
     const nextFileId = typeof fileId === 'object' ? fileId?.file_id : fileId
     if (!nextFileId) {
-      message.error('文件信息不完整')
+      MessagePlugin.error('文件信息不完整')
       return
     }
     fileDetailFileId.value = nextFileId
@@ -676,7 +685,7 @@ export const useDatabaseStore = defineStore('database', () => {
       })
     } catch (error) {
       console.error('Failed to load query params:', error)
-      message.error('加载查询参数失败')
+      MessagePlugin.error('加载查询参数失败')
     } finally {
       state.queryParamsLoading = false
     }
@@ -727,9 +736,9 @@ export const useDatabaseStore = defineStore('database', () => {
     selectedRowKeys.value = newSelectedKeys
 
     if (failedFiles.length > 0) {
-      message.success(`已选择 ${failedFiles.length} 个失败的文件`)
+      MessagePlugin.success(`已选择 ${failedFiles.length} 个失败的文件`)
     } else {
-      message.info('当前没有失败的文件')
+      MessagePlugin.info('当前没有失败的文件')
     }
   }
 

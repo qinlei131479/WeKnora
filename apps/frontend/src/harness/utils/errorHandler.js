@@ -1,4 +1,4 @@
-import { message } from 'ant-design-vue'
+import { MessagePlugin } from 'tdesign-vue-next'
 
 /**
  * 统一错误处理工具类
@@ -29,14 +29,14 @@ export class ErrorHandler {
 
       switch (severity) {
         case 'warning':
-          message.warning(displayMessage)
+          MessagePlugin.warning(displayMessage)
           break
         case 'info':
-          message.info(displayMessage)
+          MessagePlugin.info(displayMessage)
           break
         case 'error':
         default:
-          message.error(displayMessage)
+          MessagePlugin.error(displayMessage)
           break
       }
     }

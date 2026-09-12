@@ -5,7 +5,7 @@ import { MessagePlugin } from 'tdesign-vue-next'
 import { RefreshCw, Upload } from 'lucide-vue-next'
 
 import { userApi } from '@harness/apis/user_api'
-import AgentRuntimeConfigForm from './AgentRuntimeConfigForm.vue'
+import AgentWorkConfigForm from './AgentWorkConfigForm.vue'
 import FallbackAvatar from '@harness/components/common/FallbackAvatar.vue'
 import { isBuiltinAgent, useAgentStore } from '@harness/stores/agent'
 import { generatePixelAvatar } from '@harness/utils/pixelAvatar'
@@ -110,8 +110,8 @@ const runtimeConfigTabs = [
   { key: 'tools', icon: 'tools', labelKey: 'agent.editor.toolsConfig', descKey: 'agent.editor.toolsConfigDesc' },
   { key: 'mcp', icon: 'server', labelKey: 'agentEditor.mcp.label', descKey: 'agentEditor.mcp.desc' },
   { key: 'skills', icon: 'lightbulb', labelKey: 'agent.editor.skillsConfig', descKey: 'agent.editor.skillsConfigDesc' },
-  { key: 'advanced', icon: 'setting', labelKey: 'agent.runtimeManage.editor.advanced', descKey: 'agent.runtimeManage.editor.advancedDesc' },
-  { key: 'subagents', icon: 'usergroup', labelKey: 'agent.runtimeManage.editor.subagents', descKey: 'agent.runtimeManage.editor.subagentsDesc' }
+  { key: 'advanced', icon: 'setting', labelKey: 'agent.workManage.editor.advanced', descKey: 'agent.workManage.editor.advancedDesc' },
+  { key: 'subagents', icon: 'usergroup', labelKey: 'agent.workManage.editor.subagents', descKey: 'agent.workManage.editor.subagentsDesc' }
 ]
 
 const agentModalNavGroups = computed(() => {
@@ -143,14 +143,14 @@ const agentModalNavGroups = computed(() => {
     },
     {
       key: 'advanced',
-      label: t('agent.runtimeManage.editor.navAdvanced'),
+      label: t('agent.workManage.editor.navAdvanced'),
       items: [itemMap.advanced, itemMap.subagents]
     }
   ]
 })
 
 const runtimeSectionMeta = computed(() => runtimeConfigTabs.find((item) => item.key === agentModalActiveTab.value))
-const isRuntimeAgentModalTab = (key) => Boolean(TAB_TO_SEGMENT[key])
+const isWorkAgentModalTab = (key) => Boolean(TAB_TO_SEGMENT[key])
 const runtimeConfigSegment = computed(() => TAB_TO_SEGMENT[agentModalActiveTab.value] || 'model')
 
 const getDefaultBackendId = () => {
@@ -163,8 +163,8 @@ const isSubAgentBackend = (backendId) => backendId === SUB_AGENT_BACKEND_ID
 
 const backendRadioOptions = computed(() => {
   const labelFor = (value, fallback) => {
-    if (value === DEFAULT_AGENT_BACKEND_ID) return t('agent.runtimeManage.editor.backendAssistant')
-    if (value === SUB_AGENT_BACKEND_ID) return t('agent.runtimeManage.editor.backendSubagent')
+    if (value === DEFAULT_AGENT_BACKEND_ID) return t('agent.workManage.editor.backendAssistant')
+    if (value === SUB_AGENT_BACKEND_ID) return t('agent.workManage.editor.backendSubagent')
     return fallback || value
   }
   const seen = new Set()
@@ -194,12 +194,12 @@ const backendRadioOptions = computed(() => {
 
 const selectedBackendDesc = computed(() => {
   if (agentForm.backend_id === SUB_AGENT_BACKEND_ID) {
-    return t('agent.runtimeManage.editor.backendDescSubagent')
+    return t('agent.workManage.editor.backendDescSubagent')
   }
   if (agentForm.backend_id === DEFAULT_AGENT_BACKEND_ID) {
-    return t('agent.runtimeManage.editor.backendDescAssistant')
+    return t('agent.workManage.editor.backendDescAssistant')
   }
-  return t('agent.runtimeManage.editor.backendDesc')
+  return t('agent.workManage.editor.backendDesc')
 })
 
 const getInitialShareConfig = () => cloneShareConfig(DEFAULT_GLOBAL_SHARE_CONFIG)
@@ -225,7 +225,7 @@ const agentPreviewName = computed(
 const generateDefaultAgentProfile = () => {
   const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '')
   return {
-    name: t('agent.runtimeManage.editor.defaultName'),
+    name: t('agent.workManage.editor.defaultName'),
     slug: `agent-${stamp}`
   }
 }
@@ -260,7 +260,7 @@ const openEdit = async (agent) => {
   try {
     detail = await agentStore.fetchAgentDetail(agentId, true)
   } catch (error) {
-    MessagePlugin.error(error.message || t('agent.runtimeManage.loadFailed'))
+    MessagePlugin.error(error.message || t('agent.workManage.loadFailed'))
     return
   }
   if (!detail?.id) return
@@ -308,12 +308,12 @@ const onAgentIconFileChange = (event) => {
 
 const beforeAgentIconUpload = (file) => {
   if (!file.type.startsWith('image/')) {
-    MessagePlugin.error(t('agent.runtimeManage.editor.iconUploadType'))
+    MessagePlugin.error(t('agent.workManage.editor.iconUploadType'))
     return false
   }
 
   if (file.size > MAX_IMAGE_UPLOAD_SIZE_BYTES) {
-    MessagePlugin.error(t('agent.runtimeManage.editor.iconUploadSize', { size: MAX_IMAGE_UPLOAD_SIZE_MB }))
+    MessagePlugin.error(t('agent.workManage.editor.iconUploadSize', { size: MAX_IMAGE_UPLOAD_SIZE_MB }))
     return false
   }
 
@@ -327,9 +327,9 @@ const uploadAgentIcon = async (file) => {
   try {
     const data = await userApi.uploadImage(file)
     agentForm.icon = data.image_url || data.url || ''
-    MessagePlugin.success(t('agent.runtimeManage.editor.iconUploaded'))
+    MessagePlugin.success(t('agent.workManage.editor.iconUploaded'))
   } catch (error) {
-    MessagePlugin.error(error.message || t('agent.runtimeManage.editor.iconUploadFailed'))
+    MessagePlugin.error(error.message || t('agent.workManage.editor.iconUploadFailed'))
   } finally {
     agentIconUploading.value = false
   }
@@ -377,12 +377,12 @@ const buildAgentPayload = () => {
 
 const saveAgent = async () => {
   if (!canEditOpenedAgent.value) {
-    MessagePlugin.warning(t('agent.runtimeManage.editor.notEditable'))
+    MessagePlugin.warning(t('agent.workManage.editor.notEditable'))
     return
   }
   if (!agentForm.name.trim()) {
     agentModalActiveTab.value = 'basic'
-    MessagePlugin.error(t('agent.runtimeManage.editor.nameRequired'))
+    MessagePlugin.error(t('agent.workManage.editor.nameRequired'))
     return
   }
 
@@ -404,16 +404,16 @@ const saveAgent = async () => {
       agentStore.originalAgentConfig = { ...agentStore.agentConfig }
       captureProfileBaseline()
       emit('saved', { mode: 'edit', agent: updated })
-      MessagePlugin.success(t('agent.runtimeManage.editor.saved'))
+      MessagePlugin.success(t('agent.workManage.editor.saved'))
     } else {
       const created = await agentStore.createAgent(payload)
       emit('saved', { mode: 'create', agent: normalizeAgent(created) })
-      MessagePlugin.success(t('agent.runtimeManage.editor.created'))
+      MessagePlugin.success(t('agent.workManage.editor.created'))
     }
     showAgentModal.value = false
     await restoreChatAgentSelectionIfNeeded()
   } catch (error) {
-    MessagePlugin.error(error.message || t('agent.runtimeManage.editor.saveFailed'))
+    MessagePlugin.error(error.message || t('agent.workManage.editor.saveFailed'))
   } finally {
     saving.value = false
   }
@@ -470,21 +470,21 @@ defineExpose({
                 <section v-show="agentModalActiveTab === 'basic'" class="agent-modal-section">
                   <div class="section-header">
                     <h2>{{ t('agent.editor.basicInfo') }}</h2>
-                    <p class="section-description">{{ t('agent.runtimeManage.editor.basicInfoDesc') }}</p>
+                    <p class="section-description">{{ t('agent.workManage.editor.basicInfoDesc') }}</p>
                     <p v-if="!canEditOpenedAgent" class="section-description readonly-hint">
-                      {{ t('agent.runtimeManage.editor.readonlyHint') }}
+                      {{ t('agent.workManage.editor.readonlyHint') }}
                     </p>
                   </div>
                   <div class="settings-group">
                     <div v-if="!editingAgentId" class="setting-row">
                       <div class="setting-info">
-                        <label>{{ t('agent.runtimeManage.editor.slug') }}</label>
-                        <p class="desc">{{ t('agent.runtimeManage.editor.slugDesc') }}</p>
+                        <label>{{ t('agent.workManage.editor.slug') }}</label>
+                        <p class="desc">{{ t('agent.workManage.editor.slugDesc') }}</p>
                       </div>
                       <div class="setting-control">
                         <t-input
                           v-model="agentForm.slug"
-                          :placeholder="t('agent.runtimeManage.editor.slugPlaceholder')"
+                          :placeholder="t('agent.workManage.editor.slugPlaceholder')"
                         />
                       </div>
                     </div>
@@ -516,7 +516,7 @@ defineExpose({
 
                     <div class="setting-row">
                       <div class="setting-info">
-                        <label>{{ t('agent.runtimeManage.editor.backend') }} <span class="required">*</span></label>
+                        <label>{{ t('agent.workManage.editor.backend') }} <span class="required">*</span></label>
                         <p class="desc">{{ selectedBackendDesc }}</p>
                       </div>
                       <div class="setting-control">
@@ -609,14 +609,14 @@ defineExpose({
 
                 <section
                   v-if="editingAgentId"
-                  v-show="isRuntimeAgentModalTab(agentModalActiveTab)"
-                  class="agent-modal-section runtime-section"
+                  v-show="isWorkAgentModalTab(agentModalActiveTab)"
+                  class="agent-modal-section work-section"
                 >
                   <div v-if="runtimeSectionMeta" class="section-header">
                     <h2>{{ t(runtimeSectionMeta.labelKey) }}</h2>
                     <p class="section-description">{{ t(runtimeSectionMeta.descKey) }}</p>
                   </div>
-                  <AgentRuntimeConfigForm
+                  <AgentWorkConfigForm
                     ref="runtimeConfigFormRef"
                     :segment="runtimeConfigSegment"
                     :show-segmented="false"
@@ -1052,12 +1052,12 @@ defineExpose({
   background: var(--td-bg-color-container);
 }
 
-.runtime-section {
+.work-section {
   display: flex;
   flex-direction: column;
   min-height: 100%;
 
-  :deep(.agent-runtime-config-form) {
+  :deep(.agent-work-config-form) {
     display: flex;
     flex: 1;
     flex-direction: column;
@@ -1065,7 +1065,7 @@ defineExpose({
     background: transparent;
   }
 
-  :deep(.runtime-config-content) {
+  :deep(.work-config-content) {
     flex: 1;
     min-width: 0;
     min-height: 0;

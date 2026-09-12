@@ -34,9 +34,9 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { message } from 'ant-design-vue'
+import { MessagePlugin } from 'tdesign-vue-next'
 import { Download, LoaderCircle, Save } from 'lucide-vue-next'
-import { threadApi } from '@harness/apis/agent_api'
+import { threadApi } from '@/api/chat-work/agent'
 import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
 import { downloadViewerFile } from '@harness/apis/viewer_filesystem'
 
@@ -115,7 +115,7 @@ const downloadFile = async (file) => {
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
   } catch (error) {
-    message.error(error?.message || t('harness.chat.downloadFailed'))
+    MessagePlugin.error(error?.message || t('harness.chat.downloadFailed'))
   }
 }
 
@@ -134,10 +134,10 @@ const saveToWorkspace = async (file) => {
   setSaving(file.path, true)
   try {
     const result = await threadApi.saveThreadArtifactToWorkspace(props.threadId, file.path)
-    message.success(t('harness.chat.savedToWorkspace', { path: result.saved_path }))
+    MessagePlugin.success(t('harness.chat.savedToWorkspace', { path: result.saved_path }))
     emit('saved', result)
   } catch (error) {
-    message.error(error?.message || t('harness.chat.saveToWorkspaceFailed'))
+    MessagePlugin.error(error?.message || t('harness.chat.saveToWorkspaceFailed'))
   } finally {
     setSaving(file.path, false)
   }
@@ -148,6 +148,8 @@ const saveToWorkspace = async (file) => {
 .artifacts-list {
   width: 100%;
   margin: 8px 0 4px;
+  padding: 2px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -159,16 +161,23 @@ const saveToWorkspace = async (file) => {
   align-items: center;
   justify-content: space-between;
   gap: 6px;
-  border: 1px solid var(--gray-150);
+  box-sizing: border-box;
+  border: 1px solid var(--gray-150, var(--td-component-stroke, #eef0f0));
   border-radius: 12px;
-  background: linear-gradient(180deg, var(--gray-25) 0%, var(--gray-0) 100%);
+  background: linear-gradient(
+    180deg,
+    var(--gray-25, var(--td-bg-color-secondarycontainer, #f8fafa)) 0%,
+    var(--gray-0, var(--td-bg-color-container, #ffffff)) 100%
+  );
   transition:
     background 0.18s ease,
-    border-color 0.18s ease;
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 
   &:hover {
-    border-color: var(--main-200);
-    background: var(--gray-0);
+    border-color: var(--main-200, var(--td-brand-color-2, #8ce0af));
+    box-shadow: inset 0 0 0 1px var(--main-200, var(--td-brand-color-2, #8ce0af));
+    background: var(--gray-0, var(--td-bg-color-container, #ffffff));
   }
 }
 
@@ -200,7 +209,7 @@ const saveToWorkspace = async (file) => {
 .item-name {
   font-size: 13px;
   font-weight: 600;
-  color: var(--gray-900);
+  color: var(--gray-900, var(--td-text-color-primary, #151616));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -210,7 +219,7 @@ const saveToWorkspace = async (file) => {
 .item-desc {
   margin-top: 2px;
   font-size: 12px;
-  color: var(--gray-500);
+  color: var(--gray-500, var(--td-text-color-secondary, #979999));
   line-height: 1.2;
 }
 
@@ -218,7 +227,7 @@ const saveToWorkspace = async (file) => {
   display: flex;
   align-items: center;
   gap: 2px;
-  margin-right: 8px;
+  margin-right: 10px;
 }
 
 .item-action-btn {
@@ -226,7 +235,7 @@ const saveToWorkspace = async (file) => {
   height: 30px;
   border: none;
   background: transparent;
-  color: var(--gray-600);
+  color: var(--gray-600, var(--td-text-color-secondary, #697070));
   border-radius: 6px;
   display: inline-flex;
   align-items: center;
@@ -241,8 +250,8 @@ const saveToWorkspace = async (file) => {
 }
 
 .item-action-btn:hover:not(:disabled) {
-  color: var(--main-700);
-  background: var(--gray-100);
+  color: var(--main-700, var(--td-brand-color, #038626));
+  background: var(--gray-100, var(--td-bg-color-secondarycontainer, #eff2f2));
 }
 
 .item-action-spin {

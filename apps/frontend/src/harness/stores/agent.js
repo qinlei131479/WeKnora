@@ -1,9 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { agentApi } from '@harness/apis/agent_api'
+import { agentApi } from '@/api/chat-work/agent'
 import { databaseApi } from '@harness/apis/knowledge_api'
-import { mcpApi } from '@/api/runtime/mcp'
-import { skillApi } from '@/api/runtime/skill'
+import { mcpApi } from '@/api/chat-work/mcp'
+import { skillApi } from '@/api/chat-work/skill'
 import { isDefaultAllAgentResourceKind } from '@harness/utils/agentConfigUtils'
 import { handleChatError } from '@harness/utils/errorHandler'
 

@@ -8,7 +8,7 @@
   >
     <slot />
     <div v-if="!$slots.default && items.length === 0" class="extension-card-grid-empty">
-      <a-empty :image="false" :description="emptyText" />
+      <t-empty :description="emptyText" />
     </div>
   </div>
 </template>

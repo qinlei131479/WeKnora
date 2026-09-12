@@ -362,7 +362,7 @@ import {
   Plus,
   ChevronDown
 } from 'lucide-vue-next'
-import { skillApi } from '@/api/runtime/skill'
+import { skillApi } from '@/api/chat-work/skill'
 import AgentFilePreview from '@harness/components/AgentFilePreview.vue'
 import FileTreeComponent from '@harness/components/FileTreeComponent.vue'
 import ShareConfigForm from '@harness/components/ShareConfigForm.vue'

@@ -1,5 +1,5 @@
 <template>
-  <div class="chat-container">
+  <div class="chat-container harness-root">
     <div
       class="chat"
       :class="{
@@ -74,7 +74,7 @@
         }"
       >
         <!-- Main Chat Area -->
-        <div class="chat-main" ref="chatMainRef">
+        <div class="chat-main" ref="chatMainRef" :class="{ 'is-empty': !conversations.length }">
           <div class="chat-box">
             <template v-for="row in conversationRows" :key="row.key">
               <div v-if="row.type === 'conversation'" class="conv-box">
@@ -114,9 +114,6 @@
                   :sources="getConversationSources(row.conv)"
                 />
               </div>
-              <div v-else class="chat-inline-notice">
-                <span>{{ row.notice.message }}</span>
-              </div>
             </template>
 
             <!-- 生成中的加载状态 - 增强条件支持主聊天和resume流程 -->
@@ -131,17 +128,16 @@
               </div>
             </div>
           </div>
+          <div :class="conversations.length ? 'bottom-host' : 'empty-layout'">
+            <div v-if="!conversations.length" class="chat-greeting-input">
+              <h1>{{ randomGreeting }}</h1>
+            </div>
           <div class="bottom" :class="{ 'start-screen': !conversations.length }">
             <div class="message-input-wrapper">
               <!-- 加载状态：加载消息 -->
               <div v-if="isLoadingMessages" class="chat-loading">
                 <div class="loading-spinner"></div>
                 <span>{{ t('harness.chat.loadingMessages') }}</span>
-              </div>
-
-              <!-- 打招呼区域 - 在输入框上方 -->
-              <div v-if="!conversations.length" class="chat-greeting-input">
-                <h1>{{ randomGreeting }}</h1>
               </div>
 
               <section
@@ -242,11 +238,11 @@
                     @remove-attachment="handleAttachmentRemove"
                   >
                     <template #actions-left-extra>
+                      <slot name="input-actions-left" :has-active-thread="!!currentChatId"></slot>
                       <ToolApprovalModeSelector
                         :model-value="currentToolApprovalMode"
                         @update:model-value="handleToolApprovalModeSelect"
                       />
-                      <slot name="input-actions-left" :has-active-thread="!!currentChatId"></slot>
                     </template>
                     <template #actions-right-extra>
                       <button
@@ -273,20 +269,9 @@
                   </AgentInputArea>
                 </div>
               </div>
-
-              <AttachmentTmpUploadModal
-                v-model:open="attachmentUploadModalOpen"
-                :thread-id="currentChatId"
-                :ensure-thread="ensureAttachmentThread"
-                :initial-files="attachmentInitialFiles"
-                :initial-files-key="attachmentInitialFilesKey"
-                @added="handleTmpAttachmentsAdded"
-              />
-
-              <div class="bottom-actions" v-if="conversations.length > 0">
-                <p class="note">当前智能体：{{ currentThreadAgentName }}；请注意辨别内容的可靠性</p>
-              </div>
             </div>
+          </div>
+          <div v-if="!conversations.length" class="empty-layout-spacer" aria-hidden="true"></div>
           </div>
         </div>
 
@@ -425,11 +410,11 @@
                       :class="{ completed: todo.status === 'completed' }"
                     >
                       <div class="todo-item-icon" :class="todo.status || 'unknown'">
-                        <CheckCircleOutlined v-if="todo.status === 'completed'" />
-                        <SyncOutlined v-else-if="todo.status === 'in_progress'" spin />
-                        <ClockCircleOutlined v-else-if="todo.status === 'pending'" />
-                        <CloseCircleOutlined v-else-if="todo.status === 'cancelled'" />
-                        <QuestionCircleOutlined v-else />
+                        <CheckCircle v-if="todo.status === 'completed'" :size="16" />
+                        <LoaderCircle v-else-if="todo.status === 'in_progress'" :size="16" class="is-spinning" />
+                        <Clock v-else-if="todo.status === 'pending'" :size="16" />
+                        <XCircle v-else-if="todo.status === 'cancelled'" :size="16" />
+                        <HelpCircle v-else :size="16" />
                       </div>
                       <div class="todo-item-body">
                         <span class="todo-item-text" :title="todo.fullContent">
@@ -583,18 +568,20 @@
                       <div class="state-list-item-body">
                         <div class="state-list-item-title state-subagent-title">
                           <span>{{ getSubagentRunName(run) }}</span>
-                          <CheckCircleOutlined
+                          <CheckCircle
                             v-if="run.status === 'completed'"
+                            :size="14"
                             class="state-subagent-status-icon state-subagent-completed-icon"
                           />
-                          <CloseCircleOutlined
+                          <XCircle
                             v-else-if="run.status === 'failed'"
+                            :size="14"
                             class="state-subagent-status-icon state-subagent-failed-icon"
                           />
-                          <SyncOutlined
+                          <LoaderCircle
                             v-else-if="run.status === 'running'"
-                            spin
-                            class="state-subagent-status-icon state-subagent-running-icon"
+                            :size="14"
+                            class="state-subagent-status-icon state-subagent-running-icon is-spinning"
                           />
                         </div>
                         <div class="state-list-item-meta">
@@ -673,30 +660,29 @@ import {
   onActivated,
   onDeactivated
 } from 'vue'
-import { message } from 'ant-design-vue'
+import { MessagePlugin } from 'tdesign-vue-next'
 import { useI18n } from 'vue-i18n'
-import {
-  ChevronDown,
-  CornerDownRight,
-  FolderKanban,
-  LayoutList,
-  Play,
-  RefreshCw,
-  Trash2
-} from 'lucide-vue-next'
 import { formatFileSize } from '@harness/utils/file_utils'
 import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
 import { generatePixelAvatar } from '@harness/utils/pixelAvatar'
 import {
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  CloseCircleOutlined,
-  QuestionCircleOutlined,
-  SyncOutlined
-} from '@ant-design/icons-vue'
+  ChevronDown,
+  CheckCircle,
+  Clock,
+  CornerDownRight,
+  FolderKanban,
+  HelpCircle,
+  LayoutList,
+  LoaderCircle,
+  Play,
+  RefreshCw,
+  Trash2,
+  XCircle
+} from 'lucide-vue-next'
 import AgentInputArea from '@harness/components/AgentInputArea.vue'
 import ChatEngineSegmented from '@/components/ChatEngineSegmented.vue'
 import { useChatEngineNav } from '@/composables/useChatEngineNav'
+import { useStickyBottomOnResize } from '@/composables/useStickyBottomOnResize'
 import ToolApprovalModeSelector from '@harness/components/ToolApprovalModeSelector.vue'
 import ModelSelectorComponent from '@/views/agent/harness/ModelSelectorComponent.vue'
 import AgentMessageComponent from '@harness/components/AgentMessageComponent.vue'
@@ -706,12 +692,12 @@ import { handleChatError, handleValidationError } from '@harness/utils/errorHand
 import { ScrollController } from '@harness/utils/scrollController'
 import { AgentValidator } from '@harness/utils/agentValidator'
 import { useAgentStore } from '@harness/stores/agent'
-import { useChatThreadsStore } from '@harness/stores/chatThreads'
+import { useChatThreadsStore } from '@/stores/chatWork'
 import { useChatUIStore } from '@harness/stores/chatUI'
 import { useConfigStore } from '@harness/stores/config'
 import { storeToRefs } from 'pinia'
 import { MessageProcessor } from '@harness/utils/messageProcessor'
-import { agentApi, threadApi } from '@harness/apis'
+import { agentApi, threadApi } from '@/api/chat-work/agent'
 import HumanApprovalModal from '@harness/components/HumanApprovalModal.vue'
 import { extractPendingInterrupt, useApproval } from '@harness/composables/useApproval'
 import { useAgentThreadState, IDLE_QUEUE_SNAPSHOT } from '@harness/composables/useAgentThreadState'
@@ -722,7 +708,6 @@ import { useAgentRequestQueue } from '@harness/composables/useAgentRequestQueue'
 import { useAgentMentionConfig } from '@harness/composables/useAgentMentionConfig'
 import AgentArtifactsCard from '@harness/components/AgentArtifactsCard.vue'
 import AgentPanel from '@harness/components/AgentPanel.vue'
-import AttachmentTmpUploadModal from '@harness/components/AttachmentTmpUploadModal.vue'
 import SubagentThreadModal from '@harness/components/SubagentThreadModal.vue'
 import FallbackAvatar from '@harness/components/common/FallbackAvatar.vue'
 import { enrichTaskToolCalls, parseToolCallArgs } from '@harness/components/ToolCallingResult/toolRegistry'
@@ -806,9 +791,7 @@ const { getThreadState, resetOnGoingConv, stopThreadStream } = useAgentThreadSta
 const threadMessages = ref({})
 const threadFilesMap = ref({})
 const threadAttachmentsMap = ref({})
-const attachmentUploadModalOpen = ref(false)
-const attachmentInitialFiles = ref([])
-const attachmentInitialFilesKey = ref(0)
+const attachmentUploading = ref(false)
 const isRefreshingState = ref(false)
 const collapsedStateSections = reactive({
   tokenUsage: false,
@@ -817,16 +800,10 @@ const collapsedStateSections = reactive({
   artifacts: false,
   subagents: false
 })
-const threadConfigNoticeMap = ref({})
-const threadPendingConfigNoticeMap = ref({})
-const threadConfigSnapshotMap = ref({})
-const configNoticeSyncDepth = ref(0)
-const configNoticeScrollVersion = ref(0)
-
 // 本地 UI 状态（仅在本组件使用）
 const localUIState = reactive({
-  chatMainWidth: typeof window !== 'undefined' ? window.innerWidth : 0,
-  chatContentWidth: typeof window !== 'undefined' ? window.innerWidth : 0
+  chatMainWidth: 0,
+  chatContentWidth: 0
 })
 
 // Agent Panel State
@@ -868,9 +845,14 @@ const formatTodoName = (content) => {
 }
 
 const getPanelContainerWidth = () => {
-  const container = chatContentContainerRef.value || panelWrapperRef.value?.parentElement
-  return container?.clientWidth || (typeof window !== 'undefined' ? window.innerWidth : 0)
+  return (
+    chatContentContainerRef.value?.clientWidth ||
+    panelWrapperRef.value?.parentElement?.clientWidth ||
+    0
+  )
 }
+
+const resolvePanelContainerWidth = () => getPanelContainerWidth() || localUIState.chatContentWidth || 0
 
 const getFilePanelMaxWidth = (containerWidth = getPanelContainerWidth()) => {
   if (!containerWidth) return 0
@@ -899,8 +881,8 @@ const filePanelWidthStyle = computed(() => {
   if (!isFilePanelOpen.value) return '0px'
   if (filePanelDragWidth.value !== null) return `${filePanelDragWidth.value}px`
 
-  const containerWidth = localUIState.chatContentWidth || getPanelContainerWidth()
-  if (!containerWidth) return `${panelRatio.value * 100}%`
+  const containerWidth = resolvePanelContainerWidth()
+  if (!containerWidth) return `${Math.min(panelRatio.value, maxPanelRatio) * 100}%`
 
   const maxWidth = getFilePanelMaxWidth(containerWidth)
   const minWidth = getFilePanelMinWidth(containerWidth, maxWidth)
@@ -910,31 +892,57 @@ const filePanelWidthStyle = computed(() => {
 
 const statePanelCanDock = computed(() => {
   if (isFilePanelOpen.value) return false
-  const containerWidth = localUIState.chatContentWidth || getPanelContainerWidth()
+  const containerWidth = resolvePanelContainerWidth()
   return containerWidth - statePanelDockWidth > statePanelDockMinChatWidth
 })
 const statePanelDocked = computed(() => statePanelOpen.value && statePanelCanDock.value)
 const statePanelFloating = computed(() => statePanelOpen.value && !statePanelDocked.value)
 
-const setPanelRatioForViewMode = () => {
-  const hasPreview = Boolean(agentPanelActivePreviewPath.value)
-  panelRatio.value = clampPanelRatio(hasPreview ? previewPanelRatio : defaultPanelRatio)
+const setFilePanelToMinWidth = () => {
+  const apply = () => {
+    const containerWidth = resolvePanelContainerWidth()
+    const maxWidth = getFilePanelMaxWidth(containerWidth)
+    const minWidth = getFilePanelMinWidth(containerWidth, maxWidth)
+    panelRatio.value = containerWidth
+      ? clampPanelRatio(minWidth / containerWidth, containerWidth)
+      : minPanelRatio
+    filePanelDragWidth.value = null
+  }
+  apply()
+  if (!resolvePanelContainerWidth()) nextTick(apply)
+}
+
+const setFilePanelToPreviewWidth = () => {
+  const apply = () => {
+    const containerWidth = resolvePanelContainerWidth()
+    panelRatio.value = clampPanelRatio(previewPanelRatio, containerWidth)
+    filePanelDragWidth.value = null
+  }
+  apply()
+  if (!resolvePanelContainerWidth()) nextTick(apply)
 }
 
 const showFilePanel = (mode = 'tree') => {
+  const wasOpen = isFilePanelOpen.value
+  const hasPreview = Boolean(agentPanelActivePreviewPath.value)
+  const openingPreview = mode === 'preview' && hasPreview
   isFilePanelOpen.value = true
   statePanelOpen.value = false
-  agentPanelViewMode.value =
-    mode === 'preview' && agentPanelActivePreviewPath.value ? 'preview' : 'tree'
-  setPanelRatioForViewMode()
+  agentPanelViewMode.value = openingPreview ? 'preview' : 'tree'
+  if (hasPreview) {
+    setFilePanelToPreviewWidth()
+    return
+  }
+  if (!wasOpen) setFilePanelToMinWidth()
 }
 
 const showFileTreePanel = () => {
+  const wasOpen = isFilePanelOpen.value
   isFilePanelOpen.value = true
   statePanelOpen.value = false
   agentPanelActivePreviewPath.value = ''
   agentPanelViewMode.value = 'tree'
-  setPanelRatioForViewMode()
+  if (!wasOpen) setFilePanelToMinWidth()
 }
 
 const getPanelFileName = (file) => {
@@ -1017,7 +1025,6 @@ const invalidatePreviewCachePath = (targetPath, threadId = currentChatId.value) 
 const setAgentPanelViewMode = (mode) => {
   agentPanelViewMode.value =
     mode === 'preview' && agentPanelActivePreviewPath.value ? 'preview' : 'tree'
-  setPanelRatioForViewMode()
 }
 
 const activatePanelPreview = (path) => {
@@ -1066,7 +1073,6 @@ const closePanelPreviewTab = (path) => {
   const nextActiveTab = nextTabs[Math.min(closingIndex, nextTabs.length - 1)]
   agentPanelActivePreviewPath.value = nextActiveTab?.path || ''
   agentPanelViewMode.value = nextActiveTab ? 'preview' : 'tree'
-  setPanelRatioForViewMode()
 }
 
 const closePanelPreviewPath = (targetPath) => {
@@ -1085,7 +1091,6 @@ const closePanelPreviewPath = (targetPath) => {
   const nextActiveTab = nextTabs[0]
   agentPanelActivePreviewPath.value = nextActiveTab?.path || ''
   agentPanelViewMode.value = nextActiveTab ? 'preview' : 'tree'
-  setPanelRatioForViewMode()
 }
 
 // ==================== COMPUTED PROPERTIES ====================
@@ -1162,20 +1167,10 @@ const handleToolApprovalModeSelect = async (mode) => {
     writeToolApprovalModePreference(mode)
   } catch {
     thread.metadata = previousMetadata
-    message.error(t('harness.chat.approvalSaveFailed'))
+    MessagePlugin.error(t('harness.chat.approvalSaveFailed'))
   }
 }
 
-const currentThreadAgentName = computed(() => {
-  const threadAgentId = currentThread.value?.agent_id
-  if (threadAgentId && agents.value?.length) {
-    const threadAgent = agents.value.find((agent) => agent.id === threadAgentId)
-    if (threadAgent?.name) {
-      return threadAgent.name
-    }
-  }
-  return currentAgentName.value
-})
 // 检查当前智能体是否支持文件上传
 const supportsFileUpload = computed(() => {
   if (!currentAgent.value) return false
@@ -1499,11 +1494,6 @@ const { mentionConfig } = useAgentMentionConfig({
 })
 
 const currentThreadMessages = computed(() => threadMessages.value[currentChatId.value] || [])
-const currentThreadHasHistory = computed(() => currentThreadMessages.value.length > 0)
-const currentThreadConfigNotice = computed(() => {
-  if (!currentChatId.value) return null
-  return threadConfigNoticeMap.value[currentChatId.value] || null
-})
 
 const currentApprovalModalVisible = computed(
   () =>
@@ -1908,21 +1898,6 @@ const conversationRows = computed(() => {
     artifacts: MessageProcessor.extractArtifactsFromConversation(conv)
   }))
 
-  if (currentThreadConfigNotice.value) {
-    const insertAfterCount = Math.max(
-      0,
-      Math.min(
-        Number(currentThreadConfigNotice.value.insertAfterConversationCount) || 0,
-        rows.length
-      )
-    )
-    rows.splice(insertAfterCount, 0, {
-      type: 'notice',
-      key: currentThreadConfigNotice.value.id,
-      notice: currentThreadConfigNotice.value
-    })
-  }
-
   return rows
 })
 
@@ -2070,131 +2045,21 @@ const rollbackAttachments = (threadId, previousAttachments) => {
   threadAttachmentsMap.value[threadId] = previousAttachments
 }
 
-const configChangeNoticeMessage = computed(() => t('harness.chat.configChangeHint'))
-
-const withConfigNoticeSync = async (task) => {
-  configNoticeSyncDepth.value += 1
-  try {
-    return await task()
-  } finally {
-    configNoticeSyncDepth.value = Math.max(0, configNoticeSyncDepth.value - 1)
-  }
-}
-
-const buildThreadConfigSnapshot = () => {
-  return {
-    agentId: currentAgentId.value || '',
-    configJson: JSON.stringify(agentConfig.value || {})
-  }
-}
-
-const syncThreadConfigSnapshot = (threadId, options = {}) => {
-  if (!threadId) return
-
-  const { overwrite = true } = options
-  if (!overwrite && threadConfigSnapshotMap.value[threadId]) return
-  if (threadPendingConfigNoticeMap.value[threadId]) return
-
-  // 线程切换时先记录当前 UI 的配置快照，避免同步 thread 绑定配置时误报。
-  threadConfigSnapshotMap.value = {
-    ...threadConfigSnapshotMap.value,
-    [threadId]: buildThreadConfigSnapshot()
-  }
-}
-
-const upsertThreadConfigNotice = (threadId, insertAfterConversationCount) => {
-  if (!threadId) return
-
-  const existingNotice = threadConfigNoticeMap.value[threadId]
-  const nextNotice = {
-    id: existingNotice?.id || `config-change-notice-${threadId}`,
-    message: existingNotice?.message || configChangeNoticeMessage.value,
-    insertAfterConversationCount
-  }
-  const shouldScroll =
-    !existingNotice || existingNotice.insertAfterConversationCount !== insertAfterConversationCount
-
-  threadConfigNoticeMap.value = {
-    ...threadConfigNoticeMap.value,
-    [threadId]: nextNotice
-  }
-
-  if (threadPendingConfigNoticeMap.value[threadId]) {
-    const nextPendingNotices = { ...threadPendingConfigNoticeMap.value }
-    delete nextPendingNotices[threadId]
-    threadPendingConfigNoticeMap.value = nextPendingNotices
-  }
-
-  if (shouldScroll) {
-    configNoticeScrollVersion.value += 1
-  }
-}
-
-const queuePendingThreadConfigNotice = (threadId) => {
-  if (!threadId) return
-  threadPendingConfigNoticeMap.value = {
-    ...threadPendingConfigNoticeMap.value,
-    [threadId]: {
-      id: `config-change-notice-${threadId}`,
-      message: configChangeNoticeMessage.value
-    }
-  }
-}
-
-const flushPendingThreadConfigNotice = (threadId) => {
-  if (
-    !threadId ||
-    !currentThreadHasHistory.value ||
-    !threadPendingConfigNoticeMap.value[threadId]
-  ) {
-    return
-  }
-
-  upsertThreadConfigNotice(threadId, conversations.value.length)
-}
-
-const maybeInsertThreadConfigNotice = () => {
-  const threadId = currentChatId.value
-  if (!threadId || configNoticeSyncDepth.value > 0) {
-    return
-  }
-
-  const previousSnapshot = threadConfigSnapshotMap.value[threadId]
-  const currentSnapshot = buildThreadConfigSnapshot()
-
-  if (!previousSnapshot) {
-    threadConfigSnapshotMap.value = {
-      ...threadConfigSnapshotMap.value,
-      [threadId]: currentSnapshot
-    }
-    return
-  }
-
-  if (
-    previousSnapshot.agentId === currentSnapshot.agentId &&
-    previousSnapshot.configJson === currentSnapshot.configJson
-  ) {
-    return
-  }
-
-  if (currentThreadHasHistory.value) {
-    upsertThreadConfigNotice(threadId, conversations.value.length)
-  } else if (chatUIStore.isLoadingMessages) {
-    // 历史线程仍在加载时先挂起提示，避免消息返回后把变更误当成新的基线。
-    queuePendingThreadConfigNotice(threadId)
-  } else {
-    return
-  }
-
-  threadConfigSnapshotMap.value = {
-    ...threadConfigSnapshotMap.value,
-    [threadId]: currentSnapshot
-  }
-}
-
 // ==================== SCROLL & RESIZE HANDLING ====================
 const scrollController = new ScrollController('.chat-main')
 const chatMainRef = ref(null)
+
+// 流式生成期间，消息内容会持续增高（逐字追加、图片/表格渲染回流等），
+// 这些高度变化不一定会触发 `conversations` 的引用变更，watch 未必能及时感知。
+// 参照对话模式 `chat/index.vue` 的做法：直接观察消息列表本身的尺寸变化，
+// 只要用户没有主动上滑（shouldAutoScroll 仍为 true），就跟随内容持续滚到底部。
+const stickyBottomBlocked = {
+  get value() {
+    return !scrollController.shouldAutoScroll
+  }
+}
+useStickyBottomOnResize(chatMainRef, stickyBottomBlocked, () => scrollController.scrollToBottom())
+
 let chatMainResizeObserver = null
 // 初始化延迟标志，避免首次挂载时 ResizeObserver 立即触发导致侧边栏意外关闭
 let isResizeObserverReady = false
@@ -2247,7 +2112,7 @@ const startChatMainResizeObserver = () => {
   }
 
   const syncLayoutWidths = () => {
-    localUIState.chatMainWidth = chatMainRef.value?.clientWidth || window.innerWidth
+    localUIState.chatMainWidth = chatMainRef.value?.clientWidth || 0
     localUIState.chatContentWidth =
       chatContentContainerRef.value?.clientWidth || localUIState.chatMainWidth
   }
@@ -2491,12 +2356,63 @@ const handleAttachmentUpload = async (files = []) => {
     return
 
   const droppedFiles = Array.from(files || []).filter((file) => file instanceof File)
-  if (droppedFiles.length) {
-    attachmentInitialFiles.value = droppedFiles
-    attachmentInitialFilesKey.value += 1
-  }
+  if (!droppedFiles.length || attachmentUploading.value) return
 
-  attachmentUploadModalOpen.value = true
+  const threadId = await ensureAttachmentThread()
+  if (!threadId) return
+
+  attachmentUploading.value = true
+  const attachments = []
+  try {
+    for (const file of droppedFiles) {
+      try {
+        const response = await threadApi.uploadTmpAttachment(file)
+        if (!response?.object_name) continue
+
+        // 简化后的“直接选文件”流程不再弹窗让用户手动点“解析”，
+        // 但解析能力本身要保留：PDF/图片等需要解析成 Markdown 才能被智能体真正读懂，
+        // 否则只是把原始二进制挂上去，智能体拿到的仍然是不可读内容。
+        // 这里在后台静默解析一次，不阻塞、不弹提示，解析失败也不影响附件正常挂载。
+        let parsedObjectName = response.parsed_object_name || null
+        let truncated = Boolean(response.truncated)
+        if (response.parse_supported && !parsedObjectName) {
+          try {
+            const parseMethod = response.parse_methods?.[0] || 'weknora'
+            const parseResponse = await threadApi.parseTmpAttachment({
+              object_name: response.object_name,
+              file_name: response.file_name,
+              bucket_name: response.bucket_name,
+              parse_method: parseMethod
+            })
+            parsedObjectName = parseResponse?.parsed_object_name || null
+            truncated = Boolean(parseResponse?.truncated)
+          } catch (parseError) {
+            console.warn('Background attachment parse failed:', parseError)
+          }
+        }
+
+        attachments.push({
+          file_name: response.file_name,
+          file_type: response.file_type,
+          bucket_name: response.bucket_name,
+          object_name: response.object_name,
+          parsed_object_name: parsedObjectName,
+          truncated
+        })
+      } catch (error) {
+        handleChatError(error, 'upload')
+      }
+    }
+
+    if (!attachments.length) return
+
+    await threadApi.confirmTmpThreadAttachments(threadId, attachments)
+    await handleTmpAttachmentsAdded()
+  } catch (error) {
+    handleChatError(error, 'upload')
+  } finally {
+    attachmentUploading.value = false
+  }
 }
 
 const ensureAttachmentThread = async () => {
@@ -2603,7 +2519,7 @@ const handleCancelQueuedRequest = async (requestId) => {
   cancellingRequestIds.delete(requestId)
   if (cancelled) {
     await resumeQueuedRequestsForThread(threadId)
-    message.success(t('harness.chat.queuedDeleted'))
+    MessagePlugin.success(t('harness.chat.queuedDeleted'))
   }
 }
 
@@ -2616,7 +2532,7 @@ const handleSteerQueuedRequest = async (requestId) => {
   const steered = await steerRequest(threadId, agentSlug, requestId)
   steeringRequestIds.delete(requestId)
   if (steered) {
-    message.success(t('harness.chat.steered'))
+    MessagePlugin.success(t('harness.chat.steered'))
   }
 }
 
@@ -2627,7 +2543,7 @@ const handleContinueQueue = async () => {
   if (!threadId || !agentSlug || currentThreadState.value?.continueQueueInFlight) return
 
   if (await continueQueue(threadId, agentSlug)) {
-    message.success(t('harness.chat.queueContinued'))
+    MessagePlugin.success(t('harness.chat.queueContinued'))
   }
 }
 
@@ -2695,20 +2611,16 @@ const selectChat = async (chatId) => {
   }
 
   try {
-    await withConfigNoticeSync(async () => {
-      // 先更新当前线程，确保底部智能体名称与选中项即时同步。
-      setCurrentThreadId(chatId)
+    // 先更新当前线程，确保底部智能体名称与选中项即时同步。
+    setCurrentThreadId(chatId)
 
-      if (
-        !props.singleMode &&
-        targetChat?.agent_id &&
-        targetChat.agent_id !== currentAgentId.value
-      ) {
-        await agentStore.selectAgent(targetChat.agent_id)
-      }
-
-      syncThreadConfigSnapshot(chatId)
-    })
+    if (
+      !props.singleMode &&
+      targetChat?.agent_id &&
+      targetChat.agent_id !== currentAgentId.value
+    ) {
+      await agentStore.selectAgent(targetChat.agent_id)
+    }
   } catch (error) {
     setCurrentThreadId(previousThreadId)
     handleChatError(error, 'load')
@@ -2728,7 +2640,6 @@ const selectChat = async (chatId) => {
   await scrollController.scrollToBottomStaticForce()
   // await fetchAgentState(targetAgentId, chatId)
   await handleAgentStateRefresh(chatId)
-  syncThreadConfigSnapshot(chatId, { overwrite: false })
   await resumeActiveRunForThread(chatId)
   await resumeQueuedRequestsForThread(chatId)
   restorePendingInterruptForThread(chatId)
@@ -2772,8 +2683,11 @@ const selectThreadFromRoute = async (threadId) => {
 const handleSendMessage = async ({ image, queuePolicy = 'enqueue' } = {}) => {
   const text = userInput.value.trim()
   const imageContent = image?.imageContent || null
+  // 附件可以是唯一的发送内容（用户先确认附件、不写正文就点发送/回车），
+  // 因此这里不能只看 text/image，否则会被静默吞掉，界面上没有任何反馈。
+  const hasPendingAttachments = currentPendingThreadAttachments.value.length > 0
   if (
-    (!text && !image) ||
+    (!text && !image && !hasPendingAttachments) ||
     !currentAgent.value ||
     sendCooldownActive.value ||
     props.sendDisabled ||
@@ -2788,7 +2702,7 @@ const handleSendMessage = async ({ image, queuePolicy = 'enqueue' } = {}) => {
   if (!threadId) {
     threadId = await ensureActiveThread(text)
     if (!threadId) {
-      message.error(t('harness.chat.createFailed'))
+      MessagePlugin.error(t('harness.chat.createFailed'))
       return
     }
     // 新建线程：把草稿态的模型选择迁移到真实线程，避免选择丢失
@@ -2910,7 +2824,7 @@ const handleSendMessage = async ({ image, queuePolicy = 'enqueue' } = {}) => {
       try {
         await fetchAgentState(currentAgentId.value, threadId, { required: true })
       } catch {
-        message.error(t('harness.chat.approvalRestoreFailed'))
+        MessagePlugin.error(t('harness.chat.approvalRestoreFailed'))
       }
     }
     if (queuePolicy === 'steer' && currentChatId.value === threadId && !userInput.value) {
@@ -2941,7 +2855,7 @@ const handleSendOrStop = async (payload) => {
       if (approvalState.threadId === threadId) {
         hideApprovalState()
       }
-      message.info(t('harness.chat.cancelSent'))
+      MessagePlugin.info(t('harness.chat.cancelSent'))
     } catch (error) {
       handleChatError(error, 'stop')
     }
@@ -2955,20 +2869,20 @@ const handleApprovalWithStream = async (answer) => {
   const threadId = approvalState.threadId
   const interruptedRunId = approvalState.interruptedRunId
   if (!threadId) {
-    message.error(t('harness.chat.invalidQuestion'))
+    MessagePlugin.error(t('harness.chat.invalidQuestion'))
     approvalState.showModal = false
     return
   }
 
   const threadState = getThreadState(threadId)
   if (!threadState) {
-    message.error(t('harness.chat.threadNotFound'))
+    MessagePlugin.error(t('harness.chat.threadNotFound'))
     approvalState.showModal = false
     return
   }
 
   if (!interruptedRunId) {
-    message.error(t('harness.chat.runNotFound'))
+    MessagePlugin.error(t('harness.chat.runNotFound'))
     approvalState.showModal = false
     return
   }
@@ -3076,6 +2990,8 @@ const toggleAgentPanel = async () => {
     return
   }
 
+  // 单纯的“打开/收起”不应该丢弹出前的预览状态：如果之前正在看某个文件预览，
+  // 重新打开面板时应该回到那个预览，而不是被强制丢回文件树（原有能力保留）。
   showFilePanel(agentPanelActivePreviewPath.value ? 'preview' : 'tree')
   await handleAgentStateRefresh()
 }
@@ -3291,44 +3207,11 @@ watch(
 )
 
 watch(
-  currentThreadMessages,
-  () => {
-    if (currentThreadHasHistory.value) {
-      flushPendingThreadConfigNotice(currentChatId.value)
-      syncThreadConfigSnapshot(currentChatId.value, { overwrite: false })
-    }
-  },
-  { deep: false }
-)
-
-watch(currentAgentId, (newAgentId, oldAgentId) => {
-  if (oldAgentId === undefined || newAgentId === oldAgentId) return
-  maybeInsertThreadConfigNotice()
-})
-
-watch(
-  () => JSON.stringify(agentConfig.value || {}),
-  (newConfigJson, oldConfigJson) => {
-    if (oldConfigJson === undefined || newConfigJson === oldConfigJson) return
-    maybeInsertThreadConfigNotice()
-  }
-)
-
-watch(
   conversations,
   () => {
     if (isProcessing.value) {
       scrollController.scrollToBottom()
     }
-  },
-  { flush: 'post' }
-)
-
-watch(
-  configNoticeScrollVersion,
-  () => {
-    if (!currentChatId.value) return
-    scrollController.scrollToBottom(true)
   },
   { flush: 'post' }
 )
@@ -3375,7 +3258,7 @@ watch(currentChatId, (threadId, oldThreadId) => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 8px;
+    padding: 0 12px;
     flex-shrink: 0; /* Prevent header from shrinking */
     position: relative;
     transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -3397,6 +3280,7 @@ watch(currentChatId, (threadId, oldThreadId) => {
 
     .header__right {
       justify-content: flex-end;
+      padding-right: 2px;
     }
 
     .header__center {
@@ -3441,7 +3325,7 @@ watch(currentChatId, (threadId, oldThreadId) => {
   }
 
   &.has-file-panel .chat-header {
-    padding-right: calc(var(--file-panel-width) + 8px);
+    padding-right: calc(var(--file-panel-width) + 12px);
   }
 
   &.is-resizing-file-panel {
@@ -3476,6 +3360,39 @@ watch(currentChatId, (threadId, oldThreadId) => {
   min-width: 0; /* Prevent flex item from overflowing */
 
   scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  &.is-empty {
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+
+    .chat-box {
+      display: none;
+    }
+  }
+}
+
+.bottom-host {
+  display: contents;
+}
+
+.empty-layout {
+  display: flex;
+  flex-flow: column;
+  align-items: center;
+  flex: 1;
+  width: 100%;
+  max-width: 960px;
+  height: 100%;
+  min-height: 0;
+  margin: 0 auto;
+  padding: 0 16px;
 }
 
 .chat-content-container.has-file-panel .chat-main {
@@ -3572,126 +3489,30 @@ watch(currentChatId, (threadId, oldThreadId) => {
   background: var(--gray-0);
 }
 
+.chat-greeting-input,
+.empty-layout-spacer {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
 .chat-greeting-input {
-  padding: 24px 0 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   text-align: center;
 
   h1 {
-    font-size: 1.4rem;
-    color: var(--gray-1000);
     margin: 0;
+    width: 100%;
+    color: var(--td-text-color-primary);
+    font-family: var(--app-font-family);
+    font-size: 28px;
+    font-weight: 600;
+    line-height: 1.3;
+    text-align: center;
   }
-}
-
-.agent-segment-wrapper {
-  width: fit-content;
-  max-width: 100%;
-  margin: 0 auto 18px;
-  overflow-x: auto;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-
-  :deep(.ant-segmented) {
-    width: auto;
-    max-width: 100%;
-    white-space: nowrap;
-    background: var(--gray-50);
-    border: 1px solid var(--gray-150);
-    border-radius: 10px;
-  }
-
-  :deep(.ant-segmented-group) {
-    width: auto;
-    display: inline-flex;
-  }
-
-  :deep(.ant-segmented-item) {
-    flex: 0 0 auto;
-    min-width: 0;
-  }
-
-  :deep(.ant-segmented-item-label) {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-.agent-switcher-wrapper {
-  display: flex;
-  justify-content: center;
-  margin: 0 auto 18px;
-}
-
-.agent-switcher-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  max-width: 100%;
-  padding: 4px 12px;
-  border: 1px solid var(--gray-150);
-  border-radius: 8px;
-  background: var(--gray-0);
-  color: var(--gray-900);
-  cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
-
-  &:hover {
-    background: var(--gray-0);
-    border-color: var(--gray-200);
-  }
-}
-
-.agent-switcher-icon,
-.agent-switcher-chevron {
-  flex-shrink: 0;
-  color: var(--gray-600);
-}
-
-.agent-switcher-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-:deep(.agent-switcher-menu) {
-  min-width: 220px;
-}
-
-:deep(.agent-switcher-menu-item) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-:deep(.agent-switcher-menu-icon) {
-  flex-shrink: 0;
-  color: var(--gray-600);
-}
-
-:deep(.agent-switcher-menu-text) {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-:deep(.agent-switcher-menu-badge) {
-  flex-shrink: 0;
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--main-30);
-  color: var(--main-700);
-  font-size: 12px;
 }
 
 .chat-loading {
@@ -3724,11 +3545,12 @@ watch(currentChatId, (threadId, oldThreadId) => {
 
 .chat-box {
   width: 100%;
-  max-width: min(800px, 100%);
+  max-width: 960px;
   min-width: 0;
   margin: 0 auto;
   flex-grow: 1;
-  padding: 1rem var(--page-padding);
+  padding: 16px 8px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
@@ -3741,27 +3563,17 @@ watch(currentChatId, (threadId, oldThreadId) => {
   max-width: 100%;
 }
 
-.chat-inline-notice {
-  display: flex;
-  justify-content: center;
-  padding: 6px 16px 12px;
-  color: var(--gray-500);
-  font-size: 12px;
-  line-height: 1.6;
-  text-align: center;
-}
-
 .bottom {
   position: sticky;
   bottom: 0;
   width: 100%;
   margin: 0 auto;
-  padding: 4px 1rem 0 1rem;
+  padding: 4px 1rem 20px 1rem;
   z-index: 20;
 
     .message-input-wrapper {
     width: 100%;
-    max-width: 800px;
+    max-width: 960px;
     margin: 0 auto;
 
     .message-input-stage {
@@ -3967,20 +3779,6 @@ watch(currentChatId, (threadId, oldThreadId) => {
       }
     }
 
-    .bottom-actions {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      width: 100%;
-      background: var(--gray-0);
-    }
-
-    .note {
-      font-size: small;
-      color: var(--gray-300);
-      margin: 4px 0;
-      user-select: none;
-    }
   }
 
   .input-model-selector {
@@ -3988,21 +3786,45 @@ watch(currentChatId, (threadId, oldThreadId) => {
     align-items: center;
     justify-content: center;
     min-width: 0;
-    max-width: min(168px, calc(100vw - 160px));
+    max-width: min(220px, calc(100vw - 160px));
+
+    :deep(.model-select--nano) {
+      width: auto;
+      min-width: 100px;
+      height: 28px;
+      padding: 0 8px;
+      border: 0.5px solid var(--td-component-border, #e7e7e7);
+      border-radius: 6px;
+      color: var(--td-text-color-secondary, #666);
+      background: transparent;
+    }
+
+    :deep(.model-select--nano:hover) {
+      background: var(--td-bg-color-secondarycontainer-hover, #e6e6e6);
+    }
+
+    :deep(.model-select--nano .model-text) {
+      flex: 0 1 auto;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--td-text-color-secondary, #666);
+    }
   }
 
   &.start-screen {
-    position: absolute;
-    top: 45%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    position: static;
+    transform: none;
+    top: auto;
+    left: auto;
     bottom: auto;
-    max-width: 800px;
-    width: 90%;
+    flex: 0 0 auto;
+    max-width: 960px;
+    width: 100%;
     background: transparent;
-    padding: 0;
+    padding: 0 0 20px;
     border-top: none;
     z-index: 100;
+    margin: 0 auto;
   }
 }
 
@@ -4121,49 +3943,12 @@ watch(currentChatId, (threadId, oldThreadId) => {
     width: min(320px, calc(100% - 24px));
   }
 
-  .agent-segment-wrapper {
-    margin-bottom: 8px;
-
-    :deep(.ant-segmented-item-label) {
-      font-size: 12px;
-    }
-  }
-
-  .agent-switcher-wrapper {
-    margin-bottom: 8px;
-  }
-
-  .agent-switcher-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
   .chat-header {
     .header__left {
       .text {
         display: none;
       }
     }
-  }
-}
-
-// 智能体选择器的图标对齐
-.agent-segment-wrapper {
-  :deep(.ant-segmented-item-label) {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  :deep(.agent-option-label) {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  :deep(.agent-option-icon) {
-    flex-shrink: 0;
-    color: var(--gray-600);
   }
 }
 </style>
@@ -4186,12 +3971,15 @@ watch(currentChatId, (threadId, oldThreadId) => {
   font-size: 14px;
   font-weight: 400;
   line-height: 20px;
-  transition: background-color 0.3s;
-  border: none;
+  transition:
+    background-color 0.3s,
+    border-color 0.3s;
+  border: 1px solid transparent;
   background: transparent;
 
   &:hover:not(.is-disabled) {
     background-color: var(--gray-100);
+    border-color: var(--main-200, var(--td-brand-color-2, #8ce0af));
   }
 
   &.is-disabled {
@@ -4698,5 +4486,42 @@ watch(currentChatId, (threadId, oldThreadId) => {
 .agent-nav-btn.agent-state-btn.active {
   color: var(--gray-900);
   background-color: var(--gray-100);
+}
+</style>
+
+<style lang="less">
+/* 对齐对话模式：内容区不画自定义滚动条（harness 全局 ::-webkit-scrollbar 会强制露出灰条） */
+.chat-container,
+.chat-container *:not(.chat-markdown-table) {
+  scrollbar-width: none !important;
+  scrollbar-color: transparent transparent !important;
+}
+
+.chat-container::-webkit-scrollbar,
+.chat-container *:not(.chat-markdown-table)::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.chat-container .chat-markdown-table {
+  scrollbar-width: none;
+  scrollbar-color: transparent transparent;
+}
+
+.chat-container .chat-markdown-table:hover {
+  scrollbar-width: thin !important;
+  scrollbar-color: var(--td-scrollbar-color, rgba(0, 0, 0, 0.28)) transparent !important;
+}
+
+.chat-container .chat-markdown-table:hover::-webkit-scrollbar {
+  display: block !important;
+  width: 0 !important;
+  height: 6px !important;
+}
+
+.chat-container .chat-markdown-table:hover::-webkit-scrollbar-thumb {
+  background: var(--td-scrollbar-color, rgba(0, 0, 0, 0.28));
+  border-radius: 3px;
 }
 </style>

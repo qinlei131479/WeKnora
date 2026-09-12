@@ -88,7 +88,7 @@
           <div v-else-if="loadingFiles" class="empty">{{ t('harness.chat.panel.loadingFs') }}</div>
           <div v-else-if="filesystemError" class="empty error-state">
             <div>{{ filesystemError }}</div>
-            <a-button type="link" size="small" @click="refreshFileSystem">{{ t('harness.chat.retry') }}</a-button>
+            <button type="button" class="tree-retry-btn" @click="refreshFileSystem">{{ t('harness.chat.retry') }}</button>
           </div>
           <div v-else-if="!fileTreeData.length" class="empty">{{ t('harness.chat.panel.emptyWorkspace') }}</div>
           <div v-else class="file-tree-container">
@@ -139,7 +139,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Download, Folders, PanelRight, RefreshCw, Trash2, X } from 'lucide-vue-next'
-import { Modal, message } from 'ant-design-vue'
+import { DialogPlugin, MessagePlugin } from 'tdesign-vue-next'
 import FileTreeComponent from '@harness/components/FileTreeComponent.vue'
 import AgentFilePreview from '@harness/components/AgentFilePreview.vue'
 import FileTypeIcon from '@harness/components/common/FileTypeIcon.vue'
@@ -265,7 +265,7 @@ const createTreeNode = (entry) => {
     nameStart,
     nameEnd,
     isLeaf,
-    children: isLeaf ? undefined : [],
+    children: isLeaf ? undefined : true,
     fileData: {
       ...entry,
       path: fullPath,
@@ -274,21 +274,6 @@ const createTreeNode = (entry) => {
     },
     class: isLeaf ? 'file-node' : 'folder-node'
   }
-}
-
-const updateTreeChildren = (nodes, targetKey, children) => {
-  return nodes.map((node) => {
-    if (node.key === targetKey) {
-      return { ...node, children }
-    }
-    if (!node.children?.length) {
-      return node
-    }
-    return {
-      ...node,
-      children: updateTreeChildren(node.children, targetKey, children)
-    }
-  })
 }
 
 const removeTreeNode = (nodes, targetKey) => {
@@ -388,13 +373,15 @@ const refreshFileSystem = async () => {
 }
 
 const loadData = async (treeNode) => {
-  if (treeNode.isLeaf || treeNode.children?.length || !props.threadId) return
+  if (treeNode.isLeaf || (Array.isArray(treeNode.children) && treeNode.children.length) || !props.threadId) {
+    return Array.isArray(treeNode.children) ? treeNode.children : []
+  }
 
   try {
-    const children = await loadDirectoryChildren(treeNode.key)
-    dynamicTreeData.value = updateTreeChildren(dynamicTreeData.value, treeNode.key, children)
+    return await loadDirectoryChildren(treeNode.key)
   } catch (error) {
     console.error('Failed to load children for', treeNode.key, error)
+    return []
   }
 }
 
@@ -531,17 +518,18 @@ const pruneTreeStateAfterDelete = (targetPath) => {
 const confirmDeleteNode = (node) => {
   const fileName = node?.title || getFileName(node?.fileData)
   const isDirectory = !node?.isLeaf
-  Modal.confirm({
-    title: isDirectory
+  const dialog = DialogPlugin.confirm({
+    attach: 'body',
+    header: isDirectory
       ? t('harness.chat.panel.confirmDeleteFolder', { name: fileName })
       : t('harness.chat.panel.confirmDeleteFile', { name: fileName }),
-    content: isDirectory
+    body: isDirectory
       ? t('harness.chat.panel.deleteFolderContent')
       : t('harness.chat.panel.deleteIrreversible'),
-    okText: t('harness.chat.delete'),
-    okType: 'danger',
-    cancelText: t('harness.chat.cancel'),
-    onOk: async () => {
+    confirmBtn: { content: t('harness.chat.delete'), theme: 'danger' },
+    cancelBtn: t('harness.chat.cancel'),
+    theme: 'warning',
+    onConfirm: async () => {
       const nextDeletingPaths = new Set(deletingPaths.value)
       nextDeletingPaths.add(node.key)
       deletingPaths.value = nextDeletingPaths
@@ -550,12 +538,12 @@ const confirmDeleteNode = (node) => {
         await deleteViewerFile(props.threadId, node.key)
         dynamicTreeData.value = removeTreeNode(dynamicTreeData.value, node.key)
         pruneTreeStateAfterDelete(node.key)
-        message.success(
+        MessagePlugin.success(
           isDirectory ? t('harness.chat.panel.deleteFolderSuccess') : t('harness.chat.panel.deleteFileSuccess')
         )
       } catch (error) {
         console.error(isDirectory ? '删除文件夹失败:' : '删除文件失败:', error)
-        message.error(
+        MessagePlugin.error(
           error?.message ||
             (isDirectory
               ? t('harness.chat.panel.deleteFolderFailed')
@@ -565,6 +553,7 @@ const confirmDeleteNode = (node) => {
         const latestDeletingPaths = new Set(deletingPaths.value)
         latestDeletingPaths.delete(node.key)
         deletingPaths.value = latestDeletingPaths
+        dialog.hide()
       }
     }
   })
@@ -1005,6 +994,15 @@ watch(
 
 .error-state {
   gap: 8px;
+}
+
+.tree-retry-btn {
+  border: none;
+  background: transparent;
+  color: var(--td-brand-color, var(--main-600));
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
 }
 
 .file-tree-container {

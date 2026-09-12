@@ -238,7 +238,7 @@ import {
   XCircle
 } from 'lucide-vue-next'
 import ShareConfigForm from '@harness/components/ShareConfigForm.vue'
-import { skillApi } from '@/api/runtime/skill'
+import { skillApi } from '@/api/chat-work/skill'
 import { useUserStore } from '@harness/stores/user'
 
 const props = defineProps({

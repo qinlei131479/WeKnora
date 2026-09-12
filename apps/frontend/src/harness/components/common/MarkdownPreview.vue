@@ -363,6 +363,13 @@ const handleMarkdownAction = async (e) => {
   const target = e.target instanceof Element ? e.target : e.target?.parentElement
   if (!target) return
 
+  const tableLink = target.closest('.chat-markdown-table a')
+  if (tableLink) {
+    e.preventDefault()
+    e.stopPropagation()
+    return
+  }
+
   const codeCopyBtn = target.closest('.markdown-code-copy-btn')
   if (codeCopyBtn) {
     await copyCodeBlock(codeCopyBtn)
@@ -764,6 +771,20 @@ const showCopiedFeedback = (btn) => {
     border-radius: 8px;
     background: var(--td-bg-color-container, var(--gray-0));
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scrollbar-color: transparent transparent;
+
+    &:hover {
+      scrollbar-width: thin;
+      scrollbar-color: var(--td-scrollbar-color, rgba(0, 0, 0, 0.28)) transparent;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+      pointer-events: none;
+      cursor: text;
+    }
   }
 
   table {

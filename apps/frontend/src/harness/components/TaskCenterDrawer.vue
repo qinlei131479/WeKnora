@@ -1,33 +1,40 @@
 <template>
-  <a-modal
-    :open="isOpen"
-    title="任务中心"
+  <t-dialog
+    :visible="isOpen"
+    header="任务中心"
+    attach="body"
+    placement="center"
     :width="680"
-    :footer="null"
+    :footer="false"
     :destroy-on-close="false"
-    class="task-center-modal"
-    @cancel="handleClose"
+    dialog-class-name="task-center-modal"
+    @close="handleClose"
   >
-    <a-alert
-      type="info"
-      show-icon
+    <t-alert
+      theme="info"
       class="task-tip"
       message="状态为「已完成」仅代表任务执行结束，其内部仍可能存在已捕获的问题，请留意日志。"
     />
     <div class="task-center">
       <div class="task-toolbar">
         <div class="task-filter-group">
-          <a-segmented v-model:value="statusFilter" :options="taskFilterOptions" />
+          <t-radio-group v-model="statusFilter">
+            <t-radio-button v-for="opt in taskFilterOptions" :key="opt.value" :value="opt.value">
+              <span class="task-filter-option">
+                {{ opt.label }}
+                <span class="filter-count">{{ opt.count }}</span>
+              </span>
+            </t-radio-button>
+          </t-radio-group>
         </div>
         <div class="task-toolbar-actions">
-          <a-button type="text" @click="handleRefresh" :loading="loadingState"> 刷新 </a-button>
+          <t-button variant="text" @click="handleRefresh" :loading="loadingState"> 刷新 </t-button>
         </div>
       </div>
 
-      <a-alert
+      <t-alert
         v-if="lastErrorState"
-        type="error"
-        show-icon
+        theme="error"
         class="task-alert"
         :message="lastErrorState.message || '加载任务信息失败'"
       />
@@ -61,8 +68,8 @@
 
           <!-- 进度信息 -->
           <div v-if="!isTaskCompleted(task)" class="task-card-progress">
-            <a-progress
-              :percent="Math.round(task.progress || 0)"
+            <t-progress
+              :percentage="Math.round(task.progress || 0)"
               :status="progressStatus(task.status)"
               :stroke-width="4"
               :show-info="false"
@@ -86,24 +93,24 @@
               <span v-if="!task.started_at">创建 {{ formatTime(task.created_at, 'short') }}</span>
             </div>
             <div class="task-card-actions">
-              <a-button
-                type="text"
+              <t-button
+                variant="text"
                 size="small"
-                danger
+                theme="danger"
                 v-if="canCancel(task)"
                 @click.stop="handleCancel(task.id)"
               >
                 取消
-              </a-button>
-              <a-button
-                type="text"
+              </t-button>
+              <t-button
+                variant="text"
                 size="small"
-                danger
+                theme="danger"
                 v-if="isTaskCompleted(task)"
                 @click.stop="handleDelete(task.id, task.name)"
               >
                 删除
-              </a-button>
+              </t-button>
             </div>
           </div>
         </div>
@@ -115,12 +122,12 @@
         <div class="task-empty-subtitle">{{ emptyHint.subtitle }}</div>
       </div>
     </div>
-  </a-modal>
+  </t-dialog>
 </template>
 
 <script setup>
 import { computed, h, watch, ref } from 'vue'
-import { Modal } from 'ant-design-vue'
+import { DialogPlugin } from 'tdesign-vue-next'
 import { useTaskerStore } from '@harness/stores/tasker'
 import { storeToRefs } from 'pinia'
 import { formatFullDateTime, formatRelative, parseToShanghai } from '@harness/utils/time'
@@ -147,38 +154,10 @@ const completedCount = computed(() => successCount.value || 0)
 const failedTaskCount = computed(() => failedCount.value || 0)
 const totalTaskCount = computed(() => totalCount.value || 0)
 const taskFilterOptions = computed(() => [
-  {
-    label: () =>
-      h('span', { class: 'task-filter-option' }, [
-        '全部',
-        h('span', { class: 'filter-count' }, totalTaskCount.value)
-      ]),
-    value: 'all'
-  },
-  {
-    label: () =>
-      h('span', { class: 'task-filter-option' }, [
-        '进行中',
-        h('span', { class: 'filter-count' }, inProgressCount.value)
-      ]),
-    value: 'active'
-  },
-  {
-    label: () =>
-      h('span', { class: 'task-filter-option' }, [
-        '已完成',
-        h('span', { class: 'filter-count' }, completedCount.value)
-      ]),
-    value: 'success'
-  },
-  {
-    label: () =>
-      h('span', { class: 'task-filter-option' }, [
-        '失败',
-        h('span', { class: 'filter-count' }, failedTaskCount.value)
-      ]),
-    value: 'failed'
-  }
+  { label: '全部', value: 'all', count: totalTaskCount.value },
+  { label: '进行中', value: 'active', count: inProgressCount.value },
+  { label: '已完成', value: 'success', count: completedCount.value },
+  { label: '失败', value: 'failed', count: failedTaskCount.value }
 ])
 
 const STATUS_CONFIG = {
@@ -186,8 +165,8 @@ const STATUS_CONFIG = {
   queued: { label: '已排队', terminal: false, cancelable: true, progress: 'active' },
   running: { label: '进行中', terminal: false, cancelable: true, progress: 'active' },
   success: { label: '已完成', terminal: true, cancelable: false, progress: 'success' },
-  failed: { label: '失败', terminal: true, cancelable: false, progress: 'exception' },
-  cancelled: { label: '已取消', terminal: true, cancelable: false, progress: 'normal' }
+  failed: { label: '失败', terminal: true, cancelable: false, progress: 'error' },
+  cancelled: { label: '已取消', terminal: true, cancelable: false, progress: 'warning' }
 }
 const TASK_TYPE_LABELS = {
   knowledge_ingest: '知识库导入',
@@ -320,10 +299,15 @@ function handleDetail(taskId) {
     children.push(h('div', { style: DETAIL_TITLE_STYLE }, '结果'))
     children.push(h('pre', { style: DETAIL_JSON_STYLE }, prettyJson(task.result)))
   }
-  Modal.info({
-    title: task.name,
+  const detailDialog = DialogPlugin.confirm({
+    header: task.name,
     width: 560,
-    content: h('div', children)
+    body: h('div', children),
+    cancelBtn: null,
+    confirmBtn: '关闭',
+    onConfirm: () => {
+      detailDialog.destroy()
+    }
   })
 }
 
@@ -332,14 +316,15 @@ function handleCancel(taskId) {
 }
 
 function handleDelete(taskId, taskName) {
-  Modal.confirm({
-    title: '确认删除',
-    content: `确定要删除任务"${taskName}"吗？此操作不可恢复。`,
-    okText: '删除',
-    okType: 'danger',
-    cancelText: '取消',
-    onOk: () => {
+  const deleteDialog = DialogPlugin.confirm({
+    header: '确认删除',
+    body: `确定要删除任务"${taskName}"吗？此操作不可恢复。`,
+    confirmBtn: { content: '删除', theme: 'danger' },
+    cancelBtn: '取消',
+    theme: 'warning',
+    onConfirm: () => {
       taskerStore.deleteTask(taskId)
+      deleteDialog.destroy()
     }
   })
 }
@@ -426,13 +411,13 @@ function canCancel(task) {
   gap: 4px;
 }
 
-:deep(.filter-count) {
+.filter-count {
   margin-left: 2px;
   font-size: 12px;
   color: var(--gray-400);
 }
 
-.task-toolbar-actions :deep(.ant-btn) {
+.task-toolbar-actions :deep(.t-button) {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -596,7 +581,7 @@ function canCancel(task) {
   gap: 10px;
 }
 
-.task-card-progress :deep(.ant-progress) {
+.task-card-progress :deep(.t-progress) {
   flex: 1;
 }
 
@@ -646,16 +631,10 @@ function canCancel(task) {
   gap: 2px;
 }
 
-.task-card-actions :deep(.ant-btn) {
+.task-card-actions :deep(.t-button) {
   height: 24px;
   padding: 0 10px;
   font-size: 12px;
-  color: var(--gray-500);
-}
-
-.task-card-actions :deep(.ant-btn:hover) {
-  color: var(--gray-700);
-  background: var(--gray-50);
 }
 
 .task-empty {
