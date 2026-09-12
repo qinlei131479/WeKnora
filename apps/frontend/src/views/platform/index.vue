@@ -18,7 +18,6 @@
                     </t-tooltip>
                     <div class="platform-topbar-prefs">
                         <LanguageSwitch variant="topbar" />
-                        <FontSizeSelect />
                     </div>
                     <GlobalInvitationBell />
                     <ThemeToggle />
@@ -58,7 +57,6 @@ import NewUserGuide from '@/components/NewUserGuide.vue'
 import UserMenu from '@/components/UserMenu.vue'
 import LanguageSwitch from '@/components/LanguageSwitch.vue'
 import ThemeToggle from '@/components/ThemeToggle.vue'
-import FontSizeSelect from '@/components/FontSizeSelect.vue'
 import { useCommandPaletteStore } from '@/stores/commandPalette'
 import { useUIStore } from '@/stores/ui'
 import { useChatResourcesStore } from '@/stores/chatResources'

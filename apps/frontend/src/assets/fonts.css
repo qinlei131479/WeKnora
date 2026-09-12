@@ -1,6 +1,6 @@
 @font-face {
     font-family: 'TencentSans';
-    src: url('fonts/TencentSans.ttf') format('truetype');
+    src: url('fonts/TencentSans.woff2') format('woff2');
     font-weight: normal;
     font-style: normal;
 }

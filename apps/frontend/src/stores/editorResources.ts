@@ -105,9 +105,15 @@ export const useEditorResourcesStore = defineStore('editorResources', () => {
 
   async function ensureMcpServices(force = false): Promise<void> {
     return runOnce('mcpServices', force, async () => {
-      const list = await listMCPServices()
-      mcpServices.value = Array.isArray(list) ? list : []
-      loadedAt.value.mcpServices = Date.now()
+      try {
+        const list = await listMCPServices()
+        mcpServices.value = Array.isArray(list) ? list : []
+        loadedAt.value.mcpServices = Date.now()
+      } catch (error) {
+        // MCP 列表失败不应阻断智能体编辑器其它依赖加载。
+        mcpServices.value = []
+        console.warn('Failed to load MCP services:', error)
+      }
     })
   }
 

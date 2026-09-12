@@ -268,6 +268,16 @@ import dingtalkLogo from '@/assets/img/im/dingtalk.svg';
 import mattermostLogo from '@/assets/img/im/mattermost.svg';
 import wechatLogo from '@/assets/img/im/wechat.svg';
 import qqbotLogo from '@/assets/img/im/qqbot.png';
+import zhishikuIcon from '@/assets/img/zhishiku.svg';
+import zhishikuGreenIcon from '@/assets/img/zhishiku-green.svg';
+import agentIconSrc from '@/assets/img/agent.svg';
+import agentGreenIcon from '@/assets/img/agent-green.svg';
+import organizationIconSrc from '@/assets/img/organization.svg';
+import organizationGreenIcon from '@/assets/img/organization-green.svg';
+import settingIconSrc from '@/assets/img/setting.svg';
+import settingGreenIcon from '@/assets/img/setting-green.svg';
+import logoutIconSrc from '@/assets/img/logout.svg';
+import prefixIconSrc from '@/assets/img/prefixIcon.svg';
 
 const PLATFORM_LOGO: Record<string, string> = {
     wecom: wecomLogo,
@@ -1141,9 +1151,19 @@ const gotopage = async (path: string) => {
     getIcon(path)
 }
 
-const getImgSrc = (url: string) => {
-    return new URL(`/src/assets/img/${url}`, import.meta.url).href;
-}
+const MENU_ICON_SRC: Record<string, string> = {
+    'zhishiku.svg': zhishikuIcon,
+    'zhishiku-green.svg': zhishikuGreenIcon,
+    'agent.svg': agentIconSrc,
+    'agent-green.svg': agentGreenIcon,
+    'organization.svg': organizationIconSrc,
+    'organization-green.svg': organizationGreenIcon,
+    'setting.svg': settingIconSrc,
+    'setting-green.svg': settingGreenIcon,
+    'logout.svg': logoutIconSrc,
+    'prefixIcon.svg': prefixIconSrc
+};
+const getImgSrc = (url: string) => MENU_ICON_SRC[url] || prefixIconSrc;
 
 const HARNESS_MENU_ICONS: Record<string, Component> = {
     'harness-new-chat': MessageCirclePlus,

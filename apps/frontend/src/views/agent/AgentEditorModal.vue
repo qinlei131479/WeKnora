@@ -1200,7 +1200,7 @@
                     </div>
 
                     <!-- 选择指定 MCP 服务 -->
-                    <div v-if="mcpSelectionMode === 'selected' && showMcpServiceSelect" class="setting-row">
+                    <div v-if="mcpSelectionMode === 'selected'" class="setting-row">
                       <div class="setting-info">
                         <label>{{ $t('agentEditor.mcp.selectLabel') }}</label>
                         <p class="desc">{{ $t('agentEditor.mcp.selectDesc') }}</p>
@@ -1882,9 +1882,6 @@ const mcpOptions = computed<McpSelectOption[]>(() => {
   return options;
 });
 
-const showMcpServiceSelect = computed(() =>
-  mcpOptions.value.length > 0 || (formData.value.config.mcp_services?.length ?? 0) > 0,
-);
 const webSearchProviderList = ref<WebSearchProviderEntity[]>([]);
 const skillOptions = ref<{ name: string; description: string }[]>([]);
 // 是否允许启用 Skills（取决于后端沙箱是否启用，disabled 时为 false；未请求前为 false 避免闪显）

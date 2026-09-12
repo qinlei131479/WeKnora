@@ -26,7 +26,6 @@ import PageHeader from '@/components/harness/shared/PageHeader.vue'
 import SkillCardList from './SkillCardList.vue'
 import ToolsCardList from '../tools/ToolsCardList.vue'
 import McpCardList from '../mcp/McpCardList.vue'
-import { isHiddenKbSurface } from '@/utils/weknoraFeatures'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -38,13 +37,11 @@ const activeTab = computed(() => {
   return 'skills'
 })
 
-const tabs = computed(() =>
-  [
-    { key: 'skills', label: t('ext.tabs.skills'), path: '/platform/skills' },
-    { key: 'tools', label: t('ext.tabs.tools'), path: '/platform/tools' },
-    { key: 'mcp', label: t('ext.tabs.mcp'), path: '/platform/mcp' },
-  ].filter((item) => !isHiddenKbSurface(item.key)),
-)
+const tabs = computed(() => [
+  { key: 'skills', label: t('ext.tabs.skills'), path: '/platform/skills' },
+  { key: 'tools', label: t('ext.tabs.tools'), path: '/platform/tools' },
+  { key: 'mcp', label: t('ext.tabs.mcp'), path: '/platform/mcp' },
+])
 </script>
 
 <style lang="less">

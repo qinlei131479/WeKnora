@@ -52,16 +52,6 @@
       </div>
       <p class="section-description">
         {{ $t('tenantMember.sectionDescription') }}
-        <a
-          v-if="!featureFlags.hideGithub"
-          class="doc-link"
-          href="https://github.com/Tencent/WeKnora/blob/main/docs/RBAC%E8%AF%B4%E6%98%8E.md"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {{ $t('tenantMember.learnRbacGuide') }}
-          <t-icon name="link" class="link-icon" />
-        </a>
       </p>
     </div>
 
@@ -517,7 +507,6 @@ import { computed, nextTick, onUnmounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import { getFeatureFlags } from '@/utils/weknoraFeatures'
 import { AUDIT_ACTION_I18N_ROOTS } from '@/i18n/auditActionRegistry'
 import { auditActionLabel } from '@/i18n/auditActionLabel'
 import {
@@ -543,7 +532,6 @@ import {
 
 const { t, tm, locale } = useI18n()
 const authStore = useAuthStore()
-const featureFlags = getFeatureFlags()
 
 /** 悬停层限制在视口内，内容由内部滚动 */
 const permissionsPopupInnerStyle = {

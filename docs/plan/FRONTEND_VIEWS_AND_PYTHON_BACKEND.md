@@ -813,6 +813,33 @@ API：`harness/apis/agent_api.js`（含 thread SSE）→ `src/api/runtime/agent.
 
 清理后复验：harness 文件 133 个，import 可达 116 个，完全无引用 0 个；`npm run type-check`、`npm run build` 通过；`npm test` 341/344（3 个既有 i18n 失败）。
 
+#### 批次 1–3 执行记录（2026-09-12）
+
+**批次 1 · 零风险清理**
+
+- 删除孤儿文件：`api/web-search.ts`、`ListSurfaceTabs.vue`、`SessionGroupByDropdown.vue`、`SourceSwitcherDropdown.vue`、`settings/SettingCard.vue`、`chat/components/sendMsg.vue`、`KBIndexingStrategy.vue`、`JoinOrganization.vue`、`OrganizationEditorModal.vue`、`RoutePlaceholder.vue`、`settings/GeneralSettings.vue`、`settings/StorageEngineSettings.vue`、`utils/_repro_gap.mjs`、`i18n/locales/embed/index.ts`、`src/wailsjs/**`。
+- 移除未使用依赖：`@antv/g6`、`@opencode-ai/models`、`@types/dompurify`、`pagefind`、`webpack`、`vue-demi`、`less-loader`。
+- 清理死开关：`hideHarnessWorkspace`、`hideHarnessDashboard`、`hideKbSkillsToolsMcp`、`hideFontSize`（含 `shouldHideFontSize`）、`HIDDEN_KB_SURFACES`（含 `isHiddenKbSurface`）、`shouldHideAgentShare`，以及无直接消费者的 `hideChrome/hideClaw/hideVersionInfo/hideChatHistory` 字段。
+
+**批次 2 · 功能决策**
+
+- 删除 WeKnora Cloud 设置页（`WeKnoraCloudSettings.vue`、`weknoracloud` section、导航/权限项、图标分支）；旧深链回落到模型管理。
+- WeKnora MCP 放开：从 `HIDDEN_SETTINGS_SECTIONS` 移除 `mcp`。
+- 智能体 MCP 选择修复：`AgentEditorModal` 的「指定 MCP 服务」不再因子项为空而隐藏，并新增空态提示；`editorResources.ensureMcpServices` 失败不再阻断其它依赖加载。
+- 继续隐藏：Ollama、聊天历史、版本信息、Chrome、Claw。
+- 删除 GitHub / 官网 / 帮助与文档入口（UserMenu、Login、SystemInfo、ModelSettings、ApiIntegrationSettings、IntegrationSettingsSection、GraphSettings、TenantMembers），并移除对应 flag。
+- 删除字体大小选择器（`FontSizeSelect.vue` + 顶栏入口）与字体选择器开关；默认字体能力保留。
+- **未动** provider 白名单（`restrictProviderOptions` 及语言/IM/向量库/存储/搜索/模型/解析引擎/知识来源/API Key 能力过滤），按约定待后续处理。
+
+**批次 3 · 体积优化**
+
+- `menu.vue` / `Input-field.vue` 的动态 `new URL('/src/assets/img/${url}')` 改为静态图片映射；不再整目录打包，删除未使用的 `botanswer_loading.gif`（543KB）与 `think.gif`（334KB）。
+- `TencentSans.ttf` 8.1MB → `TencentSans.woff2` 3.6MB（保留全部字形），并更新 `@font-face`。
+- `mermaid` 已是动态 `import()`，无需改动。
+- 待后续：i18n 四语言懒加载、`highlight.js` 按需加载（均为高风险改动，本轮未做）。
+
+复验：`npm run type-check`、`npm run build` 通过；`npm test` 341/344（3 个既有 i18n 失败）；产物不再包含 GIF 与未使用图片，字体改为 WOFF2。
+
 ---
 
 

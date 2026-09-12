@@ -22,6 +22,8 @@ import { localizedBuiltinAgentName } from '@/utils/agent-mode';
 import { useChatResourcesStore } from '@/stores/chatResources';
 import { useEditorResourcesStore } from '@/stores/editorResources';
 import { useI18n } from 'vue-i18n';
+import organizationGreyIcon from '@/assets/img/organization-grey.svg';
+import organizationGreenIcon from '@/assets/img/organization-green.svg';
 import AttachmentUpload, { type AttachmentFile } from './AttachmentUpload.vue';
 import {
   kbSatisfiesAgentRequirements,
@@ -2479,6 +2481,12 @@ onBeforeRouteUpdate((to, from, next) => {
   next()
 })
 
+const INPUT_ICON_SRC: Record<string, string> = {
+  'organization-grey.svg': organizationGreyIcon,
+  'organization-green.svg': organizationGreenIcon
+};
+const getImgSrc = (url: string) => INPUT_ICON_SRC[url] || organizationGreenIcon;
+
 defineExpose({
   triggerSend(text: string) {
     if (!text.trim()) return;
@@ -2736,11 +2744,6 @@ defineExpose({
     </Teleport>
   </div>
 </template>
-<script lang="ts">
-const getImgSrc = (url: string) => {
-  return new URL(`/src/assets/img/${url}`, import.meta.url).href;
-}
-</script>
 <style scoped lang="less">
 @import './css/chat-resource-chips.less';
 
