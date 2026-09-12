@@ -1,13 +1,16 @@
 package com.iptv.business.controller;
 
+import cn.hutool.core.lang.Pair;
 import com.iptv.business.domain.vo.*;
 import com.iptv.business.service.DashboardService;
 import com.iptv.common.core.domain.R;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -16,15 +19,15 @@ import org.springframework.web.bind.annotation.RestController;
  * </p>
  *
  * @author kjsc
- * @since 2026-09-01
+ * @since 2026-09-12
  */
 @Tag(name = "总览看板", description = "总览看板管理")
 @RestController
 @RequestMapping("/dashboard")
 public class DashboardController {
-
-    @Autowired
+    @Resource
     private DashboardService dashboardService;
+
 
     @Operation(summary = "顶部数据总览", description = "顶部数据总览")
     @GetMapping("/stats")
@@ -32,10 +35,11 @@ public class DashboardController {
         return R.ok(dashboardService.queryStats());
     }
 
-    @Operation(summary = "调用统计", description = "调用统计")
+    @Operation(summary = "调用统计", description = "按统计类型和时间范围查询调用趋势")
     @GetMapping("/stats/calls/timeseries")
-    public R<TimeSeriesStatsVO> queryCallsTimeseries(String type, String time_range) {
-        return R.ok(dashboardService.queryCallsTimeseries(type, time_range));
+    public R<TimeSeriesStatsVO> queryCallsTimeseries(@Parameter(description = "models/agents/tokens/tools") @RequestParam String type,
+                                                     @Parameter(description = "14hours/14days/14weeks") @RequestParam String timeRange) {
+        return R.ok(dashboardService.queryCallsTimeseries(type, timeRange));
     }
 
     @Operation(summary = "用户活跃度分析", description = "用户活跃度分析")

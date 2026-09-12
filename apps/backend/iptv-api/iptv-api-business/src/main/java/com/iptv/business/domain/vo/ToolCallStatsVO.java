@@ -6,51 +6,38 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 工具调用统计VO
  */
 @Data
 public class ToolCallStatsVO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    @Serial
+    private static final long serialVersionUID = 91758994883829235L;
 
-
-    /**
-     * 总工具调用数
-     */
     @Schema(description = "总工具调用数")
-    private Integer totalCalls;
-    /**
-     * 成功调用数
-     */
+    private Long totalCalls;
+
     @Schema(description = "成功调用数")
-    private Integer successfulCalls;
-    /**
-     * 失败调用数
-     */
+    private Long successfulCalls;
+
     @Schema(description = "失败调用数")
-    private Integer failedCalls;
-    /**
-     * 成功工具调用数
-     */
+    private Long failedCalls;
+
     @Schema(description = "成功率")
-    private Float successRate;
-    /**
-     * 最常用工具
-     */
+    private BigDecimal successRate;
+
     @Schema(description = "最常用工具")
     private List<MostUsedTool> mostUsedTools;
 
-    /**
-     * 工具调用错误分布
-     */
     @Schema(description = "工具调用错误分布")
-    private List<ToolErrorDistribution> toolErrorDistributions;
-    /**
-     * 最近7天每日工具调用数
-     */
+    private Map<String, Long> toolErrorDistribution;
+
     @Schema(description = "最近7天每日工具调用数")
     private List<DailyToolCall> dailyToolCalls;
 
@@ -58,52 +45,29 @@ public class ToolCallStatsVO implements Serializable {
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    private static class ToolErrorDistribution{
+    public static class DailyToolCall implements Serializable {
+        @Serial
+        private static final long serialVersionUID = 4346929492570753572L;
 
-        /**
-         * 工具名称
-         */
-        @Schema(description = "工具名称")
-        private String name;
-
-        /**
-         * 调用次数
-         */
-        @Schema(description = "调用次数")
-        private Integer count;
-    }
-
-    @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
-    private static class DailyToolCall{
-        /**
-         * 日期
-         */
         @Schema(description = "日期 yyyy-MM-dd")
         @JsonFormat(pattern = "yyyy-MM-dd")
         private String date;
 
-        /**
-         * 调用次数
-         */
         @Schema(description = "调用次数")
-        private Integer count;
+        private Long callCount;
     }
 
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    private static class MostUsedTool{
-        /**
-         * 工具名称
-         */
+    public static class MostUsedTool implements Serializable {
+        @Serial
+        private static final long serialVersionUID = -2203504311635021173L;
+
         @Schema(description = "工具名称")
         private String toolName;
-        /**
-         * 调用次数
-         */
+
         @Schema(description = "调用次数")
-        private Integer count;
+        private Long count;
     }
 }

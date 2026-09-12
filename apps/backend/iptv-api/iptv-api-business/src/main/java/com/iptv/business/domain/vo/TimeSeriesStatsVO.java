@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 
@@ -14,88 +15,73 @@ import java.util.List;
  */
 @Data
 public class TimeSeriesStatsVO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    @Serial
+    private static final long serialVersionUID = 5986981197445727024L;
 
-    /**
-     * 总对话数
-     */
     @Schema(description = "总对话数")
-    private Integer totalCount;
+    private Long totalCount;
 
-    /**
-     * 峰值日期
-     */
     @Schema(description = "峰值日期")
     private String peakDate;
 
-    /**
-     * 峰值对话数
-     */
     @Schema(description = "峰值对话数")
-    private Integer peakCount;
+    private Long peakCount;
 
-    /**
-     * 活跃对话数统计
-     */
     @Schema(description = "活跃对话数统计")
     private List<DataStats> data;
 
-    /**
-     * 分类统计
-     */
     @Schema(description = "分类统计")
     private List<String> categories;
 
-    /**
-     * 平均活跃对话数统计
-     */
     @Schema(description = "平均活跃对话数统计")
     private double averageCount;
 
-    /**
-     * 智能体id-名称关系
-     */
     @Schema(description = "智能体id-名称关系")
     private List<AgentName> agentNames;
+
 
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    private static class DataStats {
+    public static class DataStats implements Serializable {
+        @Serial
+        private static final long serialVersionUID = -43618184633371269L;
 
         @Schema(description = "总对话数")
-        private Integer total;
+        private Long total;
 
-        /**
-         * 日期
-         */
         @Schema(description = "日期 yyyy-MM-dd")
         @JsonFormat(pattern = "yyyy-MM-dd")
         private String date;
 
-        /**
-         * id-数量关系
-         */
-        @Schema(description = "id-数量关系")
-        private List<AgentCount> data;
+        @Schema(description = "分组-数量关系")
+        private List<CategoryCount> data;
     }
 
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    private static class AgentCount {
-        @Schema(description = "智能体id")
-        private String agentId;
-        @Schema(description = "对话数")
-        private Integer count;
+    public static class CategoryCount implements Serializable {
+        @Serial
+        private static final long serialVersionUID = -1200953009604466533L;
+
+        @Schema(description = "分组")
+        private String category;
+
+        @Schema(description = "数据量")
+        private Long count;
     }
 
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    private static class AgentName {
+    public static class AgentName implements Serializable {
+        @Serial
+        private static final long serialVersionUID = -279989247842583951L;
+
         @Schema(description = "智能体id")
-        private String agentId;
+        private String id;
+
         @Schema(description = "智能体名称")
         private String name;
     }

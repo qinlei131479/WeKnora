@@ -2,4 +2,309 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.iptv.business.pgmapper.DashboardMapper">
 
+    <select id="recordCountWeknoraSessions" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM sessions
+        WHERE deleted_at IS NULL
+    </select>
+
+    <select id="recordCountYuxiConversations" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM h_conversations
+        WHERE COALESCE(status, 'active') &lt;&gt; 'deleted'
+    </select>
+
+    <select id="recordCountActiveConversations" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM h_conversations
+        WHERE status = 'active'
+    </select>
+
+    <select id="recordCountWeknoraMessages" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM messages m
+                 INNER JOIN sessions s ON s.id = m.session_id
+        WHERE m.deleted_at IS NULL
+          AND s.deleted_at IS NULL
+    </select>
+
+    <select id="recordCountYuxiMessages" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM h_messages hm
+                 INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+        WHERE COALESCE(hc.status, 'active') &lt;&gt; 'deleted'
+    </select>
+
+    <select id="recordCountTotalUsers" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM users
+        WHERE deleted_at IS NULL
+    </select>
+
+    <select id="recordCountFeedbacks" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM h_message_feedbacks
+        <if test="rating != null and rating != ''">
+            WHERE rating = #{rating}
+        </if>
+    </select>
+
+    <select id="selectCallTimeseries" resultType="java.util.Map">
+        <choose>
+            <when test="type == 'agents'">
+                SELECT TO_CHAR(hc.updated_at + INTERVAL '8 hours',
+                <choose>
+                    <when test="timeRange == '14hours'">'YYYY-MM-DD HH24:00'</when>
+                    <when test="timeRange == '14weeks'">'IYYY-IW'</when>
+                    <otherwise>'YYYY-MM-DD'</otherwise>
+                </choose>
+                ) AS "date",
+                COUNT(*) AS "count",
+                COALESCE(hc.agent_id, 'unknown_agent') AS "category"
+                FROM h_conversations hc
+                WHERE hc.updated_at IS NOT NULL
+                AND hc.updated_at &gt;= #{startTime}
+                GROUP BY 1, 3
+                ORDER BY 1
+            </when>
+            <when test="type == 'tokens'">
+                SELECT TO_CHAR(hm.created_at + INTERVAL '8 hours',
+                <choose>
+                    <when test="timeRange == '14hours'">'YYYY-MM-DD HH24:00'</when>
+                    <when test="timeRange == '14weeks'">'IYYY-IW'</when>
+                    <otherwise>'YYYY-MM-DD'</otherwise>
+                </choose>
+                ) AS "date",
+                SUM(COALESCE((hm.extra_metadata -&gt; 'usage_metadata' -&gt;&gt; 'input_tokens')::BIGINT, 0)) AS "count",
+                'input_tokens' AS "category"
+                FROM h_messages hm
+                INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+                WHERE hm.created_at &gt;= #{startTime}
+                  AND hm.extra_metadata IS NOT NULL
+                  AND hm.extra_metadata -&gt; 'usage_metadata' IS NOT NULL
+                GROUP BY 1
+                UNION ALL
+                SELECT TO_CHAR(hm.created_at + INTERVAL '8 hours',
+                <choose>
+                    <when test="timeRange == '14hours'">'YYYY-MM-DD HH24:00'</when>
+                    <when test="timeRange == '14weeks'">'IYYY-IW'</when>
+                    <otherwise>'YYYY-MM-DD'</otherwise>
+                </choose>
+                ) AS "date",
+                SUM(COALESCE((hm.extra_metadata -&gt; 'usage_metadata' -&gt;&gt; 'output_tokens')::BIGINT, 0)) AS "count",
+                'output_tokens' AS "category"
+                FROM h_messages hm
+                INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+                WHERE hm.created_at &gt;= #{startTime}
+                  AND hm.extra_metadata IS NOT NULL
+                  AND hm.extra_metadata -&gt; 'usage_metadata' IS NOT NULL
+                GROUP BY 1
+                ORDER BY 1
+            </when>
+            <when test="type == 'tools'">
+                SELECT TO_CHAR(htc.created_at + INTERVAL '8 hours',
+                <choose>
+                    <when test="timeRange == '14hours'">'YYYY-MM-DD HH24:00'</when>
+                    <when test="timeRange == '14weeks'">'IYYY-IW'</when>
+                    <otherwise>'YYYY-MM-DD'</otherwise>
+                </choose>
+                ) AS "date",
+                COUNT(*) AS "count",
+                COALESCE(htc.tool_name, 'unknown_tool') AS "category"
+                FROM h_tool_calls htc
+                         INNER JOIN h_messages hm ON hm.id = htc.message_id
+                         INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+                WHERE htc.created_at &gt;= #{startTime}
+                GROUP BY 1, 3
+                ORDER BY 1
+            </when>
+            <otherwise>
+                SELECT TO_CHAR(hm.created_at + INTERVAL '8 hours',
+                <choose>
+                    <when test="timeRange == '14hours'">'YYYY-MM-DD HH24:00'</when>
+                    <when test="timeRange == '14weeks'">'IYYY-IW'</when>
+                    <otherwise>'YYYY-MM-DD'</otherwise>
+                </choose>
+                ) AS "date",
+                       COUNT(*) AS "count",
+                       hm.extra_metadata -&gt; 'response_metadata' -&gt;&gt; 'model_name' AS "category"
+                FROM h_messages hm
+                INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+                WHERE hm.role = 'assistant'
+                  AND hm.created_at &gt;= #{startTime}
+                  AND hm.extra_metadata IS NOT NULL
+                GROUP BY 1, 3
+                ORDER BY 1
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="recordCountToolCalls" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM h_tool_calls htc
+                 INNER JOIN h_messages hm ON hm.id = htc.message_id
+                 INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+        <where>
+            <if test="status != null">
+                AND htc.status = #{status}
+            </if>
+            <if test="since != null">
+                AND htc.created_at &gt;= #{since}
+            </if>
+            <if test="until != null">
+                AND htc.created_at &lt; #{until}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectAgentNames" resultType="java.util.Map">
+        SELECT DISTINCT ON (slug) slug AS "agentId", name
+        FROM h_agents
+        WHERE slug IN
+        <foreach collection="slugs" item="slug" open="(" separator="," close=")">
+            #{slug}
+        </foreach>
+        ORDER BY slug, tenant_id NULLS FIRST
+    </select>
+
+    <select id="recordCountWeknoraMembers" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM tenant_members tm
+                 INNER JOIN users u ON u.id = tm.user_id AND u.deleted_at IS NULL
+        WHERE tm.deleted_at IS NULL
+          AND tm.status = 'active'
+    </select>
+
+    <select id="recordCountWeknoraActiveUsers" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM (
+            SELECT s.user_id
+            FROM sessions s
+                     INNER JOIN users u ON u.id = s.user_id AND u.deleted_at IS NULL
+            WHERE s.deleted_at IS NULL
+              AND s.user_id IS NOT NULL AND s.user_id &lt;&gt; ''
+              AND s.updated_at &gt;= #{since}
+            <if test="until != null">
+              AND s.updated_at &lt; #{until}
+            </if>
+            UNION
+            SELECT s.user_id
+            FROM messages m
+                     INNER JOIN sessions s ON s.id = m.session_id
+                     INNER JOIN users u ON u.id = s.user_id AND u.deleted_at IS NULL
+            WHERE m.deleted_at IS NULL
+              AND s.deleted_at IS NULL
+              AND s.user_id IS NOT NULL AND s.user_id &lt;&gt; ''
+              AND m.created_at &gt;= #{since}
+            <if test="until != null">
+              AND m.created_at &lt; #{until}
+            </if>
+        ) active_users
+    </select>
+
+    <select id="selectMostUsedTools"
+            resultType="com.iptv.business.domain.vo.ToolCallStatsVO$MostUsedTool">
+        SELECT htc.tool_name AS "toolName", COUNT(*) AS "count"
+        FROM h_tool_calls htc
+                 INNER JOIN h_messages hm ON hm.id = htc.message_id
+                 INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+        GROUP BY htc.tool_name
+        ORDER BY COUNT(*) DESC
+        LIMIT 10
+    </select>
+
+    <select id="selectToolErrorCounts" resultType="java.util.Map">
+        SELECT htc.tool_name AS "toolName", COUNT(*) AS "errorCount"
+        FROM h_tool_calls htc
+                 INNER JOIN h_messages hm ON hm.id = htc.message_id
+                 INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+        WHERE htc.status = 'error'
+        GROUP BY htc.tool_name
+    </select>
+
+    <select id="recordCountKnowledgeBases" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM knowledge_bases
+        WHERE deleted_at IS NULL
+          AND is_temporary = false
+    </select>
+
+    <select id="selectKnowledgeBaseTypeCounts" resultType="java.util.Map">
+        SELECT COALESCE(NULLIF(type, ''), 'document') AS "kbType", COUNT(*) AS "count"
+        FROM knowledge_bases
+        WHERE deleted_at IS NULL
+          AND is_temporary = false
+        GROUP BY 1
+    </select>
+
+    <select id="selectKnowledgeFileTypeStats" resultType="java.util.Map">
+        SELECT k.file_type AS "fileType", COUNT(*) AS "count",
+               COALESCE(SUM(k.file_size), 0) AS "storageSize"
+        FROM knowledges k
+                 INNER JOIN knowledge_bases kb ON kb.id = k.knowledge_base_id
+        WHERE k.deleted_at IS NULL
+          AND kb.deleted_at IS NULL
+          AND kb.is_temporary = false
+        GROUP BY k.file_type
+    </select>
+
+    <select id="selectYuxiAgentConversationCounts"
+            resultType="com.iptv.business.domain.vo.AgentAnalyticsVO$AgentConversationCount">
+        SELECT agent_id AS "agentId", COUNT(*) AS "conversationCount"
+        FROM h_conversations
+        GROUP BY agent_id
+    </select>
+
+    <select id="selectYuxiAgentFeedbackCounts" resultType="java.util.Map">
+        SELECT hc.agent_id AS "agentId", COUNT(*) AS "totalFeedbacks",
+               COUNT(*) FILTER (WHERE hf.rating = 'like') AS "likeFeedbacks"
+        FROM h_message_feedbacks hf
+                 INNER JOIN h_messages hm ON hm.id = hf.message_id
+                 INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+        GROUP BY hc.agent_id
+    </select>
+
+    <select id="selectYuxiAgentToolUsage"
+            resultType="com.iptv.business.domain.vo.AgentAnalyticsVO$AgentToolUsage">
+        SELECT hc.agent_id AS "agentId", COUNT(*) AS "toolUsageCount"
+        FROM h_tool_calls htc
+                 INNER JOIN h_messages hm ON hm.id = htc.message_id
+                 INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+        GROUP BY hc.agent_id
+    </select>
+
+    <select id="selectAnalyticsAgentNames" resultType="java.util.Map">
+        SELECT slug AS "agentId", name
+        FROM h_agents
+        WHERE slug IN
+        <foreach collection="slugs" item="slug" open="(" separator="," close=")">
+            #{slug}
+        </foreach>
+    </select>
+
+    <select id="recordCountWeknoraAgents" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM custom_agents
+        WHERE deleted_at IS NULL
+    </select>
+
+    <select id="selectWeknoraAgentNames" resultType="java.util.Map">
+        SELECT id AS "agentId", name
+        FROM custom_agents
+        WHERE deleted_at IS NULL
+    </select>
+
+    <select id="selectWeknoraAgentConversationCounts"
+            resultType="com.iptv.business.domain.vo.AgentAnalyticsVO$WeknoraAgentConversationCount">
+        SELECT m.agent_id AS "agentId", COUNT(DISTINCT m.session_id) AS "conversationCount",
+               'weknora' AS "system"
+        FROM messages m
+                 INNER JOIN sessions s ON s.id = m.session_id
+        WHERE m.deleted_at IS NULL
+          AND s.deleted_at IS NULL
+          AND m.agent_id IS NOT NULL AND m.agent_id &lt;&gt; ''
+        GROUP BY m.agent_id
+        ORDER BY COUNT(DISTINCT m.session_id) DESC
+    </select>
+
 </mapper>

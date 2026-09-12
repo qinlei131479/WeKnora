@@ -5,74 +5,59 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serial;
 import java.io.Serializable;
-import java.util.List;
+import java.math.BigDecimal;
 
 /**
  * 顶部数据总览VO
  */
 @Data
 public class DashboardStatsVO implements Serializable {
-    private static final long serialVersionUID = 1L;
+    @Serial
+    private static final long serialVersionUID = -8924968033528161638L;
 
-    /**
-     * 总对话数
-     */
     @Schema(description = "总对话数")
-    private Integer totalConversations;
-    /**
-     * 活跃对话数
-     */
+    private Long totalConversations;
+
     @Schema(description = "活跃对话数")
-    private Integer activeConversations;
+    private Long activeConversations;
 
-    /**
-     * 总消息数
-     */
     @Schema(description = "总消息数")
-    private Integer totalMessages;
+    private Long totalMessages;
 
-    /**
-     * 总用户数
-     */
     @Schema(description = "总用户数")
-    private Integer totalUsers;
+    private Long totalUsers;
 
-    /**
-     * 反馈统计
-     */
     @Schema(description = "反馈统计")
-    private List<FeedbackStats> feedbackStats;
+    private FeedbackStats feedbackStats;
 
-    /**
-     * 是否按系统分类
-     */
     @Schema(description = "是否按系统分类")
     private Boolean splitBySystem;
 
     @Schema(description = "对话式会话数")
-    private Integer weknoraSessions;
+    private Long weknoraSessions;
 
     @Schema(description = "生成式会话数")
-    private Integer yuxiConversations;
-
-    @Schema(description = "生成式会话消息数")
-    private Integer yuxiMessages;
+    private Long yuxiConversations;
 
     @Schema(description = "对话式会话消息数")
-    private Integer weknoraMessages;
+    private Long weknoraMessages;
+
+    @Schema(description = "生成式会话消息数")
+    private Long yuxiMessages;
 
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    private static class FeedbackStats {
-        /**
-         * 反馈数
-         */
-        private Integer totalFeedbacks;
-        /**
-         * 满意度
-         */
-        private Integer satisfactionRate;
+    public static class FeedbackStats implements Serializable {
+        @Serial
+        private static final long serialVersionUID = -7154090638177151756L;
+
+        @Schema(description = "反馈数")
+        private Long totalFeedbacks;
+
+        @Schema(description = "满意度")
+        private BigDecimal satisfactionRate;
     }
 }

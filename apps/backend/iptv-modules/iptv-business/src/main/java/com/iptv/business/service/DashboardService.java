@@ -20,7 +20,7 @@ public interface DashboardService {
     /**
      * 查询调用统计分类数据
      */
-    TimeSeriesStatsVO queryCallsTimeseries(String type, String time_range);
+    TimeSeriesStatsVO queryCallsTimeseries(String type, String timeRange);
 
     /**
      * 查询用户活跃度分析
