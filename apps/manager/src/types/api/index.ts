@@ -7,6 +7,8 @@ export * from './menu';
 
 // 智能体模块
 export * from './agent';
+// 总览看板模块
+export * from './dashboard';
 // 数据 模块
 export * from './data';
 // 发布集成 模块

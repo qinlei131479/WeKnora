@@ -1,6 +1,7 @@
 import { CustomAgents } from './agent/customAgents';
 import { Messages } from './agent/messages';
 import { Sessions } from './agent/sessions';
+import { Dashboard } from './dashboard';
 import { AmpParserEngines } from './data/ampParserEngines';
 import { Storage } from './data/storage';
 import { EmbedChannels } from './integration/embedChannels';
@@ -14,6 +15,7 @@ import { WebSearchProviders } from './data/webSearchProviders';
 
 export const API = {
   CustomAgents,
+  Dashboard,
   Messages,
   Models,
   Sessions,
