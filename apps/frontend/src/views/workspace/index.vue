@@ -147,9 +147,12 @@
       v-model:visible="agentsGuideModalVisible"
       attach="body"
       class="workspace-view-dialog"
+      dialog-class-name="workspace-agents-guide-dialog"
       :header="t('workspacePage.agentsGuideTitle')"
       :confirm-btn="t('workspacePage.agentsGuideOk')"
       :cancel-btn="null"
+      width="624px"
+      placement="center"
       @confirm="closeAgentsGuideModal"
     >
       <div class="agents-guide-content">
@@ -1218,6 +1221,15 @@ html[theme-mode="dark"] .workspace-view-dialog {
   }
 }
 
+.t-dialog.workspace-agents-guide-dialog {
+  max-width: 92vw;
+
+  .t-dialog__body {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
 .t-dialog.workspace-file-preview-modal {
   z-index: 1050;
   max-width: 92vw;
@@ -1257,30 +1269,21 @@ html[theme-mode="dark"] .workspace-view .file-browser-header {
   border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 
-html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-container,
-html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-content,
-html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-header,
-html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-body {
+html[theme-mode="dark"] .workspace-view .file-browser-td-table .t-table,
+html[theme-mode="dark"] .workspace-view .file-browser-td-table .t-table__content {
   border-color: transparent !important;
   box-shadow: none !important;
 }
 
-html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-thead > tr > th::before {
-  display: none;
-}
-
-html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-thead > tr > th,
-html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-tbody > tr > td,
-html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-cell {
+html[theme-mode="dark"] .workspace-view .file-browser-td-table thead th,
+html[theme-mode="dark"] .workspace-view .file-browser-td-table .t-table td,
+html[theme-mode="dark"] .workspace-view .file-browser-td-table .t-table__th,
+html[theme-mode="dark"] .workspace-view .file-browser-td-table .t-table__td {
   border-top: none !important;
   border-left: none !important;
   border-right: none !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
   box-shadow: none !important;
-}
-
-html[theme-mode="dark"] .workspace-view .file-browser-ant-table .ant-table-placeholder > td {
-  border-bottom: none !important;
 }
 
 .workspace-view .ant-checkbox-inner {

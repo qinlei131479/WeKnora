@@ -40,8 +40,8 @@
 
     <slot name="before-table" />
 
+    <div class="file-browser-td-table">
     <t-table
-      class="file-browser-td-table"
       :columns="tableColumns"
       :data="rows"
       :row-key="resolvedRowKey"
@@ -51,6 +51,7 @@
       :reserve-selected-row-on-paginate="reserveSelectedRowOnPaginate"
       :row-class-name="resolveRowClassNameTd"
       :row-attributes="resolveRowAttributes"
+      :bordered="false"
       size="small"
       @select-change="handleSelectChange"
       @change="handleTableChange"
@@ -61,6 +62,7 @@
         </slot>
       </template>
     </t-table>
+    </div>
   </section>
 </template>
 
@@ -427,6 +429,8 @@ const handleTableChange = (data, context) => {
 }
 
 .file-browser-td-table {
+  --td-component-border: #f3f3f3;
+  --td-component-stroke: #f3f3f3;
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -440,6 +444,8 @@ const handleTableChange = (data, context) => {
   flex: 1 1 auto;
   flex-direction: column;
   min-height: 0;
+  --td-component-border: #f3f3f3;
+  --td-component-stroke: #f3f3f3;
 }
 
 .file-browser-td-table :deep(.t-table__content) {
@@ -447,9 +453,18 @@ const handleTableChange = (data, context) => {
   min-height: 0;
   overflow: auto;
   background: var(--gray-0);
+  border: none;
 }
 
-.file-browser-td-table :deep(thead th) {
+.file-browser-td-table :deep(th),
+.file-browser-td-table :deep(td) {
+  position: relative;
+  border: none !important;
+  border-bottom: 1px solid #f3f3f3 !important;
+  box-shadow: none !important;
+}
+
+.file-browser-td-table :deep(th) {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -459,18 +474,16 @@ const handleTableChange = (data, context) => {
   font-weight: 600;
   line-height: 18px;
   white-space: nowrap;
-  border-bottom: 1px solid var(--gray-100);
   background: var(--gray-0);
 }
 
-.file-browser-td-table :deep(.t-table td) {
+.file-browser-td-table :deep(td) {
   padding: 7px 10px;
   background: var(--gray-0);
   color: var(--gray-700);
   font-size: 13px;
   line-height: 20px;
   vertical-align: middle;
-  border-bottom: 1px solid var(--gray-50);
   transition:
     background-color 0.16s ease,
     color 0.16s ease;
