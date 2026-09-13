@@ -20,7 +20,7 @@ check_server() {
     fi
 
     echo "✗ 警告: 测试服务器未运行或无法访问"
-    echo "  请先在仓库根目录执行 make dev-kjsc-harness 并确认 agent-middle-harness-api 健康"
+    echo "  请先在仓库根目录执行 make -f Makefile.kjsc harness 并确认 agent-middle-harness-api 健康"
     return 1
 }
 

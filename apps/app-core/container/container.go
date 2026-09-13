@@ -695,7 +695,7 @@ func initDatabase(cfg *config.Config) (*gorm.DB, error) {
 			logger.Warnf(context.Background(), "kjsc database migration failed: %v", err)
 			logger.Warnf(
 				context.Background(),
-				"Continuing with application startup. Please run make migrate-kjsc if needed.",
+				"Continuing with application startup. Please run make -f Makefile.kjsc migrate if needed.",
 			)
 		}
 

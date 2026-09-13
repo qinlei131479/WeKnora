@@ -38,8 +38,8 @@ show_help() {
     echo "  harness    本机启动 harness api + worker（uvicorn / arq，不启 Docker）"
     echo "  sandbox    单独启动 sandbox-provisioner（Docker）"
     echo ""
-    echo "整套顺序: init → infra → migrate-kjsc → app / frontend → harness"
-    echo "Makefile:     make dev-kjsc-init / dev-kjsc-infra / ..."
+    echo "整套顺序: init → infra → migrate → app / frontend → harness"
+    echo "Makefile:     make -f Makefile.kjsc init / infra / migrate / ..."
 }
 
 kjsc_ldflags() {
@@ -195,7 +195,7 @@ init_kjsc() {
 
     if ! command -v docker >/dev/null 2>&1; then
         log_warning "未安装 Docker，跳过镜像拉取"
-        log_success "init 完成。接下来: make dev-kjsc-harness / make dev-kjsc-sandbox"
+        log_success "init 完成。接下来: make -f Makefile.kjsc harness / sandbox"
         return 0
     fi
 
@@ -225,7 +225,7 @@ init_kjsc() {
         log_success "已拉取 sandbox 镜像"
     fi
 
-    log_success "init 完成。接下来: make dev-kjsc-harness / make dev-kjsc-sandbox"
+    log_success "init 完成。接下来: make -f Makefile.kjsc harness / sandbox"
 }
 
 check_remote_dev_connectivity() {

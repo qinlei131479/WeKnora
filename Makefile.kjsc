@@ -1,0 +1,38 @@
+# 企业开发入口。不要 include 进官方 Makefile。
+# 用法: make -f Makefile.kjsc <target>
+#
+# 顺序: init → infra → migrate → app / frontend → harness
+
+.PHONY: help init infra migrate app frontend harness sandbox \
+	dev-init dev-infra dev-app dev-frontend dev-harness dev-sandbox
+
+help:
+	@echo "KJSC 开发（make -f Makefile.kjsc <target>）"
+	@echo "  init / dev-init         补齐 .env"
+	@echo "  infra / dev-infra       postgres/redis/docreader/minio + sandbox-provisioner"
+	@echo "  migrate                 企业迁移"
+	@echo "  app / dev-app           本机 cmd/app-core"
+	@echo "  frontend / dev-frontend 本机 apps/frontend"
+	@echo "  harness / dev-harness   本机 harness api + worker"
+	@echo "  sandbox / dev-sandbox   只起 sandbox-provisioner"
+
+init dev-init:
+	./scripts/kjsc/dev.sh init
+
+infra dev-infra:
+	./scripts/kjsc/dev.sh infra
+
+migrate:
+	./scripts/kjsc/migrate.sh up
+
+app dev-app:
+	./scripts/kjsc/dev.sh app
+
+frontend dev-frontend:
+	./scripts/kjsc/dev.sh frontend
+
+harness dev-harness:
+	./scripts/kjsc/dev.sh harness
+
+sandbox dev-sandbox:
+	./scripts/kjsc/dev.sh sandbox

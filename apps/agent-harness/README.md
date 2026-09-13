@@ -13,8 +13,8 @@
 ./scripts/kjsc/dev.sh init
 
 # 2. 启动（本机进程连当前 .env / .env.local；不拉 Docker api/worker）
-make dev-kjsc-harness     # 本机 uvicorn + arq
-make dev-kjsc-sandbox     # sandbox-provisioner（仍走 Docker）
+make -f Makefile.kjsc harness   # 本机 uvicorn + arq
+make -f Makefile.kjsc sandbox   # sandbox-provisioner（仍走 Docker）
 ```
 
 访问 `http://localhost:9988`（前端）或直接 `http://localhost:9990`（Harness API）。
@@ -48,7 +48,7 @@ Postgres / Redis 连接由进程启动时 `yuxi.config.env` 按 B 段离散变�
 
 ## Make 目标
 
-- `make dev-kjsc-harness`（本机 api + worker，不启 Docker）
-- `make dev-kjsc-sandbox`（sandbox-provisioner，Docker）
+- `make -f Makefile.kjsc harness`（本机 api + worker，不启 Docker）
+- `make -f Makefile.kjsc sandbox`（sandbox-provisioner，Docker）
 - 首次环境：`./scripts/kjsc/dev.sh init`
 - Docker 编排仍可用：`docker compose -f docker-compose-mac.yml --profile harness up -d api worker`
