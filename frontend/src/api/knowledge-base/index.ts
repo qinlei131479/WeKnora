@@ -391,8 +391,10 @@ export function batchQueryKnowledge(idsQueryString: string, kbId?: string, agent
   return get(`/api/v1/knowledge/batch?${qs}`);
 }
 
+export const KNOWLEDGE_CHUNK_PAGE_SIZE = 25;
+
 export function getKnowledgeDetailsCon(id: string, page: number) {
-  return get(`/api/v1/chunks/${id}?page=${page}&page_size=25`);
+  return get(`/api/v1/chunks/${id}?page=${page}&page_size=${KNOWLEDGE_CHUNK_PAGE_SIZE}`);
 }
 
 export interface ChunkEditPayload {
@@ -418,6 +420,10 @@ export function revertDocumentChunk(knowledgeId: string, chunkId: string, revisi
 
 export function updateKnowledgeMetadata(knowledgeId: string, customMetadata: Record<string, unknown>) {
   return put(`/api/v1/knowledge/${knowledgeId}`, { custom_metadata: customMetadata });
+}
+
+export function updateKnowledgeSummary(knowledgeId: string, description: string) {
+  return put(`/api/v1/knowledge/${knowledgeId}`, { description });
 }
 
 export function regenerateKnowledgeSummary(knowledgeId: string) {
@@ -494,7 +500,14 @@ const buildQuery = (params?: Record<string, any>) => {
 
 export function listFAQEntries(
   kbId: string,
-  params?: { page?: number; page_size?: number; tag_id?: number; tag_ids?: string; keyword?: string },
+  params?: {
+    page?: number
+    page_size?: number
+    tag_id?: number
+    tag_ids?: string
+    keyword?: string
+    is_enabled?: boolean
+  },
 ) {
   const query = buildQuery(params);
   return get(`/api/v1/knowledge-bases/${kbId}/faq/entries${query}`);

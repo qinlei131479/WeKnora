@@ -1,4 +1,4 @@
-.PHONY: help build run test clean docker-build-app docker-build-docreader docker-build-frontend docker-build-all docker-run migrate-up migrate-down docker-restart docker-stop start-all stop-all start-ollama stop-ollama build-images build-images-app build-images-docreader build-images-frontend clean-images check-env list-containers pull-images show-platform dev-start dev-stop dev-restart dev-logs dev-status dev-app dev-frontend docs install-swagger build-lite run-lite package-lite migrate-kjsc dev-kjsc-init dev-kjsc-infra dev-kjsc-app dev-kjsc-frontend dev-kjsc-harness dev-kjsc-sandbox
+.PHONY: help build run test clean docker-build-app docker-build-docreader docker-build-frontend docker-build-all docker-run migrate-up migrate-down docker-restart docker-stop start-all stop-all start-ollama stop-ollama build-images build-images-app build-images-docreader build-images-frontend clean-images check-env list-containers pull-images show-platform dev-start dev-stop dev-restart dev-logs dev-status dev-app dev-frontend docs install-swagger build-lite run-lite package-lite anydoc-lib build-anydoc
 
 # Show help
 help:
@@ -8,6 +8,8 @@ help:
 	@echo "  build             构建应用"
 	@echo "  run               运行应用"
 	@echo "  test              运行测试"
+	@echo "  anydoc-lib        构建 anydoc 静态库（需要 Rust 工具链）"
+	@echo "  build-anydoc      构建带 anydoc 解析引擎的应用"
 	@echo "  clean             清理构建文件"
 	@echo ""
 	@echo "Docker 命令:"
@@ -56,17 +58,8 @@ help:
 	@echo "  dev-logs          查看开发环境日志"
 	@echo "  dev-status        查看开发环境状态"
 	@echo "  dev-app           启动后端应用（本地运行，需先运行 dev-start）"
+	@echo "                    已 make anydoc-lib 时自动链接 anydoc 引擎"
 	@echo "  dev-frontend      启动前端（本地运行，需先运行 dev-start）"
-	@echo ""
-	@echo "KJSC 开发（整套环境按此顺序）:"
-	@echo "  1. make dev-kjsc-init     首次补齐 .env（JWT / sandbox token 等）；已有则只补缺键"
-	@echo "  2. make dev-kjsc-infra    启动 postgres/redis/docreader/minio + sandbox-provisioner"
-	@echo "                            已在运行的容器不会重建（compose up -d）"
-	@echo "  3. make migrate-kjsc      首次或有新公司迁移时"
-	@echo "  4. make dev-kjsc-app      本机 cmd/app-core（另开终端）"
-	@echo "  5. make dev-kjsc-frontend 本机 apps/frontend（另开终端）"
-	@echo "  6. make dev-kjsc-harness  需要时再起 harness api + worker（另开终端）"
-	@echo "  已起过官方 make dev-start 时可从第 3/4 步开始；只补 sandbox: make dev-kjsc-sandbox"
 	@echo ""
 	@echo "Lite 模式（零外部依赖）:"
 	@echo "  build-lite        构建 Lite 版本（先构建前端到 web/，再构建 Go；SKIP_FRONTEND=1 跳过前端）"
@@ -97,6 +90,15 @@ endif
 build:
 	go build -o $(BINARY_NAME) $(MAIN_PATH)
 
+# Build the anydoc static archive (Rust) that the `anydoc` build tag links.
+# Override the platform with TARGET=<rust-target-triple>.
+anydoc-lib:
+	./scripts/build-anydoc-lib.sh
+
+# Build the application with the in-process anydoc parser engine linked in.
+build-anydoc: anydoc-lib
+	go build -tags anydoc -o $(BINARY_NAME) $(MAIN_PATH)
+
 # Run the application
 run: build
 	./$(BINARY_NAME)
@@ -120,16 +122,19 @@ docker-build-app:
 		--build-arg COMMIT_ID_ARG="$$COMMIT_ID" \
 		--build-arg BUILD_TIME_ARG="$$BUILD_TIME" \
 		--build-arg GO_VERSION_ARG="$$GO_VERSION" \
+		--build-arg WITH_ANYDOC=$${WITH_ANYDOC:-1} \
 		-f docker/Dockerfile.app -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
 
 # Build docreader Docker image
 docker-build-docreader:
 	docker build --platform $(PLATFORM) -f docker/Dockerfile.docreader -t wechatopenai/weknora-docreader:latest .
 
-# Build frontend Docker image
+# Build frontend Docker image (multi-stage: npm runs inside the builder stage)
 docker-build-frontend:
-	./scripts/build_frontend_dist.sh
-	docker build --platform $(PLATFORM) -f frontend/Dockerfile -t wechatopenai/weknora-ui:latest frontend/
+	@eval $$(./scripts/get_version.sh env); \
+	docker build --platform $(PLATFORM) \
+		--build-arg VITE_FRONTEND_COMMIT="$$COMMIT_ID" \
+		-f frontend/Dockerfile -t wechatopenai/weknora-ui:latest frontend/
 
 # Build all Docker images
 docker-build-all: docker-build-app docker-build-docreader docker-build-frontend
@@ -244,6 +249,8 @@ deps:
 
 # Build for production
 # google.golang.org/protobuf/reflect/protoregistry.conflictPolicy=warn for qdrant milvus proto conflict
+# GO_BUILD_TAGS adds optional build tags, e.g. GO_BUILD_TAGS=anydoc to link the
+# in-process office document parser (run `make anydoc-lib` first).
 build-prod:
 	VERSION=$$(git describe --tags --abbrev=0 2>/dev/null || echo "$${VERSION:-unknown}"); \
 	COMMIT_ID=$${COMMIT_ID:-unknown}; \
@@ -253,7 +260,7 @@ build-prod:
 	BUILD_TIME=$${BUILD_TIME:-unknown}; \
 	GO_VERSION=$${GO_VERSION:-unknown}; \
 	LDFLAGS="-X 'github.com/Tencent/WeKnora/internal/handler.Version=$$VERSION' -X 'github.com/Tencent/WeKnora/internal/handler.Edition=standard' -X 'github.com/Tencent/WeKnora/internal/handler.CommitID=$$COMMIT_ID' -X 'github.com/Tencent/WeKnora/internal/handler.BuildTime=$$BUILD_TIME' -X 'github.com/Tencent/WeKnora/internal/handler.GoVersion=$$GO_VERSION' -X 'google.golang.org/protobuf/reflect/protoregistry.conflictPolicy=warn'"; \
-	go build -ldflags="-w -s $$LDFLAGS" -o $(BINARY_NAME) $(MAIN_PATH)
+	go build -tags "$(GO_BUILD_TAGS)" -ldflags="-w -s $$LDFLAGS" -o $(BINARY_NAME) $(MAIN_PATH)
 
 # Build Lite version (single binary, SQLite + in-memory queue)
 # 会先构建前端到 web/，再构建 Go 二进制；SKIP_FRONTEND=1 可跳过前端
@@ -341,35 +348,5 @@ dev-app:
 
 dev-frontend:
 	./scripts/dev.sh frontend
-
-# KJSC 整套环境（按顺序）:
-#   1. make dev-kjsc-init     首次补 .env；已有则只补缺
-#   2. make dev-kjsc-infra    postgres/redis/docreader/minio（docker-compose.dev.yml --minio）
-#                            + sandbox-provisioner；已运行则跳过
-#   3. make migrate-kjsc      首次或有新公司迁移
-#   4. make dev-kjsc-app      本机 cmd/app-core（另开终端）
-#   5. make dev-kjsc-frontend 本机 apps/frontend（另开终端）
-#   6. make dev-kjsc-harness  本机 uvicorn + arq（另开终端，不启 Docker）
-# 已起过 make dev-start 时可从 3/4 开始；只补 sandbox: make dev-kjsc-sandbox
-dev-kjsc-init:
-	./scripts/kjsc/dev.sh init
-
-dev-kjsc-infra:
-	./scripts/kjsc/dev.sh infra
-
-migrate-kjsc:
-	./scripts/kjsc/migrate.sh up
-
-dev-kjsc-app:
-	./scripts/kjsc/dev.sh app
-
-dev-kjsc-frontend:
-	./scripts/kjsc/dev.sh frontend
-
-dev-kjsc-harness:
-	./scripts/kjsc/dev.sh harness
-
-dev-kjsc-sandbox:
-	./scripts/kjsc/dev.sh sandbox
 
 

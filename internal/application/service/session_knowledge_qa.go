@@ -153,6 +153,13 @@ func (s *sessionService) KnowledgeQA(
 	// rewrite, fallback, FAQ strategy, history turns)
 	s.applyAgentOverridesToChatManage(ctx, req.CustomAgent, chatManage)
 
+	// An agent may opt out of long-term memory. The preference is per-request
+	// rather than per-user, so it travels in the context that the recall
+	// plugin reads.
+	if req.CustomAgent != nil {
+		ctx = types.ApplyAgentMemoryPreference(ctx, req.CustomAgent.Config.MemoryEnabled)
+	}
+
 	// Determine pipeline based on the effective knowledge retrieval scope and
 	// web search setting. Tag-only mentions leave the raw KB/knowledge ID slices
 	// empty but produce SearchTargets, so the unified targets must participate in
@@ -179,12 +186,14 @@ func (s *sessionService) KnowledgeQA(
 
 		pipeline = types.NewPipelineBuilder().
 			AddIf(hasHistory, types.LOAD_HISTORY).
+			Add(types.MEMORY_RECALL).
 			Add(types.CHAT_COMPLETION_STREAM).
 			Build()
 	} else {
 		// RAG — dynamically assemble based on feature flags.
 		pipeline = types.NewPipelineBuilder().
 			AddIf(hasHistory, types.LOAD_HISTORY).
+			Add(types.MEMORY_RECALL).
 			Add(types.QUERY_UNDERSTAND).
 			Add(types.CHUNK_SEARCH_PARALLEL).
 			Add(types.CHUNK_RERANK).
@@ -202,6 +211,9 @@ func (s *sessionService) KnowledgeQA(
 
 	// Start knowledge QA event processing (set session tenant so pipeline session/message lookups use session owner)
 	ctx = context.WithValue(ctx, types.SessionTenantIDContextKey, req.Session.TenantID)
+	// Propagate the session ID so stateful sandbox backends (CubeSandbox) can
+	// bind script execution to a per-session MicroVM instance.
+	ctx = types.WithSessionID(ctx, req.Session.ID)
 	logger.Info(ctx, "Triggering question answering event")
 	setupSpan.Finish(map[string]interface{}{
 		"stages":             len(pipeline),
@@ -433,6 +445,7 @@ func (s *sessionService) buildSearchTargets(
 	knowledgeIDs []string,
 	tagScopes []types.TagScope,
 ) (types.SearchTargets, error) {
+	caller := types.CallerFromContext(ctx)
 	var targets types.SearchTargets
 	tagIDsByKB := mergeTagScopesByKB(tagScopes)
 
@@ -443,7 +456,7 @@ func (s *sessionService) buildSearchTargets(
 	fullKBSet := make(map[string]bool)
 
 	// First pass: batch-fetch KBs, then resolve tenant per ID (tenant scope already set by caller)
-	callerTenantRole := types.TenantRoleFromContext(ctx)
+	permissions := kbReadPermissions(ctx, s.kbShareService)
 	kbIDsToFetch := append([]string(nil), knowledgeBaseIDs...)
 	for kbID := range tagIDsByKB {
 		kbIDsToFetch = append(kbIDsToFetch, kbID)
@@ -462,25 +475,17 @@ func (s *sessionService) buildSearchTargets(
 			}
 		}
 	}
-	userID, _ := types.UserIDFromContext(ctx)
 	resolveKBTenant := func(kbID string) uint64 {
 		if kbTenantMap[kbID] != 0 {
 			return kbTenantMap[kbID]
 		}
 		kb := kbByID[kbID]
-		if kb == nil {
-			kbTenantMap[kbID] = tenantID
-		} else if kb.TenantID == tenantID {
-			kbTenantMap[kbID] = tenantID
-		} else if s.kbShareService != nil && userID != "" {
-			hasAccess, _ := s.kbShareService.HasTenantKBPermission(ctx, kbID, tenantID, callerTenantRole, types.OrgRoleViewer)
-			if hasAccess {
+		kbTenantMap[kbID] = caller.TenantID
+		if kb != nil {
+			kbTenantMap[kbID] = 0
+			if allowed, err := permissions.Check(kbID, kb.TenantID, types.OrgRoleViewer); err == nil && allowed {
 				kbTenantMap[kbID] = kb.TenantID
-			} else {
-				kbTenantMap[kbID] = tenantID
 			}
-		} else {
-			kbTenantMap[kbID] = tenantID
 		}
 		return kbTenantMap[kbID]
 	}
@@ -489,6 +494,9 @@ func (s *sessionService) buildSearchTargets(
 		for _, kbID := range knowledgeBaseIDs {
 			fullKBSet[kbID] = true
 			kbTenant := resolveKBTenant(kbID)
+			if kbTenant == 0 {
+				continue
+			}
 			if len(tagIDsByKB[kbID]) > 0 {
 				continue
 			}
@@ -551,6 +559,9 @@ func (s *sessionService) buildSearchTargets(
 			continue
 		}
 		kbTenant := resolveKBTenant(kbID)
+		if kbTenant == 0 {
+			continue
+		}
 		kb := kbByID[kbID]
 		explicitKnowledgeIDs := uniqueNonEmptyStrings(kbToKnowledgeIDs[kbID])
 
@@ -1016,7 +1027,11 @@ func buildFallbackMessages(chatManage *types.ChatManage, promptContent string) [
 	// forbids prior knowledge ("reply ONLY based on retrieved information"),
 	// which directly contradicts the fallback's purpose.
 	if strings.TrimSpace(promptContent) != "" {
-		messages = append(messages, chat.Message{Role: "system", Content: promptContent})
+		messages = append(messages, chat.Message{
+			Role: "system",
+			Content: promptContent + "\n\n" + types.SourceDataBoundaryPrompt +
+				"\n\n" + types.SourcedAnswerOutputPrompt,
+		})
 	}
 
 	messages = chatpipeline.AppendHistoryMessages(messages, chatManage.History)

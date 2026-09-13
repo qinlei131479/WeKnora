@@ -265,7 +265,7 @@
                         <li><t-icon name="check" class="check-icon" />{{ $t('organization.editor.editorPerm1') }}</li>
                         <li><t-icon name="check" class="check-icon" />{{ $t('organization.editor.editorPerm2') }}</li>
                         <li><t-icon name="check" class="check-icon" />{{ $t('organization.editor.useSharedAgentsPerm') }}</li>
-                        <li><t-icon name="close" class="close-icon" />{{ $t('organization.editor.shareKBPerm') }}</li>
+                        <li><t-icon name="check" class="check-icon" />{{ $t('organization.editor.shareKBPerm') }}</li>
                         <li><t-icon name="close" class="close-icon" />{{ $t('organization.editor.editorPerm3') }}</li>
                       </ul>
                     </div>
@@ -822,6 +822,7 @@ import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useI18n } from 'vue-i18n'
+import { copyWithToast } from '@/utils/clipboard'
 import {
   getOrganization,
   listOrgShares,
@@ -1097,7 +1098,7 @@ const orgRoleMatrix: Record<OrgRole, OrgRolePerm[]> = {
     { key: 'viewerPerm1', has: true },
     { key: 'editorPerm1', has: true },
     { key: 'useSharedAgentsPerm', has: true },
-    { key: 'shareKBPerm', has: false },
+    { key: 'shareKBPerm', has: true },
     { key: 'adminPerm1', has: false },
   ],
   viewer: [
@@ -1670,47 +1671,12 @@ const resetAddMemberDialog = () => {
   tenantSearchResults.value = []
 }
 
-const fallbackCopyText = (text: string) => {
-  const textArea = document.createElement('textarea')
-  textArea.value = text
-  textArea.style.position = 'fixed'
-  textArea.style.opacity = '0'
-  document.body.appendChild(textArea)
-  textArea.select()
-  document.execCommand('copy')
-  document.body.removeChild(textArea)
-}
-
 const copyInviteCode = async () => {
-  if (inviteCode.value) {
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(inviteCode.value)
-      } else {
-        fallbackCopyText(inviteCode.value)
-      }
-      MessagePlugin.success(t('common.copied'))
-    } catch {
-      fallbackCopyText(inviteCode.value)
-      MessagePlugin.success(t('common.copied'))
-    }
-  }
+  await copyWithToast(inviteCode.value, 'common.copied')
 }
 
 const copyInviteLink = async () => {
-  if (inviteLink.value) {
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(inviteLink.value)
-      } else {
-        fallbackCopyText(inviteLink.value)
-      }
-      MessagePlugin.success(t('common.copied'))
-    } catch {
-      fallbackCopyText(inviteLink.value)
-      MessagePlugin.success(t('common.copied'))
-    }
-  }
+  await copyWithToast(inviteLink.value, 'common.copied')
 }
 
 const refreshInviteCode = async () => {

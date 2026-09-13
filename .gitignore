@@ -2,18 +2,8 @@
 .*
 # 但不忽略特定隐藏文件和目录
 !.env.example
-!.env.kjsc.example
-!.python-version
-!**/.python-version
 !.gitignore
 !.github/
-!.dockerignore
-!.air.toml
-!.air.appcore.toml
-!.vitepress/
-!.vitepress/**
-!.prettierignore
-!.vscode
 
 # 敏感文件
 *.pem
@@ -28,11 +18,8 @@
 
 # 构建和依赖文件
 node_modules/
-dist/
-target/
+/dist/
 /build/
-docs/site/.vitepress/dist/
-docs/site/.vitepress/cache/
 *.log
 
 # 临时文件
@@ -41,19 +28,8 @@ temp/
 logs/
 *.pid
 
-# Agent-Harness 运行时数据（主 Compose 挂载 docker/volumes/agent-harness）
-/docker/volumes/
-
-# 本地 Docker 卷备份（含数据库转储，勿提交）
-/backups/
-
 WeKnora
 WeKnora-lite
-# 上面这条会在大小写不敏感的 Git 里误伤 harness 的 yuxi.weknora 适配包
-!apps/agent-harness/package/yuxi/weknora/
-!apps/agent-harness/package/yuxi/weknora/**
-!apps/agent-harness/test/unit/weknora/
-!apps/agent-harness/test/unit/weknora/**
 cmd/desktop/build/bin/
 /models/
 test/data/mswag.txt
@@ -81,8 +57,9 @@ fix-docker.sh
 
 # WeChat Mini Program local/private configuration
 miniprogram/project.private.config.json
-agent-web
 
-# 本地 ASR/评测素材（体积大，不入库）
-apps/agent-harness/test/unit/models/
-apps/agent-harness/saves
+# Staging dir for the Docker sandbox self-check probe (removed after each run)
+.weknora-sandbox-check-*
+
+# Locally built BrowserSkill runtime and extension bundles
+/artifacts/browserskill/

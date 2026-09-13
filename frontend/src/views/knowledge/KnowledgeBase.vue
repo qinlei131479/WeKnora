@@ -32,14 +32,17 @@ import {
   reparseKnowledge,
   cancelKnowledgeParse,
   batchDeleteKnowledge,
+  delKnowledgeDetails,
   batchReparseKnowledge,
   getKnowledgeSpans,
   getKnowledgeDetails,
   listKnowledgeFolders,
   moveKnowledgeToFolder,
   renameKnowledgeFolder,
+  downKnowledgeDetails,
   type KnowledgeFolderTree,
 } from "@/api/knowledge-base/index";
+import { waitForKnowledgeDeletion } from '@/utils/knowledgeDeletion';
 import { knowledgeSpansPayloadHasTrace } from '@/utils/knowledgeTrace';
 import FAQEntryManager from './components/FAQEntryManager.vue';
 import DocumentListView from './components/DocumentListView.vue';
@@ -60,6 +63,7 @@ import {
   shouldRefreshWikiStatusAfterKnowledgePoll,
 } from './wikiStatusRefresh';
 import { listMoveTargets, moveKnowledge, getKnowledgeMoveProgress } from '@/api/knowledge-base';
+import { resolveKnowledgeDownloadFileName } from './knowledgeDownloadFileName';
 import {
   buildUploadFileName,
   canMoveFolderTo,
@@ -330,7 +334,7 @@ const canDownloadKnowledge = computed(() => {
 });
 
 const knowledgeList = ref<Array<{ id: string; name: string; type?: string }>>([]);
-let { cardList, total, moreIndex, details, getKnowled, delKnowledge, openMore, onVisibleChange: _onVisibleChange, getCardDetails, getfDetails } = useKnowledgeBase(kbId.value)
+let { cardList, total, moreIndex, details, getKnowled, openMore, onVisibleChange: _onVisibleChange, getCardDetails, getfDetails } = useKnowledgeBase(kbId.value)
 
 const showKbDetailContextualGuide = computed(() => {
   return Boolean(kbId.value)
@@ -597,6 +601,8 @@ const sourceOptions = computed(() => [
   { label: t('knowledgeBase.channelFeishuDrive'), value: 'feishu_drive' },
   { label: t('knowledgeBase.channelNotion'), value: 'notion' },
   { label: t('knowledgeBase.channelYuque'), value: 'yuque' },
+  { label: t('knowledgeBase.channelGitLab'), value: 'gitlab' },
+  { label: t('knowledgeBase.channelIma'), value: 'ima' },
   { label: t('knowledgeBase.channelWechat'), value: 'wechat' },
   { label: t('knowledgeBase.channelWecom'), value: 'wecom' },
   { label: t('knowledgeBase.channelDingtalk'), value: 'dingtalk' },
@@ -1220,18 +1226,37 @@ const pendingKnowledgeId = ref<string | null>(
   (route.query.knowledge_id as string) || null
 );
 
-const tryAutoOpenDocument = () => {
-  if (!pendingKnowledgeId.value || !cardList.value?.length) return;
+let autoOpenRequest = 0;
+
+const tryAutoOpenDocument = async () => {
+  if (!pendingKnowledgeId.value) return;
   const targetId = pendingKnowledgeId.value;
   pendingKnowledgeId.value = null;
+  const request = ++autoOpenRequest;
   const card = cardList.value.find((c: KnowledgeCard) => c.id === targetId);
-  if (card) {
-    nextTick(() => openCardDetails(card));
-  } else {
-    nextTick(() => {
-      openCardDetails({ id: targetId } as KnowledgeCard);
-    });
+
+  // The current card list only contains the folder being browsed. A document
+  // opened from chat references may live in any nested folder, so resolve its
+  // folder from the detail endpoint before opening the drawer. Otherwise the
+  // drawer opens correctly while the page misleadingly remains at KB root.
+  let target = card || ({ id: targetId } as KnowledgeCard);
+  try {
+    const response: any = await getKnowledgeDetails(targetId);
+    if (request !== autoOpenRequest) return;
+    const detail = response?.data || response;
+    if (detail && typeof detail === 'object') {
+      target = { ...target, ...detail, id: targetId } as KnowledgeCard;
+      selectedFolderPath.value = detail.folder_path || ROOT_FOLDER_PATH;
+    }
+  } catch (error) {
+    // Keep the previous ID-only fallback: getCardDetails will surface the
+    // normal detail loading error, while links to root-level files still work.
+    console.error('Failed to resolve referenced document folder', error);
   }
+
+  if (request !== autoOpenRequest) return;
+  await nextTick();
+  openCardDetails(target);
 };
 
 // React to later ?knowledge_id= changes on the same KB route (no remount).
@@ -1240,8 +1265,6 @@ watch(
   (newId) => {
     if (typeof newId !== 'string' || !newId) return;
     pendingKnowledgeId.value = newId;
-    // cardList is almost always already loaded at this point; if not, the
-    // cardList watcher below will pick it up.
     tryAutoOpenDocument();
   },
 );
@@ -1282,8 +1305,8 @@ watch(() => cardList.value, (newValue) => {
   if (isFAQ.value) return;
   docListLoading.value = false;
 
-  // Auto-open document if navigated with ?knowledge_id=xxx
-  if (pendingKnowledgeId.value && newValue?.length) {
+  // Auto-open document if navigated with ?knowledge_id=xxx.
+  if (pendingKnowledgeId.value) {
     tryAutoOpenDocument();
   }
 
@@ -1419,20 +1442,7 @@ const closeCardMoreMenu = (index: number) => {
 
 const confirmDeleteKnowledge = (index: number, item: KnowledgeCard) => {
   closeCardMoreMenu(index);
-  const deletedId = item?.id;
-  delKnowledge(index, item, async () => {
-    resetPage();
-    const maxPolls = 30;
-    const delayMs = 400;
-    for (let i = 0; i < maxPolls; i++) {
-      await loadKnowledgeFiles(kbId.value);
-      const stillPresent = (cardList.value || []).some((c: KnowledgeCard) => c.id === deletedId);
-      if (!stillPresent) break;
-      await new Promise<void>((r) => setTimeout(r, delayMs));
-    }
-    loadTags(kbId.value, true);
-    void loadFolderTree(kbId.value);
-  });
+  void deleteKnowledgeDocuments([item.id], () => delKnowledgeDetails(item.id), false);
 };
 
 const onReparseMenuClick = (index: number, item: KnowledgeCard) => {
@@ -2072,37 +2082,83 @@ const openKnowledgeItem = (item: KnowledgeCard) => {
   openCardDetails(item);
 };
 
-const confirmBatchDelete = async () => {
-  if (batchDeleting.value || batchReparsing.value || selectedIds.value.size === 0) return;
-  const ids = Array.from(selectedIds.value);
-  const deletedIdSet = new Set(ids);
+// Stop observing a previous KB when navigating, including away and back.
+let deleteGeneration = 0;
+watch(kbId, () => {
+  deleteGeneration++;
+  batchDeleting.value = false;
+});
+onUnmounted(() => { deleteGeneration++; });
+
+const deleteKnowledgeDocuments = async (
+  ids: string[],
+  submit: () => Promise<any>,
+  batch: boolean,
+) => {
+  if (batchDeleting.value || batchReparsing.value || ids.length === 0) return;
+  const targetKbId = kbId.value;
+  const generation = ++deleteGeneration;
+  const isActive = () => generation === deleteGeneration && isCurrentKb(targetKbId);
   batchDeleting.value = true;
+  let submitted = false;
   try {
-    const res: any = await batchDeleteKnowledge(kbId.value, ids);
-    if (res?.success) {
-      MessagePlugin.success(t('knowledgeBase.batchDeleteSuccess', { count: ids.length }));
+    const res = await submit();
+    if (!isActive()) return;
+    if (!res?.success) {
+      MessagePlugin.error(res?.message || t('knowledgeBase.batchDeleteFailed'));
+      return;
+    }
+    submitted = true;
+    MessagePlugin.info(t('knowledgeBase.deleteSubmitted'));
+    if (batch) {
       clearSelection();
       batchMode.value = false;
-      resetPage();
-      // 后端将批量删除放入异步队列，立刻拉列表仍可能包含待删项；短轮询直到列表与后端一致或超时
-      const maxPolls = 30;
-      const delayMs = 400;
-      for (let i = 0; i < maxPolls; i++) {
-        await loadKnowledgeFiles(kbId.value);
-        const stillPresent = (cardList.value || []).some((c: KnowledgeCard) => deletedIdSet.has(c.id));
-        if (!stillPresent) break;
-        await new Promise<void>((r) => setTimeout(r, delayMs));
-      }
-      loadTags(kbId.value, true);
-      void loadFolderTree(kbId.value);
+    }
+    const result = await waitForKnowledgeDeletion(
+      ids,
+      async (queryIds) => {
+        const query = new URLSearchParams();
+        queryIds.forEach(id => query.append('ids', id));
+        return await batchQueryKnowledge(query.toString(), targetKbId) as any;
+      },
+      { isActive },
+    );
+    if (!isActive() || result === 'cancelled') return;
+    if (result === 'completed') {
+      MessagePlugin.success(batch
+        ? t('knowledgeBase.batchDeleteSuccess', { count: ids.length })
+        : t('knowledgeBase.deleteSuccess'));
+    } else if (result === 'failed') {
+      MessagePlugin.error(t('knowledgeBase.deleteTaskFailed'));
     } else {
-      MessagePlugin.error(res?.message || t('knowledgeBase.batchDeleteFailed'));
+      MessagePlugin.info(t('knowledgeBase.deletePending'));
     }
   } catch (e: any) {
-    MessagePlugin.error(e?.message || t('knowledgeBase.batchDeleteFailed'));
+    if (!isActive()) return;
+    if (submitted) {
+      MessagePlugin.warning(t('knowledgeBase.deleteStatusUnavailable'));
+    } else {
+      MessagePlugin.error(e?.message || t('knowledgeBase.batchDeleteFailed'));
+    }
   } finally {
-    batchDeleting.value = false;
+    if (isActive()) {
+      batchDeleting.value = false;
+      if (submitted) {
+        resetPage();
+        await loadKnowledgeFiles(targetKbId);
+        if (isActive()) {
+          void loadTags(targetKbId, true);
+          void loadFolderTree(targetKbId);
+        }
+      }
+    }
   }
+};
+
+const confirmBatchDelete = () => {
+  const targetKbId = kbId.value;
+  const ids = Array.from(selectedIds.value);
+  return deleteKnowledgeDocuments(ids, () => batchDeleteKnowledge(targetKbId, ids), true);
 };
 
 const handleBatchTag = () => {
@@ -2145,12 +2201,34 @@ const confirmCancelParseKnowledge = async (item: KnowledgeCard) => {
   }
 };
 
+const downloadKnowledge = async (item: KnowledgeCard) => {
+  if (!item?.id) return;
+  try {
+    const file = await downKnowledgeDetails(item.id);
+    const objectUrl = URL.createObjectURL(file);
+    const link = document.createElement('a');
+    const fileName = resolveKnowledgeDownloadFileName(item);
+    link.style.display = 'none';
+    link.href = objectUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    nextTick(() => {
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    });
+  } catch {
+    MessagePlugin.error(t('file.downloadFailed'));
+  }
+};
+
 // Bridge card-view actions back to existing per-card handlers.
 const handleCardAction = (
-  action: 'edit' | 'reparse' | 'cancel-parse' | 'move' | 'move-folder' | 'delete' | 'view-trace' | 'batch-manage',
+  action: 'download' | 'edit' | 'reparse' | 'cancel-parse' | 'move' | 'move-folder' | 'delete' | 'view-trace' | 'batch-manage',
   item: KnowledgeCard,
 ) => {
   const idx = (cardList.value || []).findIndex((i: KnowledgeCard) => i.id === item.id);
+  if (action === 'download') return downloadKnowledge(item);
   if (action === 'edit') return handleManualEdit(idx, item);
   if (action === 'reparse') {
     if (isParseInFlight(item.parse_status)) return onReparseMenuClick(idx, item);
@@ -2165,10 +2243,11 @@ const handleCardAction = (
 
 // Bridge list-view actions back to existing per-card handlers.
 const handleListAction = (
-  action: 'edit' | 'reparse' | 'cancel-parse' | 'move' | 'move-folder' | 'delete' | 'view-trace' | 'batch-manage',
+  action: 'download' | 'edit' | 'reparse' | 'cancel-parse' | 'move' | 'move-folder' | 'delete' | 'view-trace' | 'batch-manage',
   item: KnowledgeCard,
 ) => {
   const idx = (cardList.value || []).findIndex((i: KnowledgeCard) => i.id === item.id);
+  if (action === 'download') return downloadKnowledge(item);
   if (action === 'edit') return handleManualEdit(idx, item);
   if (action === 'reparse') return confirmRebuildKnowledge(idx, item);
   if (action === 'cancel-parse') return confirmCancelParseKnowledge(item);
@@ -2569,6 +2648,7 @@ async function createNewSession(value: string): Promise<void> {
                     :selected-ids="selectedIds"
                     :batch-mode="batchMode"
                     :can-edit="canEdit"
+                    :can-download="canDownloadKnowledge"
                     :can-mutate-knowledge="canMutateKnowledge"
                     :trace-available-by-id="traceAvailableById"
                     :tag-list="tagList"
@@ -2595,7 +2675,7 @@ async function createNewSession(value: string): Promise<void> {
                 <template v-else-if="(cardList.length || currentChildFolders.length) && viewMode === 'list'">
                   <DocumentListView :items="cardList" :folders="currentChildFolders" :folder-options="folderOptions"
                     :selected-ids="selectedIds" :tag-list="tagList"
-                    :can-edit="canEdit" :can-mutate-knowledge="canMutateKnowledge"
+                    :can-edit="canEdit" :can-download="canDownloadKnowledge" :can-mutate-knowledge="canMutateKnowledge"
                     :trace-visible-ids="traceAvailableById"
                     :move-menu-mode="moveMenuMode"
                     :move-target-kbs="moveTargetKbs"
@@ -3024,7 +3104,10 @@ async function createNewSession(value: string): Promise<void> {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   position: relative;
+  container-type: inline-size;
+  container-name: doc-card-area;
   /* 作为批量工具栏悬浮的定位上下文 */
 }
 
@@ -3145,17 +3228,22 @@ async function createNewSession(value: string): Promise<void> {
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
+    position: relative;
+    z-index: 1;
   }
 
-  @media (min-width: 1280px) {
+  // The folder tree changes the available document width without changing the
+  // viewport width. Switch to a single row only when this content area itself
+  // is wide enough for TDesign's fixed-width filter controls.
+  @container doc-card-area (min-width: 1240px) {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
     gap: 12px;
 
     &__filters {
-      flex: 0 1 auto;
-      overflow-x: visible;
+      flex: 1 1 auto;
+      overflow-x: auto;
     }
   }
 

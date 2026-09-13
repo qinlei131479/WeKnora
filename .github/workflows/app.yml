@@ -1,34 +1,55 @@
 name: App
 
+# Anydoc (Rust archive + `anydoc` build tag) lives in anydoc.yml so a
+# migrations-only or unrelated Go PR does not compile the parser engine.
+
 on:
   push:
     branches: [main]
     paths:
       - "**/*.go"
       - "!cli/**"
-      - "!apps/app-core/**"
+      - "!client/**"
+      - "!docreader/**"
+      - "!third_party/anydoc-go/**"
       - "go.mod"
       - "go.sum"
       - "Makefile"
       - "config/**"
       - "migrations/**"
-      - "scripts/**"
       - "skills/preloaded/**"
+      - "testdata/**"
       - "docker/Dockerfile.app"
+      - "LICENSE"
+      - "THIRD_PARTY_NOTICES.md"
+      - "licenses/**"
+      - "internal/textconv/data/**"
+      - "scripts/*licenses.sh"
+      - "scripts/check-license-bundle.sh"
+      - "cmd/desktop/build/windows/installer/project.nsi"
       - ".github/workflows/app.yml"
   pull_request:
     paths:
       - "**/*.go"
       - "!cli/**"
-      - "!apps/app-core/**"
+      - "!client/**"
+      - "!docreader/**"
+      - "!third_party/anydoc-go/**"
       - "go.mod"
       - "go.sum"
       - "Makefile"
       - "config/**"
       - "migrations/**"
-      - "scripts/**"
       - "skills/preloaded/**"
+      - "testdata/**"
       - "docker/Dockerfile.app"
+      - "LICENSE"
+      - "THIRD_PARTY_NOTICES.md"
+      - "licenses/**"
+      - "internal/textconv/data/**"
+      - "scripts/*licenses.sh"
+      - "scripts/check-license-bundle.sh"
+      - "cmd/desktop/build/windows/installer/project.nsi"
       - ".github/workflows/app.yml"
   workflow_dispatch:
 
@@ -65,6 +86,9 @@ jobs:
       - name: Download modules
         run: go mod download
 
+      - name: Verify third-party notices and source bundle
+        run: bash ./scripts/check-license-bundle.sh
+
       - name: Check formatting
         shell: bash
         run: |
@@ -80,7 +104,7 @@ jobs:
             diff_range="$base..$GITHUB_SHA"
           fi
           unformatted=$(
-            git diff --name-only --diff-filter=ACMR -z "$diff_range" -- '*.go' ':!cli/**' ':!apps/app-core/**' |
+            git diff --name-only --diff-filter=ACMR -z "$diff_range" -- '*.go' ':!cli/**' |
               xargs -0 -r gofmt -l
           )
           if [ -n "$unformatted" ]; then
@@ -92,7 +116,7 @@ jobs:
       - name: Vet and test
         shell: bash
         run: |
-          mapfile -t pkgs < <(go list ./... | grep -v '/docreader/' | grep -v '/apps/app-core/')
+          mapfile -t pkgs < <(go list ./... | grep -v '/docreader/')
           go vet "${pkgs[@]}"
           go test "${pkgs[@]}"
 

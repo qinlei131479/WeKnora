@@ -397,6 +397,7 @@
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { MessagePlugin } from 'tdesign-vue-next'
+import { copyWithToast } from '@/utils/clipboard'
 import { useAuthStore } from '@/stores/auth'
 import SettingDrawer from '@/components/settings/SettingDrawer.vue'
 import EmbedChannelPreview from '@/components/EmbedChannelPreview.vue'
@@ -537,6 +538,7 @@ const defaultLocaleOptions = computed(() => ([
   { label: '简体中文', value: 'zh-CN' },
   { label: 'English', value: 'en-US' },
   { label: '한국어', value: 'ko-KR' },
+  { label: '日本語', value: 'ja-JP' },
   { label: 'Русский', value: 'ru-RU' },
 ]))
 
@@ -749,8 +751,7 @@ const copyToken = async (ch: EmbedChannel) => {
     MessagePlugin.warning(t('embedPublish.tokenHint'))
     return
   }
-  await navigator.clipboard.writeText(token)
-  MessagePlugin.success(t('embedPublish.tokenCopied'))
+  await copyWithToast(token, 'embedPublish.tokenCopied')
 }
 
 const iframeSnippet = (ch: EmbedChannel) => {
@@ -1035,15 +1036,11 @@ async function openPreviewForChannel(
 }
 
 const copySecureServerExample = async () => {
-  if (!secureServerExample.value) return
-  await navigator.clipboard.writeText(secureServerExample.value)
-  MessagePlugin.success(t('embedPublish.copied'))
+  await copyWithToast(secureServerExample.value, 'embedPublish.copied')
 }
 
 const copyDrawerSnippet = async () => {
-  if (!drawerSnippet.value) return
-  await navigator.clipboard.writeText(drawerSnippet.value)
-  MessagePlugin.success(t('embedPublish.copied'))
+  await copyWithToast(drawerSnippet.value, 'embedPublish.copied')
 }
 
 const performRotate = async (id: string) => {
