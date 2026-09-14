@@ -25,6 +25,14 @@ func (s *stubKnowledgeBaseService) GetKnowledgeBaseByID(context.Context, string)
 	return s.kb, nil
 }
 
+func (s *stubKnowledgeBaseService) SaveMindmap(context.Context, string, []byte, []byte, []byte) error {
+	return nil
+}
+
+func (s *stubKnowledgeBaseService) GetMindmap(context.Context, string) ([]byte, []byte, []byte, error) {
+	return nil, nil, nil, nil
+}
+
 func (s *stubKnowledgeBaseService) GetKnowledgeBaseByIDOnly(context.Context, string) (*types.KnowledgeBase, error) {
 	return s.kb, nil
 }
@@ -88,13 +96,6 @@ func (s *stubKnowledgeBaseService) DuplicateKnowledgeBase(
 	string,
 ) (*types.KnowledgeBase, error) {
 	return nil, nil
-}
-
-func (s *stubKnowledgeBaseService) GetMindmap(context.Context, string) ([]byte, []byte, []byte, error) {
-	return nil, nil, nil, nil
-}
-func (s *stubKnowledgeBaseService) SaveMindmap(context.Context, string, []byte, []byte, []byte) error {
-	return nil
 }
 
 func (s *stubKnowledgeBaseService) GetRepository() interfaces.KnowledgeBaseRepository {

@@ -54,7 +54,18 @@ const (
 	EventAgentToolResult  EventType = "tool_result"  // 工具结果
 	EventAgentReflection  EventType = "reflection"   // Agent 反思
 	EventAgentReferences  EventType = "references"   // 知识引用
-	EventAgentFinalAnswer EventType = "final_answer" // 最终答案
+	EventAgentFinalAnswer   EventType = "final_answer"   // 最终答案
+	EventAgentCommandOutput EventType = "command_output" // bounded command output
+	EventMemoryRecalled     EventType = "memory_recalled"
+
+	// EventContextCompacted is emitted when older conversation was summarized
+	// away to fit the context window.
+	EventContextCompacted EventType = "context_compacted"
+
+	// EventUserMessageInjected is emitted when a message the user appended
+	// while the run was in flight was accepted into the running turn (see
+	// agent drainSteerMessages).
+	EventUserMessageInjected EventType = "user_message_injected"
 
 	// MCP tool human approval (issue #1173)
 	EventToolApprovalRequired EventType = "tool_approval_required"

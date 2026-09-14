@@ -280,7 +280,8 @@ type AuthConfig struct {
 	// create_personal preserves the historical one-user-one-workspace default;
 	// tenantless creates only the identity and waits for an invitation or an
 	// explicit self-service tenant creation.
-	DefaultTenantMode string `yaml:"default_tenant_mode" json:"default_tenant_mode"`
+	DefaultTenantMode      string `yaml:"default_tenant_mode" json:"default_tenant_mode"`
+	ComplexPasswordEnabled bool   `yaml:"complex_password_enabled" json:"complex_password_enabled"`
 }
 
 // AuthRegistrationMode constants used by handlers and middleware.
@@ -317,6 +318,7 @@ type OIDCAuthConfig struct {
 	AuthorizationEndpoint string               `yaml:"authorization_endpoint" json:"authorization_endpoint"`
 	TokenEndpoint         string               `yaml:"token_endpoint"         json:"token_endpoint"`
 	UserInfoEndpoint      string               `yaml:"user_info_endpoint"     json:"user_info_endpoint"`
+	JwksURI               string               `yaml:"jwks_uri"               json:"jwks_uri"`
 	Scopes                []string             `yaml:"scopes"                 json:"scopes"`
 	UserInfoMapping       *OIDCUserInfoMapping `yaml:"user_info_mapping"      json:"user_info_mapping"`
 }
@@ -325,7 +327,7 @@ type OIDCAuthConfig struct {
 type PromptTemplateI18n struct {
 	Name        string `yaml:"name"        json:"name"`
 	Description string `yaml:"description" json:"description"`
-	// Content, when set, replaces the template body for this locale (agent editor defaults / picker).
+	// Content, when set, replaces the template body for this locale.
 	Content string `yaml:"content" json:"content,omitempty"`
 	// User, when set, replaces the user-side prompt for this locale.
 	User string `yaml:"user" json:"user,omitempty"`
@@ -613,6 +615,7 @@ func LoadConfig() (*Config, error) {
 	applyKnowledgeBaseEnvOverrides(&cfg)
 	applyAuthAndTenantDefaults(&cfg)
 	applyAuditDefaults(&cfg)
+	applyServerEnvOverrides(&cfg)
 
 	if err := ValidateConfig(&cfg); err != nil {
 		return nil, err
@@ -663,6 +666,7 @@ func ValidateConfig(cfg *Config) error {
 			errs = append(errs, fmt.Sprintf("auth.registration_mode must be %q or %q, got %q",
 				AuthRegistrationModeSelfServe, AuthRegistrationModeInviteOnly, mode))
 		}
+
 		tenantMode := strings.TrimSpace(cfg.Auth.DefaultTenantMode)
 		if tenantMode != "" && tenantMode != AuthDefaultTenantModeCreatePersonal && tenantMode != AuthDefaultTenantModeTenantless {
 			errs = append(errs, fmt.Sprintf("auth.default_tenant_mode must be %q or %q, got %q",
@@ -714,6 +718,32 @@ func ValidateConfig(cfg *Config) error {
 	return nil
 }
 
+// applyServerEnvOverrides lets KJSC / local air keep listening on APP_PORT.
+// Official config.yaml hardcodes 8080; viper does not map APP_PORT onto
+// server.port, so without this the frontend proxy on :9988 talks to a dead
+// :9980 and login returns an empty HTTP 500.
+func applyServerEnvOverrides(cfg *Config) {
+	if cfg == nil {
+		return
+	}
+	if cfg.Server == nil {
+		cfg.Server = &ServerConfig{}
+	}
+	raw := strings.TrimSpace(os.Getenv("APP_PORT"))
+	if raw == "" {
+		return
+	}
+	port, err := strconv.Atoi(raw)
+	if err != nil || port <= 0 || port > 65535 {
+		fmt.Printf("[config] ignoring invalid APP_PORT=%q, keeping server.port=%d\n", raw, cfg.Server.Port)
+		return
+	}
+	if cfg.Server.Port != port {
+		fmt.Printf("[config] server.port overridden by APP_PORT: %d -> %d\n", cfg.Server.Port, port)
+	}
+	cfg.Server.Port = port
+}
+
 func applyOIDCEnvOverrides(cfg *Config) {
 	if cfg.OIDCAuth == nil {
 		cfg.OIDCAuth = &OIDCAuthConfig{}
@@ -748,6 +778,9 @@ func applyOIDCEnvOverrides(cfg *Config) {
 	}
 	if value := strings.TrimSpace(os.Getenv("OIDC_AUTH_USER_INFO_ENDPOINT")); value != "" {
 		cfg.OIDCAuth.UserInfoEndpoint = value
+	}
+	if value := strings.TrimSpace(os.Getenv("OIDC_AUTH_JWKS_URI")); value != "" {
+		cfg.OIDCAuth.JwksURI = value
 	}
 	if value := strings.TrimSpace(os.Getenv("OIDC_AUTH_SCOPES")); value != "" {
 		cfg.OIDCAuth.Scopes = strings.Fields(strings.ReplaceAll(value, ",", " "))
@@ -837,8 +870,12 @@ func applyAgentEnvOverrides(cfg *Config) {
 //
 // Env overrides (when set and non-empty):
 //   - WEKNORA_AUTH_DEFAULT_TENANT_MODE ("create_personal"/"tenantless")
+//   - WEKNORA_AUTH_COMPLEX_PASSWORD_ENABLED (boolean)
 //   - WEKNORA_TENANT_SELF_SERVICE_CREATION_ENABLED (boolean)
 //   - WEKNORA_TENANT_ENABLE_RBAC      ("true"/"false", case-insensitive)
+//   - WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS ("true"/"false", case-insensitive).
+//     Read explicitly because viper.AutomaticEnv has no SetEnvPrefix, so the
+//     WEKNORA_-prefixed var is not bound to the nested struct automatically.
 //   - WEKNORA_TENANT_MAX_OWNED_PER_USER (integer; <0 disables the cap,
 //     0 falls back to the handler default, >0 enforces that exact cap).
 //     Unparseable / empty values are ignored so a stale shell variable
@@ -872,6 +909,13 @@ func applyAuthAndTenantDefaults(cfg *Config) {
 	if strings.TrimSpace(cfg.Auth.RegistrationMode) == "" {
 		cfg.Auth.RegistrationMode = AuthRegistrationModeSelfServe
 	}
+
+	if value := strings.TrimSpace(os.Getenv("WEKNORA_AUTH_COMPLEX_PASSWORD_ENABLED")); value != "" {
+		if parsed, err := strconv.ParseBool(value); err == nil {
+			cfg.Auth.ComplexPasswordEnabled = parsed
+		}
+	}
+
 	if value := strings.TrimSpace(os.Getenv("WEKNORA_AUTH_DEFAULT_TENANT_MODE")); value != "" {
 		cfg.Auth.DefaultTenantMode = value
 	}
@@ -888,6 +932,16 @@ func applyAuthAndTenantDefaults(cfg *Config) {
 		// via config.yaml `enable_rbac: false` or the env override.
 		on := true
 		cfg.Tenant.EnableRBAC = &on
+	}
+
+	// WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS mirrors the RBAC switch above.
+	// It must be read explicitly: viper.AutomaticEnv has no SetEnvPrefix, so the
+	// WEKNORA_-prefixed env var is never bound to the nested struct field —
+	// without this block, only config.yaml's enable_cross_tenant_access takes
+	// effect and the documented env override is silently ignored. The default
+	// stays whatever config.yaml provides (false unless set there).
+	if value := strings.TrimSpace(os.Getenv("WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS")); value != "" {
+		cfg.Tenant.EnableCrossTenantAccess = strings.EqualFold(value, "true")
 	}
 
 	if value := strings.TrimSpace(os.Getenv("WEKNORA_TENANT_SELF_SERVICE_CREATION_ENABLED")); value != "" {

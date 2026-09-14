@@ -22,6 +22,7 @@ import (
 
 	"github.com/Tencent/WeKnora/apps/app-core/im"
 	"github.com/Tencent/WeKnora/apps/app-core/logger"
+	secutils "github.com/Tencent/WeKnora/apps/app-core/utils"
 	ws "github.com/gorilla/websocket"
 )
 
@@ -365,7 +366,9 @@ func (c *LongConnClient) sendStreamFrame(incoming *im.IncomingMessage, streamID,
 }
 
 func (c *LongConnClient) connectAndRun(ctx context.Context) error {
-	conn, _, err := ws.DefaultDialer.DialContext(ctx, c.endpoint, nil)
+	dialer := *ws.DefaultDialer
+	dialer.NetDialContext = secutils.SSRFSafeDialContext
+	conn, _, err := dialer.DialContext(ctx, c.endpoint, nil)
 	if err != nil {
 		return fmt.Errorf("dial: %w", err)
 	}

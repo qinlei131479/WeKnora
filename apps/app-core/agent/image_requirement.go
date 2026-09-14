@@ -10,6 +10,14 @@ import (
 
 const agentRetrievedImageRequirementMarker = "## Retrieved Image Output Requirement"
 
+func finalAnswerImageRequirement(enabled bool) string {
+	if !enabled {
+		return ""
+	}
+	return `The final answer MUST include at least one relevant Markdown image when retrieved tool results contain images. ` +
+		`Preserve its complete URL exactly, use ASCII half-width parentheses, and silently verify the image is present before finishing.`
+}
+
 const agentRetrievedImageSystemRequirement = `
 
 ## Retrieved Image Output Requirement

@@ -2,18 +2,17 @@ package handler
 
 import (
 	"context"
+	stderrors "errors"
+	"io"
 	"net/http"
 	"strconv"
-	"strings"
-	"unicode/utf8"
-
-	"github.com/gin-gonic/gin"
 
 	"github.com/Tencent/WeKnora/apps/app-core/errors"
 	"github.com/Tencent/WeKnora/apps/app-core/logger"
 	"github.com/Tencent/WeKnora/apps/app-core/types"
 	"github.com/Tencent/WeKnora/apps/app-core/types/interfaces"
 	secutils "github.com/Tencent/WeKnora/apps/app-core/utils"
+	"github.com/gin-gonic/gin"
 )
 
 // TagHandler handles knowledge base tag operations.
@@ -117,15 +116,6 @@ type createTagRequest struct {
 	SortOrder int    `json:"sort_order"`
 }
 
-const maxTagNameRunes = 10
-
-func validateUserTagName(name string) error {
-	if utf8.RuneCountInString(strings.TrimSpace(name)) > maxTagNameRunes {
-		return errors.NewBadRequestError("标签名称不能超过10个字")
-	}
-	return nil
-}
-
 // CreateTag godoc
 // @Summary      创建标签
 // @Description  在知识库下创建新标签
@@ -147,10 +137,6 @@ func (h *TagHandler) CreateTag(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.Error(ctx, "Failed to bind create tag payload", err)
 		c.Error(errors.NewBadRequestError("请求参数不合法").WithDetails(err.Error()))
-		return
-	}
-	if err := validateUserTagName(req.Name); err != nil {
-		c.Error(err)
 		return
 	}
 
@@ -205,12 +191,6 @@ func (h *TagHandler) UpdateTag(c *gin.Context) {
 		c.Error(errors.NewBadRequestError("请求参数不合法").WithDetails(err.Error()))
 		return
 	}
-	if req.Name != nil {
-		if err := validateUserTagName(*req.Name); err != nil {
-			c.Error(err)
-			return
-		}
-	}
 
 	tag, err := h.tagService.UpdateTag(ctx, tagID, req.Name, req.Color, req.SortOrder)
 	if err != nil {
@@ -256,19 +236,42 @@ func (h *TagHandler) DeleteTag(c *gin.Context) {
 	contentOnly := c.Query("content_only") == "true"
 
 	var req DeleteTagRequest
-	_ = c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil && !stderrors.Is(err, io.EOF) {
+		_ = c.Error(errors.NewBadRequestError("删除选项不合法"))
+		return
+	}
 
 	var excludeUUIDs []string
 	if len(req.ExcludeIDs) > 0 {
 		tenantID := types.MustTenantIDFromContext(ctx)
+		wanted := make(map[int64]bool, len(req.ExcludeIDs))
+		for _, id := range req.ExcludeIDs {
+			if id <= 0 {
+				_ = c.Error(errors.NewBadRequestError("排除条目 ID 必须为正整数"))
+				return
+			}
+			wanted[id] = true
+		}
 		chunks, err := h.getChunksBySeqIDs(ctx, tenantID, req.ExcludeIDs)
 		if err != nil {
-			logger.Warnf(ctx, "Failed to resolve exclude_ids: %v", err)
-		} else {
-			excludeUUIDs = make([]string, len(chunks))
-			for i, chunk := range chunks {
-				excludeUUIDs[i] = chunk.ID
+			_ = c.Error(err)
+			return
+		}
+		for _, chunk := range chunks {
+			if chunk == nil || !wanted[chunk.SeqID] {
+				continue
 			}
+			if chunk.TenantID != tenantID || chunk.KnowledgeBaseID != c.Param("id") ||
+				chunk.ChunkType != types.ChunkTypeFAQ {
+				_ = c.Error(errors.NewForbiddenError("排除条目不属于当前知识库"))
+				return
+			}
+			excludeUUIDs = append(excludeUUIDs, chunk.ID)
+			delete(wanted, chunk.SeqID)
+		}
+		if len(wanted) != 0 {
+			_ = c.Error(errors.NewNotFoundError("排除条目不存在"))
+			return
 		}
 	}
 

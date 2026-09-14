@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/Tencent/WeKnora/apps/app-core/application/service"
 	apperrors "github.com/Tencent/WeKnora/apps/app-core/errors"
 	"github.com/Tencent/WeKnora/apps/app-core/handler/dto"
 	"github.com/Tencent/WeKnora/apps/app-core/logger"
@@ -166,6 +167,12 @@ func (h *AuthHandler) RegisterByInvite(c *gin.Context) {
 	if existing, _ := h.userService.GetUserByEmail(ctx, req.Email); existing != nil {
 		c.Error(apperrors.NewConflictError(
 			"this email already has an account; please log in to join the workspace"))
+		return
+	}
+
+	if err := service.ValidatePasswordPolicy(req.Password, h.complexPasswordEnabled(ctx)); err != nil {
+		logger.Error(ctx, "Invalid password policy")
+		_ = c.Error(apperrors.NewValidationError(err.Error()))
 		return
 	}
 

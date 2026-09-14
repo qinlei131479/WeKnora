@@ -926,6 +926,9 @@ func (r *realKBRepo) CountByVectorStoreID(ctx context.Context, db *gorm.DB, tena
 func (r *realKBRepo) CountByModelID(_ context.Context, _ uint64, _ string) (int64, error) {
 	return 0, nil
 }
+func (r *realKBRepo) ListModelUsages(_ context.Context, _ uint64, _ string) ([]types.ModelUsageResource, error) {
+	return []types.ModelUsageResource{}, nil
+}
 
 // The remaining methods are not called by the tested code paths; declare them
 // so realKBRepo satisfies interfaces.KnowledgeBaseRepository.
@@ -946,10 +949,6 @@ func (r *realKBRepo) ListKnowledgeBases(_ context.Context) ([]*types.KnowledgeBa
 }
 func (r *realKBRepo) ListKnowledgeBasesByTenantID(_ context.Context, _ uint64) ([]*types.KnowledgeBase, error) {
 	return nil, nil
-}
-func (r *realKBRepo) SaveMindmap(_ context.Context, _ string, _, _, _ []byte) error { return nil }
-func (r *realKBRepo) GetMindmap(_ context.Context, _ string) ([]byte, []byte, []byte, error) {
-	return nil, nil, nil, nil
 }
 func (r *realKBRepo) UpdateKnowledgeBase(_ context.Context, _ *types.KnowledgeBase) error {
 	return nil

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Tencent/WeKnora/apps/app-core/agent/tools"
+	"github.com/Tencent/WeKnora/apps/app-core/application/access"
 	"github.com/Tencent/WeKnora/apps/app-core/application/repository"
 	"github.com/Tencent/WeKnora/apps/app-core/logger"
 	"github.com/Tencent/WeKnora/apps/app-core/types"
@@ -144,9 +145,9 @@ func (s *customAgentService) GetAgentByID(ctx context.Context, id string) (*type
 		// Try to get from database first (for customized config)
 		agent, err := s.repo.GetAgentByID(ctx, id, tenantID)
 		if err == nil {
-			// Found in database, return with customized config
+			// Found in database, overlay locale-specific name/description/avatar
 			agent.EnsureDefaults()
-			types.ApplyBuiltinDisplayI18n(ctx, agent)
+			types.ApplyBuiltinAgentLocalization(ctx, agent)
 			return agent, nil
 		}
 		// Not in database, return default built-in agent from registry (i18n-aware)
@@ -168,7 +169,6 @@ func (s *customAgentService) GetAgentByID(ctx context.Context, id string) (*type
 	}
 
 	agent.EnsureDefaults()
-	types.ApplyBuiltinDisplayI18n(ctx, agent)
 	return agent, nil
 }
 
@@ -186,7 +186,6 @@ func (s *customAgentService) GetAgentByIDAndTenant(ctx context.Context, id strin
 		return nil, err
 	}
 	agent.EnsureDefaults()
-	types.ApplyBuiltinDisplayI18n(ctx, agent)
 	return agent, nil
 }
 
@@ -210,7 +209,6 @@ func (s *customAgentService) ListAgents(ctx context.Context) ([]*types.CustomAge
 	builtinInDB := make(map[string]bool)
 	for _, agent := range allAgents {
 		agent.EnsureDefaults()
-		types.ApplyBuiltinDisplayI18n(ctx, agent)
 		if types.IsBuiltinAgentID(agent.ID) {
 			builtinInDB[agent.ID] = true
 		}
@@ -226,6 +224,7 @@ func (s *customAgentService) ListAgents(ctx context.Context) ([]*types.CustomAge
 			// Use customized config from database
 			for _, agent := range allAgents {
 				if agent.ID == builtinID {
+					types.ApplyBuiltinAgentLocalization(ctx, agent)
 					result = append(result, agent)
 					break
 				}
@@ -313,8 +312,9 @@ func (s *customAgentService) UpdateAgent(ctx context.Context, agent *types.Custo
 
 // updateBuiltinAgent updates a built-in agent's configuration (but not basic info)
 func (s *customAgentService) updateBuiltinAgent(ctx context.Context, agent *types.CustomAgent, tenantID uint64) (*types.CustomAgent, error) {
-	// Get the default built-in agent from registry (i18n-aware)
-	defaultAgent := types.GetBuiltinAgentWithContext(ctx, agent.ID, tenantID)
+	// Persist locale-independent display fields (the YAML "default" locale) so
+	// read paths that skip builtin localization see a stable language.
+	defaultAgent := types.GetBuiltinAgent(agent.ID, tenantID)
 	if defaultAgent == nil {
 		return nil, ErrAgentNotFound
 	}
@@ -344,7 +344,7 @@ func (s *customAgentService) updateBuiltinAgent(ctx context.Context, agent *type
 		}
 
 		logger.Infof(ctx, "Built-in agent config updated successfully, ID: %s", agent.ID)
-		types.ApplyBuiltinDisplayI18n(ctx, existingAgent)
+		types.ApplyBuiltinAgentLocalization(ctx, existingAgent)
 		return existingAgent, nil
 	}
 
@@ -376,7 +376,7 @@ func (s *customAgentService) updateBuiltinAgent(ctx context.Context, agent *type
 	}
 
 	logger.Infof(ctx, "Built-in agent config record created successfully, ID: %s", agent.ID)
-	types.ApplyBuiltinDisplayI18n(ctx, newAgent)
+	types.ApplyBuiltinAgentLocalization(ctx, newAgent)
 	return newAgent, nil
 }
 
@@ -580,7 +580,7 @@ func (s *customAgentService) getSuggestedQuestions(
 	resolvedTags := resolvedSuggestionTagScopes{}
 	if len(scopeTagIDs) > 0 {
 		var err error
-		resolvedTags, err = s.resolveSuggestionTagScopes(ctx, tenantID, tagScopes)
+		resolvedTags, err = s.resolveSuggestionTagScopes(ctx, tagScopes)
 		if err != nil {
 			logger.ErrorWithFields(ctx, err, map[string]interface{}{
 				"agent_id":      agentID,
@@ -674,7 +674,7 @@ func (s *customAgentService) getSuggestedQuestions(
 	// querying a KB shared from tenant B would hit `tenant_id = A` and get zero
 	// rows back — the symptom is "suggested questions never appear for shared KBs".
 	scopeKBIDs := mergeUniqueStrings(queryKBIDs, resolvedTags.KnowledgeBaseIDs)
-	kbGroups := s.groupKBIDsByEffectiveTenant(ctx, tenantID, scopeKBIDs)
+	kbGroups := s.groupKBIDsByEffectiveTenant(ctx, scopeKBIDs)
 	// Always keep the caller's tenant in the iteration so knowledge_ids-only
 	// requests (no kbIDs) still execute one query under the caller's tenant.
 	if len(scopeKBIDs) == 0 {
@@ -835,7 +835,6 @@ type resolvedSuggestionTagScopes struct {
 // source tenant that owns the tag and chunk rows.
 func (s *customAgentService) resolveSuggestionTagScopes(
 	ctx context.Context,
-	callerTenantID uint64,
 	tagScopes []types.TagScope,
 ) (resolvedSuggestionTagScopes, error) {
 	result := resolvedSuggestionTagScopes{TagIDsByTenant: make(map[uint64][]string)}
@@ -863,7 +862,7 @@ func (s *customAgentService) resolveSuggestionTagScopes(
 	for kbID := range byKB {
 		kbIDs = append(kbIDs, kbID)
 	}
-	kbGroups := s.groupKBIDsByEffectiveTenant(ctx, callerTenantID, kbIDs)
+	kbGroups := s.groupKBIDsByEffectiveTenant(ctx, kbIDs)
 	for tenantID, groupKBIDs := range kbGroups {
 		for _, kbID := range groupKBIDs {
 			requested := mergeUniqueStrings(nil, byKB[kbID])
@@ -1084,9 +1083,9 @@ func wikiSuggestionFromPage(page *types.WikiPage, locale string) string {
 // kbIDs is empty.
 func (s *customAgentService) groupKBIDsByEffectiveTenant(
 	ctx context.Context,
-	callerTenantID uint64,
 	kbIDs []string,
 ) map[uint64][]string {
+	callerTenantID := types.CallerFromContext(ctx).TenantID
 	out := make(map[uint64][]string)
 	if len(kbIDs) == 0 {
 		return out
@@ -1107,20 +1106,13 @@ func (s *customAgentService) groupKBIDsByEffectiveTenant(
 			kbByID[kb.ID] = kb
 		}
 	}
-	callerRole := types.TenantRoleFromContext(ctx)
+	permissions := access.NewKBPermissions(ctx, s.kbShareService)
 	for _, kbID := range kbIDs {
 		kb := kbByID[kbID]
 		if kb == nil {
 			continue
 		}
-		if kb.TenantID == callerTenantID {
-			out[callerTenantID] = append(out[callerTenantID], kbID)
-			continue
-		}
-		if s.kbShareService == nil {
-			continue
-		}
-		ok, err := s.kbShareService.HasTenantKBPermission(ctx, kbID, callerTenantID, callerRole, types.OrgRoleViewer)
+		ok, err := permissions.Check(kbID, kb.TenantID, types.OrgRoleViewer)
 		if err != nil || !ok {
 			continue
 		}

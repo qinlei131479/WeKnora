@@ -3,10 +3,10 @@ package interfaces
 import (
 	"context"
 
+	"github.com/Tencent/WeKnora/apps/app-core/models/asr"
 	"github.com/Tencent/WeKnora/apps/app-core/models/chat"
 	"github.com/Tencent/WeKnora/apps/app-core/models/embedding"
 	"github.com/Tencent/WeKnora/apps/app-core/models/rerank"
-	"github.com/Tencent/WeKnora/apps/app-core/models/asr"
 	"github.com/Tencent/WeKnora/apps/app-core/models/vlm"
 	"github.com/Tencent/WeKnora/apps/app-core/types"
 )
