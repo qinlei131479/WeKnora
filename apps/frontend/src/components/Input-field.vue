@@ -19,6 +19,7 @@ import { getRootZoom, rectToCssPx, cssViewportSize } from '@/utils/zoom';
 import { type ModelConfig } from '@/api/model';
 import { type CustomAgent, BUILTIN_QUICK_ANSWER_ID, BUILTIN_SMART_REASONING_ID } from '@/api/agent';
 import { localizedBuiltinAgentName } from '@/utils/agent-mode';
+import { chatSubmitShortcut } from '@/utils/chatSubmitShortcut';
 import { useChatResourcesStore } from '@/stores/chatResources';
 import { useEditorResourcesStore } from '@/stores/editorResources';
 import { useI18n } from 'vue-i18n';
@@ -1334,7 +1335,7 @@ const loadMentionItems = async (q: string, resetIndex = true, append = false) =>
 
     const skillsMode = agentSkillsSelectionMode.value;
     if (skillsMode !== 'none') {
-      await editorResources.ensureSkills();
+      await editorResources.ensureSkills(currentAgentConfig.value?.sandbox_config_id);
       skillItems = editorResources.skills
         .filter(skill => isSkillAllowedByAgent(skill.name))
         .map(skill => ({
@@ -2198,7 +2199,7 @@ const clearPendingUploads = () => {
   uploadedAttachments.value = [];
 }
 
-const onKeydown = (val: string, event: { e: { preventDefault(): unknown; keyCode: number; shiftKey: any; ctrlKey: any; }; }) => {
+const onKeydown = (val: string, event: { e: KeyboardEvent }) => {
   if (showMention.value) {
     if (event.e.keyCode === 38) { // Up
       event.e.preventDefault();
@@ -2238,10 +2239,8 @@ const onKeydown = (val: string, event: { e: { preventDefault(): unknown; keyCode
     }
   }
 
-  if ((event.e.keyCode == 13 && event.e.shiftKey) || (event.e.keyCode == 13 && event.e.ctrlKey)) {
-    return;
-  }
-  if (event.e.keyCode == 13) {
+  const delivery = chatSubmitShortcut(event.e, false);
+  if (delivery) {
     event.e.preventDefault();
     createSession(val)
   }

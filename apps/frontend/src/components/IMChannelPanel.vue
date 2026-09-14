@@ -578,6 +578,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, onUnmounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { normalizeOptionalString } from '@/utils/optionalString';
 import { MessagePlugin } from 'tdesign-vue-next';
 import {
   listIMChannels, createIMChannel, updateIMChannel, deleteIMChannel, toggleIMChannel,
@@ -1057,7 +1058,7 @@ async function handleSave() {
         mode: formData.value.mode,
         output_mode: formData.value.output_mode,
         session_mode: formData.value.session_mode,
-        knowledge_base_id: formData.value.knowledge_base_id,
+        knowledge_base_id: normalizeOptionalString(formData.value.knowledge_base_id),
         credentials: formData.value.credentials,
         enabled: editingEnabled.value,
         ...(formData.value.target_agent_id ? { agent_id: formData.value.target_agent_id } : {}),
@@ -1075,7 +1076,7 @@ async function handleSave() {
         mode: formData.value.mode,
         output_mode: formData.value.output_mode,
         session_mode: formData.value.session_mode,
-        knowledge_base_id: formData.value.knowledge_base_id,
+        knowledge_base_id: normalizeOptionalString(formData.value.knowledge_base_id),
         credentials: formData.value.credentials,
       });
       MessagePlugin.success(t('common.createSuccess'));

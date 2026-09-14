@@ -96,6 +96,18 @@
                     <ChatHistorySettings />
                   </div>
 
+                  <div v-if="currentSection === 'memory'" class="section">
+                    <MemoryWorkspaceSettings />
+                  </div>
+
+                  <div v-if="currentSection === 'mymemory'" class="section">
+                    <MemorySettings />
+                  </div>
+
+                  <div v-if="currentSection === 'browserconnection'" class="section">
+                    <BrowserConnectionSettings />
+                  </div>
+
                   <!-- 向量数据库引擎 -->
                   <div v-if="currentSection === 'vectorstore'" class="section">
                     <VectorStoreSettings />
@@ -109,6 +121,18 @@
                   <!-- 存储引擎 -->
                   <div v-if="currentSection === 'storage'" class="section">
                     <StorageEngineSettings />
+                  </div>
+
+                  <div v-if="currentSection === 'sandbox'" class="section">
+                    <SandboxSettings />
+                  </div>
+
+                  <div v-if="currentSection === 'skills'" class="section">
+                    <SkillSettings :initial-sandbox-id="currentSubSection" />
+                  </div>
+
+                  <div v-if="currentSection === 'envvars'" class="section">
+                    <EnvVarSettings />
                   </div>
 
                   <!-- 系统信息 -->
@@ -183,10 +207,17 @@ import OllamaSettings from './OllamaSettings.vue'
 import McpSettings from './McpSettings.vue'
 import WebSearchSettings from './WebSearchSettings.vue'
 import ChatHistorySettings from './ChatHistorySettings.vue'
+import MemoryWorkspaceSettings from './MemoryWorkspaceSettings.vue'
+import MemorySettings from './MemorySettings.vue'
+import BrowserConnectionSettings from './BrowserConnectionSettings.vue'
 import VectorStoreSettings from './VectorStoreSettings.vue'
 import ParserEngineSettings from './ParserEngineSettings.vue'
 import StorageEngineSettings from './StorageBackendSettings.vue'
+import SandboxSettings from './SandboxSettings.vue'
+import SkillSettings from './SkillSettings.vue'
+import EnvVarSettings from './EnvVarSettings.vue'
 import TenantMembers from './TenantMembers.vue'
+import { SKILL_ICON } from '@/types/mention'
 import SystemSettings from '@/views/system/SystemSettings.vue'
 import RuntimeQueues from '@/views/system/RuntimeQueues.vue'
 import PlatformAPIKeys from '@/views/system/PlatformAPIKeys.vue'
@@ -312,9 +343,15 @@ const navItems = computed(() => {
     { key: 'models', icon: 'control-platform', label: t('settings.modelManagement') },
     { key: 'websearch', icon: 'search', label: t('settings.webSearchConfig') },
     { key: 'chathistory', icon: 'chat', label: t('chatHistorySettings.title') },
+    { key: 'memory', icon: 'bulletpoint', label: t('memoryWorkspaceSettings.title') },
+    { key: 'mymemory', icon: 'bookmark', label: t('memorySettings.title') },
+    { key: 'browserconnection', icon: 'laptop', label: t('localBrowser.settingsTitle') },
+    { key: 'envvars', icon: 'key', label: t('envVarSettings.title') },
     { key: 'vectorstore', icon: 'data-base', label: t('settings.vectorStoreEngine') },
     { key: 'parser', icon: 'file-search', label: t('settings.parserEngine') },
     { key: 'storage', icon: 'cloud', label: t('settings.storageEngine') },
+    { key: 'sandbox', icon: 'code', label: t('settings.sandbox.title') },
+    { key: 'skills', icon: SKILL_ICON, label: t('settings.skills.title') },
     { key: 'mcp', icon: 'tools', label: t('settings.mcpService') },
     { key: 'system', icon: 'info-circle', label: t('settings.versionInfo') },
     { key: 'system-global', icon: 'server', label: t('settings.system') },
@@ -346,12 +383,12 @@ const navGroups = computed<NavGroup[]>(() => {
     {
       key: 'account',
       label: t('settings.navGroups.account'),
-      items: pickItems(['userprofile']),
+      items: pickItems(['userprofile', 'browserconnection', 'mymemory', 'envvars']),
     },
     {
       key: 'workspace',
       label: t('settings.navGroups.workspace'),
-      items: pickItems(['tenant', 'members', 'chathistory']),
+      items: pickItems(['tenant', 'members', 'chathistory', 'memory']),
     },
     {
       key: 'models_runtime',
@@ -376,6 +413,8 @@ const navGroups = computed<NavGroup[]>(() => {
         'vectorstore',
         'parser',
         'storage',
+        'sandbox',
+        'skills',
         'websearch',
         'mcp',
       ]),
@@ -485,18 +524,29 @@ watch(() => uiStore.settingsInitialSection, (section) => {
           }
         }, 300)
       }
+    } else if (normalizedSection === 'skills') {
+      currentSubSection.value = uiStore.settingsInitialSubSection || ''
     } else {
       currentSubSection.value = ''
     }
   }
 }, { immediate: true })
 
+watch(() => uiStore.settingsInitialSubSection, (sub) => {
+  if (uiStore.settingsInitialSection === 'skills' && visible.value) {
+    currentSubSection.value = sub || ''
+  }
+})
+
 watch(
   () => [visible.value, route.query.section],
   ([isVisible, section]) => {
     if (!isVisible || typeof section !== 'string') return
-    currentSection.value = normalizeSettingsSection(section)
-    currentSubSection.value = ''
+    const normalizedSection = normalizeSettingsSection(section)
+    currentSection.value = normalizedSection
+    currentSubSection.value = normalizedSection === 'skills'
+      ? (uiStore.settingsInitialSubSection || '')
+      : ''
   },
   { immediate: true },
 )
@@ -531,6 +581,8 @@ const handleSettingsNav = (e: CustomEvent) => {
       }
       // 如果有 subsection，选中对应的子菜单项
       currentSubSection.value = subsection || navItem.children[0].key
+    } else if (normalizedSection === 'skills') {
+      currentSubSection.value = subsection || ''
     }
   }
 }

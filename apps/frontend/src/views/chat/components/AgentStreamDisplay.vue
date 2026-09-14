@@ -18,6 +18,14 @@
       </div>
       <!-- Tree children (intermediate steps) -->
       <div v-if="showIntermediateSteps" class="tree-children">
+        <ChatMemoryStep
+          v-if="hasMemory"
+          :memories="memoryItems"
+          :expanded="memoryExpanded"
+          :forgetting-id="memoryForgettingId"
+          @toggle="toggleMemory"
+          @forget="forgetMemory"
+        />
         <template v-for="(event, index) in visibleIntermediateEvents" :key="getEventKey(event, index)">
           <div v-if="event && event.type" class="tree-child"
             :class="{ 'tree-child-last': !isConversationDone && index === visibleIntermediateEvents.length - 1 }">
@@ -172,7 +180,8 @@
 
                   <div v-if="isEventExpanded(event.tool_call_id) && !event.pending && hasExpandableResults(event)"
                     class="action-details">
-                    <div v-if="event.display_type && event.tool_data" class="tool-result-wrapper">
+                    <BrowserToolDetails v-if="event.tool_name === 'local_browser'" :event="event" />
+                    <div v-else-if="event.display_type && event.tool_data" class="tool-result-wrapper">
                       <ToolResultRenderer :display-type="event.display_type" :tool-data="event.tool_data"
                         :output="event.output" :arguments="event.arguments" />
                     </div>
@@ -208,11 +217,21 @@
     </div>
 
     <!-- Event Stream (non-tree mode: before answer starts, or answer events) -->
-    <div v-if="!ragMode || displayEvents.length > 0 || showAgentActivityIndicator" ref="streamingStepsContainer"
+    <div v-if="!ragMode || displayEvents.length > 0 || showMemoryRow || showAgentActivityIndicator" ref="streamingStepsContainer"
       class="streaming-steps-container" :class="{
         'streaming-steps-constrained': !answerEverStarted && !isConversationDone,
         'is-streaming-timeline': showStreamingTimeline
       }">
+      <ChatMemoryStep
+        v-if="showMemoryRow"
+        class="event-item"
+        :memories="memoryItems"
+        :expanded="memoryExpanded"
+        :is-last="memoryIsLast"
+        :forgetting-id="memoryForgettingId"
+        @toggle="toggleMemory"
+        @forget="forgetMemory"
+      />
       <template v-for="(event, index) in displayEvents" :key="getEventKey(event, index)">
         <div v-if="event && event.type" class="event-item" :class="{
           'event-answer': event.type === 'answer',
@@ -315,6 +334,18 @@
                   :title="$t('agent.addToKnowledgeBase')">
                   <t-icon name="bookmark-add" />
                 </t-button>
+                <span v-if="hasArtifacts || artifactsCollecting" class="answer-toolbar__artifact"
+                  :class="{ 'is-collecting': artifactButtonCollecting, 'is-arrived': artifactArrived }"
+                  @animationend="onArtifactArriveEnd">
+                  <t-button size="small" variant="outline" shape="round"
+                    :disabled="artifactButtonCollecting"
+                    :title="hasArtifacts ? $t('agent.artifactDrawer.buttonTitle') : $t('agent.artifactDrawer.collecting')"
+                    @click.stop="openArtifactDrawer()">
+                    <t-icon v-if="artifactButtonCollecting" name="loading" class="answer-toolbar__artifact-spinner" />
+                    <t-icon v-else name="folder" />
+                  </t-button>
+                  <span v-if="hasArtifacts" class="answer-toolbar__artifact-count" aria-hidden="true">{{ artifactCount }}</span>
+                </span>
                 <t-tooltip v-if="event.is_fallback" :content="$t('chat.fallbackHint')" placement="top">
                   <t-button size="small" variant="outline" shape="round" class="fallback-icon-btn">
                     <t-icon name="info-circle" />
@@ -402,7 +433,8 @@
 
                 <div v-if="isEventExpanded(event.tool_call_id) && !event.pending && hasExpandableResults(event)"
                   class="action-details">
-                  <div v-if="event.display_type && event.tool_data" class="tool-result-wrapper">
+                  <BrowserToolDetails v-if="event.tool_name === 'local_browser'" :event="event" />
+                  <div v-else-if="event.display_type && event.tool_data" class="tool-result-wrapper">
                     <ToolResultRenderer :display-type="event.display_type" :tool-data="event.tool_data"
                       :output="event.output" :arguments="event.arguments" />
                   </div>
@@ -479,6 +511,14 @@
       </div>
     </template>
   </t-drawer>
+  <ChatArtifactsDrawer
+    v-if="hasArtifacts && embeddedMode && sessionIdForArtifacts && messageIdForArtifacts"
+    v-model:visible="showArtifactDrawer"
+    :session-id="sessionIdForArtifacts"
+    :message-id="messageIdForArtifacts"
+    :artifacts="artifactList"
+    :preview-index="artifactPreviewIndex"
+  />
 </template>
 
 <script setup lang="ts">
@@ -489,9 +529,17 @@ import 'katex/dist/katex.min.css';
 import ToolResultRenderer from './ToolResultRenderer.vue';
 import ToolApprovalCard from './ToolApprovalCard.vue';
 import McpOAuthCard from './McpOAuthCard.vue';
+import BrowserToolDetails from './BrowserToolDetails.vue';
 import ChatRequestInfoButton from '@/components/ChatRequestInfoButton.vue';
 import ChatCitationFloat from '@/components/ChatCitationFloat.vue';
 import picturePreview from '@/components/picture-preview.vue';
+import ChatArtifactsDrawer from './ChatArtifactsDrawer.vue';
+import { isCollectingSkillArtifacts } from '@/utils/skillArtifacts';
+import { useArtifactArriveMotion } from '@/composables/useArtifactArriveMotion';
+import { useChatSandboxPanel } from '@/composables/useChatSandboxPanel';
+import { persistedAssistantId } from '@/utils/steerStreamFork';
+import ChatMemoryStep from './ChatMemoryStep.vue';
+import { useChatMemoryRow, type UsedMemory } from '@/composables/useChatMemoryRow';
 import { countGrepDocuments, groupGrepChunkResults } from '@/utils/grepResultsGroup';
 import { getKnowledgeChunksSummaryHtml } from '@/utils/knowledgeChunksDisplay';
 import { getAttachmentParsingSummaryHtml } from '@/utils/attachmentParsingDisplay';
@@ -520,6 +568,7 @@ import {
   prepareStreamingMermaidMarkdown,
   extractFirstMermaidCode,
   injectCachedMermaidSvg,
+  type CachedMermaidSvgHtml,
 } from '@/utils/chatMessageShared';
 import {
   configureMarkedForChatMarkdown,
@@ -817,6 +866,19 @@ const embedAuthProps = computed(() => ({
 
 const showRequestInfo = computed(
   () => !props.embeddedMode && !!(props.session?.request_id || props.session?.id),
+);
+
+const {
+  memoryItems,
+  hasMemory,
+  expanded: memoryExpanded,
+  forgettingId: memoryForgettingId,
+  toggle: toggleMemory,
+  forget: forgetMemory,
+} = useChatMemoryRow(() => props.session?.used_memories as UsedMemory[] | undefined);
+const showMemoryRow = computed(() => hasMemory.value);
+const memoryIsLast = computed(() =>
+  displayEvents.value.length === 0 && !showAgentActivityIndicator.value,
 );
 
 const resolveAssistantMessageId = (session?: SessionData) =>
@@ -1358,7 +1420,7 @@ const isConversationDone = computed(() => {
   return !!doneAnswer;
 });
 
-const streamingMermaidSvgCache = ref<string | null>(null);
+const streamingMermaidSvgCache = ref<CachedMermaidSvgHtml>(null);
 let streamingMermaidRenderTask: Promise<void> | null = null;
 let streamingMermaidRenderId = 0;
 
@@ -1432,6 +1494,38 @@ watch(activeAnswerMarkdown, () => {
 const answerFullyRendered = computed(
   () => isConversationDone.value && typedAnswer.value.length >= activeAnswerMarkdown.value.length,
 );
+const showArtifactDrawer = ref(false);
+const sandboxPanel = useChatSandboxPanel();
+const artifactList = computed(() => {
+  const list = ((props.session?.artifacts as any[]) || []);
+  return list.map((a, i) => ({ index: i, ...a }));
+});
+const hasArtifacts = computed(() => artifactList.value.length > 0);
+const artifactCount = computed(() => artifactList.value.length);
+const { artifactArrived, onArtifactArriveEnd } = useArtifactArriveMotion(artifactCount);
+const artifactsCollecting = computed(() => isCollectingSkillArtifacts(props.session as any));
+const artifactButtonCollecting = computed(() => artifactsCollecting.value && !hasArtifacts.value);
+const sessionIdForArtifacts = computed(() => props.sessionId ?? '');
+const messageIdForArtifacts = computed(() =>
+  persistedAssistantId(props.session) || String(props.session?.request_id || ''),
+);
+const artifactPreviewIndex = ref<number | null>(null);
+function openArtifactDrawer(previewIndex: number | null = null) {
+  if (!hasArtifacts.value) return;
+  if (sandboxPanel && !props.embeddedMode) {
+    if (previewIndex == null) {
+      sandboxPanel.toggleArtifacts(messageIdForArtifacts.value);
+    } else {
+      sandboxPanel.open('artifacts', {
+        messageId: messageIdForArtifacts.value,
+        previewIndex,
+      });
+    }
+    return;
+  }
+  artifactPreviewIndex.value = previewIndex;
+  showArtifactDrawer.value = true;
+}
 watch(answerFullyRendered, (ready) => {
   emit('render-complete-change', ready);
   if (!ready) return;
@@ -2262,7 +2356,7 @@ onUpdated(() => {
 const agentRenderer = new marked.Renderer();
 agentRenderer.code = createMermaidCodeRenderer('mermaid-agent');
 
-const prepareAgentMarkdown = (markdown: string, cachedSvgHtml?: string | null): string => {
+const prepareAgentMarkdown = (markdown: string, cachedSvgHtml?: CachedMermaidSvgHtml): string => {
   const mermaidSafe = !isConversationDone.value
     ? prepareStreamingMermaidMarkdown(markdown, cachedSvgHtml ?? streamingMermaidSvgCache.value)
     : replaceIncompleteMermaidWithPlaceholder(markdown);

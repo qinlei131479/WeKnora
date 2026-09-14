@@ -344,6 +344,10 @@
         </div>
       </section>
 
+      <section v-if="props.service?.id" class="setting-drawer__section">
+        <McpMetadataPanel :service-id="props.service.id" />
+      </section>
+
       <!-- Section 5 — 测试结果（内联，避免在抽屉上再叠一个居中弹窗） -->
       <section v-if="testResult" ref="testResultSection" class="setting-drawer__section">
         <div class="test-result-header">
@@ -388,6 +392,7 @@ import {
 } from '@/api/mcp-service'
 import SettingDrawer from '@/components/settings/SettingDrawer.vue'
 import McpTestResultBody from './McpTestResultBody.vue'
+import McpMetadataPanel from './McpMetadataPanel.vue'
 import CredentialResource, {
   type CredentialFieldDef,
   type CredentialResourceApi,

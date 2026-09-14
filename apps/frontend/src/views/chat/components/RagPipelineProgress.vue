@@ -4,7 +4,25 @@
          readers miss a live region that appears together with its own text. -->
     <div class="sr-only" role="status" aria-live="polite">{{ liveStatusText }}</div>
 
+    <ChatMemoryStep
+      v-if="memoryOnly && hasMemory"
+      variant="root"
+      :memories="memoryItems"
+      :expanded="memoryExpanded"
+      :forgetting-id="forgettingId"
+      @toggle="toggleMemory"
+      @forget="forgetMemory"
+    />
+
     <div v-if="showPrePipelineWait" class="tree-children">
+      <ChatMemoryStep
+        v-if="hasMemory"
+        :memories="memoryItems"
+        :expanded="memoryExpanded"
+        :forgetting-id="forgettingId"
+        @toggle="toggleMemory"
+        @forget="forgetMemory"
+      />
       <div class="tree-child tree-child-last streaming-loading-node">
         <div class="tree-branch" />
         <div class="tree-child-content">
@@ -21,6 +39,15 @@
     </div>
 
     <div v-else-if="!showCollapsedRoot" class="tree-children">
+      <ChatMemoryStep
+        v-if="hasMemory"
+        :memories="memoryItems"
+        :expanded="memoryExpanded"
+        :is-last="steps.length === 0 && !showWaitStep && !showThinkingStep && !showDoneRow"
+        :forgetting-id="forgettingId"
+        @toggle="toggleMemory"
+        @forget="forgetMemory"
+      />
       <div v-for="(step, index) in steps" :key="step.id" class="tree-child" :class="{
         'tree-child-last':
           !showDoneRow
@@ -224,6 +251,8 @@ import { getAttachmentParsingSummaryHtml } from '@/utils/attachmentParsingDispla
 import { RAG_RETRIEVAL_TOOL_NAMES, RAG_TIMELINE_TOOL_NAMES } from '@/utils/rag-pipeline-history'
 import { useChatReferencesDrawer } from '@/composables/useChatReferencesDrawer'
 import { buildReferenceSections } from '@/utils/referenceSources'
+import ChatMemoryStep from './ChatMemoryStep.vue'
+import { useChatMemoryRow, type UsedMemory } from '@/composables/useChatMemoryRow'
 import {
   createRagWaitController,
   getRagPipelineWaitKind,
@@ -236,12 +265,22 @@ const props = defineProps<{
     agentEventStream?: Array<Record<string, unknown>>
     content?: string
     knowledge_references?: Array<{ chunk_type?: string; knowledge_id?: string; knowledge_title?: string }>
+    used_memories?: UsedMemory[]
     is_completed?: boolean
   }
   embeddedMode?: boolean
+  memoryOnly?: boolean
 }>()
 
 const { t } = useI18n()
+const {
+  memoryItems,
+  hasMemory,
+  expanded: memoryExpanded,
+  forgettingId,
+  toggle: toggleMemory,
+  forget: forgetMemory,
+} = useChatMemoryRow(() => props.session?.used_memories)
 const referencesDrawer = useChatReferencesDrawer()
 const userExpanded = ref(false)
 const thinkingExpanded = ref(true)
@@ -412,7 +451,9 @@ const isThinkingStreaming = computed(
 )
 
 const visible = computed(
-  () => steps.value.length > 0 || showPrePipelineWait.value || showThinkingStep.value,
+  () => props.memoryOnly
+    ? hasMemory.value
+    : steps.value.length > 0 || showPrePipelineWait.value || showThinkingStep.value || hasMemory.value,
 )
 
 const liveStatusText = computed(() => {

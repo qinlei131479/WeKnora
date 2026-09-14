@@ -29,6 +29,7 @@
           <div v-if="description || $slots.subtitle" class="setting-drawer__subtitle">
             <slot name="subtitle">{{ description }}</slot>
           </div>
+          <div :id="headerActionsId" class="setting-drawer__header-actions"><slot name="header-actions" /></div>
         </div>
       </div>
     </template>
@@ -56,8 +57,14 @@
   </t-drawer>
 </template>
 
+<script lang="ts">
+import type { InjectionKey } from 'vue'
+
+export const SETTING_DRAWER_HEADER_ACTIONS_ID: InjectionKey<string> = Symbol('settingDrawerHeaderActionsId')
+</script>
+
 <script setup lang="ts">
-import { ref, computed, useAttrs, onMounted, onUnmounted } from 'vue'
+import { ref, computed, provide, useAttrs, useId, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 interface Props {
@@ -120,6 +127,8 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const attrs = useAttrs()
+const headerActionsId = `sdha${useId().replace(/\W/g, '')}`
+provide(SETTING_DRAWER_HEADER_ACTIONS_ID, `#${headerActionsId}`)
 
 const drawerPassthroughAttrs = computed(() => {
   const { class: _class, ...rest } = attrs

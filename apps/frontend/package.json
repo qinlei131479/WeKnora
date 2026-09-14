@@ -48,7 +48,11 @@
     "vue-i18n": "^11.4.2",
     "vue-router": "^4.5.0",
     "vue-virtual-scroller": "^2.0.0-beta.8",
-    "xlsx": "file:./packages/xlsx-0.20.2.tgz"
+    "xlsx": "file:./packages/xlsx-0.20.2.tgz",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
+    "@xmldom/xmldom": "0.9.12",
+    "jszip": "3.10.1"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.5",

@@ -21,6 +21,11 @@
                     @render-complete-change="emit('render-complete-change', $event)" />
             </div>
             <template v-else>
+                <!-- A plain answer has no timeline to put the memory row on, so
+                     it gets the standalone row. Agent turns render theirs inside
+                     the agent timeline instead. -->
+                <RagPipelineProgress v-if="!session.isAgentMode && session.used_memories?.length"
+                    :session="session" :embedded-mode="embeddedMode" memory-only />
                 <docInfo v-if="session.knowledge_references?.length" :session="session"></docInfo>
                 <AgentStreamDisplay :session="session" :session-id="sessionId" :user-query="userQuery"
                     v-if="session.isAgentMode" :follow-up-loading="followUpLoading"
@@ -46,6 +51,20 @@
                     :title="$t('agent.addToKnowledgeBase')">
                     <t-icon name="bookmark-add" />
                 </t-button>
+                <!-- Skill artifact download: only shown when this reply's
+                     assistant message actually recorded any generated files. -->
+                <span v-if="hasArtifacts || artifactsCollecting" class="answer-toolbar__artifact"
+                    :class="{ 'is-collecting': artifactButtonCollecting, 'is-arrived': artifactArrived }"
+                    @animationend="onArtifactArriveEnd">
+                    <t-button size="small" variant="outline" shape="round"
+                        :disabled="artifactButtonCollecting"
+                        :title="hasArtifacts ? $t('agent.artifactDrawer.buttonTitle') : $t('agent.artifactDrawer.collecting')"
+                        @click.stop="openArtifactDrawer()">
+                        <t-icon v-if="artifactButtonCollecting" name="loading" class="answer-toolbar__artifact-spinner" />
+                        <t-icon v-else name="folder" />
+                    </t-button>
+                    <span v-if="hasArtifacts" class="answer-toolbar__artifact-count" aria-hidden="true">{{ artifactCount }}</span>
+                </span>
                 <!-- Fallback 提示图标 -->
                 <t-tooltip v-if="session.is_fallback" :content="$t('chat.fallbackHint')" placement="top">
                     <t-button size="small" variant="outline" shape="round" class="fallback-icon-btn">
@@ -69,6 +88,14 @@
             <ChatCitationFloat :float="citationFloat" :on-enter="cancelCitationClose"
                 :on-leave="scheduleCitationClose" />
         </Teleport>
+        <ChatArtifactsDrawer
+            v-if="hasArtifacts && embeddedMode"
+            v-model:visible="showArtifactDrawer"
+            :session-id="sessionId"
+            :message-id="messageIdForArtifacts"
+            :artifacts="artifactList"
+            :preview-index="artifactPreviewIndex"
+        />
     </div>
 </template>
 <script setup>
@@ -81,7 +108,18 @@ import RagPipelineProgress from './RagPipelineProgress.vue';
 import ChatRequestInfoButton from '@/components/ChatRequestInfoButton.vue';
 import ChatCitationFloat from '@/components/ChatCitationFloat.vue';
 import picturePreview from '@/components/picture-preview.vue';
+import ChatArtifactsDrawer from './ChatArtifactsDrawer.vue';
+import { isCollectingSkillArtifacts } from '@/utils/skillArtifacts';
+import { useArtifactArriveMotion } from '@/composables/useArtifactArriveMotion';
+import { useChatSandboxPanel } from '@/composables/useChatSandboxPanel';
+import { persistedAssistantId } from '@/utils/steerStreamFork';
 import { sanitizeMarkdownHTML, safeMarkdownToHTML, createSafeImage, isValidImageURL, hydrateProtectedFileImages } from '@/utils/security';
+import {
+    artifactIndexFromEventTarget,
+    hydrateArtifactImages,
+    isArtifactRefHref,
+    renderArtifactReference,
+} from '@/utils/sandboxArtifactRefs';
 import { useI18n } from 'vue-i18n';
 import { MessagePlugin } from 'tdesign-vue-next';
 import { useUIStore } from '@/stores/ui';
@@ -165,6 +203,51 @@ const props = defineProps({
 
 const showRequestInfo = computed(() => !!(props.session?.request_id || props.session?.id));
 
+// Skill artifact download: drawer in embedded mode, sandbox panel otherwise.
+const showArtifactDrawer = ref(false);
+const sandboxPanel = useChatSandboxPanel();
+const artifactList = computed(() => {
+    const raw = props.session && props.session.artifacts;
+    const list = Array.isArray(raw) ? raw : [];
+    return list.map((a, i) => ({ index: i, ...a }));
+});
+const hasArtifacts = computed(() => artifactList.value.length > 0);
+const artifactCount = computed(() => artifactList.value.length);
+const { artifactArrived, onArtifactArriveEnd } = useArtifactArriveMotion(artifactCount);
+const artifactsCollecting = computed(() => isCollectingSkillArtifacts(props.session));
+const artifactButtonCollecting = computed(() => artifactsCollecting.value && !hasArtifacts.value);
+const messageIdForArtifacts = computed(() => {
+    return persistedAssistantId(props.session) || String(props.session?.request_id || '');
+});
+const artifactPreviewIndex = ref(null);
+function openArtifactDrawer(previewIndex = null) {
+    if (!hasArtifacts.value) return;
+    if (sandboxPanel && !props.embeddedMode) {
+        if (previewIndex == null) {
+            sandboxPanel.toggleArtifacts(messageIdForArtifacts.value);
+        } else {
+            sandboxPanel.open('artifacts', {
+                messageId: messageIdForArtifacts.value,
+                previewIndex,
+            });
+        }
+        return;
+    }
+    artifactPreviewIndex.value = previewIndex;
+    showArtifactDrawer.value = true;
+}
+
+const artifactRefContext = computed(() => {
+    const messageId = messageIdForArtifacts.value;
+    if (!props.sessionId || !messageId) return null;
+    return { sessionId: props.sessionId, messageId };
+});
+
+const artifactRefLabels = computed(() => ({
+    previewHint: t('agent.artifactDrawer.inlinePreviewHint'),
+    missingHint: t('agent.artifactDrawer.inlineMissing'),
+}));
+
 const preview = (url) => {
     nextTick(() => {
         reviewUrl.value = url;
@@ -179,9 +262,20 @@ const closePreImg = () => {
 
 const markdownRenderer = createChatMarkdownRenderer({
     codeRenderer: createMermaidCodeRenderer('mermaid-botmsg'),
-    imageRenderer: ({ href, title, text }) => createSafeImage(href, text || '', title || ''),
+    imageRenderer: ({ href, title, text }) => {
+        const artifactHtml = renderArtifactReference({
+            href,
+            alt: text || '',
+            artifacts: artifactList.value,
+            labels: artifactRefLabels.value,
+            context: artifactRefContext.value,
+            streaming: !props.session?.is_completed,
+        });
+        if (artifactHtml !== null) return artifactHtml;
+        return createSafeImage(href, text || '', title || '');
+    },
     invalidImageHtml: () => `<p>${t('error.invalidImageLink')}</p>`,
-    isValidImageUrl: isValidImageURL,
+    isValidImageUrl: (href) => isArtifactRefHref(href) || isValidImageURL(href),
 });
 
 // 计算属性：将 Markdown 文本转换为 tokens
@@ -281,6 +375,13 @@ const handleAddToKnowledge = () => {
 // 处理 markdown-content 中图片的点击事件
 const handleMarkdownImageClick = (e) => {
     const target = e.target;
+    const artifactIndex = artifactIndexFromEventTarget(target);
+    if (artifactIndex !== null) {
+        e.preventDefault();
+        e.stopPropagation();
+        openArtifactDrawer(artifactIndex);
+        return;
+    }
     if (target && target.tagName === 'IMG') {
         const src = target.getAttribute('src');
         if (src) {
@@ -301,6 +402,7 @@ watch(renderedHTML, () => {
 onUpdated(() => {
     nextTick(async () => {
         await hydrateProtectedFileImages(parentMd.value);
+        await hydrateArtifactImages(parentMd.value, artifactRefContext.value);
         refreshMarkdownEnhancements(parentMd.value);
         if (props.session?.is_completed) {
             await renderMermaidInContainer(parentMd.value);
@@ -316,6 +418,7 @@ onMounted(async () => {
         }
         rebindCitations();
         await hydrateProtectedFileImages(parentMd.value);
+        await hydrateArtifactImages(parentMd.value, artifactRefContext.value);
         await enhanceMarkdownContainer(parentMd.value);
     });
 });

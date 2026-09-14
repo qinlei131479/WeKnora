@@ -582,6 +582,7 @@ import {
   TENANT_API_KEY_CAPABILITY_GROUPS,
   type ApiKeyCapabilityGroup,
 } from '@/config/apiKeyCapabilities'
+import { consumeApiPlaygroundSSE } from './apiPlaygroundSSE'
 
 const { t } = useI18n()
 
@@ -1504,19 +1505,16 @@ async function runPlayground() {
       throw new Error(t('integrations.api.playgroundNoStream'))
     }
 
-    const reader = chatResp.body.getReader()
-    const decoder = new TextDecoder()
-    let raw = ''
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      raw += decoder.decode(value, { stream: true })
+    const result = await consumeApiPlaygroundSSE(chatResp.body, ({ raw, answer }) => {
       playground.stream_output = compactText(raw)
-      playground.final_answer = extractAnswerFromSSE(raw)
+      playground.final_answer = answer
+    })
+    if (result.status === 'failed') {
+      playground.chat_status = 'failed'
+      throw new Error(result.error || t('integrations.api.playgroundFailed'))
     }
-    raw += decoder.decode()
-    playground.stream_output = compactText(raw)
-    playground.final_answer = extractAnswerFromSSE(raw)
+    playground.stream_output = compactText(result.raw)
+    playground.final_answer = result.answer || extractAnswerFromSSE(result.raw)
     playground.chat_status = 'success'
     MessagePlugin.success(t('integrations.api.playgroundSuccess', {
       ms: Math.round(performance.now() - startedAt),

@@ -27,6 +27,7 @@
         <ApiIntegrationSettings />
       </div>
 
+      <CliIntegrationLanding v-if="tab === 'cli'" />
       <ChromeExtensionLanding v-if="tab === 'chrome'" />
       <ClawSkillLanding v-if="tab === 'claw'" />
     </div>
@@ -42,6 +43,7 @@ import AgentEmbedChannelPanel from '@/components/AgentEmbedChannelPanel.vue'
 import ApiIntegrationSettings from '@/views/integrations/ApiIntegrationSettings.vue'
 import ChromeExtensionLanding from '@/views/integrations/ChromeExtensionLanding.vue'
 import ClawSkillLanding from '@/views/integrations/ClawSkillLanding.vue'
+import CliIntegrationLanding from '@/views/integrations/CliIntegrationLanding.vue'
 import type { IntegrationTab } from '@/config/integrations'
 import { getFeatureFlags } from '@/utils/weknoraFeatures'
 
@@ -55,7 +57,7 @@ const props = defineProps<{
 const route = useRoute()
 
 const isLandingSection = computed(
-  () => props.tab === 'chrome' || props.tab === 'claw',
+  () => props.tab === 'chrome' || props.tab === 'claw' || props.tab === 'cli',
 )
 
 /** hide 模式下平台白名单为企微/飞书/钉钉，描述与可选平台保持一致 */

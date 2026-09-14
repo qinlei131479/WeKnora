@@ -177,6 +177,26 @@
             </div>
           </div>
 
+          <div v-if="activeSettingsSection === 'access'" class="setting-row setting-row--create-user">
+            <div class="setting-info">
+              <div class="setting-label">
+                <span>{{ t('system.globalSettings.createUser.label') }}</span>
+                <t-tag theme="danger" variant="light" size="small" class="setting-badge">
+                  {{ t('system.globalSettings.badgeHighRisk') }}
+                </t-tag>
+              </div>
+              <p class="desc">{{ t('system.globalSettings.createUser.description') }}</p>
+            </div>
+            <div class="setting-control">
+              <CreateUserDialog v-model:visible="createUserVisible" @announced="saveAnnouncement = $event">
+                <t-button theme="primary" variant="text" class="create-user-trigger">
+                  <template #icon><t-icon name="user-add" /></template>
+                  {{ t('system.globalSettings.createUser.action') }}
+                </t-button>
+              </CreateUserDialog>
+            </div>
+          </div>
+
       <div
             v-for="item in activeSectionSettings"
         :key="item.key"
@@ -497,6 +517,7 @@ import {
   type SystemSettingItem,
 } from '@/api/system'
 import { useAuthStore } from '@/stores/auth'
+import CreateUserDialog from './CreateUserDialog.vue'
 
 const authStore = useAuthStore()
 const currentUserId = computed(() => authStore.currentUserId)
@@ -610,6 +631,7 @@ const loading = ref(false)
 const savingKey = ref<string | null>(null)
 const savedKey = ref<string | null>(null)
 const saveAnnouncement = ref('')
+const createUserVisible = ref(false)
 let savedKeyTimer: ReturnType<typeof setTimeout> | null = null
 
 type SettingsSection = 'access' | 'tenant' | 'runtime' | 'security' | 'other'

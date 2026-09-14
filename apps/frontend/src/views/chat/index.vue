@@ -82,7 +82,12 @@
                 <div v-for="(session, index) in messagesList"
                     :key="session.id || `${session.role}-${session.created_at}-${index}`" class="msg-item-wrapper">
 
-                    <div v-if="session.role == 'user'">
+                    <MessageTimestamp v-if="shouldShowConversationTimestamp(messagesList, index)"
+                        :value="session.created_at" />
+
+                    <div v-if="session.role == 'user'"
+                        :data-message-id="session.id || undefined"
+                        :class="{ 'is-minimap-target': session.id && session.id === minimapTargetId }">
                         <usermsg :content="session.content" :mentioned_items="session.mentioned_items"
                             :images="session.images" :attachments="session.attachments" :embeddedMode="embeddedMode"
                             :session-id="session_id">
@@ -110,6 +115,9 @@
                     <span class="chat-global-wait__spinner" aria-hidden="true"></span>
                 </div>
             </div>
+            <BrowserTaskPreview v-if="!embeddedMode && session_id" :key="session_id" :session-id="session_id" />
+            <ChatQuestionMinimap v-if="!embeddedMode" :scroll-container="scrollContainer" :messages="messagesList"
+                @jump="jumpToQuestion" />
         </div>
         <transition name="scroll-btn-fade">
             <div v-show="userHasScrolledUp" class="scroll-to-bottom-btn" @click="onClickScrollToBottom">
@@ -128,6 +136,11 @@
         @update:visible="(val) => val ? null : uiStore.closeKBEditor()" @success="handleKBEditorSuccess" />
     <ChatReferencesDrawer />
     <ChatAttachmentPreviewDrawer />
+    <SandboxSidePanel v-if="!embeddedMode" :session-id="session_id"
+        :agent-id="useSettingsStoreInstance.selectedAgentId"
+        :agent-source-tenant-id="useSettingsStoreInstance.selectedAgentSourceTenantId"
+        :shifted="referencesDrawerVisible"
+        :artifacts="sessionArtifacts" :artifacts-collecting="sessionArtifactsCollecting" />
 </template>
 <script setup>
 import { storeToRefs } from 'pinia';
@@ -155,6 +168,9 @@ import { clearCitationChunkCache } from '@/utils/citationChunkCache';
 import ChatReferencesDrawer from '@/components/ChatReferencesDrawer.vue';
 import ChatAttachmentPreviewDrawer from '@/components/ChatAttachmentPreviewDrawer.vue';
 import FollowUpSuggestions from '@/components/chat/FollowUpSuggestions.vue';
+import MessageTimestamp from '@/components/chat/MessageTimestamp.vue';
+import ChatQuestionMinimap from '@/components/chat/ChatQuestionMinimap.vue';
+import { shouldShowConversationTimestamp } from '@/utils/messageTimestamp';
 import ChatHeader from '@/components/ChatHeader.vue';
 import {
     notifySessionMutation,
@@ -167,9 +183,16 @@ import {
 } from '@/api/message-suggestion';
 import { provideChatReferencesDrawer } from '@/composables/useChatReferencesDrawer';
 import { provideChatAttachmentPreviewDrawer } from '@/composables/useChatAttachmentPreviewDrawer';
+import { useSessionActivityStore } from '@/stores/sessionActivity';
+import { provideChatSandboxPanel } from '@/composables/useChatSandboxPanel';
+import SandboxSidePanel from '@/components/chat/SandboxSidePanel.vue';
+import BrowserTaskPreview from './components/BrowserTaskPreview.vue';
+import { collectSessionArtifacts } from '@/utils/sessionArtifacts';
+import { isCollectingSkillArtifacts } from '@/utils/skillArtifacts';
 
 const referencesDrawer = provideChatReferencesDrawer();
 provideChatAttachmentPreviewDrawer();
+provideChatSandboxPanel();
 const { visible: referencesDrawerVisible } = referencesDrawer;
 
 const props = defineProps({
@@ -195,7 +218,7 @@ const { navigateToKnowledgeBaseList } = useKnowledgeBaseCreationNavigation();
 const { t } = useI18n();
 const { engine: chatEngine, goToEngine } = useChatEngineNav();
 const { firstQuery, firstMentionedItems, firstModelId, firstImageFiles, firstAttachmentFiles } = storeToRefs(usemenuStore);
-const { onChunk, error, startStream, stopStream, lastStreamRequest } = useStream();
+const { onChunk, error, isStreaming, startStream, stopStream, lastStreamRequest } = useStream();
 /** Snapshot of the in-flight HTTP request for attaching to the next assistant message. */
 const pendingStreamDebug = ref(null);
 
@@ -234,6 +257,7 @@ const loadSessionAndHydrate = async (sid) => {
         const sessionRes = await getSession(sid);
         if (sessionRes?.data && sid === session_id.value) {
             currentSession.value = sessionRes.data;
+            activitySessionId.value = String(sid);
             const lastState = sessionRes.data.last_request_state;
             if (lastState) {
                 // 先把当前的"全局默认"快照下来，再用 session 状态覆盖；
@@ -250,6 +274,10 @@ const inputFieldRef = ref();
 const created_at = ref('');
 const limit = ref(20);
 const messagesList = reactive([]);
+const sessionArtifacts = computed(() => collectSessionArtifacts(messagesList));
+const sessionArtifactsCollecting = computed(() =>
+    messagesList.some((message) => isCollectingSkillArtifacts(message)),
+);
 const isReplying = ref(false);
 const currentAssistantMessageId = ref(''); // 当前正在生成的 assistant message ID
 // True only while attaching to an in-flight *IM-originated* reply via continue-stream.
@@ -272,11 +300,39 @@ let fullContent = ref('')
 const scrollContainer = ref(null)
 const userHasScrolledUp = ref(false)
 const SCROLL_BOTTOM_THRESHOLD = 80
+const sessionActivity = useSessionActivityStore();
+const activitySessionId = ref('');
+watch([activitySessionId, isReplying, isStreaming, isImRecovering, currentAssistantMessageId], () => {
+    if (props.embeddedMode || !activitySessionId.value) return;
+    sessionActivity.update(activitySessionId.value, isReplying.value || isStreaming.value || isImRecovering.value, currentAssistantMessageId.value);
+}, { flush: 'sync' });
+const minimapTargetId = ref('')
+let minimapFlashTimer = null
 
 const isNearBottom = () => {
     if (!scrollContainer.value) return true;
     const { scrollTop, scrollHeight, clientHeight } = scrollContainer.value;
     return scrollHeight - scrollTop - clientHeight < SCROLL_BOTTOM_THRESHOLD;
+}
+
+const jumpToQuestion = (id) => {
+    const root = scrollContainer.value
+    if (!root || !id) return
+    const el = root.querySelector(`[data-message-id="${CSS.escape(id)}"]`)
+    if (!el) return
+
+    const offset = el.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop
+    const nearEnd = root.scrollHeight - offset < root.clientHeight + SCROLL_BOTTOM_THRESHOLD
+    userHasScrolledUp.value = !nearEnd
+
+    el.scrollIntoView({ block: 'start', behavior: 'smooth' })
+
+    minimapTargetId.value = id
+    if (minimapFlashTimer) clearTimeout(minimapFlashTimer)
+    minimapFlashTimer = setTimeout(() => {
+        minimapTargetId.value = ''
+        minimapFlashTimer = null
+    }, 1200)
 }
 
 const handleKBEditorSuccess = (kbId) => {
@@ -1016,6 +1072,8 @@ const clearData = () => {
 onUnmounted(() => {
     window.removeEventListener(SESSION_MUTATION_EVENT, handleSessionMutation);
     if (recoverPollTimer) { clearTimeout(recoverPollTimer); recoverPollTimer = null; }
+    if (!props.embeddedMode) sessionActivity.detach(activitySessionId.value);
+    activitySessionId.value = '';
 });
 onBeforeRouteLeave((to, from, next) => {
     clearData()
@@ -1329,5 +1387,19 @@ onBeforeRouteUpdate((to, from, next) => {
 .sq-fade-enter-from,
 .sq-fade-leave-to {
     opacity: 0;
+}
+
+.is-minimap-target {
+    animation: minimap-target-flash 1.2s ease;
+}
+
+@keyframes minimap-target-flash {
+    0% {
+        background: color-mix(in srgb, var(--td-brand-color) 18%, transparent);
+    }
+
+    100% {
+        background: transparent;
+    }
 }
 </style>

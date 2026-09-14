@@ -11,6 +11,24 @@ function localizeApiErrorMessage(message: string | undefined): string | undefine
   return localizeBackendErrorMessage(message, t)
 }
 
+export type WithStatus<T> = T & {
+  readonly $httpStatus: number
+}
+
+const HTTP_STATUS_KEY = '$httpStatus'
+
+function withHttpStatus<T>(data: T, status: number): T {
+  if (data !== null && typeof data === 'object') {
+    Object.defineProperty(data, HTTP_STATUS_KEY, {
+      value: status,
+      enumerable: false,
+      configurable: true,
+      writable: false,
+    })
+  }
+  return data
+}
+
 // API基础URL
 const BASE_URL = getApiBaseUrl();
 
@@ -26,7 +44,7 @@ const instance = axios.create({
 });
 
 // 获取当前用户语言（用于 Accept-Language header）
-function getCurrentLanguage(): string {
+export function getCurrentLanguage(): string {
   return i18n.global.locale?.value || localStorage.getItem('locale') || 'zh-CN'
 }
 
@@ -119,9 +137,9 @@ instance.interceptors.response.use(
     // 根据业务状态码处理逻辑
     const { status, data } = response;
     if (status >= 200 && status < 300) {
-      return data;
+      return withHttpStatus(data, status);
     } else {
-      return Promise.reject(data);
+      return Promise.reject(withHttpStatus(data, status));
     }
   },
   async (error: any) => {
@@ -251,8 +269,8 @@ instance.interceptors.response.use(
   }
 );
 
-export function get<T = any>(url: string, config?: any): Promise<T> {
-  return instance.get<T>(url, config) as unknown as Promise<T>;
+export function get<T = any>(url: string, config?: any): Promise<WithStatus<T>> {
+  return instance.get<T>(url, config) as unknown as Promise<WithStatus<T>>;
 }
 
 export async function getDown(url: string): Promise<Blob> {
@@ -288,14 +306,18 @@ export function postChat<T = any>(url: string, data = {}): Promise<T> {
   }) as unknown as Promise<T>;
 }
 
-export function post<T = any>(url: string, data = {}, config?: any): Promise<T> {
-  return instance.post<T>(url, data, config) as unknown as Promise<T>;
+export function post<T = any>(url: string, data = {}, config?: any): Promise<WithStatus<T>> {
+  return instance.post<T>(url, data, config) as unknown as Promise<WithStatus<T>>;
 }
 
-export function put<T = any>(url: string, data = {}, config?: any): Promise<T> {
-  return instance.put<T>(url, data, config) as unknown as Promise<T>;
+export function put<T = any>(url: string, data = {}, config?: any): Promise<WithStatus<T>> {
+  return instance.put<T>(url, data, config) as unknown as Promise<WithStatus<T>>;
 }
 
-export function del<T = any>(url: string, data?: any): Promise<T> {
-  return instance.delete<T>(url, { data }) as unknown as Promise<T>;
+export function patch<T = any>(url: string, data = {}, config?: any): Promise<WithStatus<T>> {
+  return instance.patch<T>(url, data, config) as unknown as Promise<WithStatus<T>>;
+}
+
+export function del<T = any>(url: string, data?: any): Promise<WithStatus<T>> {
+  return instance.delete<T>(url, { data }) as unknown as Promise<WithStatus<T>>;
 }

@@ -1,6 +1,7 @@
 import { markRaw, nextTick, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ensureRagPipelineHistoryStream } from '@/utils/rag-pipeline-history'
+import { applyFinalArtifactContent } from '@/utils/finalArtifactContent'
 
 export type ChatMessage = Record<string, unknown>
 
@@ -806,6 +807,7 @@ export function useChatStreamHandler(options: UseChatStreamHandlerOptions) {
       }
       case 'complete': {
         log('[Agent] Complete event received')
+        applyFinalArtifactContent(message, (dataPayload as any)?.final_content)
         loading.value = false
         isReplying.value = false
         message.is_completed = true

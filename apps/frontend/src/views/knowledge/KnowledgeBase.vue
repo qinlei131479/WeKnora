@@ -42,6 +42,7 @@ import {
   type KnowledgeFolderTree,
 } from "@/api/knowledge-base/index";
 import { knowledgeSpansPayloadHasTrace } from '@/utils/knowledgeTrace';
+import { waitForKnowledgeDeletion } from '@/utils/knowledgeDeletion';
 import FAQEntryManager from './components/FAQEntryManager.vue';
 import DocumentListView from './components/DocumentListView.vue';
 import DocumentCardView from './components/DocumentCardView.vue';
@@ -2100,24 +2101,29 @@ const openKnowledgeItem = (item: KnowledgeCard) => {
 const confirmBatchDelete = async () => {
   if (batchDeleting.value || batchReparsing.value || selectedIds.value.size === 0) return;
   const ids = Array.from(selectedIds.value);
-  const deletedIdSet = new Set(ids);
   batchDeleting.value = true;
   try {
     const res: any = await batchDeleteKnowledge(kbId.value, ids);
     if (res?.success) {
-      MessagePlugin.success(t('knowledgeBase.batchDeleteSuccess', { count: ids.length }));
       clearSelection();
       batchMode.value = false;
-      resetPage();
-      // 后端将批量删除放入异步队列，立刻拉列表仍可能包含待删项；短轮询直到列表与后端一致或超时
-      const maxPolls = 30;
-      const delayMs = 400;
-      for (let i = 0; i < maxPolls; i++) {
-        await loadKnowledgeFiles(kbId.value);
-        const stillPresent = (cardList.value || []).some((c: KnowledgeCard) => deletedIdSet.has(c.id));
-        if (!stillPresent) break;
-        await new Promise<void>((r) => setTimeout(r, delayMs));
+      const result = await waitForKnowledgeDeletion(
+        ids,
+        async (queryIds) => {
+          const query = new URLSearchParams();
+          queryIds.forEach(id => query.append('ids', id));
+          return await batchQueryKnowledge(query.toString(), kbId.value) as any;
+        },
+      );
+      if (result === 'completed') {
+        MessagePlugin.success(t('knowledgeBase.batchDeleteSuccess', { count: ids.length }));
+      } else if (result === 'failed') {
+        MessagePlugin.error(t('knowledgeBase.deleteTaskFailed'));
+      } else {
+        MessagePlugin.info(t('knowledgeBase.deletePending'));
       }
+      resetPage();
+      await loadKnowledgeFiles(kbId.value);
       loadTags(kbId.value, true);
       void loadFolderTree(kbId.value);
     } else {
