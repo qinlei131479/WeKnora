@@ -18,6 +18,7 @@
 **/.venv/
 .venv_proto/
 **/.python-version
+!apps/agent-harness/.python-version
 **/__pycache__/
 **/*.pyc
 
