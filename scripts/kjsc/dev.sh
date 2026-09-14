@@ -274,6 +274,51 @@ check_remote_dev_connectivity() {
     return 0
 }
 
+# Host-platform path of the anydoc static archive (built by `make anydoc-lib`).
+anydoc_host_archive() {
+    case "$(uname -s)-$(uname -m)" in
+        Darwin-arm64) echo "$PROJECT_ROOT/third_party/anydoc-go/lib/darwin_arm64/libanydoc_go.a" ;;
+        Darwin-x86_64) echo "$PROJECT_ROOT/third_party/anydoc-go/lib/darwin_amd64/libanydoc_go.a" ;;
+        Linux-x86_64)
+            if [ -f "$PROJECT_ROOT/third_party/anydoc-go/lib/linux_amd64_gnu/libanydoc_go.a" ]; then
+                echo "$PROJECT_ROOT/third_party/anydoc-go/lib/linux_amd64_gnu/libanydoc_go.a"
+            else
+                echo "$PROJECT_ROOT/third_party/anydoc-go/lib/linux_amd64_musl/libanydoc_go.a"
+            fi
+            ;;
+        Linux-aarch64)
+            if [ -f "$PROJECT_ROOT/third_party/anydoc-go/lib/linux_arm64_gnu/libanydoc_go.a" ]; then
+                echo "$PROJECT_ROOT/third_party/anydoc-go/lib/linux_arm64_gnu/libanydoc_go.a"
+            else
+                echo "$PROJECT_ROOT/third_party/anydoc-go/lib/linux_arm64_musl/libanydoc_go.a"
+            fi
+            ;;
+        *) echo "" ;;
+    esac
+}
+
+# Enable the in-process anydoc engine when the archive is present, unless the
+# caller already set GO_BUILD_TAGS (including empty, which opts out).
+enable_anydoc_build_tag() {
+    if [ -n "${GO_BUILD_TAGS+x}" ]; then
+        export GO_BUILD_TAGS
+        if [ -n "$GO_BUILD_TAGS" ]; then
+            log_info "使用已设置的 GO_BUILD_TAGS=$GO_BUILD_TAGS"
+        else
+            log_info "GO_BUILD_TAGS 为空，跳过 anydoc"
+        fi
+        return
+    fi
+    local archive
+    archive="$(anydoc_host_archive)"
+    if [ -n "$archive" ] && [ -f "$archive" ]; then
+        export GO_BUILD_TAGS=anydoc
+        log_info "检测到 anydoc 静态库，已启用 -tags anydoc"
+    else
+        log_info "未检测到 anydoc 静态库，.docm/.odt/.rtf 等格式不可解析。需要时先运行: make anydoc-lib"
+    fi
+}
+
 # 本机进程把 Compose 主机名换成 localhost；远程开发则指向 DEV_REMOTE_HOST。
 apply_host_dev_env() {
     if [ -n "${DEV_REMOTE_HOST:-}" ]; then
@@ -372,16 +417,23 @@ start_app() {
       export CGO_LDFLAGS="-Wl,-no_warn_duplicate_libraries"
     fi
 
+    enable_anydoc_build_tag
+
     if command -v air &> /dev/null; then
         log_success "检测到 Air，使用热重载模式启动..."
         log_info "修改 Go 代码后将自动重新编译和重启"
+        # 不改官方 .air.toml；企业后端走 cmd/app-core
         air -c .air.appcore.toml
     else
         log_info "未检测到 Air，使用普通模式启动"
         log_warning "提示: 安装 Air 可以实现代码修改后自动重启"
         log_info "安装命令: go install github.com/air-verse/air@latest"
         LDFLAGS="$(kjsc_ldflags) -X 'google.golang.org/protobuf/reflect/protoregistry.conflictPolicy=warn'"
-        go run -ldflags="$LDFLAGS" ./cmd/app-core
+        tags_args=()
+        if [ -n "${GO_BUILD_TAGS:-}" ]; then
+            tags_args=(-tags "$GO_BUILD_TAGS")
+        fi
+        go run "${tags_args[@]}" -ldflags="$LDFLAGS" ./cmd/app-core
     fi
 }
 

@@ -181,6 +181,7 @@ build_app_image() {
 
     DOCKER_BUILDKIT=1 docker build \
         --platform $PLATFORM \
+        --ignorefile docker/kjsc.dockerignore \
         --build-arg GOPRIVATE_ARG=${GOPRIVATE:-""} \
         --build-arg GOPROXY_ARG="$goproxy" \
         --build-arg GOSUMDB_ARG=${GOSUMDB:-"off"} \
@@ -210,6 +211,7 @@ build_docreader_image() {
 
     docker build \
         --platform $PLATFORM \
+        --ignorefile docker/kjsc.dockerignore \
         --build-arg PLATFORM=$PLATFORM \
         --build-arg TARGETARCH=$TARGETARCH \
         --build-arg APT_MIRROR=${APT_MIRROR:-} \
@@ -275,6 +277,7 @@ build_sandbox_image() {
 
     docker build \
         --platform $PLATFORM \
+        --ignorefile docker/kjsc.dockerignore \
         -f docker/Dockerfile.sandbox \
         -t ${IMAGE_PREFIX}-sandbox:latest \
         .

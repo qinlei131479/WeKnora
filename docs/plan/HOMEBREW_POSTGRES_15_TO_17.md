@@ -388,9 +388,9 @@ Docker 容器要连本机 17：`DB_HOST=host.docker.internal`，端口仍 `5432`
 **不要再 up Docker postgres**（会和本机 17 抢端口或连错库）。本机已有 Redis 时同样不要再起 compose 里的 redis。
 
 ```bash
-make migrate-kjsc
-make dev-kjsc-app
-make dev-kjsc-frontend
+make -f Makefile.kjsc migrate
+make -f Makefile.kjsc app
+make -f Makefile.kjsc frontend
 ```
 
 `vector` / `pg_search` 未装好时，迁移多在 `000002` 一类语句失败。
@@ -423,4 +423,4 @@ export PATH="/opt/homebrew/opt/postgresql@17/bin:$PATH"
 ```
 
 本次已完成：备份 → 安装 17 → 处理 postmaster / 多余 `postgres` 角色 → `--check` 通过 → 正式 `pg_upgrade` → 数据在 17。  
-尚未完成（按第 8–9 节继续）：`pgvector` + `pg_search@17` pkg、WeKnora 专用库、`.env`、`make migrate-kjsc`。
+尚未完成（按第 8–9 节继续）：`pgvector` + `pg_search@17` pkg、WeKnora 专用库、`.env`、`make -f Makefile.kjsc migrate`。

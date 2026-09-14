@@ -49,6 +49,15 @@
 - 平台 Agent 与 Runtime 智能体是两套对象，不合并。
 - 知识库统一使用 WeKnora 知识库体系。
 
+## 企业配置与上游同步
+
+- `apps/app-core` 是企业入口，运行配置必须使用 KJSC 变体：`config/config_kjsc.yaml`、`config/builtin_agents_kjsc.yaml`、`config/prompt_templates_kjsc/`。
+- 禁止把 `apps/app-core` 的配置加载顺序、部署挂载或默认值改回官方 `config/config.yaml`、`builtin_agents.yaml`、`prompt_templates/`。
+- 同步官方代码后必须逐项检查配置加载器、`docker-compose-kjsc.yml`、`docker-compose-mac.yml`、`scripts/kjsc/*`、`.env.kjsc.example` 是否仍指向 KJSC 变体。
+- `config_kjsc.yaml` 支持 `${VAR:-default}` 展开；该能力不得简化为只支持 `${VAR}`。
+- 官方新增配置项先补到 KJSC 变体，不改官方 `config/`、`internal/`、`cmd/server/`。
+- `config/*_kjsc*`、`docker-compose-kjsc.yml`、`docker-compose-mac.yml`、`scripts/kjsc/*`、`.env.kjsc.example`、`AGENTS.md` 属于企业侧维护入口，修复只能落在这些文件内。
+
 ## 提交
 
 - 禁止自动提交：只有收到明确的人工指令后，才执行 `git add` / `git commit` 等提交操作。

@@ -60,8 +60,10 @@ services:
     volumes:
       - data-files:/data/files
       - docreader-tmp:/tmp/docreader:ro
-      # bind-mount 使用 :ro，避免容器以 root 写回 Jenkins 工作区导致 git checkout Permission denied
-      - ./config/config.yaml:/app/config/config.yaml:ro
+      # KJSC 企业变体优先于官方 config/*.yaml；bind-mount 使用 :ro，避免容器以 root 写回 Jenkins 工作区导致 git checkout Permission denied
+      - ./config/config_kjsc.yaml:/app/config/config_kjsc.yaml:ro
+      - ./config/builtin_agents_kjsc.yaml:/app/config/builtin_agents_kjsc.yaml:ro
+      - ./config/prompt_templates_kjsc:/app/config/prompt_templates_kjsc:ro
       # Optional: mount custom skills directory (allows adding skills without rebuilding image)
       - ./skills/preloaded:/app/skills/preloaded:ro
       # Optional: declarative built-in models. Copy config/builtin_models.yaml.example
