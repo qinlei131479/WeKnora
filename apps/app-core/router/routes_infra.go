@@ -38,6 +38,14 @@ func RegisterModelRoutes(
 		models.PUT("/:id/credentials", g.AdminOrSystemAdmin(), credHandler.Put)
 		models.DELETE("/:id/credentials/:field", g.AdminOrSystemAdmin(), credHandler.DeleteField)
 	}
+
+	// Harness 通过该内部 OpenAI 兼容代理调用模型，密钥始终留在 WeKnora。
+	proxy := g.apiKeyGroup(r.Group("/internal/models"), apiKeyManageModels(apiKeyFullAccess()))
+	{
+		proxy.POST("/:id/chat/completions", g.Viewer(), handler.ProxyChatCompletions)
+		proxy.POST("/:id/embeddings", g.Viewer(), handler.ProxyEmbeddings)
+		proxy.POST("/:id/rerank", g.Viewer(), handler.ProxyRerank)
+	}
 }
 
 // Sandbox configs are workspace infrastructure that hold provider credentials.

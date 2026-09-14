@@ -540,6 +540,17 @@ def test_deep_research_builtin_skill_includes_html_preview_dependency():
     assert specs["deep-research"]["skill_dependencies"] == ["html-preview"]
 
 
+def test_quote_builtin_skill_includes_knowledge_base_dependency():
+    specs = {spec["slug"]: spec for spec in svc.list_builtin_skill_specs()}
+
+    assert "quote" in specs
+    quote = specs["quote"]
+    assert quote["name"] == "quote"
+    assert quote["skill_dependencies"] == ["knowledge-base"]
+    assert (quote["source_dir"] / "SKILL.md").exists()
+    assert (quote["source_dir"] / "scripts" / "fill_quote.py").exists()
+
+
 def test_knowledge_base_builtin_skill_spec():
     specs = {spec["slug"]: spec for spec in svc.list_builtin_skill_specs()}
 
@@ -556,6 +567,37 @@ def test_knowledge_base_builtin_skill_spec():
         "download_kb_file",
     ]
     assert (knowledge_base["source_dir"] / "SKILL.md").exists()
+    content = (knowledge_base["source_dir"] / "SKILL.md").read_text(encoding="utf-8")
+    _, _, parsed_desc, _ = svc._parse_skill_markdown(content)
+    assert knowledge_base["description"] == parsed_desc
+    assert "Yuxi" not in knowledge_base["description"]
+
+
+def test_builtin_skill_description_prefers_skill_md_over_python_spec(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    source_dir = tmp_path / "builtin-skills" / "reporter"
+    source_dir.mkdir(parents=True, exist_ok=True)
+    (source_dir / "SKILL.md").write_text(
+        "---\nname: reporter\ndescription: from skill markdown\n---\n# SQL Reporter\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        svc,
+        "get_builtin_skill_specs",
+        lambda: [
+            SimpleNamespace(
+                slug="reporter",
+                source_dir=source_dir,
+                description="from python spec",
+                version="1.0.0",
+                tool_dependencies=(),
+                mcp_dependencies=(),
+                skill_dependencies=(),
+            )
+        ],
+    )
+
+    specs = {spec["slug"]: spec for spec in svc.list_builtin_skill_specs()}
+    assert specs["reporter"]["description"] == "from skill markdown"
 
 
 def test_mysql_reporter_builtin_skill_spec_replaces_reporter_and_deep_reporter():
@@ -1387,7 +1429,7 @@ async def test_init_builtin_skills_updates_existing_record_and_preserves_disable
     assert (target_dir / "prompt.md").read_text(encoding="utf-8") == "new builtin content"
     assert captured["metadata"] == {
         "name": "reporter",
-        "description": "new description",
+        "description": "new markdown description",
         "updated_by": "release-bot",
     }
     assert captured["dependencies"] == {

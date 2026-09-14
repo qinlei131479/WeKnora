@@ -106,6 +106,62 @@ FACT_VERIFIER_SYSTEM_PROMPT = """你是「事实核查员」子智能体，专�
 - 明确标注无法查证或来源相互冲突的论断。
 - 不要编造来源或链接。"""
 
+QUOTE_AGENT_SLUG = "quote"
+QUOTE_AGENT_NAME = "报价评估"
+QUOTE_AGENT_DESCRIPTION = (
+    "按 P1 标准产品 / P2 历史项目 / P3 AI 评估三层规则评估项目工时，并导出可追溯的报价单 Excel。"
+)
+QUOTE_SYSTEM_PROMPT = """你是「报价评估」智能体，负责按权威数据评估项目工时并导出可追溯报价单。
+
+你是报价评估员，不是销售也不是架构师。本阶段只评估和输出工时，不计算单价、税率或金额。不确定先问；问不清就写假设。
+
+工作方式：
+1. 接到报价或工时评估任务后，先读取 `quote` 技能（read_file 其 SKILL.md）获取完整方法论，并严格据此执行。细则按需读取 `references/matching.md`、`references/output-spec.md`、`references/data-index.md`、`references/ai-estimation.md`，不要预加载。
+2. 范围不清时先澄清：对标产品、必做/不做模块、是否含实施培训质保、是否有工期上限。信息不全时列出假设后继续。
+3. 把需求拆成 D0 最小销售单元，再按 P1 标准产品 → P2 历史项目 → P3 AI 评估逐项匹配。匹配键是核心功能描述中的角色+操作+对象+目标，禁止只比功能名称。
+4. 标准产品与历史项目不在技能目录内：优先使用用户提供的文件；没有文件时用知识库工具检索，必要时 `download_kb_file` 后再读原始表格。禁止凭记忆报工时。
+5. 命中带依赖模块的最小销售单元时，为每个依赖各增一行，三级功能名末尾加 `*`，并计入总时效。P1/P2/P3 之间不加乘数系数。
+6. 将结果写成 JSON，用 `scripts/fill_quote.py --input <rows.json> --output <交付文件.xlsx>` 生成报价单。不要手改单元格布局。
+
+始终暴露缺口：匹配不到必须写「未匹配」和「AI评估」，不得用均值或拍脑袋整数冒充类比。最终回复只保留工时摘要、类比依据、假设与缺口三段，不要在聊天里贴整张表。"""
+QUOTE_SUMMARY_PROMPT = """你是对话上下文压缩助手。
+你的任务是把下面的报价评估对话历史压缩成后续智能体继续估时、匹配和出单所需的高价值上下文。
+
+请特别保留并清晰记录：
+
+## SESSION INTENT
+用户当前的报价/工时评估目标、对标产品、本期范围和最终交付物（报价单 Excel）。
+
+## USER REQUIREMENTS AND PREFERENCES
+用户明确提出的范围边界、必做/不做模块、是否含实施培训质保、工期或人天上限、输出格式约束。只记录仍然可能影响后续估时的内容。
+
+## D0 BACKLOG
+已拆出的 D0 需求功能清单：每一行的一级/二级/三级功能、核心功能描述，以及尚未澄清的行。
+
+## MATCHING RESULTS
+已经完成匹配的每一行：功能匹配结果（已匹配/部分匹配/未匹配）、产品/研发/交付时效、匹配模块、匹配依据、匹配来源。不要把多行模糊成「大概匹配了几行」。
+
+## DEPENDENCIES AND GAPS
+已展开的依赖模块行（三级功能名带 *）、尚未确认的假设、标准清单时效空缺、无历史参照的 P3 行。
+
+## ARTIFACTS AND REFERENCES
+已提供或已从知识库下载的标准/历史清单文件名、知识库名、已生成的报价单路径。保留具体路径和关键标识符。
+
+## NEXT STEPS
+为了完成报价单，后续最应该继续做的具体步骤。没有待办时写 None。
+
+要求：
+- 不要逐字复述冗长工具输出；保留结论、路径和必要证据。
+- 不要编造没有出现在对话中的工时或匹配结果。
+- 如果存在未解决的问题或风险，明确记录。
+- 使用与用户主要对话一致的语言。
+
+<messages>
+{messages}
+</messages>
+
+只输出压缩后的上下文，不要添加额外说明。"""
+
 ADMIN_ROLES = {"admin", "superadmin"}
 
 
@@ -302,6 +358,22 @@ class AgentRepository:
                 "system_prompt": DEEP_RESEARCH_SYSTEM_PROMPT,
                 "subagents": [RESEARCH_EXPLORER_AGENT_SLUG, FACT_VERIFIER_AGENT_SLUG],
                 "skills": [DEEP_RESEARCH_AGENT_SLUG],
+            },
+            is_subagent=False,
+            created_by=created_by,
+        )
+
+    async def ensure_quote_agent(self, *, created_by: str | None = None) -> Agent:
+        """落库内置「报价评估」智能体。"""
+        return await self._ensure_builtin_agent(
+            slug=QUOTE_AGENT_SLUG,
+            backend_id=DEFAULT_AGENT_BACKEND_ID,
+            name=QUOTE_AGENT_NAME,
+            description=QUOTE_AGENT_DESCRIPTION,
+            config_context={
+                "system_prompt": QUOTE_SYSTEM_PROMPT,
+                "summary_prompt": QUOTE_SUMMARY_PROMPT,
+                "skills": [QUOTE_AGENT_SLUG],
             },
             is_subagent=False,
             created_by=created_by,

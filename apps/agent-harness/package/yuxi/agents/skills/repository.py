@@ -94,7 +94,7 @@ class SkillRepository:
             enabled=enabled,
             created_by=created_by,
             updated_by=created_by,
-            tenant_id=stamp_tenant_id(),
+            tenant_id=None if source_type == "builtin" else stamp_tenant_id(),
             created_at=now,
             updated_at=now,
         )

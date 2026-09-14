@@ -1817,7 +1817,7 @@ def list_builtin_skill_specs() -> list[dict[str, Any]]:
             {
                 "slug": slug,
                 "name": parsed_name,
-                "description": configured_description or parsed_desc,
+                "description": parsed_desc or configured_description,
                 "version": version,
                 "tool_dependencies": configured_tools or normalize_string_list(meta.get("tool_dependencies")),
                 "mcp_dependencies": configured_mcps or normalize_string_list(meta.get("mcp_dependencies")),
@@ -1831,6 +1831,11 @@ def list_builtin_skill_specs() -> list[dict[str, Any]]:
 
 
 async def init_builtin_skills(db: AsyncSession, *, created_by: str = "system") -> list[Skill]:
+    """把代码内置技能同步到运行目录和 h_skills。
+
+    展示名/描述以 SKILL.md frontmatter 为准。目录技能每次启动都会按源文件覆盖数据库对应字段，
+    直接改库不会保留。
+    """
     repo = SkillRepository(db)
     synced_items: list[Skill] = []
 
