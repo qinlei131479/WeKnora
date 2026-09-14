@@ -62,6 +62,7 @@ test('referenced i18n keys used in app code exist in every locale', () => {
 const PARSER_ENGINE_NAMES = [
   'builtin',
   'simple',
+  'anydoc',
   'mineru',
   'mineru_cloud',
   'paddleocr_vl',

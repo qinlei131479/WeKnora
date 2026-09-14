@@ -1680,6 +1680,10 @@ export default {
           name: 'Simple',
           desc: 'Простой формат и анализ изображений (внешний сервис не требуется)'
         },
+        anydoc: {
+          name: 'anydoc',
+          desc: 'Встроенный в процесс парсер документов Office (внешний сервис не требуется)'
+        },
         builtin: {
           name: 'Встроенный',
           desc: 'Встроенный парсер DocReader (docx/pdf/xlsx и другие сложные форматы)'
@@ -6788,6 +6792,18 @@ export default {
     name: 'Название',
     description: 'Описание',
     settings: 'Настройки',
+    mindmap: 'Карта знаний',
+    mindmapGenerate: 'Создать карту знаний',
+    mindmapRegenerate: 'Создать заново',
+    mindmapFitView: 'Вписать в экран',
+    mindmapLoading: 'Загрузка...',
+    mindmapGenerating: 'AI генерирует карту знаний...',
+    mindmapEmpty: 'Карты знаний пока нет. Создайте её из списка файлов базы знаний.',
+    mindmapDescription: 'Создать структуру по списку файлов базы знаний',
+    mindmapGenerated: 'Карта знаний создана',
+    mindmapLoadFailed: 'Не удалось загрузить карту знаний',
+    mindmapGenerateFailed: 'Не удалось создать карту знаний',
+    mindmapNotFound: 'API карты знаний не найден. Перезапустите сервер WeKnora и примените миграции базы данных.',
     tagUpdateSuccess: 'Тег успешно обновлен',
     tagEditDialogHeading: 'Редактировать теги',
     tagEditSearch: 'Поиск тегов...',
