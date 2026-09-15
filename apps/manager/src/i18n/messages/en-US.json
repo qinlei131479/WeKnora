@@ -59,6 +59,11 @@
   },
 
   "page": {
+    "dashboard": {
+      "userCount": "User count",
+      "totalFeedbacks": "Total feedbacks",
+      "satisfaction": "Satisfaction"
+    },
     "agent": {
       "list": {
         "detail.agentMode": "Operating Mode",

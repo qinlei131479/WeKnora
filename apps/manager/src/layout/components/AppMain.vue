@@ -40,7 +40,7 @@ function addIframe(): void {
 .app-main {
   /* 80= navbar  80  */
   min-height: calc(100vh - var(--navbar-height));
-  width: 100%;
+  width: calc(100% - var(--layout-padding));
   position: relative;
   overflow: hidden;
 }

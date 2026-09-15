@@ -1,9 +1,8 @@
 :root {
   --el-font-size-base: 14px;
-  // --el-component-size: 48px;
   --el-border-radius-base: 8px;
 
-  //---- Custom
+  //----- Custom -----
   --layout-padding: 10px;
   --layout-margin: 0px;
   --layout-radius: 10px;
@@ -25,6 +24,10 @@ body {
       width: 100% !important;
       min-width: 0 !important;
     }
+  }
+
+  .el-menu--vertical > div:first-child {
+    padding-top: 10px;
   }
 
   // 折叠后一级菜单图标居中
@@ -86,6 +89,10 @@ body {
 .el-menu--vertical.el-menu--popup-container,
 .el-menu--vertical.el-menu--popup-container > .el-menu--popup {
   border-radius: var(--layout-radius);
+}
+
+#app .main-container {
+  padding-right: 0;
 }
 
 // Table 表头高度

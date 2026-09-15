@@ -877,6 +877,11 @@
     }
   },
   "page": {
+    "dashboard": {
+      "userCount": "用户数",
+      "totalFeedbacks": "总反馈数",
+      "satisfaction": "满意度"
+    },
     "agent": {
       "list": {
         "detail.agentMode": "运行模式",
