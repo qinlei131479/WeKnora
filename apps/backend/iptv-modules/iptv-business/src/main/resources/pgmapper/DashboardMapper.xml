@@ -265,7 +265,7 @@
     </select>
 
     <select id="selectActiveKnowledgeBases" resultType="com.iptv.business.domain.vo.DashboardKnowledgeStatsVO$ActiveKnowledgeBase">
-        SELECT COUNT(kb.id) score, kb.id, kb.name, kb.description
+        SELECT COUNT(kb.id) score, kb.id, kb.name, kb.description, kb.type
         FROM messages m
         LEFT JOIN knowledges k ON k.id = m.knowledge_id
         LEFT JOIN knowledge_bases kb ON kb.id = k.knowledge_base_id

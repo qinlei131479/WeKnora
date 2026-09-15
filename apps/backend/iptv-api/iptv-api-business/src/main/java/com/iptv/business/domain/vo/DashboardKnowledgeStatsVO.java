@@ -64,5 +64,8 @@ public class DashboardKnowledgeStatsVO implements Serializable {
 
         @Schema(description = "知识库描述")
         private String description;
+
+        @Schema(description = "知识库类型：document/faq/wiki")
+        private String type;
     }
 }
