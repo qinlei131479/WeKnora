@@ -19,7 +19,6 @@ spring:
         server-addr: @nacos.serverAddr@
         namespace: @nacos.namespace@
         group: @profiles.active@
-        ip: 192.168.170.56
       config:
         # 配置中心地址
         server-addr: ${spring.cloud.nacos.discovery.server-addr}
