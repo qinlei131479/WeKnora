@@ -298,8 +298,8 @@
         GROUP BY hc.agent_id
     </select>
 
-    <select id="selectAnalyticsAgentNames" resultType="java.util.Map">
-        SELECT slug AS "agentId", name
+    <select id="selectAnalyticsAgentNames" resultType="com.iptv.business.domain.vo.DashboardAgentAnalyticsVO$AgentName">
+        SELECT slug AS "id", name, description
         FROM h_agents
         WHERE slug IN
         <foreach collection="slugs" item="slug" open="(" separator="," close=")">

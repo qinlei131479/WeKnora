@@ -116,9 +116,9 @@ public interface DashboardMapper {
     List<DashboardAgentAnalyticsVO.AgentToolUsage> selectYuxiAgentToolUsage();
 
     /**
-     * 分析接口的原始 slug/名称记录，对齐 Python 不额外筛选同名智能体
+     * 分析接口的原始 slug/名称/描述记录，不额外筛选同名智能体
      */
-    List<Map<String, Object>> selectAnalyticsAgentNames(@Param("slugs") List<String> slugs);
+    List<DashboardAgentAnalyticsVO.AgentName> selectAnalyticsAgentNames(@Param("slugs") List<String> slugs);
 
     Long recordCountWeknoraAgents();
 

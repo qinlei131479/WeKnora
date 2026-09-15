@@ -300,13 +300,13 @@ public class DashboardServiceImpl implements DashboardService {
         }
         topAgents.sort(Comparator.comparing(DashboardAgentAnalyticsVO.TopPerformingAgent::getConversationCount).reversed());
 
-        Map<String, String> agentNames = new LinkedHashMap<>();
+        Map<String, DashboardAgentAnalyticsVO.AgentName> agentNames = new LinkedHashMap<>();
         List<String> slugs = agents.stream().map(DashboardAgentAnalyticsVO.AgentConversationCount::getAgentId)
                 .filter(slug -> slug != null && !slug.isEmpty()).toList();
         if (!slugs.isEmpty()) {
-            for (Map<String, Object> row : mapper.selectAnalyticsAgentNames(slugs)) {
-                // Python 字典按 slug 保存，重名时同样由后读到的名称覆盖。
-                agentNames.put((String) row.get("agentId"), (String) row.get("name"));
+            for (DashboardAgentAnalyticsVO.AgentName agentName : mapper.selectAnalyticsAgentNames(slugs)) {
+                // 保留原有按 slug 合并的规则，同 slug 由后读到的记录覆盖。
+                agentNames.put(agentName.getId(), agentName);
             }
         }
 
@@ -326,7 +326,7 @@ public class DashboardServiceImpl implements DashboardService {
         vo.setAgentSatisfactionRates(satisfactionRates);
         vo.setAgentToolUsage(toolUsage);
         vo.setTopPerformingAgents(new ArrayList<>(topAgents.subList(0, Math.min(5, topAgents.size()))));
-        vo.setAgentNames(agentNames);
+        vo.setAgentNames(new ArrayList<>(agentNames.values()));
         vo.setWeknoraAgentConversationCounts(mapper.selectWeknoraAgentConversationCounts());
         vo.setWeknoraAgentNames(weknoraAgentNames);
         vo.setSplitBySystem(Boolean.TRUE);

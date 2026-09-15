@@ -34,8 +34,8 @@ public class DashboardAgentAnalyticsVO implements Serializable {
     @Schema(description = "智能体性能排名")
     private List<TopPerformingAgent> topPerformingAgents;
 
-    @Schema(description = "智能体名称映射")
-    private Map<String, String> agentNames;
+    @Schema(description = "智能体名称列表")
+    private List<AgentName> agentNames;
 
     @Schema(description = "是否按系统分类")
     private Boolean splitBySystem;
@@ -51,6 +51,23 @@ public class DashboardAgentAnalyticsVO implements Serializable {
 
     @Schema(description = "Weknora智能体名称映射")
     private Map<String, String> weknoraAgentNames;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AgentName implements Serializable {
+        @Serial
+        private static final long serialVersionUID = -204661593380692268L;
+
+        @Schema(description = "智能体ID")
+        private String id;
+
+        @Schema(description = "智能体名称")
+        private String name;
+
+        @Schema(description = "智能体描述")
+        private String description;
+    }
 
 
     @Data
