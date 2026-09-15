@@ -16,9 +16,9 @@ import java.util.Map;
  * 工具调用统计VO
  */
 @Data
-public class ToolCallStatsVO implements Serializable {
+public class DashboardToolCallStatsVO implements Serializable {
     @Serial
-    private static final long serialVersionUID = 91758994883829235L;
+    private static final long serialVersionUID = -7824326244206374158L;
 
     @Schema(description = "总工具调用数")
     private Long totalCalls;

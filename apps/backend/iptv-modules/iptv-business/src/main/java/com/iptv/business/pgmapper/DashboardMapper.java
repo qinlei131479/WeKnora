@@ -1,7 +1,6 @@
 package com.iptv.business.pgmapper;
 
-import com.iptv.business.domain.vo.AgentAnalyticsVO;
-import com.iptv.business.domain.vo.ToolCallStatsVO;
+import com.iptv.business.domain.vo.*;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.lang.Nullable;
 
@@ -67,8 +66,8 @@ public interface DashboardMapper {
      * 工具调用数；状态和时间边界为空时不限制
      */
     Long recordCountToolCalls(@Nullable @Param("status") String status,
-                             @Nullable @Param("since") LocalDateTime since,
-                             @Nullable @Param("until") LocalDateTime until);
+                              @Nullable @Param("since") LocalDateTime since,
+                              @Nullable @Param("until") LocalDateTime until);
 
     /**
      * 根据 slug 查询智能体名称
@@ -84,12 +83,18 @@ public interface DashboardMapper {
      * 会话更新或发送消息的去重用户数，时间范围为 [since, until)
      */
     Long recordCountWeknoraActiveUsers(@Param("since") OffsetDateTime since,
-                                     @Nullable @Param("until") OffsetDateTime until);
+                                       @Nullable @Param("until") OffsetDateTime until);
+
+    /**
+     * 会话更新或发送消息的去重用户信息，时间范围为 [since, until)
+     */
+    List<DashboardUserActiveStatsVO.ActiveUser> selectWeknoraActiveUsers(@Param("since") OffsetDateTime since,
+                                                                         @Nullable @Param("until") OffsetDateTime until);
 
     /**
      * 调用量最高的十个工具
      */
-    List<ToolCallStatsVO.MostUsedTool> selectMostUsedTools();
+    List<DashboardToolCallStatsVO.MostUsedTool> selectMostUsedTools();
 
     /**
      * status=error 的工具错误分布
@@ -102,11 +107,13 @@ public interface DashboardMapper {
 
     List<Map<String, Object>> selectKnowledgeFileTypeStats();
 
-    List<AgentAnalyticsVO.AgentConversationCount> selectYuxiAgentConversationCounts();
+    List<DashboardKnowledgeStatsVO.ActiveKnowledgeBase> selectActiveKnowledgeBases();
+
+    List<DashboardAgentAnalyticsVO.AgentConversationCount> selectYuxiAgentConversationCounts();
 
     List<Map<String, Object>> selectYuxiAgentFeedbackCounts();
 
-    List<AgentAnalyticsVO.AgentToolUsage> selectYuxiAgentToolUsage();
+    List<DashboardAgentAnalyticsVO.AgentToolUsage> selectYuxiAgentToolUsage();
 
     /**
      * 分析接口的原始 slug/名称记录，对齐 Python 不额外筛选同名智能体
@@ -117,5 +124,8 @@ public interface DashboardMapper {
 
     List<Map<String, Object>> selectWeknoraAgentNames();
 
-    List<AgentAnalyticsVO.WeknoraAgentConversationCount> selectWeknoraAgentConversationCounts();
+    List<DashboardAgentAnalyticsVO.WeknoraAgentConversationCount> selectWeknoraAgentConversationCounts();
+
+    List<DashboardConversationVO> selectStatsConversations(@Param("since") OffsetDateTime since,
+                                                           @Nullable @Param("until") OffsetDateTime until);
 }

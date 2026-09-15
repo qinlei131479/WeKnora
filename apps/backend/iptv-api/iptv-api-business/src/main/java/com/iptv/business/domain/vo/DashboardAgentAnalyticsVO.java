@@ -15,9 +15,9 @@ import java.util.Map;
  * AI智能体分析VO
  */
 @Data
-public class AgentAnalyticsVO implements Serializable {
+public class DashboardAgentAnalyticsVO implements Serializable {
     @Serial
-    private static final long serialVersionUID = -4376259798916955362L;
+    private static final long serialVersionUID = 964078402729180849L;
 
     @Schema(description = "总智能体数")
     private Long totalAgents;

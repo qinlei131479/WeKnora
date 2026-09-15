@@ -80,8 +80,8 @@
                 FROM h_messages hm
                 INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
                 WHERE hm.created_at &gt;= #{startTime}
-                  AND hm.extra_metadata IS NOT NULL
-                  AND hm.extra_metadata -&gt; 'usage_metadata' IS NOT NULL
+                AND hm.extra_metadata IS NOT NULL
+                AND hm.extra_metadata -&gt; 'usage_metadata' IS NOT NULL
                 GROUP BY 1
                 UNION ALL
                 SELECT TO_CHAR(hm.created_at + INTERVAL '8 hours',
@@ -96,8 +96,8 @@
                 FROM h_messages hm
                 INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
                 WHERE hm.created_at &gt;= #{startTime}
-                  AND hm.extra_metadata IS NOT NULL
-                  AND hm.extra_metadata -&gt; 'usage_metadata' IS NOT NULL
+                AND hm.extra_metadata IS NOT NULL
+                AND hm.extra_metadata -&gt; 'usage_metadata' IS NOT NULL
                 GROUP BY 1
                 ORDER BY 1
             </when>
@@ -112,8 +112,8 @@
                 COUNT(*) AS "count",
                 COALESCE(htc.tool_name, 'unknown_tool') AS "category"
                 FROM h_tool_calls htc
-                         INNER JOIN h_messages hm ON hm.id = htc.message_id
-                         INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+                INNER JOIN h_messages hm ON hm.id = htc.message_id
+                INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
                 WHERE htc.created_at &gt;= #{startTime}
                 GROUP BY 1, 3
                 ORDER BY 1
@@ -126,13 +126,13 @@
                     <otherwise>'YYYY-MM-DD'</otherwise>
                 </choose>
                 ) AS "date",
-                       COUNT(*) AS "count",
-                       hm.extra_metadata -&gt; 'response_metadata' -&gt;&gt; 'model_name' AS "category"
+                COUNT(*) AS "count",
+                hm.extra_metadata -&gt; 'response_metadata' -&gt;&gt; 'model_name' AS "category"
                 FROM h_messages hm
                 INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
                 WHERE hm.role = 'assistant'
-                  AND hm.created_at &gt;= #{startTime}
-                  AND hm.extra_metadata IS NOT NULL
+                AND hm.created_at &gt;= #{startTime}
+                AND hm.extra_metadata IS NOT NULL
                 GROUP BY 1, 3
                 ORDER BY 1
             </otherwise>
@@ -142,8 +142,8 @@
     <select id="recordCountToolCalls" resultType="java.lang.Long">
         SELECT COUNT(*)
         FROM h_tool_calls htc
-                 INNER JOIN h_messages hm ON hm.id = htc.message_id
-                 INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+        INNER JOIN h_messages hm ON hm.id = htc.message_id
+        INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
         <where>
             <if test="status != null">
                 AND htc.status = #{status}
@@ -178,39 +178,54 @@
     <select id="recordCountWeknoraActiveUsers" resultType="java.lang.Long">
         SELECT COUNT(*)
         FROM (
-            SELECT s.user_id
-            FROM sessions s
-                     INNER JOIN users u ON u.id = s.user_id AND u.deleted_at IS NULL
-            WHERE s.deleted_at IS NULL
-              AND s.user_id IS NOT NULL AND s.user_id &lt;&gt; ''
-              AND s.updated_at &gt;= #{since}
-            <if test="until != null">
-              AND s.updated_at &lt; #{until}
-            </if>
-            UNION
-            SELECT s.user_id
-            FROM messages m
-                     INNER JOIN sessions s ON s.id = m.session_id
-                     INNER JOIN users u ON u.id = s.user_id AND u.deleted_at IS NULL
-            WHERE m.deleted_at IS NULL
-              AND s.deleted_at IS NULL
-              AND s.user_id IS NOT NULL AND s.user_id &lt;&gt; ''
-              AND m.created_at &gt;= #{since}
-            <if test="until != null">
-              AND m.created_at &lt; #{until}
-            </if>
+        SELECT s.user_id
+        FROM sessions s
+        INNER JOIN users u ON u.id = s.user_id AND u.deleted_at IS NULL
+        WHERE s.deleted_at IS NULL
+        AND s.user_id IS NOT NULL AND s.user_id &lt;&gt; ''
+        AND s.updated_at &gt;= #{since}
+        <if test="until != null">
+            AND s.updated_at &lt; #{until}
+        </if>
+        UNION
+        SELECT s.user_id
+        FROM messages m
+        INNER JOIN sessions s ON s.id = m.session_id
+        INNER JOIN users u ON u.id = s.user_id AND u.deleted_at IS NULL
+        WHERE m.deleted_at IS NULL
+        AND s.deleted_at IS NULL
+        AND s.user_id IS NOT NULL AND s.user_id &lt;&gt; ''
+        AND m.created_at &gt;= #{since}
+        <if test="until != null">
+            AND m.created_at &lt; #{until}
+        </if>
         ) active_users
     </select>
 
-    <select id="selectMostUsedTools"
-            resultType="com.iptv.business.domain.vo.ToolCallStatsVO$MostUsedTool">
+    <select id="selectWeknoraActiveUsers" resultType="com.iptv.business.domain.vo.DashboardUserActiveStatsVO$ActiveUser">
+        SELECT s.score, u.id, u.username, u.email, u.avatar, u.tenant_id
+        FROM
+            (SELECT COUNT(user_id) score, user_id
+            FROM sessions s
+            WHERE s.deleted_at IS NULL
+                  AND s.user_id IS NOT NULL
+                  AND s.user_id &lt;&gt; ''
+                  AND s.updated_at &gt;= #{since}
+            <if test="until != null">
+                AND m.created_at &lt; #{until}
+            </if>
+            GROUP BY user_id) s
+        INNER JOIN users u ON u.deleted_at IS NULL AND u.id = s.user_id
+        ORDER BY s.score DESC
+    </select>
+
+    <select id="selectMostUsedTools" resultType="com.iptv.business.domain.vo.DashboardToolCallStatsVO$MostUsedTool">
         SELECT htc.tool_name AS "toolName", COUNT(*) AS "count"
         FROM h_tool_calls htc
                  INNER JOIN h_messages hm ON hm.id = htc.message_id
                  INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
         GROUP BY htc.tool_name
-        ORDER BY COUNT(*) DESC
-        LIMIT 10
+        ORDER BY COUNT(*) DESC LIMIT 10
     </select>
 
     <select id="selectToolErrorCounts" resultType="java.util.Map">
@@ -238,7 +253,8 @@
     </select>
 
     <select id="selectKnowledgeFileTypeStats" resultType="java.util.Map">
-        SELECT k.file_type AS "fileType", COUNT(*) AS "count",
+        SELECT k.file_type                   AS "fileType",
+               COUNT(*)                      AS "count",
                COALESCE(SUM(k.file_size), 0) AS "storageSize"
         FROM knowledges k
                  INNER JOIN knowledge_bases kb ON kb.id = k.knowledge_base_id
@@ -248,24 +264,33 @@
         GROUP BY k.file_type
     </select>
 
-    <select id="selectYuxiAgentConversationCounts"
-            resultType="com.iptv.business.domain.vo.AgentAnalyticsVO$AgentConversationCount">
+    <select id="selectActiveKnowledgeBases" resultType="com.iptv.business.domain.vo.DashboardKnowledgeStatsVO$ActiveKnowledgeBase">
+        SELECT COUNT(kb.id) score, kb.id, kb.name, kb.description
+        FROM messages m
+        LEFT JOIN knowledges k ON k.id = m.knowledge_id
+        LEFT JOIN knowledge_bases kb ON kb.id = k.knowledge_base_id
+        WHERE m.knowledge_id IS NOT NULL AND m.knowledge_id &lt;&gt; ''
+        GROUP BY kb.id
+        ORDER BY score DESC
+    </select>
+
+    <select id="selectYuxiAgentConversationCounts" resultType="com.iptv.business.domain.vo.DashboardAgentAnalyticsVO$AgentConversationCount">
         SELECT agent_id AS "agentId", COUNT(*) AS "conversationCount"
         FROM h_conversations
         GROUP BY agent_id
     </select>
 
     <select id="selectYuxiAgentFeedbackCounts" resultType="java.util.Map">
-        SELECT hc.agent_id AS "agentId", COUNT(*) AS "totalFeedbacks",
-               COUNT(*) FILTER (WHERE hf.rating = 'like') AS "likeFeedbacks"
+        SELECT hc.agent_id AS "agentId",
+               COUNT(*)    AS "totalFeedbacks",
+               COUNT(*)       FILTER (WHERE hf.rating = 'like') AS "likeFeedbacks"
         FROM h_message_feedbacks hf
                  INNER JOIN h_messages hm ON hm.id = hf.message_id
                  INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
         GROUP BY hc.agent_id
     </select>
 
-    <select id="selectYuxiAgentToolUsage"
-            resultType="com.iptv.business.domain.vo.AgentAnalyticsVO$AgentToolUsage">
+    <select id="selectYuxiAgentToolUsage" resultType="com.iptv.business.domain.vo.DashboardAgentAnalyticsVO$AgentToolUsage">
         SELECT hc.agent_id AS "agentId", COUNT(*) AS "toolUsageCount"
         FROM h_tool_calls htc
                  INNER JOIN h_messages hm ON hm.id = htc.message_id
@@ -294,17 +319,43 @@
         WHERE deleted_at IS NULL
     </select>
 
-    <select id="selectWeknoraAgentConversationCounts"
-            resultType="com.iptv.business.domain.vo.AgentAnalyticsVO$WeknoraAgentConversationCount">
-        SELECT m.agent_id AS "agentId", COUNT(DISTINCT m.session_id) AS "conversationCount",
-               'weknora' AS "system"
+    <select id="selectWeknoraAgentConversationCounts" resultType="com.iptv.business.domain.vo.DashboardAgentAnalyticsVO$WeknoraAgentConversationCount">
+        SELECT m.agent_id                   AS "agentId",
+               COUNT(DISTINCT m.session_id) AS "conversationCount",
+               'weknora'                    AS "system"
         FROM messages m
                  INNER JOIN sessions s ON s.id = m.session_id
         WHERE m.deleted_at IS NULL
           AND s.deleted_at IS NULL
-          AND m.agent_id IS NOT NULL AND m.agent_id &lt;&gt; ''
+          AND m.agent_id IS NOT NULL
+          AND m.agent_id &lt;&gt; ''
         GROUP BY m.agent_id
         ORDER BY COUNT(DISTINCT m.session_id) DESC
+    </select>
+
+    <select id="selectStatsConversations" resultType="com.iptv.business.domain.vo.DashboardConversationVO">
+        SELECT id, title, agent_id, agent_name, updated_at
+        FROM
+            (SELECT s.id, s.title, s.agent_config -&gt;&gt; 'agent_id' agent_id, a.name agent_name, s.updated_at
+            FROM sessions s
+            LEFT JOIN custom_agents a ON a.tenant_id = s.tenant_id AND a.id = s.agent_config -&gt;&gt; 'agent_id'
+            WHERE s.deleted_at IS NULL
+                  AND s.agent_config -&gt;&gt; 'agent_id' IS NOT NULL
+                  AND s.updated_at &gt;= #{since}
+                  <if test="until != null">
+                      AND s.updated_at &lt; #{until}
+                  </if>
+            UNION
+            SELECT hc.id::text, hc.title, hc.agent_id, ha.name agent_name, hc.updated_at
+            FROM h_conversations hc
+            LEFT JOIN h_agents ha ON ha.slug = hc.agent_id
+            WHERE hc.status &lt;&gt; 'deleted'
+                  AND hc.updated_at &gt;= #{since}
+                  <if test="until != null">
+                      AND hc.updated_at &lt; #{until}
+                  </if>
+            )
+        ORDER BY updated_at DESC;
     </select>
 
 </mapper>

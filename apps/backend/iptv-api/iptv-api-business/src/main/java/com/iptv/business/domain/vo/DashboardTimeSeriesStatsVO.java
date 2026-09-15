@@ -14,9 +14,9 @@ import java.util.List;
  * 调用统计VO
  */
 @Data
-public class TimeSeriesStatsVO implements Serializable {
+public class DashboardTimeSeriesStatsVO implements Serializable {
     @Serial
-    private static final long serialVersionUID = 5986981197445727024L;
+    private static final long serialVersionUID = -2908976371307107161L;
 
     @Schema(description = "总对话数")
     private Long totalCount;

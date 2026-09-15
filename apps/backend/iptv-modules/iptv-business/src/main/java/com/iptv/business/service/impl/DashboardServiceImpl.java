@@ -81,7 +81,7 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
-    public TimeSeriesStatsVO queryCallsTimeseries(String type, String timeRange) {
+    public DashboardTimeSeriesStatsVO queryCallsTimeseries(String type, String timeRange) {
         if (!"models".equals(type) && !"agents".equals(type)
                 && !"tokens".equals(type) && !"tools".equals(type)) {
             throw new ServiceException("Invalid type: " + type, 422);
@@ -128,7 +128,7 @@ public class DashboardServiceImpl implements DashboardService {
             }
         }
 
-        List<TimeSeriesStatsVO.DataStats> data = new ArrayList<>(intervals);
+        List<DashboardTimeSeriesStatsVO.DataStats> data = new ArrayList<>(intervals);
         ZonedDateTime currentTime = baseTime;
         long seriesTotal = 0L;
         long peakCount = -1L;
@@ -136,13 +136,13 @@ public class DashboardServiceImpl implements DashboardService {
         for (int i = 0; i < intervals; i++) {
             String date = formatTimeKey(currentTime, timeRange);
             Map<String, Long> counts = timeData.getOrDefault(date, Map.of());
-            List<TimeSeriesStatsVO.CategoryCount> categoryCounts = new ArrayList<>(categories.size());
+            List<DashboardTimeSeriesStatsVO.CategoryCount> categoryCounts = new ArrayList<>(categories.size());
             long pointTotal = timeTotals.getOrDefault(date, 0L);
             for (String category : categories) {
                 long count = counts.getOrDefault(category, 0L);
-                categoryCounts.add(new TimeSeriesStatsVO.CategoryCount(category, count));
+                categoryCounts.add(new DashboardTimeSeriesStatsVO.CategoryCount(category, count));
             }
-            data.add(new TimeSeriesStatsVO.DataStats(pointTotal, date, categoryCounts));
+            data.add(new DashboardTimeSeriesStatsVO.DataStats(pointTotal, date, categoryCounts));
             seriesTotal += pointTotal;
             if (pointTotal > peakCount) {
                 peakCount = pointTotal;
@@ -156,7 +156,7 @@ public class DashboardServiceImpl implements DashboardService {
                 .divide(BigDecimal.valueOf(intervals), 2, RoundingMode.HALF_UP)
                 .doubleValue();
 
-        TimeSeriesStatsVO vo = new TimeSeriesStatsVO();
+        DashboardTimeSeriesStatsVO vo = new DashboardTimeSeriesStatsVO();
         vo.setData(data);
         vo.setCategories(new ArrayList<>(categories));
         vo.setTotalCount(totalCount);
@@ -167,10 +167,10 @@ public class DashboardServiceImpl implements DashboardService {
             List<String> slugs = categories.stream()
                     .filter(category -> !"unknown_agent".equals(category))
                     .toList();
-            List<TimeSeriesStatsVO.AgentName> agentNames = new ArrayList<>();
+            List<DashboardTimeSeriesStatsVO.AgentName> agentNames = new ArrayList<>();
             if (!slugs.isEmpty()) {
                 for (Map<String, Object> row : mapper.selectAgentNames(slugs)) {
-                    agentNames.add(new TimeSeriesStatsVO.AgentName(
+                    agentNames.add(new DashboardTimeSeriesStatsVO.AgentName(
                             Objects.toString(row.get("agentId"), ""),
                             Objects.toString(row.get("name"), "")
                     ));
@@ -182,22 +182,23 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
-    public UserActivityStatsVO queryStatsUsers() {
+    public DashboardUserActiveStatsVO queryStatsUsers() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
-        UserActivityStatsVO vo = new UserActivityStatsVO();
+        DashboardUserActiveStatsVO vo = new DashboardUserActiveStatsVO();
         // Python 此接口使用有效成员关系数，不复用顶部总览的 users 表计数。
         vo.setTotalUsers(mapper.recordCountWeknoraMembers());
         vo.setActiveUsers24h(mapper.recordCountWeknoraActiveUsers(now.minusDays(1), null));
         vo.setActiveUsers30d(mapper.recordCountWeknoraActiveUsers(now.minusDays(30), null));
+        vo.setActiveUsers(mapper.selectWeknoraActiveUsers(now.minusDays(30), null));
 
         // 对齐 Python：每日明细单独取 UTC 当前时间，按滚动 24 小时窗口统计。
         OffsetDateTime dailyNow = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
-        List<UserActivityStatsVO.DailyActiveUser> dailyActiveUsers = new ArrayList<>(7);
+        List<DashboardUserActiveStatsVO.DailyActiveUser> dailyActiveUsers = new ArrayList<>(7);
         for (int i = 0; i < 7; i++) {
             OffsetDateTime since = dailyNow.minusDays(i + 1L);
             OffsetDateTime until = dailyNow.minusDays(i);
             Long count = mapper.recordCountWeknoraActiveUsers(since, until);
-            dailyActiveUsers.add(0, new UserActivityStatsVO.DailyActiveUser(
+            dailyActiveUsers.add(0, new DashboardUserActiveStatsVO.DailyActiveUser(
                     since.toLocalDate().toString(), count));
         }
         vo.setDailyActiveUsers(dailyActiveUsers);
@@ -205,12 +206,12 @@ public class DashboardServiceImpl implements DashboardService {
     }
 
     @Override
-    public ToolCallStatsVO queryStatsTools() {
+    public DashboardToolCallStatsVO queryStatsTools() {
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
         long totalCalls = mapper.recordCountToolCalls(null, null, null);
         long successfulCalls = mapper.recordCountToolCalls("success", null, null);
 
-        ToolCallStatsVO vo = new ToolCallStatsVO();
+        DashboardToolCallStatsVO vo = new DashboardToolCallStatsVO();
         vo.setTotalCalls(totalCalls);
         vo.setSuccessfulCalls(successfulCalls);
         // Python 将所有非 success 状态都计入失败数，包括 pending。
@@ -224,20 +225,20 @@ public class DashboardServiceImpl implements DashboardService {
         }
         vo.setToolErrorDistribution(errors);
 
-        List<ToolCallStatsVO.DailyToolCall> dailyToolCalls = new ArrayList<>(7);
+        List<DashboardToolCallStatsVO.DailyToolCall> dailyToolCalls = new ArrayList<>(7);
         for (int i = 0; i < 7; i++) {
             LocalDateTime since = now.minusDays(i + 1L);
             LocalDateTime until = now.minusDays(i);
             Long count = mapper.recordCountToolCalls(null, since, until);
-            dailyToolCalls.add(0, new ToolCallStatsVO.DailyToolCall(since.toLocalDate().toString(), count));
+            dailyToolCalls.add(0, new DashboardToolCallStatsVO.DailyToolCall(since.toLocalDate().toString(), count));
         }
         vo.setDailyToolCalls(dailyToolCalls);
         return vo;
     }
 
     @Override
-    public KnowledgeStatsVO queryStatsKnowledge() {
-        KnowledgeStatsVO vo = new KnowledgeStatsVO();
+    public DashboardKnowledgeStatsVO queryStatsKnowledge() {
+        DashboardKnowledgeStatsVO vo = new DashboardKnowledgeStatsVO();
         vo.setTotalDatabases(mapper.recordCountKnowledgeBases());
 
         Map<String, Long> databasesByType = new LinkedHashMap<>();
@@ -264,41 +265,43 @@ public class DashboardServiceImpl implements DashboardService {
         vo.setFileTypeDistribution(fileTypeDistribution);
         vo.setSplitBySystem(Boolean.TRUE);
         vo.setSource("weknora");
+
+        vo.setActiveKnowledgeBases(mapper.selectActiveKnowledgeBases());
         return vo;
     }
 
     @Override
-    public AgentAnalyticsVO queryStatsAgents() {
-        List<AgentAnalyticsVO.AgentConversationCount> agents = mapper.selectYuxiAgentConversationCounts();
+    public DashboardAgentAnalyticsVO queryStatsAgents() {
+        List<DashboardAgentAnalyticsVO.AgentConversationCount> agents = mapper.selectYuxiAgentConversationCounts();
         Map<String, Map<String, Object>> feedbackCounts = new HashMap<>();
         Map<String, Long> toolCounts = new HashMap<>();
         if (!agents.isEmpty()) {
             for (Map<String, Object> row : mapper.selectYuxiAgentFeedbackCounts()) {
                 feedbackCounts.put((String) row.get("agentId"), row);
             }
-            for (AgentAnalyticsVO.AgentToolUsage usage : mapper.selectYuxiAgentToolUsage()) {
+            for (DashboardAgentAnalyticsVO.AgentToolUsage usage : mapper.selectYuxiAgentToolUsage()) {
                 toolCounts.put(usage.getAgentId(), usage.getToolUsageCount());
             }
         }
 
-        List<AgentAnalyticsVO.AgentSatisfactionRate> satisfactionRates = new ArrayList<>(agents.size());
-        List<AgentAnalyticsVO.AgentToolUsage> toolUsage = new ArrayList<>(agents.size());
-        List<AgentAnalyticsVO.TopPerformingAgent> topAgents = new ArrayList<>(agents.size());
-        for (AgentAnalyticsVO.AgentConversationCount agent : agents) {
+        List<DashboardAgentAnalyticsVO.AgentSatisfactionRate> satisfactionRates = new ArrayList<>(agents.size());
+        List<DashboardAgentAnalyticsVO.AgentToolUsage> toolUsage = new ArrayList<>(agents.size());
+        List<DashboardAgentAnalyticsVO.TopPerformingAgent> topAgents = new ArrayList<>(agents.size());
+        for (DashboardAgentAnalyticsVO.AgentConversationCount agent : agents) {
             String agentId = agent.getAgentId();
             Map<String, Object> feedback = feedbackCounts.get(agentId);
             long totalFeedbacks = feedback == null ? 0L : countValue(feedback, "totalFeedbacks");
             long likes = feedback == null ? 0L : countValue(feedback, "likeFeedbacks");
             // 此接口按 Python 保留无反馈时 100 的规则，不沿用顶部总览的 null。
             BigDecimal rate = pythonPercentage(likes, totalFeedbacks, 100);
-            satisfactionRates.add(new AgentAnalyticsVO.AgentSatisfactionRate(agentId, rate, totalFeedbacks));
-            toolUsage.add(new AgentAnalyticsVO.AgentToolUsage(agentId, toolCounts.getOrDefault(agentId, 0L)));
-            topAgents.add(new AgentAnalyticsVO.TopPerformingAgent(agentId, agent.getConversationCount(), rate));
+            satisfactionRates.add(new DashboardAgentAnalyticsVO.AgentSatisfactionRate(agentId, rate, totalFeedbacks));
+            toolUsage.add(new DashboardAgentAnalyticsVO.AgentToolUsage(agentId, toolCounts.getOrDefault(agentId, 0L)));
+            topAgents.add(new DashboardAgentAnalyticsVO.TopPerformingAgent(agentId, agent.getConversationCount(), rate));
         }
-        topAgents.sort(Comparator.comparing(AgentAnalyticsVO.TopPerformingAgent::getConversationCount).reversed());
+        topAgents.sort(Comparator.comparing(DashboardAgentAnalyticsVO.TopPerformingAgent::getConversationCount).reversed());
 
         Map<String, String> agentNames = new LinkedHashMap<>();
-        List<String> slugs = agents.stream().map(AgentAnalyticsVO.AgentConversationCount::getAgentId)
+        List<String> slugs = agents.stream().map(DashboardAgentAnalyticsVO.AgentConversationCount::getAgentId)
                 .filter(slug -> slug != null && !slug.isEmpty()).toList();
         if (!slugs.isEmpty()) {
             for (Map<String, Object> row : mapper.selectAnalyticsAgentNames(slugs)) {
@@ -315,7 +318,7 @@ public class DashboardServiceImpl implements DashboardService {
             weknoraAgentNames.put(agentId, name == null || name.isEmpty() ? agentId : name);
         }
 
-        AgentAnalyticsVO vo = new AgentAnalyticsVO();
+        DashboardAgentAnalyticsVO vo = new DashboardAgentAnalyticsVO();
         vo.setTotalAgents(agents.size() + weknoraTotalAgents);
         vo.setYuxiTotalAgents((long) agents.size());
         vo.setWeknoraTotalAgents(weknoraTotalAgents);
@@ -328,6 +331,12 @@ public class DashboardServiceImpl implements DashboardService {
         vo.setWeknoraAgentNames(weknoraAgentNames);
         vo.setSplitBySystem(Boolean.TRUE);
         return vo;
+    }
+
+    @Override
+    public List<DashboardConversationVO> queryStatsConversations() {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
+        return mapper.selectStatsConversations(now.minusDays(30L), null);
     }
 
 
