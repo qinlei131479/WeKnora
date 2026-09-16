@@ -37,7 +37,7 @@ def remaining_ttl_seconds(payload: dict[str, Any], *, now: int | None = None) ->
 
 
 def verify_weknora_access_token(token: str) -> dict[str, Any]:
-    """校验 WeKnora access JWT，返回规范化 claims。"""
+    """校验 WeKnora access JWT，返回 claims（user_id 保留原始字符串，不做 UUID 规范化）。"""
     raw = str(token or "").strip()
     if not raw:
         raise WeKnoraTokenError("令牌为空")
@@ -63,7 +63,13 @@ def verify_weknora_access_token(token: str) -> dict[str, Any]:
     if not user_id:
         raise WeKnoraTokenError("令牌缺少 user_id")
     try:
-        user_id = str(uuid.UUID(user_id))
+        # 仅用于校验 user_id 是否是合法 UUID（含无横线的 32 位 hex）；
+        # 不能用 uuid.UUID(...) 的规范化结果覆盖原始值——Go 端签发 token 时
+        # 直接写入 users.id 的原始字符串（可能是无横线的历史/测试数据），
+        # 且验签时也是原样字符串比较，不做规范化。若这里改写成带横线的
+        # 标准形式，会导致后续按 users.id 查库时与数据库里的原始值不相等，
+        # 表现为 Go 端鉴权通过而 Python 端误报「用户不存在」。
+        uuid.UUID(user_id)
     except ValueError as exc:
         raise WeKnoraTokenError("令牌 user_id 不是合法 UUID") from exc
 
