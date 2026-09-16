@@ -172,12 +172,25 @@ build_app_image() {
     load_env_var GOPROXY
     load_env_var GOPRIVATE
     load_env_var GOSUMDB
+    load_env_var WITH_ANYDOC
+    load_env_var RUSTUP_DIST_SERVER
+    load_env_var RUSTUP_UPDATE_ROOT
 
     # 国内默认走 goproxy.cn + .env 中的 Debian 镜像源，避免官方源过慢
     local goproxy="${GOPROXY:-https://goproxy.cn,direct}"
     local apk_mirror="${APK_MIRROR_ARG:-mirrors.aliyun.com}"
+    local with_anydoc="${WITH_ANYDOC:-1}"
+    case "$(printf '%s' "$with_anydoc" | tr '[:upper:]' '[:lower:]')" in
+        1|true|yes|on) with_anydoc=1 ;;
+        0|false|no|off) with_anydoc=0 ;;
+        *)
+            log_error "WITH_ANYDOC 只支持 1/0、true/false，当前值: ${with_anydoc}"
+            return 1
+            ;;
+    esac
     log_info "GOPROXY=$goproxy"
     log_info "APK_MIRROR_ARG=$apk_mirror"
+    log_info "WITH_ANYDOC=$with_anydoc"
 
     DOCKER_BUILDKIT=1 docker build \
         --platform $PLATFORM \
@@ -190,6 +203,9 @@ build_app_image() {
         --build-arg COMMIT_ID_ARG="$COMMIT_ID" \
         --build-arg BUILD_TIME_ARG="$BUILD_TIME" \
         --build-arg GO_VERSION_ARG="$GO_VERSION" \
+        --build-arg WITH_ANYDOC="$with_anydoc" \
+        --build-arg RUSTUP_DIST_SERVER_ARG="${RUSTUP_DIST_SERVER:-}" \
+        --build-arg RUSTUP_UPDATE_ROOT_ARG="${RUSTUP_UPDATE_ROOT:-}" \
         -f docker/Dockerfile.app-core \
         -t ${IMAGE_PREFIX}-app:latest \
         .

@@ -12,15 +12,34 @@ pipeline {
         COMPOSE_NETWORK = 'agent-middle-network'
     }
 
+    tools {
+        go 'go1.26.0'
+    }
+
     options {
         timestamps()
         disableConcurrentBuilds()
-        timeout(time: 30, unit: 'MINUTES')
+        timeout(time: 60, unit: 'MINUTES')
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
     parameters {
         booleanParam(name: 'SKIP_BUILD', defaultValue: false, description: '跳过构建，仅重启容器')
+        booleanParam(
+            name: 'WITH_ANYDOC',
+            defaultValue: true,
+            description: '链接 anydoc 进程内 Office 解析引擎；首次构建会安装 Rust 工具链，耗时和磁盘占用更高'
+        )
+        stringParam(
+            name: 'RUSTUP_DIST_SERVER',
+            defaultValue: '',
+            description: '可选 Rust 工具链镜像；留空时读取 .env，最终默认 https://static.rust-lang.org'
+        )
+        stringParam(
+            name: 'RUSTUP_UPDATE_ROOT',
+            defaultValue: '',
+            description: '可选 Rustup 更新镜像；留空时读取 .env，最终默认 https://static.rust-lang.org/rustup'
+        )
         booleanParam(
             name: 'OVERWRITE_ENV',
             defaultValue: false,
@@ -41,7 +60,14 @@ pipeline {
                 expression { return params.SKIP_BUILD?.toString() != 'true' }
             }
             steps {
-                sh 'sh scripts/kjsc/build_images.sh -p'
+                withEnv([
+                    "WITH_ANYDOC=${params.WITH_ANYDOC?.toString()}",
+                    "RUSTUP_DIST_SERVER=${params.RUSTUP_DIST_SERVER?.trim() ?: ''}",
+                    "RUSTUP_UPDATE_ROOT=${params.RUSTUP_UPDATE_ROOT?.trim() ?: ''}"
+                ]) {
+                    sh 'go version'
+                    sh 'sh scripts/kjsc/build_images.sh -p'
+                }
             }
         }
 

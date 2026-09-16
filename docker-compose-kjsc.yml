@@ -56,6 +56,9 @@ services:
       dockerfile: docker/Dockerfile.app-core
       args:
         - APK_MIRROR_ARG=${APK_MIRROR_ARG:-}
+        - WITH_ANYDOC=${WITH_ANYDOC:-1}
+        - RUSTUP_DIST_SERVER_ARG=${RUSTUP_DIST_SERVER:-}
+        - RUSTUP_UPDATE_ROOT_ARG=${RUSTUP_UPDATE_ROOT:-}
     container_name: agent-middle-app
     ports:
       - "${APP_PORT:-8080}:8080"

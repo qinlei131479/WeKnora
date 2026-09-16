@@ -50,6 +50,10 @@ WeKnora-lite
 /server
 /dist/
 /build/
+third_party/anydoc-go/target/
+third_party/anydoc-go/lib/
+third_party/anydoc-go/.anydoc-*.crate
+third_party/anydoc-go/.anydoc-unpack/
 /artifacts/browserskill/
 cmd/desktop/build/bin/
 
