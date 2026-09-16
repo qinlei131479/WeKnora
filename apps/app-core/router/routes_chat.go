@@ -130,6 +130,12 @@ func RegisterChatRoutes(r *gin.RouterGroup, handler *session.Handler, g *rbacGua
 	{
 		knowledgeSearch.POST("", handler.SearchKnowledge)
 	}
+
+	// Harness 通过该内部接口同步解析附件，保持原有请求和响应契约不变。
+	internalParse := g.apiKeyGroup(r.Group("/internal", g.Viewer()), apiKeyChat(apiKeyFullAccess()))
+	{
+		internalParse.POST("/parse", handler.ParseInternal)
+	}
 }
 
 // RegisterSandboxTerminalRoutes registers the interactive-terminal WebSocket.
