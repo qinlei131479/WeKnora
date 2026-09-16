@@ -76,8 +76,6 @@ export const deleteSkill = (slug: string) => apiDelete(`${BASE_URL}/${encodeURIC
 export const deletePersonalSkill = (slug: string) =>
   apiDelete(`${USER_BASE_URL}/personal/${encodeURIComponent(slug)}`)
 
-export const deleteSkillsBatch = (slugs: unknown) => apiPost(`${BASE_URL}/delete-batch`, { slugs })
-
 export const skillApi = {
   listSkills,
   listSkillCards,
@@ -100,7 +98,6 @@ export const skillApi = {
   exportSkill,
   deleteSkill,
   deletePersonalSkill,
-  deleteSkillsBatch,
 }
 
 export default skillApi

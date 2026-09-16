@@ -40,35 +40,7 @@
         :class="{ 'remote-selection-body': phase === 'selecting' && flow?.kind === 'remote' }"
       >
         <section v-if="phase === 'selecting'" class="flow-section">
-          <slot v-if="flow?.kind === 'remote'" name="selection" />
-          <template v-else>
-            <div class="selection-toolbar">
-              <span>{{ t('ext.skills.install.pickToLoad') }}</span>
-              <div>
-                <t-button variant="text" size="small" @click="selectAllAvailable">{{ t('ext.skills.selectAll') }}</t-button>
-                <t-button variant="text" size="small" @click="selectedSlugs = []">{{ t('ext.skills.clear') }}</t-button>
-              </div>
-            </div>
-            <div class="flow-item-list selection-list">
-              <label
-                v-for="skill in suiteSkills"
-                :key="skill.slug"
-                class="selection-item"
-                :class="{ installed: isInstalled(skill.slug) }"
-              >
-                <t-checkbox
-                  :checked="selectedSlugs.includes(skill.slug)"
-                  :disabled="isInstalled(skill.slug)"
-                  @change="(checked) => toggleSelection(skill.slug, checked)"
-                />
-                <span class="flow-item-content">
-                  <strong>{{ skill.name }}</strong>
-                  <small>{{ skill.description || skill.slug }}</small>
-                </span>
-                <span v-if="isInstalled(skill.slug)" class="status-badge neutral">{{ t('ext.skills.install.installed') }}</span>
-              </label>
-            </div>
-          </template>
+          <slot name="selection" />
         </section>
 
         <section v-else-if="phase === 'preparing'" class="flow-section" aria-live="polite">
@@ -258,10 +230,6 @@ const StatusItemList = defineComponent({
   }
 })
 
-const suiteSkills = computed(() => props.flow?.suite?.skills || [])
-const installedSet = computed(
-  () => new Set((props.flow?.installedSlugs || []).map((slug) => String(slug).toLowerCase()))
-)
 const currentStep = computed(
   () => ({ selecting: 0, preparing: 1, reviewing: 2, installing: 3, result: 3 })[phase.value]
 )
@@ -285,16 +253,10 @@ const resultTitle = computed(() => {
   if (successfulInstallCount.value) return t('ext.skills.install.partialDone')
   return t('ext.skills.install.allFailed')
 })
-const modalTitle = computed(() =>
-  props.flow?.kind === 'suite'
-    ? t('ext.skills.install.installNamed', { name: props.flow.suite.name })
-    : props.flow?.title || t('ext.skills.install.installSkill')
+const modalTitle = computed(() => props.flow?.title || t('ext.skills.install.installSkill'))
+const modalDescription = computed(
+  () => props.flow?.description || t('ext.skills.install.defaultDesc')
 )
-const modalDescription = computed(() => {
-  if (props.flow?.kind === 'suite')
-    return `${props.flow.suite.provider} · ${props.flow.suite.description}`
-  return props.flow?.description || t('ext.skills.install.defaultDesc')
-})
 const footerSummary = computed(() => {
   if (phase.value === 'selecting') {
     return t('ext.skills.install.willLoad', { count: selectedSlugs.value.length })
@@ -316,18 +278,6 @@ const footerSummary = computed(() => {
     fail: failedInstallItems.value.length
   })
 })
-
-const isInstalled = (slug) => installedSet.value.has(String(slug).toLowerCase())
-const selectAllAvailable = () => {
-  selectedSlugs.value = suiteSkills.value
-    .filter((skill) => !isInstalled(skill.slug))
-    .map((skill) => skill.slug)
-}
-const toggleSelection = (slug, checked) => {
-  selectedSlugs.value = checked
-    ? [...new Set([...selectedSlugs.value, slug])]
-    : selectedSlugs.value.filter((item) => item !== slug)
-}
 
 const removeReviewItem = (item) => {
   reviewItems.value = reviewItems.value.filter(
@@ -383,13 +333,6 @@ const openReview = (draftPayloads) => {
     }))
   )
   phase.value = 'reviewing'
-}
-
-const prepareSuite = () => {
-  const details = suiteSkills.value.filter((skill) => selectedSlugs.value.includes(skill.slug))
-  prepareRequests([
-    { source: props.flow.suite.source, skills: selectedSlugs.value, skillDetails: details }
-  ])
 }
 
 const installDrafts = async () => {
@@ -494,11 +437,6 @@ watch(
     reviewItems.value = []
     installItems.value = []
 
-    if (props.flow.kind === 'suite') {
-      phase.value = 'selecting'
-      selectAllAvailable()
-      return
-    }
     if (props.flow.kind === 'remote' && !props.flow.requests?.length) {
       phase.value = 'selecting'
       return
@@ -641,26 +579,11 @@ watch(
   gap: 12px;
 }
 
-.selection-toolbar,
 .install-flow-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-}
-
-.selection-toolbar {
-  color: var(--gray-700);
-  font-size: 13px;
-  font-weight: 600;
-
-  :deep(.t-button--variant-text) {
-    color: var(--gray-600);
-
-    &:hover {
-      color: var(--gray-900);
-    }
-  }
 }
 
 .flow-item-list,
@@ -671,49 +594,18 @@ watch(
   gap: 8px;
 }
 
-.selection-item,
 :deep(.status-item) {
   border: 1px solid var(--gray-150);
   border-radius: 8px;
   background: var(--gray-0);
 }
 
-.selection-list {
-  overflow: hidden;
-  gap: 0;
-  border: 1px solid var(--gray-150);
-  border-radius: 8px;
-  background: var(--gray-0);
-
-  .selection-item {
-    min-height: 60px;
-    border: 0;
-    border-bottom: 1px solid var(--gray-100);
-    border-radius: 0;
-
-    &:last-child {
-      border-bottom: 0;
-    }
-  }
-}
-
-.selection-item,
 :deep(.status-item) {
   display: flex;
   align-items: center;
   min-height: 54px;
   padding: 10px 12px;
   gap: 10px;
-}
-
-.selection-item {
-  cursor: pointer;
-
-  &.installed {
-    color: var(--gray-400);
-    cursor: not-allowed;
-    background: var(--gray-50);
-  }
 }
 
 .flow-item-content,

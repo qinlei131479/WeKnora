@@ -2,46 +2,23 @@
   <div class="skill-cards-page extension-page-root">
     <Teleport defer to="#extension-page-header-actions">
       <div class="extension-header-actions">
-        <template v-if="!isBatchDeleteMode">
-          <t-button
-            variant="outline"
-            @click="isBatchDeleteMode = true"
-            :disabled="loading || importing || filteredDeletableSkills.length === 0"
-          >
-            {{ t('ext.skills.batchManage') }}
-          </t-button>
-          <t-button
-            variant="outline"
-            @click="handleOpenRemoteInstall"
-            :disabled="loading || importing"
-          >
-            <template #icon><t-icon name="cloud-download" /></template>
-            {{ t('ext.skills.remoteInstall') }}
-          </t-button>
-          <t-button
-            theme="primary"
-            :loading="importing"
-            :disabled="loading || importing"
-            @click="skillFileInput?.click()"
-          >
-            <template #icon><t-icon name="upload" /></template>
-            {{ t('ext.skills.upload') }}
-          </t-button>
-        </template>
-        <template v-else>
-          <t-button size="small" variant="text" @click="handleBatchSelectAll">{{ t('ext.skills.selectAll') }}</t-button>
-          <t-button size="small" variant="text" @click="handleBatchSelectInvert">{{ t('ext.skills.invert') }}</t-button>
-          <t-button size="small" variant="text" @click="handleBatchSelectNone">{{ t('ext.skills.clear') }}</t-button>
-          <t-button
-            theme="danger"
-            :disabled="selectedCardSlugs.length === 0"
-            :loading="loading"
-            @click="handleBatchDelete"
-          >
-            {{ t('ext.skills.batchDelete', { count: selectedCardSlugs.length }) }}
-          </t-button>
-          <t-button variant="outline" :disabled="loading" @click="exitBatchDeleteMode">{{ t('ext.skills.exitManage') }}</t-button>
-        </template>
+        <t-button
+          variant="outline"
+          @click="handleOpenRemoteInstall"
+          :disabled="loading || importing"
+        >
+          <template #icon><t-icon name="cloud-download" /></template>
+          {{ t('ext.skills.remoteInstall') }}
+        </t-button>
+        <t-button
+          theme="primary"
+          :loading="importing"
+          :disabled="loading || importing"
+          @click="skillFileInput?.click()"
+        >
+          <template #icon><t-icon name="upload" /></template>
+          {{ t('ext.skills.upload') }}
+        </t-button>
       </div>
     </Teleport>
 
@@ -96,59 +73,35 @@
             v-for="skill in group.skills"
             :key="`${group.key}:${skill.slug || skill.id}`"
             class="card-wrapper"
-            :class="{
-              selected: !skill.isSuite && selectedCardSlugs.includes(skill.slug),
-              'batch-mode': isBatchDeleteMode && !skill.isSuite
-            }"
           >
-            <SkillSuiteCard
-              v-if="skill.isSuite"
-              :suite="skill"
-              :installed-slugs="[...installedPersonalSkillKeys]"
-              @open="openRecommendedSuite"
-            />
-            <template v-else>
-              <t-checkbox
-                v-if="
-                  isBatchDeleteMode &&
-                  canManageSkill(skill) &&
-                  skill.sourceType !== 'builtin' &&
-                  skill.sourceScope !== 'personal'
-                "
-                :checked="selectedCardSlugs.includes(skill.slug)"
-                @change="handleToggleCardSelect(skill.slug)"
-                class="card-select-checkbox"
-              />
-              <InfoCard
-                variant="default"
-                layout="kb"
-                :title="formatExtensionCardTitle(skill.name)"
-                :subtitle="skill.slug"
-                :description="skill.description || t('ext.noDescription')"
-                :tags="skillCardTags(skill)"
-                :default-icon="getSkillIcon(skill.slug)"
-                @click="handleCardClick(skill)"
-                :class="{ 'card-clickable-select': isBatchDeleteMode }"
-              >
-                <template #actions>
-                  <button
-                    v-if="skill.sourceScope !== 'personal'"
-                    type="button"
-                    class="skill-enabled-action"
-                    :class="{ enabled: skill.enabled !== false }"
-                    :disabled="!canManageSkill(skill) || isSkillToggling(skill.slug)"
-                    :aria-label="skill.enabled === false ? t('ext.skills.enable') : t('ext.skills.disable')"
-                    @click.stop="handleToggleSkillEnabled(skill)"
-                  >
-                    <Plus v-if="skill.enabled === false" :size="15" class="action-icon" />
-                    <template v-else>
-                      <Check :size="15" class="action-icon action-icon-check" />
-                      <Minus :size="15" class="action-icon action-icon-minus" />
-                    </template>
-                  </button>
-                </template>
-              </InfoCard>
-            </template>
+            <InfoCard
+              variant="default"
+              layout="kb"
+              :title="formatExtensionCardTitle(skill.name)"
+              :subtitle="skill.slug"
+              :description="skill.description || t('ext.noDescription')"
+              :tags="skillCardTags(skill)"
+              :default-icon="getSkillIcon(skill.slug)"
+              @click="openSkillPreview(skill)"
+            >
+              <template #actions>
+                <button
+                  v-if="skill.sourceScope !== 'personal'"
+                  type="button"
+                  class="skill-enabled-action"
+                  :class="{ enabled: skill.enabled !== false }"
+                  :disabled="!canManageSkill(skill) || isSkillToggling(skill.slug)"
+                  :aria-label="skill.enabled === false ? t('ext.skills.enable') : t('ext.skills.disable')"
+                  @click.stop="handleToggleSkillEnabled(skill)"
+                >
+                  <Plus v-if="skill.enabled === false" :size="15" class="action-icon" />
+                  <template v-else>
+                    <Check :size="15" class="action-icon action-icon-check" />
+                    <Minus :size="15" class="action-icon action-icon-minus" />
+                  </template>
+                </button>
+              </template>
+            </InfoCard>
           </div>
         </ExtensionCardGrid>
       </template>
@@ -440,7 +393,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { MessagePlugin, DialogPlugin } from 'tdesign-vue-next'
+import { MessagePlugin } from 'tdesign-vue-next'
 import {
   WandSparkles,
   History,
@@ -455,7 +408,6 @@ import { skillApi } from '@/api/chat-work/skill'
 import ExtensionCardGrid from '@/components/harness/extensions/ExtensionCardGrid.vue'
 import SkillInstallFlowModal from './SkillInstallFlowModal.vue'
 import SkillEditorModal from './SkillEditorModal.vue'
-import SkillSuiteCard from './SkillSuiteCard.vue'
 import InfoCard from '@/components/harness/shared/InfoCard.vue'
 import PageShoulder from '@/components/harness/shared/PageShoulder.vue'
 import { formatExtensionCardTitle } from '@/utils/harness/extensionDisplayName'
@@ -465,45 +417,12 @@ const { t } = useI18n()
 
 const emit = defineEmits(['loading-change'])
 
-const recommendedSuites = computed(() => [
-  {
-    id: 'anthropic-documents',
-    name: t('ext.skills.suite.anthropicName'),
-    provider: 'Anthropic',
-    description: t('ext.skills.suite.anthropicDesc'),
-    source: 'anthropics/skills',
-    skills: [
-      {
-        slug: 'pdf',
-        name: 'PDF',
-        description: t('ext.skills.suite.pdfDesc')
-      },
-      {
-        slug: 'docx',
-        name: 'Docs',
-        description: t('ext.skills.suite.docxDesc')
-      },
-      {
-        slug: 'xlsx',
-        name: 'XLSX',
-        description: t('ext.skills.suite.xlsxDesc')
-      },
-      {
-        slug: 'pptx',
-        name: 'PPTX',
-        description: t('ext.skills.suite.pptxDesc')
-      }
-    ]
-  }
-])
 const loading = ref(false)
 const skillFileInput = ref(null)
 const importing = ref(false)
 const listingRemoteSkills = ref(false)
 const searchQuery = ref('')
 
-const isBatchDeleteMode = ref(false)
-const selectedCardSlugs = ref([])
 const togglingSkillSlugs = ref([])
 
 const skills = ref([])
@@ -556,8 +475,7 @@ const matchesSearch = (skill) => {
   const text = [
     skill.name,
     skill.slug,
-    skill.description,
-    ...(skill.skills || []).flatMap((item) => [item.name, item.slug, item.description])
+    skill.description
   ]
     .filter(Boolean)
     .join(' ')
@@ -573,35 +491,12 @@ const installedSkillCards = computed(() =>
   }))
 )
 
-const installedPersonalSkillKeys = computed(() => {
-  const keys = new Set()
-  installedSkillCards.value.forEach((skill) => {
-    if (skill.sourceScope !== 'personal') return
-    const identifiers = [skill.slug, skill.name]
-    identifiers.forEach((value) => {
-      if (value) keys.add(String(value).toLowerCase())
-    })
-  })
-  return keys
-})
-
-const recommendedSuiteCards = computed(() =>
-  recommendedSuites.value.map((suite) => ({ ...suite, isSuite: true }))
-)
-
 const filteredInstalledSkills = computed(() => installedSkillCards.value.filter(matchesSearch))
 const skillGroups = computed(() => [
   {
-    key: 'recommended',
-    title: t('ext.skills.groupRecommended'),
-    skills: isBatchDeleteMode.value ? [] : recommendedSuiteCards.value.filter(matchesSearch)
-  },
-  {
     key: 'personal',
     title: t('ext.skills.groupPersonal'),
-    skills: isBatchDeleteMode.value
-      ? []
-      : filteredInstalledSkills.value.filter((skill) => skill.sourceScope === 'personal')
+    skills: filteredInstalledSkills.value.filter((skill) => skill.sourceScope === 'personal')
   },
   {
     key: 'builtin',
@@ -625,12 +520,6 @@ const toggleSkillSection = (key) => {
   else next.add(key)
   collapsedSkillSections.value = next
 }
-const filteredDeletableSkills = computed(() =>
-  filteredInstalledSkills.value.filter(
-    (skill) =>
-      canManageSkill(skill) && skill.sourceType !== 'builtin' && skill.sourceScope !== 'personal'
-  )
-)
 
 // 仓库拉取的技能列表过滤
 const filteredRepoSkills = computed(() => {
@@ -743,27 +632,6 @@ const handleSkillEditorSubmitted = async () => {
   await fetchSkills()
 }
 
-const handleCardClick = (skill) => {
-  if (isBatchDeleteMode.value) {
-    handleToggleCardSelect(skill.slug)
-  } else {
-    openSkillPreview(skill)
-  }
-}
-
-const handleToggleCardSelect = (slug) => {
-  const target = installedSkillCards.value.find(
-    (skill) => skill.slug === slug && skill.sourceScope !== 'personal'
-  )
-  if (!canManageSkill(target) || target?.sourceType === 'builtin') return
-  const idx = selectedCardSlugs.value.indexOf(slug)
-  if (idx > -1) {
-    selectedCardSlugs.value.splice(idx, 1)
-  } else {
-    selectedCardSlugs.value.push(slug)
-  }
-}
-
 const handleToggleSkillEnabled = async (skill) => {
   if (!skill || !canManageSkill(skill) || isSkillToggling(skill.slug)) return
   const enabled = skill.enabled === false
@@ -790,72 +658,6 @@ const handleToggleSkillEnabled = async (skill) => {
   } finally {
     togglingSkillSlugs.value = togglingSkillSlugs.value.filter((slug) => slug !== skill.slug)
   }
-}
-
-const handleBatchSelectAll = () => {
-  selectedCardSlugs.value = filteredDeletableSkills.value.map((skill) => skill.slug)
-}
-
-const handleBatchSelectNone = () => {
-  selectedCardSlugs.value = []
-}
-
-const handleBatchSelectInvert = () => {
-  const currentSet = new Set(selectedCardSlugs.value)
-  selectedCardSlugs.value = filteredDeletableSkills.value
-    .filter((skill) => !currentSet.has(skill.slug))
-    .map((skill) => skill.slug)
-}
-
-const exitBatchDeleteMode = () => {
-  isBatchDeleteMode.value = false
-  selectedCardSlugs.value = []
-}
-
-const handleBatchDelete = () => {
-  const deletableSlugs = selectedCardSlugs.value.filter((slug) => {
-    const target = installedSkillCards.value.find(
-      (skill) => skill.slug === slug && skill.sourceScope !== 'personal'
-    )
-    return (
-      canManageSkill(target) &&
-      target?.sourceType !== 'builtin' &&
-      target?.sourceScope !== 'personal'
-    )
-  })
-  if (deletableSlugs.length === 0) return
-
-  const dialog = DialogPlugin.confirm({
-    attach: 'body',
-    placement: 'center',
-    header: t('ext.skills.batchDeleteTitle'),
-    body: t('ext.skills.batchDeleteContent', { count: deletableSlugs.length }),
-    confirmBtn: { content: t('ext.skills.batchDeleteOk'), theme: 'danger' },
-    cancelBtn: t('ext.cancel'),
-    onConfirm: async () => {
-      try {
-        loading.value = true
-        const res = await skillApi.deleteSkillsBatch(deletableSlugs)
-        const results = res?.data || []
-        const successList = results.filter((r) => r.success)
-        const failList = results.filter((r) => !r.success)
-
-        if (failList.length === 0) {
-          MessagePlugin.success(t('ext.skills.batchDeleteSuccess', { count: successList.length }))
-        } else {
-          MessagePlugin.warning(t('ext.skills.batchDeletePartial', { success: successList.length, fail: failList.length }))
-        }
-
-        exitBatchDeleteMode()
-        await fetchSkills()
-      } catch (error) {
-        MessagePlugin.error(error?.response?.data?.detail || error.message || t('ext.skills.batchDeleteFailed'))
-      } finally {
-        loading.value = false
-        dialog.hide()
-      }
-    }
-  })
 }
 
 const fetchSkills = async ({ refreshPersonal = false } = {}) => {
@@ -906,14 +708,6 @@ const closeInstallFlow = () => {
   installFlowOpen.value = false
   installFlow.value = null
   if (wasRemoteFlow) resetRemoteSelection()
-}
-
-const openRecommendedSuite = (suite) => {
-  openInstallFlow({
-    kind: 'suite',
-    suite,
-    installedSlugs: [...installedPersonalSkillKeys.value]
-  })
 }
 
 const handleInstallFlowCompleted = async ({ success, failed }) => {
@@ -1206,43 +1000,6 @@ defineExpose({
 
   :deep(.info-card-mini .info-card-icon) {
     align-self: flex-start;
-  }
-
-  &.batch-mode {
-    :deep(.info-card) {
-      cursor: pointer;
-      border-color: var(--gray-200);
-
-      &:hover {
-        border-color: var(--td-brand-color);
-        box-shadow: 0 4px 12px color-mix(in srgb, var(--td-brand-color) 12%, transparent);
-      }
-    }
-
-    :deep(.info-card-status),
-    :deep(.info-card-mini-action) {
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s ease;
-    }
-
-    :deep(.info-card-mini .info-card-info) {
-      padding-right: 28px;
-    }
-  }
-
-  &.selected {
-    :deep(.info-card) {
-      border-color: var(--td-brand-color, var(--main-color)) !important;
-      box-shadow: 0 4px 12px rgba(7, 192, 95, 0.12);
-    }
-  }
-
-  .card-select-checkbox {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    z-index: 10;
   }
 }
 
