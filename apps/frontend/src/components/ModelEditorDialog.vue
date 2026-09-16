@@ -198,13 +198,6 @@
                 <template v-else>
                   {{ $t('settings.weknoraCloud.credentialUnconfigured') }}
                 </template>
-                <div style="margin-top: 8px;">
-                  <t-button variant="text" size="small" @click="goToWeKnoraCloudSettings"
-                    style="padding: 0; height: auto;">
-                    <template #icon><t-icon name="jump" /></template>
-                    {{ $t('settings.weknoraCloud.goToSettings') }}
-                  </t-button>
-                </div>
               </div>
             </div>
 
@@ -855,15 +848,6 @@ const checkWkcCredentialStatus = async () => {
   } catch {
     wkcCredentialState.value = 'unconfigured'
   }
-}
-
-const goToWeKnoraCloudSettings = async () => {
-  emit('update:visible', false)
-  if (uiStore.showSettingsModal) {
-    uiStore.closeSettings()
-    await nextTick()
-  }
-  uiStore.openSettings('weknoracloud')
 }
 
 const formData = ref<ModelFormData>({

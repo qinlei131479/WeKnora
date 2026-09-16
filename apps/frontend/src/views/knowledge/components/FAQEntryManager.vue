@@ -375,8 +375,8 @@
                       </template>
                     </div>
                     <div class="faq-card-status" @click.stop>
-                      <!-- 暂时隐藏推荐开关
                       <t-tooltip
+                        v-if="!featureFlags.hideFaqRecommendation"
                         :content="entry.is_recommended ? $t('knowledgeEditor.faq.recommendedEnabled') : $t('knowledgeEditor.faq.recommendedDisabled')"
                         placement="top"
                       >
@@ -393,7 +393,6 @@
                           <span class="status-label">{{ $t('knowledgeEditor.faq.recommended') }}</span>
                         </div>
                       </t-tooltip>
-                      -->
                       <t-tooltip
                         :content="entry.is_enabled ? $t('knowledgeEditor.faq.statusEnabled') : $t('knowledgeEditor.faq.statusDisabled')"
                         placement="top">
@@ -894,6 +893,9 @@ import KBSwitcherDropdown from '@/components/KBSwitcherDropdown.vue'
 import KbTagManageDrawer from './KbTagManageDrawer.vue'
 import FAQBatchBar from './FAQBatchBar.vue'
 import { useUIStore } from '@/stores/ui'
+import { getFeatureFlags } from '@/utils/weknoraFeatures'
+
+const featureFlags = getFeatureFlags()
 
 interface FAQEntry {
   id: number
@@ -2504,10 +2506,10 @@ const downloadExampleOptions = computed(() => [
 // 示例数据
 const exampleData: FAQEntryPayload[] = [
   {
-    standard_question: '什么是智能体中台2.0？',
-    answers: ['智能体中台2.0是一个智能知识库管理系统', '它支持多种知识库类型和导入方式'],
-    similar_questions: ['智能体中台2.0是什么？', '介绍一下智能体中台2.0'],
-    negative_questions: ['这不是智能体中台2.0', '与智能体中台2.0无关'],
+    standard_question: '什么是 Agentic？',
+    answers: ['Agentic 是一个智能知识库管理系统', '它支持多种知识库类型和导入方式'],
+    similar_questions: ['Agentic 是什么？', '介绍一下 Agentic'],
+    negative_questions: ['这不是 Agentic', '与 Agentic 无关'],
     tag_name: '产品介绍',
   },
   {

@@ -113,6 +113,16 @@ export type FeatureFlags = {
   hideDatasource: boolean
   /** 隐藏智能体 / 知识库编辑页「共享管理」 */
   hideShareManagement: boolean
+  /** 隐藏知识库列表空间导航 */
+  hideKnowledgeScopeNav: boolean
+  /** 隐藏知识库收藏星标 */
+  hideKnowledgeFavoriteStar: boolean
+  /** 隐藏智能体列表空间导航 */
+  hideAgentScopeNav: boolean
+  /** 隐藏智能体收藏星标 */
+  hideAgentFavoriteStar: boolean
+  /** 隐藏 FAQ 推荐状态开关 */
+  hideFaqRecommendation: boolean
   /** 限制语言 / IM / 向量库 / 存储 / 搜索等白名单选项 */
   restrictProviderOptions: boolean
 }
@@ -126,6 +136,11 @@ export function getFeatureFlags(): FeatureFlags {
     hideKnowledgeGraph: hide,
     hideDatasource: hide,
     hideShareManagement: hide,
+    hideKnowledgeScopeNav: hide,
+    hideKnowledgeFavoriteStar: hide,
+    hideAgentScopeNav: hide,
+    hideAgentFavoriteStar: hide,
+    hideFaqRecommendation: hide,
     restrictProviderOptions: hide,
   }
 }
@@ -246,11 +261,6 @@ export function isAllowedKnowledgeSource(source: string): boolean {
 
 const WEKNORA_KB_ID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-/** yuxi 知识库管理面已删除，入口恒为 WeKnora KB */
-export function shouldHideYuxiKnowledgeAdmin(): boolean {
-  return true
-}
 
 export function isWeKnoraKbId(kbId: string | undefined | null): boolean {
   return WEKNORA_KB_ID_RE.test(String(kbId || '').trim())

@@ -1,7 +1,7 @@
 <template>
   <t-card :title="$t('dashboard.knowledge.title')" class="dash-card">
     <template v-if="knowledgeStats?.source === 'weknora'" #actions>
-      <span class="knowledge-source">{{ $t('dashboard.knowledge.sourceWeKnora') }}</span>
+      <span class="knowledge-source">{{ $t('dashboard.knowledge.sourcePlatform') }}</span>
     </template>
     <t-loading :loading="loading" size="small">
       <div class="stat-row">

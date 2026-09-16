@@ -15,7 +15,7 @@ class SkillRepository:
 
     async def list_all(self) -> list[Skill]:
         stmt = apply_tenant_filters(select(Skill), Skill.tenant_id, catalog_null=True)
-        result = await self.db.execute(stmt.order_by(Skill.updated_at.desc(), Skill.id.desc()))
+        result = await self.db.execute(stmt.order_by(Skill.id.desc()))
         return list(result.scalars().all())
 
     async def list_enabled(self) -> list[Skill]:
@@ -24,7 +24,7 @@ class SkillRepository:
             Skill.tenant_id,
             catalog_null=True,
         )
-        result = await self.db.execute(stmt.order_by(Skill.updated_at.desc(), Skill.id.desc()))
+        result = await self.db.execute(stmt.order_by(Skill.id.desc()))
         return list(result.scalars().all())
 
     async def list_by_slugs(self, slugs: list[str]) -> list[Skill]:

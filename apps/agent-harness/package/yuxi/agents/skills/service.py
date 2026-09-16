@@ -587,7 +587,7 @@ async def list_skill_slugs(db: AsyncSession, *, user: User | None = None) -> lis
     if user is not None:
         return await _list_shared_skill_slugs(db, user)
     result = await db.execute(
-        select(Skill.slug).where(Skill.enabled.is_(True)).order_by(Skill.updated_at.desc(), Skill.id.desc())
+        select(Skill.slug).where(Skill.enabled.is_(True)).order_by(Skill.id.desc())
     )
     return [slug for slug in result.scalars().all() if isinstance(slug, str)]
 

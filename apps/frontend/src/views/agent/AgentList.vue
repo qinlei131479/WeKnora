@@ -1,9 +1,9 @@
 <template>
   <div class="agent-list-container layout-container">
     <ListSpaceSidebar
-      v-if="SHOW_SCOPE_NAV"
+      v-if="!featureFlags.hideAgentScopeNav"
       v-model="spaceSelection"
-      :show-scope-nav="SHOW_SCOPE_NAV"
+      :show-scope-nav="!featureFlags.hideAgentScopeNav"
       :count-all="allAgentsCount"
       :count-mine="agents.length" :count-by-org="effectiveSharedCountByOrg" :count-favorites="agentFavoritesCount"
       :count-recents="agentRecentsCount" />
@@ -187,7 +187,7 @@
               </div>
               <!-- 收藏按钮：浮在卡片右上角；.card-header padding-right 已为
                    "更多"按钮腾出空间，避免重叠。 -->
-              <button v-if="SHOW_AGENT_FAVORITE_STAR" type="button" class="agent-favorite-star"
+              <button v-if="!featureFlags.hideAgentFavoriteStar" type="button" class="agent-favorite-star"
                 :class="{ 'is-favorited': isAgentFavorited(agent.id) }"
                 @click.stop="toggleFavoriteAgent(agent.id, $event)">
                 <t-icon :name="isAgentFavorited(agent.id) ? 'star-filled' : 'star'" size="14px" />
@@ -387,7 +387,7 @@
                 </svg>
               </div>
 
-              <button v-if="SHOW_AGENT_FAVORITE_STAR" type="button" class="agent-favorite-star"
+              <button v-if="!featureFlags.hideAgentFavoriteStar" type="button" class="agent-favorite-star"
                 :class="{ 'is-favorited': isAgentFavorited(agent.id) }"
                 @click.stop="toggleFavoriteAgent(agent.id, $event)">
                 <t-icon :name="isAgentFavorited(agent.id) ? 'star-filled' : 'star'" size="14px" />
@@ -853,6 +853,7 @@ import { useListUrlState } from '@/composables/useListUrlState'
 import { useListSurface } from '@/composables/useListSurface'
 import { useResourcePins } from '@/composables/useResourcePins'
 import AgentManagePanel from './harness/AgentManagePanel.vue'
+import { getFeatureFlags } from '@/utils/weknoraFeatures'
 
 const { t } = useI18n()
 
@@ -879,15 +880,14 @@ interface AgentWithUI extends CustomAgent {
  *  `permission` drives the「可编辑 / 仅查看」分组，仅在 shared 分支携带。 */
 type DisplayAgent = (AgentWithUI & { isMine: true }) | (CustomAgent & { isMine: false; org_name: string; source_tenant_id: number; share_id: string; permission?: string; showMore?: boolean; disabled_by_me?: boolean })
 
-const SHOW_SCOPE_NAV = false
-const SHOW_AGENT_FAVORITE_STAR = false
+const featureFlags = getFeatureFlags()
 // 左侧空间选择：默认根据当前角色决定。
 // 与 KnowledgeBaseList 同款逻辑：Viewer 在当前空间里通常没有自建智能体，
 // 默认落到 "all" 才能看到内置 + 共享给我的；Contributor 以上仍默认 "mine"。
 // State synced to `?scope=` so links are shareable. The "mine" value is
 // retained for back-compat with existing links; its display label is
 // rebranded to the active tenant name inside ListSpaceSidebar.
-const defaultScope: 'all' | 'mine' = SHOW_SCOPE_NAV && !authStore.hasRole('contributor') ? 'all' : 'mine'
+const defaultScope: 'all' | 'mine' = !featureFlags.hideAgentScopeNav && !authStore.hasRole('contributor') ? 'all' : 'mine'
 const { scope: spaceSelection, creator: creatorFilter } = useListUrlState({
   defaultScope,
   defaultCreator: 'all',
@@ -1227,7 +1227,7 @@ const handleOpenAgentEditor = (event: CustomEvent) => {
 
 // 选中空间时请求该空间内全部智能体（含我共享的）
 watch(spaceSelection, (val) => {
-  if (!SHOW_SCOPE_NAV && (val === 'all' || val === 'favorites' || val === 'recents')) {
+  if (featureFlags.hideAgentScopeNav && (val === 'all' || val === 'favorites' || val === 'recents')) {
     spaceSelection.value = 'mine'
     return
   }

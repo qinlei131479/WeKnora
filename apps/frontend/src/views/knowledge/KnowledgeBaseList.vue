@@ -3,7 +3,7 @@
     <ListSpaceSidebar
       v-if="showKbSpaceSidebar"
       v-model="spaceSelection"
-      :show-scope-nav="SHOW_SCOPE_NAV"
+      :show-scope-nav="!featureFlags.hideKnowledgeScopeNav"
       :count-all="allKnowledgeBases"
       :count-mine="kbs.length" :count-by-org="effectiveSharedCountByOrg" :count-favorites="kbFavoritesCount"
       :count-recents="kbRecentsCount" />
@@ -200,7 +200,7 @@
               @click="handleCardClick(kb)">
               <!-- 收藏按钮：右上角浮动；通过 .card-header 的 padding-right
                    给「更多」按钮腾出空间，避免两个按钮叠在一起。 -->
-              <button v-if="SHOW_KB_FAVORITE_STAR" type="button" class="kb-favorite-star" :class="{ 'is-favorited': isKbFavorited(kb.id) }"
+              <button v-if="!featureFlags.hideKnowledgeFavoriteStar" type="button" class="kb-favorite-star" :class="{ 'is-favorited': isKbFavorited(kb.id) }"
                 @click.stop="toggleFavoriteKb(kb.id, $event)">
                 <t-icon :name="isKbFavorited(kb.id) ? 'star-filled' : 'star'" size="14px" />
               </button>
@@ -304,7 +304,7 @@
               'kb-type-document': (kb.type || 'document') === 'document',
               'kb-type-faq': kb.type === 'faq'
             }" @click="handleSharedKbClickFromAll(kb)">
-              <button v-if="SHOW_KB_FAVORITE_STAR" type="button" class="kb-favorite-star" :class="{ 'is-favorited': isKbFavorited(kb.id) }"
+              <button v-if="!featureFlags.hideKnowledgeFavoriteStar" type="button" class="kb-favorite-star" :class="{ 'is-favorited': isKbFavorited(kb.id) }"
                 @click.stop="toggleFavoriteKb(kb.id, $event)">
                 <t-icon :name="isKbFavorited(kb.id) ? 'star-filled' : 'star'" size="14px" />
               </button>
@@ -435,7 +435,7 @@
             }"
               :ref="el => { if (highlightedKbId !== null && highlightedKbId === kb.id && el) highlightedCardRef = el as HTMLElement }"
               @click="handleCardClick(kb)">
-              <button v-if="SHOW_KB_FAVORITE_STAR" type="button" class="kb-favorite-star" :class="{ 'is-favorited': isKbFavorited(kb.id) }"
+              <button v-if="!featureFlags.hideKnowledgeFavoriteStar" type="button" class="kb-favorite-star" :class="{ 'is-favorited': isKbFavorited(kb.id) }"
                 @click.stop="toggleFavoriteKb(kb.id, $event)">
                 <t-icon :name="isKbFavorited(kb.id) ? 'star-filled' : 'star'" size="14px" />
               </button>
@@ -809,6 +809,7 @@ import { isContextualGuideDone, markContextualGuideDone } from '@/config/context
 import { useTenantModelReadiness } from '@/composables/useTenantModelReadiness'
 import { useI18n } from 'vue-i18n'
 import { useResourcePins } from '@/composables/useResourcePins'
+import { getFeatureFlags } from '@/utils/weknoraFeatures'
 
 const router = useRouter()
 const route = useRoute()
@@ -819,8 +820,7 @@ const orgStore = useOrganizationStore()
 const chatResources = useChatResourcesStore()
 const { t } = useI18n()
 
-const SHOW_SCOPE_NAV = false
-const SHOW_KB_FAVORITE_STAR = false
+const featureFlags = getFeatureFlags()
 // 左侧空间选择：默认根据当前角色决定。
 // Viewer 在该空间里通常 0 KB owned，"我的"会显示空状态、又把共享 KB 藏起来，
 // 体验非常误导；所以 Viewer 默认落到 "all"（我的 + 共享给我都显示）。
@@ -831,12 +831,12 @@ const SHOW_KB_FAVORITE_STAR = false
 // stored value (not "workspace") for back-compat with any external link
 // that might point at the old query — its display label is rebranded
 // via ListSpaceSidebar's workspaceLabel computed.
-const defaultScope: 'all' | 'mine' = SHOW_SCOPE_NAV && !authStore.hasRole('contributor') ? 'all' : 'mine'
+const defaultScope: 'all' | 'mine' = !featureFlags.hideKnowledgeScopeNav && !authStore.hasRole('contributor') ? 'all' : 'mine'
 const { scope: spaceSelection, creator: creatorFilter } = useListUrlState({
   defaultScope,
   defaultCreator: 'all',
 })
-const showKbSpaceSidebar = computed(() => SHOW_SCOPE_NAV)
+const showKbSpaceSidebar = computed(() => !featureFlags.hideKnowledgeScopeNav)
 
 // Per-user favorites + recents (localStorage-backed). isFavorite & touchRecent
 // are wired into card render and click handlers below.
@@ -1257,10 +1257,10 @@ watch(spaceSelection, (val) => {
   // value fall through to the per-space fetch branch (which would 404
   // on the string "shared").
   if (val === 'shared') {
-    spaceSelection.value = SHOW_SCOPE_NAV ? 'all' : 'mine'
+    spaceSelection.value = featureFlags.hideKnowledgeScopeNav ? 'mine' : 'all'
     return
   }
-  if (!SHOW_SCOPE_NAV && (val === 'all' || val === 'favorites' || val === 'recents')) {
+  if (featureFlags.hideKnowledgeScopeNav && (val === 'all' || val === 'favorites' || val === 'recents')) {
     spaceSelection.value = 'mine'
     return
   }
