@@ -1,4 +1,4 @@
-# Agent-Harness 镜像 tag 读仓库根 VERSION，读不到则 latest：VERSION=$(tr -d '\n\r' < VERSION)
+# 所有 kjsc/agent-middle-* 镜像（含 Agent-Harness、sandbox-provisioner）tag 统一读 WEKNORA_VERSION，默认 latest。
 # 启动：docker compose -f docker-compose-kjsc.yml --profile harness --profile minio up -d
 # api/worker 只通过 env_file + 挂载 ./.env 注入变量；进程启动时由 yuxi.config.env 按 B 段拼连接串。
 services:
@@ -1138,7 +1138,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.agent-harness
-    image: kjsc/agent-middle-harness:${VERSION:-latest}
+    image: kjsc/agent-middle-harness:${WEKNORA_VERSION:-latest}
     container_name: agent-middle-harness-api
     working_dir: /app
     volumes:
@@ -1181,7 +1181,7 @@ services:
   worker:
     profiles:
       - harness
-    image: kjsc/agent-middle-harness:${VERSION:-latest}
+    image: kjsc/agent-middle-harness:${WEKNORA_VERSION:-latest}
     container_name: agent-middle-harness-worker
     working_dir: /app
     volumes:
@@ -1219,7 +1219,7 @@ services:
     build:
       context: ./docker/sandbox_provisioner
       dockerfile: Dockerfile
-    image: sandbox-provisioner:${VERSION:-latest}
+    image: sandbox-provisioner:${WEKNORA_VERSION:-latest}
     container_name: sandbox-provisioner
     volumes:
       - ./docker/volumes/agent-harness:/app/saves

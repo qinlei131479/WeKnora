@@ -321,26 +321,14 @@ build_docs_image() {
     fi
 }
 
-harness_image_tag() {
-    local ver=""
-    if [ -f "$PROJECT_ROOT/VERSION" ]; then
-        ver="$(tr -d '\n\r' < "$PROJECT_ROOT/VERSION")"
-    fi
-    if [ -z "$ver" ]; then
-        echo "latest"
-        return 0
-    fi
-    echo "$ver"
-}
-
 # 构建 Agent-Harness（不并入 -a；不含 sandbox-provisioner）
+# tag 策略与 build_app_image 等保持一致：只打 :latest，运行时由
+# docker-compose-kjsc.yml 的 ${WEKNORA_VERSION:-latest} 决定实际使用的 tag。
 build_harness_image() {
     log_info "构建 Agent-Harness 镜像 (${IMAGE_PREFIX}-harness)..."
 
     cd "$PROJECT_ROOT"
     get_version_info
-    local harness_tag
-    harness_tag="$(harness_image_tag)" || return 1
 
     if [ ! -f "$PROJECT_ROOT/docker/Dockerfile.agent-harness" ]; then
         log_error "缺少 docker/Dockerfile.agent-harness"
@@ -350,12 +338,11 @@ build_harness_image() {
     docker build \
         --platform $PLATFORM \
         -f docker/Dockerfile.agent-harness \
-        -t ${IMAGE_PREFIX}-harness:${harness_tag} \
         -t ${IMAGE_PREFIX}-harness:latest \
         "$PROJECT_ROOT"
 
     if [ $? -eq 0 ]; then
-        log_success "Agent-Harness 镜像构建成功: ${IMAGE_PREFIX}-harness:${harness_tag}"
+        log_success "Agent-Harness 镜像构建成功: ${IMAGE_PREFIX}-harness:latest"
         return 0
     fi
     log_error "Agent-Harness 镜像构建失败"
@@ -363,23 +350,21 @@ build_harness_image() {
 }
 
 # 构建 sandbox-provisioner（独立于 harness）
+# tag 策略与 build_harness_image 一致：只打 :latest。
 build_sandbox_provisioner_image() {
     log_info "构建 sandbox-provisioner 镜像..."
 
     cd "$PROJECT_ROOT"
     get_version_info
-    local harness_tag
-    harness_tag="$(harness_image_tag)" || return 1
 
     docker build \
         --platform $PLATFORM \
         -f docker/sandbox_provisioner/Dockerfile \
-        -t sandbox-provisioner:${harness_tag} \
         -t sandbox-provisioner:latest \
         "$PROJECT_ROOT/docker/sandbox_provisioner"
 
     if [ $? -eq 0 ]; then
-        log_success "sandbox-provisioner 镜像构建成功: sandbox-provisioner:${harness_tag}"
+        log_success "sandbox-provisioner 镜像构建成功: sandbox-provisioner:latest"
         return 0
     fi
     log_error "sandbox-provisioner 镜像构建失败"
