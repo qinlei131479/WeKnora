@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { DashboardTimeSeriesStatsVO } from '@/types';
 import * as echarts from 'echarts';
-import { useI18n } from 'vue-i18n';
+import { t, locale } from '@/i18n';
 
 const props = defineProps<{
   data: DashboardTimeSeriesStatsVO;
@@ -11,22 +11,12 @@ const props = defineProps<{
 const type = defineModel<'models' | 'agents' | 'tokens' | 'tools'>('type', { required: true });
 const timeRange = defineModel<'14hours' | '14days' | '14weeks'>('timeRange', { required: true });
 
-const { t, locale } = useI18n({
-  useScope: 'local',
-  messages: {
-    'zh-CN': { weekLabel: '第{week}周' },
-    'en-US': { weekLabel: 'Week {week}' },
-    'ko-KR': { weekLabel: '{week}주차' },
-    'ru-RU': { weekLabel: 'Неделя {week}' }
-  }
-});
-
 const formatXAxisLabel = (value: string): string => {
   if (!value) return '';
 
   if (timeRange.value === '14weeks') {
     const week = value.match(/^\d{4}-(\d{1,2})$/)?.[1];
-    return week ? t('weekLabel', { week: Number(week) }) : value;
+    return week ? t('page.dashboard.weekLabel', { week: Number(week) }, '第{week}周') : value;
   }
 
   const date = echarts.time.parse(value);
@@ -84,8 +74,8 @@ onMounted(() => {
   });
 
   watch(
-    [() => props.data, timeRange, locale],
-    ([data]: [DashboardTimeSeriesStatsVO]) => {
+    [() => props.data, timeRange, locale] as const,
+    ([data]) => {
       const points = data.data ?? [];
       const categories = data.categories?.length
         ? data.categories

@@ -21,13 +21,6 @@ declare module 'element-plus';
 
 declare module 'qs';
 
-// vue
-declare module 'vue' {
-  interface ComponentInternalInstance {
-    proxy: any;
-  }
-}
-
 // nprogress
 declare module 'nprogress' {
   export interface NProgressOptions {

@@ -278,7 +278,6 @@ onBeforeUnmount(() => {
 }
 
 .dashboard :deep(.el-card) {
-  /** --el-card-padding: 20px; **/
   --el-card-padding: 0;
   width: 100%;
   border: var(--el-border-width) var(--el-border-style) var(--el-border-color);

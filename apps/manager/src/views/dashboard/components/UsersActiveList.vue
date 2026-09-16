@@ -1,21 +1,10 @@
 <script setup lang="ts">
 import type { DashboardUserActiveStatsVO } from '@/types';
-import { useI18n } from 'vue-i18n';
 
 const props = defineProps<{
   data: DashboardUserActiveStatsVO;
   loading: boolean;
 }>();
-
-const { t } = useI18n({
-  useScope: 'local',
-  messages: {
-    'zh-CN': { activeScore: '活跃度' },
-    'en-US': { activeScore: 'Activity' },
-    'ko-KR': { activeScore: '활성도' },
-    'ru-RU': { activeScore: 'Активность' }
-  }
-});
 </script>
 
 <template>
@@ -44,7 +33,7 @@ const { t } = useI18n({
             <div class="users-active-content">
               <div class="users-active-header">
                 <span class="users-active-name">{{ user.username }}</span>
-                <span class="users-active-score">{{ t('activeScore', '活跃度') }} {{ user.score ?? 0 }}</span>
+                <span class="users-active-score">{{ $t('page.dashboard.activeScore', '活跃度') }} {{ user.score ?? 0 }}</span>
               </div>
               <div class="users-active-email">{{ user.email }}</div>
             </div>

@@ -5,30 +5,25 @@ import knowledgeIcon2 from '@/assets/images/dashboard/dashboard_kb_2.png';
 import knowledgeIcon3 from '@/assets/images/dashboard/dashboard_kb_3.png';
 import knowledgeIcon4 from '@/assets/images/dashboard/dashboard_kb_4.png';
 import * as echarts from 'echarts';
-import { useI18n } from 'vue-i18n';
+import { computed, watch } from 'vue';
+
+interface FileTypeItem {
+  name: string;
+  value: number;
+}
 
 const props = defineProps<{
   data: DashboardKnowledgeStatsVO;
   loading: boolean;
 }>();
 
-const { t } = useI18n({
-  useScope: 'local',
-  messages: {
-    'zh-CN': { documentKnowledge: '文档知识库', faqKnowledge: 'FAQ知识库', wikiKnowledge: 'WIKI知识库' },
-    'en-US': { documentKnowledge: 'Document knowledge base', faqKnowledge: 'FAQ knowledge base', wikiKnowledge: 'WIKI knowledge base' },
-    'ko-KR': { documentKnowledge: '문서 지식베이스', faqKnowledge: 'FAQ 지식베이스', wikiKnowledge: 'WIKI 지식베이스' },
-    'ru-RU': { documentKnowledge: 'База знаний документов', faqKnowledge: 'База знаний FAQ', wikiKnowledge: 'База знаний WIKI' }
-  }
-});
-
 const spacing = ref(10);
 const knowledgeIcons = [knowledgeIcon1, knowledgeIcon2, knowledgeIcon3, knowledgeIcon4];
 const chartColors = [
-  '#409eff', '#67c23a', '#e6a23c', '#f56c6c',
-  '#a0cfff', '#b3e19d', '#f3d19e', '#fab6b6',
-  '#337ecc', '#529b2e', '#b88230', '#c45656',
-  '#d9ecff', '#e1f3d8', '#faecd8', '#fde2e2'
+  '#E63946', '#457B9D', '#F77F00', '#00B4D8', '#FFD60A',
+  '#7209B7', '#F4A261', '#2A9D8F', '#E9C46A', '#3A0CA3',
+  '#D62828', '#4CC9F0', '#FCBF49', '#560BAD', '#F08080',
+  '#0077B6', '#FFB703', '#4361EE', '#E76F51', '#06D6A0'
 ];
 const storageSize = computed(() => {
   const bytes = props.data.totalStorageSize;
@@ -51,7 +46,12 @@ const storageSize = computed(() => {
   return `${rounded} ${units[unit]}`;
 });
 
-const fileTypes = computed(() => Object.entries(props.data.fileTypeDistribution ?? {}).map(([name, value]) => ({ name, value })));
+const fileTypes = computed<FileTypeItem[]>(() =>
+  Object.entries<number>(props.data.fileTypeDistribution ?? {})
+    .filter(([, value]) => Number.isFinite(value) && value > 0)
+    .map(([name, value]) => ({ name, value }))
+    .sort((left, right) => right.value - left.value)
+);
 const knowledgeChartRef = ref<HTMLDivElement>();
 let knowledgeChart: echarts.ECharts | undefined;
 let chartResizeObserver: ResizeObserver | undefined;
@@ -74,6 +74,7 @@ onMounted(() => {
     series: [
       {
         type: 'pie',
+        clockwise: false,
         radius: ['58%', '82%'],
         center: ['50%', '50%'],
         padAngle: 2,
@@ -90,7 +91,7 @@ onMounted(() => {
 
   watch(
     fileTypes,
-    (data) => {
+    (data: FileTypeItem[]) => {
       knowledgeChart?.setOption({ series: [{ type: 'pie', data }] });
     },
     { immediate: true, deep: true, flush: 'post' }
@@ -220,10 +221,10 @@ onBeforeUnmount(() => {
             <div class="knowledge-content">
               <div class="knowledge-type">
                 <el-tag v-if="knowledge.type === 'document' || knowledge.type === 'docment'" type="primary" size="small">
-                  {{ t('documentKnowledge', '文档知识库') }}
+                  {{ $t('page.dashboard.documentKnowledge', '文档知识库') }}
                 </el-tag>
-                <el-tag v-else-if="knowledge.type === 'faq'" type="warning" size="small">{{ t('faqKnowledge', 'FAQ知识库') }}</el-tag>
-                <el-tag v-else-if="knowledge.type === 'wiki'" type="success" size="small">{{ t('wikiKnowledge', 'WIKI知识库') }}</el-tag>
+                <el-tag v-else-if="knowledge.type === 'faq'" type="warning" size="small">{{ $t('page.dashboard.faqKnowledge', 'FAQ知识库') }}</el-tag>
+                <el-tag v-else-if="knowledge.type === 'wiki'" type="success" size="small">{{ $t('page.dashboard.wikiKnowledge', 'WIKI知识库') }}</el-tag>
               </div>
               <div class="knowledge-name" :title="knowledge.name">{{ knowledge.name }}</div>
               <div class="knowledge-description" :title="knowledge.description">{{ knowledge.description }}</div>

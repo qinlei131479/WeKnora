@@ -1,42 +1,11 @@
 <script setup lang="ts">
 import type { DashboardConversationVO } from '@/types';
 import { formatDate } from '@/utils';
-import { useI18n } from 'vue-i18n';
 
 const props = defineProps<{
   data: DashboardConversationVO[];
   loading: boolean;
 }>();
-
-const { t } = useI18n({
-  useScope: 'local',
-  messages: {
-    'zh-CN': {
-      messageTitle: '对话标题',
-      messageAgent: '智能体名称',
-      newConversation: '[新对话]',
-      noAgent: '[无]'
-    },
-    'en-US': {
-      messageTitle: 'Conversation title',
-      messageAgent: 'Agent name',
-      newConversation: '[New conversation]',
-      noAgent: '[None]'
-    },
-    'ko-KR': {
-      messageTitle: '대화 제목',
-      messageAgent: '에이전트 이름',
-      newConversation: '[새 대화]',
-      noAgent: '[없음]'
-    },
-    'ru-RU': {
-      messageTitle: 'Название диалога',
-      messageAgent: 'Имя агента',
-      newConversation: '[Новый диалог]',
-      noAgent: '[Нет]'
-    }
-  }
-});
 </script>
 
 <template>
@@ -73,16 +42,16 @@ const { t } = useI18n({
         <h3 class="conversation-title">{{ $t('page.dashboard.recentMessages', '最近对话消息') }}</h3>
         <el-table :data="props.data.slice(0, 10)" show-overflow-tooltip class="conversation-table">
           <el-table-column type="index" :index="1" :label="$t('page.dashboard.messageIndex', '序号')" width="70" />
-          <el-table-column prop="title" :label="t('messageTitle', '对话标题')" min-width="360">
+          <el-table-column prop="title" :label="$t('page.dashboard.messageTitle', '对话标题')" min-width="360">
             <template #default="{ row }">
               <span v-if="row.title?.trim()">{{ row.title }}</span>
-              <span v-else class="conversation-placeholder">{{ t('newConversation', '[新对话]') }}</span>
+              <span v-else class="conversation-placeholder">{{ $t('page.dashboard.newConversation', '[新对话]') }}</span>
             </template>
           </el-table-column>
-          <el-table-column prop="agentName" :label="t('messageAgent', '智能体名称')" width="180">
+          <el-table-column prop="agentName" :label="$t('page.dashboard.messageAgent', '智能体名称')" width="180">
             <template #default="{ row }">
               <span v-if="row.agentName?.trim()">{{ row.agentName }}</span>
-              <span v-else class="conversation-placeholder">{{ t('noAgent', '[无]') }}</span>
+              <span v-else class="conversation-placeholder">{{ $t('page.dashboard.noAgent', '[无]') }}</span>
             </template>
           </el-table-column>
           <el-table-column prop="updatedAt" :label="$t('page.dashboard.messageTime', '时间')" width="200">
