@@ -6,6 +6,7 @@ import ts from 'typescript'
 import { computed } from 'vue'
 import { INTEGRATION_PREVIEW_ITEMS } from '../../config/integrations'
 import { integrationSectionKey } from '../../config/settingsRoute'
+import { isHiddenSettingsSection } from '../../utils/weknoraFeatures'
 
 // Exercise the actual sidebar grouping without mounting the settings panels.
 const source = readFileSync(new URL('./Settings.vue', import.meta.url), 'utf8')
@@ -43,4 +44,26 @@ test('settings sidebar preserves visibility filtering without hiding CLI', () =>
   const visible = integrationKeys.filter((key) => key !== 'integration-api' && key !== 'integration-im')
   assert.deepEqual(integrationMenu(visible), visible)
   assert.deepEqual(integrationMenu(['general']), [])
+})
+
+test('lite mode hides browser, memory, and sandbox credential settings', () => {
+  const originalLocalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      getItem: () => 'true',
+      setItem: () => undefined,
+    },
+  })
+  try {
+    for (const key of ['browserconnection', 'mymemory', 'envvars', 'memory']) {
+      assert.equal(isHiddenSettingsSection(key), true)
+    }
+  } finally {
+    if (originalLocalStorage) {
+      Object.defineProperty(globalThis, 'localStorage', originalLocalStorage)
+    } else {
+      delete (globalThis as { localStorage?: unknown }).localStorage
+    }
+  }
 })
