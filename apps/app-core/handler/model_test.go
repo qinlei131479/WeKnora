@@ -70,3 +70,18 @@ func TestConsumeModelDebugChatStream(t *testing.T) {
 	assert.Equal(t, 7, got.Usage.TotalTokens)
 	assert.Len(t, got.StreamEvents, 5)
 }
+
+func TestBuildOpenAIChatChunkSerializesStreamError(t *testing.T) {
+	raw := buildOpenAIChatChunk("chunk-1", "model-1", types.StreamResponse{
+		ResponseType: types.ResponseTypeError,
+		Content:      "context deadline exceeded",
+		Done:         true,
+	})
+
+	var payload map[string]any
+	require.NoError(t, json.Unmarshal(raw, &payload))
+	errorPayload, ok := payload["error"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "context deadline exceeded", errorPayload["message"])
+	assert.NotContains(t, payload, "choices")
+}

@@ -33,6 +33,7 @@ test('resolvePreviewKind covers office, tables, html, media, and code', () => {
   assert.equal(resolvePreviewKind('ppt'), 'unsupported')
   // SheetJS renders legacy .xls fine, so it stays previewable.
   assert.equal(resolvePreviewKind('xls'), 'excel')
+  assert.equal(resolvePreviewKind('xlsm'), 'excel')
   assert.equal(resolvePreviewKind('png'), 'image')
   assert.equal(resolvePreviewKind('svg'), 'image')
   assert.equal(resolvePreviewKind('md'), 'markdown')
@@ -74,6 +75,7 @@ test('pretty-print helpers only rewrite canonical JSON documents', () => {
 test('mime and highlight maps cover skill-generated html/csv', () => {
   assert.equal(getPreviewMimeType('html'), 'text/html')
   assert.equal(getPreviewMimeType('csv'), 'text/csv')
+  assert.equal(getPreviewMimeType('xlsm'), 'application/vnd.ms-excel.sheet.macroEnabled.12')
   assert.equal(getHighlightLang('html'), 'xml')
   assert.equal(getHighlightLang('ts'), 'typescript')
 })

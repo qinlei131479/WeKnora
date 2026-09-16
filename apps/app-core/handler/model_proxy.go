@@ -386,6 +386,20 @@ func buildOpenAIChatResponse(modelID string, resp *types.ChatResponse, _ bool) g
 }
 
 func buildOpenAIChatChunk(id, modelID string, event types.StreamResponse) []byte {
+	if event.ResponseType == types.ResponseTypeError {
+		body, err := json.Marshal(gin.H{
+			"error": gin.H{
+				"message": event.Content,
+				"type":    "upstream_error",
+				"code":    "stream_error",
+			},
+		})
+		if err != nil {
+			return nil
+		}
+		return body
+	}
+
 	delta := gin.H{}
 	if event.Content != "" {
 		// Reasoning-capable models (DeepSeek thinking, Qwen3 thinking, vLLM

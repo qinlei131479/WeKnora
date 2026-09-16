@@ -14,11 +14,14 @@ MAX_TEXT_PREVIEW_CHARS = 250_000
 _MARKDOWN_EXTENSIONS = frozenset({".md", ".markdown", ".mdx"})
 _PDF_EXTENSIONS = frozenset({".pdf"})
 _HTML_EXTENSIONS = frozenset({".html", ".htm"})
+_SPREADSHEET_EXTENSIONS = frozenset({".xlsx", ".xls", ".xlsm"})
 _OFFICE_PDF_PREVIEW_EXTENSIONS = frozenset({".docx", ".pptx"})
 _OFFICE_MEDIA_TYPES = {
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".xls": "application/vnd.ms-excel",
+    ".xlsm": "application/vnd.ms-excel.sheet.macroEnabled.12",
 }
 _TEXT_EXTENSIONS = frozenset(
     {
@@ -92,7 +95,7 @@ def is_office_pdf_preview_file(path: str) -> bool:
 
 
 def is_binary_preview_type(preview_type: str) -> bool:
-    return preview_type in {"image", "pdf"}
+    return preview_type in {"image", "pdf", "excel"}
 
 
 def render_preview_too_large_payload() -> dict:
@@ -179,6 +182,9 @@ def detect_preview_type(path: str, raw_content: bytes) -> tuple[str, bool, str |
 
     if suffix in _PDF_EXTENSIONS or mime_type == "application/pdf" or head.startswith(b"%PDF-"):
         return "pdf", True, None
+
+    if suffix in _SPREADSHEET_EXTENSIONS:
+        return "excel", True, None
 
     if suffix in _MARKDOWN_EXTENSIONS:
         return "markdown", True, None

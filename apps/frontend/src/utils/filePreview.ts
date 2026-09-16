@@ -46,7 +46,7 @@ register('image', [
   'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'tiff', 'tif', 'svg', 'svgz',
   'ico', 'avif', 'apng', 'jfif', 'pjpeg', 'pjp', 'heic', 'heif',
 ])
-register('excel', ['xlsx', 'xls', 'csv', 'tsv', 'tab'])
+register('excel', ['xlsx', 'xls', 'xlsm', 'csv', 'tsv', 'tab'])
 register('markdown', ['md', 'markdown', 'mdown', 'mkd', 'mdx'])
 register('html', ['html', 'htm', 'xhtml'])
 register('audio', ['mp3', 'wav', 'm4a', 'flac', 'ogg', 'oga', 'aac', 'opus', 'weba'])
@@ -86,6 +86,7 @@ const MIME_BY_EXT: Record<string, string> = {
   ppt: 'application/vnd.ms-powerpoint',
   xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   xls: 'application/vnd.ms-excel',
+  xlsm: 'application/vnd.ms-excel.sheet.macroEnabled.12',
   csv: 'text/csv',
   tsv: 'text/tab-separated-values',
   tab: 'text/tab-separated-values',

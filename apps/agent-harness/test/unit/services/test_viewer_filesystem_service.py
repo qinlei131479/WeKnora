@@ -124,7 +124,7 @@ async def test_read_viewer_output_office_file_returns_pdf_preview(
 
 
 @pytest.mark.asyncio
-async def test_read_viewer_output_xlsx_stays_unsupported(
+async def test_read_viewer_output_xlsx_returns_excel_binary_preview(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -139,18 +139,18 @@ async def test_read_viewer_output_xlsx_stays_unsupported(
     async def fake_resolve_viewer_state(**kwargs):
         return None, None, []
 
-    async def fail_convert(*args, **kwargs):
-        raise AssertionError("xlsx should not be converted to PDF")
-
     monkeypatch.setattr(svc, "_resolve_viewer_state", fake_resolve_viewer_state)
-    monkeypatch.setattr(svc, "convert_office_to_pdf", fail_convert)
 
-    result = await svc.read_viewer_file_content(
+    response = await svc.read_viewer_file_content(
         thread_id=thread_id,
         path="/home/gem/user-data/outputs/sheet.xlsx",
         current_user=user,
         db=None,
     )
+    body = b""
+    async for chunk in response.body_iterator:
+        body += chunk
 
-    assert result["preview_type"] == "unsupported"
-    assert result["supported"] is False
+    assert response.media_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    assert response.headers["x-yuxi-preview-type"] == "excel"
+    assert body == b"PK\x03\x04spreadsheet"

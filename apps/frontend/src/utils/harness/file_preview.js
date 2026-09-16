@@ -161,6 +161,13 @@ export const getPreviewTypeByContentType = (contentType) => {
   if (normalized.includes('text/html')) return 'html'
   if (normalized.startsWith('text/')) return 'text'
   if (normalized.includes('application/json')) return 'json'
+  if (
+    normalized.includes('spreadsheetml.sheet') ||
+    normalized.includes('ms-excel') ||
+    normalized.includes('excel.sheet.macroenabled')
+  ) {
+    return 'excel'
+  }
   return 'unsupported'
 }
 

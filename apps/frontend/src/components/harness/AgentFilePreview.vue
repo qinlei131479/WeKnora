@@ -151,6 +151,17 @@
       <template v-else-if="file?.previewType === 'pdf' && file?.previewUrl">
         <iframe :src="file.previewUrl" class="pdf-preview" :title="filePath" />
       </template>
+      <template v-else-if="isExcelFile">
+        <div class="excel-preview-wrapper">
+          <t-loading v-if="excelLoading" size="small" />
+          <div v-else-if="excelError" class="excel-preview-error">{{ excelError }}</div>
+          <div
+            v-else
+            class="excel-preview"
+            v-html="excelHtml"
+          />
+        </div>
+      </template>
       <template v-else-if="isHtmlFile && htmlPreviewMode === 'render'">
         <iframe
           :key="`embedded-${htmlPreviewRenderKey}`"
@@ -244,6 +255,17 @@
                 :title="filePath"
               />
             </template>
+            <template v-else-if="isExcelFile">
+              <div class="excel-preview-wrapper fullscreen-excel-preview-wrapper">
+                <t-loading v-if="excelLoading" size="small" />
+                <div v-else-if="excelError" class="excel-preview-error">{{ excelError }}</div>
+                <div
+                  v-else
+                  class="excel-preview"
+                  v-html="excelHtml"
+                />
+              </div>
+            </template>
             <template v-else-if="isHtmlFile && htmlPreviewMode === 'render'">
               <iframe
                 :key="`fullscreen-${htmlPreviewRenderKey}`"
@@ -299,6 +321,7 @@ import MarkdownPreview from '@/components/harness/common/MarkdownPreview.vue'
 import FileTypeIcon from '@/components/harness/common/FileTypeIcon.vue'
 import { useThemeStore } from '@/stores/harness/theme'
 import { escapeHtml } from '@/utils/harness/html'
+import { sanitizeHTML } from '@/utils/security'
 import {
   getCodeLanguageByPath,
   getPreviewFileExtension,
@@ -393,10 +416,15 @@ const editMode = ref('preview')
 const draftContent = ref('')
 const fullscreenPreviewVisible = ref(false)
 const htmlPreviewRenderKey = ref(0)
+const excelHtml = ref('')
+const excelLoading = ref(false)
+const excelError = ref('')
+let excelRenderToken = 0
 
 const isImagePreview = computed(
   () => props.file?.previewType === 'image' && Boolean(props.file?.previewUrl)
 )
+const isExcelFile = computed(() => props.file?.previewType === 'excel')
 const imagePreviewUrls = computed(() => (isImagePreview.value ? [props.file.previewUrl] : []))
 const imageViewerScale = {
   max: 8,
@@ -506,6 +534,50 @@ const closeFullscreenPreview = () => {
   fullscreenPreviewVisible.value = false
 }
 
+const renderExcelPreview = async () => {
+  const previewUrl = props.file?.previewUrl
+  const renderToken = ++excelRenderToken
+  excelHtml.value = ''
+  excelError.value = ''
+
+  if (!isExcelFile.value || !previewUrl) {
+    excelLoading.value = false
+    return
+  }
+
+  excelLoading.value = true
+  try {
+    const response = await fetch(previewUrl)
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    const XLSX = await import('xlsx')
+    const workbook = XLSX.read(await response.arrayBuffer(), { type: 'array' })
+    let html = ''
+    workbook.SheetNames.forEach((name, sheetIndex) => {
+      const sheet = workbook.Sheets[name]
+      const sheetHtml = XLSX.utils.sheet_to_html(sheet, { id: `agent-sheet-${sheetIndex}` })
+      html += '<div class="excel-sheet">'
+      if (workbook.SheetNames.length > 1) {
+        html += `<div class="excel-sheet-name">${escapeHtml(name)}</div>`
+      }
+      html += `${sheetHtml}</div>`
+    })
+    if (renderToken === excelRenderToken) {
+      excelHtml.value = sanitizeHTML(html)
+    }
+  } catch (error) {
+    console.warn('表格预览失败:', error)
+    if (renderToken === excelRenderToken) {
+      excelError.value = t('harness.chat.previewFailed')
+    }
+  } finally {
+    if (renderToken === excelRenderToken) {
+      excelLoading.value = false
+    }
+  }
+}
+
 watch(
   () => props.filePath,
   () => {
@@ -523,6 +595,12 @@ watch([() => props.filePath, () => props.file?.previewType, () => props.file?.co
   }
 })
 
+watch(
+  [() => props.file?.previewType, () => props.file?.previewUrl],
+  renderExcelPreview,
+  { immediate: true }
+)
+
 const handleFullscreenKeydown = (event) => {
   if (event.key === 'Escape' && fullscreenPreviewVisible.value && !isImagePreview.value) {
     closeFullscreenPreview()
@@ -539,6 +617,7 @@ watch(fullscreenPreviewVisible, (visible) => {
 })
 
 onUnmounted(() => {
+  excelRenderToken += 1
   document.body.style.overflow = ''
   window.removeEventListener('keydown', handleFullscreenKeydown)
 })
@@ -899,6 +978,69 @@ onUnmounted(() => {
   background: var(--gray-25);
 }
 
+.excel-preview-wrapper {
+  min-height: calc(80vh - 40px);
+  display: flex;
+  justify-content: center;
+  overflow: auto;
+  padding: 12px;
+  background: var(--gray-25);
+}
+
+.excel-preview {
+  min-width: 100%;
+  align-self: flex-start;
+  overflow: auto;
+  border: 1px solid var(--gray-150);
+  border-radius: 6px;
+  background: var(--gray-0);
+}
+
+.excel-preview :deep(.excel-sheet) {
+  min-width: max-content;
+}
+
+.excel-preview :deep(.excel-sheet-name) {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--gray-150);
+  background: var(--gray-50);
+  color: var(--gray-800);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.excel-preview :deep(table) {
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.excel-preview :deep(th),
+.excel-preview :deep(td) {
+  max-width: 320px;
+  overflow: hidden;
+  padding: 5px 8px;
+  border-right: 1px solid var(--gray-150);
+  border-bottom: 1px solid var(--gray-150);
+  color: var(--gray-900);
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.excel-preview :deep(th) {
+  background: var(--gray-50);
+  font-weight: 600;
+}
+
+.excel-preview-error {
+  align-self: center;
+  color: var(--gray-600);
+  font-size: 14px;
+}
+
 .html-preview {
   display: block; // 消除 iframe 行内基线间隙导致的底部白边
   width: 100%;
@@ -1018,5 +1160,9 @@ onUnmounted(() => {
 
 .fullscreen-file-content .image-preview {
   max-height: calc(100vh - 48px);
+}
+
+.fullscreen-excel-preview-wrapper {
+  min-height: calc(100vh - 48px);
 }
 </style>

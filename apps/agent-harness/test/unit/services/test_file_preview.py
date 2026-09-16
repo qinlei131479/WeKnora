@@ -36,6 +36,14 @@ def test_render_preview_payload_rejects_docx_without_parsed_markdown():
     assert payload["content"] is None
 
 
+def test_detect_preview_type_supports_spreadsheet_binary_preview():
+    preview_type, supported, message = detect_preview_type("demo.xlsx", b"PK\x03\x04spreadsheet")
+
+    assert preview_type == "excel"
+    assert supported is True
+    assert message is None
+
+
 def test_render_preview_payload_truncates_long_markdown():
     payload = render_preview_payload("note.md", ("x" * (MAX_TEXT_PREVIEW_CHARS + 1)).encode("utf-8"))
 

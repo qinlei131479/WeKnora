@@ -148,7 +148,7 @@ async def test_read_workspace_file_content_returns_pdf_preview_for_office_file(
 
 
 @pytest.mark.asyncio
-async def test_read_workspace_file_content_rejects_xlsx_preview(
+async def test_read_workspace_file_content_returns_excel_binary_preview(
     tmp_path: Path,
     monkeypatch,
 ) -> None:
@@ -159,10 +159,13 @@ async def test_read_workspace_file_content_rejects_xlsx_preview(
     target.write_bytes(b"PK\x03\x04excel")
 
     result = await svc.read_workspace_file_content(path="/sheet.xlsx", current_user=user)
+    body = b""
+    async for chunk in result.body_iterator:
+        body += chunk
 
-    assert result["content"] is None
-    assert result["preview_type"] == "unsupported"
-    assert result["supported"] is False
+    assert result.media_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    assert result.headers["x-yuxi-preview-type"] == "excel"
+    assert body == b"PK\x03\x04excel"
 
 
 @pytest.mark.asyncio
