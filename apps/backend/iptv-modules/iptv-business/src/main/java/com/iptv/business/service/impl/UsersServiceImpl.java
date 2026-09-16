@@ -2,6 +2,8 @@ package com.iptv.business.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.lang.UUID;
+import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.BCrypt;
@@ -178,6 +180,7 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
 
         // 7. 创建用户记录
         Users entity = new Users();
+        entity.setId(UUID.fastUUID().toString());
         entity.setUsername(dto.getUsername());
         entity.setEmail(dto.getEmail());
         entity.setPasswordHash(hashedPassword);

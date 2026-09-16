@@ -28,9 +28,6 @@ public class Users implements java.io.Serializable {
     /**
      * 主键 ID
      */
-
-
-    @TableId(type = IdType.ASSIGN_UUID)
     @Schema(description = "主键 ID")
     private String id;
 
