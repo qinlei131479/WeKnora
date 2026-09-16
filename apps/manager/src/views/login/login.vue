@@ -1,19 +1,19 @@
 <template>
   <div class="login">
     <aside class="login-brand">
-      <div class="login-brand__content">
-        <img class="login-brand__logo" src="../../assets/images/login/login_logo@1x.png" alt="空间视创" />
-        <div class="login-brand__name">空间视创</div>
-        <div class="login-brand__subtitle">管理后台登录</div>
+      <div class="login-brand__content" :style="{ width: `min(${$dim('page.login.brandContentWidth', 400)}px, calc(100% - 64px))` }">
+        <img class="login-brand__logo" src="../../assets/images/login/login_logo@1x.png" :alt="$t('app.company', '空间视创')" />
+        <div class="login-brand__name">{{ $t('app.company', '空间视创') }}</div>
+        <div class="login-brand__subtitle">{{ $t('page.login.brandSubtitle', '管理后台登录') }}</div>
 
-        <div class="login-brand__features">
+        <div class="login-brand__features" :style="{ width: `${$dim('page.login.brandFeaturesWidth', 272)}px` }">
           <div class="login-feature">
             <div class="login-feature__icon">
               <img src="../../assets/images/login/login_ic_user.png" alt="" />
             </div>
             <div>
-              <div class="login-feature__title">用户与岗位管理</div>
-              <div class="login-feature__description">求职者、雇主账号全周期管理</div>
+              <div class="login-feature__title">{{ $t('page.login.usersManagementTitle', '用户与岗位管理') }}</div>
+              <div class="login-feature__description">{{ $t('page.login.usersManagementDescription', '求职者、雇主账号全周期管理') }}</div>
             </div>
           </div>
           <div class="login-feature">
@@ -21,8 +21,8 @@
               <img src="../../assets/images/login/login_ic_shield.png" alt="" />
             </div>
             <div>
-              <div class="login-feature__title">风控与内容治理</div>
-              <div class="login-feature__description">违规检测、投诉工单一站式处理</div>
+              <div class="login-feature__title">{{ $t('page.login.riskControlTitle', '风控与内容治理') }}</div>
+              <div class="login-feature__description">{{ $t('page.login.riskControlDescription', '违规检测、投诉工单一站式处理') }}</div>
             </div>
           </div>
           <div class="login-feature">
@@ -30,87 +30,95 @@
               <img src="../../assets/images/login/login_ic_report.png" alt="" />
             </div>
             <div>
-              <div class="login-feature__title">数据统计看板</div>
-              <div class="login-feature__description">实时掌握平台运营核心指标</div>
+              <div class="login-feature__title">{{ $t('page.login.statisticsTitle', '数据统计看板') }}</div>
+              <div class="login-feature__description">{{ $t('page.login.statisticsDescription', '实时掌握平台运营核心指标') }}</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="login-brand__copyright">&copy; Copyright Reserved 空间视创（重庆）科技股份有限公司 版权所有</div>
+      <div class="login-brand__copyright" v-html="$t('app.copyright', { current_year: new Date().getFullYear() })"></div>
     </aside>
 
     <main class="login-main">
       <div class="login-main-title">
-        <div class="login-main-title-text">智能体中台 2.0</div>
-        <div class="login-main-title-desc">请登录你的管理员账号</div>
+        <div class="login-main-title-text">{{ $t('app.title', '智能体中台 2.0') }}</div>
+        <div class="login-main-title-desc">{{ $t('page.login.loginPrompt', '请登录你的管理员账号') }}</div>
       </div>
 
       <div class="login-main-content">
         <div class="login-main-content-left">
           <el-form ref="loginRef" :model="loginForm" :rules="loginRules" label-position="top" hide-required-asterisk="true" class="login-form">
-            <el-form-item prop="username" label="用户名">
-              <el-input v-model="loginForm.username" type="text" size="large" auto-complete="off" placeholder="请输入用户名">
-                <template #prefix>🤵</template>
-              </el-input>
+            <el-form-item prop="username" :label="$t('page.login.username', '用户名')">
+              <el-input
+                v-model="loginForm.username"
+                type="text"
+                size="large"
+                auto-complete="off"
+                clearable
+                :prefix-icon="User"
+                :placeholder="$t('page.login.usernamePlaceholder', '请输入用户名')"
+              />
             </el-form-item>
-            <el-form-item prop="password" label="密码">
+            <el-form-item prop="password" :label="$t('page.login.password', '密码')">
               <el-input
                 v-model="loginForm.password"
                 type="password"
                 size="large"
                 show-password
                 auto-complete="off"
-                placeholder="6-15位，由字母数字组成"
+                clearable
+                :prefix-icon="Lock"
+                :placeholder="$t('page.login.passwordPlaceholder', '6-15位，由字母数字组成')"
                 @keyup.enter="handleLogin"
-              >
-                <template #prefix>🔒</template>
-                <template #password-icon="{ visible }">
-                  {{ visible ? '🚫' : '👁️' }}
-                </template>
-              </el-input>
+              />
             </el-form-item>
             <div class="row-captcha">
-              <el-form-item prop="code" v-if="captchaEnabled" label="验证码">
+              <el-form-item prop="code" v-if="captchaEnabled" :label="$t('page.login.captcha', '验证码')">
                 <el-input
                   v-model="loginForm.code"
                   size="large"
                   auto-complete="off"
-                  placeholder="请输入验证码"
-                  class="login-verific-code"
+                  clearable
+                  :prefix-icon="Shield"
+                  :placeholder="$t('page.login.captchaPlaceholder', '请输入验证码')"
+                  class="login-captcha"
                   @keyup.enter="handleLogin"
-                >
-                  <template #prefix>🛡️</template>
-                </el-input>
+                />
               </el-form-item>
               <div class="login-code">
                 <img :src="codeUrl" @click="getCode" class="login-code-img" />
               </div>
             </div>
             <div class="login-form-remember">
-              <el-checkbox v-model="loginForm.rememberMe" label="记住账号密码" />
+              <el-checkbox v-model="loginForm.rememberMe" :label="$t('page.login.rememberMe', '记住账号密码')" />
             </div>
             <el-form-item class="login-submit">
               <el-button :loading="loading" type="success" @click.prevent="handleLogin">
-                <div v-if="!loading">登 录</div>
-                <div v-else>登 录 中...</div>
+                <span v-if="!loading">{{ $t('page.login.submit', '登 录') }}</span>
+                <span v-else>{{ $t('page.login.submitting', '登 录 中...') }}</span>
               </el-button>
             </el-form-item>
           </el-form>
 
-          <el-divider content-position="center">其他登录方式</el-divider>
+          <el-divider content-position="center">{{ $t('page.login.otherMethods', '其他登录方式') }}</el-divider>
           <el-button>
-            钉钉扫码登录
+            {{ $t('page.login.dingTalkLogin', '钉钉扫码登录') }}
             <template #icon>
-              <span style="font-size: 20px; margin-right: 8px">💬</span>
+              <span style="font-size: 20px; margin-right: 8px">
+                <el-icon><MessageCircle /></el-icon>
+              </span>
             </template>
           </el-button>
           <div class="login-policy">
-            <div class="login-policy-text">
-              登录即代表您同意
-              <el-link type="success" underline="never">《系统使用协议》</el-link> 及
-              <el-link type="success" underline="never">《隐私政策》</el-link>
-            </div>
+            <i18n-t keypath="page.login.agreement" tag="div" scope="global" class="login-policy-text">
+              <template #terms>
+                <el-link type="success" underline="never">{{ $t('page.login.termsOfUse', '《系统使用协议》') }}</el-link>
+              </template>
+              <template #privacy>
+                <el-link type="success" underline="never">{{ $t('page.login.privacyPolicy', '《隐私政策》') }}</el-link>
+              </template>
+            </i18n-t>
           </div>
         </div>
       </div>
@@ -134,6 +142,8 @@ import useUserStore from '@/store/modules/user';
 import LoginFailureDialog from '@/components/LoginFailureDialog';
 import AlertComponent from '@/components/TootipComponent/alertComponent.vue';
 import { setToken, removeToken } from '@/utils/auth';
+import { Lock, MessageCircle, Shield, User } from 'lucide-vue-next';
+import { t } from '@/i18n';
 const userStore = useUserStore();
 const router = useRouter();
 const { proxy } = getCurrentInstance();
@@ -152,11 +162,11 @@ const state = reactive({
   alertList: [],
   qrCodeType: 0
 });
-const loginRules = {
-  username: [{ required: true, trigger: 'blur', message: '请输入您的账号' }],
-  password: [{ required: true, trigger: 'blur', message: '请输入您的密码' }],
-  code: [{ required: true, trigger: 'change', message: '请输入验证码' }]
-};
+const loginRules = computed(() => ({
+  username: [{ required: true, trigger: 'blur', message: t('page.login.usernameRequired', '请输入您的账号') }],
+  password: [{ required: true, trigger: 'blur', message: t('page.login.passwordRequired', '请输入您的密码') }],
+  code: [{ required: true, trigger: 'change', message: t('page.login.captchaPlaceholder', '请输入验证码') }]
+}));
 
 const codeUrl = ref('');
 const qrcodeUrl = ref('');
@@ -376,7 +386,6 @@ getCookie();
 }
 
 .login-brand__content {
-  width: min(400px, calc(100% - 64px));
   transform: translateY(-25px);
   text-align: center;
 }
@@ -405,7 +414,6 @@ getCookie();
 
 .login-brand__features {
   display: flex;
-  width: 272px;
   max-width: 100%;
   margin: 48px auto 0;
   flex-direction: column;
@@ -427,7 +435,7 @@ getCookie();
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
 
   img {
     display: block;
@@ -552,8 +560,12 @@ getCookie();
   }
 }
 
-.login-verific-code {
+.login-captcha {
   width: 100%;
+}
+
+.el-input {
+  --el-input-focus-border-color: #1ea76f;
 }
 
 .login-form-remember {
@@ -567,8 +579,8 @@ getCookie();
     --el-checkbox-bg-color: #fff;
     --el-checkbox-input-border: 1px solid #1a1f2e;
     --el-checkbox-checked-text-color: #64748b;
-    --el-checkbox-checked-input-border-color: #40916c;
-    --el-checkbox-checked-bg-color: #40916c;
+    --el-checkbox-checked-input-border-color: #1ea76f;
+    --el-checkbox-checked-bg-color: #1ea76f;
     --el-checkbox-checked-icon-color: #fff;
     --el-checkbox-input-border-color-hover: #1a1f2e;
     color: #64748b;
@@ -580,8 +592,8 @@ getCookie();
   margin-bottom: 0;
 
   :deep(.el-button) {
-    --el-button-bg-color: #00ab6b;
-    --el-button-hover-bg-color: #008251;
+    --el-button-bg-color: #1ea76f;
+    --el-button-hover-bg-color: #36b481;
     font-size: 15px;
     font-weight: 600;
     color: #fff;
@@ -602,11 +614,11 @@ getCookie();
     background 0.15s,
     transform 0.1s;
 
-  --el-button-hover-text-color: var(--el-color-success);
-  --el-button-hover-bg-color: var(--el-color-success-light-9);
-  --el-button-hover-border-color: var(--el-color-success-light-7);
-  --el-button-active-border-color: var(--el-color-success);
-  --el-button-outline-color: var(--el-color-success-light-5);
+  --el-button-hover-text-color: #1ea76f;
+  --el-button-hover-bg-color: #defff2;
+  --el-button-hover-border-color: #1ea76f;
+  --el-button-active-border-color: #1ea76f;
+  --el-button-outline-color: #1ea76f;
 }
 
 :deep(i.el-icon) {
@@ -631,14 +643,15 @@ getCookie();
   .login-policy-text {
     display: flex;
     align-items: center;
+    white-space: break-spaces;
     color: #94a3b8;
     font-size: 12px;
 
     :deep(.el-link) {
       font-size: 12px;
       font-weight: normal;
-      --el-link-text-color: #00ab6b;
-      --el-link-hover-text-color: #008251;
+      --el-link-text-color: #1ea76f;
+      --el-link-hover-text-color: #36b481;
     }
   }
 }
@@ -657,14 +670,6 @@ getCookie();
 @media (max-width: 980px) {
   .login-brand {
     flex-basis: 44%;
-  }
-
-  .login-brand__content {
-    width: min(340px, calc(100% - 48px));
-  }
-
-  .login-brand__features {
-    width: 300px;
   }
 
   .login-main {

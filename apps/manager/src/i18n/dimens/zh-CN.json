@@ -1,6 +1,10 @@
 {
   "component": {},
   "page": {
+    "login": {
+      "brandContentWidth": 400,
+      "brandFeaturesWidth": 272
+    },
     "agent": {
       "list": {
         "table.createdAt": 180,
