@@ -1749,7 +1749,11 @@ async def delete_skill(db: AsyncSession, *, slug: str) -> None:
 
 
 async def delete_skills_batch(db: AsyncSession, *, slugs: list[str]) -> list[dict]:
-    """批量删除多个 skills（单技能独立的子事务与回滚）。"""
+    """批量删除多个 skills（单技能独立的子事务与回滚）。
+
+    当前前端已移除批量管理入口，因此该能力暂无前端调用方；保留供 API
+    兼容和后续管理工具复用。
+    """
     if len(slugs) > 50:
         raise ValueError("批量删除的技能数量不能超过 50 个")
     results = []

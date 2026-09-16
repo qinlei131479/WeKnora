@@ -551,6 +551,16 @@ def test_quote_builtin_skill_includes_knowledge_base_dependency():
     assert (quote["source_dir"] / "scripts" / "fill_quote.py").exists()
 
 
+@pytest.mark.parametrize("slug", ["pdf", "docx", "pptx", "xlsx"])
+def test_office_document_builtin_skill_specs(slug: str):
+    specs = {spec["slug"]: spec for spec in svc.list_builtin_skill_specs()}
+
+    spec = specs[slug]
+    assert spec["name"] == slug
+    assert (spec["source_dir"] / "SKILL.md").exists()
+    assert (spec["source_dir"] / "LICENSE.txt").exists()
+
+
 def test_knowledge_base_builtin_skill_spec():
     specs = {spec["slug"]: spec for spec in svc.list_builtin_skill_specs()}
 

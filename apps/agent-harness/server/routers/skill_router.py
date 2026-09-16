@@ -589,6 +589,8 @@ async def delete_skill_route(
         raise HTTPException(status_code=500, detail="删除技能失败")
 
 
+# 当前前端已移除批量管理入口，不再调用该接口。
+# 这里保留接口以兼容已有外部调用方，并供后续管理工具复用。
 @skills.post("/delete-batch")
 async def delete_skills_batch_route(
     payload: SkillBatchDeleteRequest,
