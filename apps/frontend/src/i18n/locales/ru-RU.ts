@@ -3682,6 +3682,7 @@ export default {
     questionMinimapTitle: 'Вопросы',
     questionMinimapAriaLabel: 'Содержание вопросов',
     questionMinimapAttachmentPlaceholder: '(Вложение)',
+    scrollToBottom: 'Вниз',
     suggestedQuestions: 'Вы можете спросить меня',
     followUpQuestions: 'Спрашивайте дальше',
     followUpQuestionsLoading: 'Загрузка рекомендуемых вопросов',

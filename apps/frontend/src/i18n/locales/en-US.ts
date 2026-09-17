@@ -4566,6 +4566,7 @@ export default {
     questionMinimapTitle: 'Q&A',
     questionMinimapAriaLabel: 'Question outline',
     questionMinimapAttachmentPlaceholder: '(Attachment)',
+    scrollToBottom: 'Back to bottom',
     suggestedQuestions: 'You can ask me',
     followUpQuestions: 'Keep asking',
     followUpQuestionsLoading: 'Loading suggested questions',

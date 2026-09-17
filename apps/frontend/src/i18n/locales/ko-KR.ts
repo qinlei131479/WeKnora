@@ -3682,6 +3682,7 @@ export default {
     questionMinimapTitle: '질문',
     questionMinimapAriaLabel: '질문 목차',
     questionMinimapAttachmentPlaceholder: '(첨부)',
+    scrollToBottom: '맨 아래로',
     suggestedQuestions: '이렇게 물어보세요',
     followUpQuestions: '이어서 질문',
     followUpQuestionsLoading: '추천 질문 로딩 중',

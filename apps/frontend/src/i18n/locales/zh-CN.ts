@@ -3682,6 +3682,7 @@ export default {
     questionMinimapTitle: '问答',
     questionMinimapAriaLabel: '提问目录',
     questionMinimapAttachmentPlaceholder: '（附件）',
+    scrollToBottom: '回到底部',
     suggestedQuestions: '你可以这样问我',
     followUpQuestions: '继续问',
     followUpQuestionsLoading: '加载推荐问题',

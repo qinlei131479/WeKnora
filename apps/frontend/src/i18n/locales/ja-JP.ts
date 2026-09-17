@@ -3568,6 +3568,7 @@ export default {
     questionMinimapTitle: 'Q&A',
     questionMinimapAriaLabel: '質問一覧',
     questionMinimapAttachmentPlaceholder: '（添付ファイル）',
+    scrollToBottom: '一番下へ',
     referenceChunkCount: '{count}件のチャンク',
     fallbackHint: 'ナレッジベースから関連する内容が見つかりませんでした。上記はモデルの直接回答です。',
     requestInfoTitle: 'リクエスト情報',

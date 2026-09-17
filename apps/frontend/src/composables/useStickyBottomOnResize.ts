@@ -11,6 +11,7 @@ import { onMounted, onUnmounted, type Ref } from 'vue'
 export function useStickyBottomOnResize(
   scrollContainer: Ref<HTMLElement | null>,
   userHasScrolledUp: Ref<boolean>,
+  contentElement?: Ref<HTMLElement | null>,
 ): void {
   let resizeObserver: ResizeObserver | null = null
 
@@ -27,7 +28,7 @@ export function useStickyBottomOnResize(
   }
 
   onMounted(() => {
-    const messageList = scrollContainer.value?.firstElementChild
+    const messageList = contentElement?.value ?? scrollContainer.value?.firstElementChild
     if (!messageList || typeof ResizeObserver === 'undefined') return
 
     resizeObserver = new ResizeObserver(followResize)

@@ -75,23 +75,37 @@
       >
         <!-- Main Chat Area -->
         <div class="chat-main" ref="chatMainRef" :class="{ 'is-empty': !conversations.length }">
-          <div class="chat-box">
+          <div ref="chatBoxRef" class="chat-box">
             <template v-for="row in conversationRows" :key="row.key">
               <div v-if="row.type === 'conversation'" class="conv-box">
                 <template
                   v-for="(displayItem, itemIndex) in row.displayItems"
                   :key="displayItem.key"
                 >
-                  <AgentMessageComponent
+                  <div
                     v-if="displayItem.type === 'message'"
-                    :message="displayItem.message"
-                    :is-processing="isDisplayMessageProcessing(row.conv, displayItem)"
-                    :show-refs="showMsgRefs(displayItem.message, row.conv)"
-                    :hide-tool-calls="true"
-                    :mention="mentionConfig"
-                    @retry="retryMessage(displayItem.message)"
+                    class="message-anchor"
+                    :class="{
+                      'is-minimap-target':
+                        displayItem.message.type === 'human' &&
+                        getMessageRequestId(displayItem.message) === minimapTargetId
+                    }"
+                    :data-message-id="
+                      displayItem.message.type === 'human'
+                        ? getMessageRequestId(displayItem.message)
+                        : undefined
+                    "
                   >
-                  </AgentMessageComponent>
+                    <AgentMessageComponent
+                      :message="displayItem.message"
+                      :is-processing="isDisplayMessageProcessing(row.conv, displayItem)"
+                      :show-refs="showMsgRefs(displayItem.message, row.conv)"
+                      :hide-tool-calls="true"
+                      :mention="mentionConfig"
+                      @retry="retryMessage(displayItem.message)"
+                    >
+                    </AgentMessageComponent>
+                  </div>
                   <ToolCallsGroupComponent
                     v-else
                     :tool-calls="displayItem.toolCalls"
@@ -631,6 +645,26 @@
           @view-mode-change="setAgentPanelViewMode"
         />
       </div>
+
+      <ChatQuestionMinimap
+        v-if="currentChatId"
+        :scroll-container="chatBoxRef"
+        :messages="minimapMessages"
+        @jump="jumpToOutline"
+      />
+
+      <transition name="scroll-btn-fade">
+        <button
+          v-show="showScrollToBottom"
+          type="button"
+          class="scroll-to-bottom-btn"
+          :title="t('chat.scrollToBottom')"
+          :aria-label="t('chat.scrollToBottom')"
+          @click="handleScrollToBottomClick"
+        >
+          <ChevronDown :size="20" aria-hidden="true" />
+        </button>
+      </transition>
     </div>
 
     <SubagentThreadModal
@@ -681,6 +715,7 @@ import {
 } from 'lucide-vue-next'
 import AgentInputArea from '@/components/harness/AgentInputArea.vue'
 import ChatEngineSegmented from '@/components/ChatEngineSegmented.vue'
+import ChatQuestionMinimap from '@/components/chat/ChatQuestionMinimap.vue'
 import { useChatEngineNav } from '@/composables/useChatEngineNav'
 import { useStickyBottomOnResize } from '@/composables/useStickyBottomOnResize'
 import ToolApprovalModeSelector from '@/components/harness/ToolApprovalModeSelector.vue'
@@ -1889,6 +1924,19 @@ const conversations = computed(() => {
   return activeRunHistoryConvs
 })
 
+const minimapMessages = computed(() =>
+  conversations.value
+    .flatMap((conv) => conv.messages || [])
+    .map((message) => ({
+      id: getMessageRequestId(message) || message.id || '',
+      role: message.type === 'human' ? 'user' : message.type === 'ai' ? 'assistant' : '',
+      content: typeof message.content === 'string' ? message.content : '',
+      images: message.image_content ? [message.image_content] : [],
+      attachments: message.extra_metadata?.attachments || []
+    }))
+    .filter((message) => message.id && (message.role === 'user' || message.role === 'assistant'))
+)
+
 const conversationRows = computed(() => {
   const rows = conversations.value.map((conv, index) => ({
     type: 'conversation',
@@ -2046,8 +2094,64 @@ const rollbackAttachments = (threadId, previousAttachments) => {
 }
 
 // ==================== SCROLL & RESIZE HANDLING ====================
-const scrollController = new ScrollController('.chat-main')
 const chatMainRef = ref(null)
+const chatBoxRef = ref(null)
+const scrollController = new ScrollController(() => chatBoxRef.value)
+const showScrollToBottom = ref(false)
+const minimapTargetId = ref('')
+let minimapFlashTimer = null
+const MINIMAP_NEAR_BOTTOM_PX = 80
+
+const resetScrollState = () => {
+  showScrollToBottom.value = false
+  minimapTargetId.value = ''
+  scrollController.enableAutoScroll()
+}
+
+const isNearScrollBottom = (container = chatBoxRef.value) => {
+  if (!container) return true
+  return (
+    container.scrollHeight - container.scrollTop - container.clientHeight <
+    MINIMAP_NEAR_BOTTOM_PX
+  )
+}
+
+const handleChatBoxScroll = () => {
+  scrollController.handleScroll()
+  showScrollToBottom.value = !isNearScrollBottom()
+}
+
+const handleScrollToBottomClick = () => {
+  resetScrollState()
+  void scrollController.scrollToBottom(true)
+}
+
+const jumpToOutline = (id) => {
+  const root = chatBoxRef.value
+  if (!root || !id) return
+
+  const target = root.querySelector(`[data-message-id="${CSS.escape(id)}"]`)
+  if (!target) return
+
+  const offset =
+    target.getBoundingClientRect().top - root.getBoundingClientRect().top + root.scrollTop
+  const nearEnd = root.scrollHeight - offset < root.clientHeight + MINIMAP_NEAR_BOTTOM_PX
+  if (nearEnd) {
+    scrollController.enableAutoScroll()
+  } else {
+    scrollController.disableAutoScroll()
+  }
+  showScrollToBottom.value = !nearEnd
+
+  target.scrollIntoView({ block: 'start', behavior: 'smooth' })
+
+  minimapTargetId.value = id
+  if (minimapFlashTimer) clearTimeout(minimapFlashTimer)
+  minimapFlashTimer = setTimeout(() => {
+    minimapTargetId.value = ''
+    minimapFlashTimer = null
+  }, 1200)
+}
 
 // 流式生成期间，消息内容会持续增高（逐字追加、图片/表格渲染回流等），
 // 这些高度变化不一定会触发 `conversations` 的引用变更，watch 未必能及时感知。
@@ -2058,7 +2162,7 @@ const stickyBottomBlocked = {
     return !scrollController.shouldAutoScroll
   }
 }
-useStickyBottomOnResize(chatMainRef, stickyBottomBlocked, () => scrollController.scrollToBottom())
+useStickyBottomOnResize(chatBoxRef, stickyBottomBlocked, chatBoxRef)
 
 let chatMainResizeObserver = null
 // 初始化延迟标志，避免首次挂载时 ResizeObserver 立即触发导致侧边栏意外关闭
@@ -2138,9 +2242,9 @@ onMounted(() => {
   }
 
   nextTick(() => {
-    const chatMainContainer = document.querySelector('.chat-main')
-    if (chatMainContainer) {
-      chatMainContainer.addEventListener('scroll', scrollController.handleScroll, { passive: true })
+    const chatBoxContainer = chatBoxRef.value
+    if (chatBoxContainer) {
+      chatBoxContainer.addEventListener('scroll', handleChatBoxScroll, { passive: true })
     }
 
     startChatMainResizeObserver()
@@ -2163,6 +2267,11 @@ onUnmounted(() => {
     document.removeEventListener('visibilitychange', handlePageVisibilityChange)
   }
   scrollController.cleanup()
+  chatBoxRef.value?.removeEventListener('scroll', handleChatBoxScroll)
+  if (minimapFlashTimer) {
+    clearTimeout(minimapFlashTimer)
+    minimapFlashTimer = null
+  }
   stopChatMainResizeObserver()
   stopStreamingStateRefresh()
   if (sendCooldownTimer) {
@@ -2644,6 +2753,7 @@ const selectChat = async (chatId) => {
   await resumeQueuedRequestsForThread(chatId)
   restorePendingInterruptForThread(chatId)
   await scrollController.scrollToBottomStaticForce()
+  resetScrollState()
 }
 
 const selectThreadFromRoute = async (threadId) => {
@@ -2714,8 +2824,9 @@ const handleSendMessage = async ({ image, queuePolicy = 'enqueue' } = {}) => {
 
   userInput.value = ''
 
+  resetScrollState()
   await nextTick()
-  scrollController.scrollToBottom(true)
+  void scrollController.scrollToBottom(true)
 
   const threadState = getThreadState(threadId)
   if (!threadState) return
@@ -2767,6 +2878,7 @@ const handleSendMessage = async ({ image, queuePolicy = 'enqueue' } = {}) => {
       }))
     })
     threadState.isStreaming = true
+    void scrollController.scrollToBottom(true)
   }
 
   try {
@@ -3218,6 +3330,7 @@ watch(
 
 watch(currentChatId, (threadId, oldThreadId) => {
   if (threadId === oldThreadId) return
+  resetScrollState()
   if (!threadId || approvalState.threadId !== threadId) {
     hideApprovalState()
   }
@@ -3561,6 +3674,67 @@ watch(currentChatId, (threadId, oldThreadId) => {
   flex-direction: column;
   min-width: 0;
   max-width: 100%;
+}
+
+.message-anchor {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.is-minimap-target {
+  animation: minimap-target-flash 1.2s ease;
+}
+
+@keyframes minimap-target-flash {
+  0% {
+    background: color-mix(in srgb, var(--td-brand-color) 18%, transparent);
+  }
+
+  100% {
+    background: transparent;
+  }
+}
+
+.scroll-to-bottom-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 140px;
+  z-index: 21;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--td-component-stroke);
+  border-radius: 50%;
+  background: var(--td-bg-color-container);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: var(--td-text-color-secondary);
+  cursor: pointer;
+  transform: translateX(-50%);
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--td-bg-color-container-hover);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    color: var(--td-text-color-primary);
+  }
+
+  &:active {
+    transform: translateX(-50%) scale(0.92);
+  }
+}
+
+.scroll-btn-fade-enter-active,
+.scroll-btn-fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.scroll-btn-fade-enter-from,
+.scroll-btn-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
 }
 
 .bottom {
