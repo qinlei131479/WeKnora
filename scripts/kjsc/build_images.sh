@@ -17,6 +17,8 @@ PROJECT_ROOT="$( cd "$SCRIPT_DIR/../.." && pwd )"
 
 FRONTEND_ROOT="$PROJECT_ROOT/apps/frontend"
 IMAGE_PREFIX="kjsc/agent-middle"
+DOCKER_IGNORE_ARGS=()
+IMAGE_TAG="${WEKNORA_VERSION:-latest}"
 
 # 版本信息
 VERSION="1.0.0"
@@ -78,6 +80,16 @@ check_docker() {
         return 1
     fi
 
+    # --ignorefile 是较新的 Buildx 参数；旧版 Jenkins agent 回退到根
+    # .dockerignore，保证构建可继续，代价是构建上下文会更大。
+    if docker buildx build --help 2>&1 | grep -q -- '--ignorefile'; then
+        DOCKER_IGNORE_ARGS=(--ignorefile docker/kjsc.dockerignore)
+        log_info "Docker 支持 --ignorefile，使用企业构建忽略规则"
+    else
+        DOCKER_IGNORE_ARGS=()
+        log_warning "Docker 不支持 --ignorefile，回退到根 .dockerignore；构建上下文可能更大"
+    fi
+
     log_success "Docker环境检查通过"
     return 0
 }
@@ -113,8 +125,17 @@ load_env_var() {
     fi
 }
 
+# Compose 使用 WEKNORA_VERSION 选择镜像；本地构建必须打同一种 tag，
+# 否则 Jenkins 部署阶段使用 --pull never 会找不到刚构建的镜像。
+resolve_image_tag() {
+    load_env_var WEKNORA_VERSION
+    IMAGE_TAG="${WEKNORA_VERSION:-latest}"
+    log_info "镜像 tag: $IMAGE_TAG"
+}
+
 # 获取版本信息
 get_version_info() {
+    resolve_image_tag
     if [ -f "VERSION" ]; then
         VERSION=$(cat VERSION | tr -d '\n\r')
     else
@@ -173,6 +194,7 @@ build_app_image() {
     load_env_var GOPRIVATE
     load_env_var GOSUMDB
     load_env_var WITH_ANYDOC
+    load_env_var RUSTUP_INIT_URL
     load_env_var RUSTUP_DIST_SERVER
     load_env_var RUSTUP_UPDATE_ROOT
 
@@ -194,7 +216,7 @@ build_app_image() {
 
     DOCKER_BUILDKIT=1 docker build \
         --platform $PLATFORM \
-        --ignorefile docker/kjsc.dockerignore \
+        "${DOCKER_IGNORE_ARGS[@]}" \
         --build-arg GOPRIVATE_ARG=${GOPRIVATE:-""} \
         --build-arg GOPROXY_ARG="$goproxy" \
         --build-arg GOSUMDB_ARG=${GOSUMDB:-"off"} \
@@ -204,14 +226,15 @@ build_app_image() {
         --build-arg BUILD_TIME_ARG="$BUILD_TIME" \
         --build-arg GO_VERSION_ARG="$GO_VERSION" \
         --build-arg WITH_ANYDOC="$with_anydoc" \
+        --build-arg RUSTUP_INIT_URL_ARG="${RUSTUP_INIT_URL:-}" \
         --build-arg RUSTUP_DIST_SERVER_ARG="${RUSTUP_DIST_SERVER:-}" \
         --build-arg RUSTUP_UPDATE_ROOT_ARG="${RUSTUP_UPDATE_ROOT:-}" \
         -f docker/Dockerfile.app-core \
-        -t ${IMAGE_PREFIX}-app:latest \
+        -t ${IMAGE_PREFIX}-app:${IMAGE_TAG} \
         .
 
     if [ $? -eq 0 ]; then
-        log_success "应用镜像构建成功: ${IMAGE_PREFIX}-app:latest"
+        log_success "应用镜像构建成功: ${IMAGE_PREFIX}-app:${IMAGE_TAG}"
         return 0
     else
         log_error "应用镜像构建失败"
@@ -227,16 +250,16 @@ build_docreader_image() {
 
     docker build \
         --platform $PLATFORM \
-        --ignorefile docker/kjsc.dockerignore \
+        "${DOCKER_IGNORE_ARGS[@]}" \
         --build-arg PLATFORM=$PLATFORM \
         --build-arg TARGETARCH=$TARGETARCH \
         --build-arg APT_MIRROR=${APT_MIRROR:-} \
         -f docker/Dockerfile.docreader \
-        -t ${IMAGE_PREFIX}-docreader:latest \
+        -t ${IMAGE_PREFIX}-docreader:${IMAGE_TAG} \
         .
 
     if [ $? -eq 0 ]; then
-        log_success "文档读取器镜像构建成功: ${IMAGE_PREFIX}-docreader:latest"
+        log_success "文档读取器镜像构建成功: ${IMAGE_PREFIX}-docreader:${IMAGE_TAG}"
         return 0
     else
         log_error "文档读取器镜像构建失败"
@@ -273,11 +296,11 @@ build_frontend_image() {
     docker build \
         --platform $PLATFORM \
         -f docker/Dockerfile.frontend \
-        -t ${IMAGE_PREFIX}-ui:latest \
+        -t ${IMAGE_PREFIX}-ui:${IMAGE_TAG} \
         "$PROJECT_ROOT"
 
     if [ $? -eq 0 ]; then
-        log_success "前端镜像构建成功: ${IMAGE_PREFIX}-ui:latest"
+        log_success "前端镜像构建成功: ${IMAGE_PREFIX}-ui:${IMAGE_TAG}"
         return 0
     else
         log_error "前端镜像构建失败"
@@ -293,13 +316,13 @@ build_sandbox_image() {
 
     docker build \
         --platform $PLATFORM \
-        --ignorefile docker/kjsc.dockerignore \
+        "${DOCKER_IGNORE_ARGS[@]}" \
         -f docker/Dockerfile.sandbox \
-        -t ${IMAGE_PREFIX}-sandbox:latest \
+        -t ${IMAGE_PREFIX}-sandbox:${IMAGE_TAG} \
         .
 
     if [ $? -eq 0 ]; then
-        log_success "沙箱镜像构建成功: ${IMAGE_PREFIX}-sandbox:latest"
+        log_success "沙箱镜像构建成功: ${IMAGE_PREFIX}-sandbox:${IMAGE_TAG}"
         return 0
     else
         log_error "沙箱镜像构建失败"
@@ -325,11 +348,11 @@ build_docs_image() {
     docker build \
         --platform $PLATFORM \
         -f docker/Dockerfile.docs \
-        -t ${IMAGE_PREFIX}-docs:latest \
+        -t ${IMAGE_PREFIX}-docs:${IMAGE_TAG} \
         "$PROJECT_ROOT"
 
     if [ $? -eq 0 ]; then
-        log_success "文档站镜像构建成功: ${IMAGE_PREFIX}-docs:latest"
+        log_success "文档站镜像构建成功: ${IMAGE_PREFIX}-docs:${IMAGE_TAG}"
         return 0
     else
         log_error "文档站镜像构建失败"
@@ -338,7 +361,7 @@ build_docs_image() {
 }
 
 # 构建 Agent-Harness（不并入 -a；不含 sandbox-provisioner）
-# tag 策略与 build_app_image 等保持一致：只打 :latest，运行时由
+# tag 策略与 build_app_image 等保持一致：与 WEKNORA_VERSION 相同，运行时由
 # docker-compose-kjsc.yml 的 ${WEKNORA_VERSION:-latest} 决定实际使用的 tag。
 build_harness_image() {
     log_info "构建 Agent-Harness 镜像 (${IMAGE_PREFIX}-harness)..."
@@ -354,11 +377,11 @@ build_harness_image() {
     docker build \
         --platform $PLATFORM \
         -f docker/Dockerfile.agent-harness \
-        -t ${IMAGE_PREFIX}-harness:latest \
+        -t ${IMAGE_PREFIX}-harness:${IMAGE_TAG} \
         "$PROJECT_ROOT"
 
     if [ $? -eq 0 ]; then
-        log_success "Agent-Harness 镜像构建成功: ${IMAGE_PREFIX}-harness:latest"
+        log_success "Agent-Harness 镜像构建成功: ${IMAGE_PREFIX}-harness:${IMAGE_TAG}"
         return 0
     fi
     log_error "Agent-Harness 镜像构建失败"
@@ -366,7 +389,7 @@ build_harness_image() {
 }
 
 # 构建 sandbox-provisioner（独立于 harness）
-# tag 策略与 build_harness_image 一致：只打 :latest。
+# tag 策略与 build_harness_image 一致。
 build_sandbox_provisioner_image() {
     log_info "构建 sandbox-provisioner 镜像..."
 
@@ -376,11 +399,11 @@ build_sandbox_provisioner_image() {
     docker build \
         --platform $PLATFORM \
         -f docker/sandbox_provisioner/Dockerfile \
-        -t sandbox-provisioner:latest \
+        -t sandbox-provisioner:${IMAGE_TAG} \
         "$PROJECT_ROOT/docker/sandbox_provisioner"
 
     if [ $? -eq 0 ]; then
-        log_success "sandbox-provisioner 镜像构建成功: sandbox-provisioner:latest"
+        log_success "sandbox-provisioner 镜像构建成功: sandbox-provisioner:${IMAGE_TAG}"
         return 0
     fi
     log_error "sandbox-provisioner 镜像构建失败"
@@ -446,27 +469,28 @@ build_all_images() {
 # 清理本地镜像
 clean_images() {
     log_info "清理本地 ${IMAGE_PREFIX}-* 镜像..."
+    resolve_image_tag
 
     log_info "停止相关容器..."
-    docker stop $(docker ps -q --filter "ancestor=${IMAGE_PREFIX}-app:latest" 2>/dev/null) 2>/dev/null || true
-    docker stop $(docker ps -q --filter "ancestor=${IMAGE_PREFIX}-docreader:latest" 2>/dev/null) 2>/dev/null || true
-    docker stop $(docker ps -q --filter "ancestor=${IMAGE_PREFIX}-ui:latest" 2>/dev/null) 2>/dev/null || true
-    docker stop $(docker ps -q --filter "ancestor=${IMAGE_PREFIX}-sandbox:latest" 2>/dev/null) 2>/dev/null || true
-    docker stop $(docker ps -q --filter "ancestor=${IMAGE_PREFIX}-docs:latest" 2>/dev/null) 2>/dev/null || true
+    docker stop $(docker ps -q --filter "ancestor=${IMAGE_PREFIX}-app:${IMAGE_TAG}" 2>/dev/null) 2>/dev/null || true
+    docker stop $(docker ps -q --filter "ancestor=${IMAGE_PREFIX}-docreader:${IMAGE_TAG}" 2>/dev/null) 2>/dev/null || true
+    docker stop $(docker ps -q --filter "ancestor=${IMAGE_PREFIX}-ui:${IMAGE_TAG}" 2>/dev/null) 2>/dev/null || true
+    docker stop $(docker ps -q --filter "ancestor=${IMAGE_PREFIX}-sandbox:${IMAGE_TAG}" 2>/dev/null) 2>/dev/null || true
+    docker stop $(docker ps -q --filter "ancestor=${IMAGE_PREFIX}-docs:${IMAGE_TAG}" 2>/dev/null) 2>/dev/null || true
 
     log_info "删除相关容器..."
-    docker rm $(docker ps -aq --filter "ancestor=${IMAGE_PREFIX}-app:latest" 2>/dev/null) 2>/dev/null || true
-    docker rm $(docker ps -aq --filter "ancestor=${IMAGE_PREFIX}-docreader:latest" 2>/dev/null) 2>/dev/null || true
-    docker rm $(docker ps -aq --filter "ancestor=${IMAGE_PREFIX}-ui:latest" 2>/dev/null) 2>/dev/null || true
-    docker rm $(docker ps -aq --filter "ancestor=${IMAGE_PREFIX}-sandbox:latest" 2>/dev/null) 2>/dev/null || true
-    docker rm $(docker ps -aq --filter "ancestor=${IMAGE_PREFIX}-docs:latest" 2>/dev/null) 2>/dev/null || true
+    docker rm $(docker ps -aq --filter "ancestor=${IMAGE_PREFIX}-app:${IMAGE_TAG}" 2>/dev/null) 2>/dev/null || true
+    docker rm $(docker ps -aq --filter "ancestor=${IMAGE_PREFIX}-docreader:${IMAGE_TAG}" 2>/dev/null) 2>/dev/null || true
+    docker rm $(docker ps -aq --filter "ancestor=${IMAGE_PREFIX}-ui:${IMAGE_TAG}" 2>/dev/null) 2>/dev/null || true
+    docker rm $(docker ps -aq --filter "ancestor=${IMAGE_PREFIX}-sandbox:${IMAGE_TAG}" 2>/dev/null) 2>/dev/null || true
+    docker rm $(docker ps -aq --filter "ancestor=${IMAGE_PREFIX}-docs:${IMAGE_TAG}" 2>/dev/null) 2>/dev/null || true
 
     log_info "删除本地镜像..."
-    docker rmi ${IMAGE_PREFIX}-app:latest 2>/dev/null || true
-    docker rmi ${IMAGE_PREFIX}-docreader:latest 2>/dev/null || true
-    docker rmi ${IMAGE_PREFIX}-ui:latest 2>/dev/null || true
-    docker rmi ${IMAGE_PREFIX}-sandbox:latest 2>/dev/null || true
-    docker rmi ${IMAGE_PREFIX}-docs:latest 2>/dev/null || true
+    docker rmi ${IMAGE_PREFIX}-app:${IMAGE_TAG} 2>/dev/null || true
+    docker rmi ${IMAGE_PREFIX}-docreader:${IMAGE_TAG} 2>/dev/null || true
+    docker rmi ${IMAGE_PREFIX}-ui:${IMAGE_TAG} 2>/dev/null || true
+    docker rmi ${IMAGE_PREFIX}-sandbox:${IMAGE_TAG} 2>/dev/null || true
+    docker rmi ${IMAGE_PREFIX}-docs:${IMAGE_TAG} 2>/dev/null || true
     docker rmi ${IMAGE_PREFIX}-odl-hybrid:local 2>/dev/null || true
     docker rmi ${IMAGE_PREFIX}-mcp:latest 2>/dev/null || true
 

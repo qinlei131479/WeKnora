@@ -55,6 +55,7 @@ services:
       args:
         - APK_MIRROR_ARG=${APK_MIRROR_ARG:-}
         - WITH_ANYDOC=${WITH_ANYDOC:-1}
+        - RUSTUP_INIT_URL_ARG=${RUSTUP_INIT_URL:-}
         - RUSTUP_DIST_SERVER_ARG=${RUSTUP_DIST_SERVER:-}
         - RUSTUP_UPDATE_ROOT_ARG=${RUSTUP_UPDATE_ROOT:-}
     container_name: agent-middle-app
@@ -1116,7 +1117,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.agent-harness
-    image: kjsc/agent-middle-harness:${VERSION:-latest}
+    image: kjsc/agent-middle-harness:${WEKNORA_VERSION:-latest}
     container_name: agent-middle-harness-api
     working_dir: /app
     volumes:
@@ -1160,7 +1161,7 @@ services:
     profiles:
       - harness
     # 与 api 共用 kjsc/agent-middle-harness，不要再写 build，否则 Compose Bake 会导出第二份镜像变成 <none>:<none>
-    image: kjsc/agent-middle-harness:${VERSION:-latest}
+    image: kjsc/agent-middle-harness:${WEKNORA_VERSION:-latest}
     container_name: agent-middle-harness-worker
     working_dir: /app
     volumes:

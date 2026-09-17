@@ -34,6 +34,7 @@ Jenkins：网络不存在则创建 `agent-middle-network`，再删同名容器�
 - `postgres` / `redis` / `docreader` 已常驻（Docs 流水线**不依赖**这些服务）
 - Jenkins 用户在 `docker` 组（能执行 `docker info` / `docker compose`）
 - App Job 需要 Docker BuildKit，构建节点预留至少 5 GB 可用磁盘；`WITH_ANYDOC=1` 时首次构建会在容器内安装 Rust stable 并编译静态库，不应在 Jenkins 宿主机额外安装 Cargo。
+- Buildx 无需支持 `--ignorefile`：构建脚本会探测该参数，旧版自动回退到根 `.dockerignore`。
 - App Job 构建节点需要能访问 Rustup、Crates.io（或 `RUSTUP_DIST_SERVER` / `RUSTUP_UPDATE_ROOT` 指定的镜像）以及 `build-anydoc-lib.sh` 使用的 crate 下载地址。若网络受限，在 `.env` 中配置镜像后再构建。
 - **App Job**：不依赖 Jenkins 全局 Go 工具。Go 1.26 和 Rust 均在 Docker builder 镜像内安装，避免 Jenkins 节点访问 `golang.org` / Rust 官方源失败导致 Tool Install 超时。
 - **UI Job**：Jenkins 全局工具需配置 NodeJS，**Name 必须为** `node20.20.2`（版本 20.20.2；与 `manager/Web-Jenkinsfile` 的 `tools { nodejs '...' }` 用法相同）。Docs **不依赖**上述工具。
@@ -67,7 +68,7 @@ docker compose -f docker-compose-kjsc.yml --profile docs up -d --no-deps --pull 
 
 - `SKIP_BUILD`：跳过构建，只重启容器
 - `WITH_ANYDOC`（App-core）：默认开启。关闭时企业 app 镜像不链接 anydoc；首次开启构建可能需要额外数分钟。
-- `RUSTUP_DIST_SERVER` / `RUSTUP_UPDATE_ROOT`（App-core）：可选 Rust 工具链镜像。留空时读取 `.env`，未配置则使用 Rust 官方源。
+- `RUSTUP_INIT_URL` / `RUSTUP_DIST_SERVER` / `RUSTUP_UPDATE_ROOT`（App-core）：Rust 安装脚本与工具链镜像，默认使用 `rsproxy.cn`。无法访问该镜像时可改为企业内网地址或 Rust 官方源。
 - `OVERWRITE_ENV`（App-core / Frontend / Harness / Sandbox）：勾选后强制 `cp .env.kjsc.example .env`；覆盖前自动备份为 `.env.bak.<时间戳>`。适用于仓库更新了 example（如 SSRF 白名单）但 Jenkins 工作区仍保留旧 `.env` 的场景。**会覆盖**工作区内手工修改的密码、端口等，请谨慎勾选
 
 建议有 API 变更时：先 App-core，后 Frontend。Docs 与业务服务解耦，可单独构建部署。Harness 依赖已常驻的 postgres/redis/minio，以及可访问的 WeKnora App（`WEKNORA_BASE_URL`）；现网必须 `--profile harness --profile minio` 且 `--no-deps`，不要把 postgres/minio 拉起来。

@@ -57,6 +57,7 @@ services:
       args:
         - APK_MIRROR_ARG=${APK_MIRROR_ARG:-}
         - WITH_ANYDOC=${WITH_ANYDOC:-1}
+        - RUSTUP_INIT_URL_ARG=${RUSTUP_INIT_URL:-}
         - RUSTUP_DIST_SERVER_ARG=${RUSTUP_DIST_SERVER:-}
         - RUSTUP_UPDATE_ROOT_ARG=${RUSTUP_UPDATE_ROOT:-}
     container_name: agent-middle-app

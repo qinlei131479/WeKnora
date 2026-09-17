@@ -9,6 +9,7 @@ ARG GOPROXY_ARG
 ARG GOSUMDB_ARG=off
 ARG APK_MIRROR_ARG
 ARG WITH_ANYDOC=1
+ARG RUSTUP_INIT_URL_ARG
 ARG RUSTUP_DIST_SERVER_ARG
 ARG RUSTUP_UPDATE_ROOT_ARG
 
@@ -53,13 +54,15 @@ ENV GO_VERSION=${GO_VERSION_ARG}
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
+    RUSTUP_INIT_URL=${RUSTUP_INIT_URL_ARG:-https://sh.rustup.rs} \
     RUSTUP_DIST_SERVER=${RUSTUP_DIST_SERVER_ARG:-https://static.rust-lang.org} \
     RUSTUP_UPDATE_ROOT=${RUSTUP_UPDATE_ROOT_ARG:-https://static.rust-lang.org/rustup}
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     if [ "$WITH_ANYDOC" = "1" ]; then \
-        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
-            | sh -s -- -y --profile minimal --default-toolchain stable && \
+        curl --proto '=https' --tlsv1.2 -sSf "$RUSTUP_INIT_URL" \
+            -o /tmp/rustup-init.sh && \
+        sh /tmp/rustup-init.sh -y --profile minimal --default-toolchain stable && \
         ./scripts/build-anydoc-lib.sh; \
     fi
 

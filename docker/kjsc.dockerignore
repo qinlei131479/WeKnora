@@ -1,5 +1,6 @@
 # kjsc 镜像构建 ignorefile（不改官方根 .dockerignore）
-# 用法：docker build --ignorefile docker/kjsc.dockerignore
+# 用法：支持 --ignorefile 的 Buildx 直接传入；旧版 Buildx 由
+# scripts/kjsc/build_images.sh 回退使用根 .dockerignore。
 # 覆盖官方忽略规则，并排除企业侧不进 app/docreader/sandbox 镜像的目录。
 
 # VCS / CI

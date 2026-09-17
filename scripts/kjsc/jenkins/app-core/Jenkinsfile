@@ -28,13 +28,18 @@ pipeline {
             description: '链接 anydoc 进程内 Office 解析引擎；首次构建会安装 Rust 工具链，耗时和磁盘占用更高'
         )
         string(
+            name: 'RUSTUP_INIT_URL',
+            defaultValue: 'https://rsproxy.cn/rustup-init.sh',
+            description: 'Rustup 安装脚本地址；留空时读取 .env，最终默认 https://sh.rustup.rs'
+        )
+        string(
             name: 'RUSTUP_DIST_SERVER',
-            defaultValue: '',
+            defaultValue: 'https://rsproxy.cn',
             description: '可选 Rust 工具链镜像；留空时读取 .env，最终默认 https://static.rust-lang.org'
         )
         string(
             name: 'RUSTUP_UPDATE_ROOT',
-            defaultValue: '',
+            defaultValue: 'https://rsproxy.cn/rustup',
             description: '可选 Rustup 更新镜像；留空时读取 .env，最终默认 https://static.rust-lang.org/rustup'
         )
         booleanParam(
@@ -59,6 +64,7 @@ pipeline {
             steps {
                 withEnv([
                     "WITH_ANYDOC=${params.WITH_ANYDOC?.toString()}",
+                    "RUSTUP_INIT_URL=${params.RUSTUP_INIT_URL?.trim() ?: ''}",
                     "RUSTUP_DIST_SERVER=${params.RUSTUP_DIST_SERVER?.trim() ?: ''}",
                     "RUSTUP_UPDATE_ROOT=${params.RUSTUP_UPDATE_ROOT?.trim() ?: ''}"
                 ]) {
@@ -85,6 +91,14 @@ pipeline {
                           echo "已从 .env.kjsc.example 生成 .env"
                         else
                           echo "保留现有 .env（未勾选覆盖）"
+                        fi
+                        image_tag=$(grep -E '^WEKNORA_VERSION=' .env 2>/dev/null | tail -n1 | cut -d= -f2- | tr -d ' "\t\r' || true)
+                        image_tag=${image_tag:-latest}
+                        app_image="kjsc/agent-middle-app:${image_tag}"
+                        echo "部署镜像: ${app_image}"
+                        if ! docker image inspect "$app_image" >/dev/null 2>&1; then
+                          echo "镜像不存在: ${app_image}"
+                          exit 1
                         fi
                         docker network inspect "$COMPOSE_NETWORK" >/dev/null 2>&1 || docker network create "$COMPOSE_NETWORK"
                         docker rm -f "$CONTAINER_NAME" 2>/dev/null || true
