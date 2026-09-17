@@ -35,7 +35,7 @@ Jenkins：网络不存在则创建 `agent-middle-network`，再删同名容器�
 - Jenkins 用户在 `docker` 组（能执行 `docker info` / `docker compose`）
 - App Job 需要 Docker BuildKit，构建节点预留至少 5 GB 可用磁盘；`WITH_ANYDOC=1` 时首次构建会在容器内安装 Rust stable 并编译静态库，不应在 Jenkins 宿主机额外安装 Cargo。
 - App Job 构建节点需要能访问 Rustup、Crates.io（或 `RUSTUP_DIST_SERVER` / `RUSTUP_UPDATE_ROOT` 指定的镜像）以及 `build-anydoc-lib.sh` 使用的 crate 下载地址。若网络受限，在 `.env` 中配置镜像后再构建。
-- **App Job**：Jenkins 全局工具需配置 Go，**Name 必须为** `go1.26.0`（与 `tools { go 'go1.26.0' }` 一致）。
+- **App Job**：不依赖 Jenkins 全局 Go 工具。Go 1.26 和 Rust 均在 Docker builder 镜像内安装，避免 Jenkins 节点访问 `golang.org` / Rust 官方源失败导致 Tool Install 超时。
 - **UI Job**：Jenkins 全局工具需配置 NodeJS，**Name 必须为** `node20.20.2`（版本 20.20.2；与 `manager/Web-Jenkinsfile` 的 `tools { nodejs '...' }` 用法相同）。Docs **不依赖**上述工具。
 
 首次可手工：

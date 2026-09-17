@@ -1,6 +1,7 @@
 // 后端 App 流水线（agent-middle / kjsc）
 // Jenkins Script Path: scripts/kjsc/jenkins/app-core/Jenkinsfile
 // 依赖：postgres/redis/docreader 已运行；Jenkins 用户可执行 docker
+// Go/Rust 均在 Docker builder 内安装，Jenkins 宿主机不需要配置 Go 或 Cargo
 // 若无 .env，部署阶段会从 .env.kjsc.example 复制生成
 
 pipeline {
@@ -10,10 +11,6 @@ pipeline {
         CONTAINER_NAME = 'agent-middle-app'
         COMPOSE_SERVICE = 'app'
         COMPOSE_NETWORK = 'agent-middle-network'
-    }
-
-    tools {
-        go 'go1.26.0'
     }
 
     options {
@@ -65,7 +62,6 @@ pipeline {
                     "RUSTUP_DIST_SERVER=${params.RUSTUP_DIST_SERVER?.trim() ?: ''}",
                     "RUSTUP_UPDATE_ROOT=${params.RUSTUP_UPDATE_ROOT?.trim() ?: ''}"
                 ]) {
-                    sh 'go version'
                     sh 'sh scripts/kjsc/build_images.sh -p'
                 }
             }
