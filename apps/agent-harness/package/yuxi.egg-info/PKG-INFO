@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
-Name: yuxi
-Version: 0.7.2
+Name: agent harness
+Version: 0.8.0
 Summary: Yuxi 智能知识库与知识图谱平台核心后端包
 License: MIT
 Classifier: License :: OSI Approved :: MIT License
@@ -80,8 +80,8 @@ Requires-Dist: scikit-learn>=1.3.0
 Requires-Dist: nltk>=3.8.1
 Requires-Dist: beautifulsoup4>=4.12.0
 
-# yuxi
+# agent harness
 
-Yuxi 核心后端 Python 包。
+agent harness 核心后端 Python 包。
 
-该目录用于将 `yuxi` 作为本地可构建、可安装的 Python package 提供给 `backend` 项目使用。
+该目录用于将 `agent harness` 作为本地可构建、可安装的 Python package 提供给 `backend` 项目使用。

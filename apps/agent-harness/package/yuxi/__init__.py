@@ -5,7 +5,7 @@ from yuxi.config import config as config
 try:
     from importlib.metadata import version
 
-    __version__ = version("yuxi")
+    __version__ = version("yuxi") or "unknown"
 except Exception:
     __version__ = "unknown"
 

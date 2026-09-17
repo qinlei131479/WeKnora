@@ -1,4 +1,4 @@
-# Agent-Harness：从 Bubble-Weave/Yuxi 迁入的 Python LangGraph 运行时。
+# Agent-Harness： Python LangGraph 运行时。
 
 源码来自独立仓库 Bubble-Weave，第一阶段保持接口独立：
 
@@ -28,10 +28,6 @@ DB_NAME=agent-middle
 REDIS_ADDR=localhost:6379
 ```
 
-默认账号：
-
-- 超管 `zwj` / `zwj12138`
-- 其他用户密码 `yuxi123456`
 
 不要对整份 compose 加 `--remove-orphans`。首次建库 / seed 请直接用 docker compose 或脚本，不经过 Makefile。
 
