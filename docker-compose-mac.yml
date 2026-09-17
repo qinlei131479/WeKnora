@@ -64,6 +64,9 @@ services:
     volumes:
       - data-files:/data/files
       - docreader-tmp:/tmp/docreader:ro
+      # Docker 沙箱后端需要访问宿主机 Engine API。该 socket 等效宿主机 root，
+      # 仅应在受信任的私有化测试/部署环境启用。
+      - /var/run/docker.sock:/var/run/docker.sock
       # KJSC 企业变体优先于官方 config/*.yaml；bind-mount 使用 :ro，避免容器以 root 写回 Jenkins 工作区导致 git checkout Permission denied
       - ./config/config_kjsc.yaml:/app/config/config_kjsc.yaml:ro
       - ./config/builtin_agents_kjsc.yaml:/app/config/builtin_agents_kjsc.yaml:ro
@@ -345,6 +348,7 @@ services:
       - WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY=${WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY:-8}
       - WEKNORA_CHAT_ATTACHMENT_OCR_MAX_PAGES=${WEKNORA_CHAT_ATTACHMENT_OCR_MAX_PAGES:-8}
       # Agent Skills Sandbox
+      - WEKNORA_SANDBOX_DOCKER_ENABLED=${WEKNORA_SANDBOX_DOCKER_ENABLED:-true}
       - WEKNORA_SANDBOX_MODE=${WEKNORA_SANDBOX_MODE:-docker}
       - WEKNORA_SANDBOX_TIMEOUT=${WEKNORA_SANDBOX_TIMEOUT:-60}
       - WEKNORA_SANDBOX_DOCKER_IMAGE=${WEKNORA_SANDBOX_DOCKER_IMAGE:-kjsc/agent-middle-sandbox:${WEKNORA_VERSION:-latest}}
