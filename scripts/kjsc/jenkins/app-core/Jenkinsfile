@@ -30,12 +30,12 @@ pipeline {
             defaultValue: true,
             description: '链接 anydoc 进程内 Office 解析引擎；首次构建会安装 Rust 工具链，耗时和磁盘占用更高'
         )
-        stringParam(
+        string(
             name: 'RUSTUP_DIST_SERVER',
             defaultValue: '',
             description: '可选 Rust 工具链镜像；留空时读取 .env，最终默认 https://static.rust-lang.org'
         )
-        stringParam(
+        string(
             name: 'RUSTUP_UPDATE_ROOT',
             defaultValue: '',
             description: '可选 Rustup 更新镜像；留空时读取 .env，最终默认 https://static.rust-lang.org/rustup'
