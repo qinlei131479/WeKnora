@@ -19,7 +19,7 @@
         <t-divider />
         <h4>{{ $t('dashboard.tools.errorAnalysis') }}</h4>
         <div class="error-grid">
-          <t-table :data="errorData" :columns="errorColumns" size="small" :pagination="false" max-height="200" row-key="tool_name">
+          <t-table :data="errorData" :columns="errorColumns" size="small" max-height="200" row-key="tool_name">
             <template #tool_name="{ row }">
               <t-tag theme="primary" variant="light">{{ row.tool_name }}</t-tag>
             </template>

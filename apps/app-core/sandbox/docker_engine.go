@@ -392,6 +392,18 @@ func dockerInvalidRequest(op, message string) error {
 	}
 }
 
+// dockerIsMissingSkillSnapshot 识别本 daemon 缺失 skill 快照的专用创建错误。
+func dockerIsMissingSkillSnapshot(err error) bool {
+	var remoteErr *RemoteError
+	if !errors.As(err, &remoteErr) {
+		return false
+	}
+	return remoteErr.Kind == RemoteErrorKindInvalidRequest &&
+		remoteErr.Op == "Create" &&
+		strings.HasPrefix(remoteErr.Message, "skill snapshot image ") &&
+		strings.HasSuffix(remoteErr.Message, " is not on this daemon")
+}
+
 // awaitImagePull waits for a pull to finish. The daemon only performs the
 // transfer while its progress stream is being consumed, so a caller that
 // closes the body early aborts the pull.

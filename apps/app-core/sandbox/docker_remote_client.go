@@ -48,6 +48,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Tencent/WeKnora/apps/app-core/logger"
 	"github.com/moby/moby/api/pkg/stdcopy"
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
@@ -259,7 +260,19 @@ func (c *DockerRemoteClient) Create(
 		image = c.settings.Image
 	}
 	if err := c.ensureImage(ctx, image); err != nil {
-		return nil, err
+		fallbackImage := strings.TrimSpace(req.FallbackTemplateID)
+		if fallbackImage != "" && dockerIsMissingSkillSnapshot(err) {
+			// 快照镜像只存在于生成它的 daemon；此处改用基础镜像保住会话。
+			logger.Warnf(ctx,
+				"docker skill snapshot %s is missing on this daemon; "+
+					"falling back to base image %s", image, fallbackImage)
+			image = fallbackImage
+			if err := c.ensureImage(ctx, image); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
 	}
 
 	labels := dockerContainerLabels(req.Metadata)

@@ -152,6 +152,11 @@ func ResolveEffectiveConfig(
 			effective.E2BTemplate = snapshot
 		}
 	case SandboxTypeDocker:
+		baseImage := strings.TrimSpace(effective.DockerImage)
+		if tenantCfg.SkillImage != nil && strings.TrimSpace(tenantCfg.SkillImage.BaseTemplateID) != "" {
+			baseImage = strings.TrimSpace(tenantCfg.SkillImage.BaseTemplateID)
+		}
+		effective.DockerImageFallback = baseImage
 		// Deliberately computed from the STORED docker block, not from
 		// effective.DockerHost: a blank host is resolved from the environment
 		// by applyDockerRuntimeDefaults, and that resolved value must never
@@ -197,6 +202,7 @@ func ResolveEffectiveConfig(
 // "inherits nothing" would still have an exception to explain.
 func clearProviderFields(cfg *Config) {
 	cfg.DockerImage = ""
+	cfg.DockerImageFallback = ""
 	cfg.DockerHost = ""
 	cfg.DockerTLSCertPath = ""
 	cfg.DockerNetworkMode = ""

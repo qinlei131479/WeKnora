@@ -113,10 +113,20 @@ const getCurrentKbId = (): string | null => {
     return (route.params as any)?.kbId as string || null
 }
 
-const CHAT_DROP_ROUTE_NAMES = new Set(['chat', 'globalCreatChat', 'kbCreatChat']);
+const CHAT_DROP_ROUTE_NAMES = new Set(['chat', 'globalCreatChat', 'kbCreatChat', 'chatWork', 'chatWorkCreat']);
+const KNOWLEDGE_DROP_ROUTE_NAMES = new Set(['knowledgeBaseDetail']);
+const GLOBAL_DROP_ROUTE_NAMES = new Set([...CHAT_DROP_ROUTE_NAMES, ...KNOWLEDGE_DROP_ROUTE_NAMES]);
 
 const isChatDropRoute = () => {
     return CHAT_DROP_ROUTE_NAMES.has(String(route.name || ''));
+}
+
+const isKnowledgeDropRoute = () => {
+    return KNOWLEDGE_DROP_ROUTE_NAMES.has(String(route.name || ''));
+}
+
+const isGlobalDropRoute = () => {
+    return GLOBAL_DROP_ROUTE_NAMES.has(String(route.name || ''));
 }
 
 const collectDroppedFiles = async (event: DragEvent): Promise<File[]> => {
@@ -187,6 +197,7 @@ const isFileDrag = (event: DragEvent): boolean => {
 const handleGlobalDragEnter = (event: DragEvent) => {
     if (!isFileDrag(event)) return;
     event.preventDefault();
+    if (!isGlobalDropRoute()) return;
     dragCounter++;
     if (event.dataTransfer) {
         event.dataTransfer.effectAllowed = 'all';
@@ -197,6 +208,7 @@ const handleGlobalDragEnter = (event: DragEvent) => {
 const handleGlobalDragOver = (event: DragEvent) => {
     if (!isFileDrag(event)) return;
     event.preventDefault();
+    if (!isGlobalDropRoute()) return;
     if (event.dataTransfer) {
         event.dataTransfer.dropEffect = 'copy';
     }
@@ -205,6 +217,7 @@ const handleGlobalDragOver = (event: DragEvent) => {
 const handleGlobalDragLeave = (event: DragEvent) => {
     if (!isFileDrag(event)) return;
     event.preventDefault();
+    if (!isGlobalDropRoute()) return;
     dragCounter--;
     if (dragCounter === 0) {
         ismask.value = false;
@@ -214,6 +227,7 @@ const handleGlobalDragLeave = (event: DragEvent) => {
 const handleGlobalDrop = async (event: DragEvent) => {
     if (!isFileDrag(event)) return;
     event.preventDefault();
+    if (!isGlobalDropRoute()) return;
     dragCounter = 0;
     ismask.value = false;
 
@@ -231,6 +245,8 @@ const handleGlobalDrop = async (event: DragEvent) => {
         return;
     }
     
+    if (!isKnowledgeDropRoute()) return;
+
     const isInitialized = await checkKnowledgeBaseInitialization();
     if (!isInitialized) {
         return;
@@ -241,12 +257,21 @@ const handleGlobalDrop = async (event: DragEvent) => {
     }));
 }
 
+// capture 阶段只负责关闭遮罩，业务分发仍交给本地上传区和冒泡兜底。
+const handleGlobalDropReset = (event: DragEvent) => {
+    if (!isFileDrag(event)) return;
+    dragCounter = 0;
+    ismask.value = false;
+}
+
 // 组件挂载时添加全局事件监听器
 onMounted(() => {
     document.addEventListener('dragenter', handleGlobalDragEnter, true);
     document.addEventListener('dragover', handleGlobalDragOver, true);
     document.addEventListener('dragleave', handleGlobalDragLeave, true);
-    document.addEventListener('drop', handleGlobalDrop, true);
+    // drop 使用冒泡监听，让本地上传区可先通过 stopPropagation 声明接管文件。
+    document.addEventListener('drop', handleGlobalDrop);
+    document.addEventListener('drop', handleGlobalDropReset, true);
     if (isWailsDesktop) {
         window.addEventListener('keydown', handleGlobalKeyDown);
         // @ts-ignore
@@ -281,7 +306,8 @@ onUnmounted(() => {
     document.removeEventListener('dragenter', handleGlobalDragEnter, true);
     document.removeEventListener('dragover', handleGlobalDragOver, true);
     document.removeEventListener('dragleave', handleGlobalDragLeave, true);
-    document.removeEventListener('drop', handleGlobalDrop, true);
+    document.removeEventListener('drop', handleGlobalDrop);
+    document.removeEventListener('drop', handleGlobalDropReset, true);
     if (isWailsDesktop) {
         window.removeEventListener('keydown', handleGlobalKeyDown);
         // @ts-ignore
@@ -400,6 +426,8 @@ onUnmounted(() => {
     width: 100%;
     height: 100%;
     z-index: 999;
+    /* 视觉提示不参与命中测试，确保本地上传区仍能拿到真实 drop 目标。 */
+    pointer-events: none;
     display: flex;
     justify-content: center;
     align-items: center;

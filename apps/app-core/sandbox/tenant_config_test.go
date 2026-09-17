@@ -703,6 +703,8 @@ func TestResolveEffectiveConfigUsesSkillSnapshotAsDockerImage(t *testing.T) {
 
 		require.NoError(t, err)
 		require.Equal(t, "weknora-skill/weknora-sk-cfg1-g1", eff.DockerImage)
+		require.Equal(t, "weknora/sandbox:base", eff.DockerImageFallback,
+			"daemon-local snapshots can disappear and must retain a safe boot target")
 	})
 
 	t.Run("fingerprint mismatch falls back to the base image", func(t *testing.T) {
@@ -719,6 +721,7 @@ func TestResolveEffectiveConfigUsesSkillSnapshotAsDockerImage(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, "weknora/sandbox:base", eff.DockerImage,
 			"a snapshot from another daemon is invisible; the session must still boot")
+		require.Equal(t, "weknora/sandbox:base", eff.DockerImageFallback)
 	})
 
 	// A blank host follows the environment, so binding the fingerprint to the

@@ -262,6 +262,9 @@ type Config struct {
 	// plays the same role as a Cube/E2B template ID.
 	DockerImage string
 
+	// DockerImageFallback 保存 skill 快照生效前的基础镜像，仅供快照丢失时回退。
+	DockerImageFallback string
+
 	// DockerHost is the daemon endpoint, in DOCKER_HOST form
 	// ("unix:///var/run/docker.sock", "tcp://10.0.0.5:2376"). Empty uses
 	// DefaultDockerHost.

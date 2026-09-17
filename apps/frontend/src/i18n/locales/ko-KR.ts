@@ -1,5 +1,37 @@
 export default {
 
+  mcpMetadata: {
+    searchTools: '도구 이름 또는 설명 검색',
+    retry: '다시 시도',
+    details: '상세',
+    description: '설명',
+    parameters: '매개변수',
+    required: '필수',
+    fullSchema: '전체 정의',
+    noDescription: '설명이 없습니다',
+    noParameters: '매개변수 정의가 없습니다',
+    enabled: '활성화',
+    approval: '승인 필요',
+    noTools: '일치하는 도구가 없습니다',
+    next: '다음',
+    policyLoadFailed: '도구 정책을 불러오지 못했습니다. 수정하기 전에 다시 시도하세요.',
+    policySaveFailed: '도구 설정을 저장하지 못했습니다',
+    tools: 'Tools 목록',
+    cacheHint: '아직 동기화되지 않았다면 이 단계에서 자동으로 연결해 저장합니다. 이후에는 새로 고침할 때만 MCP 서버에 연결합니다.',
+    refresh: 'Tools 새로 고침',
+    fetch: '다시 가져오기',
+    fetching: '연결해서 Tools를 가져오는 중…',
+    toolCount: '도구 {count}개',
+    stale: '연결 또는 인증 설정이 변경되었습니다. 모델이 사용하기 전에 목록을 새로 고치세요.',
+    notSynced: '아직 동기화되지 않았습니다. 가져오면 전체 설명과 매개변수 정의가 저장됩니다.',
+    syncedAt: '동기화 시간:',
+    serverDocumentation: '서버 원본 설명',
+    noServerDocumentation: '이 MCP 서버의 initialize 응답에 instructions / serverInfo.description이 없습니다(둘 다 선택 필드). 도구 설명은 아래 각 도구의 description에 있습니다.',
+    policyHint: '도구 활성화 및 승인 설정은 즉시 저장되며 목록을 새로 고쳐도 유지됩니다.',
+    failed: '도구 목록을 불러오지 못했습니다',
+    instructionsRequired: '사용 안내를 입력해 주세요',
+    previous: '이전'
+  },
   localBrowser: {
     pipOpen: "미리보기 팝업 열기",
     pipReturn: "대화 내 미리보기로 돌아가기",
@@ -293,7 +325,7 @@ export default {
     }
   },
   brand: {
-    name: '智能体中台2.0'
+    name: '智能体工作台'
   },
   platformApiKeys: {
     title: '플랫폼 API 키',
@@ -862,6 +894,14 @@ export default {
     }
   },
   datasource: {
+    prereqBarText_ima: '처음 사용하시나요? 클릭하여 Tencent IMA OpenAPI 설정 가이드를 확인하세요',
+    prereqStep1Brief_ima: 'IMA 에이전트 OpenAPI 액세스 활성화',
+    prereqStep1Desc_ima: 'https://ima.qq.com/agent-interface 에 로그인하여 OpenAPI 액세스를 신청하세요',
+    prereqStep2Brief_ima: 'ClientID 및 APIKey 획득',
+    prereqStep2Desc_ima: '에이전트 접속 페이지에서 ima-openapi-clientid 와 ima-openapi-apikey 자격 증명을 복사하세요',
+    prereqStep3Brief_ima: '대상 지식베이스에 자격 증명 권한 부여',
+    prereqStep3Desc_ima: 'IMA 클라이언트에서 동기화하려는 지식베이스에 대해 자격 증명을 승인하세요. 승인되지 않은 지식베이스는 목록에 나타나지 않습니다',
+    prereqOpenConsole_ima: 'Tencent IMA OpenAPI 콘솔로 이동',
     title: '데이터 소스 관리',
     description: '외부 데이터 소스를 구성하여 콘텐츠를 지식베이스에 자동 동기화',
     add: '데이터 소스 추가',
@@ -998,6 +1038,8 @@ export default {
       authHeadersHint: '비공개 피드 접근용. 한 줄에 하나씩 「이름: 값」 형식으로 입력하세요. 예: Authorization: Bearer xxxx'
     },
     connectorDesc: {
+      ima: 'Tencent IMA 지식베이스에서 문서, 노트 및 파일 동기화 (AI 세션과 동영상 분석은 지원되지 않음)',
+      gitlab: 'GitLab 프로젝트의 파일 동기화',
       feishu: '페이슈 위키에서 문서, 스프레드시트, 파일 동기화',
       lark: 'Lark 위키에서 문서, 스프레드시트, 파일 동기화',
       feishu_drive: "페이슈 드라이브 폴더에서 문서, 스프레드시트, 파일 동기화",
@@ -1007,6 +1049,8 @@ export default {
       rss: 'RSS / Atom 피드에서 글 동기화'
     },
     connector: {
+      ima: 'Tencent IMA',
+      gitlab: 'GitLab',
       feishu: '페이슈 (Feishu)',
       lark: 'Lark (Feishu 글로벌)',
       feishu_drive: "페이슈 드라이브",
@@ -1211,6 +1255,7 @@ export default {
       }
     },
     im: {
+      feishuAPIBaseURLHint: '선택 사항. 서버가 외부 인터넷에 직접 연결 가능하면 비워두세요. 프록시를 통해서만 접근 가능한 경우 역방향 프록시 URL(예: nginx, http://host:port)을 입력하세요. 내부 네트워크 주소는 SSRF_WHITELIST 환경 변수에 호스트명을 추가하세요.',
       title: 'IM 통합',
       description: '에이전트를 Feishu, Slack, Telegram, DingTalk, Mattermost, QQBot, Yunzhijia 등 인스턴트 메시징 플랫폼에 연결',
       descriptionRestricted: '에이전트를 기업 WeChat(WeCom), Feishu, DingTalk에 연결',
@@ -1376,6 +1421,7 @@ export default {
       effectiveEmpty: '사용 가능한 도구가 없어 일반 모델 대화로 동작합니다'
     },
     desc: {
+      maxTokensAgent: '각 추론 라운드에서 생성할 최대 토큰 수(도구 호출 JSON 포함). 「기본값」은 샌드박스 없으면 4096, 파일 쓰기/편집이 가능하면 24576입니다. 「사용자 지정」은 입력한 값을 그대로 저장합니다.',
       name: '에이전트를 쉽게 식별할 수 있는 이름을 설정하세요',
       description: '에이전트의 용도와 특징을 간단히 설명하세요',
       systemPrompt: '에이전트의 동작과 역할을 정의하는 사용자 정의 시스템 프롬프트',
@@ -1481,6 +1527,44 @@ export default {
     }
   },
   agentStream: {
+    mcp: {
+      listServers: 'MCP 서비스 목록',
+      listTools: 'MCP 도구 목록',
+      searchTools: 'MCP 도구 검색',
+      describeTool: '도구 정의 읽기',
+      showing: '{total}개 중 {count}개 표시',
+      moreAvailable: '결과가 더 있습니다',
+      empty: '표시할 항목이 없습니다',
+      parameters: '매개변수',
+      expand: '설명 펼치기',
+      collapse: '접기',
+      required: '필수',
+      fullSchema: '전체 매개변수 정의',
+      failed: 'MCP 작업 실패',
+      result: '실행 결과'
+    },
+    skillFiles: {
+      heading: '스킬 파일',
+      script: '스크립트',
+      instructions: '스킬 안내'
+    },
+    sandboxFiles: {
+      found: '파일 {count}개 발견',
+      empty: '파일 없음',
+      truncated: '목록이 잘림',
+      wrote: '씀',
+      replacements: '{count}곳 치환'
+    },
+    shellExec: {
+      workDir: '디렉터리',
+      exitCode: '종료 코드',
+      stdout: '표준 출력',
+      stderr: '표준 에러',
+      emptyOutput: '출력 없음',
+      truncated: '출력이 잘림',
+      killed: '시간 초과로 종료됨',
+      binarySuppressed: '바이너리 출력은 생략되었습니다. 파일은 산출물 디렉터리에 저장한 뒤 다운로드하세요.'
+    },
     saveToKb: {
       emptyContent: '현재 응답이 비어 있어 지식베이스에 저장할 수 없습니다',
       editorOpened: '편집기가 열렸습니다. 지식베이스를 선택한 후 저장하세요'
@@ -1778,6 +1862,9 @@ export default {
     }
   },
   preview: {
+    htmlRendered: '렌더링 미리보기',
+    htmlSource: '원본 보기',
+    videoNotSupported: '브라우저가 동영상 재생을 지원하지 않습니다',
     tab: '미리보기',
     loading: '문서 미리보기 로딩 중...',
     loadFailed: '문서 미리보기 로드 실패',
@@ -2217,6 +2304,9 @@ export default {
     }
   },
   modelSettings: {
+    usage: {
+      title: '모델을 삭제할 수 없습니다'
+    },
     title: '모델 설정',
     description: '다양한 유형의 AI 모델을 관리합니다. Ollama 로컬 모델과 원격 API를 지원합니다',
     copySuffix: ' 사본',
@@ -2540,6 +2630,7 @@ export default {
     close: '설정 닫기'
   },
   language: {
+    jaJP: '日本語',
     zhCN: '简体中文',
     enUS: 'English',
     ruRU: 'Русский',
@@ -2620,6 +2711,10 @@ export default {
       providerLabel: '프로바이더',
       providerPlaceholder: '모델 프로바이더 선택',
       providers: {
+        litellm: {
+          label: 'LiteLLM',
+          description: '자체 호스팅 프록시로 OpenAI, Anthropic, Gemini, Bedrock 등 100+ 공급자를 연결합니다. 플레이스홀더 URL을 실제 주소로 바꾸세요. localhost는 SSRF_WHITELIST에 추가해야 합니다.'
+        },
         novita: {
           label: 'Novita AI',
           description: 'moonshotai/kimi-k2.5, zai-org/glm-5, minimax/minimax-m2.7, qwen/qwen3-embedding-0.6b 등'
@@ -2887,6 +2982,45 @@ export default {
     graphDatabaseEngineDescription: '현재 사용 중인 그래프 데이터베이스 엔진',
     unknown: '알 수 없음',
     globalSettings: {
+      createUser: {
+        label: '사용자 생성',
+        description: '새 로컬 사용자 계정을 개설합니다. 플랫폼의 기본 공간 모드가 "개인 공간 자동 생성"으로 설정된 경우, 스스로 가입한 사용자와 마찬가지로 개인 공간도 함께 만들어집니다.',
+        action: '사용자 생성',
+        dialogTitle: '새 사용자 생성',
+        warning: '보안에 민감한 작업입니다. 새 사용자가 로그인할 때 사용할 사용자 이름과 이메일을 신중히 확인하세요.',
+        usernameLabel: '사용자 이름',
+        usernamePlaceholder: '2~50자',
+        emailLabel: '이메일',
+        emailPlaceholder: '올바른 이메일 주소를 입력하세요',
+        autoGenerateLabel: '무작위 비밀번호 자동 생성',
+        newPasswordLabel: '새 비밀번호',
+        newPasswordPlaceholder: '8~32자, 문자와 숫자 포함',
+        confirmPasswordLabel: '새 비밀번호 확인',
+        confirmPasswordPlaceholder: '새 비밀번호를 다시 입력',
+        confirmBtn: '사용자 생성',
+        success: '사용자가 생성되었습니다',
+        successIdempotent: '이미 존재하는 사용자입니다. 변경 사항이 없습니다',
+        missingPassword: '사용자는 생성되었지만 생성된 비밀번호가 반환되지 않았습니다. 비밀번호를 재설정해 접근을 복구하세요.',
+        failed: '사용자 생성 실패',
+        validation: {
+          usernameRequired: '사용자 이름을 입력하세요',
+          usernameLength: '사용자 이름은 2~50자여야 합니다',
+          emailRequired: '이메일을 입력하세요',
+          emailInvalid: '올바른 이메일 주소를 입력하세요',
+          confirmRequired: '새 비밀번호를 다시 입력하세요',
+          passwordMismatch: '비밀번호가 일치하지 않습니다'
+        },
+        generated: {
+          successTitle: '사용자가 생성되었습니다',
+          successBody: '이 사용자를 위한 무작위 비밀번호가 생성되었습니다. 이 비밀번호는 한 번만 표시됩니다.',
+          usernameLabel: '사용자 이름',
+          emailLabel: '이메일',
+          passwordLabel: '생성된 비밀번호',
+          copyBtn: '계정 정보 복사',
+          copySuccess: '계정 정보가 클립보드에 복사되었습니다',
+          acknowledgeBtn: '비밀번호를 저장했습니다'
+        }
+      },
       title: '시스템 설정',
       description: '플랫폼 전역 런타임 설정입니다. 저장하면 모든 워크스페이스에 즉시 적용됩니다. 시스템 관리자만 보고 수정할 수 있습니다.',
       loading: '로딩 중...',
@@ -2938,6 +3072,9 @@ export default {
           denied: '거부'
         },
         action: {
+          system: {
+            user_created: '사용자 생성'
+          },
           'system.setting_changed': '시스템 설정 변경',
           'system.admin_promoted': '시스템 관리자 부여',
           'system.api_key_created': '플랫폼 API 키 생성',
@@ -3067,6 +3204,9 @@ export default {
         }
       },
       keyDescriptions: {
+        sandbox: {
+          docker_enabled: 'Docker 샌드박스 백엔드를 허용할지 설정합니다. 로컬 docker.sock은 호스트 root와 같으므로 기본값은 꺼짐입니다. 시스템 관리자만 켤 수 있으며 저장 즉시 적용됩니다. 데몬 소켓을 마운트했거나 TLS가 있는 원격 tcp:// 를 쓰는 프라이빗 단일 노드에서만 켜세요.'
+        },
         model: {
           max_concurrency: '백그라운드 작업(문서 색인/보강)이 단일 모델에 대해 갖는 기본 동시 호출 상한이며, 모델 ID 기준으로 모든 복제본이 공유합니다. 매 호출마다 실시간으로 읽고 재시작 없이 즉시 적용됩니다. 0 또는 음수는 기본 상한을 해제합니다(각 모델은 모델 관리에서 설정한 자체 상한을 계속 준수함). 백그라운드 작업에만 영향을 주며 대화형 채팅에는 영향을 주지 않습니다.'
         },
@@ -3079,6 +3219,7 @@ export default {
           wiki_concurrency: '상위 작업과 분리된 전용 Wiki 워커 풀의 프로세스별 동시성입니다. 최소값은 1이며 적용하려면 서비스를 재시작해야 합니다.'
         },
         tenant: {
+          auto_accept_invitation: '켜면 워크스페이스 관리자가 이메일로 가입된 사용자를 초대할 때 상대가 바로 멤버가 되며, 받은편지함에서 수락할 필요가 없습니다. 끄면 「초대 발송 → 상대가 수락」 흐름을 유지합니다. 저장 즉시 적용됩니다.',
           max_owned_per_user: '슈퍼유저가 아닌 사용자가 셀프 서비스로 소유할 수 있는 최대 워크스페이스 수입니다. 워크스페이스 생성 시마다 읽으며 저장 즉시 적용됩니다. 0은 내장 기본값 10을 사용하고, 음수는 제한을 완전히 해제합니다(공개 배포에는 권장하지 않음).',
           self_service_creation_enabled: '비슈퍼유저가 공간을 직접 만들 수 있는지 설정합니다. 비활성화하면 일반 사용자는 초대로만 기존 공간에 참여할 수 있으며, 크로스 워크스페이스 슈퍼유저는 계속 만들 수 있습니다.',
           default_storage_quota_gb: '신규 워크스페이스 생성 시 기본으로 할당되는 저장 용량(GB)으로, 벡터·원본·텍스트·인덱스 등을 포함합니다. 생성 시에만 읽으며, 변경은 이후 생성되는 워크스페이스에만 적용되고 기존 워크스페이스에는 소급되지 않습니다. 0 또는 음수는 내장 기본값 10GB를 사용합니다.',
@@ -3088,11 +3229,15 @@ export default {
           whitelist: 'SSRF 보호 허용 목록입니다. example.com / *.foo.com / 10.0.0.0/8 / 2001:db8::1 형식을 입력할 수 있습니다. 저장 즉시 적용됩니다. SSRF_WHITELIST_EXTRA 환경 변수는 배포자가 관리하며 여기서 덮어쓰지 않습니다.'
         },
         auth: {
+          complex_password_enabled: '복잡한 비밀번호를 사용할지 여부입니다. 활성화하면 비밀번호에 대문자, 소문자, 숫자 및 특수 문자가 포함되어야 합니다. 변경 사항은 즉시 적용되며, 새로 가입하는 사용자 또는 비밀번호를 새로 변경하거나 재설정하는 경우에만 적용됩니다. 특수 문자는 다음을 포함합니다: {specialChars}',
           registration_mode: '셀프 가입 모드입니다. self_serve = 누구나 계정을 만들 수 있음; invite_only = 공개 가입을 끄고 Owner/Admin만 초대 가능. 저장 즉시 적용되며, self_serve는 스팸 가입이 들어올 수 있으니 신중히 사용하세요.',
           default_tenant_mode: '공개 가입 후 공간 초기화 정책입니다. create_personal은 개인 공간을 만들고 Owner를 부여하며, tenantless는 초대 수락 또는 직접 공간 생성 전까지 계정만 만듭니다.'
         }
       },
       keyLabels: {
+        sandbox: {
+          docker_enabled: 'Docker 샌드박스 사용'
+        },
         model: {
           max_concurrency: '모델 기본 동시 처리 상한'
         },
@@ -3105,6 +3250,7 @@ export default {
           wiki_concurrency: 'Wiki 워커 동시성'
         },
         tenant: {
+          auto_accept_invitation: '등록된 사용자 초대 시 자동 가입',
           max_owned_per_user: '사용자당 최대 워크스페이스 수',
           self_service_creation_enabled: '사용자 공간 직접 생성 허용',
           default_storage_quota_gb: '신규 워크스페이스 기본 저장 용량 (GB)',
@@ -3114,6 +3260,7 @@ export default {
           whitelist: 'SSRF 보호 허용 목록'
         },
         auth: {
+          complex_password_enabled: '복잡한 비밀번호 사용',
           registration_mode: '셀프 가입 모드',
           default_tenant_mode: '기본 공간 프로비저닝'
         }
@@ -3496,6 +3643,45 @@ export default {
     }
   },
   chat: {
+    memoryUsedCount: '기억 {count}개를 참고했습니다',
+    memoryForget: '이 기억 삭제',
+    memoryForgotten: '기억을 삭제했습니다',
+    memoryForgetFailed: '삭제 실패',
+    memoryHint: '이 답변이 참고한 장기 기억입니다. 삭제하면 다시 사용되지 않습니다.',
+    conversationTime: {
+      today: '오늘 {time}',
+      yesterday: '어제 {time}',
+      thisYear: '{month}월 {day}일 {time}',
+      otherYear: '{year}년 {month}월 {day}일 {time}'
+    },
+    sandbox: {
+      panelTitle: '샌드박스',
+      tabArtifacts: '파일',
+      tabTerminal: '터미널',
+      tabDesktop: '데스크톱',
+      artifactsEmpty: '이 대화에서 생성된 파일이 없습니다',
+      artifactScope: '파일 범위',
+      artifactsCurrent: '이번 응답',
+      artifactsAll: '전체',
+      artifactsSearch: '파일 이름 검색',
+      artifactsNoMatches: '일치하는 파일이 없습니다',
+      desktopPlaceholder: '데스크톱 시각화는 곧 지원될 예정입니다',
+      paused: '이 대화의 샌드박스가 일시 중지되었습니다. 터미널을 시작하면 다시 시작됩니다.',
+      start: '터미널 시작',
+      connecting: '샌드박스에 연결하는 중…',
+      needsProvision: '이 대화에는 실행 중인 샌드박스가 없습니다. 생성하고 시작하면 새 샌드박스가 만들어지며 워크스페이스 설정에 따라 요금이 부과됩니다.',
+      createAndStart: '생성 후 시작',
+      noSandbox: '아직 샌드박스가 없고 현재 에이전트에 샌드박스 백엔드가 구성되지 않아 만들 위치를 정할 수 없습니다. 샌드박스가 구성된 에이전트로 전환하거나 코드 실행이 필요한 메시지를 보내세요.',
+      unsupported: '현재 샌드박스 백엔드는 대화형 터미널을 지원하지 않습니다',
+      disconnected: '연결이 끊어졌습니다',
+      retry: '다시 연결',
+      sessionEnded: '터미널 세션이 종료되었습니다',
+      idleDisconnected: '터미널이 유휴 상태로 연결이 끊어졌습니다. 샌드박스는 TTL에 따라 일시 중지됩니다. 다시 연결할 수 있습니다.',
+      authRevoked: '로그인 상태가 더 이상 유효하지 않아 터미널 연결이 끊어졌습니다. 다시 로그인한 뒤 재연결하세요.'
+    },
+    questionMinimapTitle: '질문',
+    questionMinimapAriaLabel: '질문 목차',
+    questionMinimapAttachmentPlaceholder: '(첨부)',
     suggestedQuestions: '이렇게 물어보세요',
     followUpQuestions: '이어서 질문',
     followUpQuestionsLoading: '추천 질문 로딩 중',
@@ -3831,6 +4017,11 @@ export default {
       downloadExampleExcel: 'Excel 예시 다운로드'
     },
     faq: {
+      statusEnableSuccess: 'FAQ 항목이 활성화되었습니다',
+      batchEnable: '일괄 활성화',
+      batchDisable: '일괄 비활성화',
+      batchDelete: '일괄 삭제',
+      confirmBatchDelete: '선택한 FAQ 항목 {count}개를 삭제하시겠습니까? 삭제 후에는 복구할 수 없습니다.',
       title: 'Q&A',
       subtitle: '구조화된 Q&A 관리, 표준 질문, 유사 질문, 반례를 지원하여 사용자 쿼리를 정확하게 매칭하고 Q&A 정확도를 향상시킵니다',
       description: 'FAQ 지식베이스의 인덱스 전략 및 Q&A 구성 방식 설정',
@@ -4915,7 +5106,7 @@ export default {
     }
   },
   createChat: {
-    title: '안녕하세요, @:{\'brand.name\'}입니다',
+    title: '안녕하세요! 오늘은 무엇을 이야기해볼까요?',
     newSessionTitle: '새 세션',
     messages: {
       createFailed: '세션 생성 실패',
@@ -5080,6 +5271,12 @@ export default {
     noCompatibleKbForAgent: '현재 에이전트의 도구와 범위 내 지식베이스의 기능이 일치하지 않아 참조할 수 있는 지식베이스가 없습니다.'
   },
   common: {
+    copySuccess: '복사되었습니다',
+    loadMore: '더 보기',
+    createSuccess: '생성 성공',
+    updateSuccess: '업데이트 성공',
+    operationFailed: '작업 실패',
+    avatar: '아바타',
     add: '추가',
     me: '나',
     confirm: '확인',
@@ -5139,6 +5336,9 @@ export default {
     }
   },
   auth: {
+    passwordMustContainLowercaseLetter: '비밀번호에는 소문자가 포함되어야 합니다',
+    passwordMustContainUppercaseLetter: '비밀번호에는 대문자가 포함되어야 합니다',
+    passwordMustContainSpecialChar: '비밀번호에는 특수문자가 포함되어야 합니다: {specialChars}',
     login: '로그인',
     logout: '로그아웃',
     oidcLogin: 'OIDC로 로그인',
@@ -5185,6 +5385,8 @@ export default {
     loginErrorRetry: '로그인 오류, 나중에 다시 시도해주세요',
     registerError: '가입 오류, 나중에 다시 시도해주세요',
     workspaceOnboarding: {
+      description: '작업 공간을 만들어 시작하거나 기존 작업 공간의 초대를 수락하세요.',
+      help: '지금 작업 공간을 만들거나 나중에 돌아와 초대를 수락할 수 있습니다.',
       title: '테넌트 선택',
       create: '테넌트 만들기',
       invitations: '초대 보기',
@@ -5198,6 +5400,8 @@ export default {
     }
   },
   inviteRegister: {
+    bannerHintLogin: '로그인하면 자동으로 팀에 합류됩니다.',
+    joined: '팀에 합류했습니다.',
     bannerTitle: '「{tenant}」에 초대되었습니다',
     bannerHint: '아래 정보를 입력해 가입을 완료하세요. 등록이 끝나면 자동으로 팀에 합류합니다.',
     loading: '초대 링크를 확인하는 중…',
@@ -6132,6 +6336,18 @@ export default {
     }
   },
   agent: {
+    artifactDrawer: {
+      buttonTitle: '이 응답에서 생성된 파일 보기',
+      title: '생성된 파일',
+      empty: '이번 회차에서 다운로드 가능한 파일이 없습니다.',
+      preview: '미리보기',
+      previewBack: '목록으로',
+      collecting: '생성된 파일을 저장하는 중…',
+      download: '다운로드',
+      downloadFailed: '다운로드에 실패했습니다. 다시 시도해 주세요.',
+      inlinePreviewHint: '클릭하여 미리보기',
+      inlineMissing: '파일을 사용할 수 없습니다'
+    },
     taskLabel: '작업:',
     think: '사고',
     copy: '복사',
@@ -6761,6 +6977,8 @@ export default {
     }
   },
   knowledgeBase: {
+    deletePending: '삭제가 아직 완료되지 않았습니다. 잠시 후 새로고침하여 결과를 확인하세요.',
+    deleteTaskFailed: '삭제에 실패했습니다. 문서의 오류 세부 정보를 확인한 후 다시 시도하세요.',
     title: '지식베이스',
     fileContent: '파일 내용',
     name: '이름',

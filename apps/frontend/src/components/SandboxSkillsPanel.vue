@@ -1368,7 +1368,9 @@ function onFileInputChange(event: Event) {
 function onFileDrop(event: DragEvent) {
   if (installBusy.value) return
   const file = event.dataTransfer?.files?.[0]
-  if (file) void uploadFile(file)
+  if (!file) return
+  event.stopPropagation()
+  void uploadFile(file)
 }
 
 async function toggleEnabled(skill: ConfigSkill, enabled: boolean) {

@@ -1244,9 +1244,10 @@ func buildSessionCreateRequest(provider RemoteProvider, cfg *Config) (RemoteCrea
 		// DockerRemoteClient.networkMode); the allow / deny lists are
 		// rejected at save time so they cannot arrive here.
 		return RemoteCreateRequest{
-			TemplateID: cfg.DockerImage,
-			EnvVars:    envVars,
-			Network:    cfg.Network,
+			TemplateID:         cfg.DockerImage,
+			FallbackTemplateID: cfg.DockerImageFallback,
+			EnvVars:            envVars,
+			Network:            cfg.Network,
 			Timeout: RemoteTimeoutPolicy{
 				Mode:  RemoteTimeoutExplicit,
 				Value: ttl,

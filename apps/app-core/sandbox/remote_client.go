@@ -106,6 +106,10 @@ type RemoteCreateRequest struct {
 	// TemplateID references the pre-baked sandbox template. Required.
 	TemplateID string
 
+	// FallbackTemplateID 是 Docker skill 快照丢失时的基础镜像回退项。
+	// 该字段属于内部创建参数，Cube/E2B 适配器不会读取它。
+	FallbackTemplateID string
+
 	// Timeout controls the idle-timeout policy.
 	Timeout RemoteTimeoutPolicy
 

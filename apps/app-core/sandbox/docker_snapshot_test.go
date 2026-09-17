@@ -181,6 +181,23 @@ func TestDockerCreateDoesNotPullAMissingSkillSnapshot(t *testing.T) {
 		"a local commit must not be fetched from a registry")
 }
 
+func TestDockerCreateFallsBackToBaseImageWhenSkillSnapshotIsMissing(t *testing.T) {
+	engine := newFakeDockerEngine()
+	docker := newTestDockerClient(t, engine)
+
+	handle, err := docker.Create(context.Background(), RemoteCreateRequest{
+		TemplateID:         "weknora-skill/weknora-sk-cfg1-g1",
+		FallbackTemplateID: "weknora/sandbox:test",
+	})
+
+	require.NoError(t, err)
+	require.Equal(t, "container-1", handle.ID())
+	require.Equal(t, []string{"weknora/sandbox:test"}, engine.pulled,
+		"only the base image may be pulled; the snapshot is daemon-local")
+	require.Len(t, engine.created, 1)
+	require.Equal(t, "weknora/sandbox:test", engine.created[0].Image)
+}
+
 func TestDockerSanitizeImageName(t *testing.T) {
 	require.Equal(t, "weknora-sk-cfg1-g1", dockerSanitizeImageName("weknora-sk-cfg1-g1"))
 	require.Equal(t, "abc-def", dockerSanitizeImageName("ABC_DEF"))

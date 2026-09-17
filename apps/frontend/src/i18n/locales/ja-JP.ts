@@ -1,4 +1,7 @@
 export default {
+  brand: {
+    name: '智能体工作台'
+  },
   localBrowser: {
     pipOpen: "プレビューを別ウィンドウで表示",
     pipReturn: "会話内のプレビューに戻す",
@@ -2610,7 +2613,7 @@ export default {
     goToAgentSettings: 'エージェント設定に移動'
   },
   createChat: {
-    title: 'こんにちは、プラットフォームです。あなたのナレッジを、すぐそばに',
+    title: 'やあ！今日は何について話しましょうか？',
     newSessionTitle: '新しいセッション',
     messages: {
       createFailed: 'セッションの作成に失敗しました',

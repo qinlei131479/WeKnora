@@ -25,7 +25,7 @@
       <div ref="conversationToolChartRef" class="chart" />
       <t-divider />
       <h4>{{ $t('dashboard.agents.topPerformers') }}</h4>
-      <t-table :data="topPerformers" :columns="performerColumns" size="small" :pagination="false" row-key="agent_id">
+      <t-table :data="topPerformers" :columns="performerColumns" size="small" row-key="agent_id">
         <template #rank="{ rowIndex }">
           <span class="rank-number" :class="{ featured: rowIndex < 3 }">{{ rowIndex + 1 }}</span>
         </template>

@@ -1068,7 +1068,9 @@ function onFileInputChange(event: Event) {
 function onFileDrop(event: DragEvent) {
   if (addBusy.value || registeredCatalog.value) return
   const file = event.dataTransfer?.files?.[0]
-  if (file) acceptPendingFile(file)
+  if (!file) return
+  event.stopPropagation()
+  acceptPendingFile(file)
 }
 
 function onInstallDrawerConfirm() {

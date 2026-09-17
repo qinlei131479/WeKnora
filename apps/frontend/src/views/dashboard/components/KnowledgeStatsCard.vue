@@ -7,7 +7,7 @@
       <div class="stat-row">
         <t-statistic class="stat-info" :title="$t('dashboard.knowledge.total')" :value="knowledgeStats?.total_databases || 0" :suffix="$t('dashboard.knowledge.unit')" />
         <t-statistic class="stat-success" :title="$t('dashboard.knowledge.files')" :value="knowledgeStats?.total_files || 0" :suffix="$t('dashboard.knowledge.unit')" />
-        <t-statistic class="stat-warning" :title="$t('dashboard.knowledge.storage')" :value="formattedStorageSize" />
+        <t-statistic class="stat-warning" :title="$t('dashboard.knowledge.storage')" :value="storageDisplaySize" :decimal-places="storageSizeDecimalPlaces" :unit="storageSizeUnit" />
       </div>
       <t-divider />
       <h4>{{ $t('dashboard.knowledge.fileTypes') }}</h4>
@@ -50,13 +50,26 @@ const totalFiles = ref(0)
 const currentCarouselIndex = ref(0)
 let carouselTimer: ReturnType<typeof setInterval> | null = null
 
-const formattedStorageSize = computed(() => {
-  const size = props.knowledgeStats?.total_storage_size || 0
-  if (size < 1024) return `${size} B`
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(2)} KB`
-  if (size < 1024 * 1024 * 1024) return `${(size / (1024 * 1024)).toFixed(2)} MB`
-  return `${(size / (1024 * 1024 * 1024)).toFixed(2)} GB`
+const storageSize = computed(() => {
+  const size = Number(props.knowledgeStats?.total_storage_size || 0)
+  return Number.isFinite(size) && size > 0 ? size : 0
 })
+
+const storageSizeUnit = computed(() => {
+  if (storageSize.value < 1024) return 'B'
+  if (storageSize.value < 1024 * 1024) return 'KB'
+  if (storageSize.value < 1024 * 1024 * 1024) return 'MB'
+  return 'GB'
+})
+
+const storageDisplaySize = computed(() => {
+  if (storageSizeUnit.value === 'KB') return storageSize.value / 1024
+  if (storageSizeUnit.value === 'MB') return storageSize.value / (1024 * 1024)
+  if (storageSizeUnit.value === 'GB') return storageSize.value / (1024 * 1024 * 1024)
+  return storageSize.value
+})
+
+const storageSizeDecimalPlaces = computed(() => (storageSize.value < 1024 ? 0 : 2))
 
 const stopCarousel = () => {
   if (carouselTimer) {
@@ -159,6 +172,11 @@ onUnmounted(cleanup)
 .stat-info :deep(.t-statistic-content-value) { color: var(--color-info-500); }
 .stat-success :deep(.t-statistic-content-value) { color: var(--color-success-500); }
 .stat-warning :deep(.t-statistic-content-value) { color: var(--color-warning-500); }
+.stat-warning :deep(.t-statistic-content-unit) {
+  color: var(--color-warning-500);
+  font-size: var(--td-font-size-headline-medium);
+  line-height: var(--td-line-height-headline-medium);
+}
 .donut { position: relative; }
 .carousel-info {
   position: absolute;

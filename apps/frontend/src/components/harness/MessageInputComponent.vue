@@ -1143,12 +1143,21 @@ const handleDragLeave = (e) => {
 const handleDrop = (e) => {
   if (!hasTransferFiles(e.dataTransfer)) return
   e.preventDefault()
-  e.stopPropagation()
   isDraggingFiles.value = false
   if (!canAcceptUploadFiles()) return
   const files = Array.from(e.dataTransfer?.files || [])
   if (!files.length) return
+  e.stopPropagation()
 
+  emit('drop-files', files)
+}
+
+const CHAT_FILE_DROP_EVENT = 'weknora:chat-file-drop'
+
+// 全局拖拽兜底事件仅接收输入区外部的文件，输入区自身的事件已就地处理。
+const handleWindowChatFileDrop = (event) => {
+  const files = event.detail?.files
+  if (!files?.length || !canAcceptUploadFiles()) return
   emit('drop-files', files)
 }
 
@@ -1251,6 +1260,7 @@ watch(inputValue, (value) => {
 
 onMounted(() => {
   document.addEventListener('click', closeMentionPopup)
+  window.addEventListener(CHAT_FILE_DROP_EVENT, handleWindowChatFileDrop)
   nextTick(() => {
     if (inputRef.value) {
       renderEditorContent(inputValue.value || '')
@@ -1268,6 +1278,7 @@ onBeforeUnmount(() => {
   }
   isDraggingFiles.value = false
   document.removeEventListener('click', closeMentionPopup)
+  window.removeEventListener(CHAT_FILE_DROP_EVENT, handleWindowChatFileDrop)
 })
 
 // 公开方法供父组件调用

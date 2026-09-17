@@ -11,7 +11,7 @@
       <div class="detail-title-area">
         <div class="detail-icon">{{ server?.icon || '🔌' }}</div>
         <div class="detail-title-text">
-          <h2>{{ server?.name || name }}</h2>
+          <h2>{{ server?.name || slug }}</h2>
           <span class="detail-subtitle">{{ server?.transport || '' }}</span>
         </div>
       </div>

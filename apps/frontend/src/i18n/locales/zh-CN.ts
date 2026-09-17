@@ -1,5 +1,37 @@
 export default {
 
+  mcpMetadata: {
+    searchTools: '搜索工具名称或描述',
+    retry: '重试',
+    details: '详情',
+    description: '描述',
+    parameters: '参数',
+    required: '必填',
+    fullSchema: '完整定义',
+    noDescription: '没有描述',
+    noParameters: '没有参数定义',
+    enabled: '启用工具',
+    approval: '调用需审批',
+    noTools: '没有匹配的工具',
+    next: '下一页',
+    policyLoadFailed: '工具策略读取失败，请重试后再修改。',
+    policySaveFailed: '工具设置保存失败',
+    tools: 'Tools 清单',
+    cacheHint: '尚未同步时会自动连接并保存完整描述；之后只在刷新时访问 MCP 服务。',
+    refresh: '刷新 Tools',
+    fetch: '重新拉取',
+    fetching: '正在连接并拉取 Tools…',
+    toolCount: '{count} 个工具',
+    stale: '连接或认证配置已改变。以下是旧目录，重新同步后才能供模型使用。',
+    notSynced: '尚未同步工具。连接并拉取后，会保存完整描述和参数定义。',
+    syncedAt: '同步时间：',
+    serverDocumentation: '服务端原始说明',
+    noServerDocumentation: '该 MCP Server 的 initialize 未返回 instructions / serverInfo.description（均为可选字段）。工具说明在下方各工具的 description 里。',
+    policyHint: '工具开关与审批设置即时保存；刷新目录不会覆盖这些设置。',
+    failed: '工具目录读取失败',
+    instructionsRequired: '使用说明不能为空',
+    previous: '上一步'
+  },
   localBrowser: {
     pipOpen: "弹出悬浮窗",
     pipReturn: "返回对话小窗",
@@ -293,7 +325,7 @@ export default {
     }
   },
   brand: {
-    name: '智能体中台2.0'
+    name: '智能体工作台'
   },
   platformApiKeys: {
     title: '平台 API Key',
@@ -862,6 +894,14 @@ export default {
     }
   },
   datasource: {
+    prereqBarText_ima: '首次使用？点击查看腾讯 IMA OpenAPI 授权指引',
+    prereqStep1Brief_ima: '开通 IMA 智能体接入',
+    prereqStep1Desc_ima: '登录 https://ima.qq.com/agent-interface 并申请 OpenAPI 接入',
+    prereqStep2Brief_ima: '获取 ClientID 与 APIKey',
+    prereqStep2Desc_ima: '在智能体接入页复制 ima-openapi-clientid 与 ima-openapi-apikey 两个凭证',
+    prereqStep3Brief_ima: '授权目标知识库',
+    prereqStep3Desc_ima: '在 IMA 客户端为该凭证授权需要同步的知识库，未授权的知识库不会出现在列表中',
+    prereqOpenConsole_ima: '前往 IMA OpenAPI 控制台',
     title: '数据源管理',
     description: '配置外部数据源，自动同步内容到知识库',
     add: '添加数据源',
@@ -998,6 +1038,8 @@ export default {
       authHeadersHint: '用于访问私有订阅源，每行一个，格式为「名称: 值」，例如 Authorization: Bearer xxxx'
     },
     connectorDesc: {
+      ima: '同步腾讯 IMA 知识库中的文档、笔记与文件（暂不支持 AI 会话与视频解析）',
+      gitlab: '同步 GitLab 项目中的文件',
       feishu: '同步飞书知识库中的文档、表格、文件',
       lark: '同步 Lark 知识库中的文档、表格、文件（飞书国际版）',
       feishu_drive: "同步飞书云盘文件夹中的文档、表格、文件",
@@ -1007,6 +1049,8 @@ export default {
       rss: '同步 RSS / Atom 订阅源中的文章'
     },
     connector: {
+      ima: '腾讯 IMA',
+      gitlab: 'GitLab',
       feishu: '飞书',
       lark: 'Lark（飞书国际版）',
       feishu_drive: "飞书云盘",
@@ -1211,6 +1255,7 @@ export default {
       }
     },
     im: {
+      feishuAPIBaseURLHint: '可选。若服务器能直连外网则留空；若需通过代理才能访问飞书，填写反向代理地址（如 nginx，http://host:port）。内网地址需将域名加入 SSRF_WHITELIST 环境变量',
       title: 'IM 集成',
       description: '将智能体接入即时通讯平台，支持企业微信、飞书、Slack、Telegram、钉钉、Mattermost、微信、QQBot 和云之家',
       descriptionRestricted: '将智能体接入即时通讯平台，支持企业微信、飞书和钉钉',
@@ -1376,6 +1421,7 @@ export default {
       effectiveEmpty: '当前没有可用工具，智能体将退化为纯模型问答'
     },
     desc: {
+      maxTokensAgent: '每一轮推理的最大生成 Token（含工具调用 JSON）。选「默认」时，未绑沙箱为 4096，绑了沙箱（可写/改文件）为 24576。选「自定义」后按你填的数保存，不再自动改。',
       name: '为智能体设置一个易于识别的名称',
       description: '简要描述智能体的用途和特点',
       systemPrompt: '自定义系统提示词，定义智能体的行为和角色',
@@ -1481,6 +1527,44 @@ export default {
     }
   },
   agentStream: {
+    mcp: {
+      listServers: '查看 MCP 服务',
+      listTools: '查看 MCP 工具',
+      searchTools: '搜索 MCP 工具',
+      describeTool: '读取工具定义',
+      showing: '已显示 {count} / {total} 项',
+      moreAvailable: '还有更多结果',
+      empty: '没有可显示的项',
+      parameters: '参数',
+      expand: '展开说明',
+      collapse: '收起',
+      required: '必填',
+      fullSchema: '完整参数定义',
+      failed: 'MCP 操作失败',
+      result: '执行结果'
+    },
+    skillFiles: {
+      heading: '技能文件',
+      script: '脚本',
+      instructions: '技能说明'
+    },
+    sandboxFiles: {
+      found: '找到 {count} 个文件',
+      empty: '暂无文件',
+      truncated: '列表已截断',
+      wrote: '已写入',
+      replacements: '替换 {count} 处'
+    },
+    shellExec: {
+      workDir: '目录',
+      exitCode: '退出码',
+      stdout: '标准输出',
+      stderr: '标准错误',
+      emptyOutput: '无输出',
+      truncated: '输出已截断',
+      killed: '已超时终止',
+      binarySuppressed: '二进制输出已省略，请将文件写入产物目录后下载'
+    },
     saveToKb: {
       emptyContent: '当前回答为空，无法保存到知识库',
       editorOpened: '已打开编辑器，请选择知识库后保存'
@@ -1778,6 +1862,9 @@ export default {
     }
   },
   preview: {
+    htmlRendered: '渲染预览',
+    htmlSource: '查看源码',
+    videoNotSupported: '您的浏览器不支持视频播放',
     tab: '预览',
     loading: '正在加载文档预览...',
     loadFailed: '加载文档预览失败',
@@ -2217,6 +2304,9 @@ export default {
     }
   },
   modelSettings: {
+    usage: {
+      title: '模型无法删除'
+    },
     title: '模型配置',
     description: '管理不同类型的 AI 模型，支持 Ollama 本地模型和远程 API',
     copySuffix: ' 副本',
@@ -2540,6 +2630,7 @@ export default {
     close: '关闭设置'
   },
   language: {
+    jaJP: '日本語',
     zhCN: '简体中文',
     enUS: 'English',
     ruRU: 'Русский',
@@ -2620,6 +2711,10 @@ export default {
       providerLabel: '服务商',
       providerPlaceholder: '选择模型服务商',
       providers: {
+        litellm: {
+          label: 'LiteLLM',
+          description: '自托管代理，统一接入 OpenAI、Anthropic、Gemini、Bedrock 等 100+ 厂商。请将占位 URL 换成可访问地址；localhost 需加入 SSRF_WHITELIST。'
+        },
         novita: {
           label: 'Novita AI',
           description: 'moonshotai/kimi-k2.5, zai-org/glm-5, minimax/minimax-m2.7, qwen/qwen3-embedding-0.6b 等'
@@ -2887,6 +2982,45 @@ export default {
     graphDatabaseEngineDescription: '当前使用的图数据库引擎',
     unknown: '未知',
     globalSettings: {
+      createUser: {
+        label: '创建用户',
+        description: '开通一个新的本地用户账号。如果平台的默认空间模式设置为「自动创建个人空间」，该用户会像自助注册的用户一样，同时获得一个个人空间。',
+        action: '创建用户',
+        dialogTitle: '创建新用户',
+        warning: '这是高风险操作。请仔细核对用户名和邮箱——它们将作为该用户登录的唯一凭据。',
+        usernameLabel: '用户名',
+        usernamePlaceholder: '2-50 个字符',
+        emailLabel: '邮箱',
+        emailPlaceholder: '请输入有效的邮箱地址',
+        autoGenerateLabel: '自动生成随机密码',
+        newPasswordLabel: '新密码',
+        newPasswordPlaceholder: '8-32 个字符，包含字母和数字',
+        confirmPasswordLabel: '确认新密码',
+        confirmPasswordPlaceholder: '再次输入新密码',
+        confirmBtn: '创建用户',
+        success: '用户已创建',
+        successIdempotent: '用户已存在，未做任何更改',
+        missingPassword: '用户已创建，但未返回生成的密码。请使用重置密码来恢复访问。',
+        failed: '创建用户失败',
+        validation: {
+          usernameRequired: '请输入用户名',
+          usernameLength: '用户名长度必须为 2-50 个字符',
+          emailRequired: '请输入邮箱',
+          emailInvalid: '请输入有效的邮箱地址',
+          confirmRequired: '请再次输入新密码',
+          passwordMismatch: '两次输入的密码不一致'
+        },
+        generated: {
+          successTitle: '用户已创建',
+          successBody: '已为该用户生成一个随机密码。此密码只会显示一次。',
+          usernameLabel: '用户名',
+          emailLabel: '邮箱',
+          passwordLabel: '生成的密码',
+          copyBtn: '复制账号信息',
+          copySuccess: '账号信息已复制到剪贴板',
+          acknowledgeBtn: '我已保存密码'
+        }
+      },
       title: '系统设置',
       description: '平台级运行时配置，保存后立即对所有租户生效。仅系统管理员可见可改。',
       loading: '加载中...',
@@ -2938,6 +3072,9 @@ export default {
           denied: '拒绝'
         },
         action: {
+          system: {
+            user_created: '创建用户'
+          },
           'system.setting_changed': '系统设置变更',
           'system.admin_promoted': '授予系统管理员',
           'system.api_key_created': '创建平台 API Key',
@@ -3067,6 +3204,9 @@ export default {
         }
       },
       keyDescriptions: {
+        sandbox: {
+          docker_enabled: '是否允许 Docker 沙箱后端。本机 docker.sock 等同宿主机 root，默认关闭。仅系统管理员可打开；打开后立即生效，无需重启。私有化单机且已挂载 daemon socket，或配置了带 TLS 的远程 tcp:// 时再启用。'
+        },
         model: {
           max_concurrency: '后台任务（文档入库/富化）对单个模型的默认并发上限，按模型 ID 全副本共享。每次调用实时读取，修改后立即生效、无需重启。0 或负数表示关闭默认限制（各模型仍会尊重自身在模型管理里配置的上限）。仅影响后台任务，不影响交互式对话。'
         },
@@ -3079,6 +3219,7 @@ export default {
           wiki_concurrency: '每个服务实例的 Wiki 专用 Worker 并发数，与上游任务池相互隔离。最小值为 1；修改后需重启服务进程方可生效。'
         },
         tenant: {
+          auto_accept_invitation: '开启后，空间管理员通过邮箱邀请已注册用户时，对方会立即成为成员，不再经过收件箱确认。关闭时保持「发出邀请 → 被邀请人确认」流程。修改后立即生效。',
           max_owned_per_user: '每个非超管用户通过自助创建可拥有的最大租户数。每次创建租户时实时读取，修改后立即生效。0 表示使用内置默认值 10；负数表示完全关闭限制（不建议在公开部署使用）。',
           self_service_creation_enabled: '是否允许非超管用户主动创建租户。关闭后，普通用户只能通过邀请加入已有租户；跨租户超管仍可创建。修改后立即生效。',
           default_storage_quota_gb: '新建租户时默认分配的存储配额（GB），包含向量、原文、文本、索引等。仅在创建时读取，修改后只对之后新建的租户生效，不会回写已存在的租户。0 或负数表示使用内置默认值 10GB。',
@@ -3088,11 +3229,15 @@ export default {
           whitelist: 'SSRF 防护白名单。可填入 example.com / *.foo.com / 10.0.0.0/8 / 2001:db8::1。修改后立即生效。SSRF_WHITELIST_EXTRA 环境变量仍由部署方维护，不在此处覆盖。'
         },
         auth: {
+          complex_password_enabled: '是否启用复杂密码。开启后密码必须包含大小写字母、数字和特殊字符。修改后立即生效，只影响新注册用户或新密码修改/重置操作。特殊字符包含：{specialChars}',
           registration_mode: '自助注册模式。self_serve = 任何人可注册账号；invite_only = 关闭公网注册，仅 Owner/Admin 可邀请。修改后立即生效，但谨慎对待 self_serve（公网会接受 spam）。',
           default_tenant_mode: '公开注册后的租户初始化策略。create_personal 会自动创建个人租户并授予 Owner；tenantless 仅创建账户，用户需要接受邀请或主动创建租户。只影响之后注册的用户。'
         }
       },
       keyLabels: {
+        sandbox: {
+          docker_enabled: '启用 Docker 沙箱'
+        },
         model: {
           max_concurrency: '模型默认并发上限'
         },
@@ -3105,6 +3250,7 @@ export default {
           wiki_concurrency: 'Wiki Worker 并发数'
         },
         tenant: {
+          auto_accept_invitation: '邀请已注册用户时自动加入',
           max_owned_per_user: '每用户最大租户数',
           self_service_creation_enabled: '允许用户自助创建租户',
           default_storage_quota_gb: '新租户默认存储配额 (GB)',
@@ -3114,6 +3260,7 @@ export default {
           whitelist: 'SSRF 防护白名单'
         },
         auth: {
+          complex_password_enabled: '启用复杂密码',
           registration_mode: '自助注册模式',
           default_tenant_mode: '注册默认租户策略'
         }
@@ -3496,6 +3643,45 @@ export default {
     }
   },
   chat: {
+    memoryUsedCount: '本次使用了 {count} 条记忆',
+    memoryForget: '删除这条记忆',
+    memoryForgotten: '已删除这条记忆',
+    memoryForgetFailed: '删除失败',
+    memoryHint: '这些是助手在回答时看到的长期记忆，删除后不会再被使用。',
+    conversationTime: {
+      today: '今天 {time}',
+      yesterday: '昨天 {time}',
+      thisYear: '{month}月{day}日 {time}',
+      otherYear: '{year}年{month}月{day}日 {time}'
+    },
+    sandbox: {
+      panelTitle: '沙箱可视化',
+      tabArtifacts: '产物',
+      tabTerminal: '终端',
+      tabDesktop: '桌面',
+      artifactsEmpty: '本会话尚未生成可下载的文件',
+      artifactScope: '产物范围',
+      artifactsCurrent: '本轮',
+      artifactsAll: '全部',
+      artifactsSearch: '搜索文件名',
+      artifactsNoMatches: '没有匹配的文件',
+      desktopPlaceholder: '桌面可视化即将支持',
+      paused: '本会话的沙箱已暂停。启动终端会唤醒它。',
+      start: '启动终端',
+      connecting: '正在连接沙箱…',
+      needsProvision: '本会话当前没有运行中的沙箱环境。创建并启动会新建一个沙箱，并按工作区配置计费。',
+      createAndStart: '创建并启动',
+      noSandbox: '会话尚未创建沙箱，且当前智能体未配置沙箱后端，无法确定在哪个后端创建。请切换到配置了沙箱的智能体，或发送一条需要执行代码的消息。',
+      unsupported: '当前沙箱后端不支持交互终端',
+      disconnected: '连接已断开',
+      retry: '重新连接',
+      sessionEnded: '终端会话已结束',
+      idleDisconnected: '终端空闲已断开，沙箱将按工作区 TTL 自行暂停。可重新连接。',
+      authRevoked: '登录状态已失效，终端已断开。请重新登录后再连接。'
+    },
+    questionMinimapTitle: '问答',
+    questionMinimapAriaLabel: '提问目录',
+    questionMinimapAttachmentPlaceholder: '（附件）',
     suggestedQuestions: '你可以这样问我',
     followUpQuestions: '继续问',
     followUpQuestionsLoading: '加载推荐问题',
@@ -3831,6 +4017,11 @@ export default {
       downloadExampleExcel: '下载 Excel 示例'
     },
     faq: {
+      statusEnableSuccess: 'FAQ 条目已启用',
+      batchEnable: '批量启用',
+      batchDisable: '批量禁用',
+      batchDelete: '批量删除',
+      confirmBatchDelete: '确认删除选中的 {count} 个 FAQ 条目？删除后将无法恢复。',
       title: '问答',
       subtitle: '结构化问答管理，支持标准问、相似问和反例，精准匹配用户查询，提升问答准确率',
       description: '设置 FAQ 知识库的索引策略和问答组织方式',
@@ -4915,7 +5106,7 @@ export default {
     }
   },
   createChat: {
-    title: 'Hi，我是 @:{\'brand.name\'}',
+    title: '嗨！今天想聊些什么？',
     newSessionTitle: '新会话',
     messages: {
       createFailed: '创建会话失败',
@@ -5080,6 +5271,12 @@ export default {
     noCompatibleKbForAgent: '当前智能体的工具与作用域内知识库的能力不匹配，暂无可引用的知识库。'
   },
   common: {
+    copySuccess: '复制成功',
+    loadMore: '加载更多',
+    createSuccess: '创建成功',
+    updateSuccess: '更新成功',
+    operationFailed: '操作失败',
+    avatar: '头像',
     add: '添加',
     me: '我',
     confirm: '确认',
@@ -5139,6 +5336,9 @@ export default {
     }
   },
   auth: {
+    passwordMustContainLowercaseLetter: '密码必须包含小写字母',
+    passwordMustContainUppercaseLetter: '密码必须包含大写字母',
+    passwordMustContainSpecialChar: '密码必须包含特殊字符：{specialChars}',
     login: '登录',
     logout: '退出',
     oidcLogin: '使用 OIDC 登录',
@@ -5185,6 +5385,8 @@ export default {
     loginErrorRetry: '登录错误，请稍后重试',
     registerError: '注册错误，请稍后重试',
     workspaceOnboarding: {
+      description: '创建一个空间即可开始使用，或接受邀请加入已有空间。',
+      help: '你现在可以创建空间，也可以稍后回来接受邀请。',
       title: '选择你的租户',
       create: '创建租户',
       invitations: '查看邀请',
@@ -5198,6 +5400,8 @@ export default {
     }
   },
   inviteRegister: {
+    bannerHintLogin: '登录后将自动加入该团队。',
+    joined: '已加入该团队',
     bannerTitle: '您被邀请加入「{tenant}」',
     bannerHint: '填写下方信息完成注册，注册成功后将自动加入该团队。',
     loading: '正在校验邀请链接…',
@@ -6132,6 +6336,18 @@ export default {
     }
   },
   agent: {
+    artifactDrawer: {
+      buttonTitle: '查看本次生成的文件',
+      title: '生成的文件',
+      empty: '本次未生成可下载的文件',
+      preview: '预览',
+      previewBack: '返回列表',
+      collecting: '正在保存生成的文件…',
+      download: '下载',
+      downloadFailed: '下载失败，请稍后重试',
+      inlinePreviewHint: '点击预览',
+      inlineMissing: '文件不可用'
+    },
     taskLabel: '任务:',
     think: '思考',
     copy: '复制',
@@ -6761,6 +6977,8 @@ export default {
     }
   },
   knowledgeBase: {
+    deletePending: '删除尚未完成，请稍后刷新查看结果。',
+    deleteTaskFailed: '删除任务失败，请查看文档错误详情后重试。',
     title: '知识库',
     fileContent: '文件内容',
     name: '名称',

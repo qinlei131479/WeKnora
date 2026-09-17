@@ -2266,6 +2266,7 @@ const onDrop = (e: DragEvent) => {
   e.preventDefault();
   const files = e.dataTransfer?.files;
   if (!files || files.length === 0) return;
+  e.stopPropagation();
   handleDroppedFiles(Array.from(files));
 };
 

@@ -295,7 +295,7 @@
                       @dragstart="onFolderDragStart($event, item.folderId, item.path)" @dragend="onPageDragEnd"
                       @dragover.prevent.stop="onDirectoryDragOver($event, item.pathKey)"
                       @dragleave.stop="onDirectoryDragLeave(item.pathKey)"
-                      @drop.prevent.stop="onDropOnDirectory($event, item.folderId, item.path)">
+                      @drop.prevent="onDropOnDirectory($event, item.folderId, item.path)">
                       <t-icon :name="item.collapsed ? 'chevron-right' : 'chevron-down'" class="wiki-directory-toggle" />
                       <input v-if="editingFolderId === item.folderId" v-model="editingName"
                         class="wiki-directory-rename-input"
@@ -2310,6 +2310,8 @@ const pendingMove = ref<
 
 function onDropOnDirectory(e: DragEvent, folderId: string, path: string[]) {
   const item = draggedItem.value
+  // 只有确实发生目录内移动时才拦截；普通文件拖入仍交给知识库全局上传。
+  if (item) e.stopPropagation()
   draggedItem.value = null
   dropTargetKey.value = ''
   if (!item) return

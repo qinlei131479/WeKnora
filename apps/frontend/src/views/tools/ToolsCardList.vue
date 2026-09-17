@@ -97,7 +97,6 @@
                     :columns="argColumns"
                     row-key="name"
                     size="small"
-                    :pagination="false"
                     bordered
                     class="args-table"
                   />

@@ -3,7 +3,19 @@
     <div class="work-config-content">
       <div v-if="selectedAgent" class="agent-info">
         <div v-if="props.showSegmented && !isEmptyConfig" class="config-segment">
-          <t-segmented v-model="currentSegment" :options="segmentOptions" class="config-segmented" />
+          <t-radio-group
+            :value="currentSegment"
+            class="config-segmented"
+            @update:value="(value) => currentSegment = value"
+          >
+            <t-radio-button
+              v-for="option in segmentOptions"
+              :key="option.value"
+              :value="option.value"
+            >
+              {{ option.label }}
+            </t-radio-button>
+          </t-radio-group>
         </div>
 
         <t-alert
@@ -900,6 +912,17 @@ defineExpose({ validateAndFilterConfig })
 
 .config-segment {
   margin-bottom: 16px;
+}
+
+.config-segmented {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+
+  :deep(.t-radio-button) {
+    flex: 1 0 auto;
+    min-width: 0;
+  }
 }
 
 .config-alert,

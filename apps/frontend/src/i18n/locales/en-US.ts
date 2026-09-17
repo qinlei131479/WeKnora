@@ -1,5 +1,37 @@
 export default {
 
+  mcpMetadata: {
+    searchTools: 'Search tool names or descriptions',
+    retry: 'Retry',
+    details: 'Details',
+    description: 'Description',
+    parameters: 'Parameters',
+    required: 'Required',
+    fullSchema: 'Full schema',
+    noDescription: 'No description',
+    noParameters: 'No parameter definition',
+    enabled: 'Enabled',
+    approval: 'Require approval',
+    noTools: 'No matching tools',
+    next: 'Next',
+    policyLoadFailed: 'Could not load tool policies. Retry before editing.',
+    policySaveFailed: 'Could not save tool settings',
+    tools: 'Tools',
+    cacheHint: 'This step connects automatically if no directory is saved yet. Later visits only connect when you refresh.',
+    refresh: 'Refresh tools',
+    fetch: 'Fetch again',
+    fetching: 'Connecting and fetching tools…',
+    toolCount: '{count} tools',
+    stale: 'Connection or authentication settings changed. Refresh this old directory before models can use it.',
+    notSynced: 'No tools synchronized yet. Fetch to save full descriptions and parameter definitions.',
+    syncedAt: 'Last synchronized:',
+    serverDocumentation: 'Original server documentation',
+    noServerDocumentation: 'This MCP server\'s initialize result did not include instructions or serverInfo.description (both are optional). Tool text lives in each tool\'s description below.',
+    policyHint: 'Tool and approval switches save immediately and survive directory refreshes.',
+    failed: 'Could not load the tool directory',
+    instructionsRequired: 'Usage instructions are required',
+    previous: 'Previous'
+  },
   localBrowser: {
     pipOpen: "Pop out preview",
     pipReturn: "Return to conversation",
@@ -293,7 +325,7 @@ export default {
     }
   },
   brand: {
-    name: '智能体中台2.0'
+    name: '智能体工作台'
   },
   dashboard: {
     subtitle: 'View platform usage at a glance, including conversations, agents, tool calls, and knowledge bases',
@@ -994,6 +1026,8 @@ export default {
     sharedTooltip: 'Accessed from an external tenant via a shared space'
   },
   knowledgeBase: {
+    deletePending: 'Deletion is still pending. Refresh later to check the result.',
+    deleteTaskFailed: 'Deletion failed. Check the document error details and try again.',
     title: 'Knowledge Base',
     fileContent: 'File Content',
     accessInfo: {
@@ -1482,6 +1516,18 @@ export default {
     }
   },
   agent: {
+    artifactDrawer: {
+      buttonTitle: 'View files generated in this reply',
+      title: 'Generated files',
+      empty: 'No downloadable files were generated this turn.',
+      preview: 'Preview',
+      previewBack: 'Back to list',
+      collecting: 'Saving generated files…',
+      download: 'Download',
+      downloadFailed: 'Download failed, please retry.',
+      inlinePreviewHint: 'Click to preview',
+      inlineMissing: 'File unavailable'
+    },
     taskLabel: 'Task:',
     think: 'Thinking',
     copy: 'Copy',
@@ -2873,6 +2919,8 @@ export default {
     next: 'Next'
   },
   inviteRegister: {
+    bannerHintLogin: 'Log in to join this team automatically.',
+    joined: 'You have joined the team.',
     bannerTitle: 'You have been invited to join "{tenant}"',
     bannerHint: 'Fill in the details below to register. You will join the team automatically once registration completes.',
     loading: 'Verifying invitation link…',
@@ -2899,6 +2947,9 @@ export default {
     passwordMismatch: 'Passwords do not match'
   },
   auth: {
+    passwordMustContainLowercaseLetter: 'Password must contain lowercase letters',
+    passwordMustContainUppercaseLetter: 'Password must contain uppercase letters',
+    passwordMustContainSpecialChar: 'Password must contain special characters: {specialChars}',
     login: 'Login',
     logout: 'Logout',
     oidcLogin: 'Sign in with OIDC',
@@ -2945,6 +2996,8 @@ export default {
     loginErrorRetry: 'Login error, please try again later',
     registerError: 'Registration error, please try again later',
     workspaceOnboarding: {
+      description: 'Create a workspace to get started, or accept an invitation to join one that already exists.',
+      help: 'You can create a workspace now or return later to accept an invitation.',
       title: 'Choose your tenant',
       create: 'Create tenant',
       invitations: 'View invitations',
@@ -2966,6 +3019,12 @@ export default {
     }
   },
   common: {
+    copySuccess: 'Copied successfully',
+    loadMore: 'Load more',
+    createSuccess: 'Created successfully',
+    updateSuccess: 'Updated successfully',
+    operationFailed: 'Operation failed',
+    avatar: 'Avatar',
     add: 'Add',
     me: 'Me',
     confirm: 'Confirm',
@@ -3174,7 +3233,7 @@ export default {
     goToAgentSettings: 'Go to agent settings'
   },
   createChat: {
-    title: 'Hi, I am @:{\'brand.name\'}',
+    title: 'Hi! What would you like to talk about today?',
     newSessionTitle: 'New Session',
     messages: {
       createFailed: 'Failed to create session',
@@ -4206,6 +4265,11 @@ export default {
       subtitle: 'Click or drag-and-drop to upload documents; multiple formats are parsed automatically with intelligent chunking for a searchable knowledge base'
     },
     faq: {
+      statusEnableSuccess: 'FAQ entry enabled',
+      batchEnable: 'Enable selected',
+      batchDisable: 'Disable selected',
+      batchDelete: 'Delete selected',
+      confirmBatchDelete: 'Delete the selected {count} FAQ entries? This action cannot be undone.',
       title: 'FAQ Configuration',
       subtitle: 'Manage FAQ entries with batch import, edit, and search testing',
       description: 'Configure indexing strategy and guidance for FAQ-style knowledge bases',
@@ -4463,6 +4527,45 @@ export default {
     }
   },
   chat: {
+    memoryUsedCount: 'Used {count} memories',
+    memoryForget: 'Delete this memory',
+    memoryForgotten: 'Memory deleted',
+    memoryForgetFailed: 'Failed to delete',
+    memoryHint: 'These are the long-term memories this answer saw. Deleting one stops it from being used again.',
+    conversationTime: {
+      today: 'Today {time}',
+      yesterday: 'Yesterday {time}',
+      thisYear: '{month}/{day} {time}',
+      otherYear: '{month}/{day}/{year} {time}'
+    },
+    sandbox: {
+      panelTitle: 'Sandbox',
+      tabArtifacts: 'Files',
+      tabTerminal: 'Terminal',
+      tabDesktop: 'Desktop',
+      artifactsEmpty: 'No generated files in this conversation yet.',
+      artifactScope: 'File scope',
+      artifactsCurrent: 'This turn',
+      artifactsAll: 'All files',
+      artifactsSearch: 'Search filenames',
+      artifactsNoMatches: 'No matching files',
+      desktopPlaceholder: 'Desktop visualization coming soon',
+      paused: 'This conversation\'s sandbox is paused. Starting the terminal resumes it.',
+      start: 'Start terminal',
+      connecting: 'Connecting to sandbox…',
+      needsProvision: 'This conversation has no running sandbox. Creating one starts a new sandbox, billed according to your workspace configuration.',
+      createAndStart: 'Create and start',
+      noSandbox: 'No sandbox yet, and the current agent has no sandbox backend configured, so there is nowhere to create one. Switch to an agent with a sandbox configured, or send a message that runs code.',
+      unsupported: 'The current sandbox backend does not support interactive terminals',
+      disconnected: 'Connection lost',
+      retry: 'Reconnect',
+      sessionEnded: 'Terminal session ended',
+      idleDisconnected: 'The terminal disconnected after being idle. The sandbox will pause on its own TTL. You can reconnect.',
+      authRevoked: 'Your session is no longer valid, so the terminal was disconnected. Sign in again, then reconnect.'
+    },
+    questionMinimapTitle: 'Q&A',
+    questionMinimapAriaLabel: 'Question outline',
+    questionMinimapAttachmentPlaceholder: '(Attachment)',
     suggestedQuestions: 'You can ask me',
     followUpQuestions: 'Keep asking',
     followUpQuestionsLoading: 'Loading suggested questions',
@@ -4767,6 +4870,45 @@ export default {
       networkError: 'Network error, please try again later'
     },
     globalSettings: {
+      createUser: {
+        label: 'Create user',
+        description: 'Provision a new local user account. If the platform\'s default workspace mode is set to "create personal", the user gets a personal workspace just like a self-registered user would.',
+        action: 'Create user',
+        dialogTitle: 'Create a new user',
+        warning: 'This is a high-risk action. Verify the username and email carefully — they are how the new user will sign in.',
+        usernameLabel: 'Username',
+        usernamePlaceholder: '2-50 characters',
+        emailLabel: 'Email',
+        emailPlaceholder: 'Enter a valid email address',
+        autoGenerateLabel: 'Auto-generate a random password',
+        newPasswordLabel: 'New password',
+        newPasswordPlaceholder: '8-32 characters, including letters and numbers',
+        confirmPasswordLabel: 'Confirm new password',
+        confirmPasswordPlaceholder: 'Enter the new password again',
+        confirmBtn: 'Create user',
+        success: 'User created',
+        successIdempotent: 'User already existed; no changes made',
+        missingPassword: 'User was created but the generated password was not returned. Reset the password to recover access.',
+        failed: 'Failed to create user',
+        validation: {
+          usernameRequired: 'Enter a username',
+          usernameLength: 'Username must be 2-50 characters',
+          emailRequired: 'Enter an email address',
+          emailInvalid: 'Enter a valid email address',
+          confirmRequired: 'Enter the new password again',
+          passwordMismatch: 'The passwords do not match'
+        },
+        generated: {
+          successTitle: 'User created',
+          successBody: 'A random password was generated for this user. It will only be shown once.',
+          usernameLabel: 'Username',
+          emailLabel: 'Email',
+          passwordLabel: 'Generated password',
+          copyBtn: 'Copy account details',
+          copySuccess: 'Account details copied to clipboard',
+          acknowledgeBtn: 'I have saved the password'
+        }
+      },
       title: 'System Settings',
       description: 'Platform-wide runtime configuration. Saves take effect immediately for every tenant. Visible and editable by system administrators only.',
       loading: 'Loading...',
@@ -5027,7 +5169,11 @@ export default {
         }
       },
       keyLabels: {
+        sandbox: {
+          docker_enabled: 'Enable Docker sandbox'
+        },
         auth: {
+          complex_password_enabled: 'Require complex password',
           registration_mode: 'Self-service registration mode',
           default_tenant_mode: 'Default tenant provisioning'
         },
@@ -5035,6 +5181,7 @@ export default {
           whitelist: 'SSRF protection allowlist'
         },
         tenant: {
+          auto_accept_invitation: 'Auto-join invited registered users',
           max_owned_per_user: 'Max tenants owned per user',
           self_service_creation_enabled: 'Allow self-service tenant creation',
           default_storage_quota_gb: 'Default storage quota for new tenants (GB)',
@@ -5053,7 +5200,11 @@ export default {
         }
       },
       keyDescriptions: {
+        sandbox: {
+          docker_enabled: 'Allow the Docker sandbox backend. A local docker.sock is equivalent to root on the host, so this stays off by default. Only a system admin can turn it on; the change takes effect immediately. Enable it only on a private single-node install that mounts the daemon socket or uses a TLS-protected remote tcp:// endpoint.'
+        },
         auth: {
+          complex_password_enabled: 'Whether to require complex passwords. When enabled, passwords must contain uppercase and lowercase letters, numbers, and special characters. Changes take effect immediately and only apply to newly registered users or new password changes/resets. Special characters include {specialChars}',
           registration_mode: 'Self-service registration mode. self_serve = anyone can register an account; invite_only = public registration is disabled and only Owners/Admins can invite. Takes effect immediately after saving, but use self_serve with care (the public internet will send spam sign-ups).',
           default_tenant_mode: 'Tenant provisioning after public registration. create_personal creates an Owner tenant; tenantless creates only the account until the user accepts an invitation or creates a tenant. Applies to new users only.'
         },
@@ -5061,6 +5212,7 @@ export default {
           whitelist: 'SSRF protection allowlist. Accepts entries such as example.com / *.foo.com / 10.0.0.0/8 / 2001:db8::1. Takes effect immediately after saving. The SSRF_WHITELIST_EXTRA environment variable is still maintained by the deployer and is not overridden here.'
         },
         tenant: {
+          auto_accept_invitation: 'When enabled, inviting a registered user by email adds them as a member immediately instead of waiting for inbox confirmation. When off, the invitee must accept from their inbox. Takes effect immediately.',
           max_owned_per_user: 'Maximum number of tenants a non-superuser may own via self-service creation. Read on every tenant creation and takes effect immediately after saving. 0 uses the built-in default of 10; a negative value disables the cap entirely (not recommended on public deployments).',
           self_service_creation_enabled: 'Whether non-superusers may create tenants themselves. When disabled, regular users can only join existing tenants by invitation; cross-tenant superusers remain exempt. Takes effect immediately.',
           default_storage_quota_gb: 'Default storage quota (GB) assigned when a new tenant is created, covering vectors, originals, text, indexes, and related data. Read only at creation time — changes apply to newly created tenants only and do not retroactively update existing tenants. 0 or a negative value uses the built-in default of 10 GB.',
@@ -5204,6 +5356,9 @@ export default {
           outcome: 'Result'
         },
         action: {
+          system: {
+            user_created: 'User created'
+          },
           'system.setting_changed': 'System setting changed',
           'system.admin_promoted': 'System admin granted',
           'system.api_key_created': 'Platform API key created',
@@ -5442,6 +5597,10 @@ export default {
       providerLabel: 'Provider',
       providerPlaceholder: 'Select model provider',
       providers: {
+        litellm: {
+          label: 'LiteLLM',
+          description: 'Self-hosted proxy to 100+ providers (OpenAI, Anthropic, Gemini, Bedrock, etc.). Replace the placeholder URL; loopback hosts need SSRF_WHITELIST.'
+        },
         openai: {
           label: 'OpenAI',
           description: 'gpt-5.2, gpt-5-mini, etc.'
@@ -5547,6 +5706,7 @@ export default {
     builtinTag: 'Built-in'
   },
   language: {
+    jaJP: '日本語',
     zhCN: '简体中文',
     enUS: 'English',
     ruRU: 'Русский',
@@ -5760,6 +5920,9 @@ export default {
     builtin: 'Built-in'
   },
   modelSettings: {
+    usage: {
+      title: 'Model cannot be deleted'
+    },
     title: 'Model Settings',
     description: 'Manage different types of AI models, including local Ollama and remote APIs',
     typeShort: {
@@ -6307,6 +6470,9 @@ export default {
     }
   },
   preview: {
+    htmlRendered: 'Rendered preview',
+    htmlSource: 'View source',
+    videoNotSupported: 'Your browser does not support video playback',
     tab: 'Preview',
     loading: 'Loading document preview...',
     loadFailed: 'Failed to load document preview',
@@ -6470,6 +6636,44 @@ export default {
     }
   },
   agentStream: {
+    skillFiles: {
+      heading: 'Skill files',
+      script: 'script',
+      instructions: 'Instructions'
+    },
+    sandboxFiles: {
+      found: 'Found {count} file(s)',
+      empty: 'No files',
+      truncated: 'List truncated',
+      wrote: 'Wrote',
+      replacements: 'Replaced {count}'
+    },
+    shellExec: {
+      workDir: 'Directory',
+      exitCode: 'Exit code',
+      stdout: 'Stdout',
+      stderr: 'Stderr',
+      emptyOutput: 'No output',
+      truncated: 'Output truncated',
+      killed: 'Timed out',
+      binarySuppressed: 'Binary output omitted. Write files to the artifact directory to download them.'
+    },
+    mcp: {
+      listServers: 'List MCP services',
+      listTools: 'List MCP tools',
+      searchTools: 'Search MCP tools',
+      describeTool: 'Read tool definition',
+      showing: 'Showing {count} of {total}',
+      moreAvailable: 'More results available',
+      empty: 'Nothing to show',
+      parameters: 'Parameters',
+      expand: 'Show more',
+      collapse: 'Show less',
+      required: 'Required',
+      fullSchema: 'Full parameter definition',
+      failed: 'MCP operation failed',
+      result: 'Result'
+    },
     toolApproval: {
       waiting: 'Awaiting review · {target}',
       waitingStatus: 'Awaiting review',
@@ -6686,6 +6890,7 @@ export default {
       disabled: 'Disabled'
     },
     desc: {
+      maxTokensAgent: 'Maximum tokens generated in each reasoning round, including tool-call JSON. Default is 4096 without a sandbox, or 24576 when a sandbox can write or edit files. A custom value is saved as entered and is not changed later.',
       name: 'Set an easily identifiable name for the agent',
       description: 'Briefly describe the purpose and features of the agent',
       systemPrompt: 'Custom system prompt to define the agent behavior and role',
@@ -6788,6 +6993,7 @@ export default {
       description: 'Embed this agent on your website so visitors can chat via an in-page window or floating launcher. Knowledge scope follows this agent.'
     },
     im: {
+      feishuAPIBaseURLHint: 'Optional. Leave empty if the server can reach the internet directly; if a proxy is required to access Feishu, enter the reverse proxy URL (e.g. nginx, http://host:port). For internal network addresses, add the hostname to the SSRF_WHITELIST env var.',
       title: 'IM Integration',
       description: 'Connect agent to instant messaging platforms like WeCom, Feishu, Lark, Slack, Telegram, DingTalk, Mattermost, WeChat, QQBot and Yunzhijia',
       descriptionRestricted: 'Connect agent to instant messaging platforms: WeCom, Feishu and DingTalk',
@@ -7023,6 +7229,14 @@ export default {
     daysAgo: '{days} days ago'
   },
   datasource: {
+    prereqBarText_ima: 'First time? Click to see the Tencent IMA OpenAPI setup guide',
+    prereqStep1Brief_ima: 'Enable IMA agent OpenAPI access',
+    prereqStep1Desc_ima: 'Sign in to https://ima.qq.com/agent-interface and apply for OpenAPI access',
+    prereqStep2Brief_ima: 'Obtain the ClientID and APIKey',
+    prereqStep2Desc_ima: 'Copy the ima-openapi-clientid and ima-openapi-apikey credentials from the agent-interface page',
+    prereqStep3Brief_ima: 'Grant the credential access to the target knowledge bases',
+    prereqStep3Desc_ima: 'In the IMA client, authorize the credential for the knowledge bases you want to sync; unauthorized bases will not appear in the list',
+    prereqOpenConsole_ima: 'Open Tencent IMA OpenAPI console',
     title: 'Data Sources',
     description: 'Configure external data sources to sync content into this knowledge base',
     add: 'Add Data Source',
@@ -7124,6 +7338,8 @@ export default {
       docsFailedSummary: '{n} document(s) failed to sync'
     },
     connector: {
+      ima: 'Tencent IMA',
+      gitlab: 'GitLab',
       feishu: 'Feishu',
       lark: 'Lark',
       feishu_drive: 'Feishu Drive',
@@ -7133,6 +7349,8 @@ export default {
       rss: 'RSS / Atom Feed'
     },
     connectorDesc: {
+      ima: 'Sync documents, notes and files from Tencent IMA knowledge bases (AI sessions and video parses are not supported)',
+      gitlab: 'Sync files from GitLab projects',
       feishu: 'Sync documents, spreadsheets and files from Feishu Wiki',
       lark: 'Sync documents, spreadsheets and files from Lark Wiki (Feishu international)',
       feishu_drive: 'Sync documents, spreadsheets and files from a Feishu Drive folder',

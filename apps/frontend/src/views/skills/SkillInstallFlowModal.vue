@@ -121,34 +121,35 @@
 
       <footer class="install-flow-footer">
         <slot v-if="phase === 'selecting' && flow?.kind === 'remote'" name="selection-footer" />
+        <template v-else-if="phase === 'preparing'">
+          <span class="footer-summary">{{ footerSummary }}</span>
+          <div class="footer-actions">
+            <t-button v-if="flowError" @click="handleClose">{{ t('ext.skills.install.close') }}</t-button>
+            <t-button v-else loading disabled>{{ t('ext.skills.install.loading') }}</t-button>
+          </div>
+        </template>
+        <template v-else-if="phase === 'reviewing'">
+          <span class="footer-summary">{{ footerSummary }}</span>
+          <div class="footer-actions">
+            <t-button variant="outline" @click="handleClose">{{ t('ext.skills.install.cancel') }}</t-button>
+            <t-button theme="primary" :disabled="readyItems.length === 0" @click="installDrafts">
+              {{ t('ext.skills.install.confirmInstall', { count: readyItems.length, target: installTargetLabel }) }}
+            </t-button>
+          </div>
+        </template>
+        <template v-else-if="phase === 'installing'">
+          <span class="footer-summary">{{ footerSummary }}</span>
+          <div class="footer-actions">
+            <t-button theme="primary" loading disabled>{{ t('ext.skills.install.installing') }}</t-button>
+          </div>
+        </template>
         <template v-else>
           <span class="footer-summary">{{ footerSummary }}</span>
           <div class="footer-actions">
-            <template v-if="phase === 'selecting'">
-              <t-button variant="outline" @click="handleClose">{{ t('ext.skills.install.cancel') }}</t-button>
-              <t-button theme="primary" :disabled="selectedSlugs.length === 0" @click="prepareSuite">
-                {{ t('ext.skills.install.loadSelected') }}
-              </t-button>
-            </template>
-            <template v-else-if="phase === 'preparing'">
-              <t-button v-if="flowError" @click="handleClose">{{ t('ext.skills.install.close') }}</t-button>
-              <t-button v-else loading disabled>{{ t('ext.skills.install.loading') }}</t-button>
-            </template>
-            <template v-else-if="phase === 'reviewing'">
-              <t-button variant="outline" @click="handleClose">{{ t('ext.skills.install.cancel') }}</t-button>
-              <t-button theme="primary" :disabled="readyItems.length === 0" @click="installDrafts">
-                {{ t('ext.skills.install.confirmInstall', { count: readyItems.length, target: installTargetLabel }) }}
-              </t-button>
-            </template>
-            <template v-else-if="phase === 'installing'">
-              <t-button theme="primary" loading disabled>{{ t('ext.skills.install.installing') }}</t-button>
-            </template>
-            <template v-else>
-              <t-button v-if="failedInstallItems.length" @click="retryFailedItems">
-                {{ t('ext.skills.install.retryFailed') }}
-              </t-button>
-              <t-button theme="primary" @click="finishFlow">{{ t('ext.skills.install.finish') }}</t-button>
-            </template>
+            <t-button v-if="failedInstallItems.length" @click="retryFailedItems">
+              {{ t('ext.skills.install.retryFailed') }}
+            </t-button>
+            <t-button theme="primary" @click="finishFlow">{{ t('ext.skills.install.finish') }}</t-button>
           </div>
         </template>
       </footer>
@@ -184,7 +185,6 @@ const stepLabels = computed(() => [
   t('ext.skills.install.stepDone')
 ])
 const phase = ref('selecting')
-const selectedSlugs = ref([])
 const progressItems = ref([])
 const drafts = ref([])
 const reviewItems = ref([])
@@ -258,9 +258,6 @@ const modalDescription = computed(
   () => props.flow?.description || t('ext.skills.install.defaultDesc')
 )
 const footerSummary = computed(() => {
-  if (phase.value === 'selecting') {
-    return t('ext.skills.install.willLoad', { count: selectedSlugs.value.length })
-  }
   if (phase.value === 'preparing') {
     return flowError.value
       ? t('ext.skills.install.cleanedDrafts')

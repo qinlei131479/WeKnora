@@ -1969,6 +1969,7 @@ const handleFileChange = async (event: Event) => {
 const handleFileDrop = async (event: DragEvent) => {
   const file = event.dataTransfer?.files[0]
   if (!file) return
+  event.stopPropagation()
   await processFile(file)
 }
 
