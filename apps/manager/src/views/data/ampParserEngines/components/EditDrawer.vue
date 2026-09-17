@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import modal from '@/plugins/modal';
 import { API } from '@/api';
 import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { t } from '@/i18n';
@@ -38,7 +39,6 @@ const emit = defineEmits<{
   (event: 'success'): void;
 }>();
 
-const { proxy } = getCurrentInstance()!;
 const formRef = ref<FormRef>();
 const saving = ref(false);
 const loadingSortOrder = ref(false);
@@ -201,9 +201,7 @@ const submitForm = () => {
     const request = editing ? API.AmpParserEngines.update(buildPayload()) : API.AmpParserEngines.insert(buildPayload());
     request
       .then(() => {
-        proxy.$modal.msgSuccess(
-          editing ? t('page.normal.confirmInfo.updateSuccess', '修改成功') : t('page.normal.confirmInfo.addSuccess', '新增成功')
-        );
+        modal.msgSuccess(editing ? t('page.normal.confirmInfo.updateSuccess', '修改成功') : t('page.normal.confirmInfo.addSuccess', '新增成功'));
         emit('success');
         visible.value = false;
       })

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import modal from '@/plugins/modal';
 import { API } from '@/api';
 import { t } from '@/i18n';
 import type { AmpParserEnginesPageDTO, AmpParserEnginesVO, PageDomain } from '@/types';
@@ -6,12 +7,10 @@ import { Search } from 'lucide-vue-next';
 import DetailDrawer from './components/DetailDrawer.vue';
 import EditDrawer from './components/EditDrawer.vue';
 
-const { proxy } = getCurrentInstance()!;
-
 const state = reactive({
   loading: false,
   dto: {} as AmpParserEnginesPageDTO,
-  page: { pageNum: 1, pageSize: 10, orderByColumn: 'sortOrder', isAsc: 'asc' } as PageDomain,
+  page: { pageNum: 1, pageSize: 10, orderByColumn: 'sortOrder', isAsc: 'asc' } satisfies PageDomain,
   rows: [] as AmpParserEnginesVO[],
   total: 0,
   detailVisible: false,
@@ -64,17 +63,21 @@ const handleEdit = (row: AmpParserEnginesVO) => {
 };
 
 const handleDelete = (row: AmpParserEnginesVO) => {
-  if (row.id === undefined) return;
+  const id = row.id;
+  if (id === undefined) return;
 
-  API.AmpParserEngines.delete(row.id)
+  modal
+    .confirm(t('page.data.ampParserEngines.deleteConfirm', { name: row.name ?? '' }, '确认删除解析引擎 {name}？'))
+    .then(() => API.AmpParserEngines.delete(id))
     .then(() => {
-      proxy.$modal.msgSuccess(t('page.normal.confirmInfo.removeSuccess', '删除成功'));
+      modal.msgSuccess(t('page.normal.confirmInfo.removeSuccess', '删除成功'));
       if (state.rows.length === 1 && state.page.pageNum > 1) {
         state.page.pageNum -= 1;
       }
       getList();
     })
-    .catch((error) => {
+    .catch((error: unknown) => {
+      if (error === 'cancel' || error === 'close') return;
       console.error('--> --> Error:', error);
     });
 };
@@ -176,18 +179,9 @@ onMounted(getList);
             <el-button link type="primary" v-hasPermi="['business:ampParserEngines:edit']" @click.stop="handleEdit(row)">
               {{ $t('page.normal.edit', '编辑') }}
             </el-button>
-            <el-popconfirm
-              :confirm-button-text="$t('page.normal.confirm', '确定')"
-              :cancel-button-text="$t('page.normal.cancel', '取消')"
-              :title="$t('page.normal.confirmInfo.remove', '确认删除吗？')"
-              @confirm="handleDelete(row)"
-            >
-              <template #reference>
-                <el-button link type="danger" v-hasPermi="['business:ampParserEngines:remove']">
-                  {{ $t('page.normal.remove', '删除') }}
-                </el-button>
-              </template>
-            </el-popconfirm>
+            <el-button link type="danger" v-hasPermi="['business:ampParserEngines:remove']" @click.stop="handleDelete(row)">
+              {{ $t('page.normal.remove', '删除') }}
+            </el-button>
           </template>
         </el-table-column>
       </el-table>

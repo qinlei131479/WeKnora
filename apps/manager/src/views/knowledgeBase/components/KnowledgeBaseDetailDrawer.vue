@@ -636,7 +636,7 @@
             <!-- 活动记录 -->
             <div v-if="currentSection === 'activity'" class="section" style="height: 100%">
               <!-- <KnowledgeBaseActivitySettings :detail="editorMode === 'detail'" :kb-id="activeKbId" :active="currentSection === 'activity'" /> -->
-              <KnowledgeBaseActivityDetail :kb-id="activeKbId" />
+              <KnowledgeBaseActivityDetail v-if="activeKbId" :kb-id="activeKbId" />
             </div>
           </div>
         </div>

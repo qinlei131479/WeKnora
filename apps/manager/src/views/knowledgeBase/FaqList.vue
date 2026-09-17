@@ -156,6 +156,7 @@
 </template>
 
 <script setup lang="ts" name="KnowledgeFaqList">
+import type { PropType } from 'vue';
 import { ref, reactive, onMounted } from '@vue/runtime-core';
 import { Search } from 'lucide-vue-next';
 import {
@@ -177,7 +178,6 @@ import faqQueryUse from './faqList/faqQueryUse';
 import faqTagUse from './faqList/faqTagUse';
 // import useTableData from '@/composables/useTableData';
 
-const { proxy } = getCurrentInstance();
 const emit = defineEmits(['back']);
 
 const props = defineProps({
@@ -186,7 +186,7 @@ const props = defineProps({
     default: ''
   },
   lib: {
-    type: Object as KnowledgeBaseEntity | undefined,
+    type: Object as PropType<KnowledgeBaseEntity>,
     default: () => void 0
   }
 });

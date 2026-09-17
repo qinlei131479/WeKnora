@@ -2,6 +2,8 @@ import type { PageDomain, BaseEntity, AjaxResult, TreeSelect } from "../common";
 
 /** 角色分页查询参数 */
 export interface RoleQueryParams extends PageDomain {
+  /** 租户编号 */
+  tenantId?: string | number;
   /** 角色名称 */
   roleName?: string;
   /** 角色权限 */
@@ -18,7 +20,8 @@ export interface RoleQueryParams extends PageDomain {
 /** 批量授权用户参数 */
 export interface AuthUserSelectParams {
   roleId: number;
-  userIds: number[];
+  /** 逗号分隔的用户编号 */
+  userIds: string;
 }
 
 /** 用户和角色关联信息 */
@@ -33,13 +36,17 @@ export interface SysUserRole {
 export interface SysUserRoles {
   /** 用户编号 */
   userId?: number;
-  /** 角色编号组 */
-  roleIds?: number[];
+  /** 逗号分隔的角色编号 */
+  roleIds?: string;
 }
 
 
 /** 角色信息 */
 export interface SysRole extends BaseEntity {
+  /** 租户编号 */
+  tenantId?: number;
+  /** 内置标识 */
+  builtin?: number;
   /** 角色编号 */
   roleId?: number;
   /** 角色名称 */

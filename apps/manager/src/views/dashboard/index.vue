@@ -225,8 +225,8 @@ onBeforeUnmount(() => {
 <style lang="scss" scoped>
 :global(.app-main:has(.dashboard)) {
   width: 100%;
-  min-height: calc(100% - var(--navbar-height)) !important;
-  height: calc(100% - var(--navbar-height)) !important;
+  min-height: calc(100% - var(--navbar-height) + var(--layout-padding)) !important;
+  height: calc(100% - var(--navbar-height) + var(--layout-padding)) !important;
   overflow: hidden !important;
 }
 
@@ -261,6 +261,10 @@ onBeforeUnmount(() => {
 
 .page-content :deep(.page-content-body) {
   overflow: visible;
+}
+
+.page-content :deep(.content-footer) {
+  margin: 0 !important;
 }
 
 .dashboard :deep(.el-row) {

@@ -196,98 +196,33 @@
       </template>
     </page-content>
 
-    <!-- 添加或修改对话框 -->
-    <KjscRtlDrawer :title="title" v-model="open" size="800px">
-      <el-form :model="form" :rules="rules" ref="saveFormRef" label-position="top" class="tenant-space-form">
-        <el-form-item :label="$t('page.tenantSpace.name', '空间名称')" prop="name">
-          <el-input
-            v-model="form.name"
-            :placeholder="$t('page.tenantSpace.namePlaceholder', '例如：我的新项目')"
-            maxlength="999"
-            :show-word-limit="false"
-          />
-        </el-form-item>
-        <el-form-item :label="$t('page.tenantSpace.description', '空间描述')" prop="description">
-          <el-input
-            v-model="form.description"
-            type="textarea"
-            :autosize="{ minRows: 2, maxRows: 5 }"
-            :placeholder="$t('page.tenantSpace.descriptionPlaceholder', '简单描述一下这个空间的用途')"
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="manage-dialog-footer">
-          <el-button class="close-btn" @click="closeDialog">
-            {{ $t('page.normal.cancel', '取消') }}
-          </el-button>
-          <el-button class="submit-btn" type="primary" :disabled="submitDisabled" @click="submitForm">
-            {{ $t('page.normal.save', '保存') }}
-          </el-button>
-        </div>
-      </template>
-    </KjscRtlDrawer>
+    <!-- 添加或修改抽屉 -->
+    <SpaceAddEditDrawer ref="spaceAddEditDrawerRef" @success="getList" />
 
-    <KjscRtlDrawer :title="detailTitle" v-model="detailOpen" size="800px" close-on-press-escape close-on-click-modal>
-      <el-form label-position="left" label-width="120" class="tenant-space-form">
-        <el-form-item :label="$t('page.tenantSpace.id', '空间id')">
-          {{ detailForm.id }}
-        </el-form-item>
-        <el-form-item :label="$t('page.tenantSpace.name', '空间名称')" prop="name">
-          {{ detailForm.name }}
-        </el-form-item>
-        <el-form-item :label="$t('page.tenantSpace.description', '空间描述')" prop="description">
-          {{ detailForm.description }}
-        </el-form-item>
-        <el-form-item :label="$t('page.tenantSpace.status', '空间状态')" prop="status">
-          <el-tag :type="getStatusTheme(detailForm.status)">{{ getStatusText(detailForm.status) }}</el-tag>
-        </el-form-item>
-        <el-form-item :label="$t('page.tenantSpace.createdAt', '空间创建时间')" prop="createdAt">
-          {{ parseTime(detailForm.createdAt) }}
-        </el-form-item>
-        <el-form-item :label="$t('page.tenantSpace.storageQuota', '存储配额')">
-          {{ formatSize(detailForm.storageQuota) }}
-        </el-form-item>
-        <el-form-item :label="$t('page.tenantSpace.storageUsed', '已使用储存')">
-          {{ formatSize(detailForm.storageUsed) }}
-        </el-form-item>
-        <el-form-item :label="$t('page.tenantSpace.storageUsageRate', '储存使用率')">
-          <span>{{ getRate(detailForm.storageQuota, detailForm.storageUsed) }}</span>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="manage-dialog-footer">
-          <el-button class="close-btn" @click="closeDialogDetail">
-            {{ $t('page.normal.close', '关闭') }}
-          </el-button>
-        </div>
-      </template>
-    </KjscRtlDrawer>
+    <!-- 详情抽屉 -->
+    <SpaceDetailDrawer ref="spaceDetailDrawerRef" />
   </section>
 </template>
 
 <script setup lang="ts" name="TenantSpace">
 import { ref, reactive } from '@vue/runtime-core';
+import SpaceAddEditDrawer from './components/SpaceAddEditDrawer.vue';
+import SpaceDetailDrawer from './components/SpaceDetailDrawer.vue';
 // import { ElMessage } from 'element-plus'
 // import { Close, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
 import { useI18n } from 'vue-i18n';
-import { isEmpty } from '@/utils/common.js';
 import { formatSize } from '@/utils';
+import modal from '@/plugins/modal';
 import { AjaxResult, TableShowColumns, TenantSpaceEntity, TenantSpaceListReq } from '@/types';
 import { getStatusTheme, getStatusText } from '@/composables/useTenantSpace';
 import { Search } from 'lucide-vue-next';
 import {
-  addTenantSpaceSingleApi,
   deleteTenantSpaceSingleApi,
   disableTenantsBatchApi,
   enableTenantsBatchApi,
-  getTenantSpaceListApi,
-  getTenantSpaceSingleApi,
-  updateTenantSpaceSingleApi
+  getTenantSpaceListApi
 } from '@/api/space/tenantSpace.js';
 
-interface FormEntity extends TenantSpaceEntity {}
-const { proxy } = getCurrentInstance();
 const { t } = useI18n();
 
 const $t = t;
@@ -316,25 +251,13 @@ const getRate = (quota: number, used: number) => {
 };
 
 // 详情
-const detailTitle = ref<string>(t('page.tenantSpace.title.detail', '空间详情'));
-const detailOpen = ref<boolean>(false);
-const detailForm = ref<TenantSpaceEntity>({} as TenantSpaceEntity);
+const spaceDetailDrawerRef = ref<InstanceType<typeof SpaceDetailDrawer>>();
 const showDetail = (id: number) => {
-  getTenantSpaceSingleApi(id).then((res: AjaxResult<TenantSpaceEntity>) => {
-    detailForm.value = res.data || ({} as TenantSpaceEntity);
-    detailOpen.value = true;
-  });
-};
-const closeDialogDetail = () => {
-  detailOpen.value = false;
+  spaceDetailDrawerRef.value?.open(id);
 };
 
-const open = ref<boolean>(false);
-let mode = '';
-const title = ref<string>(t('page.tenantSpace.title.add', '新增空间'));
-// const saveFormRef = ref(null);
+const spaceAddEditDrawerRef = ref<InstanceType<typeof SpaceAddEditDrawer>>();
 const data = reactive({
-  form: {} as FormEntity,
   queryParams: {
     name: undefined
   } as TenantSpaceListReq,
@@ -343,22 +266,10 @@ const data = reactive({
     // isAsc: 'desc',
     pageNum: 1,
     pageSize: 10
-  },
-  rules: {
-    // nickName: [
-    //   { required: true, validator: validateNickName, trigger: "blur" },
-    // ],
-    name: [{ required: true, message: '空间名称不能为空', trigger: 'blur' }]
   }
 });
 
-const { queryParams, pageParams, form, rules } = toRefs(data);
-
-// 是否必填为空
-const submitDisabled = computed(() => {
-  const formValue: TenantSpaceEntity = form.value;
-  return isEmpty(formValue.name);
-});
+const { queryParams, pageParams } = toRefs(data);
 
 /** 查询用户列表 */
 function getList() {
@@ -396,7 +307,7 @@ function resetQuery() {
 function handleDelete(row: TenantSpaceEntity) {
   const id = row.id!;
   const message = t('page.tenantSpace.deleteConfirm', '是否确认删除空间编号为"' + id + '"的数据项？');
-  proxy.$modal.confirm(message).then(
+  modal.confirm(message).then(
     function () {
       return doDelete(id);
     },
@@ -407,7 +318,7 @@ function handleDelete(row: TenantSpaceEntity) {
 function doDelete(id: number | string) {
   return deleteTenantSpaceSingleApi(id).then((res: AjaxResult) => {
     if (res.code === 200) {
-      proxy.$modal.msgSuccess(t('page.tenantSpace.deleteSuccess', '删除成功'));
+      modal.msgSuccess(t('page.tenantSpace.deleteSuccess', '删除成功'));
       getList();
     }
   });
@@ -443,13 +354,13 @@ function handleEnable(row?: TenantSpaceEntity) {
     saveIds.push(row.id!);
   } else {
     if (ids.value.length === 0) {
-      // proxy.$modal.msgError(t('page.tenantSpace.enableConfirm', '请选择要操作的空间'))
+      // modal.msgError(t('page.tenantSpace.enableConfirm', '请选择要操作的空间'))
       return;
     }
     message = t('page.tenantSpace.enableConfirmBatch', '是否确认启用选中的空间？');
     saveIds = ids.value;
   }
-  proxy.$modal.confirm(message).then(
+  modal.confirm(message).then(
     function () {
       return doEnable(saveIds);
     },
@@ -459,7 +370,7 @@ function handleEnable(row?: TenantSpaceEntity) {
 function doEnable(saveIds: number[]) {
   return enableTenantsBatchApi(saveIds).then((res: AjaxResult) => {
     if (res.code === 200) {
-      proxy.$modal.msgSuccess(t('page.tenantSpace.enableSuccess', '启用成功'));
+      modal.msgSuccess(t('page.tenantSpace.enableSuccess', '启用成功'));
       getList();
     }
   });
@@ -474,13 +385,13 @@ function handleDisable(row?: TenantSpaceEntity) {
     saveIds.push(row.id!);
   } else {
     if (ids.value.length === 0) {
-      // proxy.$modal.msgError(t('page.tenantSpace.disableConfirm', '请选择要操作的空间'))
+      // modal.msgError(t('page.tenantSpace.disableConfirm', '请选择要操作的空间'))
       return;
     }
     message = t('page.tenantSpace.disableConfirmBatch', '是否确认停用选中的空间？');
     saveIds = ids.value;
   }
-  proxy.$modal.confirm(message).then(
+  modal.confirm(message).then(
     function () {
       return doDisable(saveIds);
     },
@@ -490,107 +401,23 @@ function handleDisable(row?: TenantSpaceEntity) {
 function doDisable(saveIds: number[]) {
   return disableTenantsBatchApi(saveIds).then((res: AjaxResult) => {
     if (res.code === 200) {
-      proxy.$modal.msgSuccess(t('page.tenantSpace.disableSuccess', '停用成功'));
+      modal.msgSuccess(t('page.tenantSpace.disableSuccess', '停用成功'));
       getList();
     }
   });
-}
-
-/** 重置操作表单 */
-function reset() {
-  form.value = {
-    name: undefined
-  };
-  proxy.resetForm('saveFormRef');
-}
-
-/** 取消按钮 */
-function cancel() {
-  open.value = false;
-  reset();
 }
 
 /** 新增按钮操作 */
 function handleAdd() {
-  reset();
-  title.value = t('page.tenantSpace.title.add', '新增空间');
-  open.value = true;
-  mode = 'add';
+  spaceAddEditDrawerRef.value?.openAdd();
 }
 
 /** 修改按钮操作 */
 function handleUpdate(row: TenantSpaceEntity) {
-  reset();
-  title.value = t('page.tenantSpace.title.update', '修改空间信息');
   const id = row?.id || ids.value[0];
-  mode = 'update';
-  getTenantSpaceSingleApi(id).then((res) => {
-    if (res?.code === 200) {
-      const response: any = res.data;
-      form.value = serverDataToFormData(response || {});
-      open.value = true;
-    }
-  });
-}
-
-function serverDataToFormData(data: TenantSpaceEntity) {
-  const formData = { ...data } as FormEntity;
-  return formData;
-}
-function formDataToServerData(formData: FormEntity) {
-  const { ...serverData } = formData;
-  return serverData;
-}
-
-function doUpdate() {
-  const params = formDataToServerData(form.value);
-  return updateTenantSpaceSingleApi(params).then((res: AjaxResult) => {
-    if (res.code === 200) {
-      proxy.$modal.msgSuccess(t('page.tenantSpace.updateSuccess', '修改成功'));
-      getList();
-      open.value = false;
-    }
-  });
-}
-
-function doAdd() {
-  const params = formDataToServerData(form.value);
-  return addTenantSpaceSingleApi(params).then((res: AjaxResult) => {
-    if (res.code === 200) {
-      proxy.$modal.msgSuccess(t('page.tenantSpace.addSuccess', '新增成功'));
-      getList();
-      open.value = false;
-    }
-  });
-}
-
-/** 提交按钮 */
-function submitForm() {
-  proxy.$refs['saveFormRef'].validate((valid: boolean) => {
-    if (valid) {
-      if (form.value.id) {
-        doUpdate();
-      } else {
-        doAdd();
-      }
-    }
-  });
-}
-function closeDialog() {
-  open.value = false;
+  if (id === undefined) return;
+  spaceAddEditDrawerRef.value?.openEdit(id);
 }
 
 getList();
 </script>
-
-<style scoped lang="scss">
-.el-input-number {
-  width: 100%;
-}
-
-// .manage-dialog-footer {
-//   .close-btn {
-//     margin-right: 12px;
-//   }
-// }
-</style>

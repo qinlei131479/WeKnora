@@ -73,13 +73,13 @@
       </el-col> -->
       <el-col :span="12">
         <el-tabs v-model="activeTab" style="height: 100%">
-            <el-tab-pane label="个人资料" name="userinfo">
-              <userInfo :user="state.user" />
-            </el-tab-pane>
-            <el-tab-pane label="修改密码" name="resetPwd">
-              <resetPwd :userInfo="state.user"/>
-            </el-tab-pane>
-          </el-tabs>
+          <el-tab-pane label="个人资料" name="userinfo">
+            <userInfo :user="state.user" />
+          </el-tab-pane>
+          <el-tab-pane label="修改密码" name="resetPwd">
+            <resetPwd :userInfo="state.user" />
+          </el-tab-pane>
+        </el-tabs>
         <!-- <el-card class="right-box" shadow="never">
           <template v-slot:header>
             <div class="clearfix title-style">
@@ -96,7 +96,7 @@
           </el-tabs>
         </el-card> -->
       </el-col>
-      <el-col :span="12" style="display: grid;place-items: center;">
+      <el-col :span="12" style="display: grid; place-items: center">
         <!-- <div style="width:100%">
           <div style="width:100%;text-align:center">登陆绑定</div>
           <div class="profile-main-content-right">
@@ -128,56 +128,56 @@
 
 <script setup name="Profile">
 // import userAvatar from "./userAvatar";
-import userInfo from "./userInfo";
-import resetPwd from "./resetPwd";
-import { getUserProfile,bindQrCode,unbindQrCode,getBindStatus } from "@/api/system/user";
-import { getInfo, getQrCode } from "@/api/login";
-import qbimage from '../../../../assets/images/qbCodeImg.png'
-const activeTab = ref("userinfo");
+import userInfo from './userInfo';
+import resetPwd from './resetPwd';
+import { getUserProfile, bindQrCode, unbindQrCode, getBindStatus } from '@/api/system/user';
+import { getInfo, getQrCode } from '@/api/login';
+import qbimage from '../../../../assets/images/qbCodeImg.png';
+const activeTab = ref('userinfo');
 const state = reactive({
   user: {},
   roleGroup: {},
   postGroup: {},
-  qrCodeType:0,
-  loginFailureDialog:false,//测试
-  failureType:null,//测试
-  userId:''
+  qrCodeType: 0,
+  loginFailureDialog: false, //测试
+  failureType: null, //测试
+  userId: ''
 });
-let qrCodeKey = ''
-const qrcodeUrl = ref("");
+let qrCodeKey = '';
+const qrcodeUrl = ref('');
 //测试
-const openLoginFailureDialog  = (type) => {
+const openLoginFailureDialog = (type) => {
   state.loginFailureDialog = true;
   state.failureType = type;
-}
+};
 //测试
-const done  = () => {
+const done = () => {
   state.loginFailureDialog = false;
-}
+};
 const { proxy } = getCurrentInstance();
 top.state = state;
 const ssePath = import.meta.env.VITE_APP_SSE_PATH;
 let eventSource = null;
-function sseConnect(){
-  eventSource = new EventSource(ssePath+'?qrCodeKey='+qrCodeKey+'&type=bind');
+function sseConnect() {
+  eventSource = new EventSource(ssePath + '?qrCodeKey=' + qrCodeKey + '&type=bind');
   eventSource.onopen = () => {
     console.log('Connection to server opened.');
   };
   // eventSource.onmessage = (event) => {
   //   console.log('event===',event);
   // };
-  eventSource.addEventListener("bind", (event) => {
-    console.log('event===',event);
+  eventSource.addEventListener('bind', (event) => {
+    console.log('event===', event);
     const res = JSON.parse(event.data);
-    if(res.code==200){
-      if(res.userId){
+    if (res.code == 200) {
+      if (res.userId) {
         state.userId = res.userId;
         bindQrCodeFn(state.userId);
         eventSource.close();
       }
     }
-    if(res.code==500||res.code==410){
-      state.qrCodeType=1;
+    if (res.code == 500 || res.code == 410) {
+      state.qrCodeType = 1;
       eventSource.close();
       proxy.$modal.msgError(res.msg);
     }
@@ -191,17 +191,17 @@ function sseConnect(){
   };
 }
 onUnmounted(() => {
-    if (eventSource) {
-      eventSource.close();
-    }
+  if (eventSource) {
+    eventSource.close();
+  }
 });
 // 绑定二维码
 function bindQrCodeFn(userId) {
   bindQrCode(userId).then((res) => {
-    if(res.code == 200){
-        state.qrCodeType=2;
-        qrcodeUrl.value = qbimage;
-    }else{
+    if (res.code == 200) {
+      state.qrCodeType = 2;
+      qrcodeUrl.value = qbimage;
+    } else {
       proxy.$modal.msgError(res.msg);
       getQrCodeImg();
     }
@@ -210,9 +210,9 @@ function bindQrCodeFn(userId) {
 // 解除绑定
 function unbindQrCodeFn() {
   unbindQrCode().then((res) => {
-    if(res.code == 200){
-      state.qrCodeType=0;
-    }else{
+    if (res.code == 200) {
+      state.qrCodeType = 0;
+    } else {
       proxy.$modal.msgError(res.msg);
     }
     getQrCodeImg();
@@ -221,26 +221,26 @@ function unbindQrCodeFn() {
 // 查询绑定状态
 function getBindStatusFn() {
   getBindStatus().then((res) => {
-    if(res.code == 200){
-      if(res.data){
-        state.qrCodeType=2;
+    if (res.code == 200) {
+      if (res.data) {
+        state.qrCodeType = 2;
         qrcodeUrl.value = qbimage;
-        return
+        return;
       }
-    }else{
+    } else {
       proxy.$modal.msgError(res.msg);
     }
     getQrCodeImg();
   });
 }
-function clickRefleshQrCodeImg(){
-  state.qrCodeType=0;
+function clickRefleshQrCodeImg() {
+  state.qrCodeType = 0;
   getQrCodeImg();
 }
 // 获取扫描二维码图片
 function getQrCodeImg() {
   getQrCode().then((res) => {
-    if(res.code == 200){
+    if (res.code == 200) {
       res = res.data;
       qrCodeKey = res.key;
       qrcodeUrl.value = res.qrCode;
@@ -251,15 +251,15 @@ function getQrCodeImg() {
 function getUser() {
   getInfo().then((res) => {
     const data = res.data || res;
-    let tenantName = data.tenant && data.tenant.name || ''
+    let tenantName = (data.tenant && data.tenant.name) || '';
     let response = data;
     state.user = response.user || {};
     let roleNameList = [];
-    if(state.user.roles&&state.user.roles.length!=0){
-      roleNameList = state.user.roles.map(obj => obj.roleName);
+    if (state.user.roles && state.user.roles.length != 0) {
+      roleNameList = state.user.roles.map((obj) => obj.roleName);
     }
     state.user.tenantName = tenantName;
-    state.user.roleName = roleNameList.join('、')
+    state.user.roleName = roleNameList.join('、');
     // state.roleGroup = response.roleGroup;
     // state.postGroup = response.postGroup;
   });
@@ -314,17 +314,17 @@ getUser();
   line-height: 24px;
   margin-bottom: 24px;
 }
-.profile-main-content-right{
+.profile-main-content-right {
   position: relative;
   width: 100%;
   height: calc(100% - 83px);
   display: flex;
   justify-content: center;
-  img{
+  img {
     width: 240px;
     height: 240px;
   }
-  .loseEfficacy{
+  .loseEfficacy {
     position: absolute;
     cursor: pointer;
     // top: 0px;
@@ -335,21 +335,21 @@ getUser();
     font-size: 14px;
     display: grid;
     place-items: center;
-    img{
+    img {
       width: 15px;
       height: 15px;
     }
   }
 }
-.profile-main-content-right-bottom{
+.profile-main-content-right-bottom {
   width: 100%;
   height: 83px;
   padding-top: 15px;
-  .desc{
+  .desc {
     width: 100%;
     text-align: center;
     font-size: 14px;
-    color: #0C113D;
+    color: #0c113d;
   }
 }
 </style>

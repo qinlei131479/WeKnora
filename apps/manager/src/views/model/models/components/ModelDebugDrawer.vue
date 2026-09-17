@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import KJSCDialogV2 from '@/components/KJSCCmpt/KJSCDialogV2.vue';
+import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { API } from '@/api';
 import type { ModelDebugDTO, ModelDebugVO, ModelsVO } from '@/types/api/model/model';
 import { modelTypeLabelKey } from '../constants';
@@ -17,7 +17,7 @@ const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void;
 }>();
 
-const dialogVisible = computed({
+const drawerVisible = computed({
   get: () => props.visible,
   set: (value: boolean) => emit('update:visible', value)
 });
@@ -51,9 +51,7 @@ const isVision = computed(() => modelType.value === 'VLLM');
 const needsFile = computed(() => isVision.value || modelType.value === 'ASR');
 const fileAccept = computed(() => (isVision.value ? 'image/*' : 'audio/*'));
 const filePlaceholder = computed(() =>
-  isVision.value
-    ? t('page.models.debug.fileImagePlaceholder', '请上传一张图片')
-    : t('page.models.debug.fileAudioPlaceholder', '请上传一段音频')
+  isVision.value ? t('page.models.debug.fileImagePlaceholder', '请上传一张图片') : t('page.models.debug.fileAudioPlaceholder', '请上传一段音频')
 );
 
 const typeLabel = computed(() => {
@@ -69,9 +67,7 @@ const documents = computed(() =>
 );
 
 /** input 必填；视觉 / 语音还必须带文件 */
-const canRun = computed(
-  () => !!props.model?.id && !!form.input.trim() && (!needsFile.value || !!selectedFile.value)
-);
+const canRun = computed(() => !!props.model?.id && !!form.input.trim() && (!needsFile.value || !!selectedFile.value));
 
 const resetState = () => {
   form.input = '';
@@ -169,120 +165,100 @@ const handleCopy = async () => {
 </script>
 
 <template>
-  <KJSCDialogV2
-    v-model="dialogVisible"
-    :title="$t('page.models.debug.title', '模型调试')"
-    width="760px"
-    append-to-body
-    custom-class="model-debug-dialog"
-    :show-close-btn="false"
-    :show-subit-btn="false"
-  >
-    <div class="debug-body">
-      <div class="debug-model">
-        <span class="debug-model__name">{{ props.model?.displayName || props.model?.name || '-' }}</span>
-        <el-tag size="small" type="info">{{ typeLabel }}</el-tag>
-      </div>
-
-      <el-form :model="form" label-position="top">
-        <el-form-item v-if="needsFile" :label="$t('page.models.debug.file', '上传文件')">
-          <el-upload
-            v-model:file-list="fileList"
-            :auto-upload="false"
-            :limit="1"
-            :accept="fileAccept"
-            :on-change="onFileChange"
-            :on-remove="onFileRemove"
-            :on-exceed="onFileExceed"
-          >
-            <el-button>{{ $t('page.models.debug.fileSelect', '选择文件') }}</el-button>
-            <template #tip>
-              <div class="el-upload__tip">{{ filePlaceholder }}</div>
-            </template>
-          </el-upload>
-        </el-form-item>
-
-        <el-form-item :label="$t('page.models.debug.input', '输入内容')">
-          <el-input
-            v-model="form.input"
-            type="textarea"
-            :rows="4"
-            :placeholder="$t('page.models.debug.inputPlaceholder', '请输入用于调试的文本')"
-          />
-        </el-form-item>
-
-        <el-form-item v-if="isRerank" :label="$t('page.models.debug.documents', '候选文档')">
-          <el-input
-            v-model="form.documentsText"
-            type="textarea"
-            :rows="4"
-            :placeholder="$t('page.models.debug.documentsPlaceholder', '每行一条文档，用于重排序打分')"
-          />
-        </el-form-item>
-
-        <template v-if="isChat">
-          <el-form-item :label="$t('page.models.debug.systemPrompt', '系统提示词')">
-            <el-input
-              v-model="form.systemPrompt"
-              type="textarea"
-              :rows="2"
-              :placeholder="$t('page.models.debug.systemPromptPlaceholder', '可选')"
-            />
-          </el-form-item>
-
-          <div class="param-grid">
-            <el-form-item label="Temperature">
-              <el-input-number v-model="form.temperature" :min="0" :max="2" :step="0.1" controls-position="right" />
-            </el-form-item>
-            <el-form-item label="Top P">
-              <el-input-number v-model="form.topP" :min="0" :max="1" :step="0.1" controls-position="right" />
-            </el-form-item>
-            <el-form-item label="Max Tokens">
-              <el-input-number v-model="form.maxTokens" :min="1" :max="8192" :step="128" controls-position="right" />
-            </el-form-item>
-          </div>
-
-          <el-form-item :label="$t('page.models.debug.thinking', '思考模式')">
-            <el-switch v-model="form.thinking" />
-          </el-form-item>
-        </template>
-      </el-form>
-
-      <template v-if="result">
-        <h4 class="section-title">{{ $t('page.models.debug.resultTitle', '调试结果') }}</h4>
-
-        <div class="result-meta">
-          <el-tag :type="result.error ? 'danger' : 'success'">
-            {{ result.error ? $t('page.models.debug.failed', '调用失败') : $t('page.models.debug.succeeded', '调用成功') }}
-          </el-tag>
-          <span v-if="result.elapsedMs !== undefined" class="form-desc form-desc--inline">
-            {{ $t('page.models.debug.elapsed', '耗时') }}: {{ result.elapsedMs }} ms
-          </span>
-        </div>
-
-        <div v-if="result.error" class="result-block result-block--error">{{ result.error }}</div>
-
-        <div v-if="result.response !== undefined && result.response !== null" class="result-section">
-          <span class="result-section__label">{{ $t('page.models.debug.response', '响应内容') }}</span>
-          <pre class="result-block">{{ stringify(result.response) }}</pre>
-        </div>
-
-        <div v-if="result.observations && Object.keys(result.observations).length" class="result-section">
-          <span class="result-section__label">{{ $t('page.models.debug.observations', '观察指标') }}</span>
-          <pre class="result-block">{{ stringify(result.observations) }}</pre>
-        </div>
-
-        <div v-if="result.requestPreview && Object.keys(result.requestPreview).length" class="result-section">
-          <span class="result-section__label">{{ $t('page.models.debug.requestPreview', '请求预览') }}</span>
-          <pre class="result-block">{{ stringify(result.requestPreview) }}</pre>
-        </div>
-      </template>
+  <KjscRtlDrawer v-model="drawerVisible" :title="$t('page.models.debug.title', '模型调试')" size="800px" append-to-body>
+    <div class="debug-model">
+      <span class="debug-model__name">{{ props.model?.displayName || props.model?.name || '-' }}</span>
+      <el-tag size="small" type="info">{{ typeLabel }}</el-tag>
     </div>
 
-    <template #prefixFooter>
-      <div class="dialog-footer">
+    <el-form :model="form" label-position="top">
+      <el-form-item v-if="needsFile" :label="$t('page.models.debug.file', '上传文件')">
+        <el-upload
+          v-model:file-list="fileList"
+          :auto-upload="false"
+          :limit="1"
+          :accept="fileAccept"
+          :on-change="onFileChange"
+          :on-remove="onFileRemove"
+          :on-exceed="onFileExceed"
+        >
+          <el-button>{{ $t('page.models.debug.fileSelect', '选择文件') }}</el-button>
+          <template #tip>
+            <div class="el-upload__tip">{{ filePlaceholder }}</div>
+          </template>
+        </el-upload>
+      </el-form-item>
+
+      <el-form-item :label="$t('page.models.debug.input', '输入内容')">
+        <el-input v-model="form.input" type="textarea" :rows="4" :placeholder="$t('page.models.debug.inputPlaceholder', '请输入用于调试的文本')" />
+      </el-form-item>
+
+      <el-form-item v-if="isRerank" :label="$t('page.models.debug.documents', '候选文档')">
+        <el-input
+          v-model="form.documentsText"
+          type="textarea"
+          :rows="4"
+          :placeholder="$t('page.models.debug.documentsPlaceholder', '每行一条文档，用于重排序打分')"
+        />
+      </el-form-item>
+
+      <template v-if="isChat">
+        <el-form-item :label="$t('page.models.debug.systemPrompt', '系统提示词')">
+          <el-input v-model="form.systemPrompt" type="textarea" :rows="2" :placeholder="$t('page.models.debug.systemPromptPlaceholder', '可选')" />
+        </el-form-item>
+
+        <div class="param-grid">
+          <el-form-item label="Temperature">
+            <el-input-number v-model="form.temperature" :min="0" :max="2" :step="0.1" controls-position="right" />
+          </el-form-item>
+          <el-form-item label="Top P">
+            <el-input-number v-model="form.topP" :min="0" :max="1" :step="0.1" controls-position="right" />
+          </el-form-item>
+          <el-form-item label="Max Tokens">
+            <el-input-number v-model="form.maxTokens" :min="1" :max="8192" :step="128" controls-position="right" />
+          </el-form-item>
+        </div>
+
+        <el-form-item :label="$t('page.models.debug.thinking', '思考模式')">
+          <el-switch v-model="form.thinking" />
+        </el-form-item>
+      </template>
+    </el-form>
+
+    <template v-if="result">
+      <h4 class="section-title">{{ $t('page.models.debug.resultTitle', '调试结果') }}</h4>
+
+      <div class="result-meta">
+        <el-tag :type="result.error ? 'danger' : 'success'">
+          {{ result.error ? $t('page.models.debug.failed', '调用失败') : $t('page.models.debug.succeeded', '调用成功') }}
+        </el-tag>
+        <span v-if="result.elapsedMs !== undefined" class="form-desc form-desc--inline">
+          {{ $t('page.models.debug.elapsed', '耗时') }}: {{ result.elapsedMs }} ms
+        </span>
+      </div>
+
+      <div v-if="result.error" class="result-block result-block--error">{{ result.error }}</div>
+
+      <div v-if="result.response !== undefined && result.response !== null" class="result-section">
+        <span class="result-section__label">{{ $t('page.models.debug.response', '响应内容') }}</span>
+        <pre class="result-block">{{ stringify(result.response) }}</pre>
+      </div>
+
+      <div v-if="result.observations && Object.keys(result.observations).length" class="result-section">
+        <span class="result-section__label">{{ $t('page.models.debug.observations', '观察指标') }}</span>
+        <pre class="result-block">{{ stringify(result.observations) }}</pre>
+      </div>
+
+      <div v-if="result.requestPreview && Object.keys(result.requestPreview).length" class="result-section">
+        <span class="result-section__label">{{ $t('page.models.debug.requestPreview', '请求预览') }}</span>
+        <pre class="result-block">{{ stringify(result.requestPreview) }}</pre>
+      </div>
+    </template>
+
+    <template #footer>
+      <div class="manage-dialog-footer">
         <el-button v-if="result" @click="handleCopy">{{ $t('page.models.debug.copy', '复制结果') }}</el-button>
-        <el-button @click="dialogVisible = false">{{ $t('page.normal.close', '关闭') }}</el-button>
+        <el-button @click="drawerVisible = false">{{ $t('page.normal.close', '关闭') }}</el-button>
         <el-button
           type="primary"
           :loading="running"
@@ -294,15 +270,10 @@ const handleCopy = async () => {
         </el-button>
       </div>
     </template>
-  </KJSCDialogV2>
+  </KjscRtlDrawer>
 </template>
 
 <style lang="scss" scoped>
-.debug-body {
-  max-height: 62vh;
-  overflow-y: auto;
-}
-
 .debug-model {
   display: flex;
   align-items: center;
@@ -329,10 +300,6 @@ const handleCopy = async () => {
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
-}
-
-.debug-alert {
-  margin-bottom: 16px;
 }
 
 .form-desc {
@@ -384,10 +351,5 @@ const handleCopy = async () => {
     background-color: #fef0f0;
     color: #c45656;
   }
-}
-
-.dialog-footer {
-  display: inline-flex;
-  gap: 16px;
 }
 </style>

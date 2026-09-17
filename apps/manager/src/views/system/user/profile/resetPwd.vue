@@ -1,48 +1,21 @@
 <template>
-  <el-form
-    ref="pwdRef"
-    :model="user"
-    :rules="rules"
-    label-width="80px"
-    style="margin-top: 35px"
-  >
+  <el-form ref="pwdRef" :model="user" :rules="rules" label-width="80px" style="margin-top: 35px">
     <el-form-item label="旧密码" prop="oldPassword">
-      <el-input
-        v-model="user.oldPassword"
-        placeholder="请输入旧密码"
-        type="password"
-        show-password
-      />
+      <el-input v-model="user.oldPassword" placeholder="请输入旧密码" type="password" show-password />
     </el-form-item>
     <el-form-item label="新密码" prop="newPassword">
-      <el-input
-        v-model="user.newPassword"
-        placeholder="请输入新密码"
-        type="password"
-        show-password
-      />
+      <el-input v-model="user.newPassword" placeholder="请输入新密码" type="password" show-password />
     </el-form-item>
     <el-form-item label="确认密码" prop="confirmPassword">
-      <el-input
-        v-model="user.confirmPassword"
-        placeholder="请确认新密码"
-        type="password"
-        show-password
-      />
+      <el-input v-model="user.confirmPassword" placeholder="请确认新密码" type="password" show-password />
     </el-form-item>
     <el-form-item>
       <el-form-item>
         <div style="width: 100%; margin-bottom: 50px">
-          <div
-            class="showRules"
-            :style="{ color: state.haveLength ? '#68C23A' : '#666' }"
-          >
+          <div class="showRules" :style="{ color: state.haveLength ? '#68C23A' : '#666' }">
             <el-icon :size="12"><CircleCheck /></el-icon> 至少6个字符
           </div>
-          <div
-            class="showRules"
-            :style="{ color: state.haveNum ? '#68C23A' : '#666' }"
-          >
+          <div class="showRules" :style="{ color: state.haveNum ? '#68C23A' : '#666' }">
             <el-icon :size="12"><CircleCheck /></el-icon> 至少一个数字
           </div>
           <!-- <div
@@ -51,10 +24,7 @@
           >
             <el-icon :size="12"><CircleCheck /></el-icon> 至少一个大写字母
           </div> -->
-          <div
-            class="showRules"
-            :style="{ color: state.haveLowerCase ? '#68C23A' : '#666' }"
-          >
+          <div class="showRules" :style="{ color: state.haveLowerCase ? '#68C23A' : '#666' }">
             <el-icon :size="12"><CircleCheck /></el-icon> 至少一个字母
           </div>
           <p>
@@ -63,21 +33,14 @@
               {{ checkPassword(user.newPassword) }}
             </span>
           </p>
-          <el-progress
-            style="width: 100%"
-            :percentage="state.totalMark"
-            :show-text="false"
-            :color="customColorMethod(state.totalMark)"
-          />
+          <el-progress style="width: 100%" :percentage="state.totalMark" :show-text="false" :color="customColorMethod(state.totalMark)" />
         </div>
         <!-- <el-button @click="close">关闭</el-button> -->
       </el-form-item>
     </el-form-item>
     <el-form-item>
-      <div style="width:100%;text-align:right">
-        <el-button :disabled="!isSubmit" type="primary" @click="submit"
-          >更改密码</el-button
-        >
+      <div style="width: 100%; text-align: right">
+        <el-button :disabled="!isSubmit" type="primary" @click="submit">更改密码</el-button>
       </div>
     </el-form-item>
   </el-form>
@@ -86,76 +49,78 @@
 </template>
 
 <script setup>
-import { updateUserPwd,checkPasswordValue } from "@/api/system/user";
-import LoginFailureDialog from "@/components/LoginFailureDialog"//测试
-import { Rsa } from '@/utils/rsa'
+import { updateUserPwd, checkPasswordValue } from '@/api/system/user';
+import LoginFailureDialog from '@/components/LoginFailureDialog'; //测试
+import { Rsa } from '@/utils/rsa';
 const { proxy } = getCurrentInstance();
 const props = defineProps({
   userInfo: {
-    type: Object,
-  },
+    type: Object
+  }
 });
 const user = reactive({
   oldPassword: undefined,
   newPassword: undefined,
-  confirmPassword: undefined,
+  confirmPassword: undefined
 });
 
 const state = reactive({
-  totalMark: "", // 密码的进度条分数
+  totalMark: '', // 密码的进度条分数
   haveLength: false,
   haveLowerCase: false,
   haveNum: false,
-  loginFailureDialog:false,//
-  failureType:null,//
+  loginFailureDialog: false, //
+  failureType: null //
   // haveUpperCase: false,
 });
 
 //
-const done  = () => {
+const done = () => {
   state.loginFailureDialog = false;
-}
-const checkPasswordInspect = async(rule, value, callback) => {
-    const rsa = new Rsa();
-    let password = rsa.encryptWithRSA(user.oldPassword);
-    const res = await checkPasswordValue({password:password,userId:props.userInfo.userId});
-    if(!res.data){
-      callback(new Error("密码错误"));
-    }else{
-      callback();
-    }
-}
+};
+const checkPasswordInspect = async (rule, value, callback) => {
+  const rsa = new Rsa();
+  let password = rsa.encryptWithRSA(user.oldPassword);
+  const res = await checkPasswordValue({ password: password, userId: props.userInfo.userId });
+  if (!res.data) {
+    callback(new Error('密码错误'));
+  } else {
+    callback();
+  }
+};
 const equalToPassword = (rule, value, callback) => {
   if (user.newPassword !== value) {
-    callback(new Error("两次输入的密码不匹配"));
+    callback(new Error('两次输入的密码不匹配'));
   } else {
     callback();
   }
 };
 const equalNewPassword = async (rule, value, callback) => {
   if (user.oldPassword === value) {
-    callback(new Error("新密码与旧密码不能相同"));
+    callback(new Error('新密码与旧密码不能相同'));
     isSubmit.value = false;
   } else {
     callback();
   }
 };
 const rules = ref({
-  oldPassword: [{ required: true, message: "旧密码不能为空", trigger: "blur" },
-  { required: true, validator: checkPasswordInspect, trigger: "blur" }],
+  oldPassword: [
+    { required: true, message: '旧密码不能为空', trigger: 'blur' },
+    { required: true, validator: checkPasswordInspect, trigger: 'blur' }
+  ],
   newPassword: [
-    { required: true, message: "新密码不能为空", trigger: "blur" },
-    { min: 6, message: "最少输入6个字符", trigger: "blur" },
-    { required: true, validator: equalNewPassword, trigger: "blur" },
+    { required: true, message: '新密码不能为空', trigger: 'blur' },
+    { min: 6, message: '最少输入6个字符', trigger: 'blur' },
+    { required: true, validator: equalNewPassword, trigger: 'blur' }
   ],
   confirmPassword: [
-    { required: true, message: "确认密码不能为空", trigger: "blur" },
-    { required: true, validator: equalToPassword, trigger: "blur" },
-  ],
+    { required: true, message: '确认密码不能为空', trigger: 'blur' },
+    { required: true, validator: equalToPassword, trigger: 'blur' }
+  ]
 });
 
 /** 提交按钮 */
-const submit  = async () => {
+const submit = async () => {
   proxy.$refs.pwdRef.validate((valid) => {
     if (valid) {
       // const res = updateUserPwd(user.oldPassword, user.newPassword);
@@ -167,15 +132,17 @@ const submit  = async () => {
       // }else{
       //   proxy.$modal.msgError(res.msg?res.msg:"更改失败、请重新提交");
       // }
-      updateUserPwd(user.oldPassword, user.newPassword).then((response) => {
+      updateUserPwd(user.oldPassword, user.newPassword)
+        .then((response) => {
           state.loginFailureDialog = true;
           state.failureType = 8;
-      }).catch(err => {
-          proxy.$modal.msgError("更改失败、请重新提交");
-      });
+        })
+        .catch((err) => {
+          proxy.$modal.msgError('更改失败、请重新提交');
+        });
     }
   });
-}
+};
 /** 关闭按钮 */
 function close() {
   proxy.$tab.closePage();
@@ -185,20 +152,23 @@ const isSubmit = computed(() => {
   return (
     state.haveLength &&
     state.haveNum &&
-    state.haveLowerCase&&(user.confirmPassword==user.newPassword)&&(user.confirmPassword!=''&&user.newPassword!='')
+    state.haveLowerCase &&
+    user.confirmPassword == user.newPassword &&
+    user.confirmPassword != '' &&
+    user.newPassword != ''
   );
 });
 
-const customColorMethod = (percentage) =>{
+const customColorMethod = (percentage) => {
   if (percentage < 30) {
-    return "#FA5555";
+    return '#FA5555';
   }
   if (percentage < 60) {
-    return "#e6a23c";
+    return '#e6a23c';
   }
-  return "#67c23a";
-}
-const checkPassword = (str) =>{
+  return '#67c23a';
+};
+const checkPassword = (str) => {
   if (str) {
     // 第一步先判断各分类长度
     let num = 0; // 数字
@@ -292,25 +262,25 @@ const checkPassword = (str) =>{
     }
     const totalMark = wholeMark + numMark + caseMark + specialMark + reward;
     state.totalMark = totalMark;
-    let strength = "";
+    let strength = '';
     if (totalMark < 25) {
-      strength = "非常弱";
+      strength = '非常弱';
     } else if (totalMark >= 25 && totalMark < 50) {
-      strength = "弱";
+      strength = '弱';
     } else if (totalMark >= 50 && totalMark < 60) {
-      strength = "一般";
+      strength = '一般';
     } else if (totalMark >= 60 && totalMark < 70) {
-      strength = "强";
+      strength = '强';
     } else if (totalMark >= 70 && totalMark < 80) {
-      strength = "非常强";
+      strength = '非常强';
     } else if (totalMark >= 86 && totalMark < 90) {
-      strength = "安全";
+      strength = '安全';
     } else {
-      strength = "非常安全";
+      strength = '非常安全';
     }
     return strength;
   }
-}
+};
 </script>
 <style lang="less" scoped>
 .showRules {

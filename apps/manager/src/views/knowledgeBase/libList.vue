@@ -38,10 +38,10 @@
             @click="handleDelete()">
             {{ $t('page.normal.batchDelete', '批量删除') }}
           </button> -->
-          <button type="button" class="toolbar-btn" :disabled="ids.length === 0" v-hasPermi="['business:tenants:edit']" @click="handleEnable()">
+          <button type="button" class="toolbar-btn" :disabled="ids.length === 0" v-hasPermi="['business:tenants:edit']">
             {{ $t('page.normal.batchEnable', '批量启用') }}
           </button>
-          <button type="button" class="toolbar-btn" :disabled="ids.length === 0" v-hasPermi="['business:tenants:edit']" @click="handleDisable()">
+          <button type="button" class="toolbar-btn" :disabled="ids.length === 0" v-hasPermi="['business:tenants:edit']">
             {{ $t('page.normal.batchDisable', '批量停用') }}
           </button>
           <span class="selected-text"
@@ -297,11 +297,12 @@
     <!-- 添加或修改对话框 -->
     <!-- <KnowledgeBaseEditorModal v-model:visible="open" :mode="mode" :kbId="kbId" /> -->
     <!-- 详情抽屉 -->
-    <KnowledgeBaseDetailDrawer v-model:visible="open" :kbId="kbId" />
+    <KnowledgeBaseDetailDrawer v-model:visible="open" :kbId="kbId" :mode="mode" />
   </section>
 </template>
 
 <script setup lang="ts" name="KnowledgeLibList">
+import modal from '@/plugins/modal';
 import { ref, reactive } from '@vue/runtime-core';
 import { AjaxResult, KnowledgeBaseEntity, KnowledgeBaseExtends, KnowledgeBaseListReq, TableShowColumns } from '@/types';
 
@@ -316,7 +317,6 @@ import { getKBChunkStrategyOptionLabel } from '@/composables/useKBChunk.js';
 import { parseEntity } from '@/composables/useKnowledge.js';
 
 const emit = defineEmits(['manage']);
-const { proxy } = getCurrentInstance();
 
 const { t } = useI18n();
 const $t = t;
@@ -326,7 +326,7 @@ const i18nTexts = ref({
   disable: t('page.normal.disable')
 });
 
-const tableData = ref<KnowledgeBaseExtends[]>([]) as { value: KnowledgeBaseExtends[] };
+const tableData = ref<KnowledgeBaseExtends[]>([]);
 // const tableRef = ref();
 const loading = ref<boolean>(true);
 // const showSearch = ref<boolean>(true)
@@ -395,7 +395,7 @@ function resetQuery() {
 function handleDelete(row: KnowledgeBaseEntity) {
   const id = row.id!;
   const message = t('page.tenantMember.deleteConfirm', '是否确认删除知识库编号为"' + id + '"的数据项？');
-  proxy.$modal.confirm(message).then(
+  modal.confirm(message).then(
     function () {
       return doDelete(id);
     },
@@ -406,7 +406,7 @@ function handleDelete(row: KnowledgeBaseEntity) {
 function doDelete(id: number | string) {
   return deleteKnowledgeBaseSingleApi(id).then((res: AjaxResult) => {
     if (res.code === 200) {
-      proxy.$modal.msgSuccess(t('page.knowledgeBase.deleteSuccess', '删除成功'));
+      modal.msgSuccess(t('page.knowledgeBase.deleteSuccess', '删除成功'));
       if (tableData.value.length === 1 && pageParams.value.pageNum > 1) {
         pageParams.value.pageNum--;
       }

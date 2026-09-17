@@ -259,6 +259,7 @@
 // import useAppStore from '@/store/modules/app'
 import useUserStore from '@/store/modules/user';
 import ExcelImportDialog from '@/components/ExcelImportDialog/index.vue';
+import type { FormInstance } from 'element-plus/es/components/form';
 import {
   changeUserStatus,
   listUser,
@@ -271,23 +272,33 @@ import {
   checkUserNameValue
 } from '@/api/system/user';
 import { getRoleAllList } from '@/api/system/role';
+import { getConfigKey } from '@/api/system/config';
 import type { SysUser, UserQueryParams } from '@/types/api/system/user';
 import type { SysRole } from '@/types/api/system/role';
 import type { SysPost } from '@/types/api/system/post';
-import type { TreeSelect, TableShowColumns } from '@/types/api/common';
+import type { TreeSelect, TableShowColumns, ValueLabelOption } from '@/types/api/common';
 import _api from '@/utils/api';
 import { isEmpty } from '@/utils/common.js';
 import cache from '@/plugins/cache';
+import modal from '@/plugins/modal';
+import { addDateRange } from '@/utils/ruoyi';
+import { download } from '@/utils/request';
 
 import positionServiceFactory from '@/service/positionService';
 import { Info } from 'lucide-vue-next';
 
 const api: any = _api;
 
+interface UserForm extends Omit<SysUser, 'roleIds'> {
+  roleIds?: number;
+  deptIds?: number[];
+  builtin?: number;
+  roleKey?: string;
+}
+
 const router = useRouter();
 // const appStore = useAppStore()
 const userStore = useUserStore();
-const { proxy } = getCurrentInstance();
 // const { sys_normal_disable, sys_user_sex } = proxy.useDict("sys_normal_disable", "sys_user_sex")
 
 const deptTreeProps = {
@@ -298,6 +309,8 @@ const deptTreeProps = {
 
 const userList = ref<SysUser[]>([]);
 const userTableRef = ref();
+const userRef = ref<FormInstance>();
+const importUserRef = ref<InstanceType<typeof ExcelImportDialog>>();
 const open = ref<boolean>(false);
 const resetPwdOpen = ref<boolean>(false);
 const resetPwdUser = ref<SysUser>({});
@@ -315,8 +328,8 @@ const enabledDeptOptions = ref<TreeSelect[] | undefined>(undefined);
 // const initPassword = ref<string | undefined>(undefined)
 const postOptions = ref<SysPost[]>([]);
 const roleOptions = ref<SysRole[]>([]);
-const tenantOptions = ref([]);
-const queryTenantOptions = ref([]);
+const tenantOptions = ref<ValueLabelOption[]>([]);
+const queryTenantOptions = ref<ValueLabelOption[]>([]);
 // 列显隐信息
 const columns = ref<Record<string, TableShowColumns>>({
   userId: { label: '用户编号', visible: true },
@@ -377,7 +390,7 @@ const validateNickName = (rule: any, value: string, callback: Function) => {
 };
 
 const data = reactive({
-  form: {} as SysUser,
+  form: {} as UserForm,
   queryParams: {
     orderByColumn: 'createTime',
     isAsc: 'desc',
@@ -420,7 +433,7 @@ const isInternalRole = computed(() => {
 /** 查询用户列表 */
 function getList() {
   loading.value = true;
-  listUser(proxy.addDateRange(queryParams.value, dateRange.value)).then((res) => {
+  listUser(addDateRange(queryParams.value, dateRange.value)).then((res) => {
     loading.value = false;
     userList.value = res.rows;
     total.value = res.total;
@@ -459,12 +472,12 @@ function handleNodeClick(data: any) {
 }
 
 // 获取初始密码
-const getInitPassword = async () => {
-  let res = await proxy.getConfigKey('sys.user.initPassword');
-  // console.log('getInitPassword', res)
-  if (res.code === 200) {
-    orginPwd.value = res.data || res.msg;
-  }
+const getInitPassword = () => {
+  return getConfigKey('sys.user.initPassword').then((res) => {
+    if (res.code === 200) {
+      orginPwd.value = res.data || res.msg;
+    }
+  });
 };
 /** 搜索按钮操作 */
 function handleQuery() {
@@ -483,21 +496,21 @@ function resetQuery() {
 /** 删除按钮操作 */
 function handleDelete(row?: SysUser) {
   const userIds = row?.userId || ids.value;
-  proxy.$modal
+  modal
     .confirm('是否确认删除用户编号为"' + userIds + '"的数据项？')
     .then(function () {
       return delUser(userIds);
     })
     .then(() => {
       getList();
-      proxy.$modal.msgSuccess('删除成功');
+      modal.msgSuccess('删除成功');
     })
     .catch(() => {});
 }
 
 /** 导出按钮操作 */
 function handleExport() {
-  proxy.download(
+  download(
     'system/user/export',
     {
       ...queryParams.value
@@ -509,13 +522,13 @@ function handleExport() {
 /** 用户状态修改  */
 function handleStatusChange(row: SysUser) {
   const text = row.status === '0' ? '启用' : '停用';
-  proxy.$modal
+  modal
     .confirm('确认要"' + text + '""' + row.userName + '"用户吗?')
     .then(function () {
       return changeUserStatus(row.userId!, row.status!);
     })
     .then(() => {
-      proxy.$modal.msgSuccess(text + '成功');
+      modal.msgSuccess(text + '成功');
     })
     .catch(function () {
       row.status = row.status === '0' ? '1' : '0';
@@ -583,7 +596,7 @@ function submitResetPwd() {
   }
   resetPwdError.value = '';
   resetUserPwd(resetPwdUser.value.userId!, resetPwdValue.value).then(() => {
-    proxy.$modal.msgSuccess('修改成功，新密码是：' + resetPwdValue.value);
+    modal.msgSuccess('修改成功，新密码是：' + resetPwdValue.value);
     closeResetPwd();
   });
 }
@@ -597,7 +610,7 @@ function handleSelectionChange(selection: SysUser[]) {
 
 /** 导入按钮操作 */
 function handleImport() {
-  proxy.$refs['importUserRef'].open();
+  importUserRef.value?.open();
 }
 
 /** 重置操作表单 */
@@ -607,7 +620,7 @@ function reset() {
     deptId: undefined,
     userName: undefined,
     nickName: undefined,
-    tenantId: '',
+    tenantId: undefined,
     password: undefined,
     phonenumber: undefined,
     email: undefined,
@@ -619,7 +632,7 @@ function reset() {
     roleIds: undefined
   };
   orginPwd.value = '';
-  proxy.resetForm('userRef');
+  userRef.value?.resetFields();
 }
 
 /** 取消按钮 */
@@ -713,20 +726,22 @@ function handleUpdate(row?: SysUser) {
 
 /** 提交按钮 */
 function submitForm() {
-  proxy.$refs['userRef'].validate((valid: boolean) => {
+  userRef.value?.validate((valid: boolean) => {
     if (valid) {
-      const params = { ...form.value };
-      params.roleIds = [params.roleIds];
+      const params: SysUser = {
+        ...form.value,
+        roleIds: form.value.roleIds === undefined ? [] : [form.value.roleIds]
+      };
       if (form.value.userId != undefined) {
         updateUser(params).then(() => {
-          proxy.$modal.msgSuccess('修改成功');
+          modal.msgSuccess('修改成功');
           open.value = false;
           getList();
         });
       } else {
         params.password = orginPwd.value || '';
         addUser(params).then(() => {
-          proxy.$modal.msgSuccess('新增成功');
+          modal.msgSuccess('新增成功');
           open.value = false;
           getList();
         });

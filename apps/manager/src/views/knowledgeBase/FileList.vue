@@ -197,6 +197,7 @@
 </template>
 
 <script setup lang="ts" name="KnowledgeFileList">
+import type { Component, PropType } from 'vue';
 import { ref, reactive, onMounted } from '@vue/runtime-core';
 // import { Document, Folder, FolderOpened } from '@element-plus/icons-vue';
 import { Folder, FolderOpen, LoaderCircle, CircleX } from 'lucide-vue-next';
@@ -213,7 +214,6 @@ import filesQueryUse from './fileList/filesQueryUse';
 
 import FileDetail from './components/FileDetail.vue';
 
-const { proxy } = getCurrentInstance();
 const emit = defineEmits(['back']);
 
 const props = defineProps({
@@ -222,7 +222,7 @@ const props = defineProps({
     default: ''
   },
   lib: {
-    type: Object as KnowledgeBaseEntity | undefined,
+    type: Object as PropType<KnowledgeBaseEntity>,
     default: () => void 0
   }
 });
@@ -324,7 +324,7 @@ function handleDetail(row: KnowledgeFileEntity) {
 interface StatusInfo {
   label: string;
   theme: 'success' | 'warning' | 'danger' | 'primary' | 'default';
-  icon?: string;
+  icon?: Component;
   spin?: boolean;
 }
 const computeStatus = (item: KnowledgeFileEntity): StatusInfo => {
@@ -366,7 +366,7 @@ const computeStatus = (item: KnowledgeFileEntity): StatusInfo => {
 
 const statusByRow = computed(() => {
   const map = new Map<string, StatusInfo>();
-  for (const item of tableData.value) map.set(item.id, computeStatus(item));
+  for (const item of tableData.value) if (item.id !== undefined) map.set(item.id, computeStatus(item));
   return map;
 });
 

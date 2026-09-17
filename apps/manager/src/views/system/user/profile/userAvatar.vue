@@ -28,12 +28,7 @@
       <br />
       <el-row>
         <el-col :lg="2" :md="2">
-          <el-upload
-            action="#"
-            :http-request="requestUpload"
-            :show-file-list="false"
-            :before-upload="beforeUpload"
-          >
+          <el-upload action="#" :http-request="requestUpload" :show-file-list="false" :before-upload="beforeUpload">
             <el-button>
               选择
               <el-icon class="el-icon--right"><Upload /></el-icon>
@@ -61,19 +56,19 @@
 </template>
 
 <script setup>
-import "vue-cropper/dist/index.css";
-import { VueCropper } from "vue-cropper";
-import { uploadAvatar } from "@/api/system/user";
-import useUserStore from "@/store/modules/user";
-import api from "@/utils/api";
-import { resolveStaticPath } from "@/utils";
+import 'vue-cropper/dist/index.css';
+import { VueCropper } from 'vue-cropper';
+import { uploadAvatar } from '@/api/system/user';
+import useUserStore from '@/store/modules/user';
+import api from '@/utils/api';
+import { resolveStaticPath } from '@/utils';
 const userStore = useUserStore();
 const { proxy } = getCurrentInstance();
 
 const open = ref(false);
 const visible = ref(false);
-const title = ref("修改头像");
-const fileData = ref('');;
+const title = ref('修改头像');
+const fileData = ref('');
 //图片裁剪数据
 const options = reactive({
   img: userStore.avatar, // 裁剪图片的地址
@@ -81,9 +76,9 @@ const options = reactive({
   autoCropWidth: 200, // 默认生成截图框宽度
   autoCropHeight: 200, // 默认生成截图框高度
   fixedBox: true, // 固定截图框大小 不允许改变
-  outputType: "png", // 默认生成截图为PNG格式
+  outputType: 'png', // 默认生成截图为PNG格式
   previews: {}, //预览数据
-  loading:false
+  loading: false
 });
 
 /** 编辑头像 */
@@ -111,18 +106,18 @@ function changeScale(num) {
 }
 /** 上传预处理 */
 function beforeUpload(file) {
-  if (file.type.indexOf("image/") == -1) {
-    proxy.$modal.msgError("文件格式错误，请上传图片类型,如：JPG，PNG后缀的文件。");
+  if (file.type.indexOf('image/') == -1) {
+    proxy.$modal.msgError('文件格式错误，请上传图片类型,如：JPG，PNG后缀的文件。');
   } else {
     let type = file.type.split('image/');
-    let typeList = ['png', 'jpg', 'jpeg','PNG', 'JPG', 'JPEG']
-    if(typeList.indexOf(type[1])==-1){
-      proxy.$modal.msgError("文件格式无效，请从新选择PNG、JPG、JPEG格式进行上传。");
-      return
+    let typeList = ['png', 'jpg', 'jpeg', 'PNG', 'JPG', 'JPEG'];
+    if (typeList.indexOf(type[1]) == -1) {
+      proxy.$modal.msgError('文件格式无效，请从新选择PNG、JPG、JPEG格式进行上传。');
+      return;
     }
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    console.log(file)
+    console.log(file);
     // debugger
     fileData.value = file;
     reader.onload = () => {
@@ -130,8 +125,7 @@ function beforeUpload(file) {
     };
   }
 }
-function handleCrop(data) {
-}
+function handleCrop(data) {}
 /** 上传图片 */
 // const uploadImg = async () => {
 //   proxy.$refs.cropper.getCropBlob(async data => {
@@ -163,20 +157,20 @@ function handleCrop(data) {
 // }
 function uploadImg() {
   proxy.$refs.cropper.getCropBlob((data) => {
-    const formData = new FormData()
-    formData.append("file", data, options.filename)
+    const formData = new FormData();
+    formData.append('file', data, options.filename);
     options.loading = true;
-    uploadAvatar(formData).then(response => {
+    uploadAvatar(formData).then((response) => {
       const data = response.data || response || {};
       options.loading = false;
-      open.value = false
-      userStore.avatar = resolveStaticPath(data.imgUrl || data.url || '')
-      options.img = userStore.avatar
-      proxy.$modal.msgSuccess("修改成功")
-      visible.value = false
+      open.value = false;
+      userStore.avatar = resolveStaticPath(data.imgUrl || data.url || '');
+      options.img = userStore.avatar;
+      proxy.$modal.msgSuccess('修改成功');
+      visible.value = false;
       // console.log('data', data)
-    })
-  })
+    });
+  });
 }
 /** 实时预览 */
 function realTime(data) {
@@ -189,7 +183,7 @@ function closeDialog() {
 }
 </script>
 
-<style lang='scss' scoped>
+<style lang="scss" scoped>
 .user-info-head {
   position: relative;
   display: inline-block;
@@ -197,7 +191,7 @@ function closeDialog() {
 }
 
 .user-info-head:hover:after {
-  content: "+";
+  content: '+';
   position: absolute;
   left: 0;
   right: 0;

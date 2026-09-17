@@ -173,14 +173,20 @@
 </template>
 
 <script setup lang="ts" name="Dict">
+import type { FormInstance } from 'element-plus/es/components/form';
+import modal from '@/plugins/modal';
+import tab from '@/plugins/tab';
+import { useDict } from '@/utils/dict';
+import { addDateRange } from '@/utils/ruoyi';
+import { download } from '@/utils/request';
 import DictDataDrawer from './detail.vue';
 import useDictStore from '@/store/modules/dict';
 import { listType, getType, delType, addType, updateType, refreshCache } from '@/api/system/dict/type';
 import type { SysDictType, DictTypeQueryParams } from '@/types/api/system/dict';
 
-const { proxy } = getCurrentInstance();
-const { sys_normal_disable } = proxy.useDict('sys_normal_disable');
+const { sys_normal_disable } = useDict('sys_normal_disable');
 
+const dictRef = ref<FormInstance>();
 const typeList = ref<SysDictType[]>([]);
 const dictTableRef = ref();
 const open = ref<boolean>(false);
@@ -214,7 +220,7 @@ const { queryParams, form, rules } = toRefs(data);
 
 function getList() {
   loading.value = true;
-  listType(proxy.addDateRange(queryParams.value, dateRange.value)).then((response) => {
+  listType(addDateRange(queryParams.value, dateRange.value)).then((response) => {
     typeList.value = response.rows;
     total.value = response.total;
     loading.value = false;
@@ -232,7 +238,7 @@ function reset() {
     status: '0',
     remark: undefined
   };
-  proxy.resetForm('dictRef');
+  dictRef.value?.resetFields();
 }
 
 function handleQuery() {
@@ -266,7 +272,7 @@ function handleViewData(row: SysDictType) {
 }
 
 function handleDataList(row: SysDictType) {
-  proxy.$tab.openPage('字典数据', '/system/dict-data/index/' + row.dictId);
+  tab.openPage('字典数据', '/system/dict-data/index/' + row.dictId);
 }
 
 function handleUpdate(row?: SysDictType) {
@@ -281,11 +287,11 @@ function handleUpdate(row?: SysDictType) {
 
 function handleStatusChange(row: SysDictType) {
   const text = row.status === '0' ? '启用' : '停用';
-  proxy.$modal
+  modal
     .confirm('确认要"' + text + '""' + row.dictName + '"字典吗?')
     .then(() => updateType(row))
     .then(() => {
-      proxy.$modal.msgSuccess(text + '成功');
+      modal.msgSuccess(text + '成功');
     })
     .catch(() => {
       row.status = row.status === '0' ? '1' : '0';
@@ -293,17 +299,17 @@ function handleStatusChange(row: SysDictType) {
 }
 
 function submitForm() {
-  proxy.$refs['dictRef'].validate((valid: boolean) => {
+  dictRef.value?.validate((valid: boolean) => {
     if (valid) {
       if (form.value.dictId != undefined) {
         updateType(form.value).then(() => {
-          proxy.$modal.msgSuccess('修改成功');
+          modal.msgSuccess('修改成功');
           open.value = false;
           getList();
         });
       } else {
         addType(form.value).then(() => {
-          proxy.$modal.msgSuccess('新增成功');
+          modal.msgSuccess('新增成功');
           open.value = false;
           getList();
         });
@@ -314,20 +320,20 @@ function submitForm() {
 
 function handleDelete(row?: SysDictType) {
   const dictIds = row?.dictId || ids.value;
-  proxy.$modal
+  modal
     .confirm('是否确认删除字典编号为"' + dictIds + '"的数据项？')
     .then(function () {
       return delType(dictIds);
     })
     .then(() => {
       getList();
-      proxy.$modal.msgSuccess('删除成功');
+      modal.msgSuccess('删除成功');
     })
     .catch(() => {});
 }
 
 function handleExport() {
-  proxy.download(
+  download(
     'system/dict/type/export',
     {
       ...queryParams.value
@@ -338,7 +344,7 @@ function handleExport() {
 
 function handleRefreshCache() {
   refreshCache().then(() => {
-    proxy.$modal.msgSuccess('刷新成功');
+    modal.msgSuccess('刷新成功');
     useDictStore().cleanDict();
   });
 }

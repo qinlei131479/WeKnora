@@ -159,12 +159,16 @@
 </template>
 
 <script setup lang="ts" name="Post">
+import type { FormInstance } from 'element-plus/es/components/form';
+import modal from '@/plugins/modal';
+import { useDict } from '@/utils/dict';
+import { download } from '@/utils/request';
 import { listPost, addPost, delPost, getPost, updatePost } from '@/api/system/post';
 import type { SysPost, PostQueryParams } from '@/types/api/system/post';
 
-const { proxy } = getCurrentInstance();
-const { sys_normal_disable } = proxy.useDict('sys_normal_disable');
+const { sys_normal_disable } = useDict('sys_normal_disable');
 
+const postRef = ref<FormInstance>();
 const postList = ref<SysPost[]>([]);
 const postTableRef = ref();
 const open = ref<boolean>(false);
@@ -214,7 +218,7 @@ function reset() {
     status: '0',
     remark: undefined
   };
-  proxy.resetForm('postRef');
+  postRef.value?.resetFields();
 }
 
 function handleQuery() {
@@ -253,11 +257,11 @@ function handleUpdate(row?: SysPost) {
 
 function handleStatusChange(row: SysPost) {
   const text = row.status === '0' ? '启用' : '停用';
-  proxy.$modal
+  modal
     .confirm('确认要"' + text + '""' + row.postName + '"岗位吗?')
     .then(() => updatePost(row))
     .then(() => {
-      proxy.$modal.msgSuccess(text + '成功');
+      modal.msgSuccess(text + '成功');
     })
     .catch(() => {
       row.status = row.status === '0' ? '1' : '0';
@@ -265,17 +269,17 @@ function handleStatusChange(row: SysPost) {
 }
 
 function submitForm() {
-  proxy.$refs['postRef'].validate((valid: boolean) => {
+  postRef.value?.validate((valid: boolean) => {
     if (valid) {
       if (form.value.postId != undefined) {
         updatePost(form.value).then(() => {
-          proxy.$modal.msgSuccess('修改成功');
+          modal.msgSuccess('修改成功');
           open.value = false;
           getList();
         });
       } else {
         addPost(form.value).then(() => {
-          proxy.$modal.msgSuccess('新增成功');
+          modal.msgSuccess('新增成功');
           open.value = false;
           getList();
         });
@@ -286,20 +290,20 @@ function submitForm() {
 
 function handleDelete(row?: SysPost) {
   const postIds = row?.postId || ids.value;
-  proxy.$modal
+  modal
     .confirm('是否确认删除岗位编号为"' + postIds + '"的数据项？')
     .then(function () {
       return delPost(postIds);
     })
     .then(() => {
       getList();
-      proxy.$modal.msgSuccess('删除成功');
+      modal.msgSuccess('删除成功');
     })
     .catch(() => {});
 }
 
 function handleExport() {
-  proxy.download(
+  download(
     'system/post/export',
     {
       ...queryParams.value

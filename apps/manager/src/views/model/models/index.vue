@@ -4,8 +4,8 @@ import { Search } from 'lucide-vue-next';
 import { API } from '@/api';
 import type { PageDomain } from '@/types';
 import type { ModelProviderVO, ModelsPageDTO, ModelsVO } from '@/types/api/model/model';
-import ModelDebugDialog from './components/ModelDebugDialog.vue';
-import ModelFormDialog from './components/ModelFormDialog.vue';
+import ModelDebugDrawer from './components/ModelDebugDrawer.vue';
+import ModelFormDrawer from './components/ModelFormDrawer.vue';
 import { MODEL_SOURCE_OPTIONS, MODEL_TYPE_OPTIONS, modelTypeLabelKey } from './constants';
 
 const { proxy } = getCurrentInstance() as any;
@@ -23,13 +23,13 @@ const state = reactive({
   total: 0
 });
 
-const dialog = reactive({
+const formDrawer = reactive({
   visible: false,
   mode: 'add' as 'add' | 'edit',
   editId: undefined as string | undefined
 });
 
-const debugDialog = reactive({
+const debugDrawer = reactive({
   visible: false,
   model: null as ModelsVO | null
 });
@@ -91,27 +91,27 @@ const resetQuery = () => {
 };
 
 const handleAdd = () => {
-  dialog.mode = 'add';
-  dialog.editId = undefined;
-  dialog.visible = true;
+  formDrawer.mode = 'add';
+  formDrawer.editId = undefined;
+  formDrawer.visible = true;
 };
 
 const handleEdit = (row: ModelsVO) => {
-  dialog.mode = 'edit';
-  dialog.editId = row.id;
-  dialog.visible = true;
+  formDrawer.mode = 'edit';
+  formDrawer.editId = row.id;
+  formDrawer.visible = true;
 };
 
 const handleDebug = (row: ModelsVO) => {
-  debugDialog.model = row;
-  debugDialog.visible = true;
+  debugDrawer.model = row;
+  debugDrawer.visible = true;
 };
 
 const handleDelete = (row: ModelsVO) => {
   if (!row.id) return;
 
   proxy?.$modal
-    ?.confirm(t('page.models.tips.deleteConfirm', { name: row.name ?? '' }, `是否确认删除模型「${row.name ?? ''}」？`))
+    ?.confirm(t('page.models.tips.deleteConfirm', { name: row.name ?? '' }, `是否确认删除模型 ${row.name ?? ''}？`))
     .then(() => API.Models.delete(row.id!))
     .then(() => {
       proxy?.$modal?.msgSuccess(t('page.normal.confirmInfo.removeSuccess', '删除成功'));
@@ -262,9 +262,9 @@ onMounted(() => {
       </template>
     </page-content>
 
-    <ModelFormDialog v-model:visible="dialog.visible" :mode="dialog.mode" :edit-id="dialog.editId" @success="getModels" />
+    <ModelFormDrawer v-model:visible="formDrawer.visible" :mode="formDrawer.mode" :edit-id="formDrawer.editId" @success="getModels" />
 
-    <ModelDebugDialog v-model:visible="debugDialog.visible" :model="debugDialog.model" />
+    <ModelDebugDrawer v-model:visible="debugDrawer.visible" :model="debugDrawer.model" />
   </section>
 </template>
 

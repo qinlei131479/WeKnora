@@ -86,7 +86,8 @@ interface KnowledgeFileBase {
 
 export interface KnowledgeFileEntity extends KnowledgeFileBase {}
 
-export interface KnowledgeFileDetail extends KnowledgeFileEntity {
+export interface KnowledgeFileDetail extends Omit<KnowledgeFileEntity, 'customMetadata'> {
+  customMetadata?: Record<string, unknown>;
   time?: string;
   md?: Array<any>;
   total?: number;

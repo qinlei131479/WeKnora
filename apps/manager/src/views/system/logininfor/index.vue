@@ -108,11 +108,14 @@
 </template>
 
 <script setup lang="ts" name="Logininfor">
+import modal from '@/plugins/modal';
+import { useDict } from '@/utils/dict';
+import { addDateRange } from '@/utils/ruoyi';
+import { download } from '@/utils/request';
 import { list, delLogininfor, cleanLogininfor, unlockLogininfor } from '@/api/system/logininfor';
 import type { SysLogininfor, LogininforQueryParams } from '@/types/api/system/logininfor';
 
-const { proxy } = getCurrentInstance();
-const { sys_common_status } = proxy.useDict('sys_common_status');
+const { sys_common_status } = useDict('sys_common_status');
 
 const logininforList = ref<SysLogininfor[]>([]);
 const logininforRef = ref();
@@ -137,7 +140,7 @@ const queryParams = ref<LogininforQueryParams>({
 
 function getList() {
   loading.value = true;
-  list(proxy.addDateRange(queryParams.value, dateRange.value)).then((response) => {
+  list(addDateRange(queryParams.value, dateRange.value)).then((response) => {
     logininforList.value = response.rows;
     total.value = response.total;
     loading.value = false;
@@ -176,46 +179,47 @@ function handleSortChange(column: any) {
 
 function handleDelete(row?: SysLogininfor) {
   const infoIds = row?.infoId || ids.value;
-  proxy.$modal
+  modal
     .confirm('是否确认删除访问编号为"' + infoIds + '"的数据项?')
     .then(function () {
       return delLogininfor(infoIds);
     })
     .then(() => {
       getList();
-      proxy.$modal.msgSuccess('删除成功');
+      modal.msgSuccess('删除成功');
     })
     .catch(() => {});
 }
 
 function handleClean() {
-  proxy.$modal
+  modal
     .confirm('是否确认清空所有登录日志数据项?')
     .then(function () {
       return cleanLogininfor();
     })
     .then(() => {
       getList();
-      proxy.$modal.msgSuccess('清空成功');
+      modal.msgSuccess('清空成功');
     })
     .catch(() => {});
 }
 
 function handleUnlock() {
-  const username = selectName.value;
-  proxy.$modal
+  const username = selectName.value[0];
+  if (!username) return;
+  modal
     .confirm('是否确认解锁用户"' + username + '"数据项?')
     .then(function () {
       return unlockLogininfor(username);
     })
     .then(() => {
-      proxy.$modal.msgSuccess('用户' + username + '解锁成功');
+      modal.msgSuccess('用户' + username + '解锁成功');
     })
     .catch(() => {});
 }
 
 function handleExport() {
-  proxy.download(
+  download(
     'system/logininfor/export',
     {
       ...queryParams.value

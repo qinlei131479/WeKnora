@@ -1,16 +1,9 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import KJSCDialogV2 from '@/components/KJSCCmpt/KJSCDialogV2.vue';
+import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { API } from '@/api';
 import { toProviderModelType } from '@/api/model/models';
-import type {
-  ModelCredentialField,
-  ModelProviderVO,
-  ModelTestRequestDTO,
-  ModelTestResultVO,
-  ModelsDTO,
-  ModelsVO
-} from '@/types/api/model/model';
+import type { ModelCredentialField, ModelProviderVO, ModelTestRequestDTO, ModelTestResultVO, ModelsDTO, ModelsVO } from '@/types/api/model/model';
 import { MODEL_SOURCE_OPTIONS, MODEL_TYPE_OPTIONS } from '../constants';
 
 const { proxy } = getCurrentInstance() as any;
@@ -27,16 +20,14 @@ const emit = defineEmits<{
   (e: 'success'): void;
 }>();
 
-const dialogVisible = computed({
+const drawerVisible = computed({
   get: () => props.visible,
   set: (value: boolean) => emit('update:visible', value)
 });
 
 const isEdit = computed(() => props.mode === 'edit');
 
-const dialogTitle = computed(() =>
-  isEdit.value ? t('page.models.form.title.edit', '编辑模型') : t('page.models.form.title.add', '新增模型')
-);
+const drawerTitle = computed(() => (isEdit.value ? t('page.models.form.title.edit', '编辑模型') : t('page.models.form.title.add', '新增模型')));
 
 /** 键值对编辑器的行结构，提交前会转成 Record<string, string> */
 interface KeyValueRow {
@@ -264,7 +255,7 @@ const loadDetail = (id: string) =>
       console.error('[Models] load detail failed:', error);
     });
 
-const initDialog = async () => {
+const initDrawer = async () => {
   resetForm();
   loading.value = true;
 
@@ -285,13 +276,13 @@ const initDialog = async () => {
 watch(
   () => props.visible,
   (visible: boolean) => {
-    if (visible) initDialog();
+    if (visible) initDrawer();
   }
 );
 
 /**
  * 更新接口不处理凭证，编辑时填了新密钥必须再走一次凭证接口，否则会被静默丢弃。
- * 返回 false 表示密钥没存上，此时基本信息已保存，应保留弹窗让用户重试。
+ * 返回 false 表示密钥没存上，此时基本信息已保存，应保留抽屉让用户重试。
  */
 const saveSecretsIfFilled = async () => {
   if (!form.id) return true;
@@ -342,7 +333,7 @@ const handleSave = async () => {
       await API.Models.update(payload);
 
       if (!(await saveSecretsIfFilled())) {
-        // 基本信息已落库，先刷新列表，弹窗留着让用户重试密钥
+        // 基本信息已落库，先刷新列表，抽屉留着让用户重试密钥
         emit('success');
         return;
       }
@@ -351,12 +342,10 @@ const handleSave = async () => {
     }
 
     proxy?.$modal?.msgSuccess(
-      isEdit.value
-        ? t('page.normal.confirmInfo.updateSuccess', '修改成功')
-        : t('page.normal.confirmInfo.addSuccess', '新增成功')
+      isEdit.value ? t('page.normal.confirmInfo.updateSuccess', '修改成功') : t('page.normal.confirmInfo.addSuccess', '新增成功')
     );
     emit('success');
-    dialogVisible.value = false;
+    drawerVisible.value = false;
   } catch (error) {
     console.error('[Models] save failed:', error);
   } finally {
@@ -480,22 +469,13 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
 </script>
 
 <template>
-  <KJSCDialogV2
-    v-model="dialogVisible"
-    :title="dialogTitle"
-    width="760px"
-    append-to-body
-    custom-class="model-form-dialog"
-    :show-close-btn="false"
-    :show-subit-btn="false"
-  >
+  <KjscRtlDrawer v-model="drawerVisible" :title="drawerTitle" size="800px" append-to-body>
     <el-form
       ref="saveFormRef"
       v-loading="loading"
       :model="form"
       :rules="rules"
       label-position="top"
-      class="model-form"
       :validate-on-rule-change="false"
     >
       <h4 class="section-title">{{ $t('page.models.form.section.basic', '基本信息') }}</h4>
@@ -510,22 +490,14 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
       />
 
       <el-form-item :label="$t('page.models.form.name', '模型名称')" prop="name">
-        <el-input
-          v-model="form.name"
-          :placeholder="$t('page.models.form.namePlaceholder', '请输入模型名称')"
-          maxlength="100"
-        />
+        <el-input v-model="form.name" :placeholder="$t('page.models.form.namePlaceholder', '请输入模型名称')" maxlength="100" />
         <span class="form-desc">
           {{ $t('page.models.form.nameDesc', '需与厂商接口中的模型标识一致，例如 qwen-plus') }}
         </span>
       </el-form-item>
 
       <el-form-item :label="$t('page.models.form.displayName', '显示名称')" prop="displayName">
-        <el-input
-          v-model="form.displayName"
-          :placeholder="$t('page.models.form.displayNamePlaceholder', '请输入显示名称（可选）')"
-          maxlength="100"
-        />
+        <el-input v-model="form.displayName" :placeholder="$t('page.models.form.displayNamePlaceholder', '请输入显示名称（可选）')" maxlength="100" />
       </el-form-item>
 
       <el-form-item :label="$t('page.models.form.type', '模型类型')" prop="type">
@@ -535,12 +507,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
           :placeholder="$t('page.models.form.typePlaceholder', '请选择模型类型')"
           @change="onTypeChange"
         >
-          <el-option
-            v-for="item in MODEL_TYPE_OPTIONS"
-            :key="item.value"
-            :label="$t(item.labelKey, item.label)"
-            :value="item.value"
-          />
+          <el-option v-for="item in MODEL_TYPE_OPTIONS" :key="item.value" :label="$t(item.labelKey, item.label)" :value="item.value" />
         </el-select>
       </el-form-item>
 
@@ -553,12 +520,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
           default-first-option
           :placeholder="$t('page.models.form.sourcePlaceholder', '请选择模型来源')"
         >
-          <el-option
-            v-for="item in MODEL_SOURCE_OPTIONS"
-            :key="item.value"
-            :label="$t(item.labelKey, item.label)"
-            :value="item.value"
-          />
+          <el-option v-for="item in MODEL_SOURCE_OPTIONS" :key="item.value" :label="$t(item.labelKey, item.label)" :value="item.value" />
         </el-select>
       </el-form-item>
 
@@ -588,10 +550,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
       </el-form-item>
 
       <el-form-item :label="$t('page.models.form.baseUrl', 'Base URL')" prop="baseUrl">
-        <el-input
-          v-model="form.baseUrl"
-          :placeholder="$t('page.models.form.baseUrlPlaceholder', '请输入 Base URL')"
-        />
+        <el-input v-model="form.baseUrl" :placeholder="$t('page.models.form.baseUrlPlaceholder', '请输入 Base URL')" />
       </el-form-item>
 
       <!-- 新增模式：凭证随 parameters 一起提交 -->
@@ -611,9 +570,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
           <div class="credential-status">
             <el-tag :type="apiKeyConfigured ? 'success' : 'info'">
               {{
-                apiKeyConfigured
-                  ? $t('page.models.table.credentialConfigured', '已配置')
-                  : $t('page.models.table.credentialUnconfigured', '未配置')
+                apiKeyConfigured ? $t('page.models.table.credentialConfigured', '已配置') : $t('page.models.table.credentialUnconfigured', '未配置')
               }}
             </el-tag>
             <span class="form-desc form-desc--inline">
@@ -627,9 +584,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
             type="password"
             show-password
             autocomplete="new-password"
-            :placeholder="
-              $t('page.models.form.apiKeyReplacePlaceholder', '输入新的 API Key，点击「更新密钥」或直接保存均可生效')
-            "
+            :placeholder="$t('page.models.form.apiKeyReplacePlaceholder', '输入新的 API Key，点击「更新密钥」或直接保存均可生效')"
           />
 
           <div class="credential-actions">
@@ -651,10 +606,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
       </el-form-item>
 
       <el-form-item :label="$t('page.models.form.appId', 'App ID')" prop="appId">
-        <el-input
-          v-model="form.appId"
-          :placeholder="$t('page.models.form.appIdPlaceholder', '部分厂商（如 WeKnoraCloud）需要填写')"
-        />
+        <el-input v-model="form.appId" :placeholder="$t('page.models.form.appIdPlaceholder', '部分厂商（如 WeKnoraCloud）需要填写')" />
       </el-form-item>
 
       <el-form-item v-if="!isEdit" :label="$t('page.models.form.appSecret', 'App Secret')" prop="appSecret">
@@ -707,28 +659,18 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
       </el-form-item>
 
       <el-form-item :label="$t('page.models.form.interfaceType', '接口类型')" prop="interfaceType">
-        <el-input
-          v-model="form.interfaceType"
-          :placeholder="$t('page.models.form.interfaceTypePlaceholder', '例如 openai（可选）')"
-        />
+        <el-input v-model="form.interfaceType" :placeholder="$t('page.models.form.interfaceTypePlaceholder', '例如 openai（可选）')" />
       </el-form-item>
 
       <el-form-item :label="$t('page.models.form.parameterSize', '参数规模')" prop="parameterSize">
-        <el-input
-          v-model="form.parameterSize"
-          :placeholder="$t('page.models.form.parameterSizePlaceholder', '例如 7B / 13B（可选）')"
-        />
+        <el-input v-model="form.parameterSize" :placeholder="$t('page.models.form.parameterSizePlaceholder', '例如 7B / 13B（可选）')" />
       </el-form-item>
 
       <el-form-item :label="$t('page.models.form.maxConcurrency', '最大并发数')" prop="maxConcurrency">
         <el-input-number v-model="form.maxConcurrency" :min="0" :max="1000" controls-position="right" />
       </el-form-item>
 
-      <el-form-item
-        v-if="supportsVisionVisible"
-        :label="$t('page.models.form.supportsVision', '支持视觉输入')"
-        prop="supportsVision"
-      >
+      <el-form-item v-if="supportsVisionVisible" :label="$t('page.models.form.supportsVision', '支持视觉输入')" prop="supportsVision">
         <el-switch v-model="form.supportsVision" />
         <span class="form-desc form-desc--inline">
           {{ $t('page.models.form.supportsVisionDesc', '开启后该模型可接收图片输入') }}
@@ -745,17 +687,11 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
           </span>
         </el-form-item>
 
-        <el-form-item
-          :label="$t('page.models.form.truncatePromptTokens', '截断提示词 token 数')"
-          prop="truncatePromptTokens"
-        >
+        <el-form-item :label="$t('page.models.form.truncatePromptTokens', '截断提示词 token 数')" prop="truncatePromptTokens">
           <el-input-number v-model="form.truncatePromptTokens" :min="0" :max="32768" controls-position="right" />
         </el-form-item>
 
-        <el-form-item
-          :label="$t('page.models.form.supportsDimensionOverride', '支持维度覆盖')"
-          prop="supportsDimensionOverride"
-        >
+        <el-form-item :label="$t('page.models.form.supportsDimensionOverride', '支持维度覆盖')" prop="supportsDimensionOverride">
           <el-switch v-model="form.supportsDimensionOverride" />
         </el-form-item>
       </template>
@@ -794,18 +730,14 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
 
       <div v-if="testResult" class="test-result" :class="testResult.available ? 'is-success' : 'is-error'">
         <span class="test-result__title">
-          {{
-            testResult.available
-              ? $t('page.models.test.success', '测试成功')
-              : $t('page.models.test.fail', '测试失败')
-          }}
+          {{ testResult.available ? $t('page.models.test.success', '测试成功') : $t('page.models.test.fail', '测试失败') }}
         </span>
         <span class="test-result__text">{{ testResult.message || '-' }}</span>
       </div>
     </el-form>
 
-    <template #prefixFooter>
-      <div class="dialog-footer">
+    <template #footer>
+      <div class="manage-dialog-footer">
         <el-button
           :loading="testing"
           :disabled="!canTest"
@@ -814,13 +746,13 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         >
           {{ $t('page.models.test.button', '测试连接') }}
         </el-button>
-        <el-button @click="dialogVisible = false">{{ $t('page.normal.cancel', '取消') }}</el-button>
+        <el-button @click="drawerVisible = false">{{ $t('page.normal.cancel', '取消') }}</el-button>
         <el-button type="primary" :loading="saving" @click="handleSave">
           {{ $t('page.normal.save', '保存') }}
         </el-button>
       </div>
     </template>
-  </KJSCDialogV2>
+  </KjscRtlDrawer>
 </template>
 
 <style lang="scss" scoped>
@@ -916,8 +848,4 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
   }
 }
 
-.dialog-footer {
-  display: inline-flex;
-  gap: 16px;
-}
 </style>

@@ -12,7 +12,7 @@ import { getKnowledgeFileChunksApi } from '@/api/data/knowledgeFile';
 export interface UseFileDetailChunksOptions {
   knowledgeId: string;
   t: (key: string, ...args: any[]) => string;
-  getMarkdownRenderRoot: () => HTMLElement;
+  getMarkdownRenderRoot: () => HTMLElement | null;
 }
 // 生成的问题类型
 export type GeneratedQuestion = KnowledgeFileGeneratedQuestion;
@@ -28,12 +28,12 @@ export interface ProcessedChunk {
 export default function useFileDetailChunks(options: UseFileDetailChunksOptions) {
   const { t, getMarkdownRenderRoot } = options;
   const CHUNK_PAGE_SIZE = 10;
-  const knowledgeIdRef = ref(options.knowledgeId) as { value: string };
+  const knowledgeIdRef = ref(options.knowledgeId);
 
-  const chunkPageNum = ref<number>(1) as { value: number };
+  const chunkPageNum = ref<number>(1);
   const chunkTotal = ref<number>(0);
   const loadingChunks = ref<boolean>(false);
-  const chunks = ref<KnowledgeFileChunk[]>([]) as { value: KnowledgeFileChunk[] };
+  const chunks = ref<KnowledgeFileChunk[]>([]);
   // Mermaid 初始化计数器，用于生成唯一ID
   let mermaidRenderCount = 0;
 
@@ -300,7 +300,7 @@ export default function useFileDetailChunks(options: UseFileDetailChunksOptions)
     return index % 2 !== 0 ? 'chunk-odd' : 'chunk-even';
   };
   // 计算处理后的分块数据，避免在模板中频繁调用方法和 JSON.parse
-  const processedChunks = computed(() => {
+  const processedChunks = computed<ProcessedChunk[]>(() => {
     return (chunks.value || []).map((item: KnowledgeFileChunk, index: number) => {
       return {
         original: item,
@@ -311,7 +311,7 @@ export default function useFileDetailChunks(options: UseFileDetailChunksOptions)
         chunkClass: getChunkClass(index)
       };
     });
-  }) as { value: ProcessedChunk[] };
+  });
 
   // 合并后的文档内容
   /**

@@ -158,12 +158,12 @@
 </template>
 
 <script setup lang="ts" name="Models">
+import modal from '@/plugins/modal';
 import { Link } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 import { downloadOllamaModelApi, getOllamaDownloadProgressApi, getOllamaModelsApi, getOllamaStatusApi } from '@/api/model/ollama';
 import { OllamaDownloadResp, OllamaModelsResp, TableShowColumns } from '@/types';
 
-const { proxy } = getCurrentInstance();
 const { t } = useI18n();
 
 // 列显隐信息
@@ -180,7 +180,7 @@ const queryParams = ref({
   name: undefined
 });
 const loading = ref<boolean>(true);
-const ids = ref<number[]>([]);
+const ids = ref<string[]>([]);
 const single = ref<boolean>(true);
 const multiple = ref<boolean>(true);
 const total = ref<number>(0);
@@ -257,14 +257,14 @@ const testConnection = async () => {
     connectionStatus.value = result.data?.available || false;
 
     if (connectionStatus.value) {
-      proxy.$modal.msgSuccess(t('page.ollama.toasts.connected'));
+      modal.msgSuccess(t('page.ollama.toasts.connected'));
       refreshModels();
     } else {
-      proxy.$modal.msgError(result.msg || t('page.ollama.toasts.connectFailed'));
+      modal.msgError(result.msg || t('page.ollama.toasts.connectFailed'));
     }
   } catch (error: any) {
     connectionStatus.value = false;
-    proxy.$modal.msgError(error.message || t('page.ollama.toasts.connectFailed'));
+    modal.msgError(error.message || t('page.ollama.toasts.connectFailed'));
   } finally {
     testing.value = false;
   }
@@ -279,7 +279,7 @@ const refreshModels = async () => {
     downloadedModels.value = resp.data || [];
   } catch (error: any) {
     console.error('获取模型列表失败:', error);
-    proxy.$modal.msgError(error.message || t('page.ollama.toasts.listFailed'));
+    modal.msgError(error.message || t('page.ollama.toasts.listFailed'));
   } finally {
     loadingModels.value = false;
     loading.value = false;
@@ -324,14 +324,14 @@ const downloadModel = async () => {
     const result = await downloadOllamaModelApi({ model: model });
 
     if (result.code != 200) {
-      proxy.$modal.msgError(result.msg || t('page.ollama.toasts.downloadFailed'));
+      modal.msgError(result.msg || t('page.ollama.toasts.downloadFailed'));
       downloading.value = false;
       downloadProgress.value = 0;
       downloadOpen.value = false;
       return;
     }
 
-    proxy.$modal.msgSuccess(t('page.ollama.toasts.downloadStarted', { name: model }));
+    modal.msgSuccess(t('page.ollama.toasts.downloadStarted', { name: model }));
 
     const data: OllamaDownloadResp = result.data || ({} as OllamaDownloadResp);
     // 查询下载进度
@@ -354,21 +354,21 @@ const downloadModel = async () => {
 
         if (task.progress >= 100) {
           clearInterval(progressInterval);
-          proxy.$modal.msgSuccess(t('page.ollama.toasts.downloadCompleted', { name: model }));
+          modal.msgSuccess(t('page.ollama.toasts.downloadCompleted', { name: model }));
           downloadProgress.value = 0;
           downloading.value = false;
           downloadOpen.value = false;
           refreshModels();
         } else if (task.status === 'failed') {
           clearInterval(progressInterval);
-          proxy.$modal.msgError(task.message || t('page.ollama.toasts.downloadFailed'));
+          modal.msgError(task.message || t('page.ollama.toasts.downloadFailed'));
           downloading.value = false;
           downloadProgress.value = 0;
           downloadOpen.value = false;
         }
       } catch (error) {
         clearInterval(progressInterval);
-        proxy.$modal.msgError(t('page.ollama.toasts.progressFailed'));
+        modal.msgError(t('page.ollama.toasts.progressFailed'));
         downloading.value = false;
         downloadProgress.value = 0;
         downloadOpen.value = false;
@@ -376,7 +376,7 @@ const downloadModel = async () => {
     }, 1000);
   } catch (error: any) {
     console.error('下载失败:', error);
-    proxy.$modal.msgError(error.message || t('page.ollama.toasts.downloadFailed'));
+    modal.msgError(error.message || t('page.ollama.toasts.downloadFailed'));
     downloading.value = false;
     downloadProgress.value = 0;
     downloadOpen.value = false;

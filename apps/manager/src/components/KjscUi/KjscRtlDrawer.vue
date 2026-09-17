@@ -114,8 +114,6 @@ onBeforeUnmount(closeLoading);
   <el-drawer
     v-model="visible"
     direction="rtl"
-    :close-on-press-escape="false"
-    :close-on-click-modal="false"
     v-bind="$attrs"
     :modal-class="$style['modal']"
     :header-class="$style['header']"
@@ -152,6 +150,13 @@ onBeforeUnmount(closeLoading);
 
 .header {
   margin-bottom: 20px;
+  font-size: 16px;
+
+  :global(.el-drawer__title),
+  :global(.el-text) {
+    font-size: 16px;
+  }
+
   // overflow: visible;
   // :global(.el-drawer__close-btn) {
   //   position: absolute;

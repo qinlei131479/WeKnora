@@ -248,12 +248,12 @@ const { t, te, tm, locale } = useI18n();
 
 const loading = ref(false);
 const total = ref<number>(0);
-const entries = ref<KnowledgeBaseActivityEntity[]>([]) as { value: KnowledgeBaseActivityEntity[] };
+const entries = ref<KnowledgeBaseActivityEntity[]>([]);
 const error = ref('');
 const pageParams = ref({
   pageNum: 1,
   pageSize: 10
-}) as { value: { pageNum: number; pageSize: number } };
+});
 
 function getList() {
   loading.value = true;
@@ -301,7 +301,7 @@ const outcomeOptions = computed(() =>
     value,
     label: outcomeLabel(value)
   }))
-) as unknown as { value: { value: AuditOutcome; label: string }[] };
+);
 
 // Column-header filter lists. Both host a leading "全部" entry (value '')
 // so picking it clears the server-side filter for that dimension.
@@ -354,7 +354,7 @@ function selectActionFilter(value: string) {
   const next = value || undefined;
   if (action.value === next) return;
   action.value = next;
-  if (props.active) reload();
+  reload();
 }
 
 function selectOutcomeFilter(value: string) {
@@ -362,7 +362,7 @@ function selectOutcomeFilter(value: string) {
   const next = (value || undefined) as AuditOutcome | undefined;
   if (outcome.value === next) return;
   outcome.value = next;
-  if (props.active) reload();
+  reload();
 }
 
 const emptyDescription = computed(() =>
@@ -374,12 +374,12 @@ function clearFilters() {
   outcomeFilterOpen.value = false;
   action.value = undefined;
   outcome.value = undefined;
-  if (props.active) reload();
+  reload();
 }
 
-const detailTitle = computed(() => (selectedEntry.value ? actionLabel(selectedEntry.value.action) : ''));
+const detailTitle = computed(() => (selectedEntry.value?.action ? actionLabel(selectedEntry.value.action) : ''));
 
-const detailDescription = computed(() => (selectedEntry.value ? formatDateTime(selectedEntry.value.createdAt) : ''));
+const detailDescription = computed(() => (selectedEntry.value?.createdAt ? formatDateTime(selectedEntry.value.createdAt) : ''));
 
 function details(entry: KnowledgeBaseActivityEntity): Record<string, unknown> {
   if (!entry.details) return {};

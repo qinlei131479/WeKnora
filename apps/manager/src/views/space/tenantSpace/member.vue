@@ -177,132 +177,36 @@
       </template>
     </page-content>
 
-    <!-- 添加或修改对话框 -->
-    <KjscRtlDrawer :title="title" v-model="open" size="800px" @open="handleSaveModelOpen" @close="handleSaveModelClose">
-      <el-form
-        :model="form"
-        :rules="mode === 'add' ? addRules : editRules"
-        ref="saveFormRef"
-        label-position="left"
-        class="tenant-space-form"
-        :label-width="$dim('page.tenantMember.formLabel', 120)"
-      >
-        <el-row>
-          <el-col :span="12">
-            <el-form-item :label="$t('page.tenantMember.username', '成员名称')" prop="username">
-              <el-input
-                v-model="form.username"
-                :placeholder="$t('page.tenantMember.usernamePlaceholder', '请输入成员名称')"
-                maxlength="999"
-                :show-word-limit="false"
-                :disabled="mode === 'edit'"
-              />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item :label="$t('page.tenantMember.password', '密码')" prop="password" label-position="right">
-              <el-input
-                v-model="form.password"
-                type="password"
-                show-password
-                autocomplete="new-password"
-                :placeholder="$t('page.tenantMember.passwordPlaceholder', '请输入账号密码')"
-                maxlength="999"
-                :show-word-limit="false"
-                :disabled="mode === 'edit'"
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-form-item :label="$t('page.tenantMember.email', '登录账号')" prop="email">
-          <el-input v-model="form.email" :placeholder="$t('page.tenantMember.emailPlaceholder', '请输入登录账号')" :disabled="mode === 'edit'" />
-        </el-form-item>
-        <el-form-item :label="$t('page.tenantMember.spaceAndRole', '空间&角色')" prop="bindTenants">
-          <div class="space-and-role">
-            <div class="add-area">
-              <el-button type="primary" size="small" @click="addBindTenant">
-                {{ $t('page.normal.addNew', '新增') }}
-              </el-button>
-            </div>
-            <div class="list-area">
-              <div v-for="(item, index) in form.bindTenants" :key="index" class="item-area">
-                <el-select-v2
-                  v-model="item.tenantId"
-                  :options="tenantOptions"
-                  filterable
-                  :props="{ value: 'id', label: 'name' }"
-                  :placeholder="$t('page.tenantMember.spacePlaceholder', '请选择空间')"
-                />
-                <el-select-v2
-                  v-model="item.role"
-                  :options="tenantRoleOptions"
-                  filterable
-                  :placeholder="$t('page.tenantMember.rolePlaceholder', '请选择角色')"
-                />
-                <el-button type="danger" text @click="removeBindTenant(index)">
-                  <el-icon><Trash /></el-icon>
-                </el-button>
-              </div>
-            </div>
-          </div>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <div class="manage-dialog-footer">
-          <el-button @click="closeDialog">
-            {{ t('page.normal.cancel', '取消') }}
-          </el-button>
-          <el-button type="primary" :disabled="submitDisabled" @click="submitForm">
-            {{ t('page.normal.save', '保存') }}
-          </el-button>
-        </div>
-      </template>
-    </KjscRtlDrawer>
+    <!-- 添加或修改抽屉 -->
+    <MemberAddEditDrawer ref="memberAddEditDrawerRef" @success="getList" />
   </section>
 </template>
 
 <script setup lang="ts" name="TenantSpaceMember">
 // import { Delete } from '@element-plus/icons-vue'
 import { ref, reactive } from '@vue/runtime-core';
+import MemberAddEditDrawer from './components/MemberAddEditDrawer.vue';
+import modal from '@/plugins/modal';
+import type { AjaxResult, PageDomain, TableShowColumns, TenantMemberEntity, TenantMemberListReq, TenantMemberTenantIdAndRole } from '@/types';
 import {
-  AjaxResult,
-  McpEntity,
-  PageDomain,
-  TableShowColumns,
-  TenantMemberEntity,
-  TenantMemberListReq,
-  TenantMemberTenantIdAndRole,
-  TenantSpaceEntity,
-  ValueLabelOption
-} from '@/types';
-import {
-  addTenantMemberSingleApi,
   deleteTenantMemberSingleApi,
   disableTenantMemberApi,
   enableTenantMemberApi,
-  getTenantMemberListApi,
-  getTenantMemberSingleApi,
-  updateTenantMemberSingleApi
+  getTenantMemberListApi
 } from '@/api/space/tenantMember.js';
 
-import { Search, Trash } from 'lucide-vue-next';
+import { Search } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';
 // import { useI18n } from '@/composables/i18nMock'
 
-import { useRoleLabel, useRoleOptions } from '@/composables/useRoleLabel';
-import { getTenantSpaceListApi } from '@/api/space/tenantSpace';
-
-interface FormEntity extends TenantMemberEntity {
-  bindTenants: TenantMemberTenantIdAndRole[];
-}
-const { proxy } = getCurrentInstance();
+import { useRoleLabel } from '@/composables/useRoleLabel';
 
 const { t } = useI18n();
 const $t = t;
 
 const { formatRole } = useRoleLabel();
 
-const tableData = ref<McpEntity[]>([]);
+const tableData = ref<TenantMemberEntity[]>([]);
 const tableRef = ref();
 const loading = ref<boolean>(true);
 // const showSearch = ref<boolean>(true)
@@ -319,112 +223,20 @@ const columns = ref<Record<string, TableShowColumns>>({
   createdAt: { label: $t('page.tenantMember.createdAt', '注册时间'), visible: true }
 });
 
-const open = ref<boolean>(false);
-let mode = '';
-const title = ref<string>(t('page.tenantMember.addTitle', '新增空间成员'));
-// const saveFormRef = ref(null);
-const validateBindTenants = (rule: any, value: TenantMemberTenantIdAndRole[], callback: Function) => {
-  if (!value || value.length === 0) {
-    callback(new Error($t('page.tenantMember.error.tenants.empty', '关联空间&空间角色不能为空')));
-  } else {
-    let errorMsg = null;
-    value.some((item: TenantMemberTenantIdAndRole) => {
-      if (!item.tenantId) {
-        errorMsg = $t('page.tenantMember.error.tenants.space', '关联空间不能为空');
-        return true;
-      } else if (!item.role) {
-        errorMsg = $t('page.tenantMember.error.tenants.role', '关联角色不能为空');
-        return true;
-      }
-    });
-    if (errorMsg) {
-      callback(new Error(errorMsg));
-    } else {
-      callback();
-    }
-  }
-};
-interface DataType {
-  form: FormEntity;
-  queryParams: TenantMemberListReq;
-  pageParams: PageDomain;
-  addRules: Record<string, any>;
-  editRules: Record<string, any>;
-}
-const data = reactive<DataType>({
-  form: {
-    bindTenants: []
-  } as FormEntity,
+const memberAddEditDrawerRef = ref<InstanceType<typeof MemberAddEditDrawer>>();
+const data = reactive({
   queryParams: {
     name: undefined
-  },
+  } as TenantMemberListReq,
   pageParams: {
     // orderByColumn: 'createTime',
     // isAsc: 'desc',
     pageNum: 1,
     pageSize: 10
-  },
-  addRules: {
-    username: [{ required: true, message: $t('page.tenantMember.error.username', '租户成员名称不能为空'), trigger: 'blur' }],
-    password: [{ required: true, message: $t('page.tenantMember.error.password', '密码不能为空'), trigger: 'blur' }],
-    email: [{ required: true, message: $t('page.tenantMember.error.email', '登录账号不能为空'), trigger: 'blur' }],
-    bindTenants: [{ validator: validateBindTenants, trigger: 'change' }]
-  },
-  editRules: {
-    bindTenants: [{ validator: validateBindTenants, trigger: 'change' }]
-  }
-  // rules: {
-  //   // nickName: [
-  //   //   { required: true, validator: validateNickName, trigger: "blur" },
-  //   // ],
-  //   username: [
-  //     { required: true, message: "租户成员名称不能为空", trigger: "blur" },
-  //   ],
-  // }
+  } as PageDomain
 });
 
-const { queryParams, pageParams, form, addRules, editRules } = toRefs(data);
-
-const tenantOptions = ref<TenantSpaceEntity[]>([]);
-const tenantRoleOptions = ref<ValueLabelOption[]>(useRoleOptions());
-// const bindTenants = ref<TenantMemberEntity[]>([{
-//   tenantId: undefined,
-//   roleId: undefined,
-// }])
-
-const addBindTenant = () => {
-  form.value.bindTenants.push({
-    tenantId: undefined,
-    roleId: undefined
-  });
-};
-const removeBindTenant = (index: number) => {
-  if (form.value.bindTenants.length <= 1) {
-    return;
-  }
-  form.value.bindTenants.splice(index, 1);
-};
-
-// 是否必填为空
-const submitDisabled = computed(() => {
-  const formValue: TenantMemberEntity = form.value;
-  return (
-    // isEmpty(formValue.username)
-    false
-  );
-});
-
-const getTenantOptions = () => {
-  getTenantSpaceListApi({}, { pageNum: 1, pageSize: 9999 }).then((res) => {
-    tenantOptions.value = res.rows || [];
-  });
-};
-const handleSaveModelOpen = () => {
-  getTenantOptions();
-};
-const handleSaveModelClose = () => {
-  // reset()
-};
+const { queryParams, pageParams } = toRefs(data);
 
 /** 查询用户列表 */
 function getList() {
@@ -462,7 +274,7 @@ function resetQuery() {
 function handleRemove(row: TenantMemberEntity) {
   const id = row.id!;
   const message = t('page.tenantMember.confirmInfo.remove', { id: id }, `是否确认删除成员编号为${id}的数据项？`);
-  proxy.$modal.confirm(message).then(
+  modal.confirm(message).then(
     function () {
       return doDelete(id);
     },
@@ -473,7 +285,7 @@ function handleRemove(row: TenantMemberEntity) {
 function doDelete(id: number | string) {
   return deleteTenantMemberSingleApi(id).then((res: AjaxResult) => {
     if (res.code === 200) {
-      proxy.$modal.msgSuccess(t('page.normal.confirmInfo.removeSuccess', '删除成功'));
+      modal.msgSuccess(t('page.normal.confirmInfo.removeSuccess', '删除成功'));
       getList();
     }
   });
@@ -520,7 +332,7 @@ function handleEnable(row?: TenantMemberEntity) {
     saveIds = ids.value;
     return;
   }
-  proxy.$modal.confirm(message).then(
+  modal.confirm(message).then(
     function () {
       return doEnable(saveIds, isBatch);
     },
@@ -531,7 +343,7 @@ function doEnable(saveIds: (number | string)[], isBatch: boolean) {
   return enableTenantMemberApi(saveIds[0]).then((res: AjaxResult) => {
     if (res.code === 200) {
       const msg = isBatch ? t('page.normal.confirmInfo.batchEnableSuccess', '批量启用成功') : t('page.normal.confirmInfo.enableSuccess', '启用成功');
-      proxy.$modal.msgSuccess(msg);
+      modal.msgSuccess(msg);
       getList();
     }
   });
@@ -558,7 +370,7 @@ function handleDisable(row?: TenantMemberEntity) {
     isBatch = true;
     return;
   }
-  proxy.$modal.confirm(message).then(
+  modal.confirm(message).then(
     function () {
       return doDisable(saveIds, isBatch);
     },
@@ -571,137 +383,23 @@ function doDisable(saveIds: (number | string)[], isBatch: boolean) {
       const msg = isBatch
         ? t('page.normal.confirmInfo.batchDisableSuccess', '批量停用成功')
         : t('page.normal.confirmInfo.disableSuccess', '停用成功');
-      proxy.$modal.msgSuccess(msg);
+      modal.msgSuccess(msg);
       getList();
     }
   });
-}
-
-/** 重置操作表单 */
-function reset() {
-  form.value = {
-    bindTenants: [
-      {
-        tenantId: undefined,
-        role: undefined
-      }
-    ] as TenantMemberTenantIdAndRole[]
-  };
-  proxy.resetForm('saveFormRef');
-}
-
-/** 取消按钮 */
-function cancel() {
-  open.value = false;
-  reset();
 }
 
 /** 新增按钮操作 */
 function handleAdd() {
-  reset();
-  title.value = t('page.tenantMember.addTitle', '新增成员');
-  open.value = true;
-  mode = 'add';
+  memberAddEditDrawerRef.value?.openAdd();
 }
 
 /** 修改按钮操作 */
 function handleUpdate(row: TenantMemberEntity) {
-  reset();
-  title.value = t('page.tenantMember.updateTitle', '修改成员信息');
   const id = row?.id || ids.value[0];
-  mode = 'edit';
-  getTenantMemberSingleApi(id).then((res) => {
-    if (res?.code === 200) {
-      const response: any = res.data;
-      form.value = serverDataToFormData(response || {});
-      open.value = true;
-    }
-  });
-}
-
-function serverDataToFormData(data: TenantMemberEntity) {
-  const formData = { ...data } as FormEntity;
-  formData.bindTenants = data.tenants || [];
-  return formData;
-}
-function formDataToServerData(formData: FormEntity) {
-  const { bindTenants, ...serverData } = formData;
-  serverData.tenants = bindTenants || [];
-  return serverData;
-}
-
-function doUpdate() {
-  const params = formDataToServerData(form.value);
-  return updateTenantMemberSingleApi(params).then((res: AjaxResult) => {
-    if (res.code === 200) {
-      proxy.$modal.msgSuccess(t('page.normal.confirmInfo.updateSuccess', '修改成功'));
-      getList();
-      open.value = false;
-    }
-  });
-}
-
-function doAdd() {
-  const params = formDataToServerData(form.value);
-  return addTenantMemberSingleApi(params).then((res: AjaxResult) => {
-    if (res.code === 200) {
-      proxy.$modal.msgSuccess(t('page.normal.confirmInfo.addSuccess', '新增成功'));
-      getList();
-      open.value = false;
-    }
-  });
-}
-
-/** 提交按钮 */
-function submitForm() {
-  proxy.$refs['saveFormRef'].validate((valid: boolean) => {
-    if (valid) {
-      if (form.value.id) {
-        doUpdate();
-      } else {
-        doAdd();
-      }
-    }
-  });
-}
-function closeDialog() {
-  open.value = false;
+  if (id === undefined) return;
+  memberAddEditDrawerRef.value?.openEdit(id);
 }
 
 getList();
 </script>
-
-<style scoped lang="scss">
-.el-input-number {
-  width: 100%;
-}
-
-.manage-dialog-footer {
-  .close-btn {
-    margin-right: 12px;
-  }
-}
-
-.space-and-role {
-  width: 100%;
-  .add-area {
-    margin-bottom: 12px;
-  }
-  .list-area {
-    overflow: auto;
-    max-height: 400px;
-    .item-area {
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      .el-select {
-        // width: 48%;
-        + .el-select {
-          margin-left: 12px;
-        }
-      }
-    }
-  }
-}
-</style>

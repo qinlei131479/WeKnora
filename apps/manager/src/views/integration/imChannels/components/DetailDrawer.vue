@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import modal from '@/plugins/modal';
 import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { t } from '@/i18n';
 import type { ImChannelsVO } from '@/types';
@@ -25,7 +26,6 @@ const emit = defineEmits<{
   (event: 'update:modelValue', value: boolean): void;
 }>();
 
-const { proxy } = getCurrentInstance()!;
 
 const visible = computed({
   get: () => props.modelValue,
@@ -131,12 +131,12 @@ const copyWithTextarea = (text: string) => {
 
   try {
     if (document.execCommand('copy')) {
-      proxy.$modal.msgSuccess(t('page.normal.copySuccess', '复制成功'));
+      modal.msgSuccess(t('page.normal.copySuccess', '复制成功'));
     } else {
-      proxy.$modal.msgError(t('page.normal.copyFailed', '复制失败'));
+      modal.msgError(t('page.normal.copyFailed', '复制失败'));
     }
   } catch {
-    proxy.$modal.msgError(t('page.normal.copyFailed', '复制失败'));
+    modal.msgError(t('page.normal.copyFailed', '复制失败'));
   } finally {
     document.body.removeChild(textarea);
   }
@@ -148,7 +148,7 @@ const copyText = (value: unknown) => {
   if (navigator.clipboard && window.isSecureContext) {
     navigator.clipboard
       .writeText(text)
-      .then(() => proxy.$modal.msgSuccess(t('page.normal.copySuccess', '复制成功')))
+      .then(() => modal.msgSuccess(t('page.normal.copySuccess', '复制成功')))
       .catch(() => copyWithTextarea(text));
     return;
   }

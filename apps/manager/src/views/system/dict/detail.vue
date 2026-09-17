@@ -3,8 +3,6 @@
     :model-value="visible"
     direction="rtl"
     size="700px"
-    close-on-click-modal
-    close-on-press-escape
     @update:model-value="$emit('update:visible', $event)"
   >
     <!-- 自定义标题 -->

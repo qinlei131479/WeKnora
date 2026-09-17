@@ -185,17 +185,20 @@
       </template>
     </page-content>
 
-    <operlog-detail v-model:visible="detailVisible" :row="detailRow" />
+    <DetailDrawer v-model:visible="detailVisible" :row="detailRow" />
   </section>
 </template>
 
 <script setup lang="ts" name="Operlog">
-import OperlogDetail from './detail.vue';
+import modal from '@/plugins/modal';
+import { useDict } from '@/utils/dict';
+import { addDateRange } from '@/utils/ruoyi';
+import { download } from '@/utils/request';
+import DetailDrawer from './DetailDrawer.vue';
 import { list, delOperlog, cleanOperlog } from '@/api/system/operlog';
 import type { SysOperLog, OperlogQueryParams } from '@/types/api/system/operlog';
 
-const { proxy } = getCurrentInstance();
-const { sys_oper_type, sys_common_status } = proxy.useDict('sys_oper_type', 'sys_common_status');
+const { sys_oper_type, sys_common_status } = useDict('sys_oper_type', 'sys_common_status');
 
 const operlogList = ref<SysOperLog[]>([]);
 const operlogRef = ref();
@@ -225,7 +228,7 @@ const { queryParams, form } = toRefs(data);
 
 function getList() {
   loading.value = true;
-  list(proxy.addDateRange(queryParams.value, dateRange.value)).then((response) => {
+  list(addDateRange(queryParams.value, dateRange.value)).then((response) => {
     operlogList.value = response.rows;
     total.value = response.total;
     loading.value = false;
@@ -270,33 +273,33 @@ function handleDetail(row: SysOperLog) {
 
 function handleDelete(row?: SysOperLog) {
   const operIds = row?.operId || ids.value;
-  proxy.$modal
+  modal
     .confirm('是否确认删除日志编号为"' + operIds + '"的数据项?')
     .then(function () {
       return delOperlog(operIds);
     })
     .then(() => {
       getList();
-      proxy.$modal.msgSuccess('删除成功');
+      modal.msgSuccess('删除成功');
     })
     .catch(() => {});
 }
 
 function handleClean() {
-  proxy.$modal
+  modal
     .confirm('是否确认清空所有操作日志数据项?')
     .then(function () {
       return cleanOperlog();
     })
     .then(() => {
       getList();
-      proxy.$modal.msgSuccess('清空成功');
+      modal.msgSuccess('清空成功');
     })
     .catch(() => {});
 }
 
 function handleExport() {
-  proxy.download(
+  download(
     'system/operlog/export',
     {
       ...queryParams.value

@@ -165,19 +165,22 @@
 </template>
 
 <script setup lang="ts" name="Dept">
+import type { FormInstance } from 'element-plus/es/components/form';
+import modal from '@/plugins/modal';
+import { useDict } from '@/utils/dict';
+import { handleTree } from '@/utils/ruoyi';
 import { listDept, getDept, delDept, addDept, updateDept, updateDeptSort, listDeptExcludeChild } from '@/api/system/dept';
 import type { SysDept, DeptQueryParams } from '@/types/api/system/dept';
-import type { TreeSelect } from '@/types/api/common';
 
-const { proxy } = getCurrentInstance();
-const { sys_normal_disable } = proxy.useDict('sys_normal_disable');
+const { sys_normal_disable } = useDict('sys_normal_disable');
 
+const deptRef = ref<FormInstance>();
 const deptList = ref<any[]>([]);
 const deptTableRef = ref();
 const open = ref<boolean>(false);
 const loading = ref<boolean>(true);
 const title = ref<string>('');
-const deptOptions = ref<TreeSelect[]>([]);
+const deptOptions = ref<SysDept[]>([]);
 const isExpandAll = ref<boolean>(true);
 const refreshTable = ref<boolean>(true);
 const originalOrders = ref<Record<number, number>>({});
@@ -202,7 +205,7 @@ const { queryParams, form, rules } = toRefs(data);
 function getList() {
   loading.value = true;
   listDept(queryParams.value).then((response) => {
-    deptList.value = proxy.handleTree(response.data, 'deptId');
+    deptList.value = handleTree(response.data || [], 'deptId');
     recordOriginalOrders(deptList.value);
     loading.value = false;
     nextTick(() => {
@@ -223,7 +226,7 @@ function reset() {
     status: '0',
     description: undefined
   };
-  proxy.resetForm('deptRef');
+  deptRef.value?.resetFields();
 }
 
 function handleQuery() {
@@ -239,7 +242,7 @@ function resetQuery() {
 function handleAdd(row?: SysDept) {
   reset();
   listDept().then((response) => {
-    deptOptions.value = proxy.handleTree(response.data, 'deptId');
+    deptOptions.value = handleTree(response.data || [], 'deptId');
   });
   if (row != undefined) {
     form.value.parentId = row.deptId;
@@ -262,7 +265,7 @@ function toggleExpandAll() {
 function handleUpdate(row: SysDept) {
   reset();
   listDeptExcludeChild(row.deptId!).then((response) => {
-    deptOptions.value = proxy.handleTree(response.data, 'deptId');
+    deptOptions.value = handleTree(response.data || [], 'deptId');
   });
   getDept(row.deptId!).then((response) => {
     form.value = response.data!;
@@ -273,11 +276,11 @@ function handleUpdate(row: SysDept) {
 
 function handleStatusChange(row: SysDept) {
   const text = row.status === '0' ? '启用' : '停用';
-  proxy.$modal
+  modal
     .confirm('确认要"' + text + '""' + row.deptName + '"部门吗?')
     .then(() => updateDept(row))
     .then(() => {
-      proxy.$modal.msgSuccess(text + '成功');
+      modal.msgSuccess(text + '成功');
     })
     .catch(() => {
       row.status = row.status === '0' ? '1' : '0';
@@ -285,17 +288,17 @@ function handleStatusChange(row: SysDept) {
 }
 
 function submitForm() {
-  proxy.$refs['deptRef'].validate((valid: boolean) => {
+  deptRef.value?.validate((valid: boolean) => {
     if (valid) {
       if (form.value.deptId != undefined) {
         updateDept(form.value).then(() => {
-          proxy.$modal.msgSuccess('修改成功');
+          modal.msgSuccess('修改成功');
           open.value = false;
           getList();
         });
       } else {
         addDept(form.value).then(() => {
-          proxy.$modal.msgSuccess('新增成功');
+          modal.msgSuccess('新增成功');
           open.value = false;
           getList();
         });
@@ -306,7 +309,9 @@ function submitForm() {
 
 function recordOriginalOrders(list: SysDept[]) {
   list.forEach((item) => {
-    originalOrders.value[item.deptId] = item.orderNum;
+    if (item.deptId !== undefined && item.orderNum !== undefined) {
+      originalOrders.value[item.deptId] = item.orderNum;
+    }
     if (item.children && item.children.length) {
       recordOriginalOrders(item.children);
     }
@@ -314,14 +319,14 @@ function recordOriginalOrders(list: SysDept[]) {
 }
 
 function handleDelete(row: SysDept) {
-  proxy.$modal
+  modal
     .confirm('是否确认删除名称为"' + row.deptName + '"的数据项?')
     .then(function () {
       return delDept(row.deptId!);
     })
     .then(() => {
       getList();
-      proxy.$modal.msgSuccess('删除成功');
+      modal.msgSuccess('删除成功');
     })
     .catch(() => {});
 }

@@ -1146,6 +1146,7 @@
         "checkType.docreader": "Require DocReader Connection",
         "checkType.httpPing": "HTTP Probe",
         "checkType.none": "No Check",
+        "deleteConfirm": "Are you sure you want to delete parser engine {name}?",
         "detail.checkType": "Availability Check Type",
         "detail.configKey": "Tenant Configuration Key",
         "detail.createdAt": "Created Time",
@@ -2014,6 +2015,24 @@
       },
       "operlog": {
         "detail": "Details",
+        "detailDrawer": {
+          "businessType": "Business Type",
+          "costTime": "Duration",
+          "deptName": "Department",
+          "errorMsg": "Error Details",
+          "jsonResult": "Response Parameters",
+          "method": "Operation Method",
+          "module": "Operation Module",
+          "operIp": "Operation Address",
+          "operName": "Operator",
+          "operParam": "Request Parameters",
+          "operTime": "Operation Time",
+          "operUrl": "Request URL",
+          "status": "Execution Status",
+          "statusAbnormal": "Error",
+          "statusNormal": "Normal",
+          "title": "Operation Log Details"
+        },
         "millisecond": "ms",
         "search": {
           "businessTypePlaceholder": "Operation Type",

@@ -97,19 +97,19 @@
           <template #default="scope">
             <el-button link type="primary" @click="handleUpdate(scope.row)"
               v-hasPermi="['business:mcpServices:edit']">
-              {{ $t('page.normal.edit') }}
+              {{ $t('page.normal.edit', '编辑') }}
             </el-button>
             <el-button link type="danger" @click="handleDelete(scope.row.id, scope.row)"
               v-hasPermi="['business:mcpServices:remove']">
-              {{ $t('page.normal.remove') }}
+              {{ $t('page.normal.remove', '删除') }}
             </el-button>
             <el-button v-if="!scope.row.enabled" link type="primary"
               @click="handleEnable(scope.row)" v-hasPermi="['business:mcpServices:edit']">
-              {{ $t('page.normal.enable') }}
+              {{ $t('page.normal.enable', '启用') }}
             </el-button>
-            <el-button v-else link type="danger" @click="handleDisable(scope.row)"
+            <el-button v-else link type="info" @click="handleDisable(scope.row)"
               v-hasPermi="['business:mcpServices:edit']">
-              {{ $t('page.normal.disable') }}
+              {{ $t('page.normal.disable', '停用') }}
             </el-button>
           </template>
         </el-table-column>
@@ -178,8 +178,8 @@
               <el-radio-button value="http-streamable">HTTP Streamable</el-radio-button>
             </el-radio-group>
           </el-form-item>
-          <el-form-item :label="t('page.mcp.mcpServiceDialog.serviceUrl')" prop="serviceUrl">
-            <el-input v-model="form.serviceUrl" :placeholder="t('page.mcp.mcpServiceDialog.serviceUrlPlaceholder')"
+          <el-form-item :label="t('page.mcp.mcpServiceDialog.serviceUrl')" prop="url">
+            <el-input v-model="form.url" :placeholder="t('page.mcp.mcpServiceDialog.serviceUrlPlaceholder')"
               maxlength="9999" :show-word-limit="false" />
           </el-form-item>
           <el-form-item prop="custom_headers">
@@ -351,6 +351,8 @@
 </template>
 
 <script setup lang="ts" name="Models">
+import modal from '@/plugins/modal';
+import type { FormInstance } from 'element-plus/es/components/form';
 import { useI18n } from 'vue-i18n';
 import { ElMessage } from 'element-plus'
 // import { Close, CircleCheckFilled, CircleCloseFilled } from '@element-plus/icons-vue'
@@ -392,7 +394,6 @@ interface FormEntity extends McpEntity {
   //   retry_delay: number;
   // }
 }
-const { proxy } = getCurrentInstance()
 
 // const pageLangConfig: Record<string, string> = {
 //   'page.mcp.add': '新增MCP',
@@ -437,7 +438,7 @@ const {
   deleteApi: deleteMcpSingleApi,
 })
 
-const ids = ref<number[]>([])
+const ids = ref<string[]>([])
 const single = ref<boolean>(true)
 const multiple = ref<boolean>(true)
 
@@ -464,20 +465,20 @@ function handleEnable(row?: McpEntity) {
     saveIds.push(row.id!)
   } else {
     if (ids.value.length === 0) {
-      proxy.$modal.msgError(t('page.mcp.confirmMultiError'))
+      modal.msgError(t('page.mcp.confirmMultiError'))
       return
     }
     message = t('page.mcp.enableConfirmMulti', {}, '是否确认启用选中的MCP服务？')
     saveIds = ids.value
   }
-  proxy.$modal.confirm(message).then(function () {
+  modal.confirm(message).then(function () {
     return doEnable(saveIds)
   }, () => { });
 }
 function doEnable(saveIds: string[]) {
   return enableMcpBatchApi(saveIds).then((res: AjaxResult) => {
     if (res.code === 200) {
-      proxy.$modal.msgSuccess(t('page.normal.confirmInfo.enableSuccess'))
+      modal.msgSuccess(t('page.normal.confirmInfo.enableSuccess'))
       loadTableData()
     }
   })
@@ -492,20 +493,20 @@ function handleDisable(row?: McpEntity) {
     saveIds.push(row.id!)
   } else {
     if (ids.value.length === 0) {
-      proxy.$modal.msgError(t('page.mcp.confirmMultiError'))
+      modal.msgError(t('page.mcp.confirmMultiError'))
       return
     }
     message = t('page.mcp.disableConfirmMulti', {}, '是否确认停用选中的MCP服务？')
     saveIds = ids.value
   }
-  proxy.$modal.confirm(message).then(function () {
+  modal.confirm(message).then(function () {
     return doDisable(saveIds)
   }, () => { });
 }
 function doDisable(saveIds: string[]) {
   return disableMcpBatchApi(saveIds).then((res: AjaxResult) => {
     if (res.code === 200) {
-      proxy.$modal.msgSuccess(t('page.normal.confirmInfo.disableSuccess'))
+      modal.msgSuccess(t('page.normal.confirmInfo.disableSuccess'))
       loadTableData()
     }
   })
@@ -556,9 +557,9 @@ function doDisable(saveIds: string[]) {
 const open = ref<boolean>(false)
 let mode = '';
 const title = ref<string>("page.mcp.addTitle")
-const saveFormRef = ref(null);
-const data = reactive({
-  form: {
+const saveFormRef = ref<FormInstance>();
+function createDefaultForm(): FormEntity {
+  return {
     custom_headers: [],
     authType: '',
     oauthScopesText: '',
@@ -566,21 +567,12 @@ const data = reactive({
     api_key: '',
     advancedConfig_timeout: 0,
     advancedConfig_retry_count: 0,
-    advancedConfig_retry_delay: 0,
-    // auth_config: {
-    //   authType: '',
-    //   apiKey: '',
-    //   apiKeyHeader: '',
-    //   token: '',
-    //   scopes: [],
-    //   authServerMetadataUrl: '',
-    // },
-    // advanced_config: {
-    //   timeout: 0,
-    //   retry_count: 0,
-    //   retry_delay: 0,
-    // }
-  } as FormEntity,
+    advancedConfig_retry_delay: 0
+  };
+}
+
+const data = reactive({
+  form: createDefaultForm(),
   queryParams: {
     name: undefined,
     // tenantId: undefined,
@@ -630,11 +622,8 @@ const submitDisabled = computed(() => {
 
 /** 重置操作表单 */
 function reset() {
-  form.value = {
-    custom_headers: [],
-    name: undefined
-  }
-  proxy.resetForm("saveFormRef")
+  form.value = createDefaultForm()
+  saveFormRef.value?.resetFields()
 }
 
 /** 取消按钮 */
@@ -678,7 +667,7 @@ function handleUpdate(row: McpEntity) {
 }
 
 function serverDataToFormData(data: McpEntity) {
-  const formData = { ...data } as FormEntity;
+  const formData: FormEntity = { ...createDefaultForm(), ...data };
   formData.custom_headers = []
   if (formData.headers) {
     try {
@@ -791,7 +780,7 @@ function doUpdate() {
   const params = formDataToServerData(form.value);
   return updateMcpSingleApi(params).then((res: AjaxResult) => {
     if (res.code === 200) {
-      proxy.$modal.msgSuccess("修改成功")
+      modal.msgSuccess("修改成功")
       loadTableData()
       open.value = false
     }
@@ -802,7 +791,7 @@ function doAdd() {
   const params = formDataToServerData(form.value);
   return insertMcpSingleApi(params).then((res: AjaxResult) => {
     if (res.code === 200) {
-      proxy.$modal.msgSuccess("新增成功")
+      modal.msgSuccess("新增成功")
       loadTableData()
       open.value = false
     }
@@ -811,7 +800,7 @@ function doAdd() {
 
 /** 提交按钮 */
 function submitForm() {
-  proxy.$refs["saveFormRef"].validate((valid: boolean) => {
+  saveFormRef.value?.validate((valid: boolean) => {
     if (valid) {
       if (mode === 'update') {
         doUpdate()
@@ -961,11 +950,11 @@ const handleCodeImport = () => {
 
   saveFormRef.value?.clearValidate()
   if (multiple) {
-    proxy.$modal.msgInfo(
+    modal.msg(
       t('page.mcp.mcpServiceDialog.codeImport.toasts.multipleServers', { name }) as string,
     )
   } else {
-    proxy.$modal.msgSuccess(t('page.mcp.mcpServiceDialog.codeImport.toasts.filled') as string)
+    modal.msgSuccess(t('page.mcp.mcpServiceDialog.codeImport.toasts.filled') as string)
   }
 }
 
@@ -977,16 +966,6 @@ const removeCustomHeader = (idx: number) => {
   form.value.custom_headers.splice(idx, 1)
 }
 
-// Comma/space separated text binding for OAuth scopes.
-const oauthScopesText = computed({
-  get: () => (form.value.auth_config.scopes || []).join(' '),
-  set: (val: string) => {
-    form.value.auth_config.scopes = val
-      .split(/[\s,]+/)
-      .map((s) => s.trim())
-      .filter(Boolean)
-  },
-})
 const authTypeOptions = computed(() => [
   { value: '', disabled: false, label: t('page.mcp.mcpServiceDialog.authTypeNone', '无 / 自定义 Header') },
   { value: 'api_key', disabled: false, label: t('page.mcp.mcpServiceDialog.authTypeApiKey', 'API Key / Token') },
@@ -1026,7 +1005,7 @@ const credentialApi = computed<CredentialResourceApi<McpCredentialField>>(() => 
     },
     remove: async (field: McpCredentialField) => {
       // await deleteMCPCredentialField(id, field)
-      form.value[field] = '';
+      form.value[field === 'token' ? 'authConfigToken' : 'api_key'] = '';
     },
   }
 })

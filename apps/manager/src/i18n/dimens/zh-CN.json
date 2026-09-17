@@ -96,6 +96,7 @@
       "embeddingModel": 200,
       "id": 340,
       "indexingStrategy": 180,
+      "knowledgeGraphs": 120,
       "llmModel": 200,
       "multiModal": 120,
       "name": 220,
@@ -107,6 +108,24 @@
       "updatedAt": 180,
       "vectorStore": 200
     },
+    "knowledgeFaq": {
+      "qaId": 320,
+      "standardQuestion": 220,
+      "similarQuestions": 220,
+      "negativeQuestions": 220,
+      "answers": 220,
+      "tagName": 100,
+      "operation": 120
+    },
+    "knowledgeFile": {
+      "fileName": 200,
+      "fileType": 220,
+      "fileSize": 120,
+      "parseStatus": 120,
+      "channel": 200,
+      "createdAt": 180,
+      "operation": 120
+    },
     "mcp": {
       "id": 320,
       "name": 120,
@@ -115,7 +134,18 @@
       "isBuiltin": 120,
       "operation": 220
     },
-    "models": {},
+    "models": {
+      "table.name": 180,
+      "table.displayName": 160,
+      "table.type": 120,
+      "table.source": 120,
+      "table.provider": 140,
+      "table.credentialStatus": 100,
+      "table.isDefault": 100,
+      "table.isBuiltin": 100,
+      "table.createdAt": 180,
+      "table.operation": 200
+    },
     "normal": {
       "datetime": 180
     },

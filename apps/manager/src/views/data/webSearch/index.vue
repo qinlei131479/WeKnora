@@ -102,7 +102,7 @@ const handleDelete = (row: WebSearchProvidersVO) => {
   if (!row.id) return;
 
   proxy?.$modal
-    ?.confirm(t('page.data.webSearch.tips.deleteConfirm', { name: row.name ?? '' }, `是否确认删除搜索配置「${row.name ?? ''}」？`))
+    ?.confirm(t('page.data.webSearch.tips.deleteConfirm', { name: row.name ?? '' }, `是否确认删除搜索配置 ${row.name ?? ''}？`))
     .then(() => API.WebSearchProviders.delete(row.id!))
     .then(() => {
       proxy?.$modal?.msgSuccess(t('page.normal.confirmInfo.removeSuccess', '删除成功'));

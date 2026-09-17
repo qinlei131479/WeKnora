@@ -100,6 +100,7 @@
 </template>
 
 <script setup lang="ts">
+import modal from '@/plugins/modal';
 // import {
 //   Close,
 //   CircleCheckFilled,
@@ -129,8 +130,6 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), { active: true });
-
-const { proxy } = getCurrentInstance();
 
 const getMCPToolApprovals = (id: string) => {
   return getMcpToolListApi(id).then((res) => res?.data || []);
@@ -185,7 +184,11 @@ const setMCPToolApproval = (id: string, toolName: string, value: boolean) => {
 
 const expandedToolIndex = ref<number | null>(null);
 const { t } = useI18n();
-const displayTools = ref<MCPTool[]>([]);
+interface DisplayTool extends MCPTool {
+  requireApproval?: boolean;
+}
+
+const displayTools = ref<DisplayTool[]>([]);
 const approvalLoading = ref<Record<string, boolean>>({});
 
 const mergeApprovals = async () => {
@@ -228,7 +231,7 @@ const onRequireApprovalChange = async (toolName: string, value: boolean) => {
     displayTools.value = displayTools.value.map((x: MCPTool) => (x.name === toolName ? { ...x, requireApproval: value } : x));
   } catch (e) {
     console.error(e);
-    proxy.$modal.msgError(t('page.mcp.testResult.approvalSaveFailed'));
+    modal.msgError(t('page.mcp.testResult.approvalSaveFailed'));
   } finally {
     approvalLoading.value = { ...approvalLoading.value, [toolName]: false };
   }

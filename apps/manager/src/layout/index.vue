@@ -16,10 +16,13 @@ sidebar-container
       <settings ref="settingRef" />
     </div>
   </div>
+
+  <floating />
 </template>
 
 <script setup lang="ts">
 import { useWindowSize } from '@vueuse/core';
+import Floating from './components/Floating/index.vue';
 import Sidebar from './components/Sidebar/index.vue';
 import { AppMain, Navbar, Settings, TagsView } from './components';
 import useAppStore from '@/store/modules/app';
@@ -39,7 +42,7 @@ const classObj = computed(() => ({
   mobile: device.value === 'mobile'
 }));
 
-const { width, height } = useWindowSize();
+const { width } = useWindowSize();
 const WIDTH = 992; // refer to Bootstrap's responsive design
 
 watch(
@@ -64,9 +67,9 @@ function handleClickOutside(): void {
   useAppStore().closeSideBar({ withoutAnimation: false });
 }
 
-const settingRef = ref(null);
+const settingRef = ref<InstanceType<typeof Settings> | null>(null);
 function setLayout() {
-  settingRef.value.openSetting();
+  settingRef.value?.openSetting();
 }
 </script>
 

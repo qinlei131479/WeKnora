@@ -119,7 +119,7 @@
                 <div class="chunk-list">
                   <div
                     class="chunk-item"
-                    :class="{ 'chunk-item--disabled': !chunk.original.is_enabled }"
+                    :class="{ 'chunk-item--disabled': !chunk.original.isEnabled }"
                     v-for="(chunk, index) in processedChunks"
                     :key="chunk.original.id || index"
                   >
@@ -308,7 +308,7 @@
                                   <!-- </template> -->
                                 </div>
                               </div>
-                              <div v-else-if="questionComposerChunk !== chunk.original.id" class="questions-empty">
+                              <div v-else class="questions-empty">
                                 <t-icon name="chat-bubble-help" size="20px" />
                                 <span>{{ $t('page.normal.noGeneratedQuestions', '暂无辅助召回问题') }}</span>
                               </div>
@@ -327,7 +327,7 @@
             <div v-else-if="viewMode === 'preview'" class="content-view">
               <DocumentPreview
                 :knowledgeId="details.id"
-                :fileType="details.fileType"
+                :fileType="details.fileType || ''"
                 :fileName="details.title"
                 :active="viewMode === 'preview' && activeTab === 'content'"
                 :data="previewBlob"
@@ -366,24 +366,22 @@ const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void;
 }>();
 
-let mdContentWrap = ref<HTMLDivElement>(null);
+let mdContentWrap = ref<HTMLDivElement | null>(null);
 
 const activeTab = ref<string>('base');
 
 const details = computed(() => {
   const entity = props.visible ? props.entity || {} : {};
-  let customMetadata = entity.customMetadata;
-  if (customMetadata) {
-    const customMetadataType = typeof customMetadata;
-    if (customMetadataType === 'string') {
-      try {
-        customMetadata = JSON.parse(customMetadata);
-      } catch (error) {
-        customMetadata = {};
+  let customMetadata: Record<string, unknown> = {};
+  if (entity.customMetadata) {
+    try {
+      const parsedMetadata: unknown = typeof entity.customMetadata === 'string' ? JSON.parse(entity.customMetadata) : entity.customMetadata;
+      if (parsedMetadata && typeof parsedMetadata === 'object' && !Array.isArray(parsedMetadata)) {
+        customMetadata = parsedMetadata as Record<string, unknown>;
       }
+    } catch {
+      customMetadata = {};
     }
-  } else {
-    customMetadata = {};
   }
   let fileType = entity.fileType;
   // const isDev = import.meta.env.DEV;
@@ -394,11 +392,11 @@ const details = computed(() => {
     ...entity,
     fileType: fileType,
     title: entity.fileName || entity.title || entity.source || t('knowledgeBase.untitledDocument'),
-    time: parseTime(entity.updatedAt, '{y}-{m}-{d} {h}:{i}:{s}'),
+    time: parseTime(entity.updatedAt, '{y}-{m}-{d} {h}:{i}:{s}') || '',
     type: entity.type || 'file',
     customMetadata: customMetadata
-  } as KnowledgeFileDetail;
-}) as { value: KnowledgeFileDetail };
+  };
+});
 
 const {
   processMarkdown,
@@ -665,7 +663,7 @@ const loadParentContext = async (item: KnowledgeFileChunk, index: number) => {
 };
 
 const setParentContextPopupVisible = (item: KnowledgeFileChunk, index: number, visible: boolean) => {
-  parentContextPopup.value = visible ? item.id : '';
+  parentContextPopup.value = visible ? (item.id ?? '') : '';
   // if (visible) {
   //   // questionPopupChunk.value = '';
   //   // chunkHistoryPopup.value = '';

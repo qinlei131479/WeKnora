@@ -151,11 +151,17 @@
 </template>
 
 <script setup lang="ts" name="Config">
+import type { FormInstance } from 'element-plus/es/components/form';
+import modal from '@/plugins/modal';
+import { useDict } from '@/utils/dict';
+import { addDateRange } from '@/utils/ruoyi';
+import { download } from '@/utils/request';
 import type { SysConfig, ConfigQueryParams } from '@/types/api/system/config';
 import { listConfig, getConfig, delConfig, addConfig, updateConfig, refreshCache } from '@/api/system/config';
-const { proxy } = getCurrentInstance();
-const { sys_yes_no } = proxy.useDict('sys_yes_no');
+const { sys_yes_no } = useDict('sys_yes_no');
 
+const queryRef = ref<FormInstance>();
+const configRef = ref<FormInstance>();
 const configList = ref<SysConfig[]>([]);
 const open = ref<boolean>(false);
 const loading = ref<boolean>(true);
@@ -188,7 +194,7 @@ const { queryParams, form, rules } = toRefs(data);
 /** 查询参数列表 */
 function getList() {
   loading.value = true;
-  listConfig(proxy.addDateRange(queryParams.value, dateRange.value)).then((response) => {
+  listConfig(addDateRange(queryParams.value, dateRange.value)).then((response) => {
     configList.value = response.rows;
     total.value = response.total;
     loading.value = false;
@@ -211,7 +217,7 @@ function reset() {
     configType: 'Y',
     remark: undefined
   };
-  proxy.resetForm('configRef');
+  configRef.value?.resetFields();
 }
 
 /** 搜索按钮操作 */
@@ -223,7 +229,7 @@ function handleQuery() {
 /** 重置按钮操作 */
 function resetQuery() {
   dateRange.value = [];
-  proxy.resetForm('queryRef');
+  queryRef.value?.resetFields();
   handleQuery();
 }
 
@@ -246,6 +252,7 @@ function handleUpdate(row: SysConfig) {
   reset();
   const configId = row.configId || ids.value[0];
   getConfig(configId).then((response) => {
+    if (!response.data) return;
     form.value = response.data;
     open.value = true;
     title.value = '修改参数';
@@ -254,17 +261,17 @@ function handleUpdate(row: SysConfig) {
 
 /** 提交按钮 */
 function submitForm() {
-  proxy.$refs['configRef'].validate((valid: boolean) => {
+  configRef.value?.validate((valid: boolean) => {
     if (valid) {
       if (form.value.configId != undefined) {
         updateConfig(form.value).then(() => {
-          proxy.$modal.msgSuccess('修改成功');
+          modal.msgSuccess('修改成功');
           open.value = false;
           getList();
         });
       } else {
         addConfig(form.value).then(() => {
-          proxy.$modal.msgSuccess('新增成功');
+          modal.msgSuccess('新增成功');
           open.value = false;
           getList();
         });
@@ -276,21 +283,21 @@ function submitForm() {
 /** 删除按钮操作 */
 function handleDelete(row?: SysConfig) {
   const configIds = row?.configId || ids.value;
-  proxy.$modal
+  modal
     .confirm('是否确认删除参数编号为"' + configIds + '"的数据项？')
     .then(function () {
       return delConfig(configIds);
     })
     .then(() => {
       getList();
-      proxy.$modal.msgSuccess('删除成功');
+      modal.msgSuccess('删除成功');
     })
     .catch(() => {});
 }
 
 /** 导出按钮操作 */
 function handleExport() {
-  proxy.download(
+  download(
     'system/config/export',
     {
       ...queryParams.value
@@ -302,7 +309,7 @@ function handleExport() {
 /** 刷新缓存按钮操作 */
 function handleRefreshCache() {
   refreshCache().then(() => {
-    proxy.$modal.msgSuccess('刷新缓存成功');
+    modal.msgSuccess('刷新缓存成功');
   });
 }
 

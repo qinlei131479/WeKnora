@@ -68,7 +68,7 @@ export function delRole(roleId: number | number[]): Promise<AjaxResult> {
 }
 
 // 查询角色已授权用户列表
-export function allocatedUserList(query: AuthUserQueryParams): Promise<TableDataInfo<SysUser[]>> {
+export function allocatedUserList(query: AuthUserQueryParams): Promise<TableDataInfo<SysUser>> {
   return request({
     url: '/system/role/authUser/allocatedList',
     method: 'get',
@@ -77,7 +77,7 @@ export function allocatedUserList(query: AuthUserQueryParams): Promise<TableData
 }
 
 // 查询角色未授权用户列表
-export function unallocatedUserList(query: AuthUserQueryParams): Promise<TableDataInfo<SysUser[]>> {
+export function unallocatedUserList(query: AuthUserQueryParams): Promise<TableDataInfo<SysUser>> {
   return request({
     url: '/system/role/authUser/unallocatedList',
     method: 'get',

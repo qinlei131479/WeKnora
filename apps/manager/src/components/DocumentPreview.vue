@@ -17,7 +17,7 @@ const { t } = useI18n();
 
 interface Props {
   dataKey: string;
-  data: Blob;
+  data: Blob | null;
   fileType: string;
   fileName: string;
   active: boolean;
@@ -425,8 +425,8 @@ function cleanup() {
 //   { immediate: true }
 // );
 watch(
-  () => [props.data, props.active],
-  ([newBlob, active]: [Blob, boolean]) => {
+  [() => props.data, () => props.active],
+  ([newBlob, active]) => {
     // console.log('watch data', newBlob, active);
     if (newBlob && active) {
       loadPreview();
