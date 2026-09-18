@@ -325,7 +325,7 @@ export default {
     }
   },
   brand: {
-    name: '智能体工作台'
+    name: '智能体操作端'
   },
   dashboard: {
     subtitle: 'View platform usage at a glance, including conversations, agents, tool calls, and knowledge bases',

@@ -325,7 +325,7 @@ export default {
     }
   },
   brand: {
-    name: '智能体工作台'
+    name: '智能体操作端'
   },
   platformApiKeys: {
     title: 'Платформенные API-ключи',
