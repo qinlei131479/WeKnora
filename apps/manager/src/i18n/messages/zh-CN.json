@@ -8,9 +8,9 @@
   },
   "component": {
     "graphSettings": {
-      "addAttribute": "添加属性",
-      "addEntity": "添加实体",
-      "addRelation": "添加关系",
+      "addAttribute": "新增属性",
+      "addEntity": "新增实体",
+      "addRelation": "新增关系",
       "attributePlaceholder": "输入属性值",
       "clearExample": "清除示例",
       "completeModelConfig": "请先完成模型配置",
@@ -34,9 +34,9 @@
       "generateRandomTags": "生成随机标签",
       "generateRandomText": "生成随机文本",
       "howToEnable": "如何启用知识图谱？",
-      "manageEntitiesDescription": "添加或删除实体节点",
+      "manageEntitiesDescription": "新增或删除实体节点",
       "manageEntitiesLabel": "管理实体",
-      "manageRelationsDescription": "添加或删除实体间的关系",
+      "manageRelationsDescription": "新增或删除实体间的关系",
       "manageRelationsLabel": "管理关系",
       "nodeNamePlaceholder": "输入实体名称",
       "pleaseInputText": "请先输入示例文本",
@@ -165,12 +165,12 @@
           "kb.created": "创建知识库",
           "kb.deleted": "删除知识库",
           "kb.duplicated": "复制知识库",
-          "kb.share_added": "添加共享",
+          "kb.share_added": "新增共享",
           "kb.share_permission_changed": "修改共享权限",
           "kb.share_removed": "移除共享",
           "kb.updated": "更新知识库",
           "knowledge.batch_deleted": "批量删除知识",
-          "knowledge.created": "添加知识",
+          "knowledge.created": "新增知识",
           "knowledge.deleted": "删除知识",
           "knowledge.move_completed": "完成移动知识",
           "knowledge.move_failed": "移动知识失败",
@@ -476,7 +476,7 @@
         },
         "negativePlaceholder": "输入反例后点击加号添加",
         "negativeQuestions": "反例",
-        "negativeQuestionsDesc": "添加不应匹配此答案的问题，用于排除误匹配的情况。",
+        "negativeQuestionsDesc": "新增不应匹配此答案的问题，用于排除误匹配的情况。",
         "noResults": "未找到匹配的 FAQ 条目",
         "queryLabel": "查询内容",
         "queryPlaceholder": "请输入要检索的问题",
@@ -495,7 +495,7 @@
         "searching": "检索中...",
         "similarPlaceholder": "输入相似问题后点击加号添加",
         "similarQuestions": "相似问",
-        "similarQuestionsDesc": "添加与标准问意思相同但表述不同的问题，帮助系统更好地匹配用户查询。",
+        "similarQuestionsDesc": "新增与标准问意思相同但表述不同的问题，帮助系统更好地匹配用户查询。",
         "similarityThresholdLabel": "相似度阈值",
         "standardQuestion": "标准问",
         "standardQuestionDesc": "设置问题的标准表述，这是用户最常问的问题形式。",
@@ -1381,7 +1381,7 @@
       }
     },
     "knowledgeBase": {
-      "add": "添加知识库",
+      "add": "新增知识库",
       "deleteConfirm": "是否确认删除知识库文件 {fileName} 数据项？",
       "deleteFaqConfirm": "是否确认删除问答库 {name} 数据项？",
       "embeddingModel": "Embedding嵌入模型",
@@ -1417,7 +1417,7 @@
       "createdAt": "创建时间",
       "deleteConfirm": "是否确认删除知识库文件名为 {fileName} 的数据项？",
       "detailModel": {
-        "addGeneratedQuestion": "添加辅助召回问题",
+        "addGeneratedQuestion": "新增辅助召回问题",
         "baseInfo": "基本信息",
         "channelApi": "API",
         "channelBrowserExtension": "浏览器插件",
@@ -1504,7 +1504,7 @@
       "usersManagementTitle": "用户与岗位管理"
     },
     "mcp": {
-      "addTitle": "添加MCP",
+      "addTitle": "新增MCP",
       "confirmMultiError": "请选择要操作的MCP服务",
       "deleteConfirm": "是否确认删除MCP编号为 {id} 的数据项？",
       "description": "描述",
@@ -1516,7 +1516,7 @@
       "id": "编号",
       "isBuiltin": "是否内置",
       "mcpServiceDialog": {
-        "addTitle": "添加 MCP 服务",
+        "addTitle": "新增 MCP 服务",
         "advancedConfig": "高级配置",
         "apiKeyHeader": "请求头名称",
         "apiKeyHeaderDesc": "留空默认 X-API-Key。Bearer 方式请填 Authorization，并在下方密钥值中写 “Bearer <token>”；需要裸 token 时填 Authorization 并直接填入 token。",
@@ -1546,7 +1546,7 @@
         "connectionSection": "连接配置",
         "credentialValue": "密钥值 / Token",
         "customHeaders": {
-          "add": "添加请求头",
+          "add": "新增请求头",
           "desc": "附加到每次 MCP 请求的 HTTP 请求头，常用于企业网关鉴权、链路追踪等场景。",
           "keyPlaceholder": "Header 名称",
           "label": "自定义请求头（可选）",
@@ -1668,7 +1668,7 @@
       "form.extraConfig": "额外配置",
       "form.interfaceType": "接口类型",
       "form.interfaceTypePlaceholder": "例如 openai（可选）",
-      "form.kvAdd": "添加一行",
+      "form.kvAdd": "新增一行",
       "form.kvKeyPlaceholder": "字段名",
       "form.kvValuePlaceholder": "字段值",
       "form.maxConcurrency": "最大并发数",
@@ -1840,7 +1840,7 @@
         "add": "新增部门",
         "expandCollapse": "展开/折叠",
         "form": {
-          "addTitle": "添加部门",
+          "addTitle": "新增部门",
           "confirmAdd": "确认新增",
           "confirmEdit": "确认修改",
           "deptName": "部门名称",
@@ -1875,7 +1875,7 @@
         "data": {
           "add": "新增字典数据",
           "form": {
-            "addTitle": "添加字典数据",
+            "addTitle": "新增字典数据",
             "confirmAdd": "确认新增",
             "confirmEdit": "确认修改",
             "cssClass": "样式属性",
@@ -1912,7 +1912,7 @@
         },
         "form": {
           "add": "新增",
-          "addTitle": "添加字典类型",
+          "addTitle": "新增字典类型",
           "confirm": "确认",
           "editTitle": "修改字典类型",
           "name": "字典名称",
@@ -1964,7 +1964,7 @@
         "addShort": "新增",
         "form": {
           "add": "新增",
-          "addTitle": "添加菜单",
+          "addTitle": "新增菜单",
           "component": "组件路径",
           "componentPlaceholder": "请输入组件路径",
           "confirm": "确认",
@@ -2061,7 +2061,7 @@
         "add": "新增岗位",
         "export": "导出",
         "form": {
-          "addTitle": "添加岗位",
+          "addTitle": "新增岗位",
           "confirmAdd": "确认新增",
           "confirmEdit": "确认修改",
           "editTitle": "修改岗位",
@@ -2096,7 +2096,7 @@
         "deleteConfirm": "确认删除吗?",
         "endDatePlaceholder": "结束时间",
         "form": {
-          "addTitle": "添加角色",
+          "addTitle": "新增角色",
           "confirmAdd": "确认新增",
           "confirmEdit": "确认修改",
           "description": "角色描述",
@@ -2126,7 +2126,7 @@
         "add": "新增用户",
         "endDatePlaceholder": "结束时间",
         "form": {
-          "addTitle": "添加用户",
+          "addTitle": "新增用户",
           "confirmAdd": "确认新增",
           "confirmEdit": "确认修改",
           "dept": "部门",
@@ -2168,8 +2168,8 @@
       }
     },
     "tenantMember": {
-      "add": "添加成员",
-      "addTitle": "新增空间成员",
+      "add": "新增成员",
+      "addTitle": "新增成员",
       "confirmInfo": {
         "disable": "是否确认停用成员名称为\"{username}\"的数据项？",
         "disableBatch": "是否确认停用选中的成员？",
@@ -2186,9 +2186,9 @@
         "email": "登录账号不能为空",
         "password": "密码不能为空",
         "tenants": {
-          "empty": "关联空间&空间角色不能为空",
+          "empty": "关联租户不能为空",
           "role": "关联角色不能为空",
-          "space": "关联空间不能为空"
+          "space": "关联租户不能为空"
         },
         "username": "租户成员名称不能为空"
       },
@@ -2203,24 +2203,24 @@
       },
       "rolePlaceholder": "请选择角色",
       "searchPlaceholder": "搜索成员名称",
-      "spaceAndRole": "空间&角色",
-      "spacePlaceholder": "请选择空间",
-      "tenants": "关联空间&空间角色",
-      "tenantsPlaceholder": "请选择关联空间&空间角色",
+      "spaceAndRole": "租户&角色",
+      "spacePlaceholder": "请选择租户",
+      "tenants": "关联租户和角色",
+      "tenantsPlaceholder": "请选择租户角色",
       "updateTitle": "修改成员信息",
       "username": "成员名称",
       "usernamePlaceholder": "请输入成员名称"
     },
     "tenantSpace": {
-      "add": "添加空间",
-      "createdAt": "空间创建时间",
-      "description": "空间描述",
-      "descriptionPlaceholder": "简单描述一下这个空间的用途",
-      "id": "空间id",
-      "name": "空间名称",
+      "add": "新增租户",
+      "createdAt": "创建时间",
+      "description": "描述",
+      "descriptionPlaceholder": "简单描述一下这个租户的用途",
+      "id": "租户ID",
+      "name": "租户名称",
       "namePlaceholder": "例如：我的新项目",
-      "searchPlaceholder": "搜索空间名称",
-      "status": "空间状态",
+      "searchPlaceholder": "搜索租户名称",
+      "status": "状态",
       "storageQuota": "存储配额",
       "storageRate": "储存使用率",
       "storageUsed": "已使用储存"

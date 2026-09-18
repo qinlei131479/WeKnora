@@ -60,7 +60,7 @@
         </template>
         <el-table-column type="selection" width="50" align="center" />
         <el-table-column
-          :label="$t('page.tenantSpace.id', '空间id')"
+          :label="$t('page.tenantSpace.id', '租户ID')"
           align="left"
           key="id"
           prop="id"
@@ -68,7 +68,7 @@
           :show-overflow-tooltip="true"
         />
         <el-table-column
-          :label="$t('page.tenantSpace.name', '空间名称')"
+          :label="$t('page.tenantSpace.name', '租户名称')"
           align="left"
           key="name"
           prop="name"
@@ -116,7 +116,7 @@
           </template>
         </el-table-column>
         <el-table-column
-          :label="$t('page.tenantSpace.status', '空间状态')"
+          :label="$t('page.tenantSpace.status', '状态')"
           align="left"
           key="status"
           prop="status"
@@ -129,7 +129,7 @@
           </template>
         </el-table-column>
         <el-table-column
-          :label="$t('page.tenantSpace.description', '空间描述')"
+          :label="$t('page.tenantSpace.description', '描述')"
           align="left"
           key="description"
           prop="description"
@@ -137,22 +137,8 @@
           v-if="columns.description.visible"
           :show-overflow-tooltip="true"
         />
-
-        <!-- <el-table-column v-if="columns.createBy.visible" label="创建人" key="createBy" prop="createBy" min-width="120"
-            align="left" :show-overflow-tooltip="true" />
-          <el-table-column v-if="columns.roleName.visible" label="所属角色" key="roleName" prop="roleName" min-width="120"
-            align="left" />
-          <el-table-column v-if="columns.tenantName.visible" label="所属租户" key="tenantName" prop="tenantName"
-            min-width="120" align="left" />
-          <el-table-column label="启用状态" align="center" key="status" width="100" v-if="columns.status.visible">
-            <template #default="scope">
-              <el-switch v-model="scope.row.status" style="--el-switch-on-color: #31aba0" active-value="0"
-                inactive-value="1" @change="handleStatusChange(scope.row)" />
-            </template>
-          </el-table-column>
-          -->
         <el-table-column
-          :label="$t('page.tenantSpace.createdAt', '空间创建时间')"
+          :label="$t('page.tenantSpace.createdAt', '创建时间')"
           align="left"
           prop="createdAt"
           :width="$dim('page.tenantSpace.createdAt', 180)"
@@ -171,22 +157,14 @@
         >
           <template #default="scope">
             <el-button link type="primary" @click="showDetail(scope.row.id)" v-hasPermi="['business:tenants:query']">
-              {{ $t('page.normal.detail') }}
+              {{ $t('page.normal.detail', '详情') }}
             </el-button>
             <el-button link type="primary" @click.stop="handleUpdate(scope.row)" v-hasPermi="['business:tenants:edit']">
-              {{ $t('page.normal.edit') }}
+              {{ $t('page.normal.edit', '编辑') }}
             </el-button>
             <el-button link type="danger" @click.stop="handleDelete(scope.row)" v-hasPermi="['business:tenants:remove']">
-              {{ $t('page.normal.remove') }}
+              {{ $t('page.normal.remove', '删除') }}
             </el-button>
-            <!-- <el-button v-if="!scope.row.enabled" link class="action-link action-link--primary"
-                @click.stop="handleEnable(scope.row)" v-hasPermi="['business:tenants:edit']">
-                {{ $t('form.button.enable') }}
-              </el-button>
-              <el-button v-else link class="action-link action-link--primary" @click.stop="handleDisable(scope.row)"
-                v-hasPermi="['business:tenants:edit']">
-                {{ $t('form.button.disable') }}
-              </el-button> -->
           </template>
         </el-table-column>
       </el-table>
@@ -216,12 +194,7 @@ import modal from '@/plugins/modal';
 import { AjaxResult, TableShowColumns, TenantSpaceEntity, TenantSpaceListReq } from '@/types';
 import { getStatusTheme, getStatusText } from '@/composables/useTenantSpace';
 import { Search } from 'lucide-vue-next';
-import {
-  deleteTenantSpaceSingleApi,
-  disableTenantsBatchApi,
-  enableTenantsBatchApi,
-  getTenantSpaceListApi
-} from '@/api/space/tenantSpace.js';
+import { deleteTenantSpaceSingleApi, disableTenantsBatchApi, enableTenantsBatchApi, getTenantSpaceListApi } from '@/api/space/tenantSpace.js';
 
 const { t } = useI18n();
 

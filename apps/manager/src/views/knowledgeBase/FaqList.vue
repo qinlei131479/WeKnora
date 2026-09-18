@@ -43,19 +43,10 @@
         :data="tableData"
         height="100%"
         @row-click="handleRowClick"
-        @selection-change="handleSelectionChange"
       >
         <template #empty>
           <kjsc-empty />
         </template>
-        <el-table-column type="selection" width="50" align="center" />
-        <el-table-column
-          :label="$t('page.knowledgeFaq.qaId', '问答ID')"
-          align="left"
-          prop="id"
-          :width="$dim('page.knowledgeFaq.qaId', 320)"
-          :show-overflow-tooltip="true"
-        />
         <el-table-column
           :label="$t('page.knowledgeFaq.standardQuestion', '标准问题')"
           align="left"
@@ -151,7 +142,7 @@
         />
       </template>
     </page-content>
-    <FaqDetail v-model:visible="detailVisible" :entity="detailEntity" />
+    <FaqDetailDrawer v-model:visible="detailVisible" :entity="detailEntity" />
   </section>
 </template>
 
@@ -172,7 +163,7 @@ import { useI18n } from 'vue-i18n';
 
 import { getKnowledgeBaseSingleApi } from '@/api/data/knowledgeBase.js';
 
-import FaqDetail from './components/FaqDetail.vue';
+import FaqDetailDrawer from './components/FaqDetailDrawer.vue';
 // import { formatSize } from '@/utils';
 import faqQueryUse from './faqList/faqQueryUse';
 import faqTagUse from './faqList/faqTagUse';
@@ -213,8 +204,6 @@ const loadLibInfo = () => {
   });
 };
 
-/** 选择条数  */
-function handleSelectionChange(selection: KnowledgeFaqEntity[]) {}
 function handleRowClick(row: KnowledgeFaqEntity, column: any) {
   if (column.property === 'operation') {
     return;

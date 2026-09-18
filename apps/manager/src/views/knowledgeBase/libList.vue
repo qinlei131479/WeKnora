@@ -32,52 +32,16 @@
         </div>
       </template>
 
-      <div class="action-toolbar" style="display: none">
-        <div class="action-toolbar__left">
-          <!-- <button type="button" class="toolbar-btn" :disabled="multiple" v-hasPermi="['system:dict:remove']"
-            @click="handleDelete()">
-            {{ $t('page.normal.batchDelete', '批量删除') }}
-          </button> -->
-          <button type="button" class="toolbar-btn" :disabled="ids.length === 0" v-hasPermi="['business:tenants:edit']">
-            {{ $t('page.normal.batchEnable', '批量启用') }}
-          </button>
-          <button type="button" class="toolbar-btn" :disabled="ids.length === 0" v-hasPermi="['business:tenants:edit']">
-            {{ $t('page.normal.batchDisable', '批量停用') }}
-          </button>
-          <span class="selected-text"
-            >{{ $t('page.normal.selected', '共选中') }} <span>{{ ids.length }}</span> {{ $t('page.normal.items', '条') }}</span
-          >
-        </div>
-
-        <div class="action-toolbar__right">
-          <!-- <button type="button" class="toolbar-btn" v-hasPermi="['system:dict:export']" @click="handleExport">导出</button> -->
-          <!-- <button type="button" class="toolbar-btn" v-hasPermi="['system:dict:remove']"
-            @click="handleRefreshCache">刷新缓存</button> -->
-          <!-- <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" /> -->
-        </div>
-      </div>
-
       <el-table
         ref="tableRef"
         v-loading="loading"
         :data="tableData"
         height="100%"
         @row-click="handleRowClick"
-        @selection-change="handleSelectionChange"
       >
         <template #empty>
           <kjsc-empty />
         </template>
-        <el-table-column type="selection" width="50" align="center" />
-        <el-table-column
-          :label="$t('page.knowledgeBase.id', '编号')"
-          align="left"
-          key="id"
-          prop="id"
-          :width="$dim('page.knowledgeBase.id', 100)"
-          v-if="columns.id.visible"
-          :show-overflow-tooltip="true"
-        />
         <el-table-column
           :label="$t('page.knowledgeBase.name', '知识库名称')"
           align="left"
@@ -330,13 +294,9 @@ const tableData = ref<KnowledgeBaseExtends[]>([]);
 // const tableRef = ref();
 const loading = ref<boolean>(true);
 // const showSearch = ref<boolean>(true)
-const ids = ref<string[]>([]);
-const single = ref<boolean>(true);
-const multiple = ref<boolean>(true);
 const total = ref<number>(0);
 // 列显隐信息
 const columns = ref<Record<string, TableShowColumns>>({
-  id: { label: $t('page.knowledgeBase.id', '编号'), visible: true },
   name: { label: $t('page.knowledgeBase.name', '知识库名称'), visible: true },
   type: { label: $t('page.knowledgeBase.type', '知识库类型'), visible: true },
   indexingStrategy: { label: $t('page.knowledgeBase.indexingStrategy', '索引策略'), visible: true },
@@ -376,7 +336,6 @@ function getList() {
       loading.value = false;
     }
   );
-  handleSelectionChange([]);
 }
 
 /** 搜索按钮操作 */
@@ -415,12 +374,6 @@ function doDelete(id: number | string) {
   });
 }
 
-/** 选择条数  */
-function handleSelectionChange(selection: KnowledgeBaseEntity[]) {
-  ids.value = selection.map((item) => item.id!);
-  single.value = selection.length != 1;
-  multiple.value = !selection.length;
-}
 function handleRowClick(row: KnowledgeBaseEntity, column: any) {
   // if (column.property === 'operation') {
   //   return;

@@ -74,12 +74,10 @@
               :data="tableData"
               height="100%"
               @row-click="handleRowClick"
-              @selection-change="handleSelectionChange"
             >
               <template #empty>
                 <kjsc-empty />
               </template>
-              <el-table-column type="selection" width="50" align="center" />
               <el-table-column
                 :label="$t('page.knowledgeFile.fileName', '文件名')"
                 align="left"
@@ -192,7 +190,7 @@
     </page-content>
 
     <!-- 详情抽屉 -->
-    <FileDetail v-model:visible="detailVisible" :entity="detailEntity" />
+    <FileDetailDrawer v-model:visible="detailVisible" :entity="detailEntity" />
   </section>
 </template>
 
@@ -212,7 +210,7 @@ import { formatSize } from '@/utils';
 import folderUse from './fileList/folderUse';
 import filesQueryUse from './fileList/filesQueryUse';
 
-import FileDetail from './components/FileDetail.vue';
+import FileDetailDrawer from './components/FileDetailDrawer.vue';
 
 const emit = defineEmits(['back']);
 
@@ -306,8 +304,6 @@ function getFileTypeSuggestions(queryString: string, cb: any) {
   cb(fileTypes.map((item) => ({ name: item })));
 }
 
-/** 选择条数  */
-function handleSelectionChange(selection: KnowledgeFileEntity[]) {}
 function handleRowClick(row: KnowledgeFileEntity, column: any) {
   if (column.property === 'operation') {
     return;

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import KJSCDialogV2 from '@/components/KJSCCmpt/KJSCDialogV2.vue';
+import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { API } from '@/api';
 import type {
   WebSearchParameters,
@@ -25,15 +25,15 @@ const emit = defineEmits<{
   (e: 'success'): void;
 }>();
 
-/** 弹窗开关：读 props、写 emit，配合父组件的 v-model:visible */
-const dialogVisible = computed({
+/** 抽屉开关：读 props、写 emit，配合父组件的 v-model:visible */
+const drawerVisible = computed({
   get: () => props.visible,
   set: (value: boolean) => emit('update:visible', value)
 });
 
 const isEdit = computed(() => props.mode === 'edit');
 
-const dialogTitle = computed(() =>
+const drawerTitle = computed(() =>
   isEdit.value ? t('page.data.webSearch.form.title.edit', '编辑网络搜索配置') : t('page.data.webSearch.form.title.add', '新增网络搜索配置')
 );
 
@@ -258,7 +258,7 @@ const loadDetail = (id: string) => {
     });
 };
 
-const initDialog = async () => {
+const initDrawer = async () => {
   resetForm();
   loading.value = true;
 
@@ -285,13 +285,13 @@ const initDialog = async () => {
 watch(
   () => props.visible,
   (visible: boolean) => {
-    if (visible) initDialog();
+    if (visible) initDrawer();
   }
 );
 
 /**
  * 更新接口不处理凭证，编辑时填了新密钥必须再走一次凭证接口，否则会被静默丢弃。
- * 返回 false 表示密钥没存上，此时基本信息已保存，应保留弹窗让用户重试。
+ * 返回 false 表示密钥没存上，此时基本信息已保存，应保留抽屉让用户重试。
  */
 const saveApiKeyIfFilled = async () => {
   if (!form.id || !form.apiKey) return true;
@@ -332,7 +332,7 @@ const handleSave = async () => {
       await API.WebSearchProviders.update(payload);
 
       if (!(await saveApiKeyIfFilled())) {
-        // 基本信息已落库，先刷新列表，弹窗留着让用户重试密钥
+        // 基本信息已落库，先刷新列表，抽屉留着让用户重试密钥
         emit('success');
         return;
       }
@@ -344,7 +344,7 @@ const handleSave = async () => {
       isEdit.value ? t('page.normal.confirmInfo.updateSuccess', '修改成功') : t('page.normal.confirmInfo.addSuccess', '新增成功')
     );
     emit('success');
-    dialogVisible.value = false;
+    drawerVisible.value = false;
   } catch (error) {
     console.error('[WebSearch] save failed:', error);
   } finally {
@@ -435,22 +435,13 @@ const handleRemoveApiKey = () => {
 </script>
 
 <template>
-  <KJSCDialogV2
-    v-model="dialogVisible"
-    :title="dialogTitle"
-    width="760px"
-    append-to-body
-    custom-class="web-search-form-dialog"
-    :show-close-btn="false"
-    :show-subit-btn="false"
-  >
+  <KjscRtlDrawer v-model="drawerVisible" :title="drawerTitle" size="760px" append-to-body>
     <el-form
       ref="saveFormRef"
       v-loading="loading"
       :model="form"
       :rules="rules"
       label-position="top"
-      class="web-search-form"
       :validate-on-rule-change="false"
     >
       <h4 class="section-title">{{ $t('page.data.webSearch.form.section.basic', '基本信息') }}</h4>
@@ -591,18 +582,18 @@ const handleRemoveApiKey = () => {
       </div>
     </el-form>
 
-    <template #prefixFooter>
-      <div class="dialog-footer">
+    <template #footer>
+      <div class="drawer-footer">
         <el-button :loading="testing" :disabled="!canTest" @click="handleTest">
           {{ $t('page.data.webSearch.test.button', '测试连接') }}
         </el-button>
-        <el-button @click="dialogVisible = false">{{ $t('page.normal.cancel', '取消') }}</el-button>
+        <el-button @click="drawerVisible = false">{{ $t('page.normal.cancel', '取消') }}</el-button>
         <el-button type="primary" :loading="saving" @click="handleSave">
           {{ $t('page.normal.save', '保存') }}
         </el-button>
       </div>
     </template>
-  </KJSCDialogV2>
+  </KjscRtlDrawer>
 </template>
 
 <style lang="scss" scoped>
@@ -683,7 +674,7 @@ const handleRemoveApiKey = () => {
   }
 }
 
-.dialog-footer {
+.drawer-footer {
   display: inline-flex;
   gap: 16px;
 }

@@ -38,6 +38,14 @@ const getSkills = () => {
 onMounted(() => {
   getSkills();
 });
+
+const resetQuery = () => {
+  keyword.value = '';
+};
+
+const handleQuery = () => {
+  getSkills();
+};
 </script>
 
 <template>
@@ -60,6 +68,9 @@ onMounted(() => {
             clearable
             :placeholder="$t('page.data.skill.search.placeholder', '输入技能名称或描述搜索')"
           />
+
+          <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
+          <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
         </div>
       </template>
 

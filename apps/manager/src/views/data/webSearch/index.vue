@@ -36,6 +36,11 @@ const providerLabel = (provider?: string) => {
 
 const isCredentialConfigured = (row: WebSearchProvidersVO) => !!row.credentials?.api_key?.configured;
 
+const tenantLabel = (tenantId?: number): string => {
+  if (tenantId == null) return '';
+  return state.tenantsVOs.find((tenant) => tenant.id === tenantId)?.name ?? '';
+};
+
 const getProviders = () => {
   loading.value = true;
   API.WebSearchProviders.list(state.providersDto, state.page)
@@ -208,6 +213,13 @@ onMounted(() => {
           :label="$t('page.data.webSearch.table.description', '描述')"
           :min-width="$dim('page.data.webSearch.table.description', 220)"
         />
+        <el-table-column
+          prop="tenantId"
+          :label="$t('page.data.vectorStores.table.tenantName', '租户')"
+          :min-width="$dim('page.data.vectorStores.table.tenantName', 300)"
+        >
+          <template #default="{ row }">{{ tenantLabel(row.tenantId) }}</template>
+        </el-table-column>
         <el-table-column
           prop="credentials"
           :label="$t('page.data.webSearch.table.credentialStatus', '凭证状态')"

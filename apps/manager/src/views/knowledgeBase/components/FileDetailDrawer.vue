@@ -4,61 +4,54 @@
     @update:model-value="$emit('update:visible', $event)"
     close-on-click-modal
     :title="$t('page.knowledgeFile.detailModel.title', '文件详情')"
-    size="60%"
+    size="800px"
     :show-confirm="false"
     :cancelText="$t('page.normal.close', '关闭')"
     @close="handleClose"
   >
     <div class="model-body">
       <el-tabs v-model="activeTab">
-        <el-tab-pane :label="$t('page.knowledgeFile.detailModel.baseInfo', '基本信息')" name="base">
-          <div class="doc-detail-rows">
-            <div v-if="details.createdAt" class="doc-detail-row">
-              <span class="doc-detail-label">{{ getTimeLabel() }}</span>
-              <span class="doc-detail-value">{{ parseTime(details.createdAt) }}</span>
-            </div>
-            <div v-if="details.type" class="doc-detail-row">
-              <span class="doc-detail-label">{{ $t('page.knowledgeFile.detailModel.type') }}</span>
-              <span class="doc-detail-value">
-                <el-tag size="small" :type="getTypeTheme()">{{ getTypeLabel() }}</el-tag>
-              </span>
-            </div>
-            <div v-if="details.channel && details.channel !== 'web'" class="doc-detail-row">
-              <span class="doc-detail-label">{{ $t('page.knowledgeFile.detailModel.source') }}</span>
-              <span class="doc-detail-value">
-                <el-tag size="small" type="warning">{{ getChannelLabel(details.channel) }}</el-tag>
-              </span>
-            </div>
-            <!-- <div v-if="detailTags.length > 0" class="doc-detail-row">
-              <span class="doc-detail-label">{{ $t('knowledgeBase.tagLabel') }}</span>
-              <span class="doc-detail-value doc-tag-chips">
-                <t-tag v-for="tag in detailTags" :key="tag.id" size="small" variant="light-outline" class="doc-tag-chip">
-                  <span class="tag-text">{{ tag.name }}</span>
-                </t-tag>
-              </span>
-            </div> -->
-          </div>
+        <el-tab-pane :label="$t('page.knowledgeFile.detailModel.baseInfo', '基本信息')" name="base" class="detail-pane">
+          <el-descriptions :column="1" border>
+            <el-descriptions-item v-if="details.createdAt" :label="getTimeLabel()" label-width="180px">
+              <span class="detail-value">{{ parseTime(details.createdAt) }}</span>
+            </el-descriptions-item>
+            <el-descriptions-item v-if="details.type" :label="$t('page.knowledgeFile.detailModel.type')" label-width="180px">
+              <el-tag size="small" :type="getTypeTheme()">{{ getTypeLabel() }}</el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item
+              v-if="details.channel && details.channel !== 'web'"
+              :label="$t('page.knowledgeFile.detailModel.source')"
+              label-width="180px"
+            >
+              <el-tag size="small" type="warning">{{ getChannelLabel(details.channel) }}</el-tag>
+            </el-descriptions-item>
+          </el-descriptions>
         </el-tab-pane>
         <el-tab-pane
           :label="$t('page.knowledgeFile.detailModel.customMetadata', '自定义元数据') + '(' + Object.keys(details.customMetadata || {}).length + ')'"
           name="customMetadata"
+          class="detail-pane"
         >
-          <div v-if="Object.keys(details.customMetadata || {}).length" class="metadata-grid">
-            <div v-for="(value, key) in details.customMetadata || {}" :key="key" class="metadata-item">
-              <span class="metadata-item-key">{{ key }}</span>
-              <span class="metadata-item-value">{{ formatMetadataValue(value) }}</span>
-            </div>
-          </div>
+          <el-descriptions v-if="Object.keys(details.customMetadata || {}).length" :column="1" border>
+            <el-descriptions-item :label="$t('page.knowledgeFile.detailModel.customMetadata', '自定义元数据')" label-width="180px">
+              <pre class="detail-value detail-json">{{ JSON.stringify(details.customMetadata, null, 2) }}</pre>
+            </el-descriptions-item>
+          </el-descriptions>
         </el-tab-pane>
-        <el-tab-pane v-if="details.source" :label="$t('page.knowledgeFile.detailModel.sourceUrl', 'URL 导入')" name="sourceUrl">
-          <div>
-            {{ details.source }}
-          </div>
+        <el-tab-pane v-if="details.source" :label="$t('page.knowledgeFile.detailModel.sourceUrl', 'URL 导入')" name="sourceUrl" class="detail-pane">
+          <el-descriptions :column="1" border>
+            <el-descriptions-item :label="$t('page.knowledgeFile.detailModel.sourceUrl', 'URL 导入')" label-width="180px">
+              <span class="detail-value">{{ details.source }}</span>
+            </el-descriptions-item>
+          </el-descriptions>
         </el-tab-pane>
-        <el-tab-pane :label="$t('page.knowledgeFile.detailModel.summary', '摘要')" name="summary">
-          <div class="summary_wrapper">
-            <div class="summary_content">{{ details.description }}</div>
-          </div>
+        <el-tab-pane :label="$t('page.knowledgeFile.detailModel.summary', '摘要')" name="summary" class="detail-pane">
+          <el-descriptions :column="1" border>
+            <el-descriptions-item :label="$t('page.knowledgeFile.detailModel.summary', '摘要')" label-width="180px">
+              <span class="detail-value">{{ details.description }}</span>
+            </el-descriptions-item>
+          </el-descriptions>
         </el-tab-pane>
         <el-tab-pane :label="$t('page.knowledgeFile.detailModel.fileContent', '文件内容')" name="content">
           <div class="content-wrapper" ref="mdContentWrap">
@@ -503,11 +496,6 @@ const getChannelLabel = (channel: string) => {
 //   // const tags: any[] = [];
 //   return Array.isArray(tags) ? tags : [];
 // });
-const formatMetadataValue = (value: unknown) => {
-  if (value === null) return 'null';
-  if (typeof value === 'boolean') return value ? 'true' : 'false';
-  return String(value);
-};
 
 const previewSupportedTypes = new Set([
   'pdf',
@@ -773,99 +761,22 @@ watch(
   }
 }
 
-.doc-detail-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.detail-pane {
+  overflow-y: auto;
 }
 
-.doc-detail-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  line-height: 1.6;
+:deep(.el-descriptions__label),
+:deep(.el-descriptions__content) {
+  vertical-align: top;
 }
 
-.doc-detail-label {
-  flex: 0 0 72px;
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.doc-detail-value {
-  flex: 1;
-  min-width: 0;
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: var(--el-text-color-primary);
-  word-break: break-word;
-}
-
-.metadata-grid {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 7px 18px;
-}
-
-.metadata-item {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
-  min-width: 0;
-}
-
-.metadata-item-key,
-.metadata-item-value {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.metadata-item-key {
-  color: var(--el-text-color-placeholder);
-  font-size: 12px;
-
-  &::after {
-    content: ':';
-  }
-}
-
-.metadata-item-value {
-  color: var(--el-text-color-primary);
-  font-size: 13px;
-}
-
-// 文档摘要区域
-.summary_wrapper {
-  position: relative;
-  // background: var(--el-bg-color);
-  border: var(--el-border);
-  border-radius: 6px;
-  max-height: 100%;
-  overflow: auto;
-
-  // &.summary_clickable {
-  //   cursor: pointer;
-  // }
-}
-
-.summary_content {
-  padding: 12px;
-  color: var(--el-text-color-primary);
-  font-size: 13px;
-  line-height: 1.5;
-  word-break: break-word;
+.detail-value {
   white-space: pre-wrap;
+  word-break: break-all;
+}
 
-  // &.summary_collapsed {
-  //   max-height: 4.5em;
-  //   overflow: hidden;
-  // }
+.detail-json {
+  margin: 0;
 }
 .no_content {
   margin-top: 12px;

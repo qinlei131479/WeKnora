@@ -2,7 +2,7 @@
   <section class="tenant-space-member-manage-page">
     <page-name class="page-name">
       <el-button type="primary" icon="Plus" @click="handleAdd" v-hasPermi="['business:users:add']">{{
-        $t('page.tenantMember.add', '添加成员')
+        $t('page.tenantMember.add', '新增成员')
       }}</el-button>
     </page-name>
 
@@ -64,15 +64,15 @@
         <template #empty>
           <kjsc-empty />
         </template>
-        <el-table-column type="selection" width="50" align="center" />
-        <el-table-column
+        <!-- <el-table-column type="selection" width="50" align="center" /> -->
+        <!-- <el-table-column
           :label="$t('page.tenantMember.id', '成员ID')"
           align="left"
           key="id"
           prop="id"
           :width="$dim('page.tenantMember.id', 300)"
           :show-overflow-tooltip="true"
-        />
+        /> -->
         <el-table-column
           :label="$t('page.tenantMember.username', '成员名称')"
           align="left"
@@ -83,7 +83,7 @@
           :show-overflow-tooltip="true"
         />
         <el-table-column
-          :label="$t('page.tenantMember.tenants', '关联空间&空间角色')"
+          :label="$t('page.tenantMember.tenants', '关联租户和角色')"
           align="left"
           key="tenants"
           prop="tenants"
@@ -91,10 +91,14 @@
           v-if="columns.tenants.visible"
           :show-overflow-tooltip="true"
         >
-          <template #default="scope">
-            <span>{{
-              scope.row.tenants?.map((item: TenantMemberTenantIdAndRole) => `${item.tenantName}-${formatRole(item.role)}`).join(';') || '-'
-            }}</span>
+          <template #default="{ row }">
+            <div v-if="row.tenants" v-for="item in row.tenants" style="margin: 4px 0">
+              <span>{{ item.tenantName || 'NULL' }}</span>
+              <el-tag type="info" effect="dark" size="small" round style="margin-left: 5px">{{ formatRole(item.role) }}</el-tag>
+            </div>
+            <!-- <span>{{
+              row.tenants?.map((item: TenantMemberTenantIdAndRole) => `${item.tenantName} - ${formatRole(item.role)}`).join(';') || '-'
+            }}</span> -->
           </template>
         </el-table-column>
         <el-table-column
@@ -188,12 +192,7 @@ import { ref, reactive } from '@vue/runtime-core';
 import MemberAddEditDrawer from './components/MemberAddEditDrawer.vue';
 import modal from '@/plugins/modal';
 import type { AjaxResult, PageDomain, TableShowColumns, TenantMemberEntity, TenantMemberListReq, TenantMemberTenantIdAndRole } from '@/types';
-import {
-  deleteTenantMemberSingleApi,
-  disableTenantMemberApi,
-  enableTenantMemberApi,
-  getTenantMemberListApi
-} from '@/api/space/tenantMember.js';
+import { deleteTenantMemberSingleApi, disableTenantMemberApi, enableTenantMemberApi, getTenantMemberListApi } from '@/api/space/tenantMember.js';
 
 import { Search } from 'lucide-vue-next';
 import { useI18n } from 'vue-i18n';

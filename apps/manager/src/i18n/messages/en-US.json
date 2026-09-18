@@ -2169,7 +2169,7 @@
     },
     "tenantMember": {
       "add": "Add Member",
-      "addTitle": "Add workspace member",
+      "addTitle": "Add member",
       "confirmInfo": {
         "disable": "Are you sure you want to disable the member \"{username}\"?",
         "disableBatch": "Are you sure you want to disable the selected members?",
@@ -2212,15 +2212,15 @@
       "usernamePlaceholder": "Enter the member name"
     },
     "tenantSpace": {
-      "add": "Add workspace",
-      "createdAt": "Workspace created at",
-      "description": "Workspace description",
-      "descriptionPlaceholder": "Briefly describe what this workspace is for",
-      "id": "Workspace ID",
-      "name": "Workspace name",
+      "add": "Add tenant",
+      "createdAt": "Created at",
+      "description": "Description",
+      "descriptionPlaceholder": "Briefly describe what this tenant is for",
+      "id": "Tenant ID",
+      "name": "Tenant name",
       "namePlaceholder": "e.g. My new project",
-      "searchPlaceholder": "Search workspace names",
-      "status": "Workspace status",
+      "searchPlaceholder": "Search tenant names",
+      "status": "Status",
       "storageQuota": "Storage Quota",
       "storageRate": "Storage usage",
       "storageUsed": "Storage used"

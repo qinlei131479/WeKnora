@@ -160,11 +160,9 @@
 <script setup lang="ts" name="Models">
 import modal from '@/plugins/modal';
 import { Link } from 'lucide-vue-next';
-import { useI18n } from 'vue-i18n';
 import { downloadOllamaModelApi, getOllamaDownloadProgressApi, getOllamaModelsApi, getOllamaStatusApi } from '@/api/model/ollama';
 import { OllamaDownloadResp, OllamaModelsResp, TableShowColumns } from '@/types';
-
-const { t } = useI18n();
+import { t } from '@/i18n';
 
 // 列显隐信息
 const columns = ref<Record<string, TableShowColumns>>({
@@ -417,7 +415,12 @@ function handleQuery() {
 
 /** 重置按钮操作 */
 function resetQuery() {
-  handleQuery();
+  // handleQuery();
+  queryParams.value = {
+    pageNum: 1,
+    pageSize: 10,
+    name: undefined
+  };
 }
 
 /** 选择条数  */
