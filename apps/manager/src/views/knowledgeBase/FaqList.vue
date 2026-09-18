@@ -191,8 +191,14 @@ const goBack = () => {
 const libInfo = ref<KnowledgeBaseEntity>({});
 const libName = computed(() => libInfo.value.name || libInfo.value.id);
 
-const { pageParams, queryParams, tableData, loading, total, loadTableData, resetQuerySearch, handleDelete } = faqQueryUse(props.libId);
+const { pageParams, queryParams, tableData, loading, total, loadTableData, resetQueryParams, handleDelete } = faqQueryUse(props.libId);
 const { tagOptionsWithId, loadTags, getTagName } = faqTagUse();
+
+const resetQuerySearch = () => {
+  resetQueryParams();
+  pageParams.value.pageNum = 1;
+  loadTableData();
+};
 
 const loadTagsData = () => {
   return loadTags(props.libId);

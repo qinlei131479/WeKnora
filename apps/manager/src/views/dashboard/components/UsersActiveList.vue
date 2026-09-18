@@ -91,9 +91,37 @@ const props = defineProps<{
   flex-shrink: 0;
 }
 
+.users-active-avatar {
+  font-size: 18px;
+}
+
 .users-active-avatar-skeleton {
   width: 56px;
   height: 56px;
+}
+
+.users-active-item:nth-child(6n + 1) .users-active-avatar {
+  background-color: #409eff;
+}
+
+.users-active-item:nth-child(6n + 2) .users-active-avatar {
+  background-color: #ffb347;
+}
+
+.users-active-item:nth-child(6n + 3) .users-active-avatar {
+  background-color: #2ec4b6;
+}
+
+.users-active-item:nth-child(6n + 4) .users-active-avatar {
+  background-color: #ff6b6b;
+}
+
+.users-active-item:nth-child(6n + 5) .users-active-avatar {
+  background-color: #9b7ede;
+}
+
+.users-active-item:nth-child(6n + 6) .users-active-avatar {
+  background-color: #ffd166;
 }
 
 .users-active-content {

@@ -79,6 +79,7 @@ const form = reactive({
 const isEmbedding = computed(() => form.type === 'Embedding');
 const isRemote = computed(() => form.source !== 'local');
 const supportsVisionVisible = computed(() => form.type === 'KnowledgeQA' || form.type === 'VLLM');
+const maxConcurrencyVisible = computed(() => ['KnowledgeQA', 'Embedding', 'VLLM'].includes(form.type));
 
 const selectedProvider = computed(() => providers.value.find((item) => item.value === form.provider));
 
@@ -173,14 +174,18 @@ const onProviderChange = () => {
 };
 
 /** 切换类型要重新拉厂商列表，原来选的厂商可能不支持新类型 */
-const onTypeChange = async () => {
+const onTypeChange = () => {
   testResult.value = null;
-  await loadProviders();
-
-  if (form.provider && !providers.value.some((item) => item.value === form.provider)) {
-    form.provider = '';
-    form.baseUrl = '';
+  if (form.type === 'Rerank' && form.source === 'local') {
+    form.source = 'remote';
   }
+
+  return loadProviders().then(() => {
+    if (form.provider && !providers.value.some((item) => item.value === form.provider)) {
+      form.provider = '';
+      form.baseUrl = '';
+    }
+  });
 };
 
 const fillFormFromRow = (row: ModelsVO) => {
@@ -478,6 +483,27 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
       label-position="top"
       :validate-on-rule-change="false"
     >
+      <el-form-item :label="$t('page.models.form.type', '模型类型')" prop="type">
+        <el-radio-group v-model="form.type" :disabled="isEdit" @change="onTypeChange">
+          <el-radio-button v-for="item in MODEL_TYPE_OPTIONS" :key="item.value" :value="item.value">
+            {{ $t(item.labelKey, item.label) }}
+          </el-radio-button>
+        </el-radio-group>
+      </el-form-item>
+
+      <el-form-item :label="$t('page.models.form.source', '模型来源')" prop="source">
+        <el-radio-group v-model="form.source" :disabled="isEdit">
+          <el-radio-button
+            v-for="item in MODEL_SOURCE_OPTIONS"
+            :key="item.value"
+            :value="item.value"
+            :disabled="isEdit || (form.type === 'Rerank' && item.value === 'local')"
+          >
+            {{ $t(item.labelKey, item.label) }}
+          </el-radio-button>
+        </el-radio-group>
+      </el-form-item>
+
       <h4 class="section-title">{{ $t('page.models.form.section.basic', '基本信息') }}</h4>
 
       <el-alert
@@ -496,35 +522,11 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         </span>
       </el-form-item>
 
-      <el-form-item :label="$t('page.models.form.displayName', '显示名称')" prop="displayName">
+      <el-form-item v-if="isRemote" :label="$t('page.models.form.displayName', '显示名称')" prop="displayName">
         <el-input v-model="form.displayName" :placeholder="$t('page.models.form.displayNamePlaceholder', '请输入显示名称（可选）')" maxlength="100" />
       </el-form-item>
 
-      <el-form-item :label="$t('page.models.form.type', '模型类型')" prop="type">
-        <el-select
-          v-model="form.type"
-          class="full-width"
-          :placeholder="$t('page.models.form.typePlaceholder', '请选择模型类型')"
-          @change="onTypeChange"
-        >
-          <el-option v-for="item in MODEL_TYPE_OPTIONS" :key="item.value" :label="$t(item.labelKey, item.label)" :value="item.value" />
-        </el-select>
-      </el-form-item>
-
-      <el-form-item :label="$t('page.models.form.source', '模型来源')" prop="source">
-        <el-select
-          v-model="form.source"
-          class="full-width"
-          filterable
-          allow-create
-          default-first-option
-          :placeholder="$t('page.models.form.sourcePlaceholder', '请选择模型来源')"
-        >
-          <el-option v-for="item in MODEL_SOURCE_OPTIONS" :key="item.value" :label="$t(item.labelKey, item.label)" :value="item.value" />
-        </el-select>
-      </el-form-item>
-
-      <el-form-item :label="$t('page.models.form.description', '描述')" prop="description">
+      <el-form-item v-if="isRemote" :label="$t('page.models.form.description', '描述')" prop="description">
         <el-input
           v-model="form.description"
           type="textarea"
@@ -534,9 +536,9 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         />
       </el-form-item>
 
-      <h4 class="section-title">{{ $t('page.models.form.section.provider', '接入配置') }}</h4>
+      <h4 v-if="isRemote" class="section-title">{{ $t('page.models.form.section.provider', '接入配置') }}</h4>
 
-      <el-form-item :label="$t('page.models.form.provider', '提供商')" prop="provider">
+      <el-form-item v-if="isRemote" :label="$t('page.models.form.provider', '提供商')" prop="provider">
         <el-select
           v-model="form.provider"
           class="full-width"
@@ -549,12 +551,12 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         <span v-if="selectedProvider?.description" class="form-desc">{{ selectedProvider.description }}</span>
       </el-form-item>
 
-      <el-form-item :label="$t('page.models.form.baseUrl', 'Base URL')" prop="baseUrl">
+      <el-form-item v-if="isRemote" :label="$t('page.models.form.baseUrl', 'Base URL')" prop="baseUrl">
         <el-input v-model="form.baseUrl" :placeholder="$t('page.models.form.baseUrlPlaceholder', '请输入 Base URL')" />
       </el-form-item>
 
       <!-- 新增模式：凭证随 parameters 一起提交 -->
-      <el-form-item v-if="!isEdit" :label="$t('page.models.form.apiKey', 'API Key')" prop="apiKey">
+      <el-form-item v-if="isRemote && !isEdit" :label="$t('page.models.form.apiKey', 'API Key')" prop="apiKey">
         <el-input
           v-model="form.apiKey"
           type="password"
@@ -565,7 +567,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
       </el-form-item>
 
       <!-- 编辑模式：凭证走独立接口，只展示状态，不回显明文 -->
-      <el-form-item v-else :label="$t('page.models.form.apiKey', 'API Key')">
+      <el-form-item v-else-if="isRemote" :label="$t('page.models.form.apiKey', 'API Key')">
         <div class="credential-box">
           <div class="credential-status">
             <el-tag :type="apiKeyConfigured ? 'success' : 'info'">
@@ -605,11 +607,11 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         </div>
       </el-form-item>
 
-      <el-form-item :label="$t('page.models.form.appId', 'App ID')" prop="appId">
+      <el-form-item v-if="isRemote" :label="$t('page.models.form.appId', 'App ID')" prop="appId">
         <el-input v-model="form.appId" :placeholder="$t('page.models.form.appIdPlaceholder', '部分厂商（如 WeKnoraCloud）需要填写')" />
       </el-form-item>
 
-      <el-form-item v-if="!isEdit" :label="$t('page.models.form.appSecret', 'App Secret')" prop="appSecret">
+      <el-form-item v-if="isRemote && !isEdit" :label="$t('page.models.form.appSecret', 'App Secret')" prop="appSecret">
         <el-input
           v-model="form.appSecret"
           type="password"
@@ -619,7 +621,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         />
       </el-form-item>
 
-      <el-form-item v-else :label="$t('page.models.form.appSecret', 'App Secret')">
+      <el-form-item v-else-if="isRemote" :label="$t('page.models.form.appSecret', 'App Secret')">
         <div class="credential-box">
           <div class="credential-status">
             <el-tag :type="appSecretConfigured ? 'success' : 'info'">
@@ -658,19 +660,19 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         </div>
       </el-form-item>
 
-      <el-form-item :label="$t('page.models.form.interfaceType', '接口类型')" prop="interfaceType">
+      <el-form-item v-if="isRemote" :label="$t('page.models.form.interfaceType', '接口类型')" prop="interfaceType">
         <el-input v-model="form.interfaceType" :placeholder="$t('page.models.form.interfaceTypePlaceholder', '例如 openai（可选）')" />
       </el-form-item>
 
-      <el-form-item :label="$t('page.models.form.parameterSize', '参数规模')" prop="parameterSize">
+      <el-form-item v-if="isRemote" :label="$t('page.models.form.parameterSize', '参数规模')" prop="parameterSize">
         <el-input v-model="form.parameterSize" :placeholder="$t('page.models.form.parameterSizePlaceholder', '例如 7B / 13B（可选）')" />
       </el-form-item>
 
-      <el-form-item :label="$t('page.models.form.maxConcurrency', '最大并发数')" prop="maxConcurrency">
+      <el-form-item v-if="maxConcurrencyVisible" :label="$t('page.models.form.maxConcurrency', '最大并发数')" prop="maxConcurrency">
         <el-input-number v-model="form.maxConcurrency" :min="0" :max="1000" controls-position="right" />
       </el-form-item>
 
-      <el-form-item v-if="supportsVisionVisible" :label="$t('page.models.form.supportsVision', '支持视觉输入')" prop="supportsVision">
+      <el-form-item v-if="form.type === 'KnowledgeQA'" :label="$t('page.models.form.supportsVision', '支持视觉输入')" prop="supportsVision">
         <el-switch v-model="form.supportsVision" />
         <span class="form-desc form-desc--inline">
           {{ $t('page.models.form.supportsVisionDesc', '开启后该模型可接收图片输入') }}
@@ -696,9 +698,9 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         </el-form-item>
       </template>
 
-      <h4 class="section-title">{{ $t('page.models.form.section.advanced', '高级配置') }}</h4>
+      <h4 v-if="isRemote" class="section-title">{{ $t('page.models.form.section.advanced', '高级配置') }}</h4>
 
-      <el-form-item :label="$t('page.models.form.customHeaders', '自定义请求头')">
+      <el-form-item v-if="isRemote" :label="$t('page.models.form.customHeaders', '自定义请求头')">
         <div class="kv-editor">
           <div v-for="(row, index) in form.customHeaders" :key="`header-${index}`" class="kv-row">
             <el-input v-model="row.key" :placeholder="$t('page.models.form.kvKeyPlaceholder', '字段名')" />
@@ -713,7 +715,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         </div>
       </el-form-item>
 
-      <el-form-item :label="$t('page.models.form.extraConfig', '额外配置')">
+      <el-form-item v-if="isRemote" :label="$t('page.models.form.extraConfig', '额外配置')">
         <div class="kv-editor">
           <div v-for="(row, index) in form.extraConfig" :key="`extra-${index}`" class="kv-row">
             <el-input v-model="row.key" :placeholder="$t('page.models.form.kvKeyPlaceholder', '字段名')" />

@@ -489,6 +489,9 @@ function handleQuery() {
 function resetQuery() {
   dateRange.value = [];
   queryParams.value.userName = undefined;
+  queryParams.value.tenantId = undefined;
+  queryParams.value.phonenumber = undefined;
+  queryParams.value.status = undefined;
   queryParams.value.deptId = undefined;
   handleQuery();
 }

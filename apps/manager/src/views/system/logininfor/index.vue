@@ -157,11 +157,16 @@ function handleQuery() {
 
 function resetQuery() {
   dateRange.value = [];
+  queryParams.value.ipaddr = undefined;
   queryParams.value.userName = undefined;
   queryParams.value.status = undefined;
   queryParams.value.pageNum = 1;
-  logininforRef.value?.sort(defaultSort.value.prop, defaultSort.value.order);
-  handleQuery();
+  if (logininforRef.value) {
+    // 恢复排序会触发 sort-change，由排序事件执行一次查询。
+    logininforRef.value.sort(defaultSort.value.prop, defaultSort.value.order);
+  } else {
+    handleSortChange(defaultSort.value);
+  }
 }
 
 function handleSelectionChange(selection: SysLogininfor[]) {

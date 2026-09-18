@@ -134,7 +134,7 @@ import AddEditDrawer from './components/AddEditDrawer.vue';
 const { t } = useI18n();
 
 const {
-  pageParams,queryParams,tableData,loading,total,loadTableData,resetPageSearch,resetQuerySearch,handleDelete
+  pageParams,queryParams,tableData,loading,total,loadTableData,resetPageSearch,resetQueryParams,handleDelete
 } = useTableData<McpEntity>({
   queryParams: {name: undefined},
   searchApi: getMcplistApi,
@@ -144,6 +144,12 @@ const {
   deleteSuccessMessage: t('page.normal.confirmInfo.removeSuccess'),
   deleteApi: deleteMcpSingleApi,
 })
+
+const resetQuerySearch = () => {
+  resetQueryParams();
+  pageParams.value.pageNum = 1;
+  loadTableData();
+};
 
 // /** 导出按钮操作 */
 // function handleExport() {

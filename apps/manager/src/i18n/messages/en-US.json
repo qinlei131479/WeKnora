@@ -1696,8 +1696,8 @@
       "search.namePlaceholder": "Search by model name",
       "search.sourcePlaceholder": "All sources",
       "search.typePlaceholder": "All types",
-      "source.local": "Local (Ollama)",
-      "source.remote": "Remote API",
+      "source.local": "Ollama",
+      "source.remote": "API",
       "table.createdAt": "Created Time",
       "table.credentialConfigured": "Configured",
       "table.credentialStatus": "Credential",
@@ -1721,11 +1721,11 @@
       "tips.credentialRequired": "Enter a new secret first",
       "tips.deleteConfirm": "Delete the model \"{name}\"?",
       "title": "Model Management",
-      "type.ASR": "Speech Recognition",
+      "type.ASR": "Speech",
       "type.Embedding": "Embedding",
       "type.KnowledgeQA": "Chat",
-      "type.Rerank": "Rerank",
-      "type.VLLM": "Multimodal"
+      "type.Rerank": "ReRank",
+      "type.VLLM": "Vision"
     },
     "normal": {
       "add": "Add",

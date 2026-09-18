@@ -10,10 +10,10 @@ interface SelectOption {
 /** 模型类型，值与后端落库的 type 一致 */
 export const MODEL_TYPE_OPTIONS: SelectOption[] = [
   { value: 'KnowledgeQA', labelKey: 'page.models.type.KnowledgeQA', label: '对话' },
-  { value: 'Embedding', labelKey: 'page.models.type.Embedding', label: '向量嵌入' },
-  { value: 'Rerank', labelKey: 'page.models.type.Rerank', label: '重排序' },
-  { value: 'VLLM', labelKey: 'page.models.type.VLLM', label: '多模态' },
-  { value: 'ASR', labelKey: 'page.models.type.ASR', label: '语音识别' }
+  { value: 'Embedding', labelKey: 'page.models.type.Embedding', label: 'Embedding' },
+  { value: 'Rerank', labelKey: 'page.models.type.Rerank', label: 'ReRank' },
+  { value: 'VLLM', labelKey: 'page.models.type.VLLM', label: '视觉' },
+  { value: 'ASR', labelKey: 'page.models.type.ASR', label: '语音' }
 ];
 
 /**
@@ -21,8 +21,8 @@ export const MODEL_TYPE_OPTIONS: SelectOption[] = [
  * 表单里允许自定义输入以兼容厂商专属来源。
  */
 export const MODEL_SOURCE_OPTIONS: SelectOption[] = [
-  { value: 'remote', labelKey: 'page.models.source.remote', label: '远程 API' },
-  { value: 'local', labelKey: 'page.models.source.local', label: '本地（Ollama）' }
+  { value: 'remote', labelKey: 'page.models.source.remote', label: 'API' },
+  { value: 'local', labelKey: 'page.models.source.local', label: 'Ollama' }
 ];
 
 const TYPE_LABEL_KEYS = MODEL_TYPE_OPTIONS.reduce<Record<string, string>>((acc, item) => {

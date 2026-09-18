@@ -10,6 +10,7 @@
         <div ref="treeHeightRef" class="knowledge-file-list-left">
           <!-- <div class="left-view"></div> -->
           <el-tree-v2
+            ref="folderTreeRef"
             v-if="folderTreeData"
             :data="folderTreeData"
             :props="folderTreeProps"
@@ -240,7 +241,18 @@ const libName = computed(() => libInfo.value.name || libInfo.value.id);
 
 const { folderTreeData, folderTreeProps, folderTreeIds, loadFolderTreeData } = folderUse({ t }, props.libId);
 
-const { pageParams, queryParams, tableData, loading, total, loadTableData, resetQuerySearch, resetParams, handleDelete } = filesQueryUse(props.libId);
+const {
+  pageParams, queryParams, tableData, loading, total, loadTableData,
+  resetQuerySearch: resetFileQuerySearch, resetParams, handleDelete
+} = filesQueryUse(props.libId);
+const folderTreeRef = ref<{ setCurrentKey: (key?: string | number) => void }>();
+
+const resetQuerySearch = () => {
+  queryParams.value.folderPath = '';
+  pageParams.value.pageNum = 1;
+  folderTreeRef.value?.setCurrentKey(folderTreeData.value?.[0]?.id);
+  resetFileQuerySearch();
+};
 
 const loadLibInfo = () => {
   getKnowledgeBaseSingleApi(props.libId).then((res) => {

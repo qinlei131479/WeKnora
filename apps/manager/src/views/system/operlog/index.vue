@@ -251,8 +251,12 @@ function resetQuery() {
   queryParams.value.businessType = undefined;
   queryParams.value.status = undefined;
   queryParams.value.pageNum = 1;
-  operlogRef.value?.sort(defaultSort.value.prop, defaultSort.value.order);
-  handleQuery();
+  if (operlogRef.value) {
+    // 恢复排序会触发 sort-change，由排序事件执行一次查询。
+    operlogRef.value.sort(defaultSort.value.prop, defaultSort.value.order);
+  } else {
+    handleSortChange(defaultSort.value);
+  }
 }
 
 function handleSelectionChange(selection: SysOperLog[]) {

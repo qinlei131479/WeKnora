@@ -44,7 +44,7 @@ const handleQuery = () => {
 
 const resetQuery = () => {
   state.dto = {};
-  state.page.pageNum = 1;
+  handleQuery();
 };
 
 const handleDetail = (row: AmpParserEnginesVO) => {

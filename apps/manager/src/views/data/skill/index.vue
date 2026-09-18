@@ -41,6 +41,7 @@ onMounted(() => {
 
 const resetQuery = () => {
   keyword.value = '';
+  handleQuery();
 };
 
 const handleQuery = () => {

@@ -415,12 +415,12 @@ function handleQuery() {
 
 /** 重置按钮操作 */
 function resetQuery() {
-  // handleQuery();
   queryParams.value = {
     pageNum: 1,
     pageSize: 10,
     name: undefined
   };
+  handleQuery();
 }
 
 /** 选择条数  */

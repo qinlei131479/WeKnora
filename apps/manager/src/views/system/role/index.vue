@@ -319,6 +319,8 @@ function handleQuery() {
 function resetQuery() {
   dateRange.value = [];
   queryParams.value.roleName = undefined;
+  queryParams.value.roleKey = undefined;
+  queryParams.value.status = undefined;
   queryParams.value.tenantId = undefined;
   handleQuery();
 }
