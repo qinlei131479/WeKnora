@@ -48,19 +48,19 @@
         </div>
       </div>
 
-      <div class="stat-card secondary">
-        <div class="stat-icon"><ChartBarIcon /></div>
+      <div class="stat-card info">
+        <div class="stat-icon"><TimeIcon /></div>
         <div class="stat-content">
-          <div class="stat-value">{{ basicStats?.feedback_stats?.total_feedbacks || 0 }}</div>
-          <div class="stat-label">{{ $t('dashboard.stats.feedbacks') }}</div>
+          <div class="stat-value">{{ userStats?.active_users_24h || 0 }}</div>
+          <div class="stat-label">{{ $t('dashboard.users.active24h') }}</div>
         </div>
       </div>
 
-      <div class="stat-card" :class="satisfactionClass">
-        <div class="stat-icon"><HeartIcon /></div>
+      <div class="stat-card success">
+        <div class="stat-icon"><CalendarIcon /></div>
         <div class="stat-content">
-          <div class="stat-value">{{ basicStats?.feedback_stats?.satisfaction_rate || 0 }}%</div>
-          <div class="stat-label">{{ $t('dashboard.stats.satisfaction') }}</div>
+          <div class="stat-value">{{ userStats?.active_users_30d || 0 }}</div>
+          <div class="stat-label">{{ $t('dashboard.users.active30d') }}</div>
         </div>
       </div>
     </div>
@@ -68,28 +68,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import {
   ArrowDownIcon,
   ArrowUpIcon,
-  ChartBarIcon,
+  CalendarIcon,
   ChartIcon,
   ChatIcon,
-  HeartIcon,
   MailIcon,
+  TimeIcon,
   UserIcon,
 } from 'tdesign-icons-vue-next'
 
-const props = defineProps<{
+defineProps<{
   basicStats?: Record<string, any>
+  userStats?: Record<string, any>
 }>()
-
-const satisfactionClass = computed(() => {
-  const rate = props.basicStats?.feedback_stats?.satisfaction_rate || 0
-  if (rate >= 80) return 'satisfaction-high'
-  if (rate >= 60) return 'satisfaction-medium'
-  return 'satisfaction-low'
-})
 </script>
 
 <style scoped lang="less">
@@ -139,10 +132,6 @@ const satisfactionClass = computed(() => {
 .stat-card.success .stat-icon { background: var(--color-success-50); color: var(--color-success-700); }
 .stat-card.info .stat-icon { background: var(--color-info-50); color: var(--color-info-700); }
 .stat-card.warning .stat-icon { background: var(--color-warning-50); color: var(--color-warning-700); }
-.stat-card.secondary .stat-icon { background: var(--color-accent-50); color: var(--color-accent-700); }
-.stat-card.satisfaction-high .stat-icon { background: var(--color-success-50); color: var(--color-success-700); }
-.stat-card.satisfaction-medium .stat-icon { background: var(--color-warning-50); color: var(--color-warning-700); }
-.stat-card.satisfaction-low .stat-icon { background: var(--color-error-50); color: var(--color-error-700); }
 
 .stat-content {
   display: flex;

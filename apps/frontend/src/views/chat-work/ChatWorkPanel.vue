@@ -100,6 +100,7 @@
                       :message="displayItem.message"
                       :is-processing="isDisplayMessageProcessing(row.conv, displayItem)"
                       :show-refs="showMsgRefs(displayItem.message, row.conv)"
+                      :session-id="currentChatId"
                       :hide-tool-calls="true"
                       :mention="mentionConfig"
                       @retry="retryMessage(displayItem.message)"
@@ -123,7 +124,8 @@
                 <RefsComponent
                   v-if="shouldShowRefs(row.conv)"
                   :message="getLastMessage(row.conv)"
-                  :show-refs="['model', 'copy', 'sources']"
+                  :show-refs="['model', 'copy', 'sources', 'requestInfo']"
+                  :session-id="currentChatId"
                   :is-latest-message="false"
                   :sources="getConversationSources(row.conv)"
                 />
@@ -3205,7 +3207,7 @@ const showMsgRefs = (msg, conv) => {
 
   // 只有真正完成的消息才显示 refs
   if (msg.isLast && msg.status === 'finished') {
-    return ['copy', 'sources']
+    return ['copy', 'sources', 'requestInfo']
   }
   return false
 }

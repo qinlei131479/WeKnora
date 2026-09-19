@@ -5,7 +5,7 @@
       <p>{{ t('dashboard.subtitle') }}</p>
     </header>
 
-    <StatsOverview :basic-stats="basicStats" />
+    <StatsOverview :basic-stats="basicStats" :user-stats="allStatsData.users" />
 
     <div class="dashboard-grid">
       <CallStatsCard class="call-stats" :loading="loading" ref="callStatsRef" />

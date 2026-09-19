@@ -35,7 +35,6 @@ from yuxi.services.thread_files_service import (
     resolve_thread_artifact_view,
     save_thread_artifact_to_workspace_view,
 )
-from yuxi.services.feedback_service import get_message_feedback_view, submit_message_feedback_view
 from yuxi.utils.logging_config import logger
 from yuxi.utils.image_processor import process_uploaded_image
 from yuxi.utils.paths import VIRTUAL_PATH_PREFIX
@@ -512,56 +511,6 @@ async def save_thread_artifact_to_workspace(
         current_uid=str(current_user.uid),
         db=db,
         path=request.path,
-    )
-
-
-# =============================================================================
-# > === 消息反馈分组 ===
-# =============================================================================
-
-
-class MessageFeedbackRequest(BaseModel):
-    rating: str  # 'like' or 'dislike'
-    reason: str | None = None  # Optional reason for dislike
-
-
-class MessageFeedbackResponse(BaseModel):
-    id: int
-    message_id: int
-    rating: str
-    reason: str | None
-    created_at: str
-
-
-@chat.post("/message/{message_id}/feedback", response_model=MessageFeedbackResponse)
-async def submit_message_feedback(
-    message_id: int,
-    feedback_data: MessageFeedbackRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_required_user),
-):
-    """提交消息反馈（需要登录）"""
-    result = await submit_message_feedback_view(
-        message_id=message_id,
-        rating=feedback_data.rating,
-        reason=feedback_data.reason,
-        db=db,
-        current_uid=str(current_user.uid),
-    )
-    return MessageFeedbackResponse(**result)
-
-
-@chat.get("/message/{message_id}/feedback")
-async def get_message_feedback(
-    message_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_required_user),
-):
-    """获取指定消息的用户反馈（需要登录）"""
-    return await get_message_feedback_view(
-        message_id=message_id,
-        db=db,
-        current_uid=str(current_user.uid),
     )
 
 

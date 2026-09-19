@@ -7630,9 +7630,7 @@ export default {
       messages: '总消息数',
       users: '用户数',
       chat: '对话',
-      work: '工作',
-      feedbacks: '总反馈数',
-      satisfaction: '满意度'
+      work: '工作'
     },
     calls: {
       title: '调用统计',
@@ -7648,11 +7646,9 @@ export default {
       total: '总计: {value}'
     },
     users: {
-      title: '用户活跃度分析',
-      total: '总用户',
+      title: '用户活跃度趋势',
       active24h: '24h活跃',
       active30d: '30天活跃',
-      trend: '活跃度趋势',
       last7days: '最近7天',
       series: '活跃用户数'
     },

@@ -1,29 +1,6 @@
 <template>
   <div class="refs" v-if="showRefs">
     <div class="tags">
-      <!-- 反馈 -->
-      <span
-        class="item btn"
-        :class="{ disabled: feedbackState.hasSubmitted }"
-        @click="likeThisResponse(msg)"
-        :title="feedbackState.hasSubmitted && feedbackState.rating === 'like' ? '已点赞' : '点赞'"
-      >
-        <ThumbsUp size="14" :stroke-width="2" :fill="feedbackState.rating === 'like' ? 'currentColor' : 'none'" />
-      </span>
-      <span
-        class="item btn"
-        :class="{ disabled: feedbackState.hasSubmitted }"
-        @click="dislikeThisResponse(msg)"
-        :title="
-          feedbackState.hasSubmitted && feedbackState.rating === 'dislike' ? '已点踩' : '点踩'
-        "
-      >
-        <ThumbsDown
-          size="14"
-          :stroke-width="2"
-          :fill="feedbackState.rating === 'dislike' ? 'currentColor' : 'none'"
-        />
-      </span>
       <!-- 模型名称 -->
       <span v-if="showKey('model') && getModelName(msg)" class="item" @click="console.log(msg)">
         <Bot size="12" /> {{ getModelName(msg) }}
@@ -32,6 +9,11 @@
       <span v-if="showKey('copy')" class="item btn" @click="copyText(msg.content)" title="复制">
         <Check v-if="isCopied" size="14" :stroke-width="2" />
         <Copy v-else size="14" :stroke-width="2" />
+      </span>
+
+      <!-- 请求信息 -->
+      <span v-if="showKey('requestInfo')" class="request-info-item">
+        <ChatRequestInfoButton :session="msg" :session-id="sessionId" />
       </span>
 
       <!-- 重试 -->
@@ -70,33 +52,13 @@
     </div>
   </div>
 
-  <!-- Dislike reason modal -->
-  <t-dialog
-    v-model:visible="dislikeModalVisible"
-    attach="body"
-    header="请告诉我们不满意的原因"
-    :confirm-btn="{ content: '提交', loading: submittingFeedback }"
-    cancel-btn="取消"
-    @confirm="submitDislikeFeedback"
-    @cancel="cancelDislike"
-    @close="cancelDislike"
-  >
-    <t-textarea
-      v-model="dislikeReason"
-      :rows="4"
-      placeholder="您的反馈将帮助我们改进服务（可选）"
-      :maxlength="500"
-    />
-  </t-dialog>
 </template>
 
 <script setup>
-import { ref, computed, reactive, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useClipboard } from '@vueuse/core'
 import { MessagePlugin } from 'tdesign-vue-next'
 import {
-  ThumbsUp,
-  ThumbsDown,
   Bot,
   Copy,
   Check,
@@ -104,7 +66,7 @@ import {
   BookOpen,
   ChevronDown
 } from 'lucide-vue-next'
-import { agentApi } from '@/api/harness'
+import ChatRequestInfoButton from '@/components/ChatRequestInfoButton.vue'
 import KnowledgeSourceSection from '@/components/harness/KnowledgeSourceSection.vue'
 import WebSearchSourceSection from '@/components/harness/WebSearchSourceSection.vue'
 
@@ -122,6 +84,10 @@ const props = defineProps({
   sources: {
     type: Object,
     default: () => ({})
+  },
+  sessionId: {
+    type: String,
+    default: ''
   }
 })
 
@@ -145,40 +111,14 @@ const toggleSources = () => {
   isSourcesExpanded.value = !isSourcesExpanded.value
 }
 
-// Feedback state
-const feedbackState = reactive({
-  hasSubmitted: false,
-  rating: null, // 'like' or 'dislike'
-  reason: null
-})
-
-// 初始化反馈状态 - 从消息的 feedback 字段读取历史反馈
-const initFeedbackState = () => {
-  if (msg.value?.feedback) {
-    feedbackState.hasSubmitted = true
-    feedbackState.rating = msg.value.feedback.rating
-    feedbackState.reason = msg.value.feedback.reason
-  } else {
-    feedbackState.hasSubmitted = false
-    feedbackState.rating = null
-    feedbackState.reason = null
-  }
-}
-
 // 监听 message prop 变化 (用于切换对话时更新状态)
 watch(
   () => props.message,
   () => {
     msg.value = props.message
-    initFeedbackState()
   },
   { immediate: true }
 )
-
-// Modal state for dislike
-const dislikeModalVisible = ref(false)
-const dislikeReason = ref('')
-const submittingFeedback = ref(false)
 
 // 使用 useClipboard 实现复制功能
 const { copy, isSupported } = useClipboard()
@@ -237,90 +177,6 @@ const getModelName = (msg) => {
   }
   return null
 }
-// Handle like action
-const likeThisResponse = async (msg) => {
-  if (feedbackState.hasSubmitted) {
-    MessagePlugin.info('您已经提交过反馈了')
-    return
-  }
-
-  if (!msg?.id) {
-    MessagePlugin.error('无法提交反馈：消息ID不存在')
-    console.error('Message object:', msg)
-    return
-  }
-
-  try {
-    submittingFeedback.value = true
-    await agentApi.submitMessageFeedback(msg.id, 'like', null)
-
-    feedbackState.hasSubmitted = true
-    feedbackState.rating = 'like'
-
-    MessagePlugin.success('感谢您的反馈！')
-  } catch (error) {
-    console.error('Failed to submit like feedback:', error)
-    if (error.message?.includes('already submitted')) {
-      MessagePlugin.info('您已经提交过反馈了')
-      feedbackState.hasSubmitted = true
-    } else {
-      MessagePlugin.error('提交反馈失败，请稍后重试')
-    }
-  } finally {
-    submittingFeedback.value = false
-  }
-}
-
-// Handle dislike action
-const dislikeThisResponse = async (msg) => {
-  if (feedbackState.hasSubmitted) {
-    MessagePlugin.info('您已经提交过反馈了')
-    return
-  }
-
-  if (!msg?.id) {
-    MessagePlugin.error('无法提交反馈：消息ID不存在')
-    console.error('Message object:', msg)
-    return
-  }
-
-  // Open modal to get reason
-  dislikeModalVisible.value = true
-}
-
-// Submit dislike feedback with reason
-const submitDislikeFeedback = async () => {
-  try {
-    submittingFeedback.value = true
-    await agentApi.submitMessageFeedback(msg.value.id, 'dislike', dislikeReason.value || null)
-
-    feedbackState.hasSubmitted = true
-    feedbackState.rating = 'dislike'
-    feedbackState.reason = dislikeReason.value
-
-    dislikeModalVisible.value = false
-    dislikeReason.value = ''
-
-    MessagePlugin.success('感谢您的反馈！')
-  } catch (error) {
-    console.error('Failed to submit dislike feedback:', error)
-    if (error.message?.includes('already submitted')) {
-      MessagePlugin.info('您已经提交过反馈了')
-      feedbackState.hasSubmitted = true
-      dislikeModalVisible.value = false
-    } else {
-      MessagePlugin.error('提交反馈失败，请稍后重试')
-    }
-  } finally {
-    submittingFeedback.value = false
-  }
-}
-
-// Cancel dislike modal
-const cancelDislike = () => {
-  dislikeModalVisible.value = false
-  dislikeReason.value = ''
-}
 </script>
 
 <style lang="less" scoped>
@@ -363,6 +219,11 @@ const cancelDislike = () => {
         }
       }
     }
+  }
+
+  .request-info-item {
+    display: inline-flex;
+    align-items: center;
   }
 
   .tags {

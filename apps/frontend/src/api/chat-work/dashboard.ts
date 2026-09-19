@@ -26,11 +26,6 @@ export const dashboardApi = {
     return apiGet('/api/dashboard/stats')
   },
 
-  getFeedbacks: (params: QueryRecord = {}) => {
-    const rating = params.rating === 'all' ? undefined : params.rating
-    return apiGet(`/api/dashboard/feedbacks${toQuery({ rating, agent_id: params.agent_id })}`)
-  },
-
   getUserStats: () => {
     return apiGet('/api/dashboard/stats/users')
   },

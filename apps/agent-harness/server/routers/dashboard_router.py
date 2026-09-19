@@ -44,12 +44,6 @@ def _scope_conversations(stmt):
     return apply_tenant_filters(stmt, Conversation.tenant_id)
 
 
-def _scope_feedbacks(stmt):
-    from yuxi.storage.postgres.models_business import MessageFeedback
-
-    return apply_tenant_filters(stmt, MessageFeedback.tenant_id)
-
-
 def _join_messages_on_conversation(stmt):
     from yuxi.storage.postgres.models_business import Conversation, Message
 
@@ -576,7 +570,7 @@ async def get_dashboard_stats(
     current_user: User = Depends(get_required_user),
 ):
     """获取当前 token 空间的基础统计"""
-    from yuxi.storage.postgres.models_business import Conversation, Message, MessageFeedback
+    from yuxi.storage.postgres.models_business import Conversation, Message
 
     try:
         # Basic counts
@@ -594,27 +588,11 @@ async def get_dashboard_stats(
         total_users_result = await db.execute(_user_count_stmt())
         total_users = total_users_result.scalar() or 0
 
-        # Feedback statistics
-        total_feedbacks_result = await db.execute(_scope_feedbacks(select(func.count(MessageFeedback.id))))
-        total_feedbacks = total_feedbacks_result.scalar() or 0
-
-        like_count_result = await db.execute(
-            _scope_feedbacks(select(func.count(MessageFeedback.id)).filter(MessageFeedback.rating == "like"))
-        )
-        like_count = like_count_result.scalar() or 0
-
-        # Calculate satisfaction rate
-        satisfaction_rate = round((like_count / total_feedbacks * 100), 2) if total_feedbacks > 0 else 100
-
         payload = {
             "total_conversations": total_conversations,
             "active_conversations": active_conversations,
             "total_messages": total_messages,
             "total_users": total_users,
-            "feedback_stats": {
-                "total_feedbacks": total_feedbacks,
-                "satisfaction_rate": satisfaction_rate,
-            },
         }
         wk = await fetch_weknora_overview(db)
         payload.update(

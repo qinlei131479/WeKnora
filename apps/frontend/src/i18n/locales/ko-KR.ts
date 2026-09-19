@@ -7630,9 +7630,7 @@ export default {
       messages: '메시지 수',
       users: '사용자 수',
       chat: '대화',
-      work: '작업',
-      feedbacks: '피드백 수',
-      satisfaction: '만족도'
+      work: '작업'
     },
     calls: {
       title: '호출 통계',
@@ -7648,11 +7646,9 @@ export default {
       total: '합계: {value}'
     },
     users: {
-      title: '사용자 활동',
-      total: '전체 사용자',
+      title: '사용자 활동 추세',
       active24h: '24시간 활성',
       active30d: '30일 활성',
-      trend: '활동 추세',
       last7days: '최근 7일',
       series: '활성 사용자'
     },

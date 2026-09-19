@@ -106,6 +106,7 @@
           :message="message"
           :show-refs="showRefs"
           :is-latest-message="isLatestMessage"
+          :session-id="sessionId"
           :sources="messageSources"
           @retry="emit('retry')"
           @openRefs="emit('openRefs', $event)"
@@ -199,6 +200,11 @@ const props = defineProps({
   isLatestMessage: {
     type: Boolean,
     default: false
+  },
+  // 所属会话 ID，用于消息操作区查询请求信息
+  sessionId: {
+    type: String,
+    default: ''
   },
   hideToolCalls: {
     type: Boolean,

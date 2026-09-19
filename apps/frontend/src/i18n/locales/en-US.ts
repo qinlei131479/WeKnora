@@ -338,9 +338,7 @@ export default {
       messages: 'Messages',
       users: 'Users',
       chat: 'Chat',
-      work: 'Work',
-      feedbacks: 'Feedback',
-      satisfaction: 'Satisfaction'
+      work: 'Work'
     },
     calls: {
       title: 'Call statistics',
@@ -356,11 +354,9 @@ export default {
       total: 'Total: {value}'
     },
     users: {
-      title: 'User activity',
-      total: 'Total users',
+      title: 'User activity trend',
       active24h: 'Active 24h',
       active30d: 'Active 30d',
-      trend: 'Activity trend',
       last7days: 'Last 7 days',
       series: 'Active users'
     },

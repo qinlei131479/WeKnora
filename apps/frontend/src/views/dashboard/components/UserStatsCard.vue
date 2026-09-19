@@ -1,27 +1,11 @@
 <template>
-  <t-card :title="$t('dashboard.users.title')" class="dash-card">
+  <t-card class="dash-card">
+    <template #title>{{ $t('dashboard.users.title') }}</template>
+    <template #actions>
+      <span class="chart-period">{{ $t('dashboard.users.last7days') }}</span>
+    </template>
     <t-loading :loading="loading" size="small">
-      <div class="compact-stats-grid">
-        <div class="mini-stat-card">
-          <div class="mini-stat-value">{{ userStats?.total_users || 0 }}</div>
-          <div class="mini-stat-label">{{ $t('dashboard.users.total') }}</div>
-        </div>
-        <div class="mini-stat-card">
-          <div class="mini-stat-value">{{ userStats?.active_users_24h || 0 }}</div>
-          <div class="mini-stat-label">{{ $t('dashboard.users.active24h') }}</div>
-        </div>
-        <div class="mini-stat-card">
-          <div class="mini-stat-value">{{ userStats?.active_users_30d || 0 }}</div>
-          <div class="mini-stat-label">{{ $t('dashboard.users.active30d') }}</div>
-        </div>
-      </div>
-      <div class="compact-chart-container">
-        <div class="chart-header">
-          <span class="chart-title">{{ $t('dashboard.users.trend') }}</span>
-          <span class="chart-subtitle">{{ $t('dashboard.users.last7days') }}</span>
-        </div>
-        <div ref="activityChartRef" class="compact-chart" />
-      </div>
+      <div ref="activityChartRef" class="compact-chart" />
     </t-loading>
   </t-card>
 </template>
@@ -136,74 +120,8 @@ onUnmounted(cleanup)
 </script>
 
 <style scoped lang="less">
-.compact-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  margin-bottom: 16px;
-  flex-shrink: 0;
-}
-
-.mini-stat-card {
-  background: var(--gray-0);
-  border: 1px solid var(--gray-100);
-  border-radius: 6px;
-  padding: 16px;
-  text-align: center;
-  transition: border-color 0.2s ease;
-
-  &:hover {
-    border-color: var(--gray-200);
-  }
-}
-
-.mini-stat-value {
-  font-size: 20px;
-  font-weight: 600;
-  color: var(--gray-1000);
-  line-height: 1.2;
-  margin-bottom: 4px;
-}
-
-.mini-stat-label {
+.chart-period {
   font-size: 12px;
-  color: var(--gray-600);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
-.compact-chart-container {
-  background: var(--gray-0);
-  border: 1px solid var(--gray-100);
-  border-radius: 6px;
-  padding: 16px;
-  flex: 1 1 auto;
-  min-height: 240px;
-  display: flex;
-  flex-direction: column;
-  transition: border-color 0.2s ease;
-
-  &:hover {
-    border-color: var(--gray-200);
-  }
-}
-
-.chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.chart-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--gray-1000);
-}
-
-.chart-subtitle {
-  font-size: 11px;
   color: var(--gray-600);
   background: var(--gray-100);
   padding: 2px 6px;
@@ -215,29 +133,12 @@ onUnmounted(cleanup)
 
 .compact-chart {
   flex: 1 1 auto;
-  min-height: 180px;
+  min-height: 260px;
   width: 100%;
 }
 
-@media (max-width: 1200px) {
-  .compact-stats-grid { grid-template-columns: repeat(2, 1fr); }
-}
-
 @media (max-width: 768px) {
-  .compact-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 6px;
-  }
-  .mini-stat-card { padding: 8px; }
-  .mini-stat-value { font-size: 16px; }
-  .mini-stat-label { font-size: 10px; }
-  .compact-chart-container {
-    min-height: 180px;
-    padding: 8px;
-  }
-  .compact-chart { min-height: 130px; }
-  .chart-header { margin-bottom: 4px; }
-  .chart-title { font-size: 11px; }
-  .chart-subtitle { font-size: 9px; }
+  .compact-chart { min-height: 180px; }
+  .chart-period { font-size: 10px; }
 }
 </style>

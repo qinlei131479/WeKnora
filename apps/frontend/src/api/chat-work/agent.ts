@@ -83,23 +83,6 @@ export const agentApi = {
   getAgentState: (threadId, { includeMessages = false } = {}) =>
     apiGet(`/api/chat/thread/${threadId}/state${includeMessages ? '?include_messages=true' : ''}`),
 
-  /**
-   * Submit feedback for a message
-   * @param {number} messageId - Message ID
-   * @param {string} rating - 'like' or 'dislike'
-   * @param {string|null} reason - Optional reason for dislike
-   * @returns {Promise} - Feedback response
-   */
-  submitMessageFeedback: (messageId, rating, reason = null) =>
-    apiPost(`/api/chat/message/${messageId}/feedback`, { rating, reason }),
-
-  /**
-   * Get feedback status for a message
-   * @param {number} messageId - Message ID
-   * @returns {Promise} - Feedback status
-   */
-  getMessageFeedback: (messageId) => apiGet(`/api/chat/message/${messageId}/feedback`),
-
   createAgent: (payload) => apiPost('/api/agent', payload),
 
   updateAgent: (agentId, payload) => apiPut(`/api/agent/${agentId}`, payload),
