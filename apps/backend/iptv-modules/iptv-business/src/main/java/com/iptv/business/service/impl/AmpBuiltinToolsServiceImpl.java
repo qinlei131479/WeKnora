@@ -41,7 +41,7 @@ public class AmpBuiltinToolsServiceImpl extends ServiceImpl<AmpBuiltinToolsMappe
     }
 
     @Override
-    public AmpBuiltinToolsVO queryById(@Nonnull String id) {
+    public AmpBuiltinToolsVO queryById(@Nonnull Long id) {
         AmpBuiltinTools entity = this.baseMapper.selectById(id);
         return BeanUtil.copyProperties(entity, AmpBuiltinToolsVO.class);
     }

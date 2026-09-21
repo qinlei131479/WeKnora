@@ -72,7 +72,7 @@ public class AmpBuiltinToolsVO implements Serializable {
     /**
      * 来源类型；目录阶段固定为 builtin
      */
-    @Schema(description = "来源类型；目录阶段固定为 builtin")
+    @Schema(description = "来源来源")
     private String source;
 
     /**

@@ -36,7 +36,7 @@ public interface AmpBuiltinToolsService extends IService<AmpBuiltinTools> {
      * @param id 主键
      * @return 实体
      */
-    AmpBuiltinToolsVO queryById(@Nonnull String id);
+    AmpBuiltinToolsVO queryById(@Nonnull Long id);
 
     /**
      * 新增

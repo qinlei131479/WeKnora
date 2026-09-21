@@ -34,7 +34,7 @@ public class AmpBuiltinToolsController {
     @Operation(summary = "按 id 查询", description = "按 id 查询")
     @GetMapping("/single")
     @RequiresPermissions("business:ampBuiltinTools:query")
-    public R<AmpBuiltinToolsVO> queryById(String id) {
+    public R<AmpBuiltinToolsVO> queryById(Long id) {
         return R.ok(ampBuiltinToolsService.queryById(id));
     }
 
