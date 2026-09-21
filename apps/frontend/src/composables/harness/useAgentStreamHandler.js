@@ -167,6 +167,24 @@ export function useAgentStreamHandler({
 
       case 'error':
         streamSmoother?.flushThread(threadId)
+        {
+          const errorMessage = chunk.error_message || chunkMessage || chunk.error_type
+          const errorMessageId = `stream-error-${request_id || Date.now()}`
+          threadState.onGoingConv.msgChunks[errorMessageId] = [
+            {
+              id: errorMessageId,
+              type: 'ai',
+              content: '',
+              status: 'error',
+              error_type: chunk.error_type || 'unexpected_error',
+              error_message: errorMessage,
+              extra_metadata: {
+                ...(request_id ? { request_id } : {}),
+                ...(threadId ? { thread_id: threadId } : {})
+              }
+            }
+          ]
+        }
         handleChatError(
           { message: chunk.error_message || chunkMessage || chunk.error_type },
           'stream'

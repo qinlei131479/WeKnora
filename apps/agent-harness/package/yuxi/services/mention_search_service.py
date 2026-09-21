@@ -8,9 +8,9 @@ from pathlib import Path
 
 import ormsgpack
 from yuxi.agents.backends.sandbox.paths import (
+    global_user_data_dir,
     sandbox_outputs_dir,
     sandbox_uploads_dir,
-    sandbox_workspace_dir,
 )
 from yuxi.services.run_queue_service import get_redis_client
 from yuxi.utils.logging_config import logger
@@ -132,7 +132,7 @@ def _normalize_sources(sources: Sequence[str] | None, *, has_thread: bool) -> tu
 
 
 def _workspace_root(uid: str) -> Path:
-    return sandbox_workspace_dir(WORKSPACE_THREAD_PLACEHOLDER, uid)
+    return global_user_data_dir(uid) / "workspace"
 
 
 async def _scan_virtual_root(root: Path, virtual_prefix: str, max_entries: int) -> list[tuple[str, str]]:

@@ -139,7 +139,7 @@ async def _upload(
     return dict(response.json())
 
 
-async def test_viewer_filesystem_e2e_respects_workspace_sharing_and_thread_local_uploads(
+async def test_viewer_filesystem_e2e_isolates_workspace_and_uploads_by_thread(
     e2e_client: httpx.AsyncClient,
     e2e_headers: dict[str, str],
     e2e_agent_context: dict[str, str | int],
@@ -210,7 +210,7 @@ async def test_viewer_filesystem_e2e_respects_workspace_sharing_and_thread_local
             path="/home/gem/user-data/workspace",
         )
     }
-    assert "/home/gem/user-data/workspace/demo.py" in other_workspace_paths, sorted(other_workspace_paths)
+    assert "/home/gem/user-data/workspace/demo.py" not in other_workspace_paths, sorted(other_workspace_paths)
 
     other_upload_paths = {
         str(entry.get("path", ""))
@@ -234,15 +234,6 @@ async def test_viewer_filesystem_e2e_respects_workspace_sharing_and_thread_local
     assert file_payload.get("content") == "print(42)\n", file_payload
     assert file_payload.get("preview_type") == "text", file_payload
     assert file_payload.get("supported") is True, file_payload
-
-    other_file_payload = await _file(
-        e2e_client,
-        e2e_headers,
-        agent_id=agent_id,
-        thread_id=other_thread_id,
-        path="/home/gem/user-data/workspace/demo.py",
-    )
-    assert other_file_payload.get("content") == "print(42)\n", other_file_payload
 
     content_disposition, payload = await _download(
         e2e_client,

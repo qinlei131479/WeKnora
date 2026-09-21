@@ -59,13 +59,19 @@ def global_user_data_dir(uid: str) -> Path:
     return Path(conf.save_dir) / "threads" / "shared" / safe_uid
 
 
+def workspace_scope_dirname(uid: str, thread_id: str) -> str:
+    """返回用户与会话共同决定的工作区目录名。"""
+    safe_thread_id = validate_thread_id(thread_id)
+    return workspace_uid_dirname(f"{uid}:{safe_thread_id}")
+
+
 def sandbox_user_data_dir(thread_id: str) -> Path:
     return _thread_root_dir(thread_id)
 
 
 def sandbox_workspace_dir(thread_id: str, uid: str) -> Path:
     validate_thread_id(thread_id)
-    return global_user_data_dir(uid) / WORKSPACE_DIR_NAME
+    return Path(conf.save_dir) / "threads" / "shared" / workspace_scope_dirname(uid, thread_id) / WORKSPACE_DIR_NAME
 
 
 def sandbox_workspace_agent_context_file(thread_id: str, uid: str, filename: str) -> Path:
@@ -127,7 +133,6 @@ def sandbox_outputs_dir(thread_id: str) -> Path:
 
 
 def ensure_thread_dirs(thread_id: str, uid: str) -> None:
-    _resolve_threads_child_path(global_user_data_dir(uid)).mkdir(parents=True, exist_ok=True)
     workspace_dir = _resolve_threads_child_path(sandbox_workspace_dir(thread_id, uid))
     workspace_dir.mkdir(parents=True, exist_ok=True)
     ensure_workspace_default_files(workspace_dir)

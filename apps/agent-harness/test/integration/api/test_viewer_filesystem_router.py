@@ -183,7 +183,7 @@ async def test_viewer_tree_user_data_root_keeps_thread_root_files_visible(test_c
     assert "/home/gem/user-data/workspace/" in paths
 
 
-async def test_workspace_is_shared_across_same_user_threads_but_uploads_remain_thread_local(test_client, standard_user):
+async def test_workspace_and_uploads_are_isolated_between_same_user_threads(test_client, standard_user):
     headers = standard_user["headers"]
     uid = str(standard_user["user"]["uid"])
     thread_id = await _create_thread_for_user(test_client, headers)
@@ -202,14 +202,13 @@ async def test_workspace_is_shared_across_same_user_threads_but_uploads_remain_t
     )
     assert workspace_response.status_code == 200, workspace_response.text
     workspace_paths = {entry.get("path") for entry in workspace_response.json().get("entries", [])}
-    assert "/home/gem/user-data/workspace/shared_across_threads.txt" in workspace_paths
+    assert "/home/gem/user-data/workspace/shared_across_threads.txt" not in workspace_paths
 
     shared_file_response = await test_client.get(
         f"/api/chat/thread/{other_thread_id}/artifacts/home/gem/user-data/workspace/shared_across_threads.txt",
         headers=headers,
     )
-    assert shared_file_response.status_code == 200, shared_file_response.text
-    assert shared_file_response.text == "shared workspace"
+    assert shared_file_response.status_code == 404, shared_file_response.text
 
     upload_response = await test_client.get(
         f"/api/chat/thread/{other_thread_id}/artifacts/{upload_path.lstrip('/')}",

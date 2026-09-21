@@ -344,6 +344,7 @@ def test_sandbox_id_for_thread_includes_skills_scope():
 
 
 def test_provider_uses_distinct_sandbox_scope_for_different_uid(monkeypatch) -> None:
+    from yuxi.agents.backends.sandbox.paths import workspace_scope_dirname
     from yuxi.agents.backends.sandbox.provider import ProvisionerSandboxProvider
 
     created = []
@@ -379,12 +380,12 @@ def test_provider_uses_distinct_sandbox_scope_for_different_uid(monkeypatch) -> 
     )
 
     assert sandbox_1 != sandbox_2
-    assert created[0][2] == "user-1"
-    assert created[1][2] == "user-2"
+    assert created[0][2] == workspace_scope_dirname("user-1", "parent-thread")
+    assert created[1][2] == workspace_scope_dirname("user-2", "parent-thread")
 
 
 def test_provider_maps_external_uid_only_at_provisioner_filesystem_boundary(monkeypatch) -> None:
-    from yuxi.agents.backends.sandbox.paths import workspace_uid_dirname
+    from yuxi.agents.backends.sandbox.paths import workspace_scope_dirname
     from yuxi.agents.backends.sandbox.provider import ProvisionerSandboxProvider
 
     calls = []
@@ -409,12 +410,13 @@ def test_provider_maps_external_uid_only_at_provisioner_filesystem_boundary(monk
 
     provider.acquire("thread-1", uid=logical_uid)
 
-    assert calls == [(workspace_uid_dirname(logical_uid), {"OWNER": logical_uid})]
+    assert calls == [(workspace_scope_dirname(logical_uid, "thread-1"), {"OWNER": logical_uid})]
     assert calls[0][0].startswith("uid-")
     assert ":" not in calls[0][0]
 
 
 def test_provider_get_create_if_missing_ensures_expected_split_scope(monkeypatch) -> None:
+    from yuxi.agents.backends.sandbox.paths import workspace_scope_dirname
     from yuxi.agents.backends.sandbox.provider import ProvisionerSandboxProvider
 
     calls = []
@@ -452,7 +454,7 @@ def test_provider_get_create_if_missing_ensures_expected_split_scope(monkeypatch
         (
             sandbox_id,
             "child-thread",
-            "user-1",
+            workspace_scope_dirname("user-1", "parent-thread"),
             {"A": "user-1"},
             "parent-thread",
             "child-skills-thread",

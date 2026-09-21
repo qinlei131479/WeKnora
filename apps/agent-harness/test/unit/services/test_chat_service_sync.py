@@ -20,6 +20,30 @@ async def _fake_normalize_agent_context_config(context, **_kwargs):
     return dict(context or {})
 
 
+@pytest.mark.parametrize(
+    ("exc", "expected_type", "expected_message"),
+    [
+        (
+            type("StreamChunkTimeoutError", (Exception,), {})("No streaming chunk received for 120.0s"),
+            "model_timeout",
+            "模型响应超时，长时间未收到新的内容，请稍后重试。",
+        ),
+        (
+            type("GraphRecursionError", (Exception,), {})("Recursion limit reached"),
+            "execution_limit",
+            "智能体执行步骤已达到上限，请调整任务后重试。",
+        ),
+        (
+            FileNotFoundError("/home/gem/user-data/uploads/demo.docx"),
+            "file_not_found",
+            "文件不存在或已被移除，请重新上传后重试。",
+        ),
+    ],
+)
+def test_user_facing_stream_error_uses_chinese_messages(exc, expected_type, expected_message) -> None:
+    assert svc._user_facing_stream_error(exc) == (expected_type, expected_message)
+
+
 @pytest.mark.asyncio
 async def test_resolve_agent_runtime_includes_subagents_only_when_requested(monkeypatch: pytest.MonkeyPatch) -> None:
     calls: list[str] = []
@@ -279,7 +303,7 @@ async def test_build_agent_input_context_loads_all_workspace_agent_context_files
 ):
     monkeypatch.setattr(workspace_paths.conf, "save_dir", str(tmp_path))
     workspace_paths.ensure_thread_dirs("thread-1", "user-1")
-    agents_dir = tmp_path / "threads" / "shared" / "user-1" / "workspace" / "agents"
+    agents_dir = workspace_paths.sandbox_workspace_dir("thread-1", "user-1") / "agents"
     (agents_dir / "AGENTS.md").write_text("行为约束", encoding="utf-8")
     (agents_dir / "USER.md").write_text("用户信息", encoding="utf-8")
     (agents_dir / "MEMORY.md").write_text("长期记忆", encoding="utf-8")
@@ -291,6 +315,25 @@ async def test_build_agent_input_context_loads_all_workspace_agent_context_files
         "用户工作区 agents/USER.md 内容：\n用户信息\n\n"
         "用户工作区 agents/MEMORY.md 内容：\n长期记忆"
     )
+
+
+@pytest.mark.asyncio
+async def test_build_agent_input_context_isolated_between_threads(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(workspace_paths.conf, "save_dir", str(tmp_path))
+    workspace_paths.ensure_thread_dirs("thread-1", "user-1")
+    workspace_paths.ensure_thread_dirs("thread-2", "user-1")
+
+    first_agents_dir = workspace_paths.sandbox_workspace_dir("thread-1", "user-1") / "agents"
+    (first_agents_dir / "AGENTS.md").write_text("第一会话的私有上下文", encoding="utf-8")
+
+    first_context = await agent_context.build_agent_input_context({}, thread_id="thread-1", uid="user-1")
+    second_context = await agent_context.build_agent_input_context({}, thread_id="thread-2", uid="user-1")
+
+    assert "第一会话的私有上下文" in first_context["system_prompt"]
+    assert "第一会话的私有上下文" not in second_context["system_prompt"]
 
 
 @pytest.mark.asyncio

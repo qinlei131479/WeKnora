@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import io
 import mimetypes
 import shutil
@@ -34,21 +35,10 @@ from yuxi.services.file_preview import (
     render_preview_too_large_payload,
 )
 from yuxi.services.workspace_service import (
-    create_workspace_directory as create_workspace_directory_entry,
+    MAX_WORKSPACE_UPLOAD_FILES,
+    _write_workspace_upload,
 )
-from yuxi.services.workspace_service import (
-    delete_workspace_path,
-    list_workspace_tree,
-)
-from yuxi.services.workspace_service import (
-    download_workspace_file as download_workspace_file_response,
-)
-from yuxi.services.workspace_service import (
-    read_workspace_file_content as read_workspace_file_content_response,
-)
-from yuxi.services.workspace_service import (
-    upload_workspace_files as upload_workspace_files_entry,
-)
+from yuxi.services.mention_search_service import invalidate_mention_cache
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils.datetime_utils import utc_isoformat_from_timestamp
 from yuxi.utils.paths import VIRTUAL_PATH_OUTPUTS, VIRTUAL_PATH_UPLOADS, VIRTUAL_PATH_WORKSPACE
@@ -207,40 +197,13 @@ def _list_local_entries(thread_id: str, uid: str, actual_path) -> list[dict]:
     return entries
 
 
-def _workspace_relative_path(path: str) -> str:
-    if path == VIRTUAL_PATH_WORKSPACE:
-        return "/"
-    if not path.startswith(f"{VIRTUAL_PATH_WORKSPACE}/"):
-        raise HTTPException(status_code=400, detail="当前路径不是工作区路径")
-    return path[len(VIRTUAL_PATH_WORKSPACE) :] or "/"
-
-
-def _viewer_entry_from_workspace_entry(entry: dict) -> dict:
-    path = str(entry.get("virtual_path") or "")
-    if not path:
-        workspace_path = str(entry.get("path") or "/")
-        path = VIRTUAL_PATH_WORKSPACE if workspace_path == "/" else f"{VIRTUAL_PATH_WORKSPACE}{workspace_path}"
-    is_dir = bool(entry.get("is_dir", False))
-    if is_dir and not path.endswith("/"):
-        path = f"{path}/"
-    return {
-        "path": path,
-        "name": str(entry.get("name", "") or PurePosixPath(path.rstrip("/")).name or path),
-        "is_dir": is_dir,
-        "size": int(entry.get("size", 0) or 0),
-        "modified_at": str(entry.get("modified_at", "") or ""),
-    }
-
-
-def _viewer_response_from_workspace_response(response: dict) -> dict:
-    result = {**response}
-    if "entry" in result and isinstance(result["entry"], dict):
-        result["entry"] = _viewer_entry_from_workspace_entry(result["entry"])
-    if "entries" in result and isinstance(result["entries"], list):
-        result["entries"] = [
-            _viewer_entry_from_workspace_entry(entry) for entry in result["entries"] if isinstance(entry, dict)
-        ]
-    return result
+def _validate_viewer_child_name(name: str, *, field_name: str) -> str:
+    clean_name = str(name or "").strip()
+    if not clean_name:
+        raise HTTPException(status_code=422, detail=f"{field_name} 不能为空")
+    if clean_name in {".", ".."} or "/" in clean_name or "\\" in clean_name:
+        raise HTTPException(status_code=422, detail=f"{field_name} 不能包含路径分隔符")
+    return clean_name
 
 
 def _list_user_data_root_entries(thread_id: str, uid: str) -> list[dict]:
@@ -317,11 +280,12 @@ async def list_viewer_filesystem_tree(
             uid = str(current_user.uid)
             ensure_thread_dirs(thread_id, uid)
             if _is_workspace_path(normalized_path):
-                response = await list_workspace_tree(
-                    path=_workspace_relative_path(normalized_path),
-                    current_user=current_user,
-                )
-                entries = [_viewer_entry_from_workspace_entry(entry) for entry in response.get("entries", [])]
+                actual_path = _resolve_local_user_data_path(thread_id, uid, normalized_path)
+                if not actual_path.exists():
+                    return {"entries": []}
+                if not actual_path.is_dir():
+                    raise HTTPException(status_code=400, detail="当前路径不是目录")
+                entries = await asyncio.to_thread(_list_local_entries, thread_id, uid, actual_path)
                 return {"entries": _sort_entries(entries)}
             if normalized_path == USER_DATA_PATH:
                 entries = await asyncio.to_thread(_list_user_data_root_entries, thread_id, uid)
@@ -367,11 +331,6 @@ async def read_viewer_file_content(
 
     try:
         if _is_user_data_path(normalized_path):
-            if _is_workspace_path(normalized_path):
-                return await read_workspace_file_content_response(
-                    path=_workspace_relative_path(normalized_path),
-                    current_user=current_user,
-                )
             actual_path = _resolve_local_user_data_path(thread_id, str(current_user.uid), normalized_path)
             if not actual_path.exists():
                 raise HTTPException(status_code=404, detail="文件不存在")
@@ -424,11 +383,6 @@ async def download_viewer_file(
 
     try:
         if _is_user_data_path(normalized_path):
-            if _is_workspace_path(normalized_path):
-                return await download_workspace_file_response(
-                    path=_workspace_relative_path(normalized_path),
-                    current_user=current_user,
-                )
             actual_path = _resolve_local_user_data_path(thread_id, str(current_user.uid), normalized_path)
             if not actual_path.exists():
                 raise HTTPException(status_code=404, detail="文件不存在")
@@ -497,9 +451,6 @@ async def delete_viewer_file(
         raise HTTPException(status_code=400, detail="当前目录不允许删除")
 
     try:
-        if _is_workspace_path(normalized_path):
-            await delete_workspace_path(path=_workspace_relative_path(normalized_path), current_user=current_user)
-            return {"success": True, "path": normalized_path}
         actual_path = _resolve_local_user_data_path(thread_id, str(current_user.uid), normalized_path)
         if not actual_path.exists():
             raise HTTPException(status_code=404, detail="文件不存在")
@@ -507,6 +458,7 @@ async def delete_viewer_file(
             await asyncio.to_thread(shutil.rmtree, actual_path)
         else:
             await asyncio.to_thread(actual_path.unlink)
+        await invalidate_mention_cache(thread_id)
     except PermissionError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except ValueError as e:
@@ -536,12 +488,25 @@ async def create_viewer_directory(
     if not _is_workspace_path(normalized_parent):
         raise HTTPException(status_code=400, detail="当前路径不支持写入")
 
-    response = await create_workspace_directory_entry(
-        parent_path=_workspace_relative_path(normalized_parent),
-        name=name,
-        current_user=current_user,
-    )
-    return _viewer_response_from_workspace_response(response)
+    uid = str(current_user.uid)
+    parent = _resolve_local_user_data_path(thread_id, uid, normalized_parent)
+    if not parent.exists():
+        raise HTTPException(status_code=404, detail="目标目录不存在")
+    if not parent.is_dir():
+        raise HTTPException(status_code=400, detail="目标路径不是目录")
+
+    directory_name = _validate_viewer_child_name(name, field_name="文件夹名")
+    target = parent / directory_name
+    if target.exists():
+        raise HTTPException(status_code=400, detail="同名文件或文件夹已存在")
+    try:
+        await asyncio.to_thread(target.mkdir)
+    except PermissionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    await invalidate_mention_cache(thread_id)
+    workspace_root = sandbox_workspace_dir(thread_id, uid).resolve()
+    return {"success": True, "entry": _entry_for_local_path(thread_id, uid, target, workspace_root)}
 
 
 async def upload_viewer_files(
@@ -565,9 +530,46 @@ async def upload_viewer_files(
     if not _is_workspace_path(normalized_parent):
         raise HTTPException(status_code=400, detail="当前路径不支持写入")
 
-    response = await upload_workspace_files_entry(
-        parent_path=_workspace_relative_path(normalized_parent),
-        files=files,
-        current_user=current_user,
-    )
-    return _viewer_response_from_workspace_response(response)
+    if not files:
+        raise HTTPException(status_code=400, detail="请选择至少一个文件")
+    if len(files) > MAX_WORKSPACE_UPLOAD_FILES:
+        raise HTTPException(status_code=400, detail=f"一次最多上传 {MAX_WORKSPACE_UPLOAD_FILES} 个文件")
+
+    uid = str(current_user.uid)
+    parent = _resolve_local_user_data_path(thread_id, uid, normalized_parent)
+    if not parent.exists():
+        raise HTTPException(status_code=404, detail="目标目录不存在")
+    if not parent.is_dir():
+        raise HTTPException(status_code=400, detail="目标路径不是目录")
+
+    seen_names: set[str] = set()
+    upload_targets: list[tuple[UploadFile, Path]] = []
+    for file in files:
+        file_name = _validate_viewer_child_name(Path(file.filename or "").name, field_name="文件名")
+        if file_name in seen_names:
+            raise HTTPException(status_code=400, detail=f"选择的文件中存在重复文件名: {file_name}")
+        seen_names.add(file_name)
+        target = parent / file_name
+        if target.exists():
+            raise HTTPException(status_code=400, detail="同名文件或文件夹已存在")
+        upload_targets.append((file, target))
+
+    completed_targets: list[Path] = []
+    try:
+        for file, target in upload_targets:
+            await _write_workspace_upload(file, target)
+            completed_targets.append(target)
+    except HTTPException:
+        for target in completed_targets:
+            with contextlib.suppress(OSError):
+                await asyncio.to_thread(target.unlink)
+        raise
+
+    await invalidate_mention_cache(thread_id)
+    workspace_root = sandbox_workspace_dir(thread_id, uid).resolve()
+    return {
+        "success": True,
+        "entries": [
+            _entry_for_local_path(thread_id, uid, target, workspace_root) for _file, target in upload_targets
+        ],
+    }

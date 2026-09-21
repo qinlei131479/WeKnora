@@ -829,10 +829,9 @@ def _parse_skill_dir_metadata(source_skill_dir: Path) -> dict[str, Any]:
 
 def get_personal_skills_root_dir(uid: str) -> Path:
     """返回认证用户的个人 Skill 根目录。"""
-    from yuxi.agents.backends.sandbox.paths import sandbox_workspace_dir
-    from yuxi.services.mention_search_service import WORKSPACE_THREAD_PLACEHOLDER
+    from yuxi.agents.backends.sandbox.paths import global_user_data_dir
 
-    root = sandbox_workspace_dir(WORKSPACE_THREAD_PLACEHOLDER, uid) / WORKSPACE_SKILLS_RELATIVE_DIR
+    root = global_user_data_dir(uid) / "workspace" / WORKSPACE_SKILLS_RELATIVE_DIR
     root.mkdir(parents=True, exist_ok=True)
     return root.resolve()
 

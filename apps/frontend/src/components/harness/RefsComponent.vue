@@ -56,8 +56,6 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { useClipboard } from '@vueuse/core'
-import { MessagePlugin } from 'tdesign-vue-next'
 import {
   Bot,
   Copy,
@@ -67,6 +65,7 @@ import {
   ChevronDown
 } from 'lucide-vue-next'
 import ChatRequestInfoButton from '@/components/ChatRequestInfoButton.vue'
+import { copyWithToast } from '@/utils/clipboard'
 import KnowledgeSourceSection from '@/components/harness/KnowledgeSourceSection.vue'
 import WebSearchSourceSection from '@/components/harness/WebSearchSourceSection.vue'
 
@@ -120,9 +119,6 @@ watch(
   { immediate: true }
 )
 
-// 使用 useClipboard 实现复制功能
-const { copy, isSupported } = useClipboard()
-
 const showKey = (key) => {
   if (props.showRefs === true) {
     return true
@@ -135,21 +131,12 @@ const isCopied = ref(false)
 
 // 定义 copy 方法
 const copyText = async (text) => {
-  if (isSupported) {
-    try {
-      await copy(text)
-      MessagePlugin.success('文本已复制到剪贴板')
-      isCopied.value = true
-      setTimeout(() => {
-        isCopied.value = false
-      }, 2000)
-    } catch (error) {
-      console.error('复制失败:', error)
-      MessagePlugin.error('复制失败，请手动复制')
-    }
-  } else {
-    console.warn('浏览器不支持自动复制')
-    MessagePlugin.warning('浏览器不支持自动复制，请手动复制')
+  const copied = await copyWithToast(text, 'common.copied', 'common.copyFailed')
+  if (copied) {
+    isCopied.value = true
+    setTimeout(() => {
+      isCopied.value = false
+    }, 2000)
   }
 }
 
@@ -224,6 +211,33 @@ const getModelName = (msg) => {
   .request-info-item {
     display: inline-flex;
     align-items: center;
+
+    // 对齐对话模式的裸图标入口，避免工作模式下保留按钮外框和白底
+    :deep(.t-button) {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      min-width: 30px;
+      height: 30px;
+      padding: 0;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      box-shadow: none;
+      color: var(--td-text-color-secondary);
+      transition: background-color 0.15s ease, color 0.15s ease;
+
+      &:hover:not(:disabled) {
+        background: var(--td-bg-color-container-hover);
+        color: var(--td-text-color-primary);
+      }
+
+      &:active:not(:disabled) {
+        background: var(--td-bg-color-container-active);
+        color: var(--td-text-color-primary);
+      }
+    }
   }
 
   .tags {

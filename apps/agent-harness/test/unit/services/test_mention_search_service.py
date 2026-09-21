@@ -39,7 +39,7 @@ def mock_sandbox_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     outputs_dir.mkdir(parents=True, exist_ok=True)
 
     # Mock sandbox_paths 的函数
-    monkeypatch.setattr(mention_service, "sandbox_workspace_dir", lambda t, u: workspace_dir)
+    monkeypatch.setattr(mention_service, "global_user_data_dir", lambda u: workspace_dir.parent)
     monkeypatch.setattr(mention_service, "sandbox_uploads_dir", lambda t: uploads_dir)
     monkeypatch.setattr(mention_service, "sandbox_outputs_dir", lambda t: outputs_dir)
 

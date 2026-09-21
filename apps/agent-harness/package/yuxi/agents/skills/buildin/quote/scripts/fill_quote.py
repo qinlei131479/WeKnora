@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -12,6 +13,12 @@ from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, Side
 
 ALLOWED_RESULTS = {"已匹配", "部分匹配", "未匹配"}
+EFFORT_KEYS = ("product", "dev", "delivery")
+EFFORT_LABELS = {"product": "产品", "dev": "研发", "delivery": "交付"}
+EFFORT_LABEL_RE = re.compile(r"(产品|研发|交付)\s*=\s*(--|\d+(?:\.\d+)?)")
+EFFORT_ITEM_RE = re.compile(
+    r"「(?P<name>[^」]+)」\s*(?P<value>\d+(?:\.\d+)?)\s*（(?P<evidence>[^）]+)）"
+)
 HEADERS = [
     "一级功能",
     "二级功能",
@@ -21,6 +28,7 @@ HEADERS = [
     "研发时效",
     "交付时效",
     "时效总计",
+    "工时说明",
     "功能匹配结果",
     "匹配模块/功能",
     "匹配依据说明",
@@ -35,10 +43,11 @@ COL_WIDTHS = {
     "F": 12.0,
     "G": 16.37,
     "H": 12.0,
-    "I": 15.25,
-    "J": 15.75,
-    "K": 33.38,
-    "L": 26.12,
+    "I": 48.0,
+    "J": 15.25,
+    "K": 15.75,
+    "L": 33.38,
+    "M": 26.12,
 }
 
 
@@ -57,13 +66,91 @@ def _thin_bottom():
     return Border(bottom=Side(style="thin"))
 
 
+def _numeric_effort(row: dict, key: str) -> float | None:
+    value = row.get(key)
+    if isinstance(value, str) and value.strip() == "--":
+        return None
+    return float(value)
+
+
+def _validate_effort_reason(row: dict, i: int) -> list[str]:
+    errors: list[str] = []
+    reason = str(row.get("effort_reason", "")).strip()
+    matches = list(EFFORT_LABEL_RE.finditer(reason))
+    if [match.group(1) for match in matches] != ["产品", "研发", "交付"]:
+        return [f"第{i}行工时说明必须按 产品=...；研发=...；交付=... 逐列写取数式"]
+
+    for index, match in enumerate(matches):
+        label = match.group(1)
+        key = next(original_key for original_key, original_label in EFFORT_LABELS.items() if original_label == label)
+        declared = match.group(2)
+        segment = reason[match.start() : matches[index + 1].start() if index + 1 < len(matches) else len(reason)]
+        try:
+            row_value = _numeric_effort(row, key)
+        except (TypeError, ValueError):
+            row_value = "invalid"
+
+        if declared == "--":
+            if row_value is not None:
+                errors.append(f"第{i}行{label}工时为数字，但工时说明写 --")
+            if not any(marker in segment for marker in ("未获得可追溯源行", "无法评估")):
+                errors.append(f"第{i}行{label}为 -- 时必须说明未获得可追溯源行，无法评估")
+            if EFFORT_ITEM_RE.search(segment):
+                errors.append(f"第{i}行{label}为 -- 时不得列数字项")
+            continue
+
+        declared_value = float(declared)
+        if row_value == "invalid":
+            errors.append(f"第{i}行{label}工时不是数字或 --")
+            continue
+        if row_value is None or abs(row_value - declared_value) > 0.051:
+            errors.append(f"第{i}行{label}工时说明与 {key} 不一致")
+
+        items = list(EFFORT_ITEM_RE.finditer(segment))
+        if not items:
+            errors.append(f"第{i}行{label}必须列出「功能/原子任务」数值（来源或AI评估定级原因）")
+            continue
+
+        item_total = 0.0
+        for item in items:
+            name = item.group("name")
+            value = float(item.group("value"))
+            evidence = item.group("evidence")
+            item_total += value
+            if value < 0:
+                errors.append(f"第{i}行{label}取数项 {name} 不能小于 0")
+            if "AI原子任务" in name or "AI评估" in evidence:
+                if "AI评估" not in evidence or not any(
+                    level in evidence for level in ("L1", "L2", "L3", "T0", "T1", "T2", "T3")
+                ):
+                    errors.append(f"第{i}行{label}AI取数项 {name} 必须写 AI评估、定级和原因")
+                if len(evidence.replace("AI评估", "").replace("，", "").strip()) < 4:
+                    errors.append(f"第{i}行{label}AI取数项 {name} 缺少定级原因")
+            elif "Sheet：" not in evidence or "行：" not in evidence:
+                errors.append(f"第{i}行{label}取数项 {name} 必须写 Sheet 和行号")
+        if abs(item_total - declared_value) > 0.051:
+            errors.append(f"第{i}行{label}取数项之和必须等于 {label} 工时")
+
+    return errors
+
+
 def validate(rows: list[dict]) -> list[str]:
     errors = []
     if not rows:
         errors.append("rows 为空")
         return errors
     for i, row in enumerate(rows, 1):
-        for key in ("l1", "l2", "l3", "desc", "match_result", "match_module", "match_reason", "match_source"):
+        for key in (
+            "l1",
+            "l2",
+            "l3",
+            "desc",
+            "effort_reason",
+            "match_result",
+            "match_module",
+            "match_reason",
+            "match_source",
+        ):
             if key not in row or row[key] in (None, ""):
                 errors.append(f"第{i}行缺少 {key}")
         result = row.get("match_result")
@@ -76,14 +163,46 @@ def validate(rows: list[dict]) -> list[str]:
                 errors.append(f"第{i}行未匹配依据必须使用固定原文")
             if row.get("match_source") != "AI评估" and "AI评估" not in str(row.get("match_source", "")):
                 errors.append(f"第{i}行未匹配来源应含 AI评估")
+            if "P3" not in str(row.get("effort_reason", "")) and "原子任务" not in str(row.get("effort_reason", "")):
+                errors.append(f"第{i}行未匹配工时说明必须写 P3 原子任务依据")
+        elif result == "部分匹配":
+            match_reason = str(row.get("match_reason", ""))
+            if "支持" not in match_reason or not any(marker in match_reason for marker in ("未覆盖", "需")):
+                errors.append(f"第{i}行部分匹配依据必须写已有支持和未覆盖改造")
+        errors.extend(_validate_effort_reason(row, i))
         for num_key in ("product", "dev", "delivery"):
             try:
-                float(row.get(num_key))
+                value = _numeric_effort(row, num_key)
             except (TypeError, ValueError):
-                errors.append(f"第{i}行 {num_key} 不是数字")
+                errors.append(f"第{i}行 {num_key} 不是数字或 --")
+            else:
+                if value is not None and value < 0:
+                    errors.append(f"第{i}行 {num_key} 不能小于 0")
         l3 = str(row.get("l3", ""))
         if l3.endswith(" *") or l3.endswith("＊"):
             errors.append(f"第{i}行依赖标记应为名称后直接加 *，无空格")
+        match_source = str(row.get("match_source", ""))
+        if (
+            result == "已匹配"
+            and "标准" in match_source
+            and "历史" not in match_source
+            and "AI评估" not in match_source
+        ):
+            try:
+                standard_only_values = [_numeric_effort(row, key) for key in ("product", "dev", "delivery")]
+                standard_only_complete = all(value is not None for value in standard_only_values)
+            except (TypeError, ValueError):
+                standard_only_complete = False
+                pass
+            else:
+                if standard_only_complete and any(value != 0 for value in standard_only_values):
+                    errors.append(f"第{i}行仅命中标准清单时三列时效必须为 0")
+            if "0" not in str(row.get("effort_reason", "")):
+                errors.append(f"第{i}行仅命中标准清单时工时说明必须写 0 人天规则")
+        if result in ("已匹配", "部分匹配") and "历史" in match_source:
+            effort_reason = str(row.get("effort_reason", ""))
+            if not any(marker in effort_reason for marker in ("直读", "累加", "求和", "+")):
+                errors.append(f"第{i}行历史工时说明必须写直读、累加或求和计算式")
     return errors
 
 
@@ -106,32 +225,41 @@ def fill(output: Path, rows: list[dict]) -> dict:
     for col, header in enumerate(HEADERS, 1):
         cell = ws.cell(1, col, header)
         cell.font = header_font
-        cell.alignment = wrap_center if col in (4, 10, 11, 12) else center
+        cell.alignment = wrap_center if col in (4, 9, 10, 11, 12, 13) else center
         cell.border = bottom
 
     n = len(rows)
     for i, row in enumerate(rows, 2):
+        product = _numeric_effort(row, "product")
+        dev = _numeric_effort(row, "dev")
+        delivery = _numeric_effort(row, "delivery")
+        effort_values = [product, dev, delivery]
+        if all(value is not None for value in effort_values):
+            total_formula = f"=E{i}+F{i}+G{i}"
+        else:
+            total_formula = f'=IF(COUNT(E{i}:G{i})=3,E{i}+F{i}+G{i},"--")'
         values = [
             row["l1"],
             row["l2"],
             row["l3"],
             row["desc"],
-            float(row["product"]),
-            float(row["dev"]),
-            float(row["delivery"]),
-            f"=E{i}+F{i}+G{i}",
+            effort_values[0] if effort_values[0] is not None else "--",
+            effort_values[1] if effort_values[1] is not None else "--",
+            effort_values[2] if effort_values[2] is not None else "--",
+            total_formula,
+            row["effort_reason"],
             row["match_result"],
             row["match_module"],
             row["match_reason"],
             row["match_source"],
         ]
-        desc_len = len(str(row["desc"]))
+        desc_len = max(len(str(row["desc"])), len(str(row["effort_reason"])))
         ws.row_dimensions[i].height = 44 if desc_len < 40 else 58 if desc_len < 80 else 72
         for col, val in enumerate(values, 1):
             cell = ws.cell(i, col, val)
             cell.font = data_font
-            cell.alignment = wrap_center if col in (4, 10, 11, 12) else center
             cell.border = bottom
+            cell.alignment = wrap_center if col in (4, 9, 10, 11, 12, 13) else center
 
     last = n + 1
     total_row = n + 2
@@ -139,7 +267,11 @@ def fill(output: Path, rows: list[dict]) -> dict:
     ws.cell(total_row, 1, "合计").font = total_font
     ws.cell(total_row, 1).alignment = center
     for col, letter in enumerate(["E", "F", "G", "H"], 5):
-        cell = ws.cell(total_row, col, f"=SUM({letter}2:{letter}{last})")
+        cell = ws.cell(
+            total_row,
+            col,
+            f'=IF(COUNT({letter}2:{letter}{last})={n},SUM({letter}2:{letter}{last}),"--")',
+        )
         cell.font = total_font
         cell.alignment = center
     ws.row_dimensions[total_row].height = 16.5
@@ -150,16 +282,22 @@ def fill(output: Path, rows: list[dict]) -> dict:
     output.parent.mkdir(parents=True, exist_ok=True)
     wb.save(output)
 
-    prod = sum(float(r["product"]) for r in rows)
-    dev = sum(float(r["dev"]) for r in rows)
-    delivery = sum(float(r["delivery"]) for r in rows)
+    totals = {}
+    for key in EFFORT_KEYS:
+        numbers = [_numeric_effort(row, key) for row in rows]
+        totals[key] = sum(numbers) if all(value is not None for value in numbers) else "--"
+    total = (
+        totals["product"] + totals["dev"] + totals["delivery"]
+        if all(isinstance(totals[key], float) for key in EFFORT_KEYS)
+        else "--"
+    )
     return {
         "ok": True,
         "rows": n,
-        "product": prod,
-        "dev": dev,
-        "delivery": delivery,
-        "total": prod + dev + delivery,
+        "product": totals["product"],
+        "dev": totals["dev"],
+        "delivery": totals["delivery"],
+        "total": total,
         "output": str(output),
     }
 

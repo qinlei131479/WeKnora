@@ -49,6 +49,28 @@ from yuxi.utils.question_utils import (
 from yuxi.utils.thread_utils import extract_thread_id as _metadata_thread_id
 
 
+def _user_facing_stream_error(exc: Exception) -> tuple[str, str]:
+    """将底层异常转换为适合直接展示给用户的中文提示。"""
+    error_name = type(exc).__name__
+    raw_message = str(exc).strip()
+    normalized_message = raw_message.lower()
+
+    if error_name == "GraphRecursionError" or "graph_recursion_limit" in normalized_message:
+        return "execution_limit", "智能体执行步骤已达到上限，请调整任务后重试。"
+
+    if error_name == "StreamChunkTimeoutError" or "no streaming chunk received" in normalized_message:
+        return "model_timeout", "模型响应超时，长时间未收到新的内容，请稍后重试。"
+
+    if isinstance(exc, FileNotFoundError) or "文件不存在" in raw_message or "no such file" in normalized_message:
+        detail = raw_message if "文件不存在" in raw_message else ""
+        return "file_not_found", detail or "文件不存在或已被移除，请重新上传后重试。"
+
+    if isinstance(exc, (ConnectionError, TimeoutError)):
+        return "model_connection_error", "模型服务连接异常，请稍后重试。"
+
+    return "unexpected_error", "处理请求时发生异常，请稍后重试。"
+
+
 def _build_state_files(attachments: list[dict]) -> dict:
     """将附件列表转换为 StateBackend 格式的 files 字典
 
@@ -1107,8 +1129,7 @@ async def stream_agent_chat(
     except Exception as e:
         logger.exception(f"Error streaming messages: {e}")
 
-        error_msg = f"Error streaming messages: {e}"
-        error_type = "unexpected_error"
+        error_type, error_msg = _user_facing_stream_error(e)
 
         full_msg = _ensure_full_msg(full_msg, accumulated_content)
 

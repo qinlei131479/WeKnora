@@ -8,7 +8,6 @@ from fastapi import HTTPException
 
 from yuxi.agents.backends.sandbox import paths as sandbox_paths
 from yuxi.services import viewer_filesystem_service as svc
-from yuxi.services import workspace_service
 
 
 def test_resolve_local_user_data_path_blocks_upload_symlink_escape(tmp_path: Path, monkeypatch) -> None:
@@ -67,7 +66,7 @@ async def test_read_viewer_workspace_office_file_returns_pdf_preview(
         return b"%PDF-1.4\npreview"
 
     monkeypatch.setattr(svc, "_resolve_viewer_state", fake_resolve_viewer_state)
-    monkeypatch.setattr(workspace_service, "convert_office_to_pdf", fake_convert)
+    monkeypatch.setattr(svc, "convert_office_to_pdf", fake_convert)
 
     response = await svc.read_viewer_file_content(
         thread_id=thread_id,
