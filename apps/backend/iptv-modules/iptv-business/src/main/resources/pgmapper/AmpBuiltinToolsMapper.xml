@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.AmpBuiltinToolsMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.iptv.business.domain.AmpBuiltinTools">
+        <id column="id" property="id"/>
+        <result column="tool_slug" property="toolSlug"/>
+        <result column="capability_key" property="capabilityKey"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="category" property="category"/>
+        <result column="input_schema" property="inputSchema"/>
+        <result column="enabled" property="enabled"/>
+        <result column="source" property="source"/>
+        <result column="version" property="version"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, tool_slug, capability_key, name, description, category, input_schema, enabled, source, version, created_at, updated_at
+    </sql>
+
+    <!-- 分页查询（PostgreSQL：字符串使用 ILIKE 大小写不敏感模糊查询） -->
+    <select id="queryPage" resultMap="BaseResultMap" parameterType="com.iptv.business.domain.dto.page.AmpBuiltinToolsPageDTO">
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM amp_builtin_tools
+        <where>
+            <if test="param.category != null">
+                AND category = #{param.category}
+            </if>
+            <if test="param.keyword != null and param.keyword != ''">
+                AND (
+                name ILIKE CONCAT('%', #{param.keyword}, '%')
+                OR description ILIKE CONCAT('%', #{param.description}, '%')
+                )
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+</mapper>

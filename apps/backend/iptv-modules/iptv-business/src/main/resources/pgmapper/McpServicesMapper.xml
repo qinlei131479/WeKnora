@@ -34,53 +34,11 @@
         FROM mcp_services
         <where>
             deleted_at IS NULL
-            <if test="param.id != null and param.id != ''">
-                AND id ILIKE CONCAT('%', #{param.id}, '%')
-            </if>
-            <if test="param.tenantId != null">
-                AND tenant_id = #{param.tenantId}
-            </if>
-            <if test="param.name != null and param.name != ''">
-                AND name ILIKE CONCAT('%', #{param.name}, '%')
-            </if>
-            <if test="param.description != null and param.description != ''">
-                AND description ILIKE CONCAT('%', #{param.description}, '%')
-            </if>
-            <if test="param.enabled != null">
-                AND enabled = #{param.enabled}
-            </if>
-            <if test="param.transportType != null and param.transportType != ''">
-                AND transport_type ILIKE CONCAT('%', #{param.transportType}, '%')
-            </if>
-            <if test="param.url != null and param.url != ''">
-                AND url ILIKE CONCAT('%', #{param.url}, '%')
-            </if>
-            <if test="param.headers != null and param.headers != ''">
-                AND headers ILIKE CONCAT('%', #{param.headers}, '%')
-            </if>
-            <if test="param.authConfig != null and param.authConfig != ''">
-                AND auth_config ILIKE CONCAT('%', #{param.authConfig}, '%')
-            </if>
-            <if test="param.advancedConfig != null and param.advancedConfig != ''">
-                AND advanced_config ILIKE CONCAT('%', #{param.advancedConfig}, '%')
-            </if>
-            <if test="param.stdioConfig != null and param.stdioConfig != ''">
-                AND stdio_config ILIKE CONCAT('%', #{param.stdioConfig}, '%')
-            </if>
-            <if test="param.envVars != null and param.envVars != ''">
-                AND env_vars ILIKE CONCAT('%', #{param.envVars}, '%')
-            </if>
-            <if test="param.createdAt != null">
-                AND created_at = #{param.createdAt}
-            </if>
-            <if test="param.updatedAt != null">
-                AND updated_at = #{param.updatedAt}
-            </if>
-            <if test="param.deletedAt != null">
-                AND deleted_at = #{param.deletedAt}
-            </if>
-            <if test="param.isBuiltin != null">
-                AND is_builtin = #{param.isBuiltin}
+            <if test="param.queryPage != null and param.queryPage != ''">
+                AND (
+                name ILIKE CONCAT('%', #{param.name}, '%')
+                OR description ILIKE CONCAT('%', #{param.description}, '%')
+                )
             </if>
         </where>
         ORDER BY id DESC
