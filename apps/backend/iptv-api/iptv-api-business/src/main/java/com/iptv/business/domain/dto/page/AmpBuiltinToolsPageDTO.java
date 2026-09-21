@@ -26,4 +26,7 @@ public class AmpBuiltinToolsPageDTO implements Serializable {
 
     @Schema(description = "工具分类")
     private String category;
+
+    @Schema(description = "工具来源")
+    private String source;
 }

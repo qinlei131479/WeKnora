@@ -29,13 +29,16 @@
         <include refid="Base_Column_List"/>
         FROM amp_builtin_tools
         <where>
-            <if test="param.category != null">
+            <if test="param.category != null and param.category != ''">
                 AND category = #{param.category}
+            </if>
+            <if test="param.source != null and param.source != ''">
+                AND source = #{param.source}
             </if>
             <if test="param.keyword != null and param.keyword != ''">
                 AND (
                 name ILIKE CONCAT('%', #{param.keyword}, '%')
-                OR description ILIKE CONCAT('%', #{param.description}, '%')
+                OR description ILIKE CONCAT('%', #{param.keyword}, '%')
                 )
             </if>
         </where>
