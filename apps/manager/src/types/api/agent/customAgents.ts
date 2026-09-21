@@ -1,4 +1,4 @@
-import type { KnowledgeBaseEntity, McpEntity } from '../data';
+import type { KnowledgeBaseEntity, McpServicesVO } from '../data';
 import type { TenantsVO } from '../data/tenants';
 import type { ModelEntity } from '../model';
 
@@ -123,5 +123,5 @@ export interface CustomAgentsVO extends CustomAgentsDTO {
   vlmModel?: ModelEntity;
   reRankModel?: ModelEntity;
   knowledgeBasesList?: KnowledgeBaseEntity[];
-  mcpServicesList?: McpEntity[];
+  mcpServicesList?: McpServicesVO[];
 }

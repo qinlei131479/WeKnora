@@ -116,6 +116,11 @@ function filterKeptAdminMenus(routes: any[] = []): any[] {
 // 遍历后台传来的路由字符串，转换为组件对象
 function filterAsyncRouter(asyncRouterMap: any[], lastRouter = false, type = false) {
   return asyncRouterMap.filter((route) => {
+    // 后端未提供 activeMenu，在组件路径转换前补齐，使 MCP 页面高亮左侧“工具仓”菜单。
+    if (route.component === 'data/mcp/index') {
+      route.meta = { ...route.meta, activeMenu: '/resource/tools' };
+    }
+
     if (type && route.children) {
       route.children = filterChildren(route.children);
     }

@@ -52,6 +52,15 @@
         "table.tenantName": 300,
         "table.updatedAt": 180
       },
+      "tools": {
+        "table.category": 120,
+        "table.description": 300,
+        "table.enabled": 100,
+        "table.name": 180,
+        "table.operation": 100,
+        "table.source": 120,
+        "table.updatedAt": 180
+      },
       "vectorStores": {
         "table.createdAt": 180,
         "table.engineType": 130,

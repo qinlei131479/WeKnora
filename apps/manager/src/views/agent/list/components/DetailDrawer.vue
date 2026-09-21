@@ -4,7 +4,7 @@ import { getParserEngineListApi } from '@/api/data/system';
 import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { t } from '@/i18n';
 import type { CustomAgentConfig, CustomAgentsVO, ParserEngineEntity } from '@/types';
-import type { KnowledgeBaseEntity, McpEntity } from '@/types/api/data';
+import type { KnowledgeBaseEntity, McpServicesVO } from '@/types/api/data';
 import type { ModelEntity } from '@/types/api/model';
 
 interface DetailItem {
@@ -436,7 +436,7 @@ const formatKnowledgeBases = (ids: string[] | undefined): string => {
 const formatMcpServices = (ids: string[] | undefined): string => {
   return (ids || [])
     .map((id) => {
-      const service = props.agent.mcpServicesList?.find((item: McpEntity) => item.id === id);
+      const service = props.agent.mcpServicesList?.find((item: McpServicesVO) => item.id === id);
       return service?.name ? `${service.name}<br/>${id}` : id;
     })
     .join('\n');

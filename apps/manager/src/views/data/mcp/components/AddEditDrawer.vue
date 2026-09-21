@@ -7,10 +7,10 @@ import { ChevronDown, ChevronRight, X, CircleCheck, CircleX } from 'lucide-vue-n
 import McpTestResultBody from './McpTestResultBody.vue';
 import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { isEmpty } from '@/utils/common.js';
-import type { AjaxResult, McpEntity, McpAuthConfig, McpAdvancedConfig } from '@/types';
-import { getMcpSingleApi, insertMcpSingleApi, updateMcpSingleApi, testMcpServiceApi, type MCPTestResult } from '@/api/data/mcp';
+import type { McpServicesDTO, McpServicesVO, McpTestResultVO } from '@/types';
+import { API } from '@/api';
 
-interface FormEntity extends McpEntity {
+interface FormEntity extends Partial<McpServicesDTO> {
   custom_headers: { key: string; value: string }[];
   authType: string;
   oauthScopesText: string;
@@ -21,6 +21,23 @@ interface FormEntity extends McpEntity {
   advancedConfig_timeout: number;
   advancedConfig_retry_count: number;
   advancedConfig_retry_delay: number;
+}
+
+/** 表单使用的认证配置，接口中以 JSON 字符串传输 */
+interface McpAuthConfig {
+  auth_type?: string;
+  api_key?: string;
+  api_key_header?: string;
+  scopes?: string[];
+  token?: string;
+  auth_server_metadata_url?: string;
+}
+
+/** 表单使用的高级配置，接口中以 JSON 字符串传输 */
+interface McpAdvancedConfig {
+  timeout?: number;
+  retry_count?: number;
+  retry_delay?: number;
 }
 
 const emit = defineEmits<{
@@ -70,7 +87,7 @@ function handleUpdate(id: string) {
   reset()
   title.value = "page.mcp.updateTitle"
   mode = 'update'
-  return getMcpSingleApi(id).then(res => {
+  return API.McpServices.single(id).then(res => {
     if (res?.code === 200) {
       form.value = serverDataToFormData(res.data || {})
       open.value = true
@@ -78,7 +95,7 @@ function handleUpdate(id: string) {
   })
 }
 
-function serverDataToFormData(data: McpEntity) {
+function serverDataToFormData(data: McpServicesVO): FormEntity {
   const formData: FormEntity = { ...createDefaultForm(), ...data };
   formData.custom_headers = []
   if (formData.headers) {
@@ -157,15 +174,29 @@ function serverDataToFormData(data: McpEntity) {
   }
   return formData
 }
-function formDataToServerData(formData: FormEntity) {
+function formDataToServerData(formData: FormEntity): McpServicesDTO {
   const {
     custom_headers, authType, oauthScopesText,
     api_key_header, api_key, authConfigToken,
     auth_server_metadata_url,
-    advancedConfig_timeout, advancedConfig_retry_count, advancedConfig_retry_delay,
-    ...serverData
+    advancedConfig_timeout, advancedConfig_retry_count, advancedConfig_retry_delay
   } = formData;
-  serverData.headers = JSON.stringify(custom_headers);
+  // 只提交 DTO 字段，避免回传详情中的 deletedAt 和表单辅助字段。
+  const serverData: McpServicesDTO = {
+    id: formData.id ?? '',
+    tenantId: formData.tenantId,
+    name: formData.name,
+    description: formData.description,
+    enabled: formData.enabled,
+    transportType: formData.transportType,
+    url: formData.url,
+    headers: JSON.stringify(custom_headers),
+    stdioConfig: formData.stdioConfig,
+    envVars: formData.envVars,
+    createdAt: formData.createdAt,
+    updatedAt: formData.updatedAt,
+    isBuiltin: formData.isBuiltin
+  };
   const authConfig: McpAuthConfig = {
     auth_type: authType,
     api_key,
@@ -189,8 +220,9 @@ function formDataToServerData(formData: FormEntity) {
 }
 
 function doUpdate() {
+  if (!form.value.id) return;
   const params = formDataToServerData(form.value);
-  return updateMcpSingleApi(params).then((res: AjaxResult) => {
+  return API.McpServices.update(params).then((res) => {
     if (res.code === 200) {
       modal.msgSuccess(t('page.normal.confirmInfo.updateSuccess', '修改成功'))
       emit('success')
@@ -201,7 +233,7 @@ function doUpdate() {
 
 function doAdd() {
   const params = formDataToServerData(form.value);
-  return insertMcpSingleApi(params).then((res: AjaxResult) => {
+  return API.McpServices.insert(params).then((res) => {
     if (res.code === 200) {
       modal.msgSuccess(t('page.normal.confirmInfo.addSuccess', '新增成功'))
       emit('success')
@@ -368,7 +400,7 @@ const authTypeOptions = computed(() => [
 // 连接测试及结果展示
 const testing = ref(false)
 const lastTestOk = ref<boolean | null>(null)
-const testResult = ref<MCPTestResult | null>(null)
+const testResult = ref<McpTestResultVO | null>(null)
 const testResultSection = ref<HTMLElement | null>(null)
 
 function scrollToTestResult() {
@@ -393,10 +425,10 @@ function handleTestConnection() {
     duration: 0,
     showClose: false,
   })
-  return testMcpServiceApi(form.value.id)
+  return API.McpServices.test(form.value.id)
     .then((result) => {
       ElMessage.closeAll()
-      const safe: MCPTestResult = result?.data ?? {
+      const safe: McpTestResultVO = result?.data ?? {
         success: false,
         message: t('page.mcp.toasts.noResponse') as string,
       }

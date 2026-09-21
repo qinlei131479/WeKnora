@@ -1229,6 +1229,32 @@
         "table.tenantName": "租户",
         "table.updatedAt": "更新时间"
       },
+      "tools": {
+        "category.buildin": "内置工具",
+        "category.database": "数据库",
+        "category.knowledge": "知识库",
+        "category.wiki": "Wiki",
+        "detail.title": "工具详情",
+        "field.capabilityKey": "能力标识",
+        "field.category": "分类",
+        "field.createdAt": "创建时间",
+        "field.description": "描述",
+        "field.enabled": "状态",
+        "field.id": "ID",
+        "field.inputSchema": "输入参数结构",
+        "field.name": "名称",
+        "field.source": "来源",
+        "field.toolSlug": "工具标识",
+        "field.updatedAt": "更新时间",
+        "field.version": "版本",
+        "search.categoryPlaceholder": "请选择分类",
+        "search.keywordPlaceholder": "按名称、描述搜索",
+        "search.sourcePlaceholder": "请选择来源",
+        "source.chat": "聊天",
+        "source.work": "工作流",
+        "status.disabled": "停用",
+        "status.enabled": "启用"
+      },
       "vectorStores": {
         "detail.connectionConfig": "连接配置",
         "detail.createdAt": "创建时间",
@@ -1504,7 +1530,7 @@
       "usersManagementTitle": "用户与岗位管理"
     },
     "mcp": {
-      "addTitle": "新增MCP",
+      "addTitle": "新增 MCP",
       "confirmMultiError": "请选择要操作的MCP服务",
       "deleteConfirm": "是否确认删除MCP编号为 {id} 的数据项？",
       "description": "描述",
@@ -1515,6 +1541,8 @@
       "enableddisabled": "启用/停用",
       "id": "编号",
       "isBuiltin": "是否内置",
+      "keywordSearchPlaceholder": "按名称、描述搜索",
+      "mcp": "MCP",
       "mcpServiceDialog": {
         "addTitle": "新增 MCP 服务",
         "advancedConfig": "高级配置",
@@ -1586,7 +1614,6 @@
         "unitTimes": "次"
       },
       "name": "名称",
-      "nameSearchPlaceholder": "按名称搜索",
       "no": "否",
       "testResult": {
         "approvalSaveFailed": "保存审核设置失败",
@@ -1612,6 +1639,7 @@
         "testing": "正在测试 {name}...",
         "updateStateFailed": "更新 MCP 服务状态失败"
       },
+      "tools": "工具",
       "updateTitle": "编辑MCP",
       "yes": "是"
     },

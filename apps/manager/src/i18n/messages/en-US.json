@@ -1229,6 +1229,32 @@
         "table.tenantName": "Tenant",
         "table.updatedAt": "Updated Time"
       },
+      "tools": {
+        "category.buildin": "Built-in Tools",
+        "category.database": "Database",
+        "category.knowledge": "Knowledge Base",
+        "category.wiki": "Wiki",
+        "detail.title": "Tool Details",
+        "field.capabilityKey": "Capability Key",
+        "field.category": "Category",
+        "field.createdAt": "Created Time",
+        "field.description": "Description",
+        "field.enabled": "Status",
+        "field.id": "ID",
+        "field.inputSchema": "Input Schema",
+        "field.name": "Name",
+        "field.source": "Source",
+        "field.toolSlug": "Tool Identifier",
+        "field.updatedAt": "Updated Time",
+        "field.version": "Version",
+        "search.categoryPlaceholder": "Select a category",
+        "search.keywordPlaceholder": "Search by name or description",
+        "search.sourcePlaceholder": "Select a source",
+        "source.chat": "Chat",
+        "source.work": "Workflow",
+        "status.disabled": "Disabled",
+        "status.enabled": "Enabled"
+      },
       "vectorStores": {
         "detail.connectionConfig": "Connection Configuration",
         "detail.createdAt": "Created Time",
@@ -1515,6 +1541,8 @@
       "enableddisabled": "Enabled/Disabled",
       "id": "ID",
       "isBuiltin": "Built-in",
+      "keywordSearchPlaceholder": "Search by name or description",
+      "mcp": "MCP",
       "mcpServiceDialog": {
         "addTitle": "Add MCP Service",
         "advancedConfig": "Advanced",
@@ -1586,7 +1614,6 @@
         "unitTimes": "×"
       },
       "name": "Name",
-      "nameSearchPlaceholder": "Search by name",
       "no": "No",
       "testResult": {
         "approvalSaveFailed": "Failed to save approval setting",
@@ -1612,6 +1639,7 @@
         "testing": "Testing {name}...",
         "updateStateFailed": "Failed to update MCP service status"
       },
+      "tools": "Tools",
       "updateTitle": "Edit MCP service",
       "yes": "Yes"
     },

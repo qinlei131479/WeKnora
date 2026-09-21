@@ -113,36 +113,34 @@ import modal from '@/plugins/modal';
 //   Link
 // } from '@element-plus/icons-vue';
 import { X, CircleCheck, CircleX, Wrench, CircleAlert, ChevronUp, ChevronRight, File, Link } from 'lucide-vue-next';
-import type { MCPTestResult, MCPTool } from '@/api/data/mcp';
-import { getMcpToolListApi, enableMcpToolBatchApi, disableMcpToolBatchApi } from '@/api/data/mcp';
-import { McpToolBatchReqItem } from '@/types';
+import { API } from '@/api';
+import type { McpTestResultVO, McpToolVO, McpToolApprovalsDTO } from '@/types';
 // import { MessagePlugin } from 'tdesign-vue-next'
 
 import { useI18n } from 'vue-i18n';
 
 interface Props {
-  result: MCPTestResult | null;
-  /** When set, loads/saves per-tool approval flags */
+  result: McpTestResultVO | null;
+  /** 按服务加载、保存工具审批状态 */
   serviceId?: string;
-  /** When true, (re)loads approval flags. Lets the dialog gate the fetch on
-   *  visibility; defaults to true for always-rendered inline usage. */
+  /** 是否加载审批状态，默认启用 */
   active?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), { active: true });
 
 const getMCPToolApprovals = (id: string) => {
-  return getMcpToolListApi(id).then((res) => res?.data || []);
+  return API.McpServices.listTools(id).then((res) => res.data ?? []);
 };
 const setMCPToolApproval = (id: string, toolName: string, value: boolean) => {
-  const item: McpToolBatchReqItem = {
+  const item: McpToolApprovalsDTO = {
     toolName: toolName,
     serviceId: id
   };
   if (value) {
-    return enableMcpToolBatchApi([item]);
+    return API.McpServices.enableToolsBatch([item]);
   } else {
-    return disableMcpToolBatchApi([item]);
+    return API.McpServices.disableToolsBatch([item]);
   }
 };
 
@@ -184,15 +182,22 @@ const setMCPToolApproval = (id: string, toolName: string, value: boolean) => {
 
 const expandedToolIndex = ref<number | null>(null);
 const { t } = useI18n();
-interface DisplayTool extends MCPTool {
-  requireApproval?: boolean;
+interface DisplayTool extends McpToolVO {
+  name: string;
+  requireApproval: boolean;
 }
 
 const displayTools = ref<DisplayTool[]>([]);
 const approvalLoading = ref<Record<string, boolean>>({});
+let approvalRequestId = 0;
 
-const mergeApprovals = async () => {
-  const tools: MCPTool[] = props.result?.tools || [];
+const mergeApprovals = () => {
+  const requestId = ++approvalRequestId;
+  const tools: DisplayTool[] = (props.result?.tools ?? []).map((tool) => ({
+    ...tool,
+    name: tool.name ?? '',
+    requireApproval: false
+  }));
   if (!tools.length) {
     displayTools.value = [];
     return;
@@ -201,16 +206,19 @@ const mergeApprovals = async () => {
     displayTools.value = tools.map((x) => ({ ...x }));
     return;
   }
-  try {
-    const rows = await getMCPToolApprovals(props.serviceId);
-    const map = new Map(rows.map((r) => [r.toolName, r.requireApproval]));
-    displayTools.value = tools.map((tool) => ({
-      ...tool,
-      requireApproval: map.get(tool.name) || false
-    }));
-  } catch {
-    displayTools.value = tools.map((x) => ({ ...x }));
-  }
+  return getMCPToolApprovals(props.serviceId)
+    .then((rows) => {
+      if (requestId !== approvalRequestId) return;
+      const map = new Map(rows.map((row) => [row.toolName, row.requireApproval]));
+      displayTools.value = tools.map((tool) => ({
+        ...tool,
+        requireApproval: map.get(tool.name) ?? false
+      }));
+    })
+    .catch(() => {
+      if (requestId !== approvalRequestId) return;
+      displayTools.value = tools;
+    });
 };
 
 watch(
@@ -223,32 +231,38 @@ watch(
   { deep: true, immediate: true }
 );
 
-const onRequireApprovalChange = async (toolName: string, value: boolean) => {
-  if (!props.serviceId) return;
+const onRequireApprovalChange = (toolName: string, value: boolean) => {
+  if (!props.serviceId || !toolName) return;
+  const serviceId = props.serviceId;
   approvalLoading.value = { ...approvalLoading.value, [toolName]: true };
-  try {
-    await setMCPToolApproval(props.serviceId, toolName, value);
-    displayTools.value = displayTools.value.map((x: MCPTool) => (x.name === toolName ? { ...x, requireApproval: value } : x));
-  } catch (e) {
-    console.error(e);
-    modal.msgError(t('page.mcp.testResult.approvalSaveFailed'));
-  } finally {
-    approvalLoading.value = { ...approvalLoading.value, [toolName]: false };
-  }
+  return setMCPToolApproval(serviceId, toolName, value)
+    .then(() => {
+      if (props.serviceId !== serviceId) return;
+      displayTools.value = displayTools.value.map((tool) => (tool.name === toolName ? { ...tool, requireApproval: value } : tool));
+    })
+    .catch((error) => {
+      console.error(error);
+      if (props.serviceId === serviceId) {
+        displayTools.value = displayTools.value.map((tool) => (tool.name === toolName ? { ...tool, requireApproval: !value } : tool));
+      }
+      modal.msgError(t('page.mcp.testResult.approvalSaveFailed'));
+    })
+    .finally(() => {
+      approvalLoading.value = { ...approvalLoading.value, [toolName]: false };
+    });
 };
 
 const toggleTool = (index: number) => {
   expandedToolIndex.value = expandedToolIndex.value === index ? null : index;
 };
 
-const formatSchema = (schema: any): string => {
-  if (!schema) return '';
-  if (typeof schema === 'string') {
-    try {
-      schema = JSON.parse(schema);
-    } catch (e) {}
+const formatSchema = (schema?: string): string => {
+  if (!schema?.trim()) return '';
+  try {
+    return JSON.stringify(JSON.parse(schema), null, 2);
+  } catch {
+    return schema;
   }
-  return JSON.stringify(schema, null, 2);
 };
 </script>
 
