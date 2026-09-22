@@ -28,8 +28,10 @@
         <where>
             deleted_at IS NULL
             <if test="param.keyword != null and param.keyword != ''">
-                AND name ILIKE CONCAT('%', #{param.keyword}, '%')
+                AND (
+                name ILIKE CONCAT('%', #{param.keyword}, '%')
                 OR description ILIKE CONCAT('%', #{param.keyword}, '%')
+                )
             </if>
             <if test="param.tenantId != null">
                 AND tenant_id = #{param.tenantId}
