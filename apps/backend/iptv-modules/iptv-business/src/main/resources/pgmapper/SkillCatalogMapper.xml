@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.iptv.business.pgmapper.SkillCatalogMapper">
+
+    <resultMap type="com.iptv.business.domain.SkillCatalog" id="SkillCatalogResult">
+        <id     property="id"           column="id"/>
+        <result property="tenantId"     column="tenant_id"/>
+        <result property="name"         column="name"/>
+        <result property="version"      column="version"/>
+        <result property="description"  column="description"/>
+        <result property="instructions" column="instructions"/>
+        <result property="bundleRef"    column="bundle_ref"/>
+        <result property="bundleSha256" column="bundle_sha256"/>
+        <result property="createdAt"    column="created_at"/>
+        <result property="updatedAt"    column="updated_at"/>
+        <result property="deletedAt"    column="deleted_at"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, tenant_id, name, version, description, instructions,
+        bundle_ref, bundle_sha256, created_at, updated_at, deleted_at
+    </sql>
+
+    <select id="queryPage" resultMap="SkillCatalogResult">
+        select
+        <include refid="Base_Column_List"/>
+        from tenant_skill_catalog
+        <where>
+            deleted_at is null
+            <if test="param.name != null and param.name != ''">
+                and name ilike concat('%', #{param.name}, '%')
+            </if>
+            <if test="param.description != null and param.description != ''">
+                and description ilike concat('%', #{param.description}, '%')
+            </if>
+            <if test="param.version != null and param.version != ''">
+                and version ilike concat('%', #{param.version}, '%')
+            </if>
+            <if test="param.tenantId != null">
+                and tenant_id = #{param.tenantId}
+            </if>
+            <if test="param.createdAtStart != null">
+                and created_at &gt;= #{param.createdAtStart}
+            </if>
+            <if test="param.createdAtEnd != null">
+                and created_at &lt;= #{param.createdAtEnd}
+            </if>
+        </where>
+        order by created_at desc
+    </select>
+
+    <select id="countInstallRefs" resultType="long">
+        select count(*)
+        from tenant_skills
+        where catalog_id = #{catalogId}
+          and deleted_at is null
+    </select>
+
+</mapper>

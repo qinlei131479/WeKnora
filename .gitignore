@@ -18,10 +18,10 @@
 
 # 构建和依赖文件
 node_modules/
-/dist/
-/build/
+dist/
+build/
 *.log
-/target/
+target/
 
 # 临时文件
 tmp/
