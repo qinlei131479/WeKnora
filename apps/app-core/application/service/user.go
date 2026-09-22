@@ -224,20 +224,42 @@ func (s *userService) Register(ctx context.Context, req *types.RegisterRequest) 
 	return user, nil
 }
 
+// findUserForLogin 先按登录账号查找，未命中再按邮箱查找。
+func (s *userService) findUserForLogin(ctx context.Context, identifier string) (*types.User, error) {
+	if identifier == "" {
+		return nil, nil
+	}
+	user, err := s.userRepo.GetUserByAccount(ctx, identifier)
+	if err == nil && user != nil {
+		return user, nil
+	}
+	if err != nil && !isUserLookupNotFound(err) {
+		return nil, err
+	}
+	user, err = s.userRepo.GetUserByEmail(ctx, identifier)
+	if err != nil {
+		if isUserLookupNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return user, nil
+}
+
 // Login authenticates a user and returns tokens
 func (s *userService) Login(ctx context.Context, req *types.LoginRequest) (*types.LoginResponse, error) {
 	logger.Info(ctx, "Start user login")
-	// Get user by email
-	user, err := s.userRepo.GetUserByEmail(ctx, req.Email)
+	// 同一输入先按登录账号查找，没有再按邮箱查找。不按用户名查找。
+	user, err := s.findUserForLogin(ctx, strings.TrimSpace(req.Email))
 	if err != nil {
-		logger.Errorf(ctx, "Failed to get user by email: %v", err)
+		logger.Errorf(ctx, "Failed to look up login user: %v", err)
 		return &types.LoginResponse{
 			Success: false,
 			Message: "Invalid email or password",
 		}, nil
 	}
 	if user == nil {
-		logger.Warn(ctx, "User not found for email")
+		logger.Warn(ctx, "User not found for login identifier")
 		return &types.LoginResponse{
 			Success: false,
 			Message: "Invalid email or password",

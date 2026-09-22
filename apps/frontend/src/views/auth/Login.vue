@@ -150,9 +150,9 @@
           <div class="form-content">
             <t-form ref="formRef" :data="formData" :rules="formRules" @submit="handleLogin" layout="vertical"
               label-align="top">
-              <t-form-item :label="$t('auth.email')" name="email">
-                <t-input v-model="formData.email" :placeholder="$t('auth.emailPlaceholder')" type="text"
-                  autocomplete="email" size="large" :disabled="loading" />
+              <t-form-item :label="$t('auth.loginAccount')" name="email">
+                <t-input v-model="formData.email" :placeholder="$t('auth.loginAccountPlaceholder')" type="text"
+                  autocomplete="username" size="large" :disabled="loading" />
               </t-form-item>
 
               <t-form-item :label="$t('auth.password')" name="password">
@@ -402,11 +402,10 @@ const registerData = reactive<{ [key: string]: any }>({
   confirmPassword: ''
 })
 
-// Login form validation rules
+// 登录框接受登录账号或邮箱，不做邮箱格式校验。
 const formRules = computed(() => ({
   email: [
-    { required: true, message: t('auth.emailRequired'), type: 'error' },
-    { email: true, message: t('auth.emailInvalid'), type: 'error' }
+    { required: true, message: t('auth.loginAccountRequired'), type: 'error' },
   ],
   password: [
     { required: true, message: t('auth.passwordRequired'), type: 'error' },
@@ -575,7 +574,7 @@ const handleLogin = async () => {
       await persistLoginResponse(response)
       notifyLoginSuccess(response, t, tm, formatRole, roleIcon)
     } else {
-      MessagePlugin.error(response.message || t('auth.loginError'))
+      MessagePlugin.error(t('auth.loginError'))
     }
   } catch (error: any) {
     console.error('登录错误:', error)

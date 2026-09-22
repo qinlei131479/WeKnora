@@ -22,6 +22,10 @@ func (r *provisioningUserRepo) GetUserByUsername(context.Context, string) (*type
 	return nil, nil
 }
 
+func (r *provisioningUserRepo) GetUserByAccount(context.Context, string) (*types.User, error) {
+	return nil, nil
+}
+
 func (r *provisioningUserRepo) CreateUser(_ context.Context, user *types.User) error {
 	copy := *user
 	r.created = &copy

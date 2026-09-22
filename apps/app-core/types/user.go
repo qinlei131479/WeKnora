@@ -88,6 +88,8 @@ type User struct {
 	ID string `json:"id"         gorm:"type:varchar(36);primaryKey"`
 	// Username of the user
 	Username string `json:"username"   gorm:"type:varchar(100);uniqueIndex;not null"`
+	// 登录账号。仅字母和数字，全局唯一；历史用户可为空，仍用邮箱登录。
+	Account *string `json:"account,omitempty" gorm:"type:varchar(20);uniqueIndex:users_account_key"`
 	// Email address of the user
 	Email string `json:"email"      gorm:"type:varchar(255);uniqueIndex;not null"`
 	// Hashed password of the user
@@ -142,7 +144,8 @@ type AuthToken struct {
 
 // LoginRequest represents a login request
 type LoginRequest struct {
-	Email    string `json:"email"    binding:"required,email"`
+	// email 字段同时接受登录账号和邮箱，服务端先按账号查找，再按邮箱查找。
+	Email    string `json:"email"    binding:"required"`
 	Password string `json:"password" binding:"required,min=6"`
 }
 

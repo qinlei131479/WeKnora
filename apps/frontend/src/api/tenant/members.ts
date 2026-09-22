@@ -12,6 +12,8 @@ export interface TenantMember {
   user_id: string
   email: string
   username: string
+  /** 登录账号。历史成员可能为空。 */
+  account?: string
   avatar?: string
   role: TenantRole
   status: TenantMemberStatus
@@ -113,6 +115,42 @@ export async function addMember(
   body: AddMemberRequest,
 ): Promise<AddMemberResponse> {
   return (await post(`/api/v1/tenants/${tenantId}/members`, body)) as unknown as AddMemberResponse
+}
+
+export interface AddTenantUserRequest {
+  username: string
+  account: string
+  email: string
+  password: string
+  role: TenantRole
+}
+
+export interface UpdateTenantUserRequest {
+  username: string
+  /** 仅当原登录账号为空时提交；已有账号不传。 */
+  account?: string
+  email: string
+  role: TenantRole
+}
+
+/** 在当前租户直接创建用户并加入。Backend: POST /api/v1/tenants/:id/add-users */
+export async function addTenantUser(
+  tenantId: number,
+  body: AddTenantUserRequest,
+): Promise<AddMemberResponse> {
+  return (await post(`/api/v1/tenants/${tenantId}/add-users`, body)) as unknown as AddMemberResponse
+}
+
+/** 编辑成员资料。登录账号为空时可补填，补填后不可再改。Backend: PUT /api/v1/tenants/:id/add-users/:user_id */
+export async function updateTenantUser(
+  tenantId: number,
+  userId: string,
+  body: UpdateTenantUserRequest,
+): Promise<AddMemberResponse> {
+  return (await put(
+    `/api/v1/tenants/${tenantId}/add-users/${userId}`,
+    body,
+  )) as unknown as AddMemberResponse
 }
 
 /**

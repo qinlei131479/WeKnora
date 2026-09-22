@@ -71,6 +71,10 @@ func (s *stubUserRepoForAuth) GetUserByEmail(context.Context, string) (*types.Us
 func (s *stubUserRepoForAuth) GetUserByUsername(context.Context, string) (*types.User, error) {
 	return nil, nil
 }
+
+func (s *stubUserRepoForAuth) GetUserByAccount(context.Context, string) (*types.User, error) {
+	return nil, nil
+}
 func (s *stubUserRepoForAuth) GetUserByTenantID(context.Context, uint64) (*types.User, error) {
 	return nil, nil
 }

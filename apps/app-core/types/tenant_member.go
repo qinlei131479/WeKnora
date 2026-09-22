@@ -126,9 +126,11 @@ type Membership struct {
 // the model directly would leak DeletedAt/UpdatedAt and lock the DB
 // schema into the public API. Use this for `/tenants/:id/members` only.
 type TenantMemberResponse struct {
-	UserID    string             `json:"user_id"`
-	Email     string             `json:"email"`
-	Username  string             `json:"username"`
+	UserID   string `json:"user_id"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	// 登录账号。历史成员可能为空。
+	Account   string             `json:"account,omitempty"`
 	Avatar    string             `json:"avatar,omitempty"`
 	Role      TenantRole         `json:"role"`
 	Status    TenantMemberStatus `json:"status"`

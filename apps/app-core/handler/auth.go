@@ -269,7 +269,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// Validate required fields
 	if req.Email == "" || req.Password == "" {
 		logger.Error(ctx, "Missing required login fields")
-		appErr := errors.NewValidationError("Email and password are required")
+		appErr := errors.NewValidationError("Login account and password are required")
 		c.Error(appErr)
 		return
 	}

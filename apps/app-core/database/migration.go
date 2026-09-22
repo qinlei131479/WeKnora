@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -379,7 +380,13 @@ func RunKjscMigrationsWithOptions(dsn string, opts MigrationOptions) error {
 	}
 
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-		return fmt.Errorf("failed to run kjsc migrations: %w", err)
+		recovered, recErr := recoverMissingKjscVersion(ctx, m, err)
+		if recErr != nil {
+			return recErr
+		}
+		if !recovered {
+			return fmt.Errorf("failed to run kjsc migrations: %w", err)
+		}
 	}
 
 	version, dirty, err := m.Version()
@@ -392,4 +399,82 @@ func RunKjscMigrationsWithOptions(dsn string, opts MigrationOptions) error {
 	}
 	logger.Infof(ctx, "kjsc database is at version %d (dirty=%v)", version, dirty)
 	return nil
+}
+
+// recoverMissingKjscVersion 处理库版本在 migrations/version_kjsc 中没有对应文件的情况。
+// 例如库停在 10，目录只有 1–6 和 11 时，golang-migrate 会直接失败，11 不会执行。
+// 这时回退到目录里不高于该版本的最近文件，再继续执行更新的迁移。
+func recoverMissingKjscVersion(ctx context.Context, m *migrate.Migrate, upErr error) (bool, error) {
+	missing, ok := parseMissingMigrationVersion(upErr)
+	if !ok {
+		return false, nil
+	}
+	anchor, found := latestKjscVersionAtOrBelow(missing - 1)
+	if !found {
+		return false, nil
+	}
+	logger.Warnf(ctx, "kjsc 迁移版本 %d 在 migrations/version_kjsc 中没有文件，从版本 %d 继续", missing, anchor)
+	if err := m.Force(anchor); err != nil {
+		return false, fmt.Errorf("failed to continue kjsc migrations from version %d: %w", anchor, err)
+	}
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		return false, fmt.Errorf("failed to run kjsc migrations: %w", err)
+	}
+	return true, nil
+}
+
+func parseMissingMigrationVersion(err error) (int, bool) {
+	if err == nil || !strings.Contains(err.Error(), "no migration found for version ") {
+		return 0, false
+	}
+	const prefix = "no migration found for version "
+	msg := err.Error()
+	idx := strings.Index(msg, prefix)
+	rest := msg[idx+len(prefix):]
+	end := strings.IndexByte(rest, ':')
+	if end <= 0 {
+		return 0, false
+	}
+	n, convErr := strconv.Atoi(strings.TrimSpace(rest[:end]))
+	if convErr != nil || n < 0 {
+		return 0, false
+	}
+	return n, true
+}
+
+func latestKjscVersionAtOrBelow(target int) (int, bool) {
+	entries, err := os.ReadDir("migrations/version_kjsc")
+	if err != nil || target < 0 {
+		return 0, false
+	}
+	best := -1
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".up.sql") {
+			continue
+		}
+		ver, ok := leadingMigrationVersion(entry.Name())
+		if !ok || ver > target || ver <= best {
+			continue
+		}
+		best = ver
+	}
+	if best < 0 {
+		return 0, false
+	}
+	return best, true
+}
+
+func leadingMigrationVersion(name string) (int, bool) {
+	i := 0
+	for i < len(name) && name[i] >= '0' && name[i] <= '9' {
+		i++
+	}
+	if i == 0 || i >= len(name) || name[i] != '_' {
+		return 0, false
+	}
+	n, err := strconv.Atoi(name[:i])
+	if err != nil {
+		return 0, false
+	}
+	return n, true
 }

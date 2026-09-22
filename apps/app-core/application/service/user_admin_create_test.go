@@ -34,6 +34,10 @@ func (r *adminCreateUserRepo) GetUserByUsername(context.Context, string) (*types
 	return nil, nil
 }
 
+func (r *adminCreateUserRepo) GetUserByAccount(context.Context, string) (*types.User, error) {
+	return nil, nil
+}
+
 func (r *adminCreateUserRepo) CreateUser(_ context.Context, user *types.User) error {
 	copied := *user
 	r.created = &copied
@@ -295,6 +299,10 @@ func (r *racyIdentityRepo) GetUserByEmail(_ context.Context, _ string) (*types.U
 
 func (r *racyIdentityRepo) GetUserByUsername(_ context.Context, _ string) (*types.User, error) {
 	return r.byUsername, nil
+}
+
+func (r *racyIdentityRepo) GetUserByAccount(context.Context, string) (*types.User, error) {
+	return nil, nil
 }
 
 func TestAdminCreateUserRejectsPartialEmailConflict(t *testing.T) {

@@ -98,6 +98,23 @@ func (r *userRepository) GetUserByUsername(ctx context.Context, username string)
 	return &user, nil
 }
 
+// GetUserByAccount 按登录账号精确查找。未找到时返回 ErrUserNotFound。
+func (r *userRepository) GetUserByAccount(ctx context.Context, account string) (*types.User, error) {
+	var user types.User
+	if err := r.db.WithContext(ctx).Where("account = ?", account).First(&user).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+// HardDeleteUser 物理删除用户，用于新增成员失败后的回滚，避免软删除仍占用唯一账号。
+func (r *userRepository) HardDeleteUser(ctx context.Context, id string) error {
+	return r.db.WithContext(ctx).Unscoped().Where("id = ?", id).Delete(&types.User{}).Error
+}
+
 // GetUserByTenantID gets the first user (owner) of a tenant
 func (r *userRepository) GetUserByTenantID(ctx context.Context, tenantID uint64) (*types.User, error) {
 	var user types.User
