@@ -317,8 +317,7 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
         if (refs > 0) {
             throw new ServiceException("请先从所有沙箱卸载该技能后再删除");
         }
-        entity.setDeletedAt(new Date());
-        skillCatalogMapper.updateById(entity);
+        skillCatalogMapper.deleteById(id);
         // 尽力清理 bundle 对象与资源记录（失败仅告警）
         purgeBundleRef(entity.getBundleRef());
     }
