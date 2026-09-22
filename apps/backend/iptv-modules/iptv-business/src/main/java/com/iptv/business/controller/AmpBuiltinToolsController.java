@@ -33,7 +33,7 @@ public class AmpBuiltinToolsController {
 
     @Operation(summary = "按 id 查询", description = "按 id 查询")
     @GetMapping("/single")
-    @RequiresPermissions("business:ampBuiltinTools:query")
+    @RequiresPermissions("business:tools:query")
     public R<AmpBuiltinToolsVO> queryById(Long id) {
         return R.ok(ampBuiltinToolsService.queryById(id));
     }
@@ -41,7 +41,7 @@ public class AmpBuiltinToolsController {
 
     @Operation(summary = "分页查询", description = "按条件分页查询")
     @GetMapping("/list")
-    @RequiresPermissions("business:ampBuiltinTools:list")
+    @RequiresPermissions("business:tools:list")
     public TableDataInfo<AmpBuiltinToolsVO> list(AmpBuiltinToolsPageDTO dto, PageDTO pg) {
         return ampBuiltinToolsService.queryPage(dto, pg);
     }
@@ -53,7 +53,7 @@ public class AmpBuiltinToolsController {
 //    @Log(title = "新增Harness 内置工具只读目录，用于统一预览、依赖解析和统计", businessType = BusinessType.INSERT)
 //    @Operation(summary = "新增", description = "新增")
 //    @PostMapping("/insert/single")
-//    @RequiresPermissions("business:ampBuiltinTools:add")
+//    @RequiresPermissions("business:tools:add")
 //    public R<AmpBuiltinToolsVO> insert(@RequestBody @Validated(BaseDTO.Insert.class) AmpBuiltinToolsDTO dto) {
 //        return R.ok(ampBuiltinToolsService.insert(dto));
 //    }
@@ -61,7 +61,7 @@ public class AmpBuiltinToolsController {
 //    @Log(title = "更新Harness 内置工具只读目录，用于统一预览、依赖解析和统计", businessType = BusinessType.UPDATE)
 //    @Operation(summary = "按 id 更新", description = "按 id 更新")
 //    @PostMapping("/update/single")
-//    @RequiresPermissions("business:ampBuiltinTools:edit")
+//    @RequiresPermissions("business:tools:edit")
 //    public R<AmpBuiltinToolsVO> update(@RequestBody @Validated(BaseDTO.Update.class) AmpBuiltinToolsDTO dto) {
 //        return R.ok(ampBuiltinToolsService.update(dto));
 //    }
@@ -70,7 +70,7 @@ public class AmpBuiltinToolsController {
 //    @Log(title = "删除Harness 内置工具只读目录，用于统一预览、依赖解析和统计", businessType = BusinessType.DELETE)
 //    @Operation(summary = "按 id 删除", description = "按 id 删除")
 //    @PostMapping("/delete/single")
-//    @RequiresPermissions("business:ampBuiltinTools:remove")
+//    @RequiresPermissions("business:tools:remove")
 //    public R<Void> deleteById(String id) {
 //        ampBuiltinToolsService.deleteById(id);
 //        return R.ok();
@@ -79,7 +79,7 @@ public class AmpBuiltinToolsController {
 //    @Log(title = "导出Harness 内置工具只读目录，用于统一预览、依赖解析和统计", businessType = BusinessType.EXPORT)
 //    @Operation(summary = "导出", description = "导出数据到 Excel")
 //    @GetMapping("/excel")
-//    @RequiresPermissions("business:ampBuiltinTools:export")
+//    @RequiresPermissions("business:tools:export")
 //    public void export(AmpBuiltinToolsPageDTO dto, PageDTO pg, HttpServletResponse response) {
 //        List<AmpBuiltinToolsVO> list = ampBuiltinToolsService.queryPage(dto, pg).getRows();
 //        ExcelUtil<AmpBuiltinToolsVO> util = new ExcelUtil<>(AmpBuiltinToolsVO.class);
@@ -89,7 +89,7 @@ public class AmpBuiltinToolsController {
 //    @Log(title = "批量启用Harness 内置工具只读目录，用于统一预览、依赖解析和统计", businessType = BusinessType.UPDATE)
 //    @Operation(summary = "批量启用", description = "批量启用")
 //    @PostMapping("/enabled/batch")
-//    @RequiresPermissions("business:ampBuiltinTools:edit")
+//    @RequiresPermissions("business:tools:edit")
 //    public R<Void> updateEnabledBatch(@RequestParam List<String> ids) {
 //        ampBuiltinToolsService.updateEnabledBatch(ids);
 //        return R.ok();
@@ -98,7 +98,7 @@ public class AmpBuiltinToolsController {
 //    @Log(title = "批量停用Harness 内置工具只读目录，用于统一预览、依赖解析和统计", businessType = BusinessType.UPDATE)
 //    @Operation(summary = "批量停用", description = "批量停用")
 //    @PostMapping("/disabled/batch")
-//    @RequiresPermissions("business:ampBuiltinTools:edit")
+//    @RequiresPermissions("business:tools:edit")
 //    public R<Void> updateDisabledBatch(@RequestParam List<String> ids) {
 //        ampBuiltinToolsService.updateDisabledBatch(ids);
 //        return R.ok();
