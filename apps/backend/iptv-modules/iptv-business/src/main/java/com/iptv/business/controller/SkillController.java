@@ -4,9 +4,7 @@ import com.iptv.business.domain.dto.SkillCatalogFileSaveDTO;
 import com.iptv.business.domain.dto.SkillCatalogSourceDTO;
 import com.iptv.business.domain.dto.page.SkillCatalogPageDTO;
 import com.iptv.business.domain.vo.SkillCatalogVO;
-import com.iptv.business.domain.vo.SkillVO;
 import com.iptv.business.service.SkillCatalogService;
-import com.iptv.business.service.SkillService;
 import com.iptv.common.core.domain.R;
 import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
@@ -21,8 +19,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -37,40 +33,24 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SkillController {
 
-    private final SkillService skillService;
-
     private final SkillCatalogService skillCatalogService;
 
-    @Operation(summary = "获取预装技能列表", description = "获取系统中所有预装技能的列表")
-    @GetMapping("/list")
-    @RequiresPermissions("business:skills:list")
-    public R<Map<String, Object>> listSkills() {
-        List<SkillVO> skills = skillService.listPreloadedSkills();
-        Boolean sandboxMode = skillService.isSandboxMode();
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("data", skills);
-        result.put("skills_available", sandboxMode);
-
-        return R.ok(result);
-    }
-
     @Operation(summary = "分页查询技能目录", description = "跨全部租户分页查询技能目录定义，支持按名称/描述/版本模糊与租户过滤")
-    @GetMapping("/catalog/list")
+    @GetMapping("/list")
     @RequiresPermissions("business:skills:list")
     public TableDataInfo<SkillCatalogVO> catalogList(SkillCatalogPageDTO dto, PageDTO pg) {
         return skillCatalogService.queryPage(dto, pg);
     }
 
     @Operation(summary = "查询技能目录详情", description = "按 id 查询技能目录定义详情（元数据 + bundle 文件树）")
-    @GetMapping("/catalog/single")
+    @GetMapping("/single")
     @RequiresPermissions("business:skills:query")
     public R<SkillCatalogVO> catalogDetail(@NotBlank(message = "技能id不能为空") String id) {
         return R.ok(skillCatalogService.detail(id));
     }
 
     @Operation(summary = "读取技能文件内容", description = "读取 bundle 内文本文件内容（仅根级/白名单文本文件）")
-    @GetMapping("/catalog/file")
+    @GetMapping("/file")
     @RequiresPermissions("business:skills:query")
     public R<Map<String, Object>> catalogFile(@NotBlank(message = "技能id不能为空") String id,
                                               @NotBlank(message = "文件路径不能为空") String path) {
@@ -79,7 +59,7 @@ public class SkillController {
 
     @Log(title = "上传技能（内置目录）", businessType = BusinessType.IMPORT)
     @Operation(summary = "上传技能", description = "上传 .zip 或 SKILL.md 归一化后写入技能目录（内置技能，tenant_id=1）")
-    @PostMapping("/catalog/upload")
+    @PostMapping("/upload")
     @RequiresPermissions("business:skills:add")
     public R<SkillCatalogVO> catalogUpload(@RequestParam("file") MultipartFile file) {
         return R.ok(skillCatalogService.upload(file));
@@ -87,7 +67,7 @@ public class SkillController {
 
     @Log(title = "远程拉取技能（内置目录）", businessType = BusinessType.IMPORT)
     @Operation(summary = "远程拉取技能", description = "从 registry/skills-sh/github/gitlab/直链来源拉取技能并写入技能目录（内置技能，tenant_id=1）")
-    @PostMapping("/catalog/remote/pull")
+    @PostMapping("/remote/pull")
     @RequiresPermissions("business:skills:add")
     public R<SkillCatalogVO> catalogPull(@RequestBody @Valid SkillCatalogSourceDTO dto) {
         return R.ok(skillCatalogService.pullFromSource(dto));
@@ -95,7 +75,7 @@ public class SkillController {
 
     @Log(title = "修改技能SKILL.md", businessType = BusinessType.UPDATE)
     @Operation(summary = "保存SKILL.md内容", description = "保存根级 SKILL.md 内容并重新打包 bundle 同步元数据")
-    @PostMapping("/catalog/file/save")
+    @PostMapping("/file/save")
     @RequiresPermissions("business:skills:edit")
     public R<Void> catalogSaveFile(@RequestBody @Valid SkillCatalogFileSaveDTO dto) {
         skillCatalogService.saveSkillMd(dto);
@@ -104,7 +84,7 @@ public class SkillController {
 
     @Log(title = "删除技能目录定义", businessType = BusinessType.DELETE)
     @Operation(summary = "删除技能目录定义", description = "软删除技能目录定义；存在沙箱安装引用时拒绝，并尽力清理 bundle 对象")
-    @GetMapping("/catalog/delete/single")
+    @GetMapping("/delete/single")
     @RequiresPermissions("business:skills:remove")
     public R<Void> catalogDelete(@NotBlank(message = "技能id不能为空") @RequestParam String id) {
         skillCatalogService.delete(id);
