@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
@@ -62,7 +61,7 @@ public class CryptoUtils {
             return systemAesKey;
         }
 
-        String envKey = EnvUtil.get("SYSTEM_AES_KEY","weknora-system-aes-key-32bytes!!");
+        String envKey = EnvUtil.get("SYSTEM_AES_KEY", "weknora-system-aes-key-32bytes!!");
         log.info("SYSTEM_AES_KEY: {}", envKey);
         if (StrUtil.isBlank(envKey)) {
             log.warn("未配置 SYSTEM_AES_KEY");
@@ -137,7 +136,7 @@ public class CryptoUtils {
             String encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(combined);
 
             return ENC_PREFIX + encoded;
-        }catch (Exception e){
+        } catch (Exception e) {
             log.error("AES-GCM 加密失败", e);
             return plaintext;
         }
@@ -185,7 +184,7 @@ public class CryptoUtils {
             // 解密
             byte[] plaintext = cipher.doFinal(ciphertext);
             return new String(plaintext, StandardCharsets.UTF_8);
-        }catch (Exception e){
+        } catch (Exception e) {
             log.error("AES-GCM 解密失败", e);
             return encrypted;
         }
@@ -200,7 +199,7 @@ public class CryptoUtils {
      * @return 加密后的字符串
      * @throws Exception 加密失败或密钥未配置
      */
-    public static String encrypt(String plaintext){
+    public static String encrypt(String plaintext) {
         byte[] key = getAesKey();
         if (key == null) {
             log.warn("[crypto] SYSTEM_AES_KEY 未配置或长度不正确");
@@ -215,9 +214,8 @@ public class CryptoUtils {
      *
      * @param encrypted 加密字符串
      * @return 解密后的明文
-     * @throws Exception 解密失败或密钥未配置
      */
-    public static String decryptStrict(String encrypted) throws Exception {
+    public static String decryptStrict(String encrypted) {
         if (StrUtil.isBlank(encrypted)) {
             return encrypted;
         }

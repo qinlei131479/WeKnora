@@ -21,6 +21,7 @@ node_modules/
 /dist/
 /build/
 *.log
+/target/
 
 # 临时文件
 tmp/
