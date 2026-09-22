@@ -25,5 +25,5 @@ public class SkillCatalogPageDTO implements Serializable {
     private String keyword;
 
     @Schema(description = "租户 ID（为空查询全部租户）")
-    private Long tenantId;
+    private Integer tenantId;
 }
