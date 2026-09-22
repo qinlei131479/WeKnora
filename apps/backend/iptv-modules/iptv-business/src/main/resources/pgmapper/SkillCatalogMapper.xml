@@ -22,38 +22,27 @@
     </sql>
 
     <select id="queryPage" resultMap="SkillCatalogResult">
-        select
+        SELECT
         <include refid="Base_Column_List"/>
-        from tenant_skill_catalog
+        FROM tenant_skill_catalog
         <where>
-            deleted_at is null
-            <if test="param.name != null and param.name != ''">
-                and name ilike concat('%', #{param.name}, '%')
-            </if>
-            <if test="param.description != null and param.description != ''">
-                and description ilike concat('%', #{param.description}, '%')
-            </if>
-            <if test="param.version != null and param.version != ''">
-                and version ilike concat('%', #{param.version}, '%')
+            deleted_at IS NULL
+            <if test="param.keyword != null and param.keyword != ''">
+                AND name ILIKE CONCAT('%', #{param.keyword}, '%')
+                OR description ILIKE CONCAT('%', #{param.keyword}, '%')
             </if>
             <if test="param.tenantId != null">
-                and tenant_id = #{param.tenantId}
-            </if>
-            <if test="param.createdAtStart != null">
-                and created_at &gt;= #{param.createdAtStart}
-            </if>
-            <if test="param.createdAtEnd != null">
-                and created_at &lt;= #{param.createdAtEnd}
+                AND tenant_id = #{param.tenantId}
             </if>
         </where>
-        order by created_at desc
+        ORDER BY created_at DESC
     </select>
 
     <select id="countInstallRefs" resultType="long">
-        select count(*)
-        from tenant_skills
-        where catalog_id = #{catalogId}
-          and deleted_at is null
+        SELECT COUNT(*) cnt
+        FROM tenant_skills
+        WHERE catalog_id = #{catalogId}
+          AND deleted_at IS NULL
     </select>
 
 </mapper>
