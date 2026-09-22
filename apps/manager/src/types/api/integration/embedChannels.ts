@@ -1,5 +1,5 @@
 import type { CustomAgentsVO } from '../agent/customAgents';
-import type { TenantsVO } from '../data/tenants';
+import type { TenantsVO } from '../tenants';
 
 /** 网页嵌入渠道新增/更新参数 */
 export interface EmbedChannelsDTO {

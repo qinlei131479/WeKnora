@@ -69,13 +69,7 @@
             </el-button>
           </div>
           <div class="table-area">
-            <el-table
-              ref="tableRef"
-              v-loading="loading"
-              :data="tableData"
-              height="100%"
-              @row-click="handleRowClick"
-            >
+            <el-table ref="tableRef" v-loading="loading" :data="tableData" height="100%" @row-click="handleRowClick">
               <template #empty>
                 <kjsc-empty />
               </template>
@@ -197,20 +191,16 @@
 
 <script setup lang="ts" name="KnowledgeFileList">
 import type { Component, PropType } from 'vue';
-import { ref, reactive, onMounted } from '@vue/runtime-core';
-// import { Document, Folder, FolderOpened } from '@element-plus/icons-vue';
+import { ref, onMounted } from '@vue/runtime-core';
 import { Folder, FolderOpen, LoaderCircle, CircleX } from 'lucide-vue-next';
-import { AjaxResult, KnowledgeBaseEntity, KnowledgeFileEntity, KnowledgeFileFoldersNode, KnowledgeFileListReq, TableShowColumns } from '@/types';
-
-import { useI18n } from 'vue-i18n';
+import { KnowledgeBaseEntity, KnowledgeFileEntity, KnowledgeFileFoldersNode, KnowledgeFileListReq, TableShowColumns } from '@/types';
+// import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { Search } from 'lucide-vue-next';
-
 import { getKnowledgeBaseSingleApi } from '@/api/data/knowledgeBase.js';
-
 import { formatSize } from '@/utils';
 import folderUse from './fileList/folderUse';
 import filesQueryUse from './fileList/filesQueryUse';
-
 import FileDetailDrawer from './components/FileDetailDrawer.vue';
 
 const emit = defineEmits(['back']);
@@ -226,8 +216,8 @@ const props = defineProps({
   }
 });
 
-const { t } = useI18n();
-const $t = t;
+// const { t } = useI18n();
+// const $t = t;
 const goBack = () => {
   emit('back');
 };
@@ -242,8 +232,15 @@ const libName = computed(() => libInfo.value.name || libInfo.value.id);
 const { folderTreeData, folderTreeProps, folderTreeIds, loadFolderTreeData } = folderUse({ t }, props.libId);
 
 const {
-  pageParams, queryParams, tableData, loading, total, loadTableData,
-  resetQuerySearch: resetFileQuerySearch, resetParams, handleDelete
+  pageParams,
+  queryParams,
+  tableData,
+  loading,
+  total,
+  loadTableData,
+  resetQuerySearch: resetFileQuerySearch,
+  resetParams,
+  handleDelete
 } = filesQueryUse(props.libId);
 const folderTreeRef = ref<{ setCurrentKey: (key?: string | number) => void }>();
 

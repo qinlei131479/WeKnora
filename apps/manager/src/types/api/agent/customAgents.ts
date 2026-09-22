@@ -1,5 +1,5 @@
 import type { KnowledgeBaseEntity, McpServicesVO } from '../data';
-import type { TenantsVO } from '../data/tenants';
+import type { TenantsVO } from '../tenants';
 import type { ModelEntity } from '../model';
 
 export type CustomAgentMode = 'quick-answer' | 'smart-reasoning';

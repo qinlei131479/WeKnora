@@ -1,5 +1,5 @@
 <script setup lang="ts" name="Models">
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { Search } from 'lucide-vue-next';
 import { API } from '@/api';
 import type { PageDomain } from '@/types';
@@ -9,7 +9,6 @@ import ModelFormDrawer from './components/ModelFormDrawer.vue';
 import { MODEL_SOURCE_OPTIONS, MODEL_TYPE_OPTIONS, modelTypeLabelKey } from './constants';
 
 const { proxy } = getCurrentInstance() as any;
-const { t } = useI18n();
 
 const loading = ref(false);
 

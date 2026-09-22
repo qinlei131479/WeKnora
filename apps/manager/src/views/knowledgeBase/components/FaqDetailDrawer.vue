@@ -33,17 +33,16 @@
 <script setup lang="ts">
 import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { KnowledgeFaqEntity } from '@/types';
-import { useI18n } from 'vue-i18n';
-const { t } = useI18n();
+import { t } from '@/i18n';
 
 // Props
-const props = defineProps<{
+defineProps<{
   visible: boolean;
   entity?: KnowledgeFaqEntity;
 }>();
 
 // Emits
-const emit = defineEmits<{
+defineEmits<{
   (e: 'update:visible', value: boolean): void;
 }>();
 </script>

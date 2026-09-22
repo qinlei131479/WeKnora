@@ -1,5 +1,6 @@
 import type { CustomAgentsVO } from '../agent/customAgents';
-import type { KnowledgeBaseEntity, TenantsVO } from '../data';
+import type { KnowledgeBaseEntity } from '../data';
+import type { TenantsVO } from '../tenants';
 
 /** IM 渠道基础交互参数 */
 export interface ImChannelsDTO {

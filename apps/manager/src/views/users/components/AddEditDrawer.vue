@@ -2,40 +2,37 @@
 import type { FormInstance, FormRules } from 'element-plus/es/components/form';
 import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import modal from '@/plugins/modal';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { Trash } from 'lucide-vue-next';
 import { useRoleOptions } from '@/composables/useRoleLabel';
-import type { AjaxResult, TenantMemberEntity, TenantMemberTenantIdAndRole, TenantSpaceEntity, ValueLabelOption } from '@/types';
-import { addTenantMemberSingleApi, getTenantMemberSingleApi, updateTenantMemberSingleApi } from '@/api/space/tenantMember.js';
-import { getTenantSpaceListApi } from '@/api/space/tenantSpace';
+import type { AjaxResult, UsersDTO, UsersVO, BindTenantDTO, TenantsVO, ValueLabelOption } from '@/types';
+import { API } from '@/api';
 
-interface FormEntity extends TenantMemberEntity {
-  password?: string;
-  bindTenants: TenantMemberTenantIdAndRole[];
+interface FormEntity extends Omit<UsersDTO, 'tenants'> {
+  bindTenants: BindTenantDTO[];
 }
 
 const emit = defineEmits<{
   (event: 'success'): void;
 }>();
 
-const { t } = useI18n();
 const open = ref(false);
 const mode = ref<'add' | 'edit'>('add');
-const title = ref(t('page.tenantMember.addTitle', '新增空间成员'));
+const title = ref(t('page.users.addTitle', '新增空间成员'));
 const saveFormRef = ref<FormInstance>();
-const form = ref<FormEntity>({ bindTenants: [] });
+const form = ref<FormEntity>({ id: '', bindTenants: [] });
 
-const validateBindTenants = (_rule: unknown, value: TenantMemberTenantIdAndRole[], callback: (error?: Error) => void) => {
+const validateBindTenants = (_rule: unknown, value: BindTenantDTO[], callback: (error?: Error) => void) => {
   if (!value || value.length === 0) {
-    callback(new Error(t('page.tenantMember.error.tenants.empty', '关联空间&空间角色不能为空')));
+    callback(new Error(t('page.users.error.tenants.empty', '关联空间&空间角色不能为空')));
   } else {
     let errorMsg: string | null = null;
-    value.some((item: TenantMemberTenantIdAndRole) => {
+    value.some((item: BindTenantDTO) => {
       if (!item.tenantId) {
-        errorMsg = t('page.tenantMember.error.tenants.space', '关联空间不能为空');
+        errorMsg = t('page.users.error.tenants.space', '关联空间不能为空');
         return true;
       } else if (!item.role) {
-        errorMsg = t('page.tenantMember.error.tenants.role', '关联角色不能为空');
+        errorMsg = t('page.users.error.tenants.role', '关联角色不能为空');
         return true;
       }
     });
@@ -48,16 +45,34 @@ const validateBindTenants = (_rule: unknown, value: TenantMemberTenantIdAndRole[
 };
 
 const addRules: FormRules<FormEntity> = {
-  username: [{ required: true, message: t('page.tenantMember.error.username', '租户成员名称不能为空'), trigger: 'blur' }],
-  password: [{ required: true, message: t('page.tenantMember.error.password', '密码不能为空'), trigger: 'blur' }],
-  email: [{ required: true, message: t('page.tenantMember.error.email', '登录账号不能为空'), trigger: 'blur' }],
+  account: [
+    { required: true, message: t('page.users.error.account', '账号不能为空'), trigger: 'blur' },
+    {
+      pattern: /^[A-Za-z][A-Za-z0-9_]*$/,
+      message: t('page.users.error.accountFormat', '账号必须以字母开头，只能包含字母、数字和下划线'),
+      trigger: 'blur'
+    }
+  ],
+  password: [
+    { required: true, message: t('page.users.error.password', '密码不能为空'), trigger: 'blur' },
+    {
+      pattern: /^(?=.*[A-Za-z])(?=.*[0-9]).{6,20}$/,
+      message: t('page.users.error.passwordFormat', '密码必须包含字母和数字，长度为6~20位'),
+      trigger: 'blur'
+    }
+  ],
+  username: [{ required: true, whitespace: true, message: t('page.users.error.username', '用户名不能为空'), trigger: 'blur' }],
+  email: [
+    { required: true, message: t('page.users.error.email', '邮箱不能为空'), trigger: 'blur' },
+    { type: 'email', message: t('page.users.error.emailFormat', '请输入正确的邮箱地址'), trigger: 'blur' }
+  ],
   bindTenants: [{ validator: validateBindTenants, trigger: 'change' }]
 };
 const editRules: FormRules<FormEntity> = {
   bindTenants: [{ validator: validateBindTenants, trigger: 'change' }]
 };
 
-const tenantOptions = ref<TenantSpaceEntity[]>([]);
+const tenantOptions = ref<TenantsVO[]>([]);
 const tenantRoleOptions = ref<ValueLabelOption[]>(useRoleOptions());
 const addBindTenant = () => {
   form.value.bindTenants.push({
@@ -73,7 +88,7 @@ const removeBindTenant = (index: number) => {
 };
 
 const getTenantOptions = () => {
-  getTenantSpaceListApi({}, { pageNum: 1, pageSize: 9999 }).then((res) => {
+  API.Tenants.list({}, { pageNum: 1, pageSize: 9999 }).then((res) => {
     tenantOptions.value = res.rows || [];
   });
 };
@@ -83,21 +98,25 @@ const handleSaveModelOpen = () => {
 
 /** 重置操作表单 */
 function reset() {
+  saveFormRef.value?.resetFields();
   form.value = {
+    id: '',
     bindTenants: [
       {
         tenantId: undefined,
         role: undefined
       }
-    ] as TenantMemberTenantIdAndRole[]
+    ]
   };
-  saveFormRef.value?.resetFields();
+  nextTick(() => {
+    saveFormRef.value?.clearValidate();
+  });
 }
 
 /** 新增按钮操作 */
 function handleAdd() {
   reset();
-  title.value = t('page.tenantMember.addTitle', '新增成员');
+  title.value = t('page.users.addTitle', '新增成员');
   open.value = true;
   mode.value = 'add';
 }
@@ -105,9 +124,9 @@ function handleAdd() {
 /** 修改按钮操作 */
 function handleUpdate(id: string) {
   reset();
-  title.value = t('page.tenantMember.updateTitle', '修改成员信息');
+  title.value = t('page.users.updateTitle', '修改成员信息');
   mode.value = 'edit';
-  getTenantMemberSingleApi(id).then((res) => {
+  API.Users.single(id).then((res) => {
     if (res?.code === 200) {
       form.value = serverDataToFormData(res.data || {});
       open.value = true;
@@ -115,20 +134,26 @@ function handleUpdate(id: string) {
   });
 }
 
-function serverDataToFormData(data: TenantMemberEntity) {
-  const formData = { ...data } as FormEntity;
-  formData.bindTenants = data.tenants || [];
-  return formData;
+function serverDataToFormData(data: UsersVO): FormEntity {
+  return {
+    id: data.id || '',
+    account: data.account,
+    username: data.username,
+    email: data.email,
+    bindTenants: (data.tenants || []).map(({ tenantId, role }) => ({ tenantId, role }))
+  };
 }
-function formDataToServerData(formData: FormEntity) {
+function formDataToServerData(formData: FormEntity): UsersDTO {
   const { bindTenants, ...serverData } = formData;
-  serverData.tenants = bindTenants || [];
-  return serverData;
+  return {
+    ...serverData,
+    tenants: bindTenants || []
+  };
 }
 
 function doUpdate() {
   const params = formDataToServerData(form.value);
-  return updateTenantMemberSingleApi(params).then((res: AjaxResult) => {
+  return API.Users.update(params).then((res: AjaxResult) => {
     if (res.code === 200) {
       modal.msgSuccess(t('page.normal.confirmInfo.updateSuccess', '修改成功'));
       emit('success');
@@ -139,7 +164,7 @@ function doUpdate() {
 
 function doAdd() {
   const params = formDataToServerData(form.value);
-  return addTenantMemberSingleApi(params).then((res: AjaxResult) => {
+  return API.Users.insert(params).then((res: AjaxResult) => {
     if (res.code === 200) {
       modal.msgSuccess(t('page.normal.confirmInfo.addSuccess', '新增成功'));
       emit('success');
@@ -175,42 +200,52 @@ defineExpose({
     <el-form
       :model="form"
       :rules="mode === 'add' ? addRules : editRules"
+      :validate-on-rule-change="false"
       ref="saveFormRef"
       label-position="left"
       class="tenant-space-form"
-      :label-width="$dim('page.tenantMember.formLabel', 120)"
+      :label-width="$dim('page.users.formLabel', 120)"
     >
       <el-row>
         <el-col :span="12">
-          <el-form-item :label="$t('page.tenantMember.username', '成员名称')" prop="username">
-            <el-input
-              v-model="form.username"
-              :placeholder="$t('page.tenantMember.usernamePlaceholder', '请输入成员名称')"
-              maxlength="999"
-              :show-word-limit="false"
-              :disabled="mode === 'edit'"
-            />
+          <el-form-item :label="$t('page.users.account', '账号')" prop="account">
+            <el-input v-model="form.account" :placeholder="$t('page.users.accountPlaceholder', '请输入账号')" :disabled="mode === 'edit'" />
           </el-form-item>
         </el-col>
         <el-col :span="12">
-          <el-form-item :label="$t('page.tenantMember.password', '密码')" prop="password" label-position="right">
+          <el-form-item :label="$t('page.users.password', '密码')" prop="password" label-position="right">
             <el-input
               v-model="form.password"
               type="password"
               show-password
               autocomplete="new-password"
-              :placeholder="$t('page.tenantMember.passwordPlaceholder', '请输入账号密码')"
-              maxlength="999"
+              :placeholder="$t('page.users.passwordPlaceholder', '请输入密码')"
+              maxlength="20"
               :show-word-limit="false"
               :disabled="mode === 'edit'"
             />
           </el-form-item>
         </el-col>
       </el-row>
-      <el-form-item :label="$t('page.tenantMember.email', '登录账号')" prop="email">
-        <el-input v-model="form.email" :placeholder="$t('page.tenantMember.emailPlaceholder', '请输入登录账号')" :disabled="mode === 'edit'" />
-      </el-form-item>
-      <el-form-item :label="$t('page.tenantMember.spaceAndRole', '空间&角色')" prop="bindTenants">
+      <el-row>
+        <el-col :span="12">
+          <el-form-item :label="$t('page.users.username', '用户名')" prop="username">
+            <el-input
+              v-model="form.username"
+              :placeholder="$t('page.users.usernamePlaceholder', '请输入用户名')"
+              maxlength="999"
+              :show-word-limit="false"
+              :disabled="mode === 'edit'"
+            />
+          </el-form-item>
+        </el-col>
+        <el-col :span="12">
+          <el-form-item :label="$t('page.users.email', '邮箱')" prop="email" label-position="right">
+            <el-input v-model="form.email" :placeholder="$t('page.users.emailPlaceholder', '请输入邮箱')" :disabled="mode === 'edit'" />
+          </el-form-item>
+        </el-col>
+      </el-row>
+      <el-form-item :label="$t('page.users.spaceAndRole', '租户&角色')" prop="bindTenants">
         <div class="space-and-role">
           <div class="add-area">
             <el-button type="primary" size="small" @click="addBindTenant">
@@ -224,13 +259,13 @@ defineExpose({
                 :options="tenantOptions"
                 filterable
                 :props="{ value: 'id', label: 'name' }"
-                :placeholder="$t('page.tenantMember.spacePlaceholder', '请选择空间')"
+                :placeholder="$t('page.users.spacePlaceholder', '请选择空间')"
               />
               <el-select-v2
                 v-model="item.role"
                 :options="tenantRoleOptions"
                 filterable
-                :placeholder="$t('page.tenantMember.rolePlaceholder', '请选择角色')"
+                :placeholder="$t('page.users.rolePlaceholder', '请选择角色')"
               />
               <el-button type="danger" text @click="removeBindTenant(index)">
                 <el-icon><Trash /></el-icon>

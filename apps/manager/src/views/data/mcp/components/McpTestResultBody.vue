@@ -115,9 +115,7 @@ import modal from '@/plugins/modal';
 import { X, CircleCheck, CircleX, Wrench, CircleAlert, ChevronUp, ChevronRight, File, Link } from 'lucide-vue-next';
 import { API } from '@/api';
 import type { McpTestResultVO, McpToolVO, McpToolApprovalsDTO } from '@/types';
-// import { MessagePlugin } from 'tdesign-vue-next'
-
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 
 interface Props {
   result: McpTestResultVO | null;
@@ -181,7 +179,6 @@ const setMCPToolApproval = (id: string, toolName: string, value: boolean) => {
 // const $t = t;
 
 const expandedToolIndex = ref<number | null>(null);
-const { t } = useI18n();
 interface DisplayTool extends McpToolVO {
   name: string;
   requireApproval: boolean;

@@ -1193,13 +1193,39 @@
         "table.sortOrder": "排序",
         "table.updatedAt": "更新时间"
       },
-      "skill": {
-        "empty.unavailable": "当前系统未配置预装技能目录",
-        "search.placeholder": "输入技能名称或描述搜索",
-        "status.available": "技能可用",
-        "status.unavailable": "技能未启用",
-        "table.description": "技能描述",
-        "table.name": "技能名称",
+      "skills": {
+        "add.completedHint": "技能已添加到目录。",
+        "add.dropHint": "或将文件拖到此处",
+        "add.finish": "完成",
+        "add.next": "下一步",
+        "add.or": "或者",
+        "add.source": "从来源添加",
+        "add.sourceHint": "支持 {'@'}slug、skills-sh:owner/repo/slug、GitHub/GitLab URL、zip 或 SKILL.md 直链",
+        "add.sourcePlaceholder": "粘贴技能来源链接或输入技能标识",
+        "add.subtitle": "粘贴来源或上传文件，先将技能添加到目录。",
+        "add.title": "新增技能",
+        "add.upload": "上传本地文件",
+        "add.uploadHint": "支持 .zip 技能包或 SKILL.md 文件",
+        "add.uploadText": "点击上传 .zip 或 SKILL.md 文件",
+        "deleteConfirm": "确认删除技能 {name}？",
+        "error.fileLoad": "文件内容加载失败，请重试",
+        "error.fileType": "仅支持 .zip 或 SKILL.md 文件",
+        "error.filesLoad": "文件目录加载失败，请重试",
+        "error.oneFile": "一次只能选择一个技能文件",
+        "error.sourceOrFileRequired": "请填写技能来源或选择文件",
+        "field.createdAt": "创建时间",
+        "field.description": "技能描述",
+        "field.name": "技能名称",
+        "field.tenant": "租户",
+        "field.updatedAt": "更新时间",
+        "field.version": "版本",
+        "files.preview": "预览",
+        "files.selectFile": "选择文件查看内容",
+        "files.source": "源码",
+        "files.subtitle": "文件",
+        "files.title": "查看文件",
+        "search.keyword": "按技能名称、描述搜索",
+        "search.tenant": "选择租户",
         "title": "Skill管理"
       },
       "storage": {
@@ -2195,51 +2221,7 @@
         }
       }
     },
-    "tenantMember": {
-      "add": "新增成员",
-      "addTitle": "新增成员",
-      "confirmInfo": {
-        "disable": "是否确认停用成员名称为\"{username}\"的数据项？",
-        "disableBatch": "是否确认停用选中的成员？",
-        "disableBatchSuccess": "批量停用成功",
-        "enable": "是否确认启用成员名称为\"{username}\"的数据项？",
-        "enableBatch": "是否确认启用选中的成员？",
-        "enableBatchSuccess": "批量启用成功",
-        "remove": "是否确认删除成员编号为\"{id}\"的数据项？"
-      },
-      "createdAt": "注册时间",
-      "email": "登录账号",
-      "emailPlaceholder": "请输入登录账号",
-      "error": {
-        "email": "登录账号不能为空",
-        "password": "密码不能为空",
-        "tenants": {
-          "empty": "关联租户不能为空",
-          "role": "关联角色不能为空",
-          "space": "关联租户不能为空"
-        },
-        "username": "租户成员名称不能为空"
-      },
-      "id": "成员ID",
-      "password": "密码",
-      "passwordPlaceholder": "请输入账号密码",
-      "role": {
-        "admin": "管理员",
-        "contributor": "编辑",
-        "owner": "所有者",
-        "viewer": "查看"
-      },
-      "rolePlaceholder": "请选择角色",
-      "searchPlaceholder": "搜索成员名称",
-      "spaceAndRole": "租户&角色",
-      "spacePlaceholder": "请选择租户",
-      "tenants": "关联租户和角色",
-      "tenantsPlaceholder": "请选择租户角色",
-      "updateTitle": "修改成员信息",
-      "username": "成员名称",
-      "usernamePlaceholder": "请输入成员名称"
-    },
-    "tenantSpace": {
+    "tenants": {
       "add": "新增租户",
       "createdAt": "创建时间",
       "description": "描述",
@@ -2252,6 +2234,57 @@
       "storageQuota": "存储配额",
       "storageRate": "储存使用率",
       "storageUsed": "已使用储存"
+    },
+    "users": {
+      "account": "账号",
+      "accountPlaceholder": "请输入账号",
+      "add": "新增成员",
+      "addTitle": "新增成员",
+      "confirmInfo": {
+        "disable": "是否确认停用成员名称为\"{username}\"的数据项？",
+        "disableBatch": "是否确认停用选中的成员？",
+        "disableBatchSuccess": "批量停用成功",
+        "enable": "是否确认启用成员名称为\"{username}\"的数据项？",
+        "enableBatch": "是否确认启用选中的成员？",
+        "enableBatchSuccess": "批量启用成功",
+        "remove": "是否确认删除成员编号为\"{id}\"的数据项？"
+      },
+      "createdAt": "注册时间",
+      "email": "邮箱",
+      "emailPlaceholder": "请输入邮箱",
+      "error": {
+        "account": "账号不能为空",
+        "accountFormat": "账号必须以字母开头，只能包含字母、数字和下划线",
+        "email": "邮箱不能为空",
+        "emailFormat": "请输入正确的邮箱地址",
+        "password": "密码不能为空",
+        "passwordFormat": "密码必须包含字母和数字，长度为6~20位",
+        "tenants": {
+          "empty": "关联租户不能为空",
+          "role": "关联角色不能为空",
+          "space": "关联租户不能为空"
+        },
+        "username": "用户名不能为空"
+      },
+      "id": "成员ID",
+      "isActive": "状态",
+      "password": "密码",
+      "passwordPlaceholder": "请输入密码",
+      "role": {
+        "admin": "管理员",
+        "contributor": "编辑",
+        "owner": "所有者",
+        "viewer": "查看"
+      },
+      "rolePlaceholder": "请选择角色",
+      "searchPlaceholder": "搜索成员名称",
+      "spaceAndRole": "租户&角色",
+      "spacePlaceholder": "请选择租户",
+      "tenants": "租户&角色",
+      "tenantsPlaceholder": "请选择租户角色",
+      "updateTitle": "修改成员信息",
+      "username": "用户名",
+      "usernamePlaceholder": "请输入用户名"
     }
   },
   "plugin": {},

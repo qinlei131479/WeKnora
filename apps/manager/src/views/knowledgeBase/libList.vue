@@ -32,13 +32,7 @@
         </div>
       </template>
 
-      <el-table
-        ref="tableRef"
-        v-loading="loading"
-        :data="tableData"
-        height="100%"
-        @row-click="handleRowClick"
-      >
+      <el-table ref="tableRef" v-loading="loading" :data="tableData" height="100%" @row-click="handleRowClick">
         <template #empty>
           <kjsc-empty />
         </template>
@@ -269,8 +263,7 @@
 import modal from '@/plugins/modal';
 import { ref, reactive } from '@vue/runtime-core';
 import { AjaxResult, KnowledgeBaseEntity, KnowledgeBaseExtends, KnowledgeBaseListReq, TableShowColumns } from '@/types';
-
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { Search } from 'lucide-vue-next';
 
 import KnowledgeBaseDetailDrawer from './components/KnowledgeBaseDetailDrawer.vue';
@@ -281,9 +274,6 @@ import { getKBChunkStrategyOptionLabel } from '@/composables/useKBChunk.js';
 import { parseEntity } from '@/composables/useKnowledge.js';
 
 const emit = defineEmits(['manage']);
-
-const { t } = useI18n();
-const $t = t;
 
 const i18nTexts = ref({
   enable: t('page.normal.enable'),
@@ -297,11 +287,11 @@ const loading = ref<boolean>(true);
 const total = ref<number>(0);
 // 列显隐信息
 const columns = ref<Record<string, TableShowColumns>>({
-  name: { label: $t('page.knowledgeBase.name', '知识库名称'), visible: true },
-  type: { label: $t('page.knowledgeBase.type', '知识库类型'), visible: true },
-  indexingStrategy: { label: $t('page.knowledgeBase.indexingStrategy', '索引策略'), visible: true },
-  llmModel: { label: $t('page.knowledgeBase.llmModel', 'LLM语言大模型'), visible: true },
-  embeddingModel: { label: $t('page.knowledgeBase.embeddingModel', 'Embedding嵌入模型'), visible: true }
+  name: { label: t('page.knowledgeBase.name', '知识库名称'), visible: true },
+  type: { label: t('page.knowledgeBase.type', '知识库类型'), visible: true },
+  indexingStrategy: { label: t('page.knowledgeBase.indexingStrategy', '索引策略'), visible: true },
+  llmModel: { label: t('page.knowledgeBase.llmModel', 'LLM语言大模型'), visible: true },
+  embeddingModel: { label: t('page.knowledgeBase.embeddingModel', 'Embedding嵌入模型'), visible: true }
 });
 
 const open = ref<boolean>(false);
@@ -353,7 +343,7 @@ function resetQuery() {
 /** 删除按钮操作 */
 function handleDelete(row: KnowledgeBaseEntity) {
   const id = row.id!;
-  const message = t('page.tenantMember.deleteConfirm', '是否确认删除知识库编号为"' + id + '"的数据项？');
+  const message = t('page.users.deleteConfirm', '是否确认删除知识库编号为"' + id + '"的数据项？');
   modal.confirm(message).then(
     function () {
       return doDelete(id);

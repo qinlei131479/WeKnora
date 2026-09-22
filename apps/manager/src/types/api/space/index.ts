@@ -1,2 +1,1 @@
-export * from './tenantSpace'
-export * from './tenantMember'
+export * from './user'

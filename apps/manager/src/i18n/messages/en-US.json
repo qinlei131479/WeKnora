@@ -1193,13 +1193,39 @@
         "table.sortOrder": "Sort Order",
         "table.updatedAt": "Updated Time"
       },
-      "skill": {
-        "empty.unavailable": "No preloaded skill directory is configured",
-        "search.placeholder": "Search by skill name or description",
-        "status.available": "Skills available",
-        "status.unavailable": "Skills disabled",
-        "table.description": "Description",
-        "table.name": "Skill Name",
+      "skills": {
+        "add.completedHint": "The skill has been added to the catalog.",
+        "add.dropHint": "or drag the file here",
+        "add.finish": "Finish",
+        "add.next": "Next",
+        "add.or": "OR",
+        "add.source": "Add from Source",
+        "add.sourceHint": "Supports {'@'}slug, skills-sh:owner/repo/slug, GitHub/GitLab URLs, and direct links to zip or SKILL.md files",
+        "add.sourcePlaceholder": "Paste a skill source URL or enter a skill identifier",
+        "add.subtitle": "Paste a source or upload a file to add the skill to the catalog first.",
+        "add.title": "Add Skill",
+        "add.upload": "Upload Local File",
+        "add.uploadHint": "Upload a .zip skill bundle or a SKILL.md file",
+        "add.uploadText": "Click to upload a .zip or SKILL.md file",
+        "deleteConfirm": "Delete skill {name}?",
+        "error.fileLoad": "Failed to load file content. Please retry.",
+        "error.fileType": "Only .zip and SKILL.md files are supported",
+        "error.filesLoad": "Failed to load the file tree. Please retry.",
+        "error.oneFile": "Select only one skill file at a time",
+        "error.sourceOrFileRequired": "Enter a skill source or select a file",
+        "field.createdAt": "Created Time",
+        "field.description": "Description",
+        "field.name": "Skill Name",
+        "field.tenant": "Tenant",
+        "field.updatedAt": "Updated Time",
+        "field.version": "Version",
+        "files.preview": "Preview",
+        "files.selectFile": "Select a file to view its content",
+        "files.source": "Source",
+        "files.subtitle": "Files",
+        "files.title": "View Files",
+        "search.keyword": "Search by skill name or description",
+        "search.tenant": "Select a tenant",
         "title": "Skill Management"
       },
       "storage": {
@@ -2195,51 +2221,7 @@
         }
       }
     },
-    "tenantMember": {
-      "add": "Add Member",
-      "addTitle": "Add member",
-      "confirmInfo": {
-        "disable": "Are you sure you want to disable the member \"{username}\"?",
-        "disableBatch": "Are you sure you want to disable the selected members?",
-        "disableBatchSuccess": "Disabled successfully",
-        "enable": "Are you sure you want to enable the member \"{username}\"?",
-        "enableBatch": "Are you sure you want to enable the selected members?",
-        "enableBatchSuccess": "Enabled successfully",
-        "remove": "Are you sure you want to delete the member with ID \"{id}\"?"
-      },
-      "createdAt": "Registration Time",
-      "email": "Login Account",
-      "emailPlaceholder": "Enter the login account",
-      "error": {
-        "email": "Login account is required",
-        "password": "Password is required",
-        "tenants": {
-          "empty": "Associated workspaces and workspace roles are required",
-          "role": "An associated role is required",
-          "space": "An associated workspace is required"
-        },
-        "username": "Tenant member name is required"
-      },
-      "id": "Member ID",
-      "password": "Password",
-      "passwordPlaceholder": "Enter the account password",
-      "role": {
-        "admin": "Admin",
-        "contributor": "Contributor",
-        "owner": "Owner",
-        "viewer": "View"
-      },
-      "rolePlaceholder": "Select a role",
-      "searchPlaceholder": "Search member names",
-      "spaceAndRole": "Workspaces and roles",
-      "spacePlaceholder": "Select a workspace",
-      "tenants": "Associated workspaces and workspace roles",
-      "tenantsPlaceholder": "Select associated workspaces and workspace roles",
-      "updateTitle": "Edit member information",
-      "username": "Member name",
-      "usernamePlaceholder": "Enter the member name"
-    },
-    "tenantSpace": {
+    "tenants": {
       "add": "Add tenant",
       "createdAt": "Created at",
       "description": "Description",
@@ -2252,6 +2234,57 @@
       "storageQuota": "Storage Quota",
       "storageRate": "Storage usage",
       "storageUsed": "Storage used"
+    },
+    "users": {
+      "account": "Account",
+      "accountPlaceholder": "Enter an account",
+      "add": "Add Member",
+      "addTitle": "Add member",
+      "confirmInfo": {
+        "disable": "Are you sure you want to disable the member \"{username}\"?",
+        "disableBatch": "Are you sure you want to disable the selected members?",
+        "disableBatchSuccess": "Disabled successfully",
+        "enable": "Are you sure you want to enable the member \"{username}\"?",
+        "enableBatch": "Are you sure you want to enable the selected members?",
+        "enableBatchSuccess": "Enabled successfully",
+        "remove": "Are you sure you want to delete the member with ID \"{id}\"?"
+      },
+      "createdAt": "Registration Time",
+      "email": "Email",
+      "emailPlaceholder": "Enter an email address",
+      "error": {
+        "account": "Account is required",
+        "accountFormat": "The account must start with a letter and contain only letters, digits, and underscores",
+        "email": "Email is required",
+        "emailFormat": "Enter a valid email address",
+        "password": "Password is required",
+        "passwordFormat": "The password must contain letters and digits and be 6–20 characters long",
+        "tenants": {
+          "empty": "Associated workspaces and workspace roles are required",
+          "role": "An associated role is required",
+          "space": "An associated workspace is required"
+        },
+        "username": "Username is required"
+      },
+      "id": "Member ID",
+      "isActive": "Status",
+      "password": "Password",
+      "passwordPlaceholder": "Enter a password",
+      "role": {
+        "admin": "Admin",
+        "contributor": "Contributor",
+        "owner": "Owner",
+        "viewer": "View"
+      },
+      "rolePlaceholder": "Select a role",
+      "searchPlaceholder": "Search member names",
+      "spaceAndRole": "Tenants & Roles",
+      "spacePlaceholder": "Select a workspace",
+      "tenants": "Tenants & Roles",
+      "tenantsPlaceholder": "Select associated workspaces and workspace roles",
+      "updateTitle": "Edit member information",
+      "username": "Username",
+      "usernamePlaceholder": "Enter a username"
     }
   },
   "plugin": {},

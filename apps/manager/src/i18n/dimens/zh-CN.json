@@ -1,10 +1,6 @@
 {
   "component": {},
   "page": {
-    "login": {
-      "brandContentWidth": 400,
-      "brandFeaturesWidth": 272
-    },
     "agent": {
       "list": {
         "table.createdAt": 180,
@@ -36,9 +32,14 @@
         "table.sortOrder": 80,
         "table.updatedAt": 180
       },
-      "skill": {
+      "skills": {
+        "table.createdAt": 180,
         "table.description": 360,
-        "table.name": 220
+        "table.name": 220,
+        "table.operation": 180,
+        "table.tenant": 180,
+        "table.updatedAt": 180,
+        "table.version": 100
       },
       "storage": {
         "table.createdAt": 180,
@@ -118,51 +119,55 @@
       "vectorStore": 200
     },
     "knowledgeFaq": {
-      "qaId": 320,
-      "standardQuestion": 220,
-      "similarQuestions": 220,
-      "negativeQuestions": 220,
       "answers": 220,
-      "tagName": 100,
-      "operation": 120
+      "negativeQuestions": 220,
+      "operation": 120,
+      "qaId": 320,
+      "similarQuestions": 220,
+      "standardQuestion": 220,
+      "tagName": 100
     },
     "knowledgeFile": {
-      "fileName": 200,
-      "fileType": 220,
-      "fileSize": 120,
-      "parseStatus": 120,
       "channel": 200,
       "createdAt": 180,
-      "operation": 120
+      "fileName": 200,
+      "fileSize": 120,
+      "fileType": 220,
+      "operation": 120,
+      "parseStatus": 120
+    },
+    "login": {
+      "brandContentWidth": 400,
+      "brandFeaturesWidth": 272
     },
     "mcp": {
-      "id": 320,
-      "name": 120,
       "description": 120,
       "enableddisabled": 120,
+      "id": 320,
       "isBuiltin": 120,
+      "name": 120,
       "operation": 220
     },
     "models": {
-      "table.name": 180,
-      "table.displayName": 160,
-      "table.type": 120,
-      "table.source": 120,
-      "table.provider": 140,
-      "table.credentialStatus": 100,
-      "table.isDefault": 100,
-      "table.isBuiltin": 100,
       "table.createdAt": 180,
-      "table.operation": 200
+      "table.credentialStatus": 100,
+      "table.displayName": 160,
+      "table.isBuiltin": 100,
+      "table.isDefault": 100,
+      "table.name": 180,
+      "table.operation": 200,
+      "table.provider": 140,
+      "table.source": 120,
+      "table.type": 120
     },
     "normal": {
       "datetime": 180
     },
     "ollama": {
-      "name": 160,
-      "size": 120,
       "digest": 300,
-      "modifiedAt": 170
+      "modifiedAt": 170,
+      "name": 160,
+      "size": 120
     },
     "system": {
       "dept": {
@@ -211,11 +216,11 @@
       "operlog": {
         "table.businessType": 100,
         "table.costTime": 110,
-        "table.operation": 80,
         "table.operId": 100,
         "table.operIp": 130,
         "table.operName": 110,
         "table.operTime": 170,
+        "table.operation": 80,
         "table.requestMethod": 100,
         "table.status": 100,
         "table.title": 140
@@ -249,15 +254,7 @@
         "table.userName": 120
       }
     },
-    "tenantMember": {
-      "email": 100,
-      "formLabel": 120,
-      "id": 300,
-      "operation": 220,
-      "tenants": 120,
-      "username": 120
-    },
-    "tenantSpace": {
+    "tenants": {
       "createdAt": 180,
       "description": 120,
       "id": 100,
@@ -267,6 +264,17 @@
       "storageQuota": 120,
       "storageRate": 120,
       "storageUsed": 120
+    },
+    "users": {
+      "account": 120,
+      "createdAt": 150,
+      "email": 130,
+      "formLabel": 120,
+      "id": 300,
+      "isActive": 80,
+      "operation": 220,
+      "tenants": 200,
+      "username": 120
     }
   }
 }

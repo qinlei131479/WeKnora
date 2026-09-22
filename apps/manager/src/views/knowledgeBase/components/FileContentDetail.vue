@@ -1,7 +1,7 @@
 <template></template>
 <script setup lang="ts">
 import { KnowledgeFileEntity } from '@/types';
-const props = defineProps<{
+defineProps<{
   entity: KnowledgeFileEntity;
 }>();
 </script>

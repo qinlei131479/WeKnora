@@ -1,4 +1,4 @@
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 
 export interface KBChunkStrategyOption {
   label: string;
@@ -35,6 +35,5 @@ export function getKBChunkStrategyOptionLabel(strategy: string): string {
   if (!strategy) {
     return '';
   }
-  const { t } = useI18n();
   return t(`component.knowledgeEditor.chunking.strategies.${strategy}.label`);
 }

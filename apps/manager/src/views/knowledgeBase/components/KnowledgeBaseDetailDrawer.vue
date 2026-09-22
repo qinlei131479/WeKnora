@@ -278,60 +278,16 @@
 </template>
 
 <script setup lang="ts">
-// import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus';
-import {
-  Close,
-  DocumentCopy,
-  CircleCheckFilled,
-  InfoFilled,
-  Cpu,
-  Coin,
-  HelpFilled,
-  Picture,
-  Microphone,
-  Folder,
-  Files,
-  Connection,
-  Setting,
-  Download,
-  Share,
-  Paperclip
-} from '@element-plus/icons-vue';
+import { ElMessage } from 'element-plus';
 import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
-import { useI18n } from 'vue-i18n';
-import { Search } from 'lucide-vue-next';
-
-// import KBModelConfig from './settings/KBModelConfig.vue';
-// import KBVectorStoreSettings from './settings/KBVectorStoreSettings.vue';
-// import KBStorageSettings from './settings/KBStorageSettings.vue';
-// import KBChunkingSettings from './settings/KBChunkingSettings.vue';
-// import KBAdvancedSettings from './settings/KBAdvancedSettings.vue';
-// import ModelSelector from '@/components/business/ModelSelector.vue';
-// import ModelDetail from '@/components/business/ModelDetail.vue';
-// import GraphSettings from './settings/GraphSettings.vue';
-// import KBShareSettings from './settings/KBShareSettings.vue';
-// import DataSourceSettings from './settings/DataSourceSettings.vue';
-// import KnowledgeBaseActivitySettings from './settings/KnowledgeBaseActivitySettings.vue';
-// import VectorStoreBadge from '@/components/business/VectorStoreBadge.vue';
+import { t } from '@/i18n';
 import KBParserDetail from './KBParserDetail.vue';
 import KnowledgeBaseActivityDetail from './KnowledgeBaseActivityDetail.vue';
-
 import { getKnowledgeBaseSingleApi } from '@/api/data/knowledgeBase.js';
-
 import { getKBChunkStrategyOptions } from '@/composables/useKBChunk';
 import { parseEntity } from '@/composables/useKnowledge.js';
 import { KnowledgeBaseExtends } from '@/types';
-import { getModelListApi } from '@/api/model/model.js';
 
-const { t } = useI18n();
-// const $t = t;
-
-// 功能开关（manager 项目默认启用）
-const hideDatasource = false;
-const hideShareManagement = false;
-
-// Props
 const props = defineProps<{
   visible: boolean;
   mode: 'create' | 'edit' | 'detail';
@@ -349,70 +305,27 @@ const modelTitle = computed(() => {
   return t('component.knowledgeEditor.titleDetail', '知识库详情');
 });
 
-/** 首次保存创建成功后留在弹窗内，继续配置共享等设置 */
-const savedKbId = ref<string | null>(null);
-const editorMode = computed(() => (savedKbId.value ? 'edit' : props.mode));
-const activeKbId = computed(() => savedKbId.value ?? props.kbId);
-
-const copyKbId = async () => {
-  const id = activeKbId.value;
-  if (!id) return;
-
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(id);
-    } else {
-      const textarea = document.createElement('textarea');
-      textarea.value = id;
-      textarea.setAttribute('readonly', '');
-      textarea.style.position = 'fixed';
-      textarea.style.opacity = '0';
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
-    }
-    ElMessage.success(t('common.copied'));
-  } catch {
-    ElMessage.error(t('common.copyFailed'));
-  }
-};
+const activeKbId = computed(() => props.kbId);
 
 const currentSection = ref<string>('basic');
-
-const saving = ref(false);
-const loading = ref(false);
-const allModels = ref<any[]>([]);
-const hasFiles = ref(false);
-const initialStorageProvider = ref<string>('');
-const tenantDefaultStorageProvider = ref('local');
-const initialIndexingStrategy = ref<any>(null);
-
-const canViewActivity = computed(() => {
-  if (editorMode.value === 'create' && !activeKbId.value) return false;
-  return true;
-});
-
-const chunkingDirty = ref(false);
 
 const navTabs = computed(() => {
   if (formData.value?.type === 'faq') {
     return [
-      { key: 'basic', icon: InfoFilled, label: t('component.knowledgeEditor.sidebar.basic') },
-      { key: 'faq', icon: HelpFilled, label: t('component.knowledgeEditor.sidebar.faq') },
-      { key: 'activity', icon: Paperclip, label: t('component.knowledgeEditor.sidebar.activity') }
+      { key: 'basic', label: t('component.knowledgeEditor.sidebar.basic') },
+      { key: 'faq', label: t('component.knowledgeEditor.sidebar.faq') },
+      { key: 'activity', label: t('component.knowledgeEditor.sidebar.activity') }
     ];
   }
   return [
-    { key: 'basic', icon: InfoFilled, label: t('component.knowledgeEditor.sidebar.basic') },
-    { key: 'parser', icon: Search, label: t('component.knowledgeEditor.sidebar.parserEngine') },
-    { key: 'multimodal', icon: Picture, label: t('component.knowledgeEditor.sidebar.multimodal') },
-    { key: 'asr', icon: Microphone, label: t('component.knowledgeEditor.sidebar.asr') },
-    { key: 'storage', icon: Folder, label: t('component.knowledgeEditor.sidebar.storage') },
-    { key: 'chunking', icon: Files, label: t('component.knowledgeEditor.sidebar.chunking') },
-    // { key: 'graph', icon: Connection, label: t('component.knowledgeEditor.sidebar.graph') },
-    { key: 'advanced', icon: Setting, label: t('component.knowledgeEditor.sidebar.advanced') },
-    { key: 'activity', icon: Paperclip, label: t('component.knowledgeEditor.sidebar.activity') }
+    { key: 'basic', label: t('component.knowledgeEditor.sidebar.basic') },
+    { key: 'parser', label: t('component.knowledgeEditor.sidebar.parserEngine') },
+    { key: 'multimodal', label: t('component.knowledgeEditor.sidebar.multimodal') },
+    { key: 'asr', label: t('component.knowledgeEditor.sidebar.asr') },
+    { key: 'storage', label: t('component.knowledgeEditor.sidebar.storage') },
+    { key: 'chunking', label: t('component.knowledgeEditor.sidebar.chunking') },
+    { key: 'advanced', label: t('component.knowledgeEditor.sidebar.advanced') },
+    { key: 'activity', label: t('component.knowledgeEditor.sidebar.activity') }
   ];
 });
 
@@ -434,30 +347,16 @@ const currentLanguage = computed(() => {
   return selected?.label || '';
 });
 
-const loadAllModels = async (force = false) => {
-  try {
-    const reslut = await getModelListApi({}, { pageNum: 1, pageSize: 9999 });
-    allModels.value = reslut.rows || [];
-  } catch (error) {
-    console.error('Failed to load model list:', error);
-    ElMessage.error(t('component.knowledgeEditor.messages.loadModelsFailed'));
-    allModels.value = [];
-  }
-};
-
 const loadKBData = async (kbIdOverride?: string) => {
   const kbId = kbIdOverride ?? activeKbId.value;
   if (!kbId) return;
 
-  loading.value = true;
   try {
     const reslut = await getKnowledgeBaseSingleApi(kbId);
     if (!reslut || !reslut.data) {
       throw new Error(t('component.knowledgeEditor.messages.notFound'));
     }
     const kb = reslut.data;
-
-    hasFiles.value = (kb.fileCount as number) > 0;
 
     const kbExtend: KnowledgeBaseExtends = parseEntity(kb);
     console.log('kbExtend', kbExtend);
@@ -606,15 +505,11 @@ const loadKBData = async (kbIdOverride?: string) => {
       {} as Record<string, string>
     );
     formData.value.chunkingConfig.languageNames = formData.value.chunkingConfig.languages.map((item: string) => languageValueLableMap[item]);
-    initialStorageProvider.value = formData.value.storageProvider;
-    initialIndexingStrategy.value = { ...formData.value.indexingStrategy };
     console.log('formData.value', { ...formData.value });
   } catch (error) {
     console.error('Failed to load knowledge base data:', error);
     ElMessage.error(t('component.knowledgeEditor.messages.loadDataFailed'));
     handleClose();
-  } finally {
-    loading.value = false;
   }
 };
 
@@ -627,18 +522,8 @@ const resolvedGranularity = computed<'focused' | 'standard' | 'exhaustive'>(() =
 });
 
 const resetState = () => {
-  savedKbId.value = null;
   currentSection.value = 'basic';
   formData.value = null;
-  hasFiles.value = false;
-  initialStorageProvider.value = '';
-  tenantDefaultStorageProvider.value = 'local';
-  initialIndexingStrategy.value = null;
-  saving.value = false;
-  loading.value = false;
-  chunkingDirty.value = false;
-  // kbCreatorId.value = '';
-  // kbTenantId.value = 0;
 };
 
 const handleClose = () => {
@@ -650,10 +535,9 @@ const handleClose = () => {
 
 watch(
   () => props.visible,
-  async (newVal?: boolean) => {
+  (newVal?: boolean) => {
     if (newVal) {
       resetState();
-      // await loadAllModels();
       loadKBData();
     }
   }

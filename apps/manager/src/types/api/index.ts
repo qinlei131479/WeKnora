@@ -17,5 +17,6 @@ export * from './integration';
 export * from './model';
 // 空间模块
 export * from './space';
+export * from './tenants';
 // System 模块
 export * from './system';

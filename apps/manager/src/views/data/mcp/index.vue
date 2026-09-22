@@ -1,7 +1,7 @@
 <template>
   <section class="mcp-manage-page">
     <page-name class="page-name">
-      <el-button type="primary" icon="Plus" v-hasPermi="['business:mcpServices:add']" @click="handleAdd">{{ $t('page.mcp.addTitle') }}</el-button>
+      <el-button type="primary" icon="Plus" v-hasPermi="['business:mcp:add']" @click="handleAdd">{{ $t('page.mcp.addTitle', '新增 MCP') }}</el-button>
     </page-name>
 
     <page-content>
@@ -67,16 +67,16 @@
         </el-table-column>
         <el-table-column :label="$t('page.normal.operation', '操作')" align="left" :width="$dim('page.mcp.operation', 220)" fixed="right">
           <template #default="scope">
-            <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['business:mcpServices:edit']">
+            <el-button link type="primary" @click="handleUpdate(scope.row)" v-hasPermi="['business:mcp:edit']">
               {{ $t('page.normal.edit', '编辑') }}
             </el-button>
-            <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['business:mcpServices:remove']">
+            <el-button link type="danger" @click="handleDelete(scope.row)" v-hasPermi="['business:mcp:remove']">
               {{ $t('page.normal.remove', '删除') }}
             </el-button>
-            <el-button v-if="!scope.row.enabled" link type="primary" @click="handleEnable(scope.row)" v-hasPermi="['business:mcpServices:edit']">
+            <el-button v-if="!scope.row.enabled" link type="primary" @click="handleEnable(scope.row)" v-hasPermi="['business:mcp:edit']">
               {{ $t('page.normal.enable', '启用') }}
             </el-button>
-            <el-button v-else link type="info" @click="handleDisable(scope.row)" v-hasPermi="['business:mcpServices:edit']">
+            <el-button v-else link type="info" @click="handleDisable(scope.row)" v-hasPermi="['business:mcp:edit']">
               {{ $t('page.normal.disable', '停用') }}
             </el-button>
           </template>

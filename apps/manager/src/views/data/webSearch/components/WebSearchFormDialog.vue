@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { API } from '@/api';
 import type {
@@ -12,7 +12,6 @@ import type {
 } from '@/types';
 
 const { proxy } = getCurrentInstance() as any;
-const { t } = useI18n();
 
 const props = defineProps<{
   visible: boolean;
@@ -436,14 +435,7 @@ const handleRemoveApiKey = () => {
 
 <template>
   <KjscRtlDrawer v-model="drawerVisible" :title="drawerTitle" size="760px" append-to-body>
-    <el-form
-      ref="saveFormRef"
-      v-loading="loading"
-      :model="form"
-      :rules="rules"
-      label-position="top"
-      :validate-on-rule-change="false"
-    >
+    <el-form ref="saveFormRef" v-loading="loading" :model="form" :rules="rules" label-position="top" :validate-on-rule-change="false">
       <h4 class="section-title">{{ $t('page.data.webSearch.form.section.basic', '基本信息') }}</h4>
 
       <el-form-item :label="$t('page.data.webSearch.form.name', '配置名称')" prop="name">

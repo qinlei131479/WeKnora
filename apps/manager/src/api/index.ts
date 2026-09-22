@@ -9,10 +9,10 @@ import { Storage } from './data/storage';
 import { EmbedChannels } from './integration/embedChannels';
 import { ImChannels } from './integration/imChannels';
 import { Models } from './model/models';
-import { Tenants } from './tenants/tenants';
-import { Users } from './users/users';
+import { Tenants } from './space/tenants';
+import { Users } from './space/users';
 import { VectorStores } from './data/vectorStores';
-import { Skills } from './data/skill';
+import { Skills } from './data/skills';
 import { WebSearchProviders } from './data/webSearchProviders';
 
 export const API = {

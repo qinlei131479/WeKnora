@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { API } from '@/api';
 import type { PageDomain, TenantsVO, WebSearchProviderTypeVO, WebSearchProvidersPageDTO, WebSearchProvidersVO } from '@/types';
 import { Search } from 'lucide-vue-next';
 import WebSearchFormDialog from './components/WebSearchFormDialog.vue';
 
 const { proxy } = getCurrentInstance() as any;
-const { t } = useI18n();
 
 const loading = ref(false);
 const testingId = ref('');

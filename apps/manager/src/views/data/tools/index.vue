@@ -158,7 +158,9 @@ onMounted(getList);
         />
         <el-table-column :label="$t('page.normal.operation', '操作')" :width="$dim('page.data.tools.table.operation', 100)" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="handleDetail(row)">{{ $t('page.normal.detail', '详情') }}</el-button>
+            <el-button link type="primary" @click="handleDetail(row)" v-hasPermi="['business:tools:query']">{{
+              $t('page.normal.detail', '详情')
+            }}</el-button>
           </template>
         </el-table-column>
       </el-table>

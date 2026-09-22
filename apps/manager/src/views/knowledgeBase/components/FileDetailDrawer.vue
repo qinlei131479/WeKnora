@@ -122,40 +122,6 @@
                         <span class="chunk-meta">{{ chunk.meta }}</span>
                       </div>
                       <div class="chunk-header-right">
-                        <!-- :visible="parentContextPopup === chunk.original.id" -->
-                        <!-- <el-popover
-                          v-if="chunk.hasParent"
-                          trigger="click"
-                          width="auto"
-                          overlay-class-name="chunk-context-popup-overlay"
-                          @show="() => setParentContextPopupVisible(chunk.original, index, true)"
-                          @hide="() => setParentContextPopupVisible(chunk.original, index, false)"
-                          @visible-change="(visible: boolean) => setParentContextPopupVisible(chunk.original, index, visible)"
-                        >
-                          <template #reference>
-                            <el-button
-                              class="icon-action-btn"
-                              :class="{ 'is-active': parentContextPopup === chunk.original.id }"
-                              text
-                              :title="$t('page.knowledgeFile.detailModel.viewParentContext', '查看父块上下文')"
-                            >
-                              <template #icon><GitBranch /></template>
-                            </el-button>
-                          </template>
-                          <div class="chunk-context-popup" @click.stop>
-                            <div class="chunk-popup-head">
-                              <div class="chunk-popup-title">
-                                <el-icon><GitBranch /></el-icon>
-                                <span>{{ $t('page.knowledgeFile.detailModel.viewParentContext', '查看父块上下文') }}</span>
-                              </div>
-                            </div>
-                            <div v-if="parentContextLoading.has(index)" class="chunk-popup-state">
-                              <t-loading size="small" />
-                              <span>{{ $t('page.normal.loading') }}</span>
-                            </div>
-                            <div v-else class="chunk-context-popup-body md-content" v-html="processMarkdown(getParentContent(chunk.original))"></div>
-                          </div>
-                        </el-popover> -->
                         <el-popover
                           v-if="chunk.questions.length > 0"
                           trigger="click"
@@ -179,125 +145,15 @@
                           <div class="chunk-questions-popup" @click.stop>
                             <div class="chunk-popup-head">
                               <div class="chunk-popup-title">
-                                <!-- <t-icon name="help-circle" size="15px" /> -->
                                 <el-icon><CircleHelp /></el-icon>
                                 <span>{{ $t('page.knowledgeFile.detailModel.generatedQuestions', '辅助召回问题') }}</span>
                                 <span class="chunk-popup-count">{{ chunk.questions.length }}</span>
-                                <!-- <span v-if="hasStaleGeneratedQuestions(chunk.original)" class="chunk-question-stale-hint">
-                                  {{ $t('page.knowledgeFile.detailModel.staleGeneratedQuestions', '过期问题') }}
-                                </span> -->
                               </div>
-                              <!-- <div v-if="canEditContent" class="chunk-popup-actions">
-                                <el-tooltip :content="$t('page.knowledgeFile.detailModel.addGeneratedQuestion', '添加辅助召回问题')" placement="top">
-                                  <el-button
-                                    class="icon-action-btn"
-                                    size="small"
-                                    variant="text"
-                                    shape="square"
-                                    @click.stop="openQuestionComposer(chunk.original)"
-                                  >
-                                    <template #icon><t-icon name="add" size="15px" /></template>
-                                  </el-button>
-                                </el-tooltip>
-                                <el-tooltip :content="$t('page.knowledgeFile.detailModel.regenerateQuestions', '重新生成问题')" placement="top">
-                                  <el-button
-                                    class="icon-action-btn"
-                                    size="small"
-                                    variant="text"
-                                    shape="square"
-                                    :loading="regeneratingQuestionChunk === chunk.original.id"
-                                    @click.stop="regenerateQuestions(chunk.original)"
-                                  >
-                                    <template #icon><t-icon name="refresh" size="15px" /></template>
-                                  </el-button>
-                                </el-tooltip>
-                              </div> -->
                             </div>
                             <div class="chunk-questions-popup-body">
-                              <!-- <div v-if="questionComposerChunk === chunk.original.id" class="question-composer">
-                                <el-input
-                                  v-model="questionDrafts[chunk.original.id]"
-                                  autofocus
-                                  :placeholder="$t('page.knowledgeFile.detailModel.addGeneratedQuestion', '添加辅助召回问题')"
-                                  @enter="addQuestion(chunk.original)"
-                                />
-                                <el-tooltip :content="$t('page.normal.cancel', '取消')" placement="top">
-                                  <el-button
-                                    class="icon-action-btn"
-                                    size="small"
-                                    variant="text"
-                                    shape="square"
-                                    :disabled="savingQuestionChunk === chunk.original.id"
-                                    @click="closeQuestionComposer(chunk.original)"
-                                  >
-                                    <template #icon><t-icon name="close" size="14px" /></template>
-                                  </el-button>
-                                </el-tooltip>
-                                <el-button
-                                  size="small"
-                                  theme="primary"
-                                  :loading="savingQuestionChunk === chunk.original.id"
-                                  :disabled="!(questionDrafts[chunk.original.id] || '').trim()"
-                                  @click="addQuestion(chunk.original)"
-                                >
-                                  {{ $t('page.normal.add', '添加') }}
-                                </el-button>
-                              </div> -->
                               <div v-if="chunk.questions.length" class="questions-list">
                                 <div v-for="question in chunk.questions" :key="question.id" class="question-item">
                                   <span class="question-text">{{ question.question }}</span>
-                                  <!-- <span class="question-leading-icon"><t-icon name="help-circle" size="14px" /></span>
-                                  <div v-if="editingQuestionKey === `${chunk.original.id}:${question.id}`" class="question-inline-editor">
-                                    <el-input v-model="questionEditDraft" autofocus @enter="saveQuestionEdit(chunk.original, question)" />
-                                    <el-button size="small" variant="text" @click="cancelQuestionEdit">{{
-                                      $t('page.normal.cancel', '取消')
-                                    }}</el-button>
-                                    <el-button
-                                      size="small"
-                                      theme="primary"
-                                      :loading="savingQuestionKey === `${chunk.original.id}:${question.id}`"
-                                      @click="saveQuestionEdit(chunk.original, question)"
-                                      >{{ $t('page.normal.save', '保存') }}</el-button
-                                    >
-                                  </div>
-                                  <template v-else> -->
-                                  <!-- <template> -->
-                                  <!-- <span class="question-text">{{ question.question }}</span> -->
-                                  <!-- <div class="question-actions">
-                                      <el-tooltip
-                                        v-if="canEditContent && !question.id.startsWith('legacy-')"
-                                        :content="$t('page.normal.edit', '编辑')"
-                                        placement="top"
-                                      >
-                                        <el-button
-                                          class="icon-action-btn"
-                                          theme="default"
-                                          variant="text"
-                                          shape="square"
-                                          size="small"
-                                          @click.stop="startQuestionEdit(chunk.original, question)"
-                                        >
-                                          <template #icon><t-icon name="edit" size="14px" /></template>
-                                        </el-button>
-                                      </el-tooltip>
-                                      <el-popconfirm
-                                        v-if="canDeleteGeneratedQuestion && !question.id.startsWith('legacy-')"
-                                        theme="warning"
-                                        :content="$t('page.normal.confirmDeleteQuestion', '确定要删除这个问题吗？删除后将同时移除对应的向量索引。')"
-                                        @confirm="handleDeleteQuestion(chunk.original, index, question)"
-                                      >
-                                        <el-button
-                                          class="icon-action-btn delete-question-btn"
-                                          theme="default"
-                                          variant="text"
-                                          shape="square"
-                                          size="small"
-                                          :loading="isDeleting(index, question.id)"
-                                        >
-                                          <template #icon><t-icon name="delete" size="14px" /></template>
-                                        </el-button>
-                                      </el-popconfirm>
-                                    </div> -->
                                   <!-- </template> -->
                                 </div>
                               </div>
@@ -335,18 +191,14 @@
   </KjscRtlDrawer>
 </template>
 <script setup lang="ts">
-import { RefreshCw, CircleHelp, GitBranch } from 'lucide-vue-next';
+import { CircleHelp } from 'lucide-vue-next';
 import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
-// import FileContentDetail from './FileContentDetail.vue';
-import { KnowledgeFileChunk, KnowledgeFileDetail, KnowledgeFileEntity } from '@/types';
-import { useI18n } from 'vue-i18n';
+import { KnowledgeFileDetail, KnowledgeFileEntity } from '@/types';
+import { t } from '@/i18n';
 import { getPreviewKnowledgeFileApi } from '@/api/data/knowledgeFile.js';
 import { parseTime } from '@/utils/ruoyi.js';
 import DocumentPreview from '@/components/DocumentPreview.vue';
 import useFileDetailChunks from './useFileDetailChunks';
-
-import type { ProcessedChunk, GeneratedQuestion } from './useFileDetailChunks';
-const { t } = useI18n();
 
 // Props
 const props = defineProps<{
@@ -355,7 +207,7 @@ const props = defineProps<{
 }>();
 
 // Emits
-const emit = defineEmits<{
+defineEmits<{
   (e: 'update:visible', value: boolean): void;
 }>();
 
@@ -377,10 +229,6 @@ const details = computed(() => {
     }
   }
   let fileType = entity.fileType;
-  // const isDev = import.meta.env.DEV;
-  // if (isDev) {
-  //   fileType = 'docx';
-  // }
   return {
     ...entity,
     fileType: fileType,
@@ -400,8 +248,7 @@ const {
   loadMoreChunks,
   resetDetailChunks,
   setUpKnowledgeId,
-  runMarkdownPostRenderPipeline,
-  hasStaleGeneratedQuestions
+  runMarkdownPostRenderPipeline
 } = useFileDetailChunks({
   knowledgeId: props.entity?.id || '',
   t,
@@ -415,19 +262,6 @@ const handleChunkEndReached = (direction: string) => {
 };
 const previewBlob = ref<Blob | null>(null);
 
-// watch(
-//   () => details.value?.id,
-//   async (newId: string | undefined) => {
-//     if (newId) {
-//       try {
-//         const response = await getPreviewKnowledgeFileApi(newId);
-//         previewBlob.value = response;
-//       } catch (error) {
-//         console.error('Error fetching preview:', error);
-//       }
-//     }
-//   }
-// );
 const handleClose = () => {
   activeTab.value = 'base';
   resetDetailChunks();
@@ -491,12 +325,6 @@ const getChannelLabel = (channel: string) => {
   const key = channelLabelMap[channel];
   return key ? t(key) : t('page.knowledgeFile.detailModel.channelUnknown');
 };
-// const detailTags = computed(() => {
-//   const tags = details.value?.tags;
-//   // const tags: any[] = [];
-//   return Array.isArray(tags) ? tags : [];
-// });
-
 const previewSupportedTypes = new Set([
   'pdf',
   'docx',
@@ -589,7 +417,6 @@ watch(
     let isAudio = isAudioFile(detailsValue.fileType);
     if (isAudio) {
       viewMode.value = 'merged'; // 音频默认全文视图，播放器已内嵌
-      // loadAudioPreview();
       loadPrevewFile(true);
     } else if (detailsValue.type === 'file' && canPreview()) {
       viewMode.value = 'preview';
@@ -620,60 +447,9 @@ const loadPrevewFile = async (isAudio: boolean) => {
   }
 };
 
-// 父 Chunk 上下文通过 Header Popup 展示，避免在每个分块下方占用高度。
-const parentContextPopup = ref('');
-const parentContextCache = ref<Map<string, string>>(new Map());
-const parentContextLoading = ref<Set<number>>(new Set());
-
-const loadParentContext = async (item: KnowledgeFileChunk, index: number) => {
-  const parentId = item.parentChunkId;
-  // if (!parentContextCache.value.has(parentId)) {
-  //   parentContextLoading.value.add(index);
-  //   parentContextLoading.value = new Set(parentContextLoading.value);
-  //   try {
-  //     const result: any = await getChunkByIdOnly(parentId);
-  //     if (result.success && result.data) {
-  //       parentContextCache.value.set(parentId, result.data.content || '');
-  //       parentContextCache.value = new Map(parentContextCache.value);
-  //     }
-  //   } catch (err) {
-  //     MessagePlugin.error(t('knowledgeBase.parentContextLoadFailed'));
-  //     parentContextPopup.value = '';
-  //     return;
-  //   } finally {
-  //     parentContextLoading.value.delete(index);
-  //     parentContextLoading.value = new Set(parentContextLoading.value);
-  //   }
-  // }
-
-  // await nextTick();
-  // await runMarkdownPostRenderPipeline();
-};
-
-const setParentContextPopupVisible = (item: KnowledgeFileChunk, index: number, visible: boolean) => {
-  parentContextPopup.value = visible ? (item.id ?? '') : '';
-  // if (visible) {
-  //   // questionPopupChunk.value = '';
-  //   // chunkHistoryPopup.value = '';
-  //   loadParentContext(item, index);
-  // }
-};
-
-const getParentContent = (item: KnowledgeFileChunk) => {
-  // return parentContextCache.value.get(item.parentChunkId) || '';
-  return item.content || '';
-};
-
 const questionPopupChunk = ref('');
 const setQuestionPopupVisible = (item: any, visible: boolean) => {
   questionPopupChunk.value = visible ? item.id : '';
-  // if (visible) {
-  //   parentContextPopup.value = '';
-  //   chunkHistoryPopup.value = '';
-  // } else {
-  //   closeQuestionComposer(item);
-  //   cancelQuestionEdit();
-  // }
 };
 
 watch(

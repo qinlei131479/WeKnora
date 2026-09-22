@@ -1,10 +1,9 @@
 import { getKnowledgeFaqListApi, deleteKnowledgeFaqSingleApi } from '@/api/data/knowledgeFaq';
 import { KnowledgeFaqEntity, KnowledgeFaqListReq, PageDomain } from '@/types';
 import useTableData from '@/composables/useTableData';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 
 export default function useFaqTableData(knowledgeBaseId?: number | string) {
-  const { t } = useI18n();
   const tableData = useTableData<KnowledgeFaqEntity>({
     searchApi: getKnowledgeFaqListApi,
     queryParams: {

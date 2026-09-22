@@ -3,19 +3,44 @@ import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { t } from '@/i18n';
 import { formatSize } from '@/utils';
 import { parseTime } from '@/utils/ruoyi';
-import { getStatusTheme, getStatusText } from '@/composables/useTenantSpace';
-import { getTenantSpaceSingleApi } from '@/api/space/tenantSpace';
-import type { TenantSpaceEntity } from '@/types';
+import { API } from '@/api';
+import type { TenantsVO } from '@/types';
 
 interface DetailItem {
-  key: keyof TenantSpaceEntity | 'storageRate';
+  key: keyof TenantsVO | 'storageRate';
   label: string;
   value: unknown;
   type?: 'status';
 }
 
 const visible = ref(false);
-const form = ref<Partial<TenantSpaceEntity>>({});
+const form = ref<Partial<TenantsVO>>({});
+
+function getStatusTheme(status: string | undefined): string {
+  switch (status) {
+    case 'active':
+      return 'success';
+    case 'inactive':
+      return 'warning';
+    case 'suspended':
+      return 'danger';
+    default:
+      return 'default';
+  }
+}
+
+function getStatusText(status: string | undefined): string {
+  switch (status) {
+    case 'active':
+      return t('tenant.statusActive', '活跃');
+    case 'inactive':
+      return t('tenant.statusInactive', '未激活');
+    case 'suspended':
+      return t('tenant.statusSuspended', '已暂停');
+    default:
+      return t('tenant.statusUnknown', '未知');
+  }
+}
 
 const getRate = (quota?: number, used?: number): string => {
   if (quota == null || used == null) return '';
@@ -23,24 +48,24 @@ const getRate = (quota?: number, used?: number): string => {
 };
 
 const detailItems = computed<DetailItem[]>(() => [
-  { key: 'id', label: t('page.tenantSpace.id', '空间id'), value: form.value.id },
-  { key: 'name', label: t('page.tenantSpace.name', '空间名称'), value: form.value.name },
-  { key: 'description', label: t('page.tenantSpace.description', '空间描述'), value: form.value.description },
-  { key: 'status', label: t('page.tenantSpace.status', '空间状态'), value: form.value.status, type: 'status' },
-  { key: 'createdAt', label: t('page.tenantSpace.createdAt', '空间创建时间'), value: parseTime(form.value.createdAt) },
+  { key: 'id', label: t('page.tenants.id', '空间id'), value: form.value.id },
+  { key: 'name', label: t('page.tenants.name', '空间名称'), value: form.value.name },
+  { key: 'description', label: t('page.tenants.description', '空间描述'), value: form.value.description },
+  { key: 'status', label: t('page.tenants.status', '空间状态'), value: form.value.status, type: 'status' },
+  { key: 'createdAt', label: t('page.tenants.createdAt', '空间创建时间'), value: parseTime(form.value.createdAt) },
   {
     key: 'storageQuota',
-    label: t('page.tenantSpace.storageQuota', '存储配额'),
+    label: t('page.tenants.storageQuota', '存储配额'),
     value: form.value.storageQuota == null ? '' : formatSize(form.value.storageQuota)
   },
   {
     key: 'storageUsed',
-    label: t('page.tenantSpace.storageUsed', '已使用储存'),
+    label: t('page.tenants.storageUsed', '已使用储存'),
     value: form.value.storageUsed == null ? '' : formatSize(form.value.storageUsed)
   },
   {
     key: 'storageRate',
-    label: t('page.tenantSpace.storageRate', '储存使用率'),
+    label: t('page.tenants.storageRate', '储存使用率'),
     value: getRate(form.value.storageQuota, form.value.storageUsed)
   }
 ]);
@@ -54,7 +79,7 @@ const formatValue = (value: unknown): string => {
 };
 
 const showDetail = (id: number) => {
-  return getTenantSpaceSingleApi(id).then((res) => {
+  return API.Tenants.single(id).then((res) => {
     form.value = res.data || {};
     visible.value = true;
   });
@@ -69,7 +94,7 @@ defineExpose({
   <KjscRtlDrawer
     v-model="visible"
     :size="800"
-    :title="$t('page.tenantSpace.title.detail', '空间详情')"
+    :title="$t('page.tenants.title.detail', '空间详情')"
     :show-cancel="false"
     :show-confirm="false"
     append-to-body

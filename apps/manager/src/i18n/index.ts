@@ -25,7 +25,7 @@ export const i18n = createI18n({
   }
 });
 
-export const { locale, t, te } = i18n.global;
+export const { locale, t, te, tm } = i18n.global;
 
 //----- 语言引起的 UI 变化控制 -----------------------------------------------------------------------
 

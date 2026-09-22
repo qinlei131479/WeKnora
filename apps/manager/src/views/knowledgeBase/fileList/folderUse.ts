@@ -1,9 +1,9 @@
-import type { Composer } from 'vue-i18n';
+import type { t } from '@/i18n';
 import { getKnowledgeFileFoldersApi } from '@/api/data/knowledgeFile';
 import { KnowledgeFileFoldersNode, KnowledgeFileFoldersResp } from '@/types';
 
-export default function useFolder(i18n: Pick<Composer, 't'>, knowledgeBaseId?: number | string) {
-  const folderTreeData = ref<KnowledgeFileFoldersNode[]>(null);
+export default function useFolder(i18n: { t: typeof t }, knowledgeBaseId?: number | string) {
+  const folderTreeData = ref<KnowledgeFileFoldersNode[]>();
   const showFolderTree = ref<boolean>(false);
   const folderTreeLoading = ref<boolean>(false);
   const folderTreeIds = ref<string[]>([]);
@@ -50,7 +50,7 @@ export default function useFolder(i18n: Pick<Composer, 't'>, knowledgeBaseId?: n
   };
   const loadFolderTreeData = () => {
     folderTreeLoading.value = true;
-    getKnowledgeFileFoldersApi(knowledgeBaseIdRef.value).then((res) => {
+    getKnowledgeFileFoldersApi(knowledgeBaseIdRef.value ?? '').then((res) => {
       const rootNode = buildRootNode(res.data);
       const allIds: string[] = [rootNode.id!];
       rootNode.children = res.data?.folders || [];

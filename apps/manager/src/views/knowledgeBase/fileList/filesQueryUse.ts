@@ -1,10 +1,9 @@
 import { deleteKnowledgeFileSingleApi, getKnowledgeFileListApi } from '@/api/data/knowledgeFile';
 import { KnowledgeFileEntity, KnowledgeFileListReq, PageDomain } from '@/types';
 import useTableData from '@/composables/useTableData';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 
 export default function useFilesQuery(knowledgeBaseId?: number | string) {
-  const { t } = useI18n();
   const tableData = useTableData<KnowledgeFileEntity>({
     searchApi: getKnowledgeFileListApi,
     queryParams: {

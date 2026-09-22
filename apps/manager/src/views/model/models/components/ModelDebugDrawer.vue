@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { API } from '@/api';
 import type { ModelDebugDTO, ModelDebugVO, ModelsVO } from '@/types/api/model/model';
 import { modelTypeLabelKey } from '../constants';
 
 const { proxy } = getCurrentInstance() as any;
-const { t } = useI18n();
 
 const props = defineProps<{
   visible: boolean;

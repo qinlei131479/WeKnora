@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { API } from '@/api';
 import { toProviderModelType } from '@/api/model/models';
@@ -7,7 +7,6 @@ import type { ModelCredentialField, ModelProviderVO, ModelTestRequestDTO, ModelT
 import { MODEL_SOURCE_OPTIONS, MODEL_TYPE_OPTIONS } from '../constants';
 
 const { proxy } = getCurrentInstance() as any;
-const { t } = useI18n();
 
 const props = defineProps<{
   visible: boolean;
@@ -475,14 +474,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
 
 <template>
   <KjscRtlDrawer v-model="drawerVisible" :title="drawerTitle" size="800px" append-to-body>
-    <el-form
-      ref="saveFormRef"
-      v-loading="loading"
-      :model="form"
-      :rules="rules"
-      label-position="top"
-      :validate-on-rule-change="false"
-    >
+    <el-form ref="saveFormRef" v-loading="loading" :model="form" :rules="rules" label-position="top" :validate-on-rule-change="false">
       <el-form-item :label="$t('page.models.form.type', '模型类型')" prop="type">
         <el-radio-group v-model="form.type" :disabled="isEdit" @change="onTypeChange">
           <el-radio-button v-for="item in MODEL_TYPE_OPTIONS" :key="item.value" :value="item.value">
@@ -849,5 +841,4 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
     color: #c45656;
   }
 }
-
 </style>

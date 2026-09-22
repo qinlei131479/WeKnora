@@ -145,7 +145,7 @@
 
 <script setup lang="ts" generic="K extends string">
 // import { onBeforeUnmount, reactive, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 // import { MessagePlugin } from 'tdesign-vue-next'
 import { Lock, CircleCheckFilled, WarningFilled } from '@element-plus/icons-vue';
 
@@ -181,7 +181,7 @@ interface Emits {
   (e: 'changed'): void;
 }
 
-const { proxy } = getCurrentInstance();
+const { proxy } = getCurrentInstance() as any;
 
 const MessagePlugin = {
   success: function (msg: string) {
@@ -193,7 +193,6 @@ const MessagePlugin = {
 };
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
-const { t } = useI18n();
 
 type State = 'configured' | 'unconfigured' | 'editing';
 // Local view state per field. Source of truth is props.meta, but we track

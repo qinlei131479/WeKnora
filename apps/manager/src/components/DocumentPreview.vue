@@ -8,12 +8,10 @@ import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css';
 import markedKatex from 'marked-katex-extension';
 import 'katex/dist/katex.min.css';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { sanitizeHTML, safeMarkdownToHTML } from '@/utils/security';
 
 const VueOfficePptx = defineAsyncComponent(() => import('@vue-office/pptx'));
-
-const { t } = useI18n();
 
 interface Props {
   dataKey: string;

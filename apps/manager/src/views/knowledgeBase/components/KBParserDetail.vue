@@ -13,7 +13,6 @@
       <div v-for="group in fileTypeGroups" :key="group.key" class="setting-row">
         <div class="setting-info">
           <label class="group-label">
-            <!-- <el-icon v-if="!embedded" :name="group.icon" class="group-icon" /> -->
             {{ group.label }}
           </label>
           <div class="ext-tags">
@@ -22,24 +21,7 @@
         </div>
         <div class="setting-control">
           <div class="parser-control-stack">
-            <!-- <el-select
-              :value="getEngineForGroup(group.extensions) || undefined"
-              @change="(val: string) => handleEngineChange(group.extensions, val)"
-              :style="{ width: '280px' }"
-              :placeholder="$t('component.kbSettings.parser.noEngine')"
-              :popper-options="{ overlayInnerStyle: { maxHeight: '240px' } }"
-            >
-              <el-option v-for="opt in getEngineOptions(group.extensions)" :key="opt.value" :value="opt.value" :label="opt.selectLabel" />
-            </el-select> -->
             <span> {{ getDefaultEngineLabel(group.extensions) }}</span>
-            <!-- <el-checkbox
-              v-if="group.extensions.includes('xlsx') && getEngineForGroup(group.extensions) === 'builtin'"
-              class="xlsx-header-option"
-              :checked="getXLSXFirstRowAsHeader(group.extensions)"
-              disabled
-            >
-              {{ $t('component.kbSettings.parser.xlsxFirstRowAsHeader') }}
-            </el-checkbox> -->
           </div>
         </div>
       </div>
@@ -48,17 +30,9 @@
 </template>
 
 <script setup lang="ts">
-// import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { getParserEngineListApi } from '@/api/data/system';
 import { ParserEngineEntity } from '@/types';
-import { useI18n } from 'vue-i18n';
-// import { type ParserEngineInfo } from '@/api/system'
-// import { useEditorResourcesStore } from '@/stores/editorResources'
-// import { useUIStore } from '@/stores/ui'
-// import { storeToRefs } from 'pinia'
-
-const { t } = useI18n();
-// const editorResources = useEditorResourcesStore()
+import { t } from '@/i18n';
 
 function getEngineDisplayName(engineName: string): string {
   const key = `component.kbSettings.parser.engines.${engineName}.name`;
@@ -66,7 +40,6 @@ function getEngineDisplayName(engineName: string): string {
   return translated !== key ? translated : engineName;
 }
 
-interface ParserEngineInfo {}
 export interface ParserEngineRule {
   file_types: string[];
   engine: string;
@@ -102,7 +75,6 @@ const emit = defineEmits<{
   'update:parserEngineRules': [value: ParserEngineRule[]];
 }>();
 
-// const uiStore = useUIStore()
 const localEngineRules = ref<ParserEngineRule[]>([...props.parserEngineRules]) as { value: ParserEngineRule[] };
 const parserEngines = ref<ParserEngineEntity[]>([]) as { value: ParserEngineEntity[] };
 const loading = ref(true);
@@ -197,10 +169,6 @@ function getEngineOptions(extensions: string[]): EngineOption[] {
     }));
 }
 
-function hasAvailableEngine(extensions: string[]): boolean {
-  return getEngineOptions(extensions).length > 0;
-}
-
 function getDefaultEngineLabel(extensions: string[]): string {
   const opts = getEngineOptions(extensions);
   return opts.find((o) => o.isDefault)?.selectLabel ?? '';
@@ -220,36 +188,8 @@ function getEngineForGroup(extensions: string[]): string {
   return getDefaultEngine(extensions);
 }
 
-function handleEngineChange(extensions: string[], engine: string) {
-  const currentRule = getRuleForGroup(extensions);
-  const otherRules = localEngineRules.value.filter((r: ParserEngineRule) => !r.file_types.some((ft) => extensions.includes(ft)));
-  if (engine) {
-    otherRules.push({
-      file_types: [...extensions],
-      engine,
-      ...(currentRule?.xlsx_first_row_as_header !== undefined ? { xlsx_first_row_as_header: currentRule.xlsx_first_row_as_header } : {})
-    });
-  }
-  localEngineRules.value = otherRules;
-  emit('update:parserEngineRules', buildCompleteRules());
-}
-
 function getRuleForGroup(extensions: string[]): ParserEngineRule | undefined {
   return localEngineRules.value.find((rule: ParserEngineRule) => rule.file_types.some((fileType) => extensions.includes(fileType)));
-}
-
-function getXLSXFirstRowAsHeader(extensions: string[]): boolean {
-  return getRuleForGroup(extensions)?.xlsx_first_row_as_header === true;
-}
-
-function handleXLSXFirstRowAsHeaderChange(extensions: string[], checked: boolean) {
-  const rules = buildCompleteRules();
-  const rule = rules.find((item) => item.file_types.some((fileType) => extensions.includes(fileType)));
-  if (!rule) return;
-
-  rule.xlsx_first_row_as_header = checked;
-  localEngineRules.value = rules;
-  emit('update:parserEngineRules', rules);
 }
 
 function buildCompleteRules(): ParserEngineRule[] {
@@ -268,15 +208,9 @@ function buildCompleteRules(): ParserEngineRule[] {
   return rules;
 }
 
-function goToParserSettings() {
-  // uiStore.openSettings('parser');
-}
-
-async function loadEngines(force = false) {
+async function loadEngines() {
   loading.value = true;
   try {
-    // await editorResources.ensureParserEngines(force);
-    // parserEngines.value = editorResources.parserEngines as ParserEngineInfo[];
     const res = await getParserEngineListApi();
     parserEngines.value = res.data?.engines || [];
   } catch {
@@ -288,7 +222,6 @@ async function loadEngines(force = false) {
 }
 
 function ensureCompleteRules() {
-  // console.log('ensureCompleteRules');
   if (!parserEngines.value.length) return;
   const complete = buildCompleteRules();
   if (complete.length && complete.length > localEngineRules.value.length) {
@@ -298,13 +231,6 @@ function ensureCompleteRules() {
 }
 
 onMounted(loadEngines);
-
-// const { showSettingsModal } = storeToRefs(uiStore);
-// watch(showSettingsModal, (open, wasOpen) => {
-//   if (wasOpen && !open) {
-//     loadEngines(true);
-//   }
-// });
 
 watch(
   () => props.parserEngineRules,

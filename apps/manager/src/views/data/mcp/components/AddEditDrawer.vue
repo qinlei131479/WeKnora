@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import modal from '@/plugins/modal';
 import type { FormInstance, FormRules } from 'element-plus/es/components/form';
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 import { ElMessage } from 'element-plus';
 import { ChevronDown, ChevronRight, X, CircleCheck, CircleX } from 'lucide-vue-next';
 import McpTestResultBody from './McpTestResultBody.vue';
@@ -44,8 +44,6 @@ const emit = defineEmits<{
   (event: 'success'): void;
 }>();
 
-const { t } = useI18n();
-
 const open = ref<boolean>(false)
 let mode = '';
 const title = ref<string>("page.mcp.addTitle")
@@ -77,6 +75,7 @@ function reset() {
 /** 新增按钮操作 */
 function handleAdd() {
   reset()
+  form.value.transportType = 'http-streamable'
   title.value = "page.mcp.addTitle"
   open.value = true
   mode = 'add';
@@ -512,8 +511,8 @@ defineExpose({
         <h4 class="setting-drawer__section-title">{{ t('page.mcp.mcpServiceDialog.connectionSection', '连接配置') }}</h4>
         <el-form-item :label="t('page.mcp.mcpServiceDialog.transportType')" prop="transportType">
           <el-radio-group v-model="form.transportType">
+            <el-radio-button value="http-streamable">Streamable HTTP</el-radio-button>
             <el-radio-button value="sse">SSE</el-radio-button>
-            <el-radio-button value="http-streamable">HTTP Streamable</el-radio-button>
           </el-radio-group>
         </el-form-item>
         <el-form-item :label="t('page.mcp.mcpServiceDialog.serviceUrl')" prop="url">

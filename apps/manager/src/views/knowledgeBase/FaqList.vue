@@ -37,13 +37,7 @@
           </el-button>
         </div>
       </template>
-      <el-table
-        ref="tableRef"
-        v-loading="loading"
-        :data="tableData"
-        height="100%"
-        @row-click="handleRowClick"
-      >
+      <el-table ref="tableRef" v-loading="loading" :data="tableData" height="100%" @row-click="handleRowClick">
         <template #empty>
           <kjsc-empty />
         </template>
@@ -148,7 +142,7 @@
 
 <script setup lang="ts" name="KnowledgeFaqList">
 import type { PropType } from 'vue';
-import { ref, reactive, onMounted } from '@vue/runtime-core';
+import { ref } from '@vue/runtime-core';
 import { Search } from 'lucide-vue-next';
 import {
   // AjaxResult,
@@ -159,7 +153,7 @@ import {
   // TableShowColumns
 } from '@/types';
 
-import { useI18n } from 'vue-i18n';
+import { t } from '@/i18n';
 
 import { getKnowledgeBaseSingleApi } from '@/api/data/knowledgeBase.js';
 
@@ -182,8 +176,6 @@ const props = defineProps({
   }
 });
 
-const { t } = useI18n();
-const $t = t;
 const goBack = () => {
   emit('back');
 };

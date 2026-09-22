@@ -1,11 +1,6 @@
 {
   "component": {},
-
   "page": {
-    "login": {
-      "brandContentWidth": 520,
-      "brandFeaturesWidth": 362
-    },
     "agent": {
       "list": {
         "table.createdAt": 180,
@@ -37,9 +32,14 @@
         "table.sortOrder": 100,
         "table.updatedAt": 180
       },
-      "skill": {
+      "skills": {
+        "table.createdAt": 180,
         "table.description": 360,
-        "table.name": 220
+        "table.name": 220,
+        "table.operation": 200,
+        "table.tenant": 180,
+        "table.updatedAt": 180,
+        "table.version": 100
       },
       "storage": {
         "table.createdAt": 180,
@@ -103,99 +103,47 @@
       "knowledgeGraphs": 120
     },
     "knowledgeFaq": {
-      "qaId": 320,
-      "standardQuestion": 220,
-      "similarQuestions": 220,
-      "negativeQuestions": 220,
       "answers": 220,
-      "tagName": 100,
-      "operation": 120
+      "negativeQuestions": 220,
+      "operation": 120,
+      "qaId": 320,
+      "similarQuestions": 220,
+      "standardQuestion": 220,
+      "tagName": 100
     },
     "knowledgeFile": {
-      "fileName": 200,
-      "fileType": 220,
-      "fileSize": 120,
-      "parseStatus": 120,
       "channel": 200,
       "createdAt": 180,
-      "operation": 120
+      "fileName": 200,
+      "fileSize": 120,
+      "fileType": 220,
+      "operation": 120,
+      "parseStatus": 120
+    },
+    "login": {
+      "brandContentWidth": 520,
+      "brandFeaturesWidth": 362
     },
     "models": {
-      "table.name": 180,
-      "table.displayName": 160,
-      "table.type": 120,
-      "table.source": 120,
-      "table.provider": 140,
-      "table.credentialStatus": 100,
-      "table.isDefault": 100,
-      "table.isBuiltin": 100,
       "table.createdAt": 180,
-      "table.operation": 200
+      "table.credentialStatus": 100,
+      "table.displayName": 160,
+      "table.isBuiltin": 100,
+      "table.isDefault": 100,
+      "table.name": 180,
+      "table.operation": 200,
+      "table.provider": 140,
+      "table.source": 120,
+      "table.type": 120
     },
     "system": {
-      "user": {
-        "table.userId": 100,
-        "table.nickName": 160,
-        "table.userName": 160,
-        "table.createBy": 130,
-        "table.roleName": 150,
-        "table.tenantName": 150,
-        "table.status": 160,
-        "table.updateTime": 170,
-        "table.operation": 180
-      },
-      "role": {
-        "table.roleName": 160,
-        "table.tenantName": 150,
-        "table.remark": 200,
-        "table.updateTime": 170,
-        "table.operation": 140
-      },
       "dept": {
+        "table.createTime": 170,
         "table.deptName": 260,
-        "table.orderNum": 120,
         "table.description": 220,
-        "table.status": 100,
-        "table.createTime": 170,
-        "table.operation": 200
-      },
-      "post": {
-        "table.postId": 100,
-        "table.postCode": 140,
-        "table.postName": 160,
-        "table.postSort": 120,
-        "table.remark": 200,
-        "table.status": 100,
-        "table.createTime": 170,
-        "table.operation": 140
-      },
-      "logininfor": {
-        "table.infoId": 120,
-        "table.userName": 140,
-        "table.status": 140,
-        "table.message": 200,
-        "table.accessTime": 170
-      },
-      "operlog": {
-        "table.operId": 100,
-        "table.title": 160,
-        "table.businessType": 160,
-        "table.requestMethod": 170,
-        "table.operName": 110,
-        "table.operIp": 190,
-        "table.status": 180,
-        "table.operTime": 170,
-        "table.costTime": 110,
-        "table.operation": 100
-      },
-      "menu": {
-        "table.menuName": 220,
-        "table.type": 100,
-        "table.order": 140,
-        "table.permission": 210,
-        "table.component": 180,
-        "table.status": 100,
-        "table.operation": 200
+        "table.operation": 200,
+        "table.orderNum": 120,
+        "table.status": 100
       },
       "dict": {
         "data": {
@@ -208,14 +156,81 @@
           "table.remark": 160,
           "table.status": 100
         },
+        "table.createdAt": 170,
         "table.id": 140,
         "table.name": 170,
-        "table.type": 180,
-        "table.status": 100,
+        "table.operation": 200,
         "table.remark": 160,
-        "table.createdAt": 170,
-        "table.operation": 200
+        "table.status": 100,
+        "table.type": 180
+      },
+      "logininfor": {
+        "table.accessTime": 170,
+        "table.infoId": 120,
+        "table.message": 200,
+        "table.status": 140,
+        "table.userName": 140
+      },
+      "menu": {
+        "table.component": 180,
+        "table.menuName": 220,
+        "table.operation": 200,
+        "table.order": 140,
+        "table.permission": 210,
+        "table.status": 100,
+        "table.type": 100
+      },
+      "operlog": {
+        "table.businessType": 160,
+        "table.costTime": 110,
+        "table.operId": 100,
+        "table.operIp": 190,
+        "table.operName": 110,
+        "table.operTime": 170,
+        "table.operation": 100,
+        "table.requestMethod": 170,
+        "table.status": 180,
+        "table.title": 160
+      },
+      "post": {
+        "table.createTime": 170,
+        "table.operation": 140,
+        "table.postCode": 140,
+        "table.postId": 100,
+        "table.postName": 160,
+        "table.postSort": 120,
+        "table.remark": 200,
+        "table.status": 100
+      },
+      "role": {
+        "table.operation": 140,
+        "table.remark": 200,
+        "table.roleName": 160,
+        "table.tenantName": 150,
+        "table.updateTime": 170
+      },
+      "user": {
+        "table.createBy": 130,
+        "table.nickName": 160,
+        "table.operation": 180,
+        "table.roleName": 150,
+        "table.status": 160,
+        "table.tenantName": 150,
+        "table.updateTime": 170,
+        "table.userId": 100,
+        "table.userName": 160
       }
+    },
+    "users": {
+      "account": 120,
+      "createdAt": 150,
+      "email": 130,
+      "formLabel": 140,
+      "id": 300,
+      "isActive": 80,
+      "operation": 220,
+      "tenants": 220,
+      "username": 120
     }
   }
 }

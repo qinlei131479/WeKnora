@@ -65,6 +65,9 @@ const KEPT_VIEW_PREFIXES = [
   'agent/',
   'data/',
   'space/',
+  'tenant/',
+  'tenants/',
+  'users/',
   'knowledgeBase/'
 ];
 
@@ -177,10 +180,20 @@ export function filterDynamicRoutes(routes: any[]): any[] {
 }
 
 export const loadView = (view: string): any => {
+  // 租户及用户页面迁移后，兼容后端菜单仍返回的旧组件路径，不改变菜单路由地址。
+  const tenantViews: Record<string, string> = {
+    // 技能页面迁移后，兼容后端菜单返回的旧组件路径。
+    'data/skill/index': 'data/skills/index',
+    'space/tenantSpace/index': 'tenants/index',
+    'tenant/index': 'tenants/index',
+    'space/tenantSpace/member': 'users/index',
+    'tenant/user': 'users/index'
+  };
+  const resolvedView = tenantViews[view] || view;
   let res;
   for (const path in modules) {
     const dir = path.split('views/')[1].split('.vue')[0];
-    if (dir === view) {
+    if (dir === resolvedView) {
       res = () => modules[path]();
     }
   }

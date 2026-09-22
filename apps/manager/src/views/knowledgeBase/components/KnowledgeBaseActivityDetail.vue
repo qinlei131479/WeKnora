@@ -1,28 +1,5 @@
 ﻿<template>
   <div class="section-content kb-activity-settings">
-    <!-- <div class="section-header">
-      <div class="kb-activity-title-row">
-        <h3 class="section-title">{{ t('component.knowledgeEditor.activity.title') }}</h3>
-        <el-button
-          type="button"
-          class="suggested-questions-refresh"
-          :disabled="loading"
-          :title="t('component.knowledgeEditor.activity.refresh')"
-          :aria-label="t('component.knowledgeEditor.activity.refresh')"
-          @click="reload"
-        >
-          <el-icon :name="loading ? 'loading' : 'refresh'" :class="{ 'sq-refresh-spin': loading }" />
-        </el-button>
-      </div>
-      <p class="section-desc">{{ t('component.knowledgeEditor.activity.description') }}</p>
-      <p v-if="hasActiveFilters" class="kb-activity-filter-bar">
-        <span>{{ filterSummaryText }}</span>
-        <button type="button" class="kb-activity-clear-filters" @click="clearFilters">
-          {{ t('component.knowledgeEditor.activity.clearFilters') }}
-        </button>
-      </p>
-    </div> -->
-
     <div class="section-body kb-activity-body">
       <div v-if="error" class="kb-activity-branch kb-activity-branch--error">
         <el-alert theme="error" :message="error">
@@ -32,9 +9,9 @@
         </el-alert>
       </div>
 
-      <div ref="scrollRoot" class="audit-scroll-area narrow-scrollbar kb-activity-branch">
+      <div class="audit-scroll-area narrow-scrollbar kb-activity-branch">
         <div class="data-table-shell audit-table-shell">
-          <el-table row-key="id" :data="entries" :loading="loading" @row-click="openDetail">
+          <el-table row-key="id" :data="entries" :loading="loading">
             <template #empty>
               <div class="kb-activity-empty">
                 <el-empty :description="emptyDescription" />
@@ -78,173 +55,27 @@
                 </el-tag>
               </template>
             </el-table-column>
-            <!-- 
-            <template #outcome-title>
-              <div class="kb-activity-col-header kb-activity-col-header--center">
-                <span>{{ t('component.knowledgeEditor.activity.columns.outcome') }}</span>
-                <el-popover
-                  v-model:visible="outcomeFilterOpen"
-                  trigger="click"
-                  placement="bottom-right"
-                  destroy-on-close
-                  :overlay-style="{ padding: 0 }"
-                  ::popper-style="{ padding: 0 }"
-                >
-                  <template #reference>
-                    <div class="kb-activity-filter-menu">
-                      <div class="kb-activity-filter-options">
-                        <button
-                          v-for="item in outcomeFilterList"
-                          :key="item.value || '__all__'"
-                          type="button"
-                          class="kb-activity-filter-option"
-                          :class="{ active: (outcome ?? '') === item.value }"
-                          @click="selectOutcomeFilter(item.value)"
-                        >
-                          <span class="kb-activity-filter-option-label">{{ item.label }}</span>
-                          <el-icon v-if="(outcome ?? '') === item.value" name="check" class="kb-activity-filter-option-check" size="14px" />
-                        </button>
-                      </div>
-                    </div>
-                  </template>
-                  <button
-                    type="button"
-                    class="kb-activity-filter-trigger"
-                    :class="{ active: Boolean(outcome) }"
-                    :aria-label="t('component.knowledgeEditor.activity.columns.outcome')"
-                    @click.stop
-                  >
-                    <el-icon name="filter" size="14px" />
-                  </button>
-                </el-popover>
-              </div>
-            </template>
-            <template #empty>
-              <div class="kb-activity-empty">
-                <el-empty :description="emptyDescription" />
-              </div>
-            </template>
-            <template #createdAt="{ row }">
-              <div class="audit-time">
-                <span class="audit-time-date">{{ formatDatePart(row.createdAt) }}</span>
-                <span class="audit-time-clock">{{ formatTimePart(row.createdAt) }}</span>
-              </div>
-            </template>
-            <template #action="{ row }">
-              <el-tag :theme="actionTheme(row.action)" size="small" variant="light-outline">
-                {{ actionLabel(row.action) }}
-              </el-tag>
-            </template>
-            <template #target="{ row }">
-              <div class="audit-target">
-                <span v-if="targetSubject(row)" class="audit-target-key">{{ targetSubject(row) }}</span>
-                <span v-if="targetDiff(row)" class="audit-target-diff">{{ targetDiff(row) }}</span>
-                <span v-else-if="!targetSubject(row)" class="audit-target-empty">—</span>
-              </div>
-            </template>
-            <template #actor="{ row }">
-              <div class="audit-actor">
-                <span class="audit-actor-name">{{ actorLabel(row) }}</span>
-              </div>
-            </template>
-            <template #outcome="{ row }">
-              <el-tag :theme="outcomeTheme(row.outcome)" size="small" effect="light">
-                {{ outcomeLabel(row.outcome) }}
-              </el-tag>
-            </template> -->
           </el-table>
         </div>
         <pagination v-show="total > 0" :total="total" v-model:page="pageParams.pageNum" v-model:limit="pageParams.pageSize" @pagination="getList" />
         <div class="place"></div>
       </div>
     </div>
-
-    <!-- <SettingDrawer
-      v-model:visible="detailVisible"
-      class="kb-activity-detail-drawer"
-      :title="detailTitle"
-      :description="detailDescription"
-      icon="file-paste"
-      width="640px"
-      :min-width="480"
-      :max-width="960"
-      storage-key="setting-drawer:width:kb-activity-detail"
-      hide-footer
-    >
-      <template v-if="selectedEntry">
-        <section class="setting-drawer__section">
-          <h4 class="setting-drawer__section-title">
-            {{ t('component.knowledgeEditor.activity.drawer.sectionSummary') }}
-          </h4>
-          <dl class="audit-detail-fields">
-            <div v-for="field in summaryFields(selectedEntry)" :key="field.key" class="audit-detail-field">
-              <dt>{{ field.label }}</dt>
-              <dd :title="field.value">{{ field.value }}</dd>
-            </div>
-          </dl>
-        </section>
-
-        <section v-if="identifierFields(selectedEntry).length > 0" class="setting-drawer__section">
-          <h4 class="setting-drawer__section-title">
-            {{ t('component.knowledgeEditor.activity.drawer.sectionIdentifiers') }}
-          </h4>
-          <dl class="audit-detail-fields">
-            <div v-for="field in identifierFields(selectedEntry)" :key="field.key" class="audit-detail-field">
-              <dt>{{ field.label }}</dt>
-              <dd class="mono" :title="field.value">{{ field.value }}</dd>
-            </div>
-          </dl>
-        </section>
-
-        <section v-if="taskFields(selectedEntry).length > 0" class="setting-drawer__section">
-          <h4 class="setting-drawer__section-title">
-            {{ t('component.knowledgeEditor.activity.drawer.sectionTask') }}
-          </h4>
-          <dl class="audit-detail-fields">
-            <div v-for="field in taskFields(selectedEntry)" :key="field.key" class="audit-detail-field">
-              <dt>{{ field.label }}</dt>
-              <dd :class="{ mono: field.key.endsWith('_id') }" :title="field.value">{{ field.value }}</dd>
-            </div>
-          </dl>
-        </section>
-
-        <section class="setting-drawer__section">
-          <h4 class="setting-drawer__section-title">
-            {{ t('component.knowledgeEditor.activity.expanded.details') }}
-          </h4>
-          <pre class="audit-detail-json mono">{{ detailsJSON(selectedEntry) }}</pre>
-        </section>
-      </template>
-    </SettingDrawer> -->
   </div>
 </template>
 
 <script setup lang="ts">
-// import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n';
-// import SettingDrawer from '@/components/business/settings/SettingDrawer.vue';
+import { t, te, tm, locale } from '@/i18n';
 import { AUDIT_ACTION_I18N_ROOTS } from '@/i18n/auditActionRegistry';
 import { auditActionLabel } from '@/i18n/auditActionLabel';
 import { getKnowledgeBaseActivityListApi } from '@/api/data/knowledgeBase';
 import { KnowledgeBaseActivityEntity } from '@/types';
-// import { listKnowledgeBaseActivity, type KnowledgeBaseActivityEntity } from '@/api/knowledge-base'
-// import type { AuditOutcome } from '@/api/tenant/audit-log'
-// import { useAuthStore } from '@/stores/auth'
 
 type AuditOutcome = 'accepted' | 'success' | 'failed' | 'partial' | 'canceled' | 'denied';
-
-interface DetailField {
-  key: string;
-  label: string;
-  value: string;
-}
 
 const props = defineProps<{
   kbId: string;
 }>();
-
-const { t, te, tm, locale } = useI18n();
-// const authStore = useAuthStore()
 
 const loading = ref(false);
 const total = ref<number>(0);
@@ -274,112 +105,12 @@ function parseEntity(entity: KnowledgeBaseActivityEntity) {
 }
 
 function reload() {
-  // cursor.value = 0;
-  // hasMore.value = true;
-  // fetchPage(true);
   getList();
 }
 
 getList();
 
-// const cursor = ref(0);
-// const hasMore = ref(true);
-const outcome = ref<AuditOutcome | undefined>();
-const action = ref<string | undefined>();
-// const loadedOnce = ref(false);
-// const pageSize = 30;
-// const scrollRoot = ref<HTMLElement | null>(null);
-// const loadSentinel = ref<HTMLElement | null>(null);
-const detailVisible = ref(false);
-const selectedEntry = ref<KnowledgeBaseActivityEntity | null>(null);
-const actionFilterOpen = ref(false);
-const outcomeFilterOpen = ref(false);
-// let scrollObserver: IntersectionObserver | null = null;
-
-const outcomeOptions = computed(() =>
-  (['accepted', 'success', 'failed', 'partial', 'canceled', 'denied'] as AuditOutcome[]).map((value) => ({
-    value,
-    label: outcomeLabel(value)
-  }))
-);
-
-// Column-header filter lists. Both host a leading "全部" entry (value '')
-// so picking it clears the server-side filter for that dimension.
-const outcomeFilterList = computed(() => [{ label: t('component.knowledgeEditor.activity.allOutcomes'), value: '' }, ...outcomeOptions.value]);
-
-const actionFilterList = computed(() => {
-  const bag = tm('component.knowledgeEditor.activity.actions') as unknown;
-  const list =
-    bag !== null && typeof bag === 'object'
-      ? Object.keys(bag as Record<string, string>).map((key) => ({
-          label: (bag as Record<string, string>)[key],
-          value: key
-        }))
-      : [];
-  return [{ label: t('component.knowledgeEditor.activity.allActions'), value: '' }, ...list];
-});
-
-const columns = computed(() => [
-  { colKey: 'createdAt', title: t('component.knowledgeEditor.activity.columns.time'), width: 116 },
-  {
-    colKey: 'action',
-    title: 'action-title',
-    width: 132
-  },
-  { colKey: 'target', title: t('component.knowledgeEditor.activity.columns.target'), minWidth: 180 },
-  { colKey: 'actor', title: t('component.knowledgeEditor.activity.columns.actor'), width: 120 },
-  {
-    colKey: 'outcome',
-    title: 'outcome-title',
-    width: 108,
-    align: 'center' as const
-  }
-]);
-
-const hasActiveFilters = computed(() => Boolean(action.value || outcome.value));
-
-const filterSummaryText = computed(() => {
-  const parts: string[] = [];
-  if (action.value) {
-    parts.push(`${t('component.knowledgeEditor.activity.columns.action')}：${actionLabel(action.value)}`);
-  }
-  if (outcome.value) {
-    parts.push(`${t('component.knowledgeEditor.activity.columns.outcome')}：${outcomeLabel(outcome.value)}`);
-  }
-  return parts.join('；');
-});
-
-function selectActionFilter(value: string) {
-  actionFilterOpen.value = false;
-  const next = value || undefined;
-  if (action.value === next) return;
-  action.value = next;
-  reload();
-}
-
-function selectOutcomeFilter(value: string) {
-  outcomeFilterOpen.value = false;
-  const next = (value || undefined) as AuditOutcome | undefined;
-  if (outcome.value === next) return;
-  outcome.value = next;
-  reload();
-}
-
-const emptyDescription = computed(() =>
-  hasActiveFilters.value ? t('component.knowledgeEditor.activity.emptyFiltered') : t('component.knowledgeEditor.activity.empty')
-);
-
-function clearFilters() {
-  actionFilterOpen.value = false;
-  outcomeFilterOpen.value = false;
-  action.value = undefined;
-  outcome.value = undefined;
-  reload();
-}
-
-const detailTitle = computed(() => (selectedEntry.value?.action ? actionLabel(selectedEntry.value.action) : ''));
-
-const detailDescription = computed(() => (selectedEntry.value?.createdAt ? formatDateTime(selectedEntry.value.createdAt) : ''));
+const emptyDescription = computed(() => t('component.knowledgeEditor.activity.empty'));
 
 function details(entry: KnowledgeBaseActivityEntity): Record<string, unknown> {
   if (!entry.details) return {};
@@ -391,9 +122,6 @@ function details(entry: KnowledgeBaseActivityEntity): Record<string, unknown> {
   }
 }
 
-function actionLabel(action: string): string {
-  return auditActionLabel({ tm }, AUDIT_ACTION_I18N_ROOTS.kbActivity, action);
-}
 function actionLabel2(action: string): string {
   console.log('actionLabel2', action);
   return auditActionLabel({ tm }, AUDIT_ACTION_I18N_ROOTS.kbActivity, action);
@@ -410,40 +138,6 @@ function outcomeTheme(value: AuditOutcome): 'success' | 'danger' | 'warning' | '
   if (value === 'failed' || value === 'denied') return 'danger';
   if (value === 'partial' || value === 'canceled') return 'warning';
   return 'default';
-}
-
-const taskDetailKeys = [
-  'task_id',
-  'trigger',
-  'processing_status',
-  'source_kb_id',
-  'target_kb_id',
-  'sync_log_id',
-  'mode',
-  'attempt',
-  'count',
-  'total',
-  'processed',
-  'failed',
-  'skipped',
-  'failure_stage'
-] as const;
-
-function taskFields(entry: KnowledgeBaseActivityEntity): DetailField[] {
-  const value = details(entry);
-  return taskDetailKeys.flatMap((key) => {
-    const raw = value[key];
-    if (raw === undefined || raw === null || raw === '') return [];
-    const labelKey = `component.knowledgeEditor.activity.detailFields.${key}`;
-    const valueKey = `component.knowledgeEditor.activity.detailValues.${String(raw)}`;
-    return [
-      {
-        key,
-        label: te(labelKey) ? t(labelKey) : key,
-        value: te(valueKey) ? t(valueKey) : String(raw)
-      }
-    ];
-  });
 }
 
 function actionTheme(action: string): 'success' | 'warning' | 'danger' | 'primary' | 'default' {
@@ -510,10 +204,6 @@ function targetDiff(entry: KnowledgeBaseActivityEntity): string {
 
 function actorLabel(entry: KnowledgeBaseActivityEntity): string {
   if (!entry.actorUserId) return t('component.knowledgeEditor.activity.systemActor');
-  // const me = authStore.user;
-  // if (me?.id === entry.actorUserId) {
-  //   return me.username?.trim() || me.email?.trim() || entry.actorUserId.slice(0, 8);
-  // }
   return entry.actorUserId.slice(0, 8);
 }
 
@@ -543,179 +233,6 @@ function formatTimePart(value: string): string {
     return '';
   }
 }
-
-function formatDateTime(value: string): string {
-  const date = formatDatePart(value);
-  const time = formatTimePart(value);
-  return time ? `${date} ${time}` : date;
-}
-
-function summaryFields(entry: KnowledgeBaseActivityEntity): DetailField[] {
-  const fields: DetailField[] = [
-    {
-      key: 'time',
-      label: t('component.knowledgeEditor.activity.columns.time'),
-      value: formatDateTime(entry.createdAt!)
-    },
-    {
-      key: 'actor',
-      label: t('component.knowledgeEditor.activity.columns.actor'),
-      value: actorLabel(entry)
-    },
-    {
-      key: 'action',
-      label: t('component.knowledgeEditor.activity.columns.action'),
-      value: actionLabel(entry.action!)
-    },
-    {
-      key: 'outcome',
-      label: t('component.knowledgeEditor.activity.columns.outcome'),
-      value: outcomeLabel(entry.outcome! as AuditOutcome)
-    }
-  ];
-
-  const subject = targetSubject(entry);
-  if (subject) {
-    fields.push({
-      key: 'target',
-      label: t('component.knowledgeEditor.activity.columns.target'),
-      value: subject
-    });
-  }
-
-  const diff = targetDiff(entry);
-  if (diff && diff !== subject) {
-    fields.push({
-      key: 'targetDiff',
-      label: t('component.knowledgeEditor.activity.drawer.targetChange'),
-      value: diff
-    });
-  }
-
-  return fields;
-}
-
-function identifierFields(entry: KnowledgeBaseActivityEntity): DetailField[] {
-  const fields: DetailField[] = [];
-  if (entry.targetType) {
-    fields.push({
-      key: 'targetType',
-      label: t('component.knowledgeEditor.activity.expanded.targetType'),
-      value: targetLabel(entry.targetType)
-    });
-  }
-  if (entry.targetId) {
-    fields.push({
-      key: 'targetId',
-      label: t('component.knowledgeEditor.activity.expanded.targetId'),
-      value: entry.targetId
-    });
-  }
-  if (entry.actorUserId) {
-    fields.push({
-      key: 'actorId',
-      label: t('component.knowledgeEditor.activity.expanded.actorId'),
-      value: entry.actorUserId
-    });
-  }
-  return fields;
-}
-
-function detailsJSON(entry: KnowledgeBaseActivityEntity): string {
-  const value = details(entry);
-  if (!Object.keys(value).length) return '{}';
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
-}
-
-function openDetail(context: { row: KnowledgeBaseActivityEntity }) {
-  selectedEntry.value = context.row;
-  detailVisible.value = true;
-}
-
-// async function fetchPage(reset = false) {
-//   if (!props.kbId || loading.value || (!reset && !hasMore.value)) return;
-//   loading.value = true;
-//   error.value = '';
-//   if (reset) {
-//     entries.value = [];
-//   }
-//   try {
-//     const response = await getKnowledgeBaseAuditLogListApi(props.kbId, {
-//       limit: pageSize,
-//       after_id: reset ? undefined : cursor.value || undefined,
-//       outcome: outcome.value,
-//       action: action.value
-//     });
-//     const page = response.rows || [];
-//     entries.value = reset ? page : [...entries.value, ...page];
-//     cursor.value = response.next_cursor || 0;
-//     hasMore.value = !!response.next_cursor && page.length > 0;
-//     loadedOnce.value = true;
-//   } catch (err: any) {
-//     error.value = err?.message || t('component.knowledgeEditor.activity.loadFailed');
-//   } finally {
-//     loading.value = false;
-//   }
-// }
-
-// function detachInfiniteScroll() {
-//   scrollObserver?.disconnect();
-//   scrollObserver = null;
-// }
-
-// function attachInfiniteScroll() {
-//   detachInfiniteScroll();
-//   const root = scrollRoot.value;
-//   const sentinel = loadSentinel.value;
-//   if (!root || !sentinel || error.value) return;
-
-//   scrollObserver = new IntersectionObserver(
-//     (hits) => {
-//       const hitBottom = hits.some((item) => item.isIntersecting);
-//       if (!hitBottom || !hasMore.value || loading.value) return;
-//       void fetchPage(false);
-//     },
-//     { root, rootMargin: '100px 0px', threshold: 0 }
-//   );
-//   scrollObserver.observe(sentinel);
-// }
-
-// watch(
-//   () => props.active,
-//   (active: boolean) => {
-//     if (active && !loadedOnce.value) reload();
-//     if (!active) detachInfiniteScroll();
-//   },
-//   { immediate: true }
-// );
-
-// watch(
-//   () => props.kbId,
-//   () => {
-//     loadedOnce.value = false;
-//     entries.value = [];
-//     if (props.active) reload();
-//   }
-// );
-
-// watch(
-//   [() => props.active, () => entries.value.length, () => error.value, hasMore],
-//   async ([active]: any) => {
-//     if (!active) {
-//       detachInfiniteScroll();
-//       return;
-//     }
-//     await nextTick();
-//     attachInfiniteScroll();
-//   },
-//   { flush: 'post' }
-// );
-
-// onUnmounted(() => detachInfiniteScroll());
 </script>
 
 <style scoped lang="scss">
