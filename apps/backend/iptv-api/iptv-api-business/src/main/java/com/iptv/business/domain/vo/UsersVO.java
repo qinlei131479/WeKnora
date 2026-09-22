@@ -1,15 +1,14 @@
 package com.iptv.business.domain.vo;
 
-import java.io.Serializable;
-import java.util.Date;
-import java.io.Serializable;
-import java.util.List;
-
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
+import java.util.Date;
+import java.util.List;
 
 /**
  * <p>
@@ -36,6 +35,12 @@ public class UsersVO implements Serializable {
      */
     @Schema(description = "用户名")
     private String username;
+
+    /**
+     * 用户账号（登录凭证）
+     */
+    @Schema(description = "用户账号（登录凭证）")
+    private String account;
 
     /**
      * 登录邮箱
@@ -112,20 +117,20 @@ public class UsersVO implements Serializable {
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
-    public static class UserTenantVO{
+    public static class UserTenantVO {
         /**
          * 工作空间 ID
-        */
+         */
         @Schema(description = "工作空间 ID")
         private Integer tenantId;
         /**
          * 工作空间名称
-        */
+         */
         @Schema(description = "工作空间名称")
         private String tenantName;
         /**
          * 角色
-        */
+         */
         @Schema(description = "角色")
         private String role;
 

@@ -3,7 +3,6 @@ package com.iptv.business.service.impl;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.lang.UUID;
-import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.BCrypt;
@@ -146,12 +145,12 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
             throw new ServiceException("该邮箱已被注册");
         }
 
-        // 检查用户名唯一性
-        Users existingUserByUsername = this.baseMapper.selectOne(
-                new LambdaUpdateWrapper<Users>().eq(Users::getUsername, dto.getUsername())
+        // 检查登录凭证唯一性
+        Users existingUserByAccount = this.baseMapper.selectOne(
+                new LambdaUpdateWrapper<Users>().eq(Users::getAccount, dto.getAccount())
         );
-        if (existingUserByUsername != null) {
-            throw new ServiceException("该用户名已被使用");
+        if (existingUserByAccount != null) {
+            throw new ServiceException("该登录凭证已被使用");
         }
 
         // 密码加密（使用BCrypt）
@@ -197,7 +196,7 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         List<TenantMembers> tenantMembersList = new ArrayList<>();
         defaultTenantsList.forEach(tenant -> {
             String role = TenantMemberRoleEnum.OWNER.getCode();
-            if(CollUtil.isNotEmpty(dto.getTenants())){
+            if (CollUtil.isNotEmpty(dto.getTenants())) {
                 role = dto.getTenants().stream()
                         .filter(b -> ObjectUtil.equal(b.getTenantId(), tenant.getId()))
                         .map(UsersDTO.BindTenantDTO::getRole)

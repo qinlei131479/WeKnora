@@ -41,6 +41,13 @@ public class UsersDTO implements Serializable {
     private String username;
 
     /**
+     * 用户账号（登录凭证）
+     */
+    @NotBlank(message = "用户账号（登录凭证）不能为空", groups = {BaseDTO.Insert.class})
+    @Schema(description = "用户账号（登录凭证）")
+    private String account;
+
+    /**
      * 登录邮箱
      */
     @NotBlank(message = "登录邮箱不能为空", groups = {BaseDTO.Insert.class})

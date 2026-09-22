@@ -34,10 +34,15 @@ public class Users implements java.io.Serializable {
     /**
      * 用户名
      */
-
-
     @Schema(description = "用户名")
     private String username;
+
+
+    /**
+     * 用户账号（登录凭证）
+     */
+    @Schema(description = "用户账号（登录凭证）")
+    private String account;
 
     /**
      * 登录邮箱
