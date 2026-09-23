@@ -12,7 +12,7 @@ public class TenantConstant {
     /** 平台管理租户id */
     public static final Long ADMIN_TENANT_ID = 1L;
 
-    public static final Integer BUSINESS_BUILTIN_TENANT_ID = 1;
+    public static final Integer BUSINESS_BUILTIN_TENANT_ID = 9999;
 
     /**
      * 租户类型编码

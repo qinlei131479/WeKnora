@@ -35,7 +35,7 @@ public class SkillController {
 
     private final SkillCatalogService skillCatalogService;
 
-    @Operation(summary = "分页查询技能目录", description = "跨全部租户分页查询技能目录定义，支持按名称/描述/版本模糊与租户过滤")
+    @Operation(summary = "分页查询技能目录", description = "跨全部租户分页查询技能目录定义，支持按关键字（名称/描述）模糊与租户过滤")
     @GetMapping("/list")
     @RequiresPermissions("business:skills:list")
     public TableDataInfo<SkillCatalogVO> catalogList(SkillCatalogPageDTO dto, PageDTO pg) {

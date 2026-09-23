@@ -26,6 +26,7 @@ import com.iptv.business.pgmapper.StorageBackendsMapper;
 import com.iptv.business.pgmapper.TenantsMapper;
 import com.iptv.business.service.SkillCatalogService;
 import com.iptv.business.service.StorageBackendFileServiceFactory;
+import com.iptv.common.core.constant.TenantConstant;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
 import com.iptv.common.core.web.page.PageDTO;
@@ -74,7 +75,7 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
     /**
      * 管理后台内置租户 ID（最高权限后台新增的技能归属该租户）
      */
-    private static final long BUILTIN_TENANT_ID = 9999L;
+    private static final long BUILTIN_TENANT_ID = TenantConstant.BUSINESS_BUILTIN_TENANT_ID;
 
     /**
      * 资源引用前缀（对齐 Go types.ResourceScheme）
@@ -204,9 +205,23 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
     public TableDataInfo<SkillCatalogVO> queryPage(@Nonnull SkillCatalogPageDTO dto, PageDTO pg) {
         Page<SkillCatalog> page = PageUtils.toPage(pg);
         List<SkillCatalog> list = skillCatalogMapper.queryPage(dto, page);
+        // 批量查询租户信息，避免列表逐行点查（N+1）
+        Map<Integer, Tenants> tenantMap = new HashMap<>();
+        Set<Long> tenantIds = list.stream()
+                .map(SkillCatalog::getTenantId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (!tenantIds.isEmpty()) {
+            List<Integer> ids = tenantIds.stream().map(Long::intValue).collect(Collectors.toList());
+            for (Tenants tenant : tenantsMapper.selectBatchIds(ids)) {
+                if (tenant.getDeletedAt() == null) {
+                    tenantMap.put(tenant.getId(), tenant);
+                }
+            }
+        }
         List<SkillCatalogVO> voList = new ArrayList<>();
         for (SkillCatalog entity : list) {
-            voList.add(toVO(entity, false));
+            voList.add(toVO(entity, false, tenantMap));
         }
         return PageUtils.getDataTable(voList, page);
     }
@@ -358,9 +373,31 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
             skillCatalogMapper.insert(entity);
         } catch (Exception e) {
             storageBackendFileServiceFactory.deleteObject(backend, objectKey);
+            // 并发上传同名技能触发 (tenant_id, name) 唯一索引冲突时给出业务提示（resources 记录随事务回滚）
+            if (isDuplicateKeyError(e)) {
+                throw new ServiceException("技能已存在，请刷新列表后编辑已有技能");
+            }
             throw e;
         }
         return toVO(entity, false);
+    }
+
+    /**
+     * 判断异常链中是否为唯一键冲突（并发插入同名技能等场景）
+     */
+    private boolean isDuplicateKeyError(Throwable e) {
+        Throwable cause = e;
+        while (cause != null) {
+            if (cause instanceof org.springframework.dao.DuplicateKeyException) {
+                return true;
+            }
+            String message = StrUtil.nullToEmpty(cause.getMessage()).toLowerCase();
+            if (message.contains("duplicate key") || message.contains("unique constraint")) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 
     /**
@@ -1510,9 +1547,16 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
     }
 
     /**
-     * 实体转 VO（附带租户信息；needTree 时附带 bundle 文件树）
+     * 实体转 VO（附带租户信息；needTree 时附带 bundle 文件树；租户信息单查）
      */
     private SkillCatalogVO toVO(SkillCatalog entity, boolean needTree) {
+        return toVO(entity, needTree, null);
+    }
+
+    /**
+     * 实体转 VO（tenantMap 非空时从中取租户信息，为空时单查）
+     */
+    private SkillCatalogVO toVO(SkillCatalog entity, boolean needTree, Map<Integer, Tenants> tenantMap) {
         SkillCatalogVO vo = new SkillCatalogVO();
         vo.setId(entity.getId());
         vo.setTenantId(entity.getTenantId());
@@ -1525,7 +1569,9 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
         vo.setCreatedAt(entity.getCreatedAt());
         vo.setUpdatedAt(entity.getUpdatedAt());
         if (ObjectUtil.isNotEmpty(entity.getTenantId())) {
-            Tenants tenant = tenantsMapper.selectById(entity.getTenantId().intValue());
+            Tenants tenant = tenantMap != null
+                    ? tenantMap.get(entity.getTenantId().intValue())
+                    : tenantsMapper.selectById(entity.getTenantId().intValue());
             if (tenant != null && tenant.getDeletedAt() == null) {
                 vo.setTenant(tenant);
             }
