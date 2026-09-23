@@ -590,11 +590,25 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
     // ==================================================================
 
     /**
-     * 解析技能 bundle zip：限额校验 → 路径安全校验 → 根目录剥离 → frontmatter 提取
+     * 解析技能 bundle zip（上传路径，严格模式，对齐 Go ParseSkillBundle 默认选项）
      */
     private SkillBundle parseSkillBundle(byte[] archive) {
+        return parseSkillBundle(archive, "", false, false);
+    }
+
+    /**
+     * 解析技能 bundle zip：限额校验 → 路径安全校验 → 技能根定位与目录剥离 → frontmatter 提取
+     *
+     * @param archive          zip 字节
+     * @param subdir           技能根子目录（GitHub/GitLab tree 子目录或 registry handoff path，上传时为空）
+     * @param allowNestedSkill 远程包允许 SKILL.md 位于嵌套目录（对齐 Go AllowNestedSkill）
+     * @param allowExtraFiles  技能目录之外的文件：true 丢弃，false 报错（对齐 Go AllowExtraFiles）
+     */
+    private SkillBundle parseSkillBundle(byte[] archive, String subdir, boolean allowNestedSkill,
+                                         boolean allowExtraFiles) {
         Map<String, byte[]> raw = readZipEntries(archive);
-        Map<String, byte[]> files = stripSkillRootPrefix(raw);
+        String prefix = skillRootPrefix(raw, subdir, allowNestedSkill);
+        Map<String, byte[]> files = stripSkillRootPrefix(raw, prefix, allowExtraFiles);
         if (!files.containsKey("SKILL.md")) {
             throw new ServiceException("技能包缺少 SKILL.md");
         }
@@ -670,26 +684,59 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
     }
 
     /**
-     * 根目录剥离：zip 根下无 SKILL.md 且所有条目共享同一首段目录时，整体剥掉该前缀
-     * （对齐 Go stripSkillRootPrefix）
+     * 定位技能根目录（对齐 Go skillRootPrefix）：
+     * 无 subdir 时根下 SKILL.md 即技能根；否则收集全部 SKILL.md 所在目录候选——
+     * 上传仅接受根/单层目录，远程包允许嵌套；subdir 非空时只接受等于或以 /{subdir} 结尾的目录；
+     * 候选唯一才通过，多个即"包含多个技能"
      */
-    private Map<String, byte[]> stripSkillRootPrefix(Map<String, byte[]> raw) {
-        if (raw.containsKey("SKILL.md")) {
+    private String skillRootPrefix(Map<String, byte[]> raw, String subdir, boolean allowNestedSkill) {
+        String clean = StrUtil.trimToEmpty(subdir).replace('\\', '/');
+        clean = StrUtil.removePrefix(clean, "/");
+        clean = StrUtil.removeSuffix(clean, "/");
+        if (StrUtil.isBlank(clean) && raw.containsKey("SKILL.md")) {
+            return "";
+        }
+        Set<String> matches = new LinkedHashSet<>();
+        for (String name : raw.keySet()) {
+            String base = name.substring(name.lastIndexOf('/') + 1);
+            if (!"SKILL.md".equals(base)) {
+                continue;
+            }
+            String dir = name.lastIndexOf('/') > 0 ? name.substring(0, name.lastIndexOf('/')) : "";
+            if (StrUtil.isNotBlank(clean)) {
+                if (dir.equals(clean) || dir.endsWith("/" + clean)) {
+                    matches.add(dir);
+                }
+                continue;
+            }
+            if (StrUtil.isBlank(dir) || !dir.contains("/") || allowNestedSkill) {
+                matches.add(dir);
+            }
+        }
+        if (matches.isEmpty()) {
+            throw new ServiceException(StrUtil.isNotBlank(clean)
+                    ? "技能包在指定目录下缺少 SKILL.md: " + clean : "技能包缺少 SKILL.md");
+        }
+        if (matches.size() > 1) {
+            throw new ServiceException("技能包包含多个技能（多处 SKILL.md）: " + String.join(", ", matches));
+        }
+        return matches.iterator().next();
+    }
+
+    /**
+     * 按技能根前缀重定向文件路径（对齐 Go stripSkillRootPrefix）：
+     * 前缀内条目剥掉前缀，前缀外条目按 allowExtraFiles 丢弃或报错
+     */
+    private Map<String, byte[]> stripSkillRootPrefix(Map<String, byte[]> raw, String prefix, boolean allowExtraFiles) {
+        if (StrUtil.isBlank(prefix)) {
             return raw;
         }
-        // 找出 SKILL.md 所在位置，确定唯一技能根
-        String skillMdPath = raw.keySet().stream()
-                .filter(name -> "SKILL.md".equalsIgnoreCase(name.substring(name.lastIndexOf('/') + 1)))
-                .findFirst()
-                .orElse(null);
-        if (skillMdPath == null) {
-            return raw;
-        }
-        String prefix = skillMdPath.substring(0, skillMdPath.lastIndexOf('/') + 1);
         Map<String, byte[]> out = new LinkedHashMap<>();
         for (Map.Entry<String, byte[]> item : raw.entrySet()) {
-            if (item.getKey().startsWith(prefix)) {
-                out.put(item.getKey().substring(prefix.length()), item.getValue());
+            if (item.getKey().startsWith(prefix + "/")) {
+                out.put(item.getKey().substring(prefix.length() + 1), item.getValue());
+            } else if (!allowExtraFiles) {
+                throw new ServiceException("压缩包内存在技能目录之外的文件: " + prefix);
             }
         }
         if (!out.containsKey("SKILL.md")) {
@@ -1143,6 +1190,10 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
             return new FetchedSource(content, contentType, source.subdir());
         }
         if (!looksLikeJson(contentType, content)) {
+            // Content-Type 声明为 zip 但魔数不符（如带前置数据的 zip）也接受（对齐 Go isZipPayload 分支）
+            if (StrUtil.containsIgnoreCase(StrUtil.nullToEmpty(contentType), "zip")) {
+                return new FetchedSource(content, contentType, source.subdir());
+            }
             throw new ServiceException("远程来源未返回技能压缩包");
         }
         JSONObject handoff;
@@ -1169,11 +1220,15 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
         if (StrUtil.isBlank(archiveUrl) && archive != null) {
             archiveUrl = archive.getStr("downloadUrl");
         }
-        String path = StrUtil.trimToEmpty(handoff.getStr("path"));
         JSONObject github = handoff.getJSONObject("github");
+        String path = StrUtil.trimToEmpty(handoff.getStr("path"));
+        if (StrUtil.isBlank(path) && github != null) {
+            path = StrUtil.trimToEmpty(github.getStr("path"));
+        }
         if (StrUtil.isBlank(archiveUrl) && github == null) {
+            // 对齐 Go handoffGitHub：installKind=github 且 repo/commit 任一非空即可
             if ("github".equalsIgnoreCase(StrUtil.trimToEmpty(handoff.getStr("installKind")))
-                    && StrUtil.isNotBlank(handoff.getStr("repo"))) {
+                    && (StrUtil.isNotBlank(handoff.getStr("repo")) || StrUtil.isNotBlank(handoff.getStr("commit")))) {
                 github = new JSONObject()
                         .set("repo", handoff.getStr("repo"))
                         .set("path", path)
@@ -1195,6 +1250,9 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
             String subdir = StrUtil.blankToDefault(next.subdir(), StrUtil.emptyToNull(path));
             String ref = next.ref();
             String commit = StrUtil.trimToEmpty(handoff.getStr("commit"));
+            if (StrUtil.isBlank(commit) && github != null) {
+                commit = StrUtil.trimToEmpty(github.getStr("commit"));
+            }
             if (next.kind() == SourceKind.GITHUB && "HEAD".equals(ref) && StrUtil.isNotBlank(commit)) {
                 ref = commit;
             }
@@ -1229,38 +1287,89 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
     }
 
     /**
-     * 下载指定 URL（SSRF 防护 + 大小上限），返回 [contentType, base64(body)]
+     * 下载指定 URL（SSRF 防护 + 大小上限），返回 [contentType, base64(body)]；
+     * 手动跟随重定向并对每一跳重新做 SSRF 校验（对齐 Go SSRFSafeHTTPClient，
+     * 不能用自动跟随，否则重定向目标会绕过内网防护）
      */
     private String[] getSkillUrl(String url) {
-        ssrfGuard(url);
-        try (HttpResponse response = HttpRequest.get(url)
-                .header("User-Agent", "Agent-Middle-Platform-SkillInstaller")
-                .header("Accept", "application/zip, application/octet-stream, application/json, text/plain;q=0.9, */*;q=0.8")
-                .timeout(FETCH_TIMEOUT_MILLIS)
-                .execute()) {
-            if (response.getStatus() < 200 || response.getStatus() >= 300) {
-                throw new ServiceException("下载技能来源失败，HTTP " + response.getStatus());
+        String current = url;
+        for (int hop = 0; ; hop++) {
+            ssrfGuard(current);
+            try (HttpResponse response = HttpRequest.get(current)
+                    .header("User-Agent", "Agent-Middle-Platform-SkillInstaller")
+                    .header("Accept", "application/zip, application/octet-stream, application/json, text/plain;q=0.9, */*;q=0.8")
+                    .timeout(FETCH_TIMEOUT_MILLIS)
+                    .execute()) {
+                int status = response.getStatus();
+                if (isRedirectStatus(status)) {
+                    if (hop >= MAX_REDIRECT_HOPS) {
+                        throw new ServiceException("技能来源重定向次数超限");
+                    }
+                    String location = response.header("Location");
+                    if (StrUtil.isBlank(location)) {
+                        throw new ServiceException("远程来源返回重定向但缺少 Location");
+                    }
+                    current = resolveRedirectUrl(current, location);
+                    continue;
+                }
+                if (status < 200 || status >= 300) {
+                    throw new ServiceException("下载技能来源失败，HTTP " + status);
+                }
+                long contentLength = response.contentLength();
+                if (contentLength > MAX_BUNDLE_BYTES) {
+                    throw new ServiceException("技能包大小不能超过 " + MAX_BUNDLE_BYTES / 1024 / 1024 + "MB");
+                }
+                byte[] body;
+                try {
+                    InputStream in = response.bodyStream();
+                    body = in.readNBytes((int) MAX_BUNDLE_BYTES + 1);
+                } catch (IOException e) {
+                    throw new ServiceException("读取远程技能来源失败: " + e.getMessage());
+                }
+                if (body.length > MAX_BUNDLE_BYTES) {
+                    throw new ServiceException("技能包大小不能超过 " + MAX_BUNDLE_BYTES / 1024 / 1024 + "MB");
+                }
+                if (body.length == 0) {
+                    throw new ServiceException("远程来源返回了空内容");
+                }
+                // base64 编码承载字节数组，避免二进制内容经字符串转码损坏
+                return new String[]{response.header("Content-Type"), java.util.Base64.getEncoder().encodeToString(body)};
             }
-            long contentLength = response.contentLength();
-            if (contentLength > MAX_BUNDLE_BYTES) {
-                throw new ServiceException("技能包大小不能超过 " + MAX_BUNDLE_BYTES / 1024 / 1024 + "MB");
-            }
-            byte[] body;
-            try {
-                InputStream in = response.bodyStream();
-                body = in.readNBytes((int) MAX_BUNDLE_BYTES + 1);
-            } catch (IOException e) {
-                throw new ServiceException("读取远程技能来源失败: " + e.getMessage());
-            }
-            if (body.length > MAX_BUNDLE_BYTES) {
-                throw new ServiceException("技能包大小不能超过 " + MAX_BUNDLE_BYTES / 1024 / 1024 + "MB");
-            }
-            if (body.length == 0) {
-                throw new ServiceException("远程来源返回了空内容");
-            }
-            // base64 编码承载字节数组，避免二进制内容经字符串转码损坏
-            return new String[]{response.header("Content-Type"), java.util.Base64.getEncoder().encodeToString(body)};
         }
+    }
+
+    /**
+     * 重定向跳数上限（对齐 Go DefaultSSRFSafeHTTPClientConfig MaxRedirects=10）
+     */
+    private static final int MAX_REDIRECT_HOPS = 10;
+
+    /**
+     * 判断是否为需要跟随的重定向状态码
+     */
+    private boolean isRedirectStatus(int status) {
+        return status == 301 || status == 302 || status == 303 || status == 307 || status == 308;
+    }
+
+    /**
+     * 将重定向 Location 解析为绝对地址（相对路径基于当前 URL 拼接，符合 HTTP 语义）
+     */
+    private String resolveRedirectUrl(String current, String location) {
+        URI base;
+        try {
+            base = URI.create(current);
+        } catch (IllegalArgumentException e) {
+            throw new ServiceException("无效的下载地址: " + current);
+        }
+        URI resolved;
+        try {
+            resolved = base.resolve(location.trim());
+        } catch (IllegalArgumentException e) {
+            throw new ServiceException("无效的重定向地址: " + location);
+        }
+        if (StrUtil.isBlank(resolved.getScheme())) {
+            throw new ServiceException("重定向地址缺少协议: " + location);
+        }
+        return resolved.toString();
     }
 
     /**
@@ -1314,7 +1423,9 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
         if (!isZipMagic(body) && !StrUtil.containsIgnoreCase(StrUtil.nullToEmpty(contentType), "zip")) {
             throw new ServiceException("远程来源未返回 zip 技能包");
         }
-        return parseSkillBundle(body);
+        // 远程包放宽：支持子目录定位技能根、允许嵌套 SKILL.md、丢弃技能目录外文件
+        // （对齐 Go ParseSkillBundleWithOptions{Subdir, AllowNestedSkill, AllowExtraFiles}）
+        return parseSkillBundle(body, subdir, true, true);
     }
 
     /**
