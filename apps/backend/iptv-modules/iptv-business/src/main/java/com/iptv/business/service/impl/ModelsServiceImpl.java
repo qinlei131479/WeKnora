@@ -417,7 +417,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
             requestBody.put("max_tokens", dto.getMaxTokens());
         }
         if (dto.getThinking() != null) {
-            requestBody.put("thinking", dto.getThinking());
+            requestBody.put("enable_thinking ", dto.getThinking());
         }
 
         observations.put("stream", false);
