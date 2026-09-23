@@ -878,18 +878,6 @@
     }
   },
   "page": {
-    "KnowledgeFaq": {
-      "answers": "Answers",
-      "deleteConfirm": "Are you sure you want to delete the standard question {name}?",
-      "negativeQuestions": "Negative examples",
-      "qaId": "Q&A ID",
-      "searchPlaceholder": "Search Q&A",
-      "similarQuestions": "Similar questions",
-      "standardQuestion": "Question",
-      "tagName": "Tag name",
-      "tagPlaceholder": "Select tags",
-      "titleDetail": "Q&A details"
-    },
     "agent": {
       "list": {
         "detail.agentMode": "Operating Mode",
@@ -1463,6 +1451,18 @@
         "faq": "Q&A"
       }
     },
+    "knowledgeFaq": {
+      "answers": "Answers",
+      "deleteConfirm": "Are you sure you want to delete the standard question {name}?",
+      "negativeQuestions": "Negative examples",
+      "qaId": "Q&A ID",
+      "searchPlaceholder": "Search Q&A",
+      "similarQuestions": "Similar questions",
+      "standardQuestion": "Question",
+      "tagName": "Tag name",
+      "tagPlaceholder": "Select tags",
+      "titleDetail": "Q&A details"
+    },
     "knowledgeFile": {
       "channel": "Source Channel",
       "characters": "characters",
@@ -1670,6 +1670,7 @@
       "yes": "Yes"
     },
     "models": {
+      "add": "Add Model",
       "debug.copy": "Copy Result",
       "debug.documents": "Candidate Documents",
       "debug.documentsPlaceholder": "One document per line, used for rerank scoring",
@@ -1695,8 +1696,9 @@
       "debug.systemPromptPlaceholder": "Optional",
       "debug.thinking": "Thinking Mode",
       "debug.title": "Model Debug",
-      "form.apiKey": "API Key",
-      "form.apiKeyPlaceholder": "Enter API Key (optional)",
+      "form.alert.ollama.rerank": "Ollama does not support ReRank models, please use a remote API instead",
+      "form.apiKey": "API Key (optional)",
+      "form.apiKeyPlaceholder": "Enter API Key",
       "form.apiKeyReplacePlaceholder": "Enter a new API Key, then click Update or simply save",
       "form.appId": "App ID",
       "form.appIdPlaceholder": "Required by some vendors such as WeKnoraCloud",
@@ -1712,36 +1714,37 @@
       "form.credentialRemoved": "Secret removed",
       "form.credentialUpdate": "Update Key",
       "form.credentialUpdated": "Secret updated",
-      "form.customHeaders": "Custom Headers",
+      "form.customHeaders": "Custom Headers (optional)",
       "form.description": "Description",
       "form.descriptionPlaceholder": "Enter a description (optional)",
       "form.dimension": "Vector Dimension",
-      "form.dimensionDesc": "The real dimension returned by the vendor is filled in after a successful test",
-      "form.displayName": "Display Name",
-      "form.displayNamePlaceholder": "Enter a display name (optional)",
+      "form.dimensionPlaceholder": "e.g. 1536",
+      "form.displayName": "Display Name (optional)",
+      "form.displayNamePlaceholder": "e.g. Support QA model",
+      "form.displayNameTip": "Used only in the UI. Runtime calls still use the model name above.",
       "form.extraConfig": "Extra Configuration",
       "form.interfaceType": "Interface Type",
       "form.interfaceTypePlaceholder": "e.g. openai (optional)",
-      "form.kvAdd": "Add Row",
-      "form.kvKeyPlaceholder": "Key",
-      "form.kvValuePlaceholder": "Value",
-      "form.maxConcurrency": "Max Concurrency",
+      "form.headerAdd": "Add Header",
+      "form.headerNamePlaceholder": "Header name",
+      "form.headerValuePlaceholder": "Header value",
+      "form.maxConcurrency": "Background Concurrency Limit",
+      "form.maxConcurrencyPlaceholder": "0 = use global default",
       "form.name": "Model Name",
-      "form.nameDesc": "Must match the model identifier used by the vendor API, e.g. qwen-plus",
-      "form.namePlaceholder": "Enter a model name",
+      "form.namePlaceholder": "e.g. {example}",
       "form.parameterSize": "Parameter Size",
       "form.parameterSizePlaceholder": "e.g. 7B / 13B (optional)",
       "form.provider": "Provider",
-      "form.providerPlaceholder": "Select a provider",
-      "form.section.advanced": "Advanced Configuration",
+      "form.section.advanced": "Advanced Options",
       "form.section.basic": "Basic Information",
       "form.section.embedding": "Embedding Parameters",
-      "form.section.provider": "Connection Configuration",
+      "form.section.provider": "Provider Settings",
       "form.source": "Model Source",
       "form.sourcePlaceholder": "Select a model source",
-      "form.supportsDimensionOverride": "Supports Dimension Override",
-      "form.supportsVision": "Supports Vision Input",
-      "form.supportsVisionDesc": "When enabled, the model accepts image input",
+      "form.supportsDimensionOverride": "Custom Output Dimension",
+      "form.supportsDimensionOverrideDesc": "Enable only if the provider documentation says this model accepts a dimensions parameter.",
+      "form.supportsVision": "Supports Vision / Multimodal",
+      "form.supportsVisionDesc": "Whether the model accepts image and multimodal input",
       "form.title.add": "Add Model",
       "form.title.edit": "Edit Model",
       "form.truncatePromptTokens": "Truncate Prompt Tokens",
@@ -2287,6 +2290,5 @@
       "usernamePlaceholder": "Enter a username"
     }
   },
-  "plugin": {},
   "plugins": {}
 }

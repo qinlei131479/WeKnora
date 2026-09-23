@@ -4,7 +4,8 @@ import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { API } from '@/api';
 import { toProviderModelType } from '@/api/model/models';
 import type { ModelCredentialField, ModelProviderVO, ModelTestRequestDTO, ModelTestResultVO, ModelsDTO, ModelsVO } from '@/types/api/model/model';
-import { MODEL_SOURCE_OPTIONS, MODEL_TYPE_OPTIONS } from '../constants';
+import { MODEL_TYPE_OPTIONS, MODEL_SOURCE_OPTIONS } from '../constants';
+import { Remove } from '@element-plus/icons-vue';
 
 const { proxy } = getCurrentInstance() as any;
 
@@ -24,9 +25,9 @@ const drawerVisible = computed({
   set: (value: boolean) => emit('update:visible', value)
 });
 
-const isEdit = computed(() => props.mode === 'edit');
-
-const drawerTitle = computed(() => (isEdit.value ? t('page.models.form.title.edit', '编辑模型') : t('page.models.form.title.add', '新增模型')));
+const drawerTitle = computed(() =>
+  props.mode === 'edit' ? t('page.models.form.title.edit', '编辑模型') : t('page.models.form.title.add', '新增模型')
+);
 
 /** 键值对编辑器的行结构，提交前会转成 Record<string, string> */
 interface KeyValueRow {
@@ -75,25 +76,13 @@ const form = reactive({
   extraConfig: [] as KeyValueRow[]
 });
 
-const isEmbedding = computed(() => form.type === 'Embedding');
-const isRemote = computed(() => form.source !== 'local');
-const supportsVisionVisible = computed(() => form.type === 'KnowledgeQA' || form.type === 'VLLM');
-const maxConcurrencyVisible = computed(() => ['KnowledgeQA', 'Embedding', 'VLLM'].includes(form.type));
-
-const selectedProvider = computed(() => providers.value.find((item) => item.value === form.provider));
-
-/**
- * 后端 test 接口最低要 modelId，未保存的新增不能测。
- */
-const canTest = computed(() => !!form.id);
-
 const rules = computed(() => ({
   name: [{ required: true, message: t('page.models.form.namePlaceholder', '请输入模型名称'), trigger: 'blur' }],
   type: [{ required: true, message: t('page.models.form.typePlaceholder', '请选择模型类型'), trigger: 'change' }],
   source: [{ required: true, message: t('page.models.form.sourcePlaceholder', '请选择模型来源'), trigger: 'change' }],
   baseUrl: [
     {
-      required: isRemote.value,
+      required: form.source !== 'local',
       message: t('page.models.form.baseUrlPlaceholder', '请输入 Base URL'),
       trigger: 'blur'
     }
@@ -166,7 +155,7 @@ const providerDefaultUrl = (provider?: ModelProviderVO) => {
 
 /** 切换厂商时用它的默认地址覆盖 Base URL，省得手输 */
 const onProviderChange = () => {
-  const defaultUrl = providerDefaultUrl(selectedProvider.value);
+  const defaultUrl = providerDefaultUrl(providers.value.find((item) => item.value === form.provider));
   if (defaultUrl) form.baseUrl = defaultUrl;
   testResult.value = null;
   nextTick(() => saveFormRef.value?.clearValidate?.('baseUrl'));
@@ -227,14 +216,14 @@ const buildParameters = (includeSecrets: boolean) => {
     interfaceType: form.interfaceType || undefined,
     parameterSize: form.parameterSize || undefined,
     provider: form.provider || undefined,
-    supportsVision: supportsVisionVisible.value ? form.supportsVision : undefined,
+    supportsVision: form.type === 'KnowledgeQA' || form.type === 'VLLM' ? form.supportsVision : undefined,
     maxConcurrency: form.maxConcurrency ?? undefined,
     appId: form.appId || undefined,
     customHeaders: rowsToRecord(form.customHeaders),
     extraConfig: rowsToRecord(form.extraConfig)
   };
 
-  if (isEmbedding.value) {
+  if (form.type === 'Embedding') {
     parameters.embeddingParameters = {
       dimension: form.dimension ?? undefined,
       truncatePromptTokens: form.truncatePromptTokens ?? undefined,
@@ -259,22 +248,23 @@ const loadDetail = (id: string) =>
       console.error('[Models] load detail failed:', error);
     });
 
-const initDrawer = async () => {
+const initDrawer = () => {
   resetForm();
   loading.value = true;
 
-  try {
-    if (isEdit.value && props.editId) {
-      await loadDetail(props.editId);
-      await loadProviders();
-      return;
-    }
-    await loadProviders();
-  } finally {
+  const request =
+    props.mode === 'edit' && props.editId
+      ? loadDetail(props.editId).then(() => loadProviders())
+      : loadProviders().then(() => {
+          if (props.mode === 'edit') return;
+          form.provider = providers.value[0]?.value ?? '';
+          onProviderChange();
+        });
+
+  return request.finally(() => {
     loading.value = false;
-    await nextTick();
-    saveFormRef.value?.clearValidate?.();
-  }
+    return nextTick(() => saveFormRef.value?.clearValidate?.());
+  });
 };
 
 watch(
@@ -329,11 +319,11 @@ const handleSave = async () => {
     type: form.type,
     source: form.source,
     description: form.description || undefined,
-    parameters: buildParameters(!isEdit.value)
+    parameters: buildParameters(props.mode !== 'edit')
   };
 
   try {
-    if (isEdit.value) {
+    if (props.mode === 'edit') {
       await API.Models.update(payload);
 
       if (!(await saveSecretsIfFilled())) {
@@ -346,7 +336,7 @@ const handleSave = async () => {
     }
 
     proxy?.$modal?.msgSuccess(
-      isEdit.value ? t('page.normal.confirmInfo.updateSuccess', '修改成功') : t('page.normal.confirmInfo.addSuccess', '新增成功')
+      props.mode === 'edit' ? t('page.normal.confirmInfo.updateSuccess', '修改成功') : t('page.normal.confirmInfo.addSuccess', '新增成功')
     );
     emit('success');
     drawerVisible.value = false;
@@ -377,7 +367,7 @@ const handleTest = () => {
   if (form.apiKey) payload.apiKey = form.apiKey;
   if (form.appSecret) payload.appSecret = form.appSecret;
 
-  if (isEmbedding.value) {
+  if (form.type === 'Embedding') {
     payload.dimension = form.dimension ?? undefined;
     payload.supportsDimensionOverride = form.supportsDimensionOverride;
   }
@@ -391,7 +381,7 @@ const handleTest = () => {
       };
 
       // Embedding 测试成功会回传真实维度，直接回填省得手工核对
-      if (isEmbedding.value && res.data?.available && res.data.dimension) {
+      if (form.type === 'Embedding' && res.data?.available && res.data.dimension) {
         form.dimension = res.data.dimension;
       }
     })
@@ -476,7 +466,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
   <KjscRtlDrawer v-model="drawerVisible" :title="drawerTitle" size="800px" append-to-body>
     <el-form ref="saveFormRef" v-loading="loading" :model="form" :rules="rules" label-position="top" :validate-on-rule-change="false">
       <el-form-item :label="$t('page.models.form.type', '模型类型')" prop="type">
-        <el-radio-group v-model="form.type" :disabled="isEdit" @change="onTypeChange">
+        <el-radio-group v-model="form.type" :disabled="props.mode === 'edit'" @change="onTypeChange">
           <el-radio-button v-for="item in MODEL_TYPE_OPTIONS" :key="item.value" :value="item.value">
             {{ $t(item.labelKey, item.label) }}
           </el-radio-button>
@@ -484,18 +474,145 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
       </el-form-item>
 
       <el-form-item :label="$t('page.models.form.source', '模型来源')" prop="source">
-        <el-radio-group v-model="form.source" :disabled="isEdit">
+        <el-radio-group v-model="form.source" :disabled="props.mode === 'edit'">
           <el-radio-button
             v-for="item in MODEL_SOURCE_OPTIONS"
             :key="item.value"
             :value="item.value"
-            :disabled="isEdit || (form.type === 'Rerank' && item.value === 'local')"
+            :disabled="props.mode === 'edit' || (form.type === 'Rerank' && item.value === 'local')"
           >
             {{ $t(item.labelKey, item.label) }}
           </el-radio-button>
         </el-radio-group>
       </el-form-item>
 
+      <el-alert
+        v-if="form.type === 'Rerank'"
+        type="primary"
+        show-icon
+        :closable="false"
+        :title="$t('form.alert.ollama.rerank', 'Ollama 不支持 ReRank 模型，请使用远程接口配置')"
+      />
+
+      <el-divider />
+
+      <h4 v-if="form.source !== 'local'" class="section-title">{{ $t('page.models.form.section.provider', '接入配置') }}</h4>
+
+      <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.provider', '服务商')" prop="provider">
+        <el-select v-model="form.provider" class="full-width" @change="onProviderChange">
+          <el-option
+            v-for="item in providers"
+            class="provider-option"
+            :class="{ 'provider-option__selected': form.provider === item.value }"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value!"
+          >
+            <div class="provider-option-title" :class="{ 'provider-option-title__selected': form.provider === item.value }">{{ item.label }}</div>
+            <div class="provider-option-description">{{ item.description }}</div>
+          </el-option>
+        </el-select>
+      </el-form-item>
+
+      <el-form-item :label="$t('page.models.form.name', '模型名称')" prop="name">
+        <el-input
+          v-model="form.name"
+          :placeholder="
+            $t(
+              'page.models.form.namePlaceholder',
+              { example: MODEL_TYPE_OPTIONS.find((item: (typeof MODEL_TYPE_OPTIONS)[number]) => item.value === form.type)?.example?.name || '' },
+              '请输入模型名称'
+            )
+          "
+          maxlength="100"
+        />
+      </el-form-item>
+
+      <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.displayName', '显示名称（可选）')" prop="displayName">
+        <el-input v-model="form.displayName" :placeholder="$t('page.models.form.displayNamePlaceholder', '例如：客户问答模型')" maxlength="100" />
+      </el-form-item>
+
+      <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.baseUrl', 'Base URL')" prop="baseUrl">
+        <el-input v-model="form.baseUrl" :placeholder="$t('page.models.form.baseUrlPlaceholder', '请输入 Base URL')" />
+      </el-form-item>
+
+      <!-- 新增模式：凭证随 parameters 一起提交 -->
+      <el-form-item v-if="form.source !== 'local' && props.mode !== 'edit'" :label="$t('page.models.form.apiKey', 'API Key（可选）')" prop="apiKey">
+        <el-input
+          v-model="form.apiKey"
+          type="password"
+          show-password
+          autocomplete="new-password"
+          :placeholder="$t('page.models.form.apiKeyPlaceholder', '请输入 API Key')"
+        />
+      </el-form-item>
+
+      <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.customHeaders', '自定义请求头')">
+        <div class="kv-editor">
+          <div v-for="(row, index) in form.customHeaders" :key="`header-${index}`" class="kv-row">
+            <el-input v-model="row.key" :placeholder="$t('page.models.form.headerNamePlaceholder', 'Header 名称')" />
+            <el-input v-model="row.value" :placeholder="$t('page.models.form.headerValuePlaceholder', 'Header 值')" />
+            <el-button link type="danger" icon="Remove" @click="removeKeyValueRow(form.customHeaders, index)" />
+          </div>
+          <el-button link type="primary" icon="Plus" @click="addKeyValueRow(form.customHeaders)">
+            {{ $t('page.models.form.headerAdd', '添加请求头') }}
+          </el-button>
+        </div>
+      </el-form-item>
+
+      <h4 v-if="form.source !== 'local' && ['KnowledgeQA', 'Embedding', 'VLLM'].includes(form.type)" class="section-title">
+        {{ $t('page.models.form.section.advanced', '高级选项') }}
+      </h4>
+
+      <el-form-item v-if="form.type === 'Embedding'" :label="$t('page.models.form.dimension', '向量维度')" prop="dimension">
+        <el-input-number
+          v-model="form.dimension"
+          controls-position="right"
+          align="left"
+          disabled
+          :placeholder="$t('page.models.form.dimensionPlaceholder', '例如：1536')"
+        />
+      </el-form-item>
+
+      <el-form-item
+        v-if="form.type === 'Embedding'"
+        :label="$t('page.models.form.supportsDimensionOverride', '自定义输出维度')"
+        prop="supportsDimensionOverride"
+      >
+        <el-switch v-model="form.supportsDimensionOverride" />
+        <span class="form-desc form-desc--inline">
+          {{ $t('page.models.form.supportsDimensionOverrideDesc', '仅在确认该模型支持 dimensions 参数时开启；默认只使用检测到的实际维度。') }}
+        </span>
+      </el-form-item>
+
+      <el-form-item v-if="form.type === 'KnowledgeQA'" :label="$t('page.models.form.supportsVision', '支持视觉/多模态')" prop="supportsVision">
+        <el-switch v-model="form.supportsVision" />
+        <span class="form-desc form-desc--inline">
+          {{ $t('page.models.form.supportsVisionDesc', '模型是否支持图片等多模态输入') }}
+        </span>
+      </el-form-item>
+
+      <!-- TODO: 思考模式参数格式 -->
+
+      <el-form-item
+        v-if="['KnowledgeQA', 'Embedding', 'VLLM'].includes(form.type)"
+        :label="$t('page.models.form.maxConcurrency', '后台并发上限')"
+        prop="maxConcurrency"
+      >
+        <el-input-number
+          v-model="form.maxConcurrency"
+          :min="0"
+          :max="4096"
+          controls-position="right"
+          align="left"
+          :placeholder="$t('page.models.form.maxConcurrencyPlaceholder', '0 表示使用全局默认')"
+        />
+      </el-form-item>
+
+      <!-- ################################################## -->
+      <!-- ################################################## -->
+      <!-- ################################################## -->
+      <!-- <el-divider /><el-divider /><el-divider />
       <h4 class="section-title">{{ $t('page.models.form.section.basic', '基本信息') }}</h4>
 
       <el-alert
@@ -507,18 +624,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         :title="$t('page.models.form.builtinHint', '内置模型可修改配置与凭证')"
       />
 
-      <el-form-item :label="$t('page.models.form.name', '模型名称')" prop="name">
-        <el-input v-model="form.name" :placeholder="$t('page.models.form.namePlaceholder', '请输入模型名称')" maxlength="100" />
-        <span class="form-desc">
-          {{ $t('page.models.form.nameDesc', '需与厂商接口中的模型标识一致，例如 qwen-plus') }}
-        </span>
-      </el-form-item>
-
-      <el-form-item v-if="isRemote" :label="$t('page.models.form.displayName', '显示名称')" prop="displayName">
-        <el-input v-model="form.displayName" :placeholder="$t('page.models.form.displayNamePlaceholder', '请输入显示名称（可选）')" maxlength="100" />
-      </el-form-item>
-
-      <el-form-item v-if="isRemote" :label="$t('page.models.form.description', '描述')" prop="description">
+      <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.description', '描述')" prop="description">
         <el-input
           v-model="form.description"
           type="textarea"
@@ -528,38 +634,9 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         />
       </el-form-item>
 
-      <h4 v-if="isRemote" class="section-title">{{ $t('page.models.form.section.provider', '接入配置') }}</h4>
+      <h4 v-if="form.source !== 'local'" class="section-title">{{ $t('page.models.form.section.provider', '接入配置') }}</h4>
 
-      <el-form-item v-if="isRemote" :label="$t('page.models.form.provider', '提供商')" prop="provider">
-        <el-select
-          v-model="form.provider"
-          class="full-width"
-          clearable
-          :placeholder="$t('page.models.form.providerPlaceholder', '请选择提供商')"
-          @change="onProviderChange"
-        >
-          <el-option v-for="item in providers" :key="item.value" :label="item.label" :value="item.value!" />
-        </el-select>
-        <span v-if="selectedProvider?.description" class="form-desc">{{ selectedProvider.description }}</span>
-      </el-form-item>
-
-      <el-form-item v-if="isRemote" :label="$t('page.models.form.baseUrl', 'Base URL')" prop="baseUrl">
-        <el-input v-model="form.baseUrl" :placeholder="$t('page.models.form.baseUrlPlaceholder', '请输入 Base URL')" />
-      </el-form-item>
-
-      <!-- 新增模式：凭证随 parameters 一起提交 -->
-      <el-form-item v-if="isRemote && !isEdit" :label="$t('page.models.form.apiKey', 'API Key')" prop="apiKey">
-        <el-input
-          v-model="form.apiKey"
-          type="password"
-          show-password
-          autocomplete="new-password"
-          :placeholder="$t('page.models.form.apiKeyPlaceholder', '请输入 API Key（可选）')"
-        />
-      </el-form-item>
-
-      <!-- 编辑模式：凭证走独立接口，只展示状态，不回显明文 -->
-      <el-form-item v-else-if="isRemote" :label="$t('page.models.form.apiKey', 'API Key')">
+      <el-form-item v-else-if="form.source !== 'local'" :label="$t('page.models.form.apiKey', 'API Key')">
         <div class="credential-box">
           <div class="credential-status">
             <el-tag :type="apiKeyConfigured ? 'success' : 'info'">
@@ -599,11 +676,11 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         </div>
       </el-form-item>
 
-      <el-form-item v-if="isRemote" :label="$t('page.models.form.appId', 'App ID')" prop="appId">
+      <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.appId', 'App ID')" prop="appId">
         <el-input v-model="form.appId" :placeholder="$t('page.models.form.appIdPlaceholder', '部分厂商（如 WeKnoraCloud）需要填写')" />
       </el-form-item>
 
-      <el-form-item v-if="isRemote && !isEdit" :label="$t('page.models.form.appSecret', 'App Secret')" prop="appSecret">
+      <el-form-item v-if="form.source !== 'local' && props.mode !== 'edit'" :label="$t('page.models.form.appSecret', 'App Secret')" prop="appSecret">
         <el-input
           v-model="form.appSecret"
           type="password"
@@ -613,7 +690,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         />
       </el-form-item>
 
-      <el-form-item v-else-if="isRemote" :label="$t('page.models.form.appSecret', 'App Secret')">
+      <el-form-item v-else-if="form.source !== 'local'" :label="$t('page.models.form.appSecret', 'App Secret')">
         <div class="credential-box">
           <div class="credential-status">
             <el-tag :type="appSecretConfigured ? 'success' : 'info'">
@@ -652,26 +729,15 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         </div>
       </el-form-item>
 
-      <el-form-item v-if="isRemote" :label="$t('page.models.form.interfaceType', '接口类型')" prop="interfaceType">
+      <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.interfaceType', '接口类型')" prop="interfaceType">
         <el-input v-model="form.interfaceType" :placeholder="$t('page.models.form.interfaceTypePlaceholder', '例如 openai（可选）')" />
       </el-form-item>
 
-      <el-form-item v-if="isRemote" :label="$t('page.models.form.parameterSize', '参数规模')" prop="parameterSize">
+      <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.parameterSize', '参数规模')" prop="parameterSize">
         <el-input v-model="form.parameterSize" :placeholder="$t('page.models.form.parameterSizePlaceholder', '例如 7B / 13B（可选）')" />
       </el-form-item>
 
-      <el-form-item v-if="maxConcurrencyVisible" :label="$t('page.models.form.maxConcurrency', '最大并发数')" prop="maxConcurrency">
-        <el-input-number v-model="form.maxConcurrency" :min="0" :max="1000" controls-position="right" />
-      </el-form-item>
-
-      <el-form-item v-if="form.type === 'KnowledgeQA'" :label="$t('page.models.form.supportsVision', '支持视觉输入')" prop="supportsVision">
-        <el-switch v-model="form.supportsVision" />
-        <span class="form-desc form-desc--inline">
-          {{ $t('page.models.form.supportsVisionDesc', '开启后该模型可接收图片输入') }}
-        </span>
-      </el-form-item>
-
-      <template v-if="isEmbedding">
+      <template v-if="form.type === 'Embedding'">
         <h4 class="section-title">{{ $t('page.models.form.section.embedding', '嵌入参数') }}</h4>
 
         <el-form-item :label="$t('page.models.form.dimension', '向量维度')" prop="dimension">
@@ -684,30 +750,9 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         <el-form-item :label="$t('page.models.form.truncatePromptTokens', '截断提示词 token 数')" prop="truncatePromptTokens">
           <el-input-number v-model="form.truncatePromptTokens" :min="0" :max="32768" controls-position="right" />
         </el-form-item>
-
-        <el-form-item :label="$t('page.models.form.supportsDimensionOverride', '支持维度覆盖')" prop="supportsDimensionOverride">
-          <el-switch v-model="form.supportsDimensionOverride" />
-        </el-form-item>
       </template>
 
-      <h4 v-if="isRemote" class="section-title">{{ $t('page.models.form.section.advanced', '高级配置') }}</h4>
-
-      <el-form-item v-if="isRemote" :label="$t('page.models.form.customHeaders', '自定义请求头')">
-        <div class="kv-editor">
-          <div v-for="(row, index) in form.customHeaders" :key="`header-${index}`" class="kv-row">
-            <el-input v-model="row.key" :placeholder="$t('page.models.form.kvKeyPlaceholder', '字段名')" />
-            <el-input v-model="row.value" :placeholder="$t('page.models.form.kvValuePlaceholder', '字段值')" />
-            <el-button link type="danger" @click="removeKeyValueRow(form.customHeaders, index)">
-              {{ $t('page.normal.delete', '删除') }}
-            </el-button>
-          </div>
-          <el-button link type="primary" @click="addKeyValueRow(form.customHeaders)">
-            {{ $t('page.models.form.kvAdd', '添加一行') }}
-          </el-button>
-        </div>
-      </el-form-item>
-
-      <el-form-item v-if="isRemote" :label="$t('page.models.form.extraConfig', '额外配置')">
+      <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.extraConfig', '额外配置')">
         <div class="kv-editor">
           <div v-for="(row, index) in form.extraConfig" :key="`extra-${index}`" class="kv-row">
             <el-input v-model="row.key" :placeholder="$t('page.models.form.kvKeyPlaceholder', '字段名')" />
@@ -720,7 +765,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
             {{ $t('page.models.form.kvAdd', '添加一行') }}
           </el-button>
         </div>
-      </el-form-item>
+      </el-form-item> -->
 
       <div v-if="testResult" class="test-result" :class="testResult.available ? 'is-success' : 'is-error'">
         <span class="test-result__title">
@@ -734,8 +779,8 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
       <div class="manage-dialog-footer">
         <el-button
           :loading="testing"
-          :disabled="!canTest"
-          :title="!canTest ? $t('page.models.test.saveFirst', '请先保存后再测试连接') : ''"
+          :disabled="!form.id"
+          :title="!form.id ? $t('page.models.test.saveFirst', '请先保存后再测试连接') : ''"
           @click="handleTest"
         >
           {{ $t('page.models.test.button', '测试连接') }}
@@ -750,17 +795,35 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
 </template>
 
 <style lang="scss" scoped>
-.section-title {
-  margin: 0 0 12px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #2b2f33;
+:deep(.el-input-number) {
+  width: 100%;
 }
 
-.section-title:not(:first-child) {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid #ececec;
+.section-title {
+  margin: 0 0 12px;
+  padding-left: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  border-left: 4px solid var(--el-color-primary);
+}
+
+.provider-option {
+  height: auto;
+  line-height: normal;
+  padding: 8px 12px;
+
+  &__selected {
+    background-color: var(--el-color-primary-light-9);
+  }
+}
+
+.provider-option-title {
+  padding-bottom: 4px;
+}
+
+.provider-option-description {
+  font-size: 12px;
+  color: var(--el-text-color-placeholder);
 }
 
 .builtin-alert {
@@ -776,7 +839,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
   width: 100%;
   color: #77838f;
   font-size: 12px;
-  line-height: 18px;
+  line-height: 20px;
 
   &--inline {
     display: inline;

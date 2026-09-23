@@ -878,18 +878,6 @@
     }
   },
   "page": {
-    "KnowledgeFaq": {
-      "answers": "答案",
-      "deleteConfirm": "是否确认删除标准问题为 {name} 的数据项？",
-      "negativeQuestions": "反例问题",
-      "qaId": "问答ID",
-      "searchPlaceholder": "搜索问答",
-      "similarQuestions": "相似问题",
-      "standardQuestion": "问题",
-      "tagName": "标签名称",
-      "tagPlaceholder": "请选择标签",
-      "titleDetail": "问答详情"
-    },
     "agent": {
       "list": {
         "detail.agentMode": "运行模式",
@@ -1463,6 +1451,18 @@
         "faq": "问答"
       }
     },
+    "knowledgeFaq": {
+      "answers": "答案",
+      "deleteConfirm": "是否确认删除标准问题为 {name} 的数据项？",
+      "negativeQuestions": "反例问题",
+      "qaId": "问答ID",
+      "searchPlaceholder": "搜索问答",
+      "similarQuestions": "相似问题",
+      "standardQuestion": "问题",
+      "tagName": "标签名称",
+      "tagPlaceholder": "请选择标签",
+      "titleDetail": "问答详情"
+    },
     "knowledgeFile": {
       "channel": "来源渠道",
       "characters": "字符",
@@ -1670,6 +1670,7 @@
       "yes": "是"
     },
     "models": {
+      "add": "新增模型",
       "debug.copy": "复制结果",
       "debug.documents": "候选文档",
       "debug.documentsPlaceholder": "每行一条文档，用于重排序打分",
@@ -1695,8 +1696,9 @@
       "debug.systemPromptPlaceholder": "可选",
       "debug.thinking": "思考模式",
       "debug.title": "模型调试",
-      "form.apiKey": "API Key",
-      "form.apiKeyPlaceholder": "请输入 API Key（可选）",
+      "form.alert.ollama.rerank": "Ollama 不支持 ReRank 模型，请使用远程接口配置",
+      "form.apiKey": "API Key（可选）",
+      "form.apiKeyPlaceholder": "请输入 API Key",
       "form.apiKeyReplacePlaceholder": "输入新的 API Key，点击「更新密钥」或直接保存均可生效",
       "form.appId": "App ID",
       "form.appIdPlaceholder": "部分厂商（如 WeKnoraCloud）需要填写",
@@ -1712,36 +1714,37 @@
       "form.credentialRemoved": "密钥已清除",
       "form.credentialUpdate": "更新密钥",
       "form.credentialUpdated": "密钥更新成功",
-      "form.customHeaders": "自定义请求头",
+      "form.customHeaders": "自定义请求头（可选）",
       "form.description": "描述",
       "form.descriptionPlaceholder": "请输入描述（可选）",
       "form.dimension": "向量维度",
-      "form.dimensionDesc": "测试连接成功后会自动回填厂商返回的真实维度",
-      "form.displayName": "显示名称",
-      "form.displayNamePlaceholder": "请输入显示名称（可选）",
+      "form.dimensionPlaceholder": "例如：1536",
+      "form.displayName": "显示名称（可选）",
+      "form.displayNamePlaceholder": "例如：客户问答模型",
+      "form.displayNameTip": "仅用于界面展示，实际调用仍使用上面的模型名称。",
       "form.extraConfig": "额外配置",
       "form.interfaceType": "接口类型",
       "form.interfaceTypePlaceholder": "例如 openai（可选）",
-      "form.kvAdd": "新增一行",
-      "form.kvKeyPlaceholder": "字段名",
-      "form.kvValuePlaceholder": "字段值",
-      "form.maxConcurrency": "最大并发数",
+      "form.headerAdd": "添加请求头",
+      "form.headerNamePlaceholder": "Header 名称",
+      "form.headerValuePlaceholder": "Header 值",
+      "form.maxConcurrency": "后台并发上限",
+      "form.maxConcurrencyPlaceholder": "0 表示使用全局默认",
       "form.name": "模型名称",
-      "form.nameDesc": "需与厂商接口中的模型标识一致，例如 qwen-plus",
-      "form.namePlaceholder": "请输入模型名称",
+      "form.namePlaceholder": "例如：{example}",
       "form.parameterSize": "参数规模",
       "form.parameterSizePlaceholder": "例如 7B / 13B（可选）",
-      "form.provider": "提供商",
-      "form.providerPlaceholder": "请选择提供商",
-      "form.section.advanced": "高级配置",
+      "form.provider": "服务商",
+      "form.section.advanced": "高级选项",
       "form.section.basic": "基本信息",
       "form.section.embedding": "嵌入参数",
       "form.section.provider": "接入配置",
       "form.source": "模型来源",
       "form.sourcePlaceholder": "请选择模型来源",
-      "form.supportsDimensionOverride": "支持维度覆盖",
-      "form.supportsVision": "支持视觉输入",
-      "form.supportsVisionDesc": "开启后该模型可接收图片输入",
+      "form.supportsDimensionOverride": "自定义输出维度",
+      "form.supportsDimensionOverrideDesc": "仅在确认该模型支持 dimensions 参数时开启；默认只使用检测到的实际维度。",
+      "form.supportsVision": "支持视觉/多模态",
+      "form.supportsVisionDesc": "模型是否支持图片等多模态输入",
       "form.title.add": "新增模型",
       "form.title.edit": "编辑模型",
       "form.truncatePromptTokens": "截断提示词 token 数",
@@ -2287,6 +2290,5 @@
       "usernamePlaceholder": "请输入用户名"
     }
   },
-  "plugin": {},
   "plugins": {}
 }

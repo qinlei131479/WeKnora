@@ -131,7 +131,7 @@ onMounted(() => {
   <section>
     <page-name :title="$t('page.models.title', '模型管理')">
       <el-button type="primary" icon="Plus" v-hasPermi="['business:models:add']" @click="handleAdd">
-        {{ $t('page.normal.add', '新增') }}
+        {{ $t('page.models.add', '新增模型') }}
       </el-button>
     </page-name>
 

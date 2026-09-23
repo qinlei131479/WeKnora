@@ -5,15 +5,16 @@ interface SelectOption {
   /** i18n key，第二个参数是兜底中文 */
   labelKey: string;
   label: string;
+  example?: Record<string, string>;
 }
 
 /** 模型类型，值与后端落库的 type 一致 */
 export const MODEL_TYPE_OPTIONS: SelectOption[] = [
-  { value: 'KnowledgeQA', labelKey: 'page.models.type.KnowledgeQA', label: '对话' },
-  { value: 'Embedding', labelKey: 'page.models.type.Embedding', label: 'Embedding' },
-  { value: 'Rerank', labelKey: 'page.models.type.Rerank', label: 'ReRank' },
-  { value: 'VLLM', labelKey: 'page.models.type.VLLM', label: '视觉' },
-  { value: 'ASR', labelKey: 'page.models.type.ASR', label: '语音' }
+  { value: 'KnowledgeQA', labelKey: 'page.models.type.KnowledgeQA', label: '对话', example: { name: 'gpt-4, claude-3-opus' } },
+  { value: 'Embedding', labelKey: 'page.models.type.Embedding', label: 'Embedding', example: { name: 'gpt-4, claude-3-opus' } },
+  { value: 'Rerank', labelKey: 'page.models.type.Rerank', label: 'ReRank', example: { name: 'gpt-4, claude-3-opus' } },
+  { value: 'VLLM', labelKey: 'page.models.type.VLLM', label: '视觉', example: { name: 'gpt-4-vision-preview' } },
+  { value: 'ASR', labelKey: 'page.models.type.ASR', label: '语音', example: { name: 'whisper-1' } }
 ];
 
 /**
