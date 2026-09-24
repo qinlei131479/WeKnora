@@ -28,6 +28,8 @@
         <include refid="Base_Column_List"/>
         FROM amp_parser_engines
         <where>
+            <!-- 排除 name 以 cloud 结尾的记录 -->
+            name NOT ILIKE '%cloud'
             <if test="param.id != null">
                 AND id = #{param.id}
             </if>
