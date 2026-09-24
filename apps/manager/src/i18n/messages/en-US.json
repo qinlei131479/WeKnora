@@ -2290,5 +2290,14 @@
       "usernamePlaceholder": "Enter a username"
     }
   },
+  "page.models.form.thinkingControl": "Thinking Mode Request Format",
+  "page.models.form.thinkingControl.chatTemplateKwargs": "chat_template_kwargs",
+  "page.models.form.thinkingControl.chatTemplateKwargsPlaceholder": "Custom OpenAI-compatible gateways, NVIDIA NIM, vLLM / local Qwen",
+  "page.models.form.thinkingControl.enableThinking": "enable_thinking",
+  "page.models.form.thinkingControl.enableThinkingPlaceholder": "Alibaba DashScope: qwen3, qwen-plus, qwen-max, qwen-turbo",
+  "page.models.form.thinkingControl.none": "Do not send thinking fields",
+  "page.models.form.thinkingControl.nonePlaceholder": "Agent “Thinking mode” switch has no effect; thinking parameters are not sent in requests",
+  "page.models.form.thinkingControl.thinkingType": "thinking.type",
+  "page.models.form.thinkingControl.thinkingTypePlaceholder": "Volcengine Ark; Tencent LKEAP (DeepSeek V3, etc.; default for LKEAP; use “Do not send” for R1)",
   "plugins": {}
 }

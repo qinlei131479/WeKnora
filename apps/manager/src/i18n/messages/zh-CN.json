@@ -2290,5 +2290,14 @@
       "usernamePlaceholder": "请输入用户名"
     }
   },
+  "page.models.form.thinkingControl": "思考模式参数格式",
+  "page.models.form.thinkingControl.chatTemplateKwargs": "chat_template_kwargs",
+  "page.models.form.thinkingControl.chatTemplateKwargsPlaceholder": "自定义 OpenAI 兼容、NVIDIA NIM、vLLM / 本地 Qwen 部署",
+  "page.models.form.thinkingControl.enableThinking": "enable_thinking",
+  "page.models.form.thinkingControl.enableThinkingPlaceholder": "阿里云 DashScope：qwen3、qwen-plus、qwen-max、qwen-turbo",
+  "page.models.form.thinkingControl.none": "不写入思考参数",
+  "page.models.form.thinkingControl.nonePlaceholder": "智能体「思考模式」开关不生效，不会在请求中写入思考相关参数",
+  "page.models.form.thinkingControl.thinkingType": "thinking.type",
+  "page.models.form.thinkingControl.thinkingTypePlaceholder": "火山引擎 Ark；腾讯云 LKEAP（DeepSeek V3 等，选 LKEAP 时默认此项；R1 请改「不写入」）",
   "plugins": {}
 }

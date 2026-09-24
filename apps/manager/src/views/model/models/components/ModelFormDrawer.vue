@@ -4,8 +4,7 @@ import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { API } from '@/api';
 import { toProviderModelType } from '@/api/model/models';
 import type { ModelCredentialField, ModelProviderVO, ModelTestRequestDTO, ModelTestResultVO, ModelsDTO, ModelsVO } from '@/types/api/model/model';
-import { MODEL_TYPE_OPTIONS, MODEL_SOURCE_OPTIONS } from '../constants';
-import { Remove } from '@element-plus/icons-vue';
+import { MODEL_TYPE_OPTIONS, MODEL_SOURCE_OPTIONS, THINKING_CONTROL_OPTIONS } from '../constants';
 
 const { proxy } = getCurrentInstance() as any;
 
@@ -73,7 +72,7 @@ const form = reactive({
   truncatePromptTokens: undefined as number | undefined,
   supportsDimensionOverride: false,
   customHeaders: [] as KeyValueRow[],
-  extraConfig: [] as KeyValueRow[]
+  extraConfig: [{ key: 'thinking_control', value: 'chat_template_kwargs' }] as KeyValueRow[]
 });
 
 const rules = computed(() => ({
@@ -123,7 +122,7 @@ const resetForm = () => {
   form.truncatePromptTokens = undefined;
   form.supportsDimensionOverride = false;
   form.customHeaders = [];
-  form.extraConfig = [];
+  form.extraConfig = [{ key: 'thinking_control', value: 'chat_template_kwargs' }];
   apiKeyConfigured.value = false;
   appSecretConfigured.value = false;
   isBuiltin.value = false;
@@ -194,7 +193,11 @@ const fillFormFromRow = (row: ModelsVO) => {
   form.maxConcurrency = params.maxConcurrency ?? undefined;
   form.appId = params.appId ?? '';
   form.customHeaders = recordToRows(params.customHeaders);
-  form.extraConfig = recordToRows(params.extraConfig);
+  // 固定首项为思考模式配置，避免接口字段顺序影响绑定，并保留其他额外配置。
+  form.extraConfig = [
+    { key: 'thinking_control', value: params.extraConfig?.thinking_control ?? '' },
+    ...recordToRows(params.extraConfig).filter((item) => item.key !== 'thinking_control')
+  ];
 
   const embedding = params.embeddingParameters ?? {};
   form.dimension = embedding.dimension ?? undefined;
@@ -502,14 +505,14 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         <el-select v-model="form.provider" class="full-width" @change="onProviderChange">
           <el-option
             v-for="item in providers"
-            class="provider-option"
-            :class="{ 'provider-option__selected': form.provider === item.value }"
+            class="select-option"
+            :class="{ 'select-option__selected': form.provider === item.value }"
             :key="item.value"
             :label="item.label"
             :value="item.value!"
           >
-            <div class="provider-option-title" :class="{ 'provider-option-title__selected': form.provider === item.value }">{{ item.label }}</div>
-            <div class="provider-option-description">{{ item.description }}</div>
+            <div class="select-option-title" :class="{ 'select-option-title__selected': form.provider === item.value }">{{ item.label }}</div>
+            <div class="select-option-description">{{ item.description }}</div>
           </el-option>
         </el-select>
       </el-form-item>
@@ -592,7 +595,25 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         </span>
       </el-form-item>
 
-      <!-- TODO: 思考模式参数格式 -->
+      <el-form-item
+        v-if="form.type === 'KnowledgeQA'"
+        :label="$t('page.models.form.thinkingControl', '思考模式参数格式')"
+        prop="extraConfig.0.value"
+      >
+        <el-select v-model="form.extraConfig[0].value" class="full-width">
+          <el-option
+            v-for="item in THINKING_CONTROL_OPTIONS"
+            class="select-option"
+            :class="{ 'select-option__selected': form.extraConfig[0].value === item.value }"
+            :key="item.value"
+            :label="$t(item.labelKey, item.label)"
+            :value="item.value"
+          >
+            <div class="select-option-title">{{ $t(item.labelKey, item.label) }}</div>
+            <div class="select-option-description">{{ item.placeholderKey ? $t(item.placeholderKey, item.placeholder || '') : item.placeholder }}</div>
+          </el-option>
+        </el-select>
+      </el-form-item>
 
       <el-form-item
         v-if="['KnowledgeQA', 'Embedding', 'VLLM'].includes(form.type)"
@@ -807,7 +828,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
   border-left: 4px solid var(--el-color-primary);
 }
 
-.provider-option {
+.select-option {
   height: auto;
   line-height: normal;
   padding: 8px 12px;
@@ -817,11 +838,11 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
   }
 }
 
-.provider-option-title {
+.select-option-title {
   padding-bottom: 4px;
 }
 
-.provider-option-description {
+.select-option-description {
   font-size: 12px;
   color: var(--el-text-color-placeholder);
 }
