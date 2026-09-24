@@ -12,7 +12,7 @@ from pathlib import Path
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, Side
 
-ALLOWED_RESULTS = {"已匹配", "部分匹配", "未匹配"}
+ALLOWED_RESULTS = {"已匹配", "未匹配"}
 EFFORT_KEYS = ("product", "dev", "delivery")
 EFFORT_LABELS = {"product": "产品", "dev": "研发", "delivery": "交付"}
 EFFORT_LABEL_RE = re.compile(r"(产品|研发|交付)\s*=\s*(--|\d+(?:\.\d+)?)")
@@ -134,6 +134,34 @@ def _validate_effort_reason(row: dict, i: int) -> list[str]:
     return errors
 
 
+def _validate_merge_groups(rows: list[dict]) -> list[str]:
+    errors: list[str] = []
+    groups: dict[str, list[int]] = {}
+    for i, row in enumerate(rows, 1):
+        group = row.get("merge_group")
+        if group in (None, ""):
+            continue
+        if not isinstance(group, str):
+            errors.append(f"第{i}行 merge_group 必须是非空字符串")
+            continue
+        groups.setdefault(group, []).append(i)
+
+    for group, row_numbers in groups.items():
+        if len(row_numbers) != 2:
+            errors.append(f"拆分组 {group} 必须恰好有 2 行")
+            continue
+        if row_numbers[1] - row_numbers[0] != 1:
+            errors.append(f"拆分组 {group} 的 2 行必须相邻")
+            continue
+        first, second = rows[row_numbers[0] - 1], rows[row_numbers[1] - 1]
+        if first.get("l1") != second.get("l1") or first.get("l2") != second.get("l2"):
+            errors.append(f"拆分组 {group} 的一级、二级功能必须一致")
+        results = sorted(str(row.get("match_result", "")) for row in (first, second))
+        if results != ["已匹配", "未匹配"]:
+            errors.append(f"拆分组 {group} 必须分别包含已匹配和未匹配")
+    return errors
+
+
 def validate(rows: list[dict]) -> list[str]:
     errors = []
     if not rows:
@@ -165,10 +193,10 @@ def validate(rows: list[dict]) -> list[str]:
                 errors.append(f"第{i}行未匹配来源应含 AI评估")
             if "P3" not in str(row.get("effort_reason", "")) and "原子任务" not in str(row.get("effort_reason", "")):
                 errors.append(f"第{i}行未匹配工时说明必须写 P3 原子任务依据")
-        elif result == "部分匹配":
+        if result == "已匹配":
             match_reason = str(row.get("match_reason", ""))
-            if "支持" not in match_reason or not any(marker in match_reason for marker in ("未覆盖", "需")):
-                errors.append(f"第{i}行部分匹配依据必须写已有支持和未覆盖改造")
+            if "已支持" not in match_reason or "复用" not in match_reason:
+                errors.append(f"第{i}行已匹配依据必须写已支持和复用")
         errors.extend(_validate_effort_reason(row, i))
         for num_key in ("product", "dev", "delivery"):
             try:
@@ -182,27 +210,23 @@ def validate(rows: list[dict]) -> list[str]:
         if l3.endswith(" *") or l3.endswith("＊"):
             errors.append(f"第{i}行依赖标记应为名称后直接加 *，无空格")
         match_source = str(row.get("match_source", ""))
+        effort_reason = str(row.get("effort_reason", ""))
         if (
             result == "已匹配"
             and "标准" in match_source
-            and "历史" not in match_source
-            and "AI评估" not in match_source
+            and "三项缺失，按规则0" in effort_reason
         ):
             try:
-                standard_only_values = [_numeric_effort(row, key) for key in ("product", "dev", "delivery")]
-                standard_only_complete = all(value is not None for value in standard_only_values)
+                values = [_numeric_effort(row, key) for key in EFFORT_KEYS]
             except (TypeError, ValueError):
-                standard_only_complete = False
-                pass
+                errors.append(f"第{i}行标准三项缺失按规则0时，三列时效必须是数字")
             else:
-                if standard_only_complete and any(value != 0 for value in standard_only_values):
-                    errors.append(f"第{i}行仅命中标准清单时三列时效必须为 0")
-            if "0" not in str(row.get("effort_reason", "")):
-                errors.append(f"第{i}行仅命中标准清单时工时说明必须写 0 人天规则")
-        if result in ("已匹配", "部分匹配") and "历史" in match_source:
-            effort_reason = str(row.get("effort_reason", ""))
+                if any(value != 0 for value in values):
+                    errors.append(f"第{i}行标准三项缺失按规则0时，三列时效必须都是 0")
+        if result == "已匹配" and "历史" in match_source:
             if not any(marker in effort_reason for marker in ("直读", "累加", "求和", "+")):
                 errors.append(f"第{i}行历史工时说明必须写直读、累加或求和计算式")
+    errors.extend(_validate_merge_groups(rows))
     return errors
 
 
@@ -229,7 +253,18 @@ def fill(output: Path, rows: list[dict]) -> dict:
         cell.border = bottom
 
     n = len(rows)
+    merge_ranges: list[tuple[int, int]] = []
+    merge_start: tuple[str, int] | None = None
     for i, row in enumerate(rows, 2):
+        group = row.get("merge_group")
+        if isinstance(group, str) and group:
+            if merge_start and merge_start[0] == group:
+                merge_ranges.append((merge_start[1], i))
+                merge_start = None
+            else:
+                merge_start = (group, i)
+        else:
+            merge_start = None
         product = _numeric_effort(row, "product")
         dev = _numeric_effort(row, "dev")
         delivery = _numeric_effort(row, "delivery")
@@ -260,6 +295,10 @@ def fill(output: Path, rows: list[dict]) -> dict:
             cell.font = data_font
             cell.border = bottom
             cell.alignment = wrap_center if col in (4, 9, 10, 11, 12, 13) else center
+
+    for start, end in merge_ranges:
+        ws.merge_cells(start_row=start, start_column=1, end_row=end, end_column=1)
+        ws.merge_cells(start_row=start, start_column=2, end_row=end, end_column=2)
 
     last = n + 1
     total_row = n + 2
@@ -299,6 +338,7 @@ def fill(output: Path, rows: list[dict]) -> dict:
         "delivery": totals["delivery"],
         "total": total,
         "output": str(output),
+        "merged_groups": len(merge_ranges),
     }
 
 
