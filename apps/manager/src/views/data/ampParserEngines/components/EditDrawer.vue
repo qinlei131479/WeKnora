@@ -263,6 +263,7 @@ watch(
           v-model="form.fileTypes"
           clearable
           style="width: 100%"
+          readonly
           :placeholder="$t('page.data.ampParserEngines.form.fileTypesPlaceholder', '输入文件扩展名，按回车生成标签，如 pdf')"
         />
       </el-form-item>
@@ -294,7 +295,7 @@ watch(
         <el-input v-model="form.configKey" :placeholder="$t('page.data.ampParserEngines.form.configKeyPlaceholder', '请输入租户配置项名称')" />
       </el-form-item>
       <el-form-item :label="$t('page.data.ampParserEngines.form.sortOrder', '排序序号')">
-        <el-input-number v-model="form.sortOrder" :min="0" controls-position="right" style="width: 100%" />
+        <el-input-number v-model="form.sortOrder" :min="0" controls-position="right" align="left" style="width: 100%" />
       </el-form-item>
       <el-form-item :label="$t('page.data.ampParserEngines.form.enabled', '状态')">
         <el-switch

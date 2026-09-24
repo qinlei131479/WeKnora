@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import modal from '@/plugins/modal';
+import { Search } from 'lucide-vue-next';
 import { API } from '@/api';
 import { t } from '@/i18n';
 import type { AmpParserEnginesPageDTO, AmpParserEnginesVO, PageDomain } from '@/types';
-import { Search } from 'lucide-vue-next';
+import modal from '@/plugins/modal';
 import DetailDrawer from './components/DetailDrawer.vue';
 import EditDrawer from './components/EditDrawer.vue';
 
@@ -176,10 +176,16 @@ onMounted(getList);
             <el-button link type="primary" v-hasPermi="['business:ampParserEngines:query']" @click.stop="handleDetail(row)">
               {{ $t('page.normal.detail', '详情') }}
             </el-button>
-            <el-button link type="primary" v-hasPermi="['business:ampParserEngines:edit']" @click.stop="handleEdit(row)">
+            <el-button
+              link
+              type="primary"
+              v-hasPermi="['business:ampParserEngines:edit']"
+              :disabled="!['mineru', 'paddleocr_vl'].includes(row.name)"
+              @click.stop="handleEdit(row)"
+            >
               {{ $t('page.normal.edit', '编辑') }}
             </el-button>
-            <el-button link type="danger" v-hasPermi="['business:ampParserEngines:remove']" @click.stop="handleDelete(row)">
+            <el-button v-if="false" link type="danger" v-hasPermi="['business:ampParserEngines:remove']" @click.stop="handleDelete(row)">
               {{ $t('page.normal.remove', '删除') }}
             </el-button>
           </template>
