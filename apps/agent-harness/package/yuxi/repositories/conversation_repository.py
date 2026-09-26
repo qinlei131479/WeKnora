@@ -11,7 +11,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from yuxi.tenancy.context import stamp_tenant_id
 from yuxi.tenancy.tenant_query import tenant_clauses, visible_or_none
-from yuxi.storage.postgres.models_business import Conversation, ConversationStats, Message, ToolCall
+from yuxi.storage.postgres.models_business import Conversation, Message, ToolCall
 from yuxi.utils import logger
 from yuxi.utils.datetime_utils import utc_now_naive
 
@@ -112,10 +112,9 @@ class ConversationRepository:
 
         self.db.add(conversation)
         await self.db.flush()
+        from yuxi.services.usage_telemetry import record_session_created
 
-        stats = ConversationStats(conversation_id=conversation.id)
-        self.db.add(stats)
-        await self.db.flush()
+        await record_session_created(self.db, conversation)
 
         logger.info(f"Created conversation: {conversation.thread_id} for user {uid}")
         return conversation
@@ -196,11 +195,14 @@ class ConversationRepository:
         conversation = await self.get_conversation_by_id(conversation_id)
         if conversation:
             conversation.updated_at = utc_now_naive()
+        await self.db.flush()
+        from yuxi.services.usage_telemetry import record_message_activity, record_token_usage
 
+        await record_message_activity(self.db, message)
         await self.db.commit()
         await self.db.refresh(message)
-
-        await self._update_message_count(conversation_id)
+        if conversation is not None:
+            await record_token_usage(message, conversation)
 
         logger.debug(f"Added {role} message to conversation {conversation_id}")
         return message
@@ -275,7 +277,6 @@ class ConversationRepository:
             select(Message)
             .options(
                 selectinload(Message.tool_calls),
-                selectinload(Message.feedbacks),
             )
             .where(Message.conversation_id == conversation_id)
             .order_by(Message.created_at.asc())
@@ -496,36 +497,6 @@ class ConversationRepository:
 
         return True
 
-    async def get_stats(self, conversation_id: int) -> ConversationStats | None:
-        result = await self.db.execute(
-            select(ConversationStats).where(ConversationStats.conversation_id == conversation_id)
-        )
-        return result.scalar_one_or_none()
-
-    async def update_stats(
-        self,
-        conversation_id: int,
-        tokens_used: int | None = None,
-        model_used: str | None = None,
-        user_feedback: dict | None = None,
-    ) -> ConversationStats | None:
-        stats = await self.get_stats(conversation_id)
-        if not stats:
-            return None
-
-        if tokens_used is not None:
-            stats.total_tokens += tokens_used
-        if model_used is not None:
-            stats.model_used = model_used
-        if user_feedback is not None:
-            stats.user_feedback = user_feedback
-
-        stats.updated_at = utc_now_naive()
-        await self.db.commit()
-        await self.db.refresh(stats)
-
-        return stats
-
     async def get_tool_call_by_langgraph_id(self, langgraph_tool_call_id: str) -> ToolCall | None:
         result = await self.db.execute(
             select(ToolCall)
@@ -554,19 +525,12 @@ class ConversationRepository:
 
         await self.db.commit()
         await self.db.refresh(tool_call)
+        from yuxi.services.usage_telemetry import record_tool_finished
+
+        await record_tool_finished(self.db, tool_call)
 
         logger.debug(f"Updated tool call {langgraph_tool_call_id} with output")
         return tool_call
-
-    async def _update_message_count(self, conversation_id: int) -> None:
-        from sqlalchemy import func
-
-        stats = await self.get_stats(conversation_id)
-        if stats:
-            result = await self.db.execute(select(func.count()).where(Message.conversation_id == conversation_id))
-            message_count = result.scalar()
-            stats.message_count = message_count
-            await self.db.commit()
 
     async def get_attachments(self, conversation_id: int) -> list[dict]:
         conversation = await self.get_conversation_by_id(conversation_id)
@@ -574,12 +538,6 @@ class ConversationRepository:
             return []
         metadata = self._ensure_metadata(conversation)
         return list(metadata.get("attachments", []))
-
-    async def get_attachments_by_thread_id(self, thread_id: str) -> list[dict]:
-        conversation = await self.get_conversation_by_thread_id(thread_id)
-        if not conversation:
-            return []
-        return await self.get_attachments(conversation.id)
 
     async def add_attachment(self, conversation_id: int, attachment_info: dict) -> dict | None:
         conversation = await self.get_conversation_by_id(conversation_id)
@@ -607,29 +565,6 @@ class ConversationRepository:
         metadata["attachments"] = attachments
         await self._save_metadata(conversation, metadata)
         return attachment_infos
-
-    async def update_attachment_status(
-        self, conversation_id: int, file_id: str, status: str, update_fields: dict | None = None
-    ) -> dict | None:
-        conversation = await self.get_conversation_by_id(conversation_id)
-        if not conversation:
-            return None
-
-        metadata = self._ensure_metadata(conversation)
-        attachments = metadata.get("attachments", [])
-        target = None
-        for item in attachments:
-            if item.get("file_id") == file_id:
-                item["status"] = status
-                if update_fields:
-                    item.update(update_fields)
-                target = item
-                break
-
-        if target is not None:
-            metadata["attachments"] = attachments
-            await self._save_metadata(conversation, metadata)
-        return target
 
     async def bind_attachments_to_request(
         self, conversation_id: int, request_id: str, file_ids: list[str]

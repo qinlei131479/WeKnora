@@ -890,7 +890,7 @@ async def _dispatch_locked_head(
     except IntegrityError as exc:
         cause = getattr(exc.orig, "__cause__", None)
         constraint_name = getattr(exc.orig, "constraint_name", None) or getattr(cause, "constraint_name", None)
-        if constraint_name != "uq_agent_runs_one_active_per_thread":
+        if constraint_name != "uq_amp_agent_runs_one_active_per_thread":
             raise
         logger.info(f"Dispatch conflict for request {head.request_id}, keeping queued")
         return None

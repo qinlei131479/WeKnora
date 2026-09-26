@@ -8,15 +8,15 @@ Provides centralized dashboard APIs for monitoring system-wide statistics.
 
 import traceback
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
-from sqlalchemy import Integer, String, cast, distinct, func, select, text
+from sqlalchemy import bindparam, distinct, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.utils.auth_middleware import get_db, get_required_user
-from yuxi.tenancy.context import current_tenant_id
+from server.utils.auth_middleware import get_admin_user, get_db
 from yuxi.tenancy.tenant_query import apply_tenant_filters
 from yuxi.dashboard.stats import (
     count_weknora_active_users,
@@ -29,9 +29,8 @@ from yuxi.dashboard.stats import (
 )
 from yuxi.repositories.agent_repository import AgentRepository
 from yuxi.repositories.conversation_repository import ConversationRepository
-from yuxi.storage.minio.client import normalize_public_minio_url
 from yuxi.storage.postgres.models_business import User
-from yuxi.utils.datetime_utils import UTC, ensure_shanghai, shanghai_now, utc_now
+from yuxi.utils.datetime_utils import UTC, shanghai_now, utc_now
 from yuxi.utils.logging_config import logger
 
 
@@ -44,50 +43,59 @@ def _scope_conversations(stmt):
     return apply_tenant_filters(stmt, Conversation.tenant_id)
 
 
-def _join_messages_on_conversation(stmt):
-    from yuxi.storage.postgres.models_business import Conversation, Message
-
-    stmt = stmt.join(Conversation, Message.conversation_id == Conversation.id)
-    return apply_tenant_filters(stmt, Conversation.tenant_id)
+def _scope_column(stmt, column):
+    return apply_tenant_filters(stmt, column)
 
 
-def _join_tool_calls_on_conversation(stmt):
-    from yuxi.storage.postgres.models_business import Conversation, Message, ToolCall
+async def _model_display_names(db: AsyncSession, model_ids: list[str]) -> dict[str, str]:
+    """模型图例用 models.display_name。没有展示名时回退 name，再回退 id。"""
+    ids = [model_id for model_id in dict.fromkeys(model_ids) if model_id and model_id != "unknown"]
+    if not ids:
+        return {}
+    stmt = text(
+        """
+        SELECT id,
+               COALESCE(NULLIF(display_name, ''), NULLIF(name, ''), id) AS label
+        FROM models
+        WHERE id IN :ids
+          AND deleted_at IS NULL
+        """
+    ).bindparams(bindparam("ids", expanding=True))
+    rows = (await db.execute(stmt, {"ids": ids})).all()
+    return {row.id: row.label for row in rows}
 
-    stmt = stmt.join(Message, ToolCall.message_id == Message.id).join(
-        Conversation, Message.conversation_id == Conversation.id
-    )
-    return apply_tenant_filters(stmt, Conversation.tenant_id)
+
+async def _count_usage_users(db: AsyncSession, model, *, since=None, until=None) -> int:
+    stmt = select(func.count(distinct(model.uid)))
+    if since is not None:
+        stmt = stmt.where(model.occurred_at >= since)
+    if until is not None:
+        stmt = stmt.where(model.occurred_at < until)
+    result = await db.execute(_scope_column(stmt, model.tenant_id))
+    return int(result.scalar() or 0)
 
 
-def _user_count_stmt():
-    from yuxi.storage.postgres.models_business import Conversation
+async def _harness_daily_active_users(db: AsyncSession) -> list[dict]:
+    from yuxi.storage.postgres.models_business import AgentUsageEvent
 
-    if current_tenant_id() is not None:
-        return apply_tenant_filters(
-            select(func.count(distinct(Conversation.uid))),
-            Conversation.tenant_id,
-        )
-    return select(func.count(User.id)).filter(User.is_deleted == 0)
+    now = utc_now()
+    rows: list[dict] = []
+    for i in range(7):
+        day_start = now - timedelta(days=i + 1)
+        day_end = now - timedelta(days=i)
+        count = await _count_usage_users(db, AgentUsageEvent, since=day_start, until=day_end)
+        rows.append({"date": day_start.strftime("%Y-%m-%d"), "active_users": count})
+    return list(reversed(rows))
 
 
 def _get_time_group_format(column, time_range: str) -> Any:
-    """
-    根据数据库类型生成时间分组格式化表达式。
-    PostgreSQL 使用 to_char + INTERVAL，SQLite 使用 datetime + strftime。
-    """
-    # 检查是否是 PostgreSQL（通过检测 engine 或使用方言）
-    # 这里直接使用 PostgreSQL 语法，因为所有业务数据现在都在 PostgreSQL 上
+    """遥测时间是 timestamptz。先换到上海时区再格式化，避免在会话时区上再加 8 小时。"""
+    local_time = func.timezone("Asia/Shanghai", column)
     if time_range == "14hours":
-        # 每小时: YYYY-MM-DD HH:00
-        time_expr = func.to_char(column + text("INTERVAL '8 hours'"), "YYYY-MM-DD HH24:00")
-    elif time_range == "14weeks":
-        # 每周: YYYY-WW
-        time_expr = func.to_char(column + text("INTERVAL '8 hours'"), "YYYY-IW")
-    else:  # 14days
-        # 每天: YYYY-MM-DD
-        time_expr = func.to_char(column + text("INTERVAL '8 hours'"), "YYYY-MM-DD")
-    return time_expr
+        return func.to_char(local_time, "YYYY-MM-DD HH24:00")
+    if time_range == "14weeks":
+        return func.to_char(local_time, "YYYY-IW")
+    return func.to_char(local_time, "YYYY-MM-DD")
 
 
 # =============================================================================
@@ -134,7 +142,6 @@ class AgentAnalytics(BaseModel):
 
     total_agents: int
     agent_conversation_counts: list[dict]
-    agent_satisfaction_rates: list[dict]
     agent_tool_usage: list[dict]
     top_performing_agents: list[dict]
     agent_names: dict[str, str] = {}  # agent_id -> agent_name 映射
@@ -186,15 +193,14 @@ async def get_all_conversations(
     limit: int = 100,
     offset: int = 0,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_required_user),
+    current_user: User = Depends(get_admin_user),
 ):
     """获取当前 token 空间内的对话"""
-    from yuxi.storage.postgres.models_business import Conversation, ConversationStats
+    from yuxi.storage.postgres.models_business import Conversation, Message
 
     try:
-        # Build query
-        query = select(Conversation, ConversationStats).outerjoin(
-            ConversationStats, Conversation.id == ConversationStats.conversation_id
+        query = select(Conversation, func.count(Message.id).label("message_count")).outerjoin(
+            Message, Message.conversation_id == Conversation.id
         )
         query = _scope_conversations(query)
 
@@ -206,8 +212,7 @@ async def get_all_conversations(
         if status != "all":
             query = query.filter(Conversation.status == status)
 
-        # Order and paginate
-        query = query.order_by(Conversation.updated_at.desc()).limit(limit).offset(offset)
+        query = query.group_by(Conversation).order_by(Conversation.updated_at.desc()).limit(limit).offset(offset)
 
         result = await db.execute(query)
         results = result.all()
@@ -219,11 +224,11 @@ async def get_all_conversations(
                 "agent_id": conv.agent_id,
                 "title": conv.title,
                 "status": conv.status,
-                "message_count": stats.message_count if stats else 0,
+                "message_count": message_count,
                 "created_at": conv.created_at.isoformat(),
                 "updated_at": conv.updated_at.isoformat(),
             }
-            for conv, stats in results
+            for conv, message_count in results
         ]
     except Exception as e:
         logger.error(f"Error getting conversations: {e}")
@@ -235,7 +240,7 @@ async def get_all_conversations(
 async def get_conversation_detail(
     thread_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_required_user),
+    current_user: User = Depends(get_admin_user),
 ):
     """获取当前 token 空间内的对话详情"""
     try:
@@ -245,9 +250,18 @@ async def get_conversation_detail(
         if not conversation:
             raise HTTPException(status_code=404, detail="Conversation not found")
 
-        # Get messages and stats
         messages = await conv_manager.get_messages(conversation.id)
-        stats = await conv_manager.get_stats(conversation.id)
+        from yuxi.storage.postgres.models_business import TokenUsageEvent
+
+        token_result = await db.execute(
+            apply_tenant_filters(
+                select(func.coalesce(func.sum(TokenUsageEvent.total_tokens), 0)).where(
+                    TokenUsageEvent.session_id == conversation.id
+                ),
+                TokenUsageEvent.tenant_id,
+            )
+        )
+        total_tokens = int(token_result.scalar() or 0)
 
         # Format messages
         message_list = []
@@ -281,10 +295,10 @@ async def get_conversation_detail(
             "agent_id": conversation.agent_id,
             "title": conversation.title,
             "status": conversation.status,
-            "message_count": stats.message_count if stats else len(message_list),
+            "message_count": len(message_list),
             "created_at": conversation.created_at.isoformat(),
             "updated_at": conversation.updated_at.isoformat(),
-            "total_tokens": stats.total_tokens if stats else 0,
+            "total_tokens": total_tokens,
             "messages": message_list,
         }
     except HTTPException:
@@ -303,17 +317,37 @@ async def get_conversation_detail(
 @dashboard.get("/stats/users", response_model=UserActivityStats)
 async def get_user_activity_stats(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_required_user),
+    current_user: User = Depends(get_admin_user),
 ):
-    """获取当前 token 空间的用户活动统计"""
+    """获取当前 token 空间的用户活动统计。工作侧活跃用户来自运行事实表。"""
     try:
+        from yuxi.storage.postgres.models_business import AgentUsageEvent
+
         now = utc_now()
         overview = await fetch_weknora_overview(db)
+        harness_total = await _count_usage_users(db, AgentUsageEvent)
+        harness_24h = await _count_usage_users(db, AgentUsageEvent, since=now - timedelta(days=1))
+        harness_30d = await _count_usage_users(db, AgentUsageEvent, since=now - timedelta(days=30))
+        weknora_daily = await fetch_weknora_daily_active_users(db)
+        harness_daily = {row["date"]: row["active_users"] for row in await _harness_daily_active_users(db)}
+        daily_active_users = [
+            {
+                "date": row["date"],
+                "active_users": int(row["active_users"] or 0) + int(harness_daily.get(row["date"], 0)),
+            }
+            for row in weknora_daily
+        ]
         return UserActivityStats(
-            total_users=weknora_user_total(weknora_users=overview.users),
-            active_users_24h=await count_weknora_active_users(db, since=now - timedelta(days=1)),
-            active_users_30d=await count_weknora_active_users(db, since=now - timedelta(days=30)),
-            daily_active_users=await fetch_weknora_daily_active_users(db),
+            total_users=simple_sum(weknora_user_total(weknora_users=overview.users), harness_total),
+            active_users_24h=simple_sum(
+                await count_weknora_active_users(db, since=now - timedelta(days=1)),
+                harness_24h,
+            ),
+            active_users_30d=simple_sum(
+                await count_weknora_active_users(db, since=now - timedelta(days=30)),
+                harness_30d,
+            ),
+            daily_active_users=daily_active_users,
         )
 
     except Exception as e:
@@ -330,66 +364,65 @@ async def get_user_activity_stats(
 @dashboard.get("/stats/tools", response_model=ToolCallStats)
 async def get_tool_call_stats(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_required_user),
+    current_user: User = Depends(get_admin_user),
 ):
-    """获取当前 token 空间的工具调用统计"""
+    """获取当前 token 空间的工具调用统计。数据来自工具遥测事实表。"""
     try:
-        from yuxi.storage.postgres.models_business import ToolCall
+        from yuxi.storage.postgres.models_business import ToolUsageEvent
 
         now = utc_now()
-        # PostgreSQL with asyncpg requires naive datetime for naive DateTime columns
-        naive_now = now.replace(tzinfo=None)
-
-        # 基础工具调用统计
-        total_calls_result = await db.execute(_join_tool_calls_on_conversation(select(func.count(ToolCall.id))))
+        total_calls_result = await db.execute(
+            _scope_column(select(func.count(ToolUsageEvent.id)), ToolUsageEvent.tenant_id)
+        )
         total_calls = total_calls_result.scalar() or 0
 
         successful_calls_result = await db.execute(
-            _join_tool_calls_on_conversation(select(func.count(ToolCall.id)).filter(ToolCall.status == "success"))
+            _scope_column(
+                select(func.count(ToolUsageEvent.id)).where(ToolUsageEvent.status == "success"),
+                ToolUsageEvent.tenant_id,
+            )
         )
         successful_calls = successful_calls_result.scalar() or 0
         failed_calls = total_calls - successful_calls
         success_rate = round((successful_calls / total_calls * 100), 2) if total_calls > 0 else 0
 
-        # 最常用工具
         most_used_tools_result = await db.execute(
-            _join_tool_calls_on_conversation(
-                select(ToolCall.tool_name, func.count(ToolCall.id).label("count"))
-                .group_by(ToolCall.tool_name)
-                .order_by(func.count(ToolCall.id).desc())
-                .limit(10)
+            _scope_column(
+                select(ToolUsageEvent.tool_name, func.count(ToolUsageEvent.id).label("count"))
+                .group_by(ToolUsageEvent.tool_name)
+                .order_by(func.count(ToolUsageEvent.id).desc())
+                .limit(10),
+                ToolUsageEvent.tenant_id,
             )
         )
-        most_used_tools = most_used_tools_result.all()
-        most_used_tools = [{"tool_name": name, "count": count} for name, count in most_used_tools]
+        most_used_tools = [{"tool_name": name, "count": count} for name, count in most_used_tools_result.all()]
 
-        # 工具错误分布
         tool_errors_result = await db.execute(
-            _join_tool_calls_on_conversation(
-                select(ToolCall.tool_name, func.count(ToolCall.id).label("error_count"))
-                .filter(ToolCall.status == "error")
-                .group_by(ToolCall.tool_name)
+            _scope_column(
+                select(ToolUsageEvent.tool_name, func.count(ToolUsageEvent.id).label("error_count"))
+                .where(ToolUsageEvent.status == "error")
+                .group_by(ToolUsageEvent.tool_name),
+                ToolUsageEvent.tenant_id,
             )
         )
-        tool_errors = tool_errors_result.all()
-        tool_error_distribution = {name: count for name, count in tool_errors}
+        tool_error_distribution = {name: count for name, count in tool_errors_result.all()}
 
-        # 最近7天每日工具调用数
         daily_tool_calls = []
         for i in range(7):
-            day_start = naive_now - timedelta(days=i + 1)
-            day_end = naive_now - timedelta(days=i)
-
+            day_start = now - timedelta(days=i + 1)
+            day_end = now - timedelta(days=i)
             daily_count_result = await db.execute(
-                _join_tool_calls_on_conversation(
-                    select(func.count(ToolCall.id)).filter(
-                        ToolCall.created_at >= day_start, ToolCall.created_at < day_end
-                    )
+                _scope_column(
+                    select(func.count(ToolUsageEvent.id)).where(
+                        ToolUsageEvent.occurred_at >= day_start,
+                        ToolUsageEvent.occurred_at < day_end,
+                    ),
+                    ToolUsageEvent.tenant_id,
                 )
             )
-            daily_count = daily_count_result.scalar() or 0
-
-            daily_tool_calls.append({"date": day_start.strftime("%Y-%m-%d"), "call_count": daily_count})
+            daily_tool_calls.append(
+                {"date": day_start.strftime("%Y-%m-%d"), "call_count": daily_count_result.scalar() or 0}
+            )
 
         return ToolCallStats(
             total_calls=total_calls,
@@ -415,7 +448,7 @@ async def get_tool_call_stats(
 @dashboard.get("/stats/knowledge", response_model=KnowledgeStats)
 async def get_knowledge_stats(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_required_user),
+    current_user: User = Depends(get_admin_user),
 ):
     """获取当前 token 空间的知识库统计"""
     try:
@@ -444,91 +477,53 @@ async def get_knowledge_stats(
 
 @dashboard.get("/stats/agents", response_model=AgentAnalytics)
 async def get_agent_analytics(
+    start: str | None = Query(default=None, description="开始日期 YYYY-MM-DD，含当天"),
+    end: str | None = Query(default=None, description="结束日期 YYYY-MM-DD，含当天"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_required_user),
+    current_user: User = Depends(get_admin_user),
 ):
-    """获取当前 token 空间的智能体分析"""
+    """获取当前 token 空间的智能体分析。工作侧读日聚合，TOP 5 按 score。"""
     try:
-        from yuxi.storage.postgres.models_business import Conversation, Message, MessageFeedback, ToolCall
+        from yuxi.storage.postgres.models_business import AgentUsageDaily
 
-        # 获取所有智能体
+        today = utc_now().date()
+        start_date = datetime.strptime(start, "%Y-%m-%d").date() if start else today - timedelta(days=29)
+        end_date = datetime.strptime(end, "%Y-%m-%d").date() if end else today
         agents_result = await db.execute(
-            _scope_conversations(
-                select(Conversation.agent_id, func.count(Conversation.id).label("conversation_count")).group_by(
-                    Conversation.agent_id
+            _scope_column(
+                select(
+                    AgentUsageDaily.agent_id,
+                    func.coalesce(func.sum(AgentUsageDaily.session_count), 0).label("conversation_count"),
+                    func.coalesce(func.sum(AgentUsageDaily.tool_call_count), 0).label("tool_usage_count"),
+                    func.coalesce(func.sum(AgentUsageDaily.score), 0).label("score"),
                 )
+                .where(AgentUsageDaily.stat_date >= start_date, AgentUsageDaily.stat_date <= end_date)
+                .group_by(AgentUsageDaily.agent_id),
+                AgentUsageDaily.tenant_id,
             )
         )
         agents = agents_result.all()
-
         total_agents = len(agents)
-        agent_conversation_counts = [{"agent_id": agent_id, "conversation_count": count} for agent_id, count in agents]
-
-        # 智能体满意度统计
-        agent_satisfaction = []
-        for agent_id, _ in agents:
-            total_feedbacks_result = await db.execute(
-                _scope_conversations(
-                    select(func.count(MessageFeedback.id))
-                    .join(Message, MessageFeedback.message_id == Message.id)
-                    .join(Conversation, Message.conversation_id == Conversation.id)
-                    .filter(Conversation.agent_id == agent_id)
-                )
-            )
-            total_feedbacks = total_feedbacks_result.scalar() or 0
-
-            positive_feedbacks_result = await db.execute(
-                _scope_conversations(
-                    select(func.count(MessageFeedback.id))
-                    .join(Message, MessageFeedback.message_id == Message.id)
-                    .join(Conversation, Message.conversation_id == Conversation.id)
-                    .filter(Conversation.agent_id == agent_id, MessageFeedback.rating == "like")
-                )
-            )
-            positive_feedbacks = positive_feedbacks_result.scalar() or 0
-
-            satisfaction_rate = round((positive_feedbacks / total_feedbacks * 100), 2) if total_feedbacks > 0 else 100
-
-            agent_satisfaction.append(
-                {"agent_id": agent_id, "satisfaction_rate": satisfaction_rate, "total_feedbacks": total_feedbacks}
-            )
-
-        # 智能体工具使用统计
-        agent_tool_usage = []
-        for agent_id, _ in agents:
-            tool_usage_count_result = await db.execute(
-                _scope_conversations(
-                    select(func.count(ToolCall.id))
-                    .join(Message, ToolCall.message_id == Message.id)
-                    .join(Conversation, Message.conversation_id == Conversation.id)
-                    .filter(Conversation.agent_id == agent_id)
-                )
-            )
-            tool_usage_count = tool_usage_count_result.scalar() or 0
-
-            agent_tool_usage.append({"agent_id": agent_id, "tool_usage_count": tool_usage_count})
-
-        # 表现最佳的智能体（按对话数排序）
-        top_performing_agents = []
-        for i, (agent_id, conv_count) in enumerate(agents):
-            # 获取满意度数据
-            satisfaction_data = next(
-                (s for s in agent_satisfaction if s["agent_id"] == agent_id), {"satisfaction_rate": 0}
-            )
-
-            top_performing_agents.append(
-                {
-                    "agent_id": agent_id,
-                    "conversation_count": conv_count,
-                    "satisfaction_rate": satisfaction_data["satisfaction_rate"],
-                }
-            )
-
-        # 按对话数排序，取前5名
-        top_performing_agents.sort(key=lambda x: x["conversation_count"], reverse=True)
+        agent_conversation_counts = [
+            {"agent_id": agent_id, "conversation_count": int(count or 0)}
+            for agent_id, count, _tool_count, _score in agents
+        ]
+        agent_tool_usage = [
+            {"agent_id": agent_id, "tool_usage_count": int(tool_count or 0)}
+            for agent_id, _count, tool_count, _score in agents
+        ]
+        top_performing_agents = [
+            {
+                "agent_id": agent_id,
+                "conversation_count": int(count or 0),
+                "score": float(score or 0),
+            }
+            for agent_id, count, _tool_count, score in agents
+        ]
+        top_performing_agents.sort(key=lambda item: item["score"], reverse=True)
         top_performing_agents = top_performing_agents[:5]
 
-        agent_slugs = [agent_id for agent_id, _ in agents if agent_id]
+        agent_slugs = [agent_id for agent_id, *_rest in agents if agent_id]
         agent_names = {}
         if agent_slugs:
             agent_repo = AgentRepository(db)
@@ -542,7 +537,6 @@ async def get_agent_analytics(
         return AgentAnalytics(
             total_agents=simple_sum(total_agents, wk_agents) if wk is not None else total_agents,
             agent_conversation_counts=agent_conversation_counts,
-            agent_satisfaction_rates=agent_satisfaction,
             agent_tool_usage=agent_tool_usage,
             top_performing_agents=top_performing_agents,
             agent_names=agent_names,
@@ -567,26 +561,38 @@ async def get_agent_analytics(
 @dashboard.get("/stats")
 async def get_dashboard_stats(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_required_user),
+    current_user: User = Depends(get_admin_user),
 ):
-    """获取当前 token 空间的基础统计"""
-    from yuxi.storage.postgres.models_business import Conversation, Message
+    """获取当前 token 空间的基础统计。工作侧会话和消息读日聚合。"""
+    from yuxi.storage.postgres.models_business import AgentUsageDaily, AgentUsageEvent
 
     try:
-        # Basic counts
-        total_conversations_result = await db.execute(_scope_conversations(select(func.count(Conversation.id))))
-        total_conversations = total_conversations_result.scalar() or 0
-
-        active_conversations_result = await db.execute(
-            _scope_conversations(select(func.count(Conversation.id)).filter(Conversation.status == "active"))
+        daily_result = await db.execute(
+            _scope_column(
+                select(
+                    func.coalesce(func.sum(AgentUsageDaily.session_count), 0),
+                    func.coalesce(func.sum(AgentUsageDaily.message_count), 0),
+                ),
+                AgentUsageDaily.tenant_id,
+            )
         )
-        active_conversations = active_conversations_result.scalar() or 0
-
-        total_messages_result = await db.execute(_join_messages_on_conversation(select(func.count(Message.id))))
-        total_messages = total_messages_result.scalar() or 0
-
-        total_users_result = await db.execute(_user_count_stmt())
-        total_users = total_users_result.scalar() or 0
+        total_conversations, total_messages = daily_result.one()
+        total_conversations = int(total_conversations or 0)
+        total_messages = int(total_messages or 0)
+        active_since = utc_now() - timedelta(days=1)
+        active_result = await db.execute(
+            _scope_column(
+                select(func.count(distinct(AgentUsageEvent.session_id))).where(
+                    AgentUsageEvent.event_type == "start",
+                    AgentUsageEvent.occurred_at >= active_since,
+                    AgentUsageEvent.session_id.isnot(None),
+                ),
+                AgentUsageEvent.tenant_id,
+            )
+        )
+        active_conversations = int(active_result.scalar() or 0)
+        harness_users = await _count_usage_users(db, AgentUsageEvent)
+        total_users = harness_users
 
         payload = {
             "total_conversations": total_conversations,
@@ -604,7 +610,7 @@ async def get_dashboard_stats(
                 "weknora_messages": wk.messages,
                 "yuxi_messages": total_messages,
                 "total_messages": simple_sum(wk.messages, total_messages),
-                "total_users": weknora_user_total(weknora_users=wk.users),
+                "total_users": simple_sum(weknora_user_total(weknora_users=wk.users), total_users),
             }
         )
         return payload
@@ -612,82 +618,6 @@ async def get_dashboard_stats(
         logger.error(f"Error getting dashboard stats: {e}")
         logger.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Failed to get dashboard stats: {str(e)}")
-
-
-# =============================================================================
-# 反馈管理（当前 token 空间）
-# =============================================================================
-
-
-class FeedbackListItem(BaseModel):
-    """反馈列表项"""
-
-    id: int
-    uid: str
-    username: str | None
-    avatar: str | None
-    rating: str
-    reason: str | None
-    created_at: str
-    message_content: str
-    conversation_title: str | None
-    agent_id: str
-
-
-@dashboard.get("/feedbacks", response_model=list[FeedbackListItem])
-async def get_all_feedbacks(
-    rating: str | None = None,
-    agent_id: str | None = None,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_required_user),
-):
-    """获取当前 token 空间的反馈记录"""
-    from yuxi.storage.postgres.models_business import Conversation, Message, MessageFeedback, User
-
-    try:
-        query = _scope_conversations(
-            select(MessageFeedback, Message, Conversation, User)
-            .join(Message, MessageFeedback.message_id == Message.id)
-            .join(Conversation, Message.conversation_id == Conversation.id)
-            .outerjoin(User, MessageFeedback.uid == User.uid)
-        )
-
-        # Apply filters
-        if rating and rating in ["like", "dislike"]:
-            query = query.filter(MessageFeedback.rating == rating)
-        if agent_id:
-            query = query.filter(Conversation.agent_id == agent_id)
-
-        # Order by creation time (most recent first)
-        query = query.order_by(MessageFeedback.created_at.desc())
-
-        results = await db.execute(query)
-        results = results.all()
-
-        # Debug logging (privacy-safe)
-        logger.info(f"Found {len(results)} feedback records")
-        # Removed sensitive user data from logs for privacy compliance
-
-        return [
-            {
-                "id": feedback.id,
-                "message_id": feedback.message_id,
-                "uid": feedback.uid,
-                "username": user.username if user else None,
-                "avatar": normalize_public_minio_url(user.avatar) if user else None,
-                "rating": feedback.rating,
-                "reason": feedback.reason,
-                "created_at": feedback.created_at.isoformat(),
-                "message_content": message.content,
-                "conversation_title": conversation.title,
-                "agent_id": conversation.agent_id,
-            }
-            for feedback, message, conversation, user in results
-        ]
-    except Exception as e:
-        logger.error(f"Error getting feedbacks: {e}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Failed to get feedbacks: {str(e)}")
 
 
 # =============================================================================
@@ -704,7 +634,7 @@ class TimeSeriesStats(BaseModel):
     average_count: float
     peak_count: int
     peak_date: str
-    agent_names: dict[str, str] | None = None  # agent_id -> agent_name 映射（仅 type=agents）
+    agent_names: dict[str, str] | None = None  # agent_id / model_id -> 展示名映射
 
 
 @dashboard.get("/stats/calls/timeseries", response_model=TimeSeriesStats)
@@ -712,22 +642,22 @@ async def get_call_timeseries_stats(
     type: str = "models",  # models/agents/tokens/tools
     time_range: str = "14days",  # 14hours/14days/14weeks
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_required_user),
+    current_user: User = Depends(get_admin_user),
 ):
-    """获取当前 token 空间的调用分析时间序列统计"""
+    """获取当前 token 空间的调用分析时间序列统计。读遥测事实表。"""
     try:
-        from yuxi.storage.postgres.models_business import Conversation, Message, ToolCall
+        from yuxi.storage.postgres.models_business import AgentUsageEvent, TokenUsageEvent, ToolUsageEvent
 
         # 计算时间范围（使用北京时间 UTC+8）
-        now = utc_now()
         local_now = shanghai_now()
 
         if time_range == "14hours":
             intervals = 14
             # 包含当前小时：从13小时前开始
-            start_time = now - timedelta(hours=intervals - 1)
-            group_format = _get_time_group_format(Message.created_at, time_range)
-            base_local_time = ensure_shanghai(start_time)
+            local_start = local_now - timedelta(hours=intervals - 1)
+            local_start = local_start.replace(minute=0, second=0, microsecond=0)
+            start_time = local_start.astimezone(UTC)
+            base_local_time = local_start
         elif time_range == "14weeks":
             intervals = 14
             # 包含当前周：从13周前开始，并对齐到当周周一 00:00
@@ -735,126 +665,104 @@ async def get_call_timeseries_stats(
             local_start = local_start - timedelta(days=local_start.weekday())
             local_start = local_start.replace(hour=0, minute=0, second=0, microsecond=0)
             start_time = local_start.astimezone(UTC)
-            group_format = _get_time_group_format(Message.created_at, time_range)
             base_local_time = local_start
         else:  # 14days (default)
             intervals = 14
             # 包含当前天：从13天前开始
-            start_time = now - timedelta(days=intervals - 1)
-            group_format = _get_time_group_format(Message.created_at, time_range)
-            base_local_time = ensure_shanghai(start_time)
+            local_start = local_now - timedelta(days=intervals - 1)
+            local_start = local_start.replace(hour=0, minute=0, second=0, microsecond=0)
+            start_time = local_start.astimezone(UTC)
+            base_local_time = local_start
 
-        # Convert start_time to naive UTC datetime for PostgreSQL query
-        # PostgreSQL with asyncpg and naive DateTime columns requires naive datetime objects
-        query_start_time = start_time.replace(tzinfo=None)
+        query_start_time = start_time
 
-        # 根据类型查询数据
         if type == "models":
-            # 模型调用统计（基于消息数量，按模型分组）
-            # 从message的extra_metadata中提取模型信息
-            category_expr = cast(Message.extra_metadata["response_metadata"]["model_name"], String)
+            group_format = _get_time_group_format(TokenUsageEvent.occurred_at, time_range)
             query_result = await db.execute(
-                _join_messages_on_conversation(
+                _scope_column(
                     select(
                         group_format.label("date"),
-                        func.count(Message.id).label("count"),
-                        category_expr.label("category"),
+                        func.count(TokenUsageEvent.id).label("count"),
+                        TokenUsageEvent.model.label("category"),
                     )
-                    .filter(Message.role == "assistant", Message.created_at >= query_start_time)
-                    .filter(Message.extra_metadata.isnot(None))
-                    .group_by(group_format, category_expr)
-                    .order_by(group_format)
+                    .where(TokenUsageEvent.occurred_at >= query_start_time)
+                    .group_by(group_format, TokenUsageEvent.model)
+                    .order_by(group_format),
+                    TokenUsageEvent.tenant_id,
                 )
             )
             query = query_result.all()
         elif type == "agents":
-            # 智能体调用统计（基于对话更新时间，按智能体分组）
-            # 为对话创建独立的时间格式化器（使用 PostgreSQL 兼容的 to_char + INTERVAL）
-            conv_group_format = _get_time_group_format(Conversation.updated_at, time_range)
-
+            group_format = _get_time_group_format(AgentUsageEvent.occurred_at, time_range)
             query_result = await db.execute(
-                _scope_conversations(
+                _scope_column(
                     select(
-                        conv_group_format.label("date"),
-                        func.count(Conversation.id).label("count"),
-                        Conversation.agent_id.label("category"),
+                        group_format.label("date"),
+                        func.count(AgentUsageEvent.id).label("count"),
+                        AgentUsageEvent.agent_id.label("category"),
                     )
-                    .filter(Conversation.updated_at.isnot(None))
-                    .filter(Conversation.updated_at >= query_start_time)
-                    .group_by(conv_group_format, Conversation.agent_id)
-                    .order_by(conv_group_format)
+                    .where(
+                        AgentUsageEvent.occurred_at >= query_start_time,
+                        AgentUsageEvent.event_type == "start",
+                    )
+                    .group_by(group_format, AgentUsageEvent.agent_id)
+                    .order_by(group_format),
+                    AgentUsageEvent.tenant_id,
                 )
             )
             query = query_result.all()
         elif type == "tokens":
-            # Token消耗统计（区分input/output tokens）
-            # 先查询input tokens
-            from sqlalchemy import literal
-
-            input_query_result = await db.execute(
-                _join_messages_on_conversation(
-                    select(
-                        group_format.label("date"),
-                        func.sum(
-                            func.coalesce(
-                                cast(cast(Message.extra_metadata["usage_metadata"]["input_tokens"], String), Integer), 0
-                            )
-                        ).label("count"),
-                        literal("input_tokens").label("category"),
+            group_format = _get_time_group_format(TokenUsageEvent.occurred_at, time_range)
+            token_rows = (
+                await db.execute(
+                    _scope_column(
+                        select(
+                            group_format.label("date"),
+                            TokenUsageEvent.model.label("model"),
+                            func.coalesce(func.sum(TokenUsageEvent.prompt_tokens), 0).label("input_tokens"),
+                            func.coalesce(func.sum(TokenUsageEvent.completion_tokens), 0).label("output_tokens"),
+                            func.coalesce(func.sum(TokenUsageEvent.total_tokens), 0).label("total_tokens"),
+                        )
+                        .where(TokenUsageEvent.occurred_at >= query_start_time)
+                        .group_by(group_format, TokenUsageEvent.model)
+                        .order_by(group_format),
+                        TokenUsageEvent.tenant_id,
                     )
-                    .filter(
-                        Message.created_at >= query_start_time,
-                        Message.extra_metadata.isnot(None),
-                        Message.extra_metadata["usage_metadata"].isnot(None),
-                    )
-                    .group_by(group_format)
-                    .order_by(group_format)
                 )
-            )
-            input_query = input_query_result.all()
-
-            # 查询output tokens
-            output_query_result = await db.execute(
-                _join_messages_on_conversation(
-                    select(
-                        group_format.label("date"),
-                        func.sum(
-                            func.coalesce(
-                                cast(cast(Message.extra_metadata["usage_metadata"]["output_tokens"], String), Integer), 0
-                            )
-                        ).label("count"),
-                        literal("output_tokens").label("category"),
-                    )
-                    .filter(
-                        Message.created_at >= query_start_time,
-                        Message.extra_metadata.isnot(None),
-                        Message.extra_metadata["usage_metadata"].isnot(None),
-                    )
-                    .group_by(group_format)
-                    .order_by(group_format)
+            ).all()
+            token_model_names = await _model_display_names(db, [row.model or "" for row in token_rows])
+            results = []
+            token_models: dict[str, dict[str, dict[str, int]]] = {}
+            for row in token_rows:
+                model_id = row.model or "unknown"
+                model_label = token_model_names.get(model_id) or (
+                    "unknown" if model_id == "unknown" else model_id
                 )
-            )
-            output_query = output_query_result.all()
-
-            # 合并两个查询结果
-            input_results = input_query
-            output_results = output_query
-            results = input_results + output_results
+                prompt = int(row.input_tokens or 0)
+                completion = int(row.output_tokens or 0)
+                total = int(row.total_tokens or 0)
+                if prompt == 0 and completion == 0 and total > 0:
+                    prompt = total
+                date_key = row.date
+                bucket = token_models.setdefault(date_key, {})
+                model_bucket = bucket.setdefault(model_label, {"input": 0, "output": 0})
+                model_bucket["input"] += prompt
+                model_bucket["output"] += completion
+                results.append(SimpleNamespace(date=date_key, category="input", count=prompt))
+                results.append(SimpleNamespace(date=date_key, category="output", count=completion))
         elif type == "tools":
-            # 工具调用统计（按工具名称分组）
-            # 为工具调用创建独立的时间格式化器（使用 PostgreSQL 兼容的 to_char + INTERVAL）
-            tool_group_format = _get_time_group_format(ToolCall.created_at, time_range)
-
+            group_format = _get_time_group_format(ToolUsageEvent.occurred_at, time_range)
             query_result = await db.execute(
-                _join_tool_calls_on_conversation(
+                _scope_column(
                     select(
-                        tool_group_format.label("date"),
-                        func.count(ToolCall.id).label("count"),
-                        ToolCall.tool_name.label("category"),
+                        group_format.label("date"),
+                        func.count(ToolUsageEvent.id).label("count"),
+                        ToolUsageEvent.tool_name.label("category"),
                     )
-                    .filter(ToolCall.created_at >= query_start_time)
-                    .group_by(tool_group_format, ToolCall.tool_name)
-                    .order_by(tool_group_format)
+                    .where(ToolUsageEvent.occurred_at >= query_start_time)
+                    .group_by(group_format, ToolUsageEvent.tool_name)
+                    .order_by(group_format),
+                    ToolUsageEvent.tenant_id,
                 )
             )
             query = query_result.all()
@@ -872,20 +780,12 @@ async def get_call_timeseries_stats(
                 categories.add(result.category)
 
         # 如果没有类别数据，提供默认类别
-        if not categories:
-            if type == "models":
-                categories.add("unknown_model")
-            elif type == "agents":
-                categories.add("unknown_agent")
-            elif type == "tokens":
-                categories.update(["input_tokens", "output_tokens"])
-            elif type == "tools":
-                categories.add("unknown_tool")
-
         categories = sorted(list(categories))
 
         agent_names = None
-        if type == "agents" and categories:
+        if type == "models" and categories:
+            agent_names = await _model_display_names(db, categories)
+        elif type == "agents" and categories:
             agent_slugs = [c for c in categories if c]
             if agent_slugs:
                 agent_repo = AgentRepository(db)
@@ -899,6 +799,9 @@ async def get_call_timeseries_stats(
             iso_year, iso_week, _ = base_date.isocalendar()
             return f"{iso_year}-{iso_week:02d}"
 
+        if type == "tokens" and time_range == "14weeks":
+            token_models = {normalize_week_key(key): value for key, value in token_models.items()}
+
         for result in results:
             date_key = result.date
             if time_range == "14weeks":
@@ -909,7 +812,10 @@ async def get_call_timeseries_stats(
             if date_key not in time_data:
                 time_data[date_key] = {}
 
-            time_data[date_key][category] = count
+            if type == "tokens":
+                time_data[date_key][category] = time_data[date_key].get(category, 0) + count
+            else:
+                time_data[date_key][category] = count
 
         # 填充缺失的时间点（使用北京时间）
         data = []
@@ -941,15 +847,18 @@ async def get_call_timeseries_stats(
                 if category not in day_data:
                     day_data[category] = 0
 
-            data.append({"date": date_key, "data": day_data, "total": day_total})
+            point = {"date": date_key, "data": day_data, "total": day_total}
+            if type == "tokens":
+                point["models"] = token_models.get(date_key, {})
+            data.append(point)
             current_time += delta
 
         # 计算统计指标
         if type == "tools":
-            # 对于工具调用，显示所有时间的总数（与ToolStatsComponent保持一致）
-            from yuxi.storage.postgres.models_business import ToolCall
-
-            total_count_result = await db.execute(_join_tool_calls_on_conversation(select(func.count(ToolCall.id))))
+            # 工具总数与工具统计卡一致，读全部工具事实，不限时间窗口。
+            total_count_result = await db.execute(
+                _scope_column(select(func.count(ToolUsageEvent.id)), ToolUsageEvent.tenant_id)
+            )
             total_count = total_count_result.scalar() or 0
         else:
             # 其他类型使用时间序列数据的总和

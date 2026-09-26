@@ -107,10 +107,3 @@ async def get_admin_user(current_user: User = Depends(get_required_user)):
     return current_user
 
 
-async def get_superadmin_user(current_user: User = Depends(get_required_user)):
-    if current_user.role != "superadmin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="需要超级管理员权限",
-        )
-    return current_user

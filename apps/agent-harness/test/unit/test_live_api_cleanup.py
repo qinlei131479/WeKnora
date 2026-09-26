@@ -5,9 +5,9 @@ from typing import Any
 import httpx
 import pytest
 
-from test import live_api_cleanup
-from test.live_api_cleanup import cleanup_e2e_chat_resources, cleanup_pytest_knowledge_resources
-from test.live_api_cleanup import remove_e2e_thread_storage
+import live_api_cleanup
+from live_api_cleanup import cleanup_e2e_chat_resources, cleanup_pytest_knowledge_resources
+from live_api_cleanup import remove_e2e_thread_storage
 
 pytestmark = pytest.mark.asyncio
 

@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPost, apiPut } from './base'
+import { apiDelete, apiGet, apiPost, apiPut, apiRequest, harnessUrl } from './base'
 
 const BASE_URL = '/api/system/skills'
 const USER_BASE_URL = '/api/skills'
@@ -19,9 +19,10 @@ export const listSkillCards = ({ refreshPersonal = false } = {}) => {
 
 export const listAccessibleSkills = () => apiGet(`${USER_BASE_URL}/accessible`)
 
-export const prepareSkillUpload = (file: File) => {
+export const prepareSkillUpload = (file: File, usageSource = 'chat') => {
   const formData = new FormData()
   formData.append('file', file)
+  formData.append('usage_source', usageSource)
   return apiPost(`${USER_BASE_URL}/import/prepare`, formData)
 }
 
@@ -39,6 +40,62 @@ export const confirmSkillInstallDraft = (draftId: string, slugs: unknown) =>
 
 export const discardSkillInstallDraft = (draftId: string) =>
   apiDelete(`${USER_BASE_URL}/install-drafts/${encodeURIComponent(draftId)}`)
+
+export const listSkillSandboxBoard = () => apiGet(`${USER_BASE_URL}/sandbox-board`)
+
+export const installSkillToSandboxes = (slug: string, sandboxConfigIds: string[]) =>
+  apiPost(`${USER_BASE_URL}/${encodeURIComponent(slug)}/sandbox-install`, {
+    sandbox_config_ids: sandboxConfigIds,
+  })
+
+export const uninstallSkillFromSandbox = (slug: string, sandboxConfigId: string) =>
+  apiDelete(
+    `${USER_BASE_URL}/${encodeURIComponent(slug)}/sandbox-installs/${encodeURIComponent(sandboxConfigId)}`,
+  )
+
+const sandboxSkillUrl = (configId: string, skillId = '') => {
+  const base = `${USER_BASE_URL}/sandbox-configs/${encodeURIComponent(configId)}/skills`
+  return skillId ? `${base}/${encodeURIComponent(skillId)}` : base
+}
+
+export const listHarnessConfigSkills = async (configId: string) => {
+  const res: any = await apiGet(sandboxSkillUrl(configId))
+  return { data: res?.data || [] }
+}
+
+export const patchHarnessConfigSkill = async (
+  configId: string,
+  skillId: string,
+  payload: { enabled?: boolean; envs?: Record<string, string> },
+) => {
+  const res: any = await apiRequest(sandboxSkillUrl(configId, skillId), {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  return { data: res?.data }
+}
+
+export const stopHarnessConfigSkill = async (configId: string, skillId: string) => {
+  const res: any = await apiPost(`${sandboxSkillUrl(configId, skillId)}/stop`, {})
+  return { data: res?.data }
+}
+
+export const deleteHarnessConfigSkill = (configId: string, skillId: string) =>
+  apiDelete(sandboxSkillUrl(configId, skillId))
+
+export const reinstallHarnessConfigSkill = (configId: string, skillId: string) =>
+  apiPost(`${sandboxSkillUrl(configId, skillId)}/reinstall`, {})
+
+export const getHarnessConfigSkillGuidance = (configId: string, skillId: string) =>
+  apiGet(`${sandboxSkillUrl(configId, skillId)}/guidance`)
+
+export const getHarnessConfigSkillMessages = async (configId: string, skillId: string) => {
+  const res: any = await apiGet(`${sandboxSkillUrl(configId, skillId)}/messages`)
+  return { data: res?.data || [] }
+}
+
+export const harnessSkillTranscriptUrl = (configId: string, skillId: string) =>
+  harnessUrl(`${sandboxSkillUrl(configId, skillId)}/transcript`)
 
 export const getSkillDependencyOptions = (slug?: string) => {
   const query = slug ? `?slug=${encodeURIComponent(slug)}` : ''
@@ -86,6 +143,9 @@ export const skillApi = {
   searchRemoteSkills,
   confirmSkillInstallDraft,
   discardSkillInstallDraft,
+  listSkillSandboxBoard,
+  installSkillToSandboxes,
+  uninstallSkillFromSandbox,
   getSkillDependencyOptions,
   getSkillTree,
   getSkillFile,

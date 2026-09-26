@@ -1,9 +1,21 @@
 from typing import Any
 
+from sqlalchemy import select
+
+from yuxi.storage.postgres.models_business import BuiltinTool
 from yuxi.utils import logger
+
+# 内置工具目录只暴露统一分类，历史或缺失分类统一回落到 buildin。
+BUILTIN_TOOL_CATEGORIES = {"buildin", "knowledge", "wiki", "database"}
 
 # 工具元数据缓存
 _metadata_cache: list[dict] = []
+
+
+def _normalize_builtin_tool_category(category: str | None) -> str:
+    if category in BUILTIN_TOOL_CATEGORIES:
+        return category
+    return "buildin"
 
 
 def _extract_tool_info(tool_obj) -> dict:
@@ -21,6 +33,7 @@ def _extract_tool_info(tool_obj) -> dict:
         schema = tool_obj.args_schema
         if hasattr(schema, "schema"):
             schema = schema.schema()
+        info["input_schema"] = schema
         for arg_name, arg_info in schema.get("properties", {}).items():
             info["args"].append(
                 {
@@ -57,7 +70,7 @@ def _ensure_metadata_loaded():
         # 合并附加元数据
         if tool_name in extra_meta:
             extra = extra_meta[tool_name]
-            runtime_info["category"] = extra.category
+            runtime_info["category"] = _normalize_builtin_tool_category(extra.category)
             runtime_info["tags"] = extra.tags
             runtime_info["config_guide"] = extra.config_guide
             # display_name 优先级高于 tool.name
@@ -65,9 +78,11 @@ def _ensure_metadata_loaded():
                 runtime_info["name"] = extra.display_name
         else:
             # 未注册，设为默认分类
-            runtime_info["category"] = "buildin"
+            runtime_info["category"] = _normalize_builtin_tool_category(None)
             runtime_info["tags"] = []
             runtime_info["config_guide"] = ""
+        runtime_info.setdefault("input_schema", {})
+        runtime_info.setdefault("version", None)
 
         _metadata_cache.append(runtime_info)
 
@@ -83,6 +98,99 @@ def get_tool_metadata(category: str = None) -> list[dict]:
     return _metadata_cache
 
 
+async def sync_builtin_tool_directory() -> int:
+    """同步代码注册表到只读目录；数据库不作为第二定义源。"""
+    from yuxi.storage.postgres.manager import pg_manager
+
+    _ensure_metadata_loaded()
+    expected = {item["slug"]: item for item in _metadata_cache}
+    try:
+        async with pg_manager.get_async_session_context() as session:
+            rows = (await session.execute(select(BuiltinTool).where(BuiltinTool.source == "work"))).scalars().all()
+            by_slug = {row.tool_slug: row for row in rows}
+            changed = False
+            for slug in sorted(set(by_slug) - set(expected)):
+                await session.delete(by_slug[slug])
+                changed = True
+            for slug, item in expected.items():
+                row = by_slug.get(slug)
+                values = {
+                    "name": item["name"],
+                    "description": item.get("description") or "",
+                    "category": _normalize_builtin_tool_category(item.get("category")),
+                    "input_schema": item.get("input_schema") or {},
+                    "enabled": True,
+                    "source": "work",
+                    "version": item.get("version"),
+                }
+                if row is None:
+                    session.add(
+                        BuiltinTool(
+                            tool_slug=slug,
+                            capability_key=f"work:{slug}",
+                            **values,
+                        )
+                    )
+                    changed = True
+                    continue
+                for key, value in values.items():
+                    if getattr(row, key) != value:
+                        setattr(row, key, value)
+                        changed = True
+            if changed:
+                await session.commit()
+            return len(expected)
+    except Exception as exc:
+        logger.warning(f"Failed to sync builtin tool directory: {exc}")
+        raise
+
+
+async def get_directory_tool_metadata(
+    category: str | None = None,
+    source: str | None = None,
+) -> list[dict]:
+    """优先读取统一目录；目录暂不可用时回退代码注册表，保证工具预览不中断。"""
+    from yuxi.storage.postgres.manager import pg_manager
+
+    _ensure_metadata_loaded()
+    registry_by_slug = {item["slug"]: item for item in get_tool_metadata(category)}
+    try:
+        async with pg_manager.get_async_session_context() as session:
+            stmt = select(BuiltinTool).order_by(BuiltinTool.id)
+            if category:
+                stmt = stmt.where(BuiltinTool.category == category)
+            if source:
+                stmt = stmt.where(BuiltinTool.source == source)
+            rows = (await session.execute(stmt)).scalars().all()
+            results = []
+            for row in rows:
+                registry = registry_by_slug.get(row.tool_slug, {})
+                results.append(
+                    {
+                        "slug": row.tool_slug,
+                        "name": row.name,
+                        "description": row.description,
+                        "metadata": registry.get("metadata") or {},
+                        "args": [
+                            {"name": key, "type": spec.get("type", ""), "description": spec.get("description", "")}
+                            for key, spec in (row.input_schema or {}).get("properties", {}).items()
+                        ],
+                        "input_schema": row.input_schema or {},
+                        "category": row.category,
+                        "tags": registry.get("tags") or [],
+                        "config_guide": registry.get("config_guide") or "",
+                        "capability_key": row.capability_key,
+                        "enabled": bool(row.enabled),
+                        "source": row.source,
+                        "version": row.version,
+                    }
+                )
+            return results
+    except Exception as exc:
+        logger.warning(f"Failed to read builtin tool directory, using code registry: {exc}")
+        return get_tool_metadata(category)
+
+
 def get_tool_instances_by_category(category: str) -> list[Any]:
     from yuxi.agents.toolkits.registry import get_all_extra_metadata, get_all_tool_instances
 
@@ -90,7 +198,7 @@ def get_tool_instances_by_category(category: str) -> list[Any]:
     tools = []
     for tool in get_all_tool_instances():
         tool_meta = extra_meta.get(tool.name)
-        tool_category = tool_meta.category if tool_meta else "buildin"
+        tool_category = _normalize_builtin_tool_category(tool_meta.category if tool_meta else None)
         if tool_category == category:
             tools.append(tool)
     return tools

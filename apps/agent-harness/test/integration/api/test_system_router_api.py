@@ -44,10 +44,9 @@ async def test_config_get_requires_login_and_update_requires_admin(test_client, 
     assert update_response.status_code == 403
 
 
-async def test_ocr_options_and_config_options_permissions(
+async def test_ocr_options_permissions(
     test_client,
     standard_user,
-    admin_headers,
 ):
     options_response = await test_client.get("/api/system/ocr/options", headers=standard_user["headers"])
     assert options_response.status_code == 200, options_response.text
@@ -55,13 +54,6 @@ async def test_ocr_options_and_config_options_permissions(
     assert options["default_engine"] == "weknora"
     assert options["weknora_managed"] is True
     assert options["engines"] == []
-
-    denied_response = await test_client.get("/api/system/config/options", headers=standard_user["headers"])
-    assert denied_response.status_code == 403
-
-    configs_response = await test_client.get("/api/system/config/options", headers=admin_headers)
-    assert configs_response.status_code == 200, configs_response.text
-    assert configs_response.json()["options"] == []
 
 
 async def test_ocr_health_is_available_to_logged_in_users(

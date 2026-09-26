@@ -9,7 +9,6 @@ from typing import Any
 import asyncpg
 import httpx
 import pytest
-from yuxi.storage.postgres.naming import prefix_sql
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.e2e, pytest.mark.slow]
 
@@ -116,8 +115,7 @@ async def _load_run_metadata(run_id: str) -> dict[str, Any]:
     conn = await asyncpg.connect(_postgres_dsn())
     try:
         row = await conn.fetchrow(
-            prefix_sql(
-                """
+            """
             SELECT
                 ar.id,
                 ar.request_id,
@@ -127,12 +125,12 @@ async def _load_run_metadata(run_id: str) -> dict[str, Any]:
                 conv.extra_metadata AS conversation_metadata,
                 input_msg.extra_metadata AS input_metadata,
                 input_msg.content AS input_content
-            FROM agent_runs ar
-            JOIN conversations conv ON conv.id = ar.conversation_id
-            LEFT JOIN messages input_msg ON input_msg.id = ar.input_message_id
+            FROM amp_agent_runs ar
+            JOIN amp_sessions conv ON conv.id = ar.conversation_id
+            LEFT JOIN amp_messages input_msg ON input_msg.id = ar.input_message_id
             WHERE ar.id = $1
             """
-            ),
+            ,
             run_id,
         )
         assert row, f"agent run row missing for {run_id}"

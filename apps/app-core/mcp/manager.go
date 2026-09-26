@@ -80,8 +80,8 @@ func cacheKey(service *types.MCPService, principal types.Principal) string {
 }
 
 // GetOrCreateClient gets an existing client or creates a new one
-// Caches and reuses existing connections for SSE/HTTP Streamable
-// Note: Stdio transport is disabled for security reasons
+// Caches and reuses existing connections for SSE/HTTP Streamable.
+// 用户 stdio 仍拒绝；内置 stdio 使用库里保存的启动命令。
 //
 // For OAuth-enabled services the connection is keyed per principal (derived from
 // ctx) so each identity connects with its own token.
@@ -94,9 +94,10 @@ func (m *MCPManager) GetOrCreateClient(ctx context.Context, service *types.MCPSe
 		return nil, fmt.Errorf("MCP service %s is not enabled", service.Name)
 	}
 
-	// Stdio transport is disabled for security reasons
 	if service.TransportType == types.MCPTransportStdio {
-		return nil, fmt.Errorf("stdio transport is disabled for security reasons; please use SSE or HTTP Streamable transport instead")
+		if _, _, _, launchErr := builtinStdioLaunch(service); launchErr != nil {
+			return nil, launchErr
+		}
 	}
 
 	var tenantID uint64

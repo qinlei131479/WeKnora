@@ -1,14 +1,12 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import os
 import threading
 import time
 from dataclasses import dataclass
 
 from yuxi.utils.logging_config import logger
-from yuxi.storage.postgres.naming import ht
 
 from .paths import workspace_scope_dirname
 from .provisioner_client import ProvisionerClient, SandboxRecord
@@ -41,36 +39,10 @@ def normalize_env(env: dict | None) -> dict[str, str]:
     return {str(key): "" if value is None else str(value) for key, value in env.items() if str(key)}
 
 
-def postgres_conninfo() -> str:
-    db_url = os.getenv("POSTGRES_URL", "").strip()
-    return db_url.replace("+asyncpg", "").replace("+psycopg", "")
-
-
 def load_user_agent_env(uid: str) -> dict[str, str]:
-    conninfo = postgres_conninfo()
-    if not conninfo:
-        return {}
-
-    try:
-        import psycopg
-
-        with psycopg.connect(conninfo, connect_timeout=3) as conn:
-            with conn.cursor() as cursor:
-                cursor.execute(f"SELECT env FROM {ht('agent_envs')} WHERE uid = %s", (uid,))
-                row = cursor.fetchone()
-    except Exception as exc:
-        raise RuntimeError(f"failed to load agent env for uid {uid}: {exc}") from exc
-
-    if not row:
-        return {}
-
-    value = row[0]
-    if isinstance(value, str):
-        try:
-            value = json.loads(value)
-        except json.JSONDecodeError as exc:
-            raise RuntimeError(f"stored agent env for uid {uid} is not valid JSON") from exc
-    return normalize_env(value)
+    """用户级环境表已退役；沙箱暂统一使用空环境。"""
+    del uid
+    return {}
 
 
 @dataclass(slots=True)

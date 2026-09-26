@@ -59,6 +59,7 @@ async def test_token_usage_middleware_records_request_and_state_tokens() -> None
     assert token_usage["llm_tool_message_tokens"] > 0
     assert token_usage["state_messages_tokens"] >= token_usage["state_messages_tokens_before_call"]
     assert token_usage["llm_input_tokens"] >= token_usage["llm_messages_tokens"]
+    assert token_usage["llm_output_tokens"] > 0
     assert token_usage["system_tokens"] > 0
     assert token_usage["tools_tokens"] > 0
     assert token_usage["tool_count"] == 1
@@ -68,6 +69,8 @@ async def test_token_usage_middleware_records_request_and_state_tokens() -> None
     assert "summary_keep_tokens" not in token_usage
     assert token_usage["model_usage"] == {"input_tokens": 12, "output_tokens": 5, "total_tokens": 17}
     assert token_usage["estimate"] is True
+    persisted_usage = result.model_response.result[0].additional_kwargs["token_usage"]
+    assert persisted_usage == token_usage
 
 
 @pytest.mark.asyncio
@@ -94,5 +97,9 @@ async def test_token_usage_middleware_detects_effective_summary_message() -> Non
 
     assert token_usage["summary_active"] is True
     assert token_usage["summary_message_tokens"] > 0
+    assert token_usage["model_usage"] == {}
+    assert token_usage["llm_input_tokens"] > 0
+    assert token_usage["llm_output_tokens"] > 0
     assert token_usage["context_window"] is None
     assert token_usage["context_usage_ratio"] is None
+    assert result.model_response.result[0].additional_kwargs["token_usage"] == token_usage

@@ -120,7 +120,7 @@
                 class="setting-row"
                 :class="{ 'setting-row-vertical': isCardResourceKind(value.kind) }"
               >
-                <div class="setting-info">
+                <div v-if="value.kind !== 'skills'" class="setting-info">
                   <label>{{ getResourceSelectLabel(value.kind) }}</label>
                   <p class="desc">{{ getResourceSelectDesc(value.kind) }}</p>
                 </div>
@@ -142,11 +142,21 @@
                       :value="getOptionValue(option)"
                       class="skill-checkbox-item"
                     >
-                      <div class="skill-item-content">
-                        <span class="skill-name">{{ getLocalizedOptionLabel(key, option) }}</span>
-                        <span v-if="getLocalizedOptionDescription(key, option)" class="skill-desc">
-                          {{ getLocalizedOptionDescription(key, option) }}
-                        </span>
+                      <div class="skill-item-content" :class="{ 'skill-item-content--skill': value.kind === 'skills' }">
+                        <div v-if="value.kind === 'skills'" class="skill-item-badge" aria-hidden="true">
+                          <t-icon :name="SKILL_ICON" size="16px" />
+                        </div>
+                        <div class="skill-item-text">
+                          <span class="skill-name" :title="getLocalizedOptionLabel(key, option)">{{ getLocalizedOptionLabel(key, option) }}</span>
+                          <span
+                            v-if="getLocalizedOptionDescription(key, option)"
+                            class="skill-desc"
+                            :class="{ 'is-clamped': value.kind === 'skills' }"
+                            :title="getLocalizedOptionDescription(key, option)"
+                          >
+                            {{ getLocalizedOptionDescription(key, option) }}
+                          </span>
+                        </div>
                       </div>
                     </t-checkbox>
                   </t-checkbox-group>
@@ -386,6 +396,7 @@ import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import PromptTemplateSelector from '@/components/PromptTemplateSelector.vue'
 import ModelSelectorComponent from './ModelSelectorComponent.vue'
+import { SKILL_ICON } from '@/types/mention'
 import { useAgentStore } from '@/stores/harness/agent'
 import { toolApi } from '@/api/chat-work/tool'
 import {
@@ -607,7 +618,10 @@ const storeOptionsForKind = (kind) => {
       .filter(Boolean)
   }
   if (kind === 'skills') {
-    return (availableSkills.value || []).map(toResourceOption).filter(Boolean)
+    return (availableSkills.value || [])
+      .filter((item) => item?.source_type === 'work' || item?.source_type === 'common')
+      .map(toResourceOption)
+      .filter(Boolean)
   }
   if (kind === 'subagents') {
     return (agents.value || [])
@@ -630,6 +644,7 @@ const getConfigOptions = (value) => {
     ])
   }
   if (!SCOPE_RESOURCE_KINDS.has(kind)) return schemaOptions
+  if (kind === 'skills') return storeOptionsForKind(kind)
   return mergeResourceOptions(schemaOptions, storeOptionsForKind(kind))
 }
 
@@ -730,7 +745,6 @@ const getResourceNoneLabel = () => t('agentEditor.selection.disabled')
 const getResourceSelectLabel = (kind) => {
   if (kind === 'knowledges') return t('agent.editor.selectKnowledgeBases')
   if (kind === 'mcps') return t('agentEditor.mcp.selectLabel')
-  if (kind === 'skills') return t('agent.editor.selectSkills')
   if (kind === 'subagents') return t('agent.workManage.editor.subagentsSelect')
   return t('common.add')
 }
@@ -738,7 +752,6 @@ const getResourceSelectLabel = (kind) => {
 const getResourceSelectDesc = (kind) => {
   if (kind === 'knowledges') return t('agent.editor.selectKnowledgeBasesDesc')
   if (kind === 'mcps') return t('agentEditor.mcp.selectDesc')
-  if (kind === 'skills') return t('agent.editor.selectSkillsDesc')
   if (kind === 'subagents') return t('agent.workManage.editor.subagentsSelectDesc')
   return ''
 }
@@ -1273,6 +1286,7 @@ defineExpose({ validateAndFilterConfig })
 
   :deep(.t-checkbox__label) {
     flex: 1;
+    min-width: 0;
   }
 }
 
@@ -1280,18 +1294,59 @@ defineExpose({ validateAndFilterConfig })
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
+}
+
+.skill-item-content--skill {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.skill-item-badge {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--td-brand-color) 12%, transparent);
+  color: var(--td-brand-color);
+}
+
+.skill-item-text {
+  flex: 1;
+  min-width: 0;
 }
 
 .skill-name {
+  display: block;
   font-size: 14px;
   font-weight: 500;
   color: var(--td-text-color-primary);
 }
 
+.skill-item-content--skill .skill-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .skill-desc {
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.45;
   color: var(--td-text-color-secondary);
+
+  &.is-clamped {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    word-break: break-word;
+  }
 }
 
 .empty-hint {

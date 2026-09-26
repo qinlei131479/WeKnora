@@ -4,7 +4,6 @@ from pathlib import Path
 import aiofiles
 import yaml
 from fastapi import APIRouter, Body, Depends, HTTPException
-from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from yuxi import config, get_version
 from yuxi.storage.postgres.models_business import User
@@ -176,50 +175,8 @@ async def reload_info_config(current_user: User = Depends(get_admin_user)):
 
 
 # =============================================================================
-# === 通用配置项与 OCR 分组 ===
+# === OCR 分组 ===
 # =============================================================================
-
-
-class ConfigOptionValuePayload(BaseModel):
-    """管理员可更新的通用配置值。"""
-
-    value: dict
-
-
-@system.get("/config/options")
-async def get_config_options(
-    current_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """返回系统定义的通用配置表单和值。"""
-
-    from yuxi.config.options import list_options, serialize_option
-
-    return {"options": [serialize_option(record) for record in await list_options(db)]}
-
-
-@system.put("/config/options/{key}")
-async def put_config_option(
-    key: str,
-    payload: ConfigOptionValuePayload,
-    current_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """保存一个通用配置项的 JSON 值。"""
-
-    from yuxi.config.options import serialize_option, update_option_value
-
-    try:
-        record = await update_option_value(db, key, payload.value, current_user.username)
-        if record is None:
-            raise HTTPException(status_code=404, detail=f"配置项不存在: {key}")
-        await db.commit()
-        await db.refresh(record)
-        return {"option": serialize_option(record)}
-    except HTTPException:
-        raise
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @system.get("/ocr/options")

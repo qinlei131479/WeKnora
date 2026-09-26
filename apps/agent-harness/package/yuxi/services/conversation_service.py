@@ -961,18 +961,6 @@ async def get_thread_history_view(
     role_type_map = {"user": "human", "assistant": "ai", "tool": "tool", "system": "system"}
 
     for msg in messages:
-        user_feedback = None
-        if msg.feedbacks:
-            for feedback in msg.feedbacks:
-                if feedback.uid == str(current_uid):
-                    user_feedback = {
-                        "id": feedback.id,
-                        "rating": feedback.rating,
-                        "reason": feedback.reason,
-                        "created_at": feedback.created_at.isoformat() if feedback.created_at else None,
-                    }
-                    break
-
         extra_metadata = dict(msg.extra_metadata or {})
         request_id = extra_metadata.get("request_id")
         if msg.role == "user" and request_id and not extra_metadata.get("attachments"):
@@ -991,7 +979,6 @@ async def get_thread_history_view(
             "extra_metadata": extra_metadata,
             "message_type": msg.message_type,
             "image_content": msg.image_content,
-            "feedback": user_feedback,
         }
 
         if msg.tool_calls:
@@ -1010,5 +997,5 @@ async def get_thread_history_view(
 
         history.append(msg_dict)
 
-    logger.info(f"Loaded {len(history)} messages with feedback for thread {thread_id}")
+    logger.info(f"Loaded {len(history)} messages for thread {thread_id}")
     return {"history": history}

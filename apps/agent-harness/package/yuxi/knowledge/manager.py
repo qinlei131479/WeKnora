@@ -359,18 +359,6 @@ class KnowledgeBaseManager:
 
         return self._database_info_accessible(user, kb)
 
-    async def get_accessible_database_info_by_uid(self, uid: str, kb_id: str) -> KnowledgeBaseSummary | None:
-        """按 uid 获取一个可访问知识库的信息，找不到或无权访问时返回 None。"""
-        normalized_kb_id = str(kb_id or "").strip()
-        if not normalized_kb_id:
-            return None
-
-        databases = await self.get_databases_by_uid(uid)
-        for database in databases:
-            if database.kb_id == normalized_kb_id:
-                return database
-        return None
-
     def database_type_supports_documents(self, kb_type: str | None) -> bool:
         """判断知识库类型是否支持文档全文操作。"""
         normalized_type = (kb_type or "milvus").lower()
@@ -1015,24 +1003,6 @@ class KnowledgeBaseManager:
             raise ValueError("filename is required")
         return await KnowledgeFileRepository().exists_by_filename(kb_id=kb_id, filename=normalized_filename)
 
-    async def list_document_file_ids_by_statuses(
-        self,
-        kb_id: str,
-        *,
-        statuses: list[str],
-        after_file_id: str | None = None,
-        limit: int = 500,
-    ) -> list[str]:
-        """按文件状态游标分页获取文件 ID，用于后台批量处理任务。"""
-        from yuxi.repositories.knowledge_file_repository import KnowledgeFileRepository
-
-        return await KnowledgeFileRepository().list_file_ids_by_exact_statuses(
-            kb_id=kb_id,
-            statuses=statuses,
-            after_file_id=after_file_id,
-            limit=limit,
-        )
-
     async def delete_folder(self, kb_id: str, folder_id: str) -> None:
         """递归删除文件夹"""
         kb_instance = await self.get_kb_executor(kb_id)
@@ -1125,54 +1095,6 @@ class KnowledgeBaseManager:
         await self._require_kb_supports_documents(kb_id, "download")
         kb_instance = await self.get_kb_executor(kb_id)
         return await kb_instance.get_file_download(kb_id, file_id, variant)
-
-    async def file_name_existed_in_db(self, kb_id: str | None, file_name: str | None) -> bool:
-        """检查指定数据库中是否存在同名的文件"""
-        if not kb_id or not file_name:
-            return False
-        return await self.document_file_exists(kb_id, file_name)
-
-    async def get_same_name_files(self, kb_id: str, filename: str) -> list[dict]:
-        """获取同一知识库中同名文件列表
-        基于原始文件名直接比较
-        返回基础信息：文件名、大小、上传时间
-
-        Args:
-            kb_id: 数据库ID
-            filename: 要检测的文件名（原始文件名）
-
-        Returns:
-            同名文件列表，每项包含：
-            - filename: 文件名
-            - size: 文件大小
-            - created_at: 上传时间
-            - file_id: 文件ID（用于下载）
-        """
-        if not kb_id or not filename:
-            return []
-
-        from yuxi.repositories.knowledge_file_repository import KnowledgeFileRepository
-
-        records = await KnowledgeFileRepository().list_same_name_files(kb_id=kb_id, filename=filename)
-        return [
-            {
-                "file_id": record.file_id,
-                "filename": record.filename,
-                "size": int(record.file_size or 0),
-                "created_at": utc_isoformat(record.created_at) if record.created_at else "",
-                "content_hash": record.content_hash or "",
-            }
-            for record in records
-        ]
-
-    async def file_existed_in_db(self, kb_id: str | None, content_hash: str | None) -> bool:
-        """检查指定数据库中是否存在相同内容哈希的文件"""
-        if not kb_id or not content_hash:
-            return False
-
-        from yuxi.repositories.knowledge_file_repository import KnowledgeFileRepository
-
-        return await KnowledgeFileRepository().exists_by_content_hash(kb_id=kb_id, content_hash=content_hash)
 
     async def update_database(
         self,
@@ -1310,24 +1232,6 @@ class KnowledgeBaseManager:
         """获取支持的知识库类型"""
         return KnowledgeBaseFactory.get_available_types()
 
-    async def get_kb_instance_info(self) -> dict[str, dict]:
-        """获取知识库实例信息"""
-        from yuxi.repositories.knowledge_base_repository import KnowledgeBaseRepository
-
-        counts: dict[str, int] = {}
-        for row in await KnowledgeBaseRepository().get_all():
-            kb_type = row.kb_type or "milvus"
-            counts[kb_type] = counts.get(kb_type, 0) + 1
-
-        info = {}
-        for kb_type, kb_instance in self.kb_instances.items():
-            info[kb_type] = {
-                "work_dir": kb_instance.work_dir,
-                "database_count": counts.get(kb_type, 0),
-                "file_metadata_source": "database",
-            }
-        return info
-
     async def get_statistics(self) -> dict:
         """获取统计信息"""
         from yuxi.repositories.knowledge_base_repository import KnowledgeBaseRepository
@@ -1415,12 +1319,3 @@ class KnowledgeBaseManager:
         logger.warning("建议：检查这些不一致的数据，必要时进行数据清理或元数据修复")
         logger.warning("=" * 80)
 
-    async def manual_consistency_check(self) -> dict:
-        """
-        手动触发数据一致性检测
-
-        Returns:
-            检测结果字典
-        """
-        logger.info("手动触发数据一致性检测...")
-        return await self.detect_data_inconsistencies()

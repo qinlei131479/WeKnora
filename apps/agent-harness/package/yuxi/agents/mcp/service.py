@@ -11,16 +11,16 @@ import asyncio
 import hashlib
 import json
 import re
+from datetime import datetime, timezone
+from dataclasses import dataclass
 from collections.abc import Callable
 from typing import Any, cast
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
-from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from yuxi.tenancy.context import stamp_tenant_id
-from yuxi.tenancy.tenant_query import apply_tenant_filters, slug_taken_clauses
-from yuxi.storage.postgres.models_business import MCPServer
+from yuxi.services import mcp_service as mcp_services
+from yuxi.tenancy.context import get_tenant_principal
 from yuxi.utils import logger
 
 # =============================================================================
@@ -36,9 +36,8 @@ _mcp_tools_cache: dict[str, list[Callable[..., Any]]] = {}
 
 # MCP tools statistics (for reporting enabled/disabled counts)
 _mcp_tools_stats: dict[str, dict[str, int]] = {}
-_USER_CONFIGURABLE_TRANSPORTS = ("sse", "streamable_http")
 
-# Default MCP Server configurations (Imported to DB on first run)
+# 内置图表服务的进程参数。列表接口会抹掉 stdio 配置，对话仍按这个 id 启动。
 _DEFAULT_MCP_SERVERS = {
     "mcp-server-chart": {
         "command": "npx",
@@ -51,51 +50,179 @@ _DEFAULT_MCP_SERVERS = {
 }
 _BUILTIN_MCP_SERVER_SLUGS = tuple(_DEFAULT_MCP_SERVERS)
 
-_RETIRED_BUILTIN_MCP_SERVER_SLUGS = ("sequentialthinking",)
 
-_SYNCED_MCP_FIELDS = (
-    "description",
-    "transport",
-    "url",
-    "command",
-    "args",
-    "env",
-    "headers",
-    "timeout",
-    "sse_read_timeout",
-    "tags",
-    "icon",
-)
+@dataclass
+class MCPRecord:
+    """mcp_services 的运行时视图。标识使用服务 id。"""
+
+    raw: dict[str, Any]
+    runtime: Any | None = None
+
+    @property
+    def app_core_id(self) -> str:
+        return str(self.raw.get("id") or "")
+
+    @property
+    def slug(self) -> str:
+        return str(getattr(self.runtime, "slug", None) or self.app_core_id)
+
+    @property
+    def transport(self) -> str:
+        return str(self.raw.get("transport_type") or "")
+
+    @property
+    def name(self) -> str:
+        return str(self.raw.get("name") or self.slug)
+
+    @property
+    def description(self) -> str | None:
+        return self.raw.get("description")
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.raw.get("enabled"))
+
+    @property
+    def icon(self) -> str | None:
+        return getattr(self.runtime, "icon", None)
+
+    @property
+    def tags(self) -> list[str]:
+        return getattr(self.runtime, "tags", None) or []
+
+    @property
+    def disabled_tools(self) -> list[str]:
+        return getattr(self.runtime, "disabled_tools", None) or []
+
+    def to_dict(self) -> dict[str, Any]:
+        transport = "streamable_http" if self.transport == "http-streamable" else self.transport
+        advanced = self.raw.get("advanced_config") or {}
+        stdio = self.raw.get("stdio_config") or {}
+        command = stdio.get("command")
+        args = list(stdio.get("args") or [])
+        # 列表会抹掉内置服务的 stdio 配置，展示参数改从代码目录补回。
+        builtin = _DEFAULT_MCP_SERVERS.get(self.slug)
+        if builtin:
+            command = command or builtin.get("command")
+            args = args or list(builtin.get("args") or [])
+        auth = dict(self.raw.get("auth_config") or {})
+        auth.pop("api_key", None)
+        auth.pop("token", None)
+        return {
+            "id": self.app_core_id,
+            "app_core_id": self.app_core_id,
+            "slug": self.slug,
+            "name": self.raw.get("name") or self.slug,
+            "description": self.raw.get("description"),
+            "transport": transport,
+            "url": self.raw.get("url"),
+            "command": command,
+            "args": args,
+            "env": self.raw.get("env_vars") or {},
+            "headers": self.raw.get("headers") or {},
+            "timeout": advanced.get("timeout"),
+            "transport_type": self.transport,
+            "auth_config": auth or None,
+            "advanced_config": advanced if isinstance(advanced, dict) else None,
+            "credentials": self.raw.get("credentials"),
+            "sse_read_timeout": getattr(self.runtime, "sse_read_timeout", None),
+            "tags": getattr(self.runtime, "tags", None) or [],
+            "icon": getattr(self.runtime, "icon", None),
+            "enabled": bool(self.raw.get("enabled")),
+            "disabled_tools": getattr(self.runtime, "disabled_tools", None) or [],
+            "is_builtin": bool(self.raw.get("is_builtin")) or self.slug in _BUILTIN_MCP_SERVER_SLUGS,
+            "created_by": getattr(self.runtime, "created_by", None),
+            "updated_by": getattr(self.runtime, "updated_by", None),
+            "created_at": self.raw.get("created_at"),
+            "updated_at": self.raw.get("updated_at"),
+        }
 
 
 class MCPServerNotFoundError(ValueError):
     """表示指定的 MCP 服务器不存在。"""
 
 
-def is_builtin_mcp_server(server: MCPServer) -> bool:
-    """判断 MCP 是否由代码中的内置定义管理。"""
-    return server.slug in _BUILTIN_MCP_SERVER_SLUGS
+def is_builtin_mcp_server(server: Any) -> bool:
+    """判断 MCP 是否为内置服务。以 mcp_services.is_builtin 为准，代码目录只覆盖启动命令。"""
+    raw = getattr(server, "raw", None)
+    if isinstance(raw, dict) and raw.get("is_builtin"):
+        return True
+    return getattr(server, "slug", "") in _BUILTIN_MCP_SERVER_SLUGS
 
 
-def requires_mcp_stdio_migration(server: MCPServer) -> bool:
+def requires_mcp_stdio_migration(server: Any) -> bool:
     """判断 MCP 是否为升级后需要迁移的用户 stdio 配置。"""
-    return server.transport == "stdio" and not is_builtin_mcp_server(server)
+    return getattr(server, "transport", "") == "stdio" and not is_builtin_mcp_server(server)
 
 
-def _to_runtime_mcp_config(server: MCPServer) -> dict[str, Any]:
-    """生成运行时 MCP 配置，内置连接字段始终以代码定义为准。"""
-    if not is_builtin_mcp_server(server):
-        return server.to_mcp_config()
+def _to_runtime_mcp_config(record: MCPRecord) -> dict[str, Any]:
+    """生成运行时 MCP 配置。图表内置服务的 stdio 命令以代码定义为准，列表接口会抹掉这段配置。"""
+    if record.slug in _DEFAULT_MCP_SERVERS:
+        builtin = _DEFAULT_MCP_SERVERS[record.slug]
+        return {
+            key: builtin[key]
+            for key in ("transport", "url", "command", "args", "env", "headers", "timeout", "sse_read_timeout")
+            if builtin.get(key) is not None
+        }
 
-    builtin = _DEFAULT_MCP_SERVERS[server.slug]
-    config = {
-        key: builtin[key]
-        for key in ("transport", "url", "command", "args", "env", "headers", "timeout", "sse_read_timeout")
-        if builtin.get(key) is not None
-    }
-    if server.disabled_tools:
-        config["disabled_tools"] = server.disabled_tools
+    data = record.to_dict()
+    transport = data["transport"]
+    config: dict[str, Any] = {"transport": transport}
+    if transport in ("sse", "streamable_http"):
+        headers = dict(data.get("headers") or {})
+        headers.update(_auth_headers(record))
+        config.update({"url": data.get("url"), "headers": headers})
+    else:
+        config.update(
+            {
+                "command": data.get("command"),
+                "args": data.get("args") or [],
+                "env": data.get("env") or {},
+            }
+        )
+    if data.get("timeout") is not None:
+        config["timeout"] = data["timeout"]
+    if data.get("sse_read_timeout") is not None:
+        config["sse_read_timeout"] = data["sse_read_timeout"]
+    if data.get("disabled_tools"):
+        config["disabled_tools"] = data["disabled_tools"]
     return config
+
+
+def _auth_headers(record: MCPRecord) -> dict[str, str]:
+    """把库里的密钥和当前用户的 OAuth 令牌收成请求头，不进入接口响应。"""
+    auth = record.raw.get("auth_config") or {}
+    headers: dict[str, str] = {}
+    if not isinstance(auth, dict):
+        return headers
+    if auth.get("auth_type") == "api_key" and auth.get("api_key"):
+        headers[str(auth.get("api_key_header") or "X-API-Key")] = str(auth["api_key"])
+    elif auth.get("auth_type") == "bearer" and auth.get("token"):
+        headers["Authorization"] = f"Bearer {auth['token']}"
+    elif record.raw.get("_oauth_access_token"):
+        headers["Authorization"] = f"Bearer {record.raw['_oauth_access_token']}"
+    custom = auth.get("custom_headers") or {}
+    if isinstance(custom, dict):
+        headers.update({str(key): str(value) for key, value in custom.items() if value is not None})
+    return headers
+
+
+def _builtin_record(slug: str, runtime: Any | None = None) -> MCPRecord:
+    """数据库还没有内置行时，用代码定义补一张只读卡片。"""
+    config = _DEFAULT_MCP_SERVERS[slug]
+    return MCPRecord(
+        raw={
+            "id": slug,
+            "name": config.get("name", slug),
+            "description": config.get("description"),
+            "enabled": True,
+            "transport_type": config["transport"],
+            "stdio_config": {"command": config.get("command"), "args": config.get("args") or []},
+            "env_vars": config.get("env") or {},
+            "headers": config.get("headers") or {},
+        },
+        runtime=runtime,
+    )
 
 
 # =============================================================================
@@ -104,84 +231,86 @@ def _to_runtime_mcp_config(server: MCPServer) -> dict[str, Any]:
 
 
 async def ensure_builtin_mcp_servers_in_db() -> None:
-    """Ensure built-in MCP server definitions exist in the database."""
-    from yuxi.storage.postgres.manager import pg_manager
+    """保留启动钩子；内置 MCP 连接定义迁移到代码目录，不再写旧 h 表。"""
 
-    try:
-        async with pg_manager.get_async_session_context() as session:
-            any_changed = False
 
-            result = await session.execute(
-                select(MCPServer).where(
-                    MCPServer.transport == "stdio",
-                    ~MCPServer.slug.in_(_BUILTIN_MCP_SERVER_SLUGS),
-                    MCPServer.enabled == 1,
-                )
-            )
-            for server in result.scalars().all():
-                server.enabled = 0
-                server.updated_by = "system"
-                clear_mcp_server_tools_cache(server.slug)
-                any_changed = True
-                logger.warning(f"Disabled legacy user stdio MCP server '{server.slug}'")
+def _tool_input_schema(tool: Any) -> dict[str, Any]:
+    schema = getattr(tool, "args_schema", None)
+    if schema is None:
+        return {}
+    if hasattr(schema, "model_json_schema"):
+        return schema.model_json_schema()
+    if hasattr(schema, "schema"):
+        return schema.schema()
+    return {}
 
-            for slug in _RETIRED_BUILTIN_MCP_SERVER_SLUGS:
-                result = await session.execute(
-                    select(MCPServer).filter(MCPServer.slug == slug, MCPServer.created_by == "system")
-                )
-                retired = result.scalar_one_or_none()
-                if retired:
-                    await session.delete(retired)
-                    clear_mcp_server_tools_cache(slug)
-                    any_changed = True
-                    logger.info(f"Removed retired built-in MCP server '{slug}' from database")
 
-            for slug, config in _DEFAULT_MCP_SERVERS.items():
-                result = await session.execute(select(MCPServer).filter(MCPServer.slug == slug))
-                existing = result.scalar_one_or_none()
-                if not existing:
-                    session.add(
-                        MCPServer(
-                            slug=slug,
-                            name=config.get("name", slug),
-                            description=config.get("description"),
-                            transport=config["transport"],
-                            url=config.get("url"),
-                            command=config.get("command"),
-                            args=config.get("args"),
-                            env=config.get("env"),
-                            headers=config.get("headers"),
-                            timeout=config.get("timeout"),
-                            sse_read_timeout=config.get("sse_read_timeout"),
-                            tags=config.get("tags"),
-                            icon=config.get("icon"),
-                            enabled=0,
-                            created_by="system",
-                            updated_by="system",
-                        )
-                    )
-                    any_changed = True
-                    logger.info(f"Added built-in MCP server '{slug}' to database")
-                    continue
+def metadata_from_live_tools(service_id: str, tools: list[Any]) -> dict[str, Any]:
+    """把现场拉到的工具整理成抽屉目录结构。内置 stdio 不走 Go 的目录刷新。"""
+    return {
+        "service_id": service_id,
+        "tools": [
+            {
+                "name": getattr(tool, "name", ""),
+                "description": getattr(tool, "description", "") or "",
+                "inputSchema": _tool_input_schema(tool),
+            }
+            for tool in tools
+        ],
+        "instructions": "",
+        "server_name": "",
+        "server_version": "",
+        "server_description": "",
+        "synced_at": datetime.now(timezone.utc).isoformat(),
+        "stale": False,
+    }
 
-                server_changed = False
-                for field in _SYNCED_MCP_FIELDS:
-                    next_value = config.get(field)
-                    if getattr(existing, field) != next_value:
-                        setattr(existing, field, next_value)
-                        server_changed = True
-                if existing.created_by != "system":
-                    existing.created_by = "system"
-                    server_changed = True
-                if server_changed:
-                    existing.updated_by = "system"
-                    any_changed = True
 
-            if any_changed:
-                await session.commit()
+async def probe_mcp_connection(transport: str, url: str, headers: dict[str, Any] | None = None) -> dict[str, Any]:
+    """按表单里的地址试连，不要求服务已经保存。"""
+    chosen = _transport_for_app_core(transport)
+    if chosen not in ("sse", "http-streamable"):
+        raise ValueError("传输类型必须是 sse 或 http-streamable")
+    target = (url or "").strip()
+    if not target.startswith(("http://", "https://")):
+        raise ValueError("url 必须是 http 或 https 地址")
+    config = {
+        "transport": "streamable_http" if chosen == "http-streamable" else "sse",
+        "url": target,
+        "headers": headers or {},
+    }
+    client = await get_mcp_client({"probe": config})
+    if client is None:
+        raise ValueError("无法初始化 MCP 连接")
+    tools = cast(list[Any], await client.get_tools())
+    return {
+        "success": True,
+        "message": f"连接成功，共发现 {len(tools)} 个工具",
+        "tool_count": len(tools),
+        "tools": [
+            {"name": getattr(tool, "name", ""), "description": getattr(tool, "description", "") or ""}
+            for tool in tools
+        ],
+    }
 
-    except Exception as e:
-        logger.exception(f"Failed to ensure builtin MCP servers in database: {e}")
+
+def connection_headers(record: MCPRecord) -> dict[str, str]:
+    """合并静态请求头、API Key、Bearer 和当前用户的 OAuth 令牌。"""
+    raw_headers = record.raw.get("headers") or {}
+    headers = {str(key): str(value) for key, value in raw_headers.items()} if isinstance(raw_headers, dict) else {}
+    headers.update(_auth_headers(record))
+    return headers
+
+
+async def live_mcp_tools(record: MCPRecord) -> list[Any]:
+    """按已保存的连接参数拉工具，不经过 app-core。"""
+    config = _to_runtime_mcp_config(record)
+    if config.get("transport") in ("sse", "streamable_http"):
+        config["headers"] = connection_headers(record)
+    client = await get_mcp_client({record.slug: config})
+    if client is None:
+        raise ValueError("无法初始化 MCP 连接")
+    return cast(list[Any], await client.get_tools())
 
 
 async def get_mcp_client(
@@ -213,23 +342,16 @@ async def _load_enabled_mcp_server_configs(
     names: list[str] | None = None,
     db: AsyncSession | None = None,
 ) -> dict[str, dict[str, Any]]:
-    """Load enabled MCP server configs directly from the database."""
-    if db is not None:
-        stmt = select(MCPServer).where(
-            MCPServer.enabled == 1,
-            or_(MCPServer.transport != "stdio", MCPServer.slug.in_(_BUILTIN_MCP_SERVER_SLUGS)),
-        )
-        if names:
-            stmt = stmt.where(MCPServer.slug.in_(names))
-        stmt = apply_tenant_filters(stmt, MCPServer.tenant_id, catalog_null=True)
-        result = await db.execute(stmt)
-        servers = result.scalars().all()
-        return {server.slug: _to_runtime_mcp_config(server) for server in servers}
-
-    from yuxi.storage.postgres.manager import pg_manager
-
-    async with pg_manager.get_async_session_context() as session:
-        return await _load_enabled_mcp_server_configs(names=names, db=session)
+    """从 mcp_services 加载启用中的 MCP 配置。"""
+    records = await get_all_mcp_servers(db)
+    by_slug = {record.slug: record for record in records}
+    if names:
+        by_slug = {slug: by_slug[slug] for slug in names if slug in by_slug}
+    return {
+        slug: _to_runtime_mcp_config(record)
+        for slug, record in by_slug.items()
+        if record.raw.get("enabled") and (record.transport != "stdio" or slug in _BUILTIN_MCP_SERVER_SLUGS)
+    }
 
 
 async def get_enabled_mcp_server_config(server_slug: str, *, db: AsyncSession | None = None) -> dict[str, Any] | None:
@@ -240,23 +362,8 @@ async def get_enabled_mcp_server_config(server_slug: str, *, db: AsyncSession | 
 
 async def get_enabled_mcp_server_slugs(*, db: AsyncSession | None = None) -> list[str]:
     """Get enabled MCP server slugs from the database."""
-    if db is not None:
-        result = await db.execute(
-            apply_tenant_filters(
-                select(MCPServer.slug).where(
-                    MCPServer.enabled == 1,
-                    or_(MCPServer.transport != "stdio", MCPServer.slug.in_(_BUILTIN_MCP_SERVER_SLUGS)),
-                ),
-                MCPServer.tenant_id,
-                catalog_null=True,
-            )
-        )
-        return [name for name in result.scalars().all() if isinstance(name, str)]
-
-    from yuxi.storage.postgres.manager import pg_manager
-
-    async with pg_manager.get_async_session_context() as session:
-        return await get_enabled_mcp_server_slugs(db=session)
+    configs = await _load_enabled_mcp_server_configs(db=db)
+    return list(configs)
 
 
 async def get_mcp_tools(
@@ -405,73 +512,146 @@ def get_mcp_tools_stats(server_slug: str) -> dict[str, int] | None:
 # =============================================================================
 
 
-async def get_mcp_server(db: AsyncSession, slug: str) -> MCPServer | None:
-    """按 slug 取当前 token 空间可见的 MCP（含 tenant_id IS NULL 的内置目录）。"""
-    stmt = apply_tenant_filters(
-        select(MCPServer).filter(MCPServer.slug == slug),
-        MCPServer.tenant_id,
-        catalog_null=True,
-    )
-    result = await db.execute(stmt)
-    return result.scalar_one_or_none()
+def _transport_for_app_core(transport: str | None) -> str | None:
+    """把工作台的 streamable_http 收成 mcp_services 使用的 http-streamable。"""
+    if transport == "streamable_http":
+        return "http-streamable"
+    return transport
 
 
-async def get_all_mcp_servers(db: AsyncSession) -> list[MCPServer]:
-    """Get all server configurations."""
-    result = await db.execute(apply_tenant_filters(select(MCPServer), MCPServer.tenant_id, catalog_null=True))
-    return list(result.scalars().all())
+def _service_write_body(
+    *,
+    name: str | None = None,
+    description: str | None = None,
+    enabled: bool | None = None,
+    transport: str | None = None,
+    url: str | None = None,
+    headers: dict | None = None,
+    auth_config: dict | None = None,
+    advanced_config: dict | None = None,
+    timeout: int | None = None,
+) -> dict[str, Any]:
+    """只写入 mcp_services 已有字段。标签、图标和独立 slug 不再落库。"""
+    body: dict[str, Any] = {}
+    if name is not None:
+        body["name"] = name
+    if description is not None:
+        body["description"] = description
+    if enabled is not None:
+        body["enabled"] = enabled
+    mapped = _transport_for_app_core(transport)
+    if mapped is not None:
+        body["transport_type"] = mapped
+    if url is not None:
+        body["url"] = url
+    if headers is not None:
+        body["headers"] = headers
+    if auth_config is not None:
+        body["auth_config"] = auth_config
+    if advanced_config is not None:
+        body["advanced_config"] = advanced_config
+    elif timeout is not None:
+        body["advanced_config"] = {"timeout": timeout}
+    return body
+
+
+async def disabled_tool_names(service_id: str, db: AsyncSession | None = None) -> list[str]:
+    """读取 mcp_tool_approvals 里被关掉的工具。读失败时不阻断对话。"""
+    try:
+        rows = await mcp_services.list_tool_approvals(db, service_id)
+    except Exception as exc:
+        logger.warning(f"Failed to load MCP tool approvals for '{service_id}': {exc}")
+        return []
+    names: list[str] = []
+    for row in rows:
+        if not isinstance(row, dict) or row.get("enabled") is not False:
+            continue
+        tool_name = row.get("tool_name")
+        if isinstance(tool_name, str) and tool_name:
+            names.append(tool_name)
+    return names
+
+
+async def get_mcp_server(db: AsyncSession, slug: str) -> MCPRecord | None:
+    """按 slug 取当前 token 空间可见的 MCP。"""
+    records = await get_all_mcp_servers(db)
+    for record in records:
+        if record.slug == slug:
+            return record
+    return None
+
+
+async def _attach_oauth_tokens(db: AsyncSession | None, raw_items: list[dict[str, Any]]) -> None:
+    principal = get_tenant_principal()
+    if principal is None or not principal.uid:
+        return
+    for raw in raw_items:
+        auth = raw.get("auth_config") or {}
+        if not isinstance(auth, dict) or auth.get("auth_type") != "oauth":
+            continue
+        try:
+            token = await mcp_services.get_oauth_token(db, str(raw.get("id") or ""), principal.uid)
+        except Exception as exc:
+            logger.warning(f"Failed to load MCP OAuth token for '{raw.get('id')}': {exc}")
+            continue
+        if token and token.get("access_token"):
+            raw["_oauth_access_token"] = token["access_token"]
+
+
+async def get_all_mcp_servers(db: AsyncSession | None = None) -> list[MCPRecord]:
+    """读取当前空间和内置 MCP。"""
+    raw_items = await mcp_services.list_services(db)
+    await _attach_oauth_tokens(db, raw_items)
+    records: list[MCPRecord] = []
+    seen: set[str] = set()
+    for raw in raw_items:
+        raw_id = str(raw.get("id") or "")
+        if not raw_id or raw_id in seen:
+            continue
+        seen.add(raw_id)
+        records.append(MCPRecord(raw=raw))
+    # 迁移尚未写入内置行时，仍用代码定义兜底，避免对话和列表丢图表服务。
+    for slug in _BUILTIN_MCP_SERVER_SLUGS:
+        if slug not in seen:
+            records.append(_builtin_record(slug))
+    return records
 
 
 async def create_mcp_server(
     db: AsyncSession,
-    slug: str,
+    *,
     name: str,
-    transport: str,
-    url: str = None,
-    description: str = None,
-    headers: dict = None,
-    timeout: int = None,
-    sse_read_timeout: int = None,
-    tags: list = None,
-    icon: str = None,
-    created_by: str = None,
-) -> MCPServer:
-    """Create server."""
-    if slug in _BUILTIN_MCP_SERVER_SLUGS:
-        raise ValueError("系统内置 MCP 的 slug 由代码保留，无法通过接口创建")
-    if transport not in _USER_CONFIGURABLE_TRANSPORTS:
-        raise ValueError("用户创建的 MCP 仅支持 sse 或 streamable_http，不允许启动 stdio 本地进程")
+    transport: str | None = None,
+    transport_type: str | None = None,
+    url: str | None = None,
+    description: str | None = None,
+    headers: dict | None = None,
+    auth_config: dict | None = None,
+    advanced_config: dict | None = None,
+    enabled: bool = True,
+    timeout: int | None = None,
+) -> MCPRecord:
+    """创建 MCP，直接写入 mcp_services。"""
+    chosen = _transport_for_app_core(transport_type or transport)
+    if chosen not in ("sse", "http-streamable"):
+        raise ValueError("用户创建的 MCP 仅支持 sse 或 http-streamable，不允许启动 stdio 本地进程")
 
-    existing = await db.execute(
-        select(MCPServer).where(*slug_taken_clauses(MCPServer.tenant_id, MCPServer.slug, slug))
-    )
-    if existing.scalar_one_or_none():
-        raise ValueError(f"Server slug '{slug}' already exists")
-
-    server = MCPServer(
-        slug=slug,
+    body = _service_write_body(
         name=name,
         description=description,
-        transport=transport,
+        enabled=enabled,
+        transport=chosen,
         url=url,
-        headers=headers,
+        headers=headers or {},
+        auth_config=auth_config,
+        advanced_config=advanced_config,
         timeout=timeout,
-        sse_read_timeout=sse_read_timeout,
-        tags=tags,
-        icon=icon,
-        enabled=1,
-        created_by=created_by,
-        updated_by=created_by,
-        tenant_id=stamp_tenant_id(),
     )
-    db.add(server)
-    await db.commit()
-    await db.refresh(server)
-
-    clear_mcp_server_tools_cache(slug)
-
-    logger.info(f"Created MCP server '{slug}'")
-    return server
+    raw = await mcp_services.create_service(db, body)
+    service_id = str(raw.get("id") or "")
+    clear_mcp_server_tools_cache(service_id)
+    logger.info(f"Created MCP server '{service_id}'")
+    return MCPRecord(raw=raw)
 
 
 async def update_mcp_server(
@@ -480,73 +660,60 @@ async def update_mcp_server(
     name: str = None,
     description: str = None,
     transport: str = None,
+    transport_type: str = None,
     url: str = None,
     headers: dict = None,
+    auth_config: dict = None,
+    advanced_config: dict = None,
+    enabled: bool = None,
     timeout: int = None,
     sse_read_timeout: int = None,
     tags: list = None,
     icon: str = None,
     updated_by: str = None,
-) -> MCPServer:
-    """Update server configuration."""
+) -> MCPRecord:
+    """更新 MCP。内置服务的连接参数不能改；标签和图标不再保存。"""
+    del sse_read_timeout, tags, icon, updated_by
     server = await get_mcp_server(db, slug)
     if not server:
         raise MCPServerNotFoundError(f"Server '{slug}' does not exist")
     if is_builtin_mcp_server(server):
         raise PermissionError("系统内置 MCP 的连接配置由代码管理，无法通过接口修改")
 
-    next_transport = transport or server.transport
-    if next_transport not in _USER_CONFIGURABLE_TRANSPORTS:
-        raise ValueError("用户创建的 MCP 仅支持 sse 或 streamable_http，不允许启动 stdio 本地进程")
+    chosen = _transport_for_app_core(transport_type or transport)
+    next_transport = chosen or server.transport
+    if next_transport not in ("sse", "http-streamable", "streamable_http"):
+        raise ValueError("用户创建的 MCP 仅支持 sse 或 http-streamable，不允许启动 stdio 本地进程")
 
-    next_url = url if url is not None else server.url
-    if not next_url or not next_url.strip():
+    next_url = url if url is not None else server.to_dict().get("url")
+    if not next_url or not str(next_url).strip():
         raise ValueError(f"传输类型为 {next_transport} 时，url 必填")
 
-    if name is not None:
-        server.name = name
-    if description is not None:
-        server.description = description
-    if transport is not None:
-        server.transport = transport
-    if url is not None:
-        server.url = url
-    server.command = None
-    server.args = None
-    server.env = None
-    if headers is not None:
-        server.headers = headers
-    if timeout is not None:
-        server.timeout = timeout
-    if sse_read_timeout is not None:
-        server.sse_read_timeout = sse_read_timeout
-    if tags is not None:
-        server.tags = tags
-    if icon is not None:
-        server.icon = icon
-    if updated_by is not None:
-        server.updated_by = updated_by
-
-    await db.commit()
-    await db.refresh(server)
-
+    body = _service_write_body(
+        name=name,
+        description=description,
+        enabled=enabled,
+        transport=chosen,
+        url=url,
+        headers=headers,
+        auth_config=auth_config,
+        advanced_config=advanced_config,
+        timeout=timeout,
+    )
+    raw = await mcp_services.update_service(db, server.app_core_id, body)
     clear_mcp_server_tools_cache(slug)
-
     logger.info(f"Updated MCP server '{slug}'")
-    return server
+    return MCPRecord(raw=raw)
 
 
 async def delete_mcp_server(db: AsyncSession, slug: str) -> bool:
-    """Delete server."""
+    """删除 MCP 服务。"""
     server = await get_mcp_server(db, slug)
     if not server:
         return False
 
-    await db.delete(server)
-    await db.commit()
-
+    await mcp_services.delete_service(db, server.app_core_id)
     clear_mcp_server_tools_cache(slug)
-
     logger.info(f"Deleted MCP server '{slug}'")
     return True
 
@@ -558,18 +725,21 @@ async def delete_mcp_server(db: AsyncSession, slug: str) -> bool:
 
 async def set_server_enabled(
     db: AsyncSession, slug: str, enabled: bool, updated_by: str = None
-) -> tuple[bool, MCPServer]:
+) -> tuple[bool, MCPRecord]:
     """Set server enabled status."""
+    del updated_by
     server = await get_mcp_server(db, slug)
     if not server:
         raise MCPServerNotFoundError(f"Server '{slug}' does not exist")
     if enabled and requires_mcp_stdio_migration(server):
-        raise ValueError("历史 stdio MCP 已被禁用，请改为 sse 或 streamable_http 后再启用")
+        raise ValueError("历史 stdio MCP 已被禁用，请改为 sse 或 http-streamable 后再启用")
 
-    server.enabled = 1 if enabled else 0
-    if updated_by is not None:
-        server.updated_by = updated_by
-    await db.commit()
+    raw = await mcp_services.update_service(
+        db,
+        server.app_core_id,
+        {"enabled": enabled},
+    )
+    server = MCPRecord(raw=raw)
 
     is_enabled = bool(server.enabled)
     clear_mcp_server_tools_cache(slug)
@@ -583,7 +753,7 @@ async def toggle_tool_enabled(
     server_slug: str,
     tool_name: str,
     updated_by: str = None,
-) -> tuple[bool, MCPServer]:
+) -> tuple[bool, MCPRecord]:
     """Toggle single tool enabled status.
 
     Args:
@@ -595,23 +765,14 @@ async def toggle_tool_enabled(
     Returns:
         (enabled, server): Tool enabled status and updated server object
     """
+    del updated_by
     server = await get_mcp_server(db, server_slug)
     if not server:
         raise MCPServerNotFoundError(f"Server '{server_slug}' does not exist")
 
-    disabled_tools = list(server.disabled_tools or [])
-
-    if tool_name in disabled_tools:
-        disabled_tools.remove(tool_name)
-        enabled = True
-    else:
-        disabled_tools.append(tool_name)
-        enabled = False
-
-    server.disabled_tools = disabled_tools
-    if updated_by is not None:
-        server.updated_by = updated_by
-    await db.commit()
+    disabled = set(await disabled_tool_names(server.app_core_id, db))
+    enabled = tool_name in disabled
+    await mcp_services.set_tool_enabled(db, server.app_core_id, tool_name, enabled)
 
     # Clear tool cache (re-filtered on next fetch)
     clear_mcp_server_tools_cache(server_slug)
@@ -644,20 +805,12 @@ async def get_enabled_mcp_tools(server_slug: str) -> list:
         logger.warning(f"MCP server '{server_slug}' not found in database or disabled")
         return []
 
-    disabled_tools = config.get("disabled_tools") or []
+    disabled_tools = list(config.get("disabled_tools") or [])
+    for tool_name in await disabled_tool_names(server_slug):
+        if tool_name not in disabled_tools:
+            disabled_tools.append(tool_name)
     return await get_mcp_tools(server_slug, additional_servers={server_slug: config}, disabled_tools=disabled_tools)
 
-
-async def get_servers_config(names: list[str]) -> dict[str, dict[str, Any]]:
-    """Batch get server configurations.
-
-    Args:
-        names: List of server names
-
-    Returns:
-        {name: config} dictionary, containing only found servers
-    """
-    return await _load_enabled_mcp_server_configs(names=names)
 
 
 async def get_all_mcp_tools(server_slug: str) -> list:

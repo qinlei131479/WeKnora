@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import io
 import json
+import os
 import re
 import shutil
 import tempfile
@@ -18,15 +20,24 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 import yaml
-from sqlalchemy import select
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from yuxi import config as sys_config
 from yuxi.agents.mcp.service import get_enabled_mcp_server_slugs
-from yuxi.agents.skills.repository import SkillRepository
+from yuxi.agents.skills.repository import (
+    SkillRecord,
+    SkillRepository,
+    SkillSandboxRepository,
+    _scope_tenant_id,
+    build_skill_bundle_for_dir,
+)
+from yuxi.appcore.client import AppCoreAuthError
 from yuxi.permissions import ResourcePermission, normalize_permission_config, resolve_skill_permission
-from yuxi.storage.postgres.models_business import Skill, User
+from yuxi.storage.postgres.models_business import User
 from yuxi.storage.redis import get_async_redis_client
+from yuxi.storage.redis.manager import RedisConfig, create_async_redis_client
+from yuxi.utils.datetime_utils import utc_now_naive
 from yuxi.utils.logging_config import logger
 from yuxi.utils.paths import ensure_within_root
 
@@ -93,6 +104,11 @@ SKILL_SOURCE_TYPES = {"builtin", "upload", "remote"}
 ADMIN_ROLES = {"admin", "superadmin"}
 DEFAULT_SKILL_SHARE_CONFIG = {"access_level": "user", "department_ids": [], "user_uids": []}
 BUILTIN_SKILL_SHARE_CONFIG = {"access_level": "global", "department_ids": [], "user_uids": []}
+BUILTIN_SKILL_PERMISSION_CONFIG = {
+    "version": 2,
+    "read_scope": BUILTIN_SKILL_SHARE_CONFIG.copy(),
+    "manage_scope": None,
+}
 SKILL_DRAFT_TTL_SECONDS = 60 * 60
 PERSONAL_SKILL_CACHE_TTL_SECONDS = 5 * 60
 PERSONAL_SKILL_CACHE_PREFIX = "yuxi:skills:personal:v1:"
@@ -187,9 +203,9 @@ def is_valid_skill_slug(slug: str) -> bool:
     return bool(SKILL_SLUG_PATTERN.match(slug.strip()))
 
 
-def is_builtin_skill(item: Skill | dict) -> bool:
-    source_type = item.get("source_type") if isinstance(item, dict) else item.source_type
-    return source_type == "builtin"
+def is_builtin_skill(item: SkillRecord | dict) -> bool:
+    tenant_id = item.get("tenant_id") if isinstance(item, dict) else getattr(item, "tenant_id", None)
+    return tenant_id == 0
 
 
 def get_allowed_skill_access_levels(user: User) -> list[str]:
@@ -206,7 +222,7 @@ def normalize_skill_share_config(
     allowed_access_levels: set[str] | None = None,
 ) -> dict:
     if source_type == "builtin":
-        return {"version": 2, "read_scope": BUILTIN_SKILL_SHARE_CONFIG.copy(), "manage_scope": None}
+        return BUILTIN_SKILL_PERMISSION_CONFIG.copy()
 
     default_scope = {
         "access_level": "global",
@@ -221,19 +237,24 @@ def normalize_skill_share_config(
     )
 
 
-def user_can_access_skill(user: User, skill: Skill, *, require_enabled: bool = True) -> bool:
+def user_can_access_skill(user: User, skill: SkillRecord, *, require_enabled: bool = True) -> bool:
     if require_enabled and not skill.enabled:
         return False
     return resolve_skill_permission(user, skill) != ResourcePermission.NONE
 
 
-def user_can_manage_skill(user: User, skill: Skill) -> bool:
+def user_can_manage_skill(user: User, skill: SkillRecord) -> bool:
     if is_builtin_skill(skill):
         return user.role in ADMIN_ROLES
     return resolve_skill_permission(user, skill) == ResourcePermission.MANAGE
 
 
-def can_skill_depend_on(parent: Skill, dependency: Skill) -> bool:
+def can_skill_depend_on(parent: SkillRecord, dependency: SkillRecord) -> bool:
+    parent_source = getattr(parent, "source_type", "work") or "work"
+    dependency_source = getattr(dependency, "source_type", "work") or "work"
+    # 对话只能依赖对话和通用，工作只能依赖工作和通用，通用不能依赖其他技能。
+    if parent_source == "common" or dependency_source not in {parent_source, "common"}:
+        return False
     if not dependency.enabled:
         return False
     if is_builtin_skill(dependency):
@@ -274,9 +295,306 @@ def _scope_contains(container: dict, target: dict) -> bool:
     return False
 
 
-def _ensure_non_builtin(item: Skill) -> None:
+def _ensure_non_builtin(item: SkillRecord) -> None:
     if is_builtin_skill(item):
         raise ValueError("内置 skill 不允许执行该操作")
+
+
+async def list_skill_sandbox_board(db: AsyncSession) -> dict[str, Any]:
+    """技能页的沙箱列表和安装状态。"""
+    tenant_id, _items = await SkillRepository(db)._local_catalog_items()
+    board = SkillSandboxRepository(db)
+    sandboxes = await board.list_sandboxes(int(tenant_id))
+    installs = await board.list_installs(int(tenant_id))
+    return {
+        "sandboxes": [{"id": row.id, "name": row.name, "sandbox_type": row.sandbox_type} for row in sandboxes],
+        "installations": [
+            {
+                "skill_id": row.id,
+                "catalog_id": row.catalog_id,
+                "name": row.name,
+                "sandbox_config_id": row.sandbox_config_id,
+                "sandbox_config_name": sandbox.name if sandbox is not None else row.sandbox_config_id,
+                "sandbox_type": sandbox.sandbox_type if sandbox is not None else "",
+                "status": row.status,
+                "enabled": bool(row.enabled),
+            }
+            for row, sandbox in installs
+        ],
+    }
+
+
+async def install_skill_to_sandboxes(db: AsyncSession, *, slug: str, sandbox_config_ids: list[str]) -> list[str]:
+    """把目录技能登记到选定沙箱。镜像构建仍由设置页的安装流程完成。"""
+    item = await get_skill_or_raise(db, slug)
+    repo = SkillRepository(db)
+    tenant_id = _scope_tenant_id() or item.tenant_id
+    if tenant_id is None:
+        raise ValueError("安装技能需要当前空间")
+    catalog = await repo._require_row(item)
+    board = SkillSandboxRepository(db)
+    known = {row.id for row in await board.list_sandboxes(int(tenant_id))}
+    targets = [config_id for config_id in sandbox_config_ids if config_id]
+    if not targets:
+        raise ValueError("请选择沙箱")
+    missing = [config_id for config_id in targets if config_id not in known]
+    if missing:
+        raise ValueError("沙箱不存在")
+    installed_ids: list[str] = []
+    for config_id in targets:
+        row = await board.install_catalog(tenant_id=int(tenant_id), sandbox_config_id=config_id, catalog=catalog)
+        installed_ids.append(row.id)
+    return installed_ids
+
+
+async def uninstall_skill_from_sandbox(db: AsyncSession, *, slug: str, sandbox_config_id: str) -> None:
+    """从沙箱安装登记中移除技能。"""
+    item = await get_skill_or_raise(db, slug)
+    tenant_id = _scope_tenant_id() or item.tenant_id
+    if tenant_id is None:
+        raise ValueError("卸载技能需要当前空间")
+    await SkillSandboxRepository(db).uninstall(
+        tenant_id=int(tenant_id),
+        sandbox_config_id=sandbox_config_id,
+        name=item.slug,
+    )
+
+
+def _sandbox_tenant_id() -> int:
+    tenant_id = _scope_tenant_id()
+    if tenant_id is None:
+        raise ValueError("需要当前空间")
+    return int(tenant_id)
+
+
+def _public_envs(raw: Any) -> list[dict[str, Any]]:
+    if not isinstance(raw, list):
+        return []
+    envs: list[dict[str, Any]] = []
+    for item in raw:
+        if not isinstance(item, dict) or not item.get("name"):
+            continue
+        envs.append(
+            {
+                "name": item.get("name"),
+                "description": item.get("description") or "",
+                "required": bool(item.get("required")),
+                "is_set": bool(item.get("value")),
+            }
+        )
+    return envs
+
+
+def _config_skill_payload(row: Any) -> dict[str, Any]:
+    """沙箱管理抽屉使用的安装记录。不返回环境变量明文。"""
+    created_at = getattr(row, "created_at", None)
+    updated_at = getattr(row, "updated_at", None)
+    return {
+        "id": row.id,
+        "name": row.name,
+        "version": row.version or "",
+        "description": row.description or "",
+        "enabled": bool(row.enabled),
+        "status": row.status,
+        "error": row.error or "",
+        "bundle_sha256": row.bundle_sha256 or "",
+        "installed_snapshot_id": row.installed_snapshot_id or "",
+        "install_session_id": row.install_session_id or "",
+        "install_message_id": row.install_message_id or "",
+        "created_at": created_at.isoformat() if created_at is not None else "",
+        "updated_at": updated_at.isoformat() if updated_at is not None else "",
+        "envs": _public_envs(row.envs),
+    }
+
+
+def _apply_env_clears(raw: Any, updates: dict[str, str]) -> Any:
+    """只接受清空。写入新值需要设置页的加密流程，这里不落明文。"""
+    if any(str(value) for value in updates.values()):
+        raise ValueError("环境变量请在设置页修改")
+    if not isinstance(raw, list):
+        return raw
+    names = {name for name, value in updates.items() if value == ""}
+    changed = []
+    for item in raw:
+        if isinstance(item, dict) and item.get("name") in names:
+            item = {**item, "value": ""}
+        changed.append(item)
+    return changed
+
+
+async def list_config_skills(db: AsyncSession, sandbox_config_id: str) -> list[dict[str, Any]]:
+    rows = await SkillSandboxRepository(db).list_config_skills(
+        tenant_id=_sandbox_tenant_id(),
+        sandbox_config_id=sandbox_config_id,
+    )
+    return [_config_skill_payload(row) for row in rows]
+
+
+def _json_field(value: Any) -> Any:
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError:
+            return value
+    return value
+
+
+async def list_skill_install_messages(
+    db: AsyncSession, *, sandbox_config_id: str, skill_id: str
+) -> list[dict[str, Any]]:
+    """读取这次安装留在会话里的记录，供管理抽屉回放安装过程。"""
+    row = await SkillSandboxRepository(db).get_install(
+        tenant_id=_sandbox_tenant_id(),
+        sandbox_config_id=sandbox_config_id,
+        skill_id=skill_id,
+    )
+    session_id = row.install_session_id or ""
+    if not session_id:
+        return []
+    result = await db.execute(
+        text(
+            """
+            SELECT id, role, content, agent_steps, is_completed, is_fallback, agent_duration_ms, created_at
+            FROM messages
+            WHERE session_id = :session_id AND deleted_at IS NULL
+            ORDER BY created_at ASC
+            """
+        ),
+        {"session_id": session_id},
+    )
+    messages: list[dict[str, Any]] = []
+    for item in result.mappings():
+        created_at = item["created_at"]
+        messages.append(
+            {
+                "id": item["id"],
+                "role": item["role"],
+                "content": item["content"] or "",
+                "agent_steps": _json_field(item["agent_steps"]) or [],
+                "is_completed": bool(item["is_completed"]),
+                "is_fallback": bool(item["is_fallback"]),
+                "agent_duration_ms": item["agent_duration_ms"] or 0,
+                "created_at": created_at.isoformat() if created_at is not None else "",
+            }
+        )
+    return messages
+
+
+async def patch_config_skill(
+    db: AsyncSession,
+    *,
+    sandbox_config_id: str,
+    skill_id: str,
+    enabled: bool | None = None,
+    envs: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    repo = SkillSandboxRepository(db)
+    row = await repo.get_install(
+        tenant_id=_sandbox_tenant_id(),
+        sandbox_config_id=sandbox_config_id,
+        skill_id=skill_id,
+    )
+    if envs is not None:
+        row.envs = _apply_env_clears(row.envs, envs)
+    if enabled is not None:
+        row.enabled = bool(enabled)
+    await repo.save_install(row)
+    return _config_skill_payload(row)
+
+
+async def stop_config_skill(db: AsyncSession, *, sandbox_config_id: str, skill_id: str) -> dict[str, Any]:
+    """停止仍停在安装中的登记。不改沙箱镜像。"""
+    repo = SkillSandboxRepository(db)
+    row = await repo.get_install(
+        tenant_id=_sandbox_tenant_id(),
+        sandbox_config_id=sandbox_config_id,
+        skill_id=skill_id,
+    )
+    if row.status != "installing":
+        raise ValueError("当前状态不能停止")
+    row.status = "failed"
+    row.error = "已停止"
+    row.installing_since = None
+    await repo.save_install(row)
+    return _config_skill_payload(row)
+
+
+async def retry_config_skill(db: AsyncSession, *, sandbox_config_id: str, skill_id: str) -> None:
+    """镜像重建仍在设置页。这里只确认记录存在，避免技能页打到 Go。"""
+    await SkillSandboxRepository(db).get_install(
+        tenant_id=_sandbox_tenant_id(),
+        sandbox_config_id=sandbox_config_id,
+        skill_id=skill_id,
+    )
+    raise ValueError("镜像重建请在设置页操作")
+
+
+async def remove_config_skill(db: AsyncSession, *, sandbox_config_id: str, skill_id: str) -> None:
+    """撤销安装登记。镜像内容仍由设置页的卸载流程处理。"""
+    repo = SkillSandboxRepository(db)
+    row = await repo.get_install(
+        tenant_id=_sandbox_tenant_id(),
+        sandbox_config_id=sandbox_config_id,
+        skill_id=skill_id,
+    )
+    now = utc_now_naive()
+    row.status = "removed"
+    row.deleted_at = now
+    await repo.save_install(row)
+
+
+async def load_skill_transcript_frames(
+    db: AsyncSession, *, sandbox_config_id: str, skill_id: str
+) -> list[dict[str, Any]]:
+    """回放安装过程。事件存在 Go 写入的 Redis 列表里，读不到就视为没有过程。"""
+    row = await SkillSandboxRepository(db).get_install(
+        tenant_id=_sandbox_tenant_id(),
+        sandbox_config_id=sandbox_config_id,
+        skill_id=skill_id,
+    )
+    session_id = row.install_session_id or ""
+    message_id = row.install_message_id or ""
+    if not session_id or not message_id:
+        raise ValueError("安装过程不存在")
+    prefix = os.environ.get("STREAM_EVENTS_PREFIX", "stream:events")
+    key = f"{prefix}:{session_id}:{message_id}"
+    client = None
+    try:
+        client = await create_async_redis_client(
+            RedisConfig.from_env(socket_timeout=2, socket_connect_timeout=2),
+            ping=True,
+        )
+        events = await client.lrange(key, 0, -1)
+    except Exception:
+        logger.warning("读取技能安装过程失败")
+        raise ValueError("安装过程不存在")
+    finally:
+        if client is not None:
+            await client.aclose()
+    frames: list[dict[str, Any]] = []
+    for raw in events or []:
+        try:
+            evt = json.loads(raw)
+        except (TypeError, json.JSONDecodeError):
+            continue
+        if not isinstance(evt, dict):
+            continue
+        frames.append(
+            {
+                "id": message_id,
+                "response_type": evt.get("type") or "",
+                "content": evt.get("content") or "",
+                "done": bool(evt.get("done")),
+                "session_id": session_id,
+                "assistant_message_id": message_id,
+                "data": evt.get("data") or None,
+            }
+        )
+        if evt.get("type") == "complete":
+            break
+    if not frames:
+        raise ValueError("安装过程不存在")
+    return frames
 
 
 def get_skills_root_dir() -> Path:
@@ -434,10 +752,48 @@ def sync_thread_readable_skills(
     return thread_skills_root
 
 
+def _preloaded_skills_root() -> Path | None:
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "skills" / "preloaded"
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
+def _directory_mtime(source_dir: Path) -> datetime:
+    files = [path for path in source_dir.rglob("*") if path.is_file() and not _is_skill_tree_noise(path)]
+    latest = max((path.stat().st_mtime for path in files), default=source_dir.stat().st_mtime)
+    return datetime.fromtimestamp(latest, tz=UTC)
+
+
+def _preloaded_skill_specs() -> list[Any]:
+    """skills/preloaded 是对话模式内置技能，版本取目录内最新修改时间。"""
+    from yuxi.agents.skills.buildin import BuiltinSkillSpec
+
+    root = _preloaded_skills_root()
+    if root is None:
+        return []
+    specs: list[Any] = []
+    for child in sorted(path for path in root.iterdir() if path.is_dir()):
+        if not (child / "SKILL.md").is_file() or not is_valid_skill_slug(child.name):
+            continue
+        moment = _directory_mtime(child)
+        specs.append(
+            BuiltinSkillSpec(
+                slug=child.name,
+                source_dir=child,
+                version=moment.strftime("%Y.%m.%d.%H%M%S"),
+                usage_source="chat",
+            )
+        )
+    return specs
+
+
 def get_builtin_skill_specs() -> list[Any]:
     from yuxi.agents.skills.buildin import BUILTIN_SKILLS
 
-    return BUILTIN_SKILLS
+    known = {spec.slug for spec in BUILTIN_SKILLS}
+    return [*BUILTIN_SKILLS, *[spec for spec in _preloaded_skill_specs() if spec.slug not in known]]
 
 
 def _build_builtin_skill_dir_path(slug: str) -> str:
@@ -560,16 +916,12 @@ async def list_skill_cards_for_user(
     return [*personal_cards, *shared_cards], personal_snapshot
 
 
-async def list_manageable_skills(db: AsyncSession, user: User) -> list[Skill]:
-    repo = SkillRepository(db)
-    return [item for item in await repo.list_all() if user_can_manage_skill(user, item)]
 
-
-async def list_visible_skills_for_management(db: AsyncSession, user: User) -> list[Skill]:
-    repo = SkillRepository(db)
-    visible: list[Skill] = []
+async def list_visible_skills_for_management(db: AsyncSession, user: User) -> list[SkillRecord]:
+    items = await _list_all_with_runtime_reconcile(db)
+    visible: list[SkillRecord] = []
     seen: set[str] = set()
-    for item in await repo.list_all():
+    for item in items:
         if item.slug in seen:
             continue
         if user_can_manage_skill(user, item) or (item.enabled and user_can_access_skill(user, item)):
@@ -578,41 +930,128 @@ async def list_visible_skills_for_management(db: AsyncSession, user: User) -> li
     return visible
 
 
-async def list_skills(db: AsyncSession) -> list[Skill]:
-    repo = SkillRepository(db)
-    return await repo.list_all()
+async def list_skills(db: AsyncSession) -> list[SkillRecord]:
+    return await _list_all_with_runtime_reconcile(db)
 
 
-async def list_skill_slugs(db: AsyncSession, *, user: User | None = None) -> list[str]:
-    if user is not None:
-        return await _list_shared_skill_slugs(db, user)
-    result = await db.execute(
-        select(Skill.slug).where(Skill.enabled.is_(True)).order_by(Skill.id.desc())
-    )
-    return [slug for slug in result.scalars().all() if isinstance(slug, str)]
+
+def _tool_matches_skill(parent_source: str, tool_source: str) -> bool:
+    """对话技能只用对话工具，工作技能可用工作或通用工具，通用技能不绑工具。"""
+    if parent_source == "chat":
+        return tool_source == "chat"
+    if parent_source == "work":
+        return tool_source in {"work", "common"}
+    return False
+
+
+async def _tool_catalog() -> list[dict]:
+    """工具选项以目录表为准，才能带上对话/工作使用侧。代码注册表只补名称。"""
+    from yuxi.agents.toolkits.service import get_directory_tool_metadata, get_tool_metadata
+
+    registry = list(get_tool_metadata())
+    if registry and all(item.get("source") for item in registry):
+        return [
+            {"slug": item["slug"], "name": item.get("name") or item["slug"], "source": str(item.get("source") or "work")}
+            for item in registry
+        ]
+    directory = await get_directory_tool_metadata()
+    by_slug = {item["slug"]: item for item in registry}
+    if directory:
+        merged: list[dict] = []
+        seen: set[str] = set()
+        for item in directory:
+            slug = item["slug"]
+            seen.add(slug)
+            meta = by_slug.get(slug, {})
+            merged.append(
+                {
+                    "slug": slug,
+                    "name": item.get("name") or meta.get("name") or slug,
+                    "source": str(item.get("source") or meta.get("source") or "work"),
+                }
+            )
+        for slug, meta in by_slug.items():
+            if slug in seen:
+                continue
+            merged.append({"slug": slug, "name": meta.get("name") or slug, "source": str(meta.get("source") or "work")})
+        return merged
+    return [
+        {"slug": item["slug"], "name": item.get("name") or item["slug"], "source": str(item.get("source") or "work")}
+        for item in registry
+    ]
+
+
+async def _tool_source_map() -> dict[str, str]:
+    """工具标识到使用侧。"""
+    return {item["slug"]: item["source"] for item in await _tool_catalog()}
+
+
+async def _live_sandbox_names(db: AsyncSession, item: SkillRecord) -> list[str]:
+    """仍挂在沙箱上的安装，返回沙箱名称。"""
+    tenant_id = _scope_tenant_id() or item.tenant_id
+    if tenant_id is None:
+        return []
+    catalog_id = str(item.id or "")
+    names: list[str] = []
+    for install, sandbox in await SkillSandboxRepository(db).list_installs(int(tenant_id)):
+        if (install.status or "") == "removed":
+            continue
+        if str(install.catalog_id or "") != catalog_id and install.name != item.slug:
+            continue
+        label = (sandbox.name if sandbox is not None and sandbox.name else None) or install.sandbox_config_id
+        if label and label not in names:
+            names.append(str(label))
+    return names
+
+
+async def _dependent_skill_names(repo: SkillRepository, item: SkillRecord) -> list[str]:
+    """仍把当前技能写在 skill_dependencies 里的其他技能。"""
+    names: list[str] = []
+    for other in await repo.list_all():
+        if other.slug == item.slug:
+            continue
+        if item.slug in (other.skill_dependencies or []):
+            label = other.name or other.slug
+            if label not in names:
+                names.append(label)
+    return names
 
 
 async def get_skill_dependency_options(
     db: AsyncSession, user: User, slug: str | None = None
 ) -> dict[str, list[str] | list[dict]]:
-    from yuxi.agents.toolkits.service import get_tool_metadata
+    parent = await get_skill_or_raise(db, slug) if slug else None
+    parent_source = parent.source_type if parent is not None else ""
+    skill_items = await _list_accessible_shared_skills(db, user)
+    if parent is not None:
+        skill_items = [item for item in skill_items if item.slug != parent.slug and can_skill_depend_on(parent, item)]
+    elif slug:
+        skill_items = [item for item in skill_items if item.slug != slug]
 
-    def get_tools():
-        all_tools = get_tool_metadata()
-        return [{"slug": tool["slug"], "name": tool.get("name", tool["slug"])} for tool in all_tools]
+    tool_list = []
+    for item in await _tool_catalog():
+        if parent_source and not _tool_matches_skill(parent_source, item["source"]):
+            continue
+        tool_list.append(item)
 
-    skill_slugs, tool_list, mcp_names = await asyncio.gather(
-        list_skill_slugs(db, user=user),
-        asyncio.to_thread(get_tools),
-        get_enabled_mcp_server_slugs(db=db),
-    )
-    if slug:
-        skill_slugs = [item for item in skill_slugs if item != slug]
+    enabled_mcp_slugs = set(await get_enabled_mcp_server_slugs(db=db))
+    from yuxi.agents.mcp.service import get_all_mcp_servers
+
+    mcp_options = []
+    for record in await get_all_mcp_servers(db):
+        if not record.enabled:
+            continue
+        mcp_slug = record.slug
+        if enabled_mcp_slugs and mcp_slug not in enabled_mcp_slugs and record.app_core_id not in enabled_mcp_slugs:
+            continue
+        mcp_options.append({"slug": mcp_slug, "name": record.name or mcp_slug})
 
     return {
-        "tools": tool_list,
-        "mcps": mcp_names,
-        "skills": skill_slugs,
+        "tools": [] if parent_source == "common" else tool_list,
+        "mcps": mcp_options,
+        "skills": []
+        if parent_source == "common"
+        else [{"slug": item.slug, "name": getattr(item, "name", None) or item.slug} for item in skill_items],
     }
 
 
@@ -621,11 +1060,24 @@ async def _list_accessible_shared_skills(
     user: User,
     *,
     require_enabled: bool = True,
-) -> list[Skill]:
+) -> list[SkillRecord]:
     """按现有共享范围返回用户可访问的数据库 Skill。"""
-    repo = SkillRepository(db)
-    items = await repo.list_enabled() if require_enabled else await repo.list_all()
+    items = await _list_all_with_runtime_reconcile(db)
+    if require_enabled:
+        items = [item for item in items if item.enabled]
     return [item for item in items if user_can_access_skill(user, item, require_enabled=require_enabled)]
+
+
+async def _list_all_with_runtime_reconcile(db: AsyncSession) -> list[SkillRecord]:
+    """列表路径自愈 Go 端已有 catalog 但 Python runtime 缺失的过渡状态。"""
+    repo = SkillRepository(db)
+    items = await repo.list_all()
+    if not any(item.runtime is None for item in items):
+        return items
+
+    runtime_specs = _build_builtin_runtime_specs(list_builtin_skill_specs())
+    await repo.reconcile_runtime_records(runtime_specs)
+    return await repo.list_all()
 
 
 async def _list_shared_skill_slugs(db: AsyncSession, user: User) -> list[str]:
@@ -643,21 +1095,28 @@ def _get_all_tool_names() -> list[str]:
 
 async def _validate_dependencies(
     *,
-    parent: Skill,
+    parent: SkillRecord,
     tool_dependencies: list[str],
     mcp_dependencies: list[str],
     skill_dependencies: list[str],
-    available_skills: dict[str, Skill],
+    available_skills: dict[str, SkillRecord],
 ) -> tuple[list[str], list[str], list[str]]:
     tools = normalize_string_list(tool_dependencies)
     mcps = normalize_string_list(mcp_dependencies)
     skills = normalize_string_list(skill_dependencies)
+    if parent.source_type == "common" and (tools or skills):
+        raise ValueError("通用技能不能绑定工具或其他技能")
 
     # 验证所有工具（不仅仅是 buildin）
-    available_tools = set(_get_all_tool_names())
-    invalid_tools = [name for name in tools if name not in available_tools]
+    tool_sources = await _tool_source_map()
+    invalid_tools = [name for name in tools if name not in tool_sources]
     if invalid_tools:
         raise ValueError(f"存在无效工具依赖: {', '.join(invalid_tools)}")
+    mismatched_tools = [
+        name for name in tools if not _tool_matches_skill(parent.source_type, tool_sources.get(name, "work"))
+    ]
+    if mismatched_tools:
+        raise ValueError(f"存在使用范围不匹配的工具依赖: {', '.join(mismatched_tools)}")
 
     available_mcps = set(await get_enabled_mcp_server_slugs(db=None))
     invalid_mcps = [name for name in mcps if name not in available_mcps]
@@ -686,9 +1145,12 @@ async def update_skill_dependencies(
     mcp_dependencies: list[str],
     skill_dependencies: list[str],
     operator: User,
-) -> Skill:
+) -> SkillRecord:
     item = await get_manageable_skill_or_raise(db, operator, slug)
     _ensure_non_builtin(item)
+    installed = await _live_sandbox_names(db, item)
+    if installed:
+        raise ValueError(f"技能已安装到沙箱，不能调整依赖：{', '.join(installed)}")
     repo = SkillRepository(db)
     skill_items = await _list_accessible_shared_skills(db, operator)
     available_skills = {skill.slug: skill for skill in skill_items}
@@ -774,6 +1236,25 @@ def _parse_skill_markdown(content: str) -> tuple[str, str, str, dict[str, Any]]:
         raise ValueError("SKILL.md frontmatter 缺少 description")
 
     return slug, name, description, data
+
+
+def _builtin_skill_markdown(content: str, slug: str) -> tuple[str, str, dict[str, Any]]:
+    """内置技能以目录名为 slug，frontmatter.name 可以是中文展示名。"""
+    frontmatter_raw, _body = _split_frontmatter(content)
+    try:
+        data = yaml.safe_load(frontmatter_raw)
+    except yaml.YAMLError as exc:
+        raise ValueError(f"SKILL.md frontmatter YAML 解析失败: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError("SKILL.md frontmatter 必须是对象")
+    raw_slug = str(data.get("slug") or "").strip()
+    if raw_slug and _validate_skill_slug_value(raw_slug, field_name="slug") != slug:
+        raise ValueError(f"内置 skill frontmatter.slug 必须等于 slug: {slug}")
+    name = _validate_skill_display_name(str(data.get("name") or slug))
+    description = str(data.get("description") or "").strip()
+    if not description:
+        raise ValueError("SKILL.md frontmatter 缺少 description")
+    return name, description, data
 
 
 def _rewrite_frontmatter_slug(content: str, new_slug: str) -> str:
@@ -901,7 +1382,7 @@ async def delete_personal_skill(uid: str, slug: str) -> PersonalSkillSnapshot:
             raise RuntimeError("个人 Skill 已删除，但列表缓存刷新失败，请手动刷新") from exc
 
 
-def _resolved_shared_skill(item: Skill, *, shadowed_by_personal: bool = False) -> ResolvedSkill:
+def _resolved_shared_skill(item: SkillRecord, *, shadowed_by_personal: bool = False) -> ResolvedSkill:
     """将数据库 Skill 适配为统一的有效 Skill 描述。"""
     source_scope = "builtin" if is_builtin_skill(item) else "shared"
     return ResolvedSkill(
@@ -1118,10 +1599,10 @@ async def _import_skill_dir_impl(
     created_by: str | None,
     source_type: str,
     share_config: dict,
-) -> Skill:
-    repo = SkillRepository(db)
+) -> SkillRecord:
     skills_root = get_skills_root_dir()
     parsed = _parse_skill_dir_metadata(source_skill_dir)
+    repo = SkillRepository(db)
     final_slug = await _generate_available_slug(repo, parsed["slug"])
     with tempfile.TemporaryDirectory(prefix=".skill-import-", dir=str(skills_root.parent)) as temp_root:
         stage_dir = Path(temp_root) / "stage"
@@ -1144,6 +1625,7 @@ async def _import_skill_dir_impl(
         temp_target.rename(final_dir)
 
         try:
+            bundle_bytes = build_skill_bundle_for_dir(final_slug, final_dir)
             item = await repo.create(
                 slug=final_slug,
                 name=parsed["name"],
@@ -1156,6 +1638,7 @@ async def _import_skill_dir_impl(
                 share_config=share_config,
                 enabled=True,
                 created_by=created_by,
+                bundle_bytes=bundle_bytes,
             )
         except Exception:
             await asyncio.to_thread(shutil.rmtree, final_dir, ignore_errors=True)
@@ -1164,7 +1647,71 @@ async def _import_skill_dir_impl(
     return item
 
 
-def _resolve_skill_dir(item: Skill) -> Path:
+_MINIO_BUNDLE = re.compile(r"minio://([^/]+)/(.+)$")
+
+
+def _minio_bundle_location(value: str) -> tuple[str, str] | None:
+    match = _MINIO_BUNDLE.search(value or "")
+    if match is None:
+        return None
+    return match.group(1), match.group(2)
+
+
+async def _load_skill_bundle(db: AsyncSession, item: SkillRecord) -> bytes | None:
+    """本地目录缺失时，从目录包或 resource 记录把技能包取回来。"""
+    ref = str(item.raw.get("bundle_ref") or "").strip()
+    location = _minio_bundle_location(ref) if ref.startswith("minio://") else None
+    if location is None and ref.startswith("resource://") and db is not None:
+        handle = ref.removeprefix("resource://")
+        result = await db.execute(
+            text("SELECT physical_path FROM resources WHERE handle = :handle AND deleted_at IS NULL"),
+            {"handle": handle},
+        )
+        row = result.first()
+        location = _minio_bundle_location(str(row[0] or "")) if row is not None else None
+    if location is None:
+        return None
+    from yuxi.storage.minio.client import get_minio_client
+
+    bucket, object_name = location
+    return await asyncio.to_thread(get_minio_client().download_file, bucket, object_name)
+
+
+def _extract_skill_bundle(skill_dir: Path, payload: bytes) -> None:
+    skill_dir.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+        skill_files = [name for name in archive.namelist() if name.endswith("SKILL.md") and ".." not in PurePosixPath(name).parts]
+        if not skill_files:
+            raise ValueError("技能包缺少 SKILL.md")
+        prefix = min(skill_files, key=len)[: -len("SKILL.md")]
+        for info in archive.infolist():
+            name = info.filename
+            if not name.startswith(prefix):
+                continue
+            relative = name[len(prefix) :]
+            if not relative or ".." in PurePosixPath(relative).parts:
+                continue
+            target = ensure_within_root((skill_dir / relative).resolve(), skill_dir, error_message="技能包路径非法")
+            if info.is_dir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(archive.read(info))
+
+
+async def _ensure_skill_dir(db: AsyncSession, item: SkillRecord) -> Path:
+    skill_dir = _resolve_skill_dir(item)
+    if (skill_dir / "SKILL.md").is_file():
+        return skill_dir
+    payload = await _load_skill_bundle(db, item)
+    if payload:
+        await asyncio.to_thread(_extract_skill_bundle, skill_dir, payload)
+    if not (skill_dir / "SKILL.md").is_file():
+        raise ValueError(f"技能目录不存在: {item.dir_path}")
+    return skill_dir
+
+
+def _resolve_skill_dir(item: SkillRecord) -> Path:
     dir_path = Path(item.dir_path)
     if dir_path.is_absolute():
         return dir_path
@@ -1246,6 +1793,7 @@ async def prepare_skill_upload(
     filename: str,
     file_bytes: bytes,
     operator: User,
+    usage_source: str = "chat",
 ) -> dict[str, Any]:
     normalized_filename = filename.lower()
     is_zip_upload = normalized_filename.endswith(".zip")
@@ -1283,6 +1831,7 @@ async def prepare_skill_upload(
             "draft_id": draft_dir.name,
             "created_by": operator.uid,
             "source_type": "upload",
+            "usage_source": usage_source if usage_source in {"chat", "work", "common"} else "chat",
             "source": filename,
             "created_at": time.time(),
             "expires_at": time.time() + SKILL_DRAFT_TTL_SECONDS,
@@ -1302,6 +1851,7 @@ async def prepare_remote_skill_install(
     source: str,
     skills: list[str],
     operator: User,
+    usage_source: str = "chat",
 ) -> dict[str, Any]:
     from yuxi.agents.skills.remote_install import prepare_remote_skills_batch
 
@@ -1339,6 +1889,7 @@ async def prepare_remote_skill_install(
             "draft_id": draft_dir.name,
             "created_by": operator.uid,
             "source_type": "remote",
+            "usage_source": usage_source if usage_source in {"chat", "work", "common"} else "chat",
             "source": source,
             "created_at": time.time(),
             "expires_at": time.time() + SKILL_DRAFT_TTL_SECONDS,
@@ -1421,12 +1972,13 @@ async def confirm_skill_install_draft(
                     continue
                 temp_target.rename(final_dir)
 
+                bundle_bytes = build_skill_bundle_for_dir(slug, final_dir)
                 try:
                     item = await repo.create(
                         slug=slug,
                         name=parsed["name"],
                         description=parsed["description"],
-                        source_type=source_type,
+                        source_type=str(data.get("usage_source") or "chat"),
                         tool_dependencies=parsed["tool_dependencies"],
                         mcp_dependencies=parsed["mcp_dependencies"],
                         skill_dependencies=parsed["skill_dependencies"],
@@ -1434,6 +1986,7 @@ async def confirm_skill_install_draft(
                         share_config=normalized_share_config,
                         enabled=True,
                         created_by=operator.uid,
+                        bundle_bytes=bundle_bytes,
                     )
                     result = {"slug": item.slug, "success": True, "skill": item.to_dict()}
                     results.append(result)
@@ -1534,7 +2087,7 @@ async def import_skill_dir(
     created_by: str | None,
     source_type: str = "upload",
     share_config: dict | None = None,
-) -> Skill:
+) -> SkillRecord:
     source_skill_dir = Path(source_dir).resolve()
     tmp_root = Path(tempfile.gettempdir()).resolve()
     if not source_skill_dir.is_relative_to(tmp_root):
@@ -1554,7 +2107,7 @@ async def import_skill_dir(
     )
 
 
-async def get_skill_or_raise(db: AsyncSession, slug: str) -> Skill:
+async def get_skill_or_raise(db: AsyncSession, slug: str) -> SkillRecord:
     slug = slug.strip() if isinstance(slug, str) else ""
     if not is_valid_skill_slug(slug):
         raise ValueError("无效 skill slug")
@@ -1566,39 +2119,36 @@ async def get_skill_or_raise(db: AsyncSession, slug: str) -> Skill:
     return item
 
 
-async def get_accessible_skill_or_raise(db: AsyncSession, user: User, slug: str) -> Skill:
-    item = await get_skill_or_raise(db, slug)
-    if not user_can_access_skill(user, item):
-        raise ValueError(f"技能 '{slug}' 不存在或无权访问")
-    return item
 
-
-async def get_management_readable_skill_or_raise(db: AsyncSession, user: User, slug: str) -> Skill:
+async def get_management_readable_skill_or_raise(db: AsyncSession, user: User, slug: str) -> SkillRecord:
     item = await get_skill_or_raise(db, slug)
     if not user_can_manage_skill(user, item) and not user_can_access_skill(user, item):
         raise ValueError(f"技能 '{slug}' 不存在或无权访问")
     return item
 
 
-async def get_manageable_skill_or_raise(db: AsyncSession, user: User, slug: str) -> Skill:
+async def get_manageable_skill_or_raise(db: AsyncSession, user: User, slug: str) -> SkillRecord:
     item = await get_skill_or_raise(db, slug)
-    if not user_can_manage_skill(user, item):
+    if is_builtin_skill(item):
+        if not user_can_manage_skill(user, item):
+            raise ValueError(f"技能 '{slug}' 不存在或无权管理")
+        return item
+    # 租户共享技能按可见即可维护，不再要求创建者才有管理范围。
+    if not user_can_manage_skill(user, item) and not user_can_access_skill(user, item, require_enabled=False):
         raise ValueError(f"技能 '{slug}' 不存在或无权管理")
     return item
 
 
 async def get_skill_tree(db: AsyncSession, slug: str) -> list[dict[str, Any]]:
     item = await get_skill_or_raise(db, slug)
-    skill_dir = _resolve_skill_dir(item)
-    if not skill_dir.exists() or not skill_dir.is_dir():
-        raise ValueError(f"技能目录不存在: {item.dir_path}")
+    skill_dir = await _ensure_skill_dir(db, item)
     _purge_skill_tree_noise(skill_dir)
     return _build_tree(skill_dir, skill_dir)
 
 
 async def read_skill_file(db: AsyncSession, slug: str, relative_path: str) -> dict[str, Any]:
     item = await get_skill_or_raise(db, slug)
-    skill_dir = _resolve_skill_dir(item)
+    skill_dir = await _ensure_skill_dir(db, item)
     target, rel = _resolve_relative_path(skill_dir, relative_path)
     if not target.exists() or not target.is_file():
         raise ValueError(f"文件不存在: {relative_path}")
@@ -1641,7 +2191,7 @@ async def create_skill_node(
     # 先写入文件，再更新元数据
     target.write_text(content or "", encoding="utf-8")
 
-    await _update_skill_metadata_if_skills_md(db, item, content or "", skill_dir, target, updated_by)
+    await _sync_skill_bundle(db, item, skill_dir, target, updated_by)
 
 
 async def update_skill_file(
@@ -1662,26 +2212,23 @@ async def update_skill_file(
     if not _is_text_path(target):
         raise ValueError("仅支持编辑文本文件")
 
-    await _update_skill_metadata_if_skills_md(db, item, content, skill_dir, target, updated_by)
-
     target.write_text(content, encoding="utf-8")
+    await _sync_skill_bundle(db, item, skill_dir, target, updated_by)
 
 
-async def _update_skill_metadata_if_skills_md(
+async def _sync_skill_bundle(
     db: AsyncSession,
-    item: Skill,
-    content: str,
+    item: SkillRecord,
     skill_dir: Path,
     target: Path,
     updated_by: str | None,
 ) -> None:
-    """如果目标文件是 SKILL.md，则解析并更新元数据"""
+    """文件变更后校验根级元数据，并把本地 bundle 同步到 app-core 主数据。"""
     if target.name == "SKILL.md" and target.parent == skill_dir:
-        parsed_slug, parsed_name, parsed_desc, _ = _parse_skill_markdown(content)
+        parsed_slug, _parsed_name, _parsed_desc, _ = _parse_skill_markdown(target.read_text(encoding="utf-8"))
         if parsed_slug != item.slug:
             raise ValueError("SKILL.md frontmatter.slug 必须与 skill slug 一致")
-        repo = SkillRepository(db)
-        await repo.update_metadata(item, name=parsed_name, description=parsed_desc, updated_by=updated_by)
+    await SkillRepository(db).sync_bundle(item, updated_by=updated_by)
 
 
 async def delete_skill_node(db: AsyncSession, *, slug: str, relative_path: str) -> None:
@@ -1700,13 +2247,12 @@ async def delete_skill_node(db: AsyncSession, *, slug: str, relative_path: str) 
         await asyncio.to_thread(shutil.rmtree, target)
     else:
         target.unlink()
+    await SkillRepository(db).sync_bundle(item, updated_by=None)
 
 
 async def export_skill_zip(db: AsyncSession, slug: str) -> tuple[str, str]:
     item = await get_skill_or_raise(db, slug)
-    skill_dir = _resolve_skill_dir(item)
-    if not skill_dir.exists() or not skill_dir.is_dir():
-        raise ValueError("技能目录不存在")
+    skill_dir = await _ensure_skill_dir(db, item)
 
     fd, export_path = tempfile.mkstemp(prefix=f"skill-{slug}-", suffix=".zip")
     Path(export_path).unlink(missing_ok=True)
@@ -1728,6 +2274,12 @@ async def delete_skill(db: AsyncSession, *, slug: str) -> None:
     if not item:
         raise ValueError(f"技能 '{slug}' 不存在")
     _ensure_non_builtin(item)
+    dependents = await _dependent_skill_names(repo, item)
+    if dependents:
+        raise ValueError(f"技能仍被依赖，请先解绑：{', '.join(dependents)}")
+    installed = await _live_sandbox_names(db, item)
+    if installed:
+        raise ValueError(f"技能已安装到沙箱，不能删除：{', '.join(installed)}")
 
     skill_dir = _resolve_skill_dir(item)
     trash_dir: Path | None = None
@@ -1773,7 +2325,7 @@ async def update_skill_share_config(
     slug: str,
     share_config: dict | None,
     operator: User,
-) -> Skill:
+) -> SkillRecord:
     item = await get_manageable_skill_or_raise(db, operator, slug)
     _ensure_non_builtin(item)
     normalized = normalize_skill_share_config(
@@ -1785,7 +2337,7 @@ async def update_skill_share_config(
     return await SkillRepository(db).update_share_config(item, share_config=normalized, updated_by=operator.uid)
 
 
-async def update_skill_enabled(db: AsyncSession, *, slug: str, enabled: bool, operator: User) -> Skill:
+async def update_skill_enabled(db: AsyncSession, *, slug: str, enabled: bool, operator: User) -> SkillRecord:
     item = await get_manageable_skill_or_raise(db, operator, slug)
     return await SkillRepository(db).update_enabled(item, enabled=enabled, updated_by=operator.uid)
 
@@ -1796,10 +2348,15 @@ def list_builtin_skill_specs() -> list[dict[str, Any]]:
         slug = str(getattr(raw_spec, "slug", "")).strip()
         source_dir = Path(str(getattr(raw_spec, "source_dir", ""))).resolve()
         configured_description = str(getattr(raw_spec, "description", "")).strip()
-        version = str(getattr(raw_spec, "version", "1.0.0")).strip() or "1.0.0"
+        usage = str(getattr(raw_spec, "usage_source", "work") or "work")
+        if usage not in {"chat", "work", "common"}:
+            usage = "work"
         configured_tools = normalize_string_list(getattr(raw_spec, "tool_dependencies", None))
         configured_mcps = normalize_string_list(getattr(raw_spec, "mcp_dependencies", None))
         configured_skills = normalize_string_list(getattr(raw_spec, "skill_dependencies", None))
+        if usage == "common":
+            configured_tools = []
+            configured_skills = []
 
         if not is_valid_skill_slug(slug):
             raise ValueError(f"内置 skill slug 非法: {slug}")
@@ -1812,9 +2369,9 @@ def list_builtin_skill_specs() -> list[dict[str, Any]]:
             raise ValueError(f"内置 skill 缺少 SKILL.md: {source_dir}")
 
         content = skill_md.read_text(encoding="utf-8")
-        parsed_slug, parsed_name, parsed_desc, meta = _parse_skill_markdown(content)
-        if parsed_slug != slug:
-            raise ValueError(f"内置 skill frontmatter.slug 必须等于 slug: {slug}")
+        parsed_name, parsed_desc, meta = _builtin_skill_markdown(content, slug)
+        moment = _directory_mtime(source_dir)
+        version = str(getattr(raw_spec, "version", "") or "").strip() or moment.strftime("%Y.%m.%d.%H%M%S")
 
         specs.append(
             {
@@ -1822,9 +2379,15 @@ def list_builtin_skill_specs() -> list[dict[str, Any]]:
                 "name": parsed_name,
                 "description": parsed_desc or configured_description,
                 "version": version,
-                "tool_dependencies": configured_tools or normalize_string_list(meta.get("tool_dependencies")),
+                "source_mtime": moment,
+                "tool_dependencies": []
+                if usage == "common"
+                else configured_tools or normalize_string_list(meta.get("tool_dependencies")),
                 "mcp_dependencies": configured_mcps or normalize_string_list(meta.get("mcp_dependencies")),
-                "skill_dependencies": configured_skills or normalize_string_list(meta.get("skill_dependencies")),
+                "skill_dependencies": []
+                if usage == "common"
+                else configured_skills or normalize_string_list(meta.get("skill_dependencies")),
+                "usage_source": usage,
                 "content_hash": _compute_dir_hash(source_dir),
                 "source_dir": source_dir,
             }
@@ -1833,70 +2396,95 @@ def list_builtin_skill_specs() -> list[dict[str, Any]]:
     return specs
 
 
-async def init_builtin_skills(db: AsyncSession, *, created_by: str = "system") -> list[Skill]:
-    """把代码内置技能同步到运行目录和 h_skills。
+def _build_builtin_runtime_specs(
+    specs: list[dict[str, Any]], *, operator_uid: str = "system"
+) -> dict[str, dict[str, Any]]:
+    return {
+        spec["slug"]: {
+            **spec,
+            "source_type": spec.get("usage_source") or "work",
+            "dir_path": _build_builtin_skill_dir_path(spec["slug"]),
+            "share_config": BUILTIN_SKILL_PERMISSION_CONFIG.copy(),
+            "enabled": True,
+            "created_by": operator_uid or BUILTIN_SKILL_OPERATOR,
+        }
+        for spec in specs
+    }
 
-    展示名/描述以 SKILL.md frontmatter 为准。目录技能每次启动都会按源文件覆盖数据库对应字段，
-    直接改库不会保留。
+
+async def init_builtin_skills(db: AsyncSession, *, created_by: str = "system") -> list[SkillRecord]:
+    """把代码内置技能同步到运行目录、app-core catalog 和 runtime 扩展。
+
+    展示名/描述以 SKILL.md frontmatter 为准。目录技能每次启动都会重新注册同名 bundle；
+    runtime 中的禁用状态只在首次安装时初始化，升级不会被重置。
     """
     repo = SkillRepository(db)
-    synced_items: list[Skill] = []
+    synced_items: list[SkillRecord] = []
 
-    for spec in list_builtin_skill_specs():
-        slug = spec["slug"]
-        existing = await repo.get_by_slug_unscoped(slug)
-        if existing and not is_builtin_skill(existing):
-            raise ValueError(f"内置 skill '{slug}' 与已存在的非内置 skill 冲突")
+    specs = list_builtin_skill_specs()
+    runtime_specs = _build_builtin_runtime_specs(specs, operator_uid=created_by)
+    # 先补齐 Go 端已注册的 catalog 扩展，再处理内置技能，避免存量同名记录阻断全部同步。
+    await repo.reconcile_runtime_records(runtime_specs, operator_uid=created_by or "system")
 
-        target_dir = get_skills_root_dir() / slug
-        _replace_skill_target(target_dir, Path(spec["source_dir"]))
+    try:
+        for spec in specs:
+            slug = spec["slug"]
+            existing = await repo.get_by_slug_unscoped(slug)
+            if existing and not is_builtin_skill(existing):
+                raise ValueError(f"内置 skill '{slug}' 与已存在的非内置 skill 冲突")
 
-        if existing:
-            if existing.name != spec["name"] or existing.description != spec["description"]:
-                await repo.update_metadata(
-                    existing,
+            target_dir = get_skills_root_dir() / slug
+            _replace_skill_target(target_dir, Path(spec["source_dir"]))
+
+            if existing:
+                dependencies_changed = (
+                    normalize_string_list(existing.tool_dependencies or []) != spec["tool_dependencies"]
+                    or normalize_string_list(existing.mcp_dependencies or []) != spec["mcp_dependencies"]
+                    or normalize_string_list(existing.skill_dependencies or []) != spec["skill_dependencies"]
+                )
+                if dependencies_changed:
+                    await repo.update_dependencies(
+                        existing,
+                        tool_dependencies=spec["tool_dependencies"],
+                        mcp_dependencies=spec["mcp_dependencies"],
+                        skill_dependencies=spec["skill_dependencies"],
+                        updated_by=created_by,
+                    )
+                synced_items.append(
+                    await repo.update_builtin_install(
+                        existing,
+                        version=spec["version"],
+                        content_hash=spec["content_hash"],
+                        updated_by=created_by,
+                        source_type=spec.get("usage_source") or "work",
+                        source_mtime=spec.get("source_mtime"),
+                    )
+                )
+                continue
+
+            synced_items.append(
+                await repo.create(
+                    slug=slug,
                     name=spec["name"],
                     description=spec["description"],
-                    updated_by=created_by,
-                )
-            if (
-                normalize_string_list(existing.tool_dependencies or []) != spec["tool_dependencies"]
-                or normalize_string_list(existing.mcp_dependencies or []) != spec["mcp_dependencies"]
-                or normalize_string_list(existing.skill_dependencies or []) != spec["skill_dependencies"]
-            ):
-                await repo.update_dependencies(
-                    existing,
+                    source_type=spec.get("usage_source") or "work",
                     tool_dependencies=spec["tool_dependencies"],
                     mcp_dependencies=spec["mcp_dependencies"],
                     skill_dependencies=spec["skill_dependencies"],
-                    updated_by=created_by,
-                )
-            synced_items.append(
-                await repo.update_builtin_install(
-                    existing,
+                    dir_path=_build_builtin_skill_dir_path(slug),
+                    share_config=BUILTIN_SKILL_PERMISSION_CONFIG.copy(),
+                    enabled=True,
                     version=spec["version"],
                     content_hash=spec["content_hash"],
-                    updated_by=created_by,
+                    created_by=created_by or BUILTIN_SKILL_OPERATOR,
+                    builtin=True,
+                    source_mtime=spec.get("source_mtime"),
                 )
             )
-            continue
-
-        synced_items.append(
-            await repo.create(
-                slug=slug,
-                name=spec["name"],
-                description=spec["description"],
-                source_type="builtin",
-                tool_dependencies=spec["tool_dependencies"],
-                mcp_dependencies=spec["mcp_dependencies"],
-                skill_dependencies=spec["skill_dependencies"],
-                dir_path=_build_builtin_skill_dir_path(slug),
-                share_config=BUILTIN_SKILL_SHARE_CONFIG.copy(),
-                enabled=True,
-                version=spec["version"],
-                content_hash=spec["content_hash"],
-                created_by=created_by or BUILTIN_SKILL_OPERATOR,
-            )
+    except AppCoreAuthError as exc:
+        logger.warning(
+            f"已补齐本地 Skill runtime，但内置技能 catalog 同步需要用户 JWT 或 WEKNORA_APPCORE_API_KEY：{exc}"
         )
+        return synced_items
 
     return synced_items

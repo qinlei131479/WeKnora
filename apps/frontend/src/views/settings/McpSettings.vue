@@ -111,6 +111,7 @@
       v-model:visible="dialogVisible"
       :service="currentService"
       :mode="dialogMode"
+      :readonly="!!currentService?.is_builtin"
       @success="handleDialogSuccess"
       @created="handleDialogCreated"
     />
@@ -260,7 +261,7 @@ const getBuiltinServiceOptions = () => {
     return []
   }
   return [
-    { content: t('common.edit'), value: 'edit' }
+    { content: t('mcpSettings.view'), value: 'edit' }
   ]
 }
 

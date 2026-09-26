@@ -14,7 +14,6 @@ from server.routers.mention_router import mention_router
 from server.routers.model_provider_router import model_providers
 from server.routers.skill_router import skills, user_skills
 from server.routers.system_router import system
-from server.routers.system_task_router import tasks
 from server.routers.tool_router import tools
 from server.routers.user_router import user_router
 from server.routers.workspace_router import workspace
@@ -30,7 +29,6 @@ router.include_router(agent_invocation_eval_router)
 router.include_router(chat)
 router.include_router(dashboard)
 router.include_router(knowledge)
-router.include_router(tasks)
 router.include_router(mcp)
 router.include_router(model_providers)
 router.include_router(skills)

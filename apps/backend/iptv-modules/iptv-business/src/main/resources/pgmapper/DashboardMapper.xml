@@ -10,13 +10,13 @@
 
     <select id="recordCountYuxiConversations" resultType="java.lang.Long">
         SELECT COUNT(*)
-        FROM h_conversations
+        FROM amp_sessions
         WHERE COALESCE(status, 'active') &lt;&gt; 'deleted'
     </select>
 
     <select id="recordCountActiveConversations" resultType="java.lang.Long">
         SELECT COUNT(*)
-        FROM h_conversations
+        FROM amp_sessions
         WHERE status = 'active'
     </select>
 
@@ -30,8 +30,8 @@
 
     <select id="recordCountYuxiMessages" resultType="java.lang.Long">
         SELECT COUNT(*)
-        FROM h_messages hm
-                 INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+        FROM amp_messages hm
+                 INNER JOIN amp_sessions hc ON hc.id = hm.conversation_id
         WHERE COALESCE(hc.status, 'active') &lt;&gt; 'deleted'
     </select>
 
@@ -42,11 +42,7 @@
     </select>
 
     <select id="recordCountFeedbacks" resultType="java.lang.Long">
-        SELECT COUNT(*)
-        FROM h_message_feedbacks
-        <if test="rating != null and rating != ''">
-            WHERE rating = #{rating}
-        </if>
+        SELECT 0
     </select>
 
     <select id="selectCallTimeseries" resultType="java.util.Map">
@@ -61,7 +57,7 @@
                 ) AS "date",
                 COUNT(*) AS "count",
                 COALESCE(hc.agent_id, 'unknown_agent') AS "category"
-                FROM h_conversations hc
+                FROM amp_sessions hc
                 WHERE hc.updated_at IS NOT NULL
                 AND hc.updated_at &gt;= #{startTime}
                 GROUP BY 1, 3
@@ -77,8 +73,8 @@
                 ) AS "date",
                 SUM(COALESCE((hm.extra_metadata -&gt; 'usage_metadata' -&gt;&gt; 'input_tokens')::BIGINT, 0)) AS "count",
                 'input_tokens' AS "category"
-                FROM h_messages hm
-                INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+                FROM amp_messages hm
+                INNER JOIN amp_sessions hc ON hc.id = hm.conversation_id
                 WHERE hm.created_at &gt;= #{startTime}
                 AND hm.extra_metadata IS NOT NULL
                 AND hm.extra_metadata -&gt; 'usage_metadata' IS NOT NULL
@@ -93,8 +89,8 @@
                 ) AS "date",
                 SUM(COALESCE((hm.extra_metadata -&gt; 'usage_metadata' -&gt;&gt; 'output_tokens')::BIGINT, 0)) AS "count",
                 'output_tokens' AS "category"
-                FROM h_messages hm
-                INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+                FROM amp_messages hm
+                INNER JOIN amp_sessions hc ON hc.id = hm.conversation_id
                 WHERE hm.created_at &gt;= #{startTime}
                 AND hm.extra_metadata IS NOT NULL
                 AND hm.extra_metadata -&gt; 'usage_metadata' IS NOT NULL
@@ -111,9 +107,9 @@
                 ) AS "date",
                 COUNT(*) AS "count",
                 COALESCE(htc.tool_name, 'unknown_tool') AS "category"
-                FROM h_tool_calls htc
-                INNER JOIN h_messages hm ON hm.id = htc.message_id
-                INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+                FROM amp_tool_calls htc
+                INNER JOIN amp_messages hm ON hm.id = htc.message_id
+                INNER JOIN amp_sessions hc ON hc.id = hm.conversation_id
                 WHERE htc.created_at &gt;= #{startTime}
                 GROUP BY 1, 3
                 ORDER BY 1
@@ -128,8 +124,8 @@
                 ) AS "date",
                 COUNT(*) AS "count",
                 hm.extra_metadata -&gt; 'response_metadata' -&gt;&gt; 'model_name' AS "category"
-                FROM h_messages hm
-                INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+                FROM amp_messages hm
+                INNER JOIN amp_sessions hc ON hc.id = hm.conversation_id
                 WHERE hm.role = 'assistant'
                 AND hm.created_at &gt;= #{startTime}
                 AND hm.extra_metadata IS NOT NULL
@@ -141,9 +137,9 @@
 
     <select id="recordCountToolCalls" resultType="java.lang.Long">
         SELECT COUNT(*)
-        FROM h_tool_calls htc
-        INNER JOIN h_messages hm ON hm.id = htc.message_id
-        INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+        FROM amp_tool_calls htc
+        INNER JOIN amp_messages hm ON hm.id = htc.message_id
+        INNER JOIN amp_sessions hc ON hc.id = hm.conversation_id
         <where>
             <if test="status != null">
                 AND htc.status = #{status}
@@ -159,7 +155,7 @@
 
     <select id="selectAgentNames" resultType="java.util.Map">
         SELECT DISTINCT ON (slug) slug AS "agentId", name
-        FROM h_agents
+        FROM amp_agents
         WHERE slug IN
         <foreach collection="slugs" item="slug" open="(" separator="," close=")">
             #{slug}
@@ -221,18 +217,18 @@
 
     <select id="selectMostUsedTools" resultType="com.iptv.business.domain.vo.DashboardToolCallStatsVO$MostUsedTool">
         SELECT htc.tool_name AS "toolName", COUNT(*) AS "count"
-        FROM h_tool_calls htc
-                 INNER JOIN h_messages hm ON hm.id = htc.message_id
-                 INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+        FROM amp_tool_calls htc
+                 INNER JOIN amp_messages hm ON hm.id = htc.message_id
+                 INNER JOIN amp_sessions hc ON hc.id = hm.conversation_id
         GROUP BY htc.tool_name
         ORDER BY COUNT(*) DESC LIMIT 10
     </select>
 
     <select id="selectToolErrorCounts" resultType="java.util.Map">
         SELECT htc.tool_name AS "toolName", COUNT(*) AS "errorCount"
-        FROM h_tool_calls htc
-                 INNER JOIN h_messages hm ON hm.id = htc.message_id
-                 INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+        FROM amp_tool_calls htc
+                 INNER JOIN amp_messages hm ON hm.id = htc.message_id
+                 INNER JOIN amp_sessions hc ON hc.id = hm.conversation_id
         WHERE htc.status = 'error'
         GROUP BY htc.tool_name
     </select>
@@ -276,31 +272,28 @@
 
     <select id="selectYuxiAgentConversationCounts" resultType="com.iptv.business.domain.vo.DashboardAgentAnalyticsVO$AgentConversationCount">
         SELECT agent_id AS "agentId", COUNT(*) AS "conversationCount"
-        FROM h_conversations
+        FROM amp_sessions
         GROUP BY agent_id
     </select>
 
     <select id="selectYuxiAgentFeedbackCounts" resultType="java.util.Map">
-        SELECT hc.agent_id AS "agentId",
-               COUNT(*)    AS "totalFeedbacks",
-               COUNT(*)       FILTER (WHERE hf.rating = 'like') AS "likeFeedbacks"
-        FROM h_message_feedbacks hf
-                 INNER JOIN h_messages hm ON hm.id = hf.message_id
-                 INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
-        GROUP BY hc.agent_id
+        SELECT NULL::text AS "agentId",
+               0::bigint AS "totalFeedbacks",
+               0::bigint AS "likeFeedbacks"
+        WHERE false
     </select>
 
     <select id="selectYuxiAgentToolUsage" resultType="com.iptv.business.domain.vo.DashboardAgentAnalyticsVO$AgentToolUsage">
         SELECT hc.agent_id AS "agentId", COUNT(*) AS "toolUsageCount"
-        FROM h_tool_calls htc
-                 INNER JOIN h_messages hm ON hm.id = htc.message_id
-                 INNER JOIN h_conversations hc ON hc.id = hm.conversation_id
+        FROM amp_tool_calls htc
+                 INNER JOIN amp_messages hm ON hm.id = htc.message_id
+                 INNER JOIN amp_sessions hc ON hc.id = hm.conversation_id
         GROUP BY hc.agent_id
     </select>
 
     <select id="selectAnalyticsAgentNames" resultType="com.iptv.business.domain.vo.DashboardAgentAnalyticsVO$AgentName">
         SELECT slug AS "id", name, description
-        FROM h_agents
+        FROM amp_agents
         WHERE slug IN
         <foreach collection="slugs" item="slug" open="(" separator="," close=")">
             #{slug}
@@ -347,8 +340,8 @@
                   </if>
             UNION
             SELECT hc.id::text, hc.title, hc.agent_id, ha.name agent_name, hc.updated_at
-            FROM h_conversations hc
-            LEFT JOIN h_agents ha ON ha.slug = hc.agent_id
+            FROM amp_sessions hc
+            LEFT JOIN amp_agents ha ON ha.slug = hc.agent_id
             WHERE hc.status &lt;&gt; 'deleted'
                   AND hc.updated_at &gt;= #{since}
                   <if test="until != null">

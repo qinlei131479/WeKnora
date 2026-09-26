@@ -68,11 +68,11 @@
         <p v-if="tool.description" class="tool-description">{{ tool.description }}</p>
         <div v-if="serviceId" class="tool-controls">
           <label class="tool-control"><span>{{ t('mcpMetadata.enabled') }}</span>
-            <t-switch :value="policy(tool.name).enabled" size="small" :disabled="loading || !!policyError || !!busy.get(tool.name)" :loading="busy.get(tool.name) === 'enabled'"
+            <t-switch :value="policy(tool.name).enabled" size="small" :disabled="readonly || loading || !!policyError || !!busy.get(tool.name)" :loading="busy.get(tool.name) === 'enabled'"
               :aria-label="`${tool.name} ${t('mcpMetadata.enabled')}`" @change="(value: boolean) => savePolicy(tool.name, 'enabled', value)" />
           </label>
           <label class="tool-control"><span>{{ t('mcpMetadata.approval') }}</span>
-            <t-switch :value="policy(tool.name).require_approval" size="small" :disabled="loading || !!policyError || !!busy.get(tool.name)" :loading="busy.get(tool.name) === 'require_approval'"
+            <t-switch :value="policy(tool.name).require_approval" size="small" :disabled="readonly || loading || !!policyError || !!busy.get(tool.name)" :loading="busy.get(tool.name) === 'require_approval'"
               :aria-label="`${tool.name} ${t('mcpMetadata.approval')}`" @change="(value: boolean) => savePolicy(tool.name, 'require_approval', value)" />
           </label>
         </div>
@@ -92,9 +92,15 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { getMCPToolApprovals, setMCPToolApproval, setMCPToolEnabled, type MCPTool, type MCPToolApprovalRow } from '@/api/mcp-service'
+import { getMcpToolApprovals, setMcpToolPolicy } from '@/api/chat-work/mcp'
 import { mcpSchemaParameters } from '@/utils/mcpToolDisplay'
 
-const props = defineProps<{ tools: MCPTool[]; serviceId?: string }>()
+const props = defineProps<{
+  tools: MCPTool[]
+  serviceId?: string
+  persist?: 'app-core' | 'harness'
+  readonly?: boolean
+}>()
 const emit = defineEmits<{ (e: 'busy', value: boolean): void }>()
 const { t } = useI18n()
 const pageSize = 20
@@ -141,7 +147,9 @@ async function loadPolicies() {
   if (!props.serviceId) { loading.value = false; return }
   loading.value = true
   try {
-    const rows = await getMCPToolApprovals(props.serviceId)
+    const rows = props.persist === 'harness'
+      ? (((await getMcpToolApprovals(props.serviceId)) as { data?: MCPToolApprovalRow[] })?.data || [])
+      : await getMCPToolApprovals(props.serviceId)
     if (current === generation) policies.value = new Map(rows.map(row => [row.tool_name, row]))
   } catch {
     if (current === generation) policyError.value = t('mcpMetadata.policyLoadFailed')
@@ -150,13 +158,18 @@ async function loadPolicies() {
 watch(() => props.serviceId, loadPolicies, { immediate: true })
 
 async function savePolicy(name: string, field: 'enabled' | 'require_approval', value: boolean) {
-  if (!props.serviceId || busy.value.has(name) || loading.value || policyError.value) return
+  if (props.readonly || !props.serviceId || busy.value.has(name) || loading.value || policyError.value) return
   const current = generation
   busy.value.set(name, field)
   emit('busy', true)
   try {
-    if (field === 'enabled') await setMCPToolEnabled(props.serviceId, name, value)
-    else await setMCPToolApproval(props.serviceId, name, value)
+    if (props.persist === 'harness') {
+      await setMcpToolPolicy(props.serviceId, name, { [field]: value })
+    } else if (field === 'enabled') {
+      await setMCPToolEnabled(props.serviceId, name, value)
+    } else {
+      await setMCPToolApproval(props.serviceId, name, value)
+    }
     if (current === generation) policies.value.set(name, { ...policy(name), [field]: value })
   } catch { if (current === generation) MessagePlugin.error(t('mcpMetadata.policySaveFailed')) }
   finally {

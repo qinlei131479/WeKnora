@@ -14,10 +14,9 @@ async def test_dashboard_requires_authentication(test_client):
     assert response.status_code == 401
 
 
-async def test_standard_user_can_fetch_conversations(test_client, standard_user):
+async def test_standard_user_cannot_fetch_conversations(test_client, standard_user):
     response = await test_client.get("/api/dashboard/conversations", headers=standard_user["headers"])
-    assert response.status_code == 200, response.text
-    assert isinstance(response.json(), list)
+    assert response.status_code == 403, response.text
 
 
 async def test_admin_can_fetch_conversations(test_client, admin_headers):
@@ -49,10 +48,3 @@ async def test_admin_can_fetch_stats(test_client, admin_headers):
     response = await test_client.get("/api/dashboard/stats/tools", headers=admin_headers)
     assert response.status_code == 200, f"tool stats failed: {response.text}"
     assert "total_calls" in response.json()
-
-
-async def test_admin_can_fetch_feedbacks(test_client, admin_headers):
-    """Test that feedback endpoint returns 200 and handles the User join correctly."""
-    response = await test_client.get("/api/dashboard/feedbacks", headers=admin_headers)
-    assert response.status_code == 200, f"feedbacks failed: {response.text}"
-    assert isinstance(response.json(), list)

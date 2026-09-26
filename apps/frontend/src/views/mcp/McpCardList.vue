@@ -32,13 +32,15 @@
           @click="handleCardClick(server)"
         >
           <template #icon>
-            <span class="info-card-emoji-icon">{{ server.icon || '🔌' }}</span>
+            <span class="mcp-transport-badge" :class="`mcp-transport-badge--${mcpTransport(server)}`">
+              <t-icon :name="mcpTransportIcon(server)" size="18px" />
+            </span>
           </template>
           <template #actions>
             <button
               type="button"
               class="mcp-enabled-action enabled"
-              :disabled="isActionLoading(server)"
+              :disabled="server.is_builtin || isActionLoading(server)"
               :aria-label="server.is_builtin ? t('ext.mcp.remove') : t('ext.mcp.delete')"
               @click.stop="handleRemoveServer(server)"
             >
@@ -61,7 +63,9 @@
           @click="handleCardClick(server)"
         >
           <template #icon>
-            <span class="info-card-emoji-icon">{{ server.icon || '🔌' }}</span>
+            <span class="mcp-transport-badge" :class="`mcp-transport-badge--${mcpTransport(server)}`">
+              <t-icon :name="mcpTransportIcon(server)" size="18px" />
+            </span>
           </template>
           <template #actions>
             <button
@@ -100,8 +104,8 @@
     >
       <div v-if="previewServer" class="mcp-basic-info-panel">
         <div class="mcp-basic-info-header">
-          <div class="mcp-basic-info-icon">
-            <span>{{ previewServer.icon || '🔌' }}</span>
+          <div class="mcp-basic-info-icon" :class="`mcp-transport-badge--${mcpTransport(previewServer)}`">
+            <t-icon :name="mcpTransportIcon(previewServer)" size="18px" />
           </div>
           <div class="mcp-basic-info-title-area">
             <div class="mcp-basic-info-title">
@@ -155,11 +159,14 @@
       </div>
     </t-dialog>
 
-    <McpFormModal
-      v-model:open="formModalVisible"
-      :edit-mode="!!editingServer"
-      :edit-data="editingServer"
-      @submitted="handleFormSubmitted"
+    <McpServiceDialog
+      v-model:visible="formModalVisible"
+      :service="editingServer"
+      :mode="dialogMode"
+      persist="harness"
+      :readonly="!!editingServer?.is_builtin"
+      @success="handleDialogSuccess"
+      @created="handleDialogCreated"
     />
   </div>
 </template>
@@ -173,7 +180,7 @@ import { mcpApi } from '@/api/chat-work/mcp'
 import ExtensionCardGrid from '@/components/harness/extensions/ExtensionCardGrid.vue'
 import InfoCard from '@/components/harness/shared/InfoCard.vue'
 import PageShoulder from '@/components/harness/shared/PageShoulder.vue'
-import McpFormModal from './McpFormModal.vue'
+import McpServiceDialog from '@/views/settings/components/McpServiceDialog.vue'
 import { formatExtensionCardTitle } from '@/utils/harness/extensionDisplayName'
 
 const { t } = useI18n()
@@ -184,6 +191,7 @@ const loading = ref(false)
 const servers = ref([])
 const searchQuery = ref('')
 const formModalVisible = ref(false)
+const dialogMode = ref('add')
 const editingServer = ref(null)
 const basicInfoVisible = ref(false)
 const previewServer = ref(null)
@@ -211,9 +219,43 @@ const filteredEnabledServers = computed(() =>
 const filteredDisabledServers = computed(() =>
   filteredServers.value.filter((item) => !item.enabled)
 )
+const toDialogService = (server) => ({
+  id: server.id || server.slug,
+  name: server.name || '',
+  description: server.description || '',
+  enabled: server.enabled !== false,
+  transport_type:
+    server.transport_type ||
+    (server.transport === 'streamable_http' ? 'http-streamable' : server.transport || 'sse'),
+  url: server.url || '',
+  headers: server.headers || {},
+  auth_config: server.auth_config,
+  advanced_config: server.advanced_config,
+  is_builtin: !!server.is_builtin,
+  credentials: server.credentials,
+  command: server.command || '',
+  args: server.args || [],
+  stdio_config: server.command ? { command: server.command, args: server.args || [] } : undefined,
+})
+
+const mcpTransport = (server) => {
+  const raw = server?.transport_type || (server?.transport === 'streamable_http' ? 'http-streamable' : server?.transport) || 'sse'
+  if (raw === 'streamable_http') return 'http-streamable'
+  if (raw === 'sse' || raw === 'http-streamable' || raw === 'stdio') return raw
+  return 'sse'
+}
+
+const mcpTransportIcon = (server) => {
+  const transport = mcpTransport(server)
+  if (transport === 'http-streamable') return 'link'
+  if (transport === 'stdio') return 'code'
+  return 'cast'
+}
+
 const handleCardClick = (server) => {
-  if (server.enabled || server.requires_migration) {
-    editingServer.value = server
+  if (server.is_builtin || server.enabled || server.requires_migration) {
+    editingServer.value = toDialogService(server)
+    dialogMode.value = 'edit'
     formModalVisible.value = true
     return
   }
@@ -244,13 +286,22 @@ const mcpCardTags = (server) => {
 
 const handleMcpAdd = () => {
   editingServer.value = null
+  dialogMode.value = 'add'
   formModalVisible.value = true
 }
 
-const handleFormSubmitted = async () => {
+const handleDialogSuccess = async () => {
   formModalVisible.value = false
   editingServer.value = null
   await fetchServers()
+}
+
+const handleDialogCreated = async (created) => {
+  dialogMode.value = 'edit'
+  editingServer.value = created
+  await fetchServers()
+  const full = servers.value.find((item) => (item.id || item.slug) === created?.id)
+  if (full) editingServer.value = toDialogService(full)
 }
 
 const handleSetServerEnabled = async (server, enabled) => {
@@ -272,10 +323,7 @@ const handleSetServerEnabled = async (server, enabled) => {
 }
 
 const handleRemoveServer = (server) => {
-  if (server.is_builtin) {
-    handleSetServerEnabled(server, false)
-    return
-  }
+  if (server.is_builtin) return
   confirmDeleteServer(server)
 }
 
@@ -331,9 +379,35 @@ defineExpose({ fetchServers, loading })
 <style lang="less" scoped>
 @import '@/assets/harness/css/extensions.less';
 
-.info-card-emoji-icon {
-  font-size: 18px;
-  line-height: 1;
+:deep(.info-card--kb .info-card-icon) {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: transparent;
+}
+
+.mcp-transport-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+}
+
+.mcp-transport-badge--sse {
+  background: rgba(17, 128, 83, 0.12);
+  color: #118053;
+}
+
+.mcp-transport-badge--http-streamable {
+  background: rgba(0, 82, 217, 0.1);
+  color: #0052d9;
+}
+
+.mcp-transport-badge--stdio {
+  background: rgba(184, 92, 0, 0.12);
+  color: #b85c00;
 }
 
 :deep(.t-button) {
@@ -379,6 +453,21 @@ defineExpose({ fetchServers, loading })
       display: none;
     }
 
+    &:disabled:hover,
+    &:disabled:focus {
+      border-color: var(--gray-150);
+      background: var(--gray-0);
+      color: var(--color-success-700, var(--td-brand-color, #07c05f));
+
+      .action-icon-check {
+        display: block;
+      }
+
+      .action-icon-minus {
+        display: none;
+      }
+    }
+
     &:hover,
     &:focus {
       border-color: var(--color-error-200, #ffccc7);
@@ -417,13 +506,26 @@ defineExpose({ fetchServers, loading })
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 9px;
-  border: 1px solid var(--gray-150);
-  background: var(--main-50);
-  color: var(--main-color);
+  border: 0;
   font-size: 18px;
+
+  &.mcp-transport-badge--sse {
+    background: rgba(17, 128, 83, 0.12);
+    color: #118053;
+  }
+
+  &.mcp-transport-badge--http-streamable {
+    background: rgba(0, 82, 217, 0.1);
+    color: #0052d9;
+  }
+
+  &.mcp-transport-badge--stdio {
+    background: rgba(184, 92, 0, 0.12);
+    color: #b85c00;
+  }
 }
 
 .mcp-basic-info-title-area {

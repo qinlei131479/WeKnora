@@ -7,14 +7,11 @@ import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from yuxi.agents.skills.service import import_skill_dir, is_valid_skill_slug
-
-if TYPE_CHECKING:
-    from yuxi.storage.postgres.models_business import Skill
+from yuxi.agents.skills.repository import SkillRecord
 
 ANSI_ESCAPE_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 CONTROL_SEQUENCE_RE = re.compile(r"\x1B\][^\x07]*(?:\x07|\x1B\\)|\x1B[\(\)][A-Za-z0-9]")
@@ -167,7 +164,7 @@ async def install_remote_skill(
     source: str,
     skill: str,
     created_by: str | None,
-) -> Skill:
+) -> SkillRecord:
     normalized_source = _normalize_source(source)
     normalized_skill = _normalize_skill_name(skill)
 

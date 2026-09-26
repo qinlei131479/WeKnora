@@ -7,10 +7,13 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from yuxi.agents.skills import service as svc
 from yuxi.agents.toolkits import service as tool_service
-from yuxi.storage.postgres.models_business import Skill, User
+from yuxi.agents.skills.repository import SkillRecord, SkillRepository
+from yuxi.storage.postgres.models_business import Base, SkillRuntime, TenantSkillCatalog, User
 
 
 def _build_zip(files: dict[str, str]) -> bytes:
@@ -23,6 +26,41 @@ def _build_zip(files: dict[str, str]) -> bytes:
 
 def _user(uid: str = "root", role: str = "admin") -> User:
     return User(username=uid, uid=uid, password_hash="x", role=role, department_id=1)
+
+
+def _skill_record(**kwargs) -> SkillRecord:
+    """构造 app-core 主数据与 runtime 扩展的测试视图。"""
+    slug = str(kwargs.get("slug") or "demo")
+    source_type = kwargs.get("source_type") or "upload"
+    tenant_id = kwargs.get("tenant_id")
+    if "tenant_id" not in kwargs and source_type == "builtin":
+        tenant_id = 0
+    raw = {
+        "id": str(kwargs.get("app_core_id") or slug),
+        "name": kwargs.get("name") or slug,
+        "description": kwargs.get("description") or "",
+        "version": kwargs.get("version"),
+        "bundle_sha256": kwargs.get("content_hash"),
+        "created_at": kwargs.get("created_at"),
+        "updated_at": kwargs.get("updated_at"),
+    }
+    runtime = SkillRuntime(
+        app_core_skill_id=raw["id"],
+        tenant_id=tenant_id,
+        slug=slug,
+        source_type=source_type,
+        tool_dependencies=kwargs.get("tool_dependencies") or [],
+        mcp_dependencies=kwargs.get("mcp_dependencies") or [],
+        skill_dependencies=kwargs.get("skill_dependencies") or [],
+        dir_path=kwargs.get("dir_path") or f"skills/{slug}",
+        share_config=kwargs.get("share_config") or {},
+        enabled=kwargs.get("enabled", True),
+        created_by=kwargs.get("created_by"),
+        updated_by=kwargs.get("updated_by"),
+        created_at=kwargs.get("created_at"),
+        updated_at=kwargs.get("updated_at"),
+    )
+    return SkillRecord(raw=raw, runtime=runtime)
 
 
 def test_allowed_skill_access_levels_by_role():
@@ -91,7 +129,7 @@ async def test_list_visible_skills_for_management_includes_owned_disabled_and_en
     monkeypatch: pytest.MonkeyPatch,
 ):
     items = [
-        Skill(
+        _skill_record(
             slug="owned-disabled",
             name="owned-disabled",
             description="",
@@ -99,7 +137,7 @@ async def test_list_visible_skills_for_management_includes_owned_disabled_and_en
             enabled=False,
             share_config={"version": 2, "read_scope": None, "manage_scope": None},
         ),
-        Skill(
+        _skill_record(
             slug="shared-enabled",
             name="shared-enabled",
             description="",
@@ -111,7 +149,7 @@ async def test_list_visible_skills_for_management_includes_owned_disabled_and_en
                 "manage_scope": {"access_level": "user", "user_uids": ["root"]},
             },
         ),
-        Skill(
+        _skill_record(
             slug="shared-disabled",
             name="shared-disabled",
             description="",
@@ -123,7 +161,7 @@ async def test_list_visible_skills_for_management_includes_owned_disabled_and_en
                 "manage_scope": {"access_level": "user", "user_uids": ["root"]},
             },
         ),
-        Skill(
+        _skill_record(
             slug="unrelated",
             name="unrelated",
             description="",
@@ -152,7 +190,7 @@ async def test_list_visible_skills_for_management_includes_owned_disabled_and_en
     "skill,operator",
     [
         (
-            Skill(
+            _skill_record(
                 slug="owned-disabled",
                 name="owned-disabled",
                 description="",
@@ -163,7 +201,7 @@ async def test_list_visible_skills_for_management_includes_owned_disabled_and_en
             _user("root", role="user"),
         ),
         (
-            Skill(
+            _skill_record(
                 slug="admin-disabled",
                 name="admin-disabled",
                 description="",
@@ -178,7 +216,7 @@ async def test_list_visible_skills_for_management_includes_owned_disabled_and_en
             _user("root", role="admin"),
         ),
         (
-            Skill(
+            _skill_record(
                 slug="shared-enabled",
                 name="shared-enabled",
                 description="",
@@ -196,7 +234,7 @@ async def test_list_visible_skills_for_management_includes_owned_disabled_and_en
 )
 async def test_management_readable_skill_allows_manageable_disabled_and_enabled_shared(
     monkeypatch: pytest.MonkeyPatch,
-    skill: Skill,
+    skill: SkillRecord,
     operator: User,
 ):
     class FakeRepo:
@@ -216,7 +254,7 @@ async def test_management_readable_skill_allows_manageable_disabled_and_enabled_
 
 @pytest.mark.asyncio
 async def test_management_readable_skill_allows_disabled_user_shared_manager(monkeypatch: pytest.MonkeyPatch):
-    skill = Skill(
+    skill = _skill_record(
         slug="shared-disabled",
         name="shared-disabled",
         description="",
@@ -246,7 +284,7 @@ async def test_management_readable_skill_allows_disabled_user_shared_manager(mon
 
 @pytest.mark.asyncio
 async def test_runtime_access_still_excludes_disabled_shared_skill(monkeypatch: pytest.MonkeyPatch):
-    skill = Skill(
+    skill = _skill_record(
         slug="shared-disabled",
         name="shared-disabled",
         description="",
@@ -263,10 +301,14 @@ async def test_runtime_access_still_excludes_disabled_shared_skill(monkeypatch: 
         def __init__(self, _db):
             pass
 
-        async def list_enabled(self):
+        async def list_all(self):
             return []
 
+    async def fake_get_redis():
+        return _FakeRedis()
+
     monkeypatch.setattr(svc, "SkillRepository", FakeRepo)
+    monkeypatch.setattr(svc, "get_async_redis_client", fake_get_redis)
 
     assert svc.user_can_access_skill(_user("root", role="user"), skill) is False
     assert await svc.list_accessible_skills(None, _user("root", role="user")) == []
@@ -327,9 +369,9 @@ async def test_confirm_skill_install_draft_defaults_share_config_to_global(
         async def exists_slug(self, _slug: str) -> bool:
             return False
 
-        async def create(self, **kwargs) -> Skill:
+        async def create(self, **kwargs) -> SkillRecord:
             self.__class__.created_payload = kwargs
-            return Skill(**kwargs, updated_by=kwargs["created_by"])
+            return _skill_record(**kwargs, updated_by=kwargs["created_by"])
 
     FakeRepo.created_payload = None
     monkeypatch.setattr(svc, "SkillRepository", FakeRepo)
@@ -386,7 +428,7 @@ async def test_normal_user_confirm_skill_draft_rejects_wider_share_scope(
         async def exists_slug(self, _slug: str) -> bool:
             return False
 
-        async def create(self, **_kwargs) -> Skill:
+        async def create(self, **_kwargs) -> SkillRecord:
             raise AssertionError("普通用户的越权共享范围应在创建前被拒绝")
 
     monkeypatch.setattr(svc, "SkillRepository", FakeRepo)
@@ -546,7 +588,9 @@ def test_quote_builtin_skill_includes_knowledge_base_dependency():
     assert "quote" in specs
     quote = specs["quote"]
     assert quote["name"] == "quote"
-    assert quote["skill_dependencies"] == ["knowledge-base"]
+    assert quote["usage_source"] == "common"
+    assert quote["skill_dependencies"] == []
+    assert quote["tool_dependencies"] == []
     assert (quote["source_dir"] / "SKILL.md").exists()
     assert (quote["source_dir"] / "scripts" / "fill_quote.py").exists()
 
@@ -705,7 +749,15 @@ async def test_get_skill_dependency_options(monkeypatch: pytest.MonkeyPatch):
             {"slug": "search", "name": "Search"},
         ]
 
+    async def fake_get_directory_tool_metadata(category=None, source=None):
+        del category, source
+        return [
+            {"slug": "calculator", "name": "Calculator", "source": "work"},
+            {"slug": "search", "name": "Search", "source": "work"},
+        ]
+
     monkeypatch.setattr(tool_service, "get_tool_metadata", fake_get_tool_metadata)
+    monkeypatch.setattr(tool_service, "get_directory_tool_metadata", fake_get_directory_tool_metadata)
 
     async def fake_get_enabled_mcp_server_slugs(db=None):
         del db
@@ -713,18 +765,35 @@ async def test_get_skill_dependency_options(monkeypatch: pytest.MonkeyPatch):
 
     monkeypatch.setattr(svc, "get_enabled_mcp_server_slugs", fake_get_enabled_mcp_server_slugs)
 
+    async def fake_get_all_mcp_servers(_db=None):
+        return [
+            SimpleNamespace(enabled=True, slug="mcp-a", app_core_id="mcp-a", name="图表服务"),
+            SimpleNamespace(enabled=True, slug="mcp-b", app_core_id="mcp-b", name="检索服务"),
+        ]
+
+    monkeypatch.setattr("yuxi.agents.mcp.service.get_all_mcp_servers", fake_get_all_mcp_servers)
+
     user = SimpleNamespace(uid="user")
 
-    async def fake_list_skill_slugs(_db, *, user):
-        assert user.uid == "user"
-        return ["alpha", "beta"]
+    async def fake_list_accessible_shared_skills(_db, _user, *, require_enabled=True):
+        del require_enabled
+        return [SimpleNamespace(slug="alpha"), SimpleNamespace(slug="beta")]
 
-    monkeypatch.setattr(svc, "list_skill_slugs", fake_list_skill_slugs)
+    monkeypatch.setattr(svc, "_list_accessible_shared_skills", fake_list_accessible_shared_skills)
 
     result = await svc.get_skill_dependency_options(None, user)
-    assert result["tools"] == [{"slug": "calculator", "name": "Calculator"}, {"slug": "search", "name": "Search"}]
-    assert result["mcps"] == ["mcp-a", "mcp-b"]
-    assert result["skills"] == ["alpha", "beta"]
+    assert result["tools"] == [
+        {"slug": "calculator", "name": "Calculator", "source": "work"},
+        {"slug": "search", "name": "Search", "source": "work"},
+    ]
+    assert result["mcps"] == [
+        {"slug": "mcp-a", "name": "图表服务"},
+        {"slug": "mcp-b", "name": "检索服务"},
+    ]
+    assert result["skills"] == [
+        {"slug": "alpha", "name": "alpha"},
+        {"slug": "beta", "name": "beta"},
+    ]
 
 
 def test_resolve_relative_path_blocks_traversal(tmp_path: Path):
@@ -741,7 +810,7 @@ async def test_skill_upload_prepare_confirm_rewrites_conflicting_name(tmp_path: 
 
     class FakeRepo:
         existing_slugs = {"demo"}
-        created_item: Skill | None = None
+        created_item: SkillRecord | None = None
 
         def __init__(self, _db):
             pass
@@ -749,8 +818,8 @@ async def test_skill_upload_prepare_confirm_rewrites_conflicting_name(tmp_path: 
         async def exists_slug(self, slug: str) -> bool:
             return slug in self.__class__.existing_slugs
 
-        async def create(self, **kwargs) -> Skill:
-            item = Skill(**kwargs, updated_by=kwargs["created_by"])
+        async def create(self, **kwargs) -> SkillRecord:
+            item = _skill_record(**kwargs, updated_by=kwargs["created_by"])
             self.__class__.existing_slugs.add(item.slug)
             self.__class__.created_item = item
             return item
@@ -790,7 +859,7 @@ async def test_skill_zip_import_uses_skill_md_name_not_zip_or_root_dir(tmp_path:
     monkeypatch.setattr(svc.sys_config, "save_dir", str(tmp_path))
 
     class FakeRepo:
-        created_item: Skill | None = None
+        created_item: SkillRecord | None = None
 
         def __init__(self, _db):
             pass
@@ -798,8 +867,8 @@ async def test_skill_zip_import_uses_skill_md_name_not_zip_or_root_dir(tmp_path:
         async def exists_slug(self, _slug: str) -> bool:
             return False
 
-        async def create(self, **kwargs) -> Skill:
-            item = Skill(**kwargs, updated_by=kwargs["created_by"])
+        async def create(self, **kwargs) -> SkillRecord:
+            item = _skill_record(**kwargs, updated_by=kwargs["created_by"])
             self.__class__.created_item = item
             return item
 
@@ -871,7 +940,7 @@ async def test_skill_zip_import_uses_frontmatter_slug_and_keeps_display_name(
     monkeypatch.setattr(svc.sys_config, "save_dir", str(tmp_path))
 
     class FakeRepo:
-        created_item: Skill | None = None
+        created_item: SkillRecord | None = None
 
         def __init__(self, _db):
             pass
@@ -879,8 +948,8 @@ async def test_skill_zip_import_uses_frontmatter_slug_and_keeps_display_name(
         async def exists_slug(self, _slug: str) -> bool:
             return False
 
-        async def create(self, **kwargs) -> Skill:
-            item = Skill(**kwargs, updated_by=kwargs["created_by"])
+        async def create(self, **kwargs) -> SkillRecord:
+            item = _skill_record(**kwargs, updated_by=kwargs["created_by"])
             self.__class__.created_item = item
             return item
 
@@ -933,7 +1002,7 @@ async def test_skill_zip_import_rewrites_conflicting_slug_not_display_name(
 
     class FakeRepo:
         existing_slugs = {"word-docx"}
-        created_item: Skill | None = None
+        created_item: SkillRecord | None = None
 
         def __init__(self, _db):
             pass
@@ -941,8 +1010,8 @@ async def test_skill_zip_import_rewrites_conflicting_slug_not_display_name(
         async def exists_slug(self, slug: str) -> bool:
             return slug in self.__class__.existing_slugs
 
-        async def create(self, **kwargs) -> Skill:
-            item = Skill(**kwargs, updated_by=kwargs["created_by"])
+        async def create(self, **kwargs) -> SkillRecord:
+            item = _skill_record(**kwargs, updated_by=kwargs["created_by"])
             self.__class__.existing_slugs.add(item.slug)
             self.__class__.created_item = item
             return item
@@ -989,7 +1058,7 @@ async def test_skill_md_prepare_confirm_creates_single_file_skill(tmp_path: Path
     monkeypatch.setattr(svc.sys_config, "save_dir", str(tmp_path))
 
     class FakeRepo:
-        created_item: Skill | None = None
+        created_item: SkillRecord | None = None
 
         def __init__(self, _db):
             pass
@@ -997,8 +1066,8 @@ async def test_skill_md_prepare_confirm_creates_single_file_skill(tmp_path: Path
         async def exists_slug(self, slug: str) -> bool:
             return False
 
-        async def create(self, **kwargs) -> Skill:
-            item = Skill(**kwargs, updated_by=kwargs["created_by"])
+        async def create(self, **kwargs) -> SkillRecord:
+            item = _skill_record(**kwargs, updated_by=kwargs["created_by"])
             self.__class__.created_item = item
             return item
 
@@ -1040,7 +1109,7 @@ async def test_import_skill_dir_requires_root_skill_md(tmp_path: Path, monkeypat
 
 
 @pytest.mark.asyncio
-async def test_update_skill_md_syncs_metadata(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+async def test_update_skill_md_syncs_bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(svc.sys_config, "save_dir", str(tmp_path))
     skill_dir = tmp_path / "skills" / "demo"
     skill_dir.mkdir(parents=True, exist_ok=True)
@@ -1049,7 +1118,7 @@ async def test_update_skill_md_syncs_metadata(tmp_path: Path, monkeypatch: pytes
         encoding="utf-8",
     )
 
-    item = Skill(
+    item = _skill_record(
         slug="demo",
         name="demo",
         description="old",
@@ -1067,17 +1136,8 @@ async def test_update_skill_md_syncs_metadata(tmp_path: Path, monkeypatch: pytes
         def __init__(self, _db):
             pass
 
-        async def update_metadata(
-            self,
-            _item: Skill,
-            *,
-            name: str,
-            description: str,
-            updated_by: str | None,
-        ) -> Skill:
-            updates["name"] = name
-            updates["description"] = description
-            updates["updated_by"] = updated_by
+        async def sync_bundle(self, _item: SkillRecord, *, updated_by: str | None) -> SkillRecord:
+            updates["bundle_updated_by"] = updated_by
             return item
 
     monkeypatch.setattr(svc, "get_skill_or_raise", fake_get_skill_or_raise)
@@ -1092,16 +1152,14 @@ async def test_update_skill_md_syncs_metadata(tmp_path: Path, monkeypatch: pytes
         updated_by="admin",
     )
 
-    assert updates["name"] == "demo"
-    assert updates["description"] == "updated desc"
-    assert updates["updated_by"] == "admin"
+    assert updates["bundle_updated_by"] == "admin"
     saved_content = (skill_dir / "SKILL.md").read_text(encoding="utf-8")
     assert "description: updated desc" in saved_content
 
 
 @pytest.mark.asyncio
 async def test_update_skill_dependencies(monkeypatch: pytest.MonkeyPatch):
-    item = Skill(
+    item = _skill_record(
         slug="alpha",
         name="alpha",
         description="alpha",
@@ -1118,7 +1176,7 @@ async def test_update_skill_dependencies(monkeypatch: pytest.MonkeyPatch):
         mcp_dependencies=[],
         skill_dependencies=[],
     )
-    dependency = Skill(
+    dependency = _skill_record(
         slug="beta",
         name="beta",
         description="beta",
@@ -1138,7 +1196,7 @@ async def test_update_skill_dependencies(monkeypatch: pytest.MonkeyPatch):
 
     # Mock get_tool_metadata to return tool list
     def fake_get_tool_metadata(category=None):
-        return [{"slug": "calculator", "name": "Calculator"}]
+        return [{"slug": "calculator", "name": "Calculator", "source": "chat"}]
 
     monkeypatch.setattr(tool_service, "get_tool_metadata", fake_get_tool_metadata)
 
@@ -1163,7 +1221,7 @@ async def test_update_skill_dependencies(monkeypatch: pytest.MonkeyPatch):
 
         async def update_dependencies(
             self,
-            _item: Skill,
+            _item: SkillRecord,
             *,
             tool_dependencies: list[str],
             mcp_dependencies: list[str],
@@ -1174,16 +1232,20 @@ async def test_update_skill_dependencies(monkeypatch: pytest.MonkeyPatch):
             captured["mcp_dependencies"] = mcp_dependencies
             captured["skill_dependencies"] = skill_dependencies
             captured["updated_by"] = updated_by
-            _item.tool_dependencies = tool_dependencies
-            _item.mcp_dependencies = mcp_dependencies
-            _item.skill_dependencies = skill_dependencies
+            _item.runtime.tool_dependencies = tool_dependencies
+            _item.runtime.mcp_dependencies = mcp_dependencies
+            _item.runtime.skill_dependencies = skill_dependencies
             return _item
 
     async def fake_list_accessible_shared_skills(_db, _operator):
         return [item, dependency]
 
+    async def no_live_installs(_db, _item):
+        return []
+
     monkeypatch.setattr(svc, "get_skill_or_raise", fake_get_skill_or_raise)
     monkeypatch.setattr(svc, "_list_accessible_shared_skills", fake_list_accessible_shared_skills)
+    monkeypatch.setattr(svc, "_live_sandbox_names", no_live_installs)
     monkeypatch.setattr(svc, "SkillRepository", FakeRepo)
 
     updated = await svc.update_skill_dependencies(
@@ -1202,7 +1264,7 @@ async def test_update_skill_dependencies(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_skill_dependency_scope_covers_read_and_manage_audiences():
-    parent = Skill(
+    parent = _skill_record(
         slug="parent",
         name="parent",
         description="parent",
@@ -1215,7 +1277,7 @@ def test_skill_dependency_scope_covers_read_and_manage_audiences():
         },
         enabled=True,
     )
-    dependency = Skill(
+    dependency = _skill_record(
         slug="dependency",
         name="dependency",
         description="dependency",
@@ -1233,7 +1295,7 @@ def test_skill_dependency_scope_covers_read_and_manage_audiences():
 
 
 def test_owner_only_skill_can_depend_on_visible_skill():
-    parent = Skill(
+    parent = _skill_record(
         slug="parent-owner-only",
         name="parent-owner-only",
         description="parent",
@@ -1243,7 +1305,7 @@ def test_owner_only_skill_can_depend_on_visible_skill():
         share_config={"version": 2, "read_scope": None, "manage_scope": None},
         enabled=True,
     )
-    dependency = Skill(
+    dependency = _skill_record(
         slug="dependency-global",
         name="dependency-global",
         description="dependency",
@@ -1291,6 +1353,11 @@ async def test_init_builtin_skills_create_missing(tmp_path: Path, monkeypatch: p
         def __init__(self, _db):
             pass
 
+        async def reconcile_runtime_records(self, runtime_specs, *, operator_uid):
+            assert "reporter" in runtime_specs
+            assert operator_uid == "system"
+            return []
+
         async def get_by_slug(self, slug: str):
             assert slug == "reporter"
             return None
@@ -1298,9 +1365,9 @@ async def test_init_builtin_skills_create_missing(tmp_path: Path, monkeypatch: p
         async def get_by_slug_unscoped(self, slug: str):
             return await self.get_by_slug(slug)
 
-        async def create(self, **kwargs) -> Skill:
+        async def create(self, **kwargs) -> SkillRecord:
             self.__class__.created_payload = kwargs
-            return Skill(**kwargs, updated_by=kwargs["created_by"])
+            return _skill_record(**kwargs, updated_by=kwargs["created_by"])
 
     monkeypatch.setattr(svc, "SkillRepository", FakeRepo)
 
@@ -1309,7 +1376,7 @@ async def test_init_builtin_skills_create_missing(tmp_path: Path, monkeypatch: p
     assert len(items) == 1
     assert items[0].slug == "reporter"
     assert FakeRepo.created_payload["source_type"] == "builtin"
-    assert FakeRepo.created_payload["share_config"] == svc.BUILTIN_SKILL_SHARE_CONFIG
+    assert FakeRepo.created_payload["share_config"] == svc.BUILTIN_SKILL_PERMISSION_CONFIG
     assert FakeRepo.created_payload["enabled"] is True
     assert FakeRepo.created_payload["created_by"] == "system"
     assert FakeRepo.created_payload["tool_dependencies"] == ["mysql_query"]
@@ -1353,7 +1420,7 @@ async def test_init_builtin_skills_updates_existing_record_and_preserves_disable
         ],
     )
 
-    existing_item = Skill(
+    existing_item = _skill_record(
         slug="reporter",
         name="reporter",
         description="old description",
@@ -1380,6 +1447,10 @@ async def test_init_builtin_skills_updates_existing_record_and_preserves_disable
         def __init__(self, _db):
             pass
 
+        async def reconcile_runtime_records(self, _runtime_specs, *, operator_uid):
+            del operator_uid
+            return []
+
         async def get_by_slug(self, slug: str):
             assert slug == "reporter"
             return existing_item
@@ -1387,24 +1458,18 @@ async def test_init_builtin_skills_updates_existing_record_and_preserves_disable
         async def get_by_slug_unscoped(self, slug: str):
             return await self.get_by_slug(slug)
 
-        async def update_metadata(self, item: Skill, *, name: str, description: str, updated_by: str | None) -> Skill:
-            item.name = name
-            item.description = description
-            captured["metadata"] = {"name": name, "description": description, "updated_by": updated_by}
-            return item
-
         async def update_dependencies(
             self,
-            item: Skill,
+            item: SkillRecord,
             *,
             tool_dependencies: list[str],
             mcp_dependencies: list[str],
             skill_dependencies: list[str],
             updated_by: str | None,
-        ) -> Skill:
-            item.tool_dependencies = tool_dependencies
-            item.mcp_dependencies = mcp_dependencies
-            item.skill_dependencies = skill_dependencies
+        ) -> SkillRecord:
+            item.runtime.tool_dependencies = tool_dependencies
+            item.runtime.mcp_dependencies = mcp_dependencies
+            item.runtime.skill_dependencies = skill_dependencies
             captured["dependencies"] = {
                 "tool_dependencies": tool_dependencies,
                 "mcp_dependencies": mcp_dependencies,
@@ -1415,17 +1480,19 @@ async def test_init_builtin_skills_updates_existing_record_and_preserves_disable
 
         async def update_builtin_install(
             self,
-            item: Skill,
+            item: SkillRecord,
             *,
             version: str,
             content_hash: str,
             updated_by: str | None,
-        ) -> Skill:
-            item.version = version
-            item.content_hash = content_hash
-            item.source_type = "builtin"
-            item.share_config = svc.BUILTIN_SKILL_SHARE_CONFIG.copy()
-            item.updated_by = updated_by
+        ) -> SkillRecord:
+            item.raw["version"] = version
+            item.raw["bundle_sha256"] = content_hash
+            item.raw["name"] = "reporter"
+            item.raw["description"] = "new markdown description"
+            item.runtime.source_type = "builtin"
+            item.runtime.share_config = svc.BUILTIN_SKILL_SHARE_CONFIG.copy()
+            item.runtime.updated_by = updated_by
             captured["install"] = {"version": version, "content_hash": content_hash, "updated_by": updated_by}
             return item
 
@@ -1437,11 +1504,6 @@ async def test_init_builtin_skills_updates_existing_record_and_preserves_disable
     assert items[0].enabled is False
     assert items[0].version == "1.0.1"
     assert (target_dir / "prompt.md").read_text(encoding="utf-8") == "new builtin content"
-    assert captured["metadata"] == {
-        "name": "reporter",
-        "description": "new markdown description",
-        "updated_by": "release-bot",
-    }
     assert captured["dependencies"] == {
         "tool_dependencies": ["mysql_query"],
         "mcp_dependencies": ["charts"],
@@ -1449,6 +1511,326 @@ async def test_init_builtin_skills_updates_existing_record_and_preserves_disable
         "updated_by": "release-bot",
     }
     assert captured["install"]["updated_by"] == "release-bot"
+
+
+def test_skill_record_without_runtime_uses_v2_fallback_config():
+    record = SkillRecord(
+        raw={"id": "catalog-1", "name": "demo", "description": "from Go"},
+        runtime=None,
+    )
+
+    assert record.share_config == {
+        "version": 2,
+        "read_scope": {"access_level": "global", "department_ids": [], "user_uids": []},
+        "manage_scope": None,
+    }
+    assert svc.resolve_skill_permission(_user(role="user"), record) == svc.ResourcePermission.READ
+
+
+@pytest.mark.asyncio
+async def test_reconcile_reads_local_catalog_and_skips_soft_deleted(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("WEKNORA_BASE_URL", "http://127.0.0.1:9980")
+    monkeypatch.delenv("WEKNORA_APPCORE_TENANT_ID", raising=False)
+    monkeypatch.setattr("yuxi.agents.skills.repository._scope_tenant_id", lambda: None)
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all, tables=[TenantSkillCatalog.__table__])
+    except Exception:
+        await engine.dispose()
+        raise
+
+    try:
+        async with async_sessionmaker(engine, expire_on_commit=False)() as session:
+            now = svc.datetime.now(svc.UTC).replace(tzinfo=None)
+            for row in (
+                TenantSkillCatalog(
+                    id="catalog-project",
+                    tenant_id=10000,
+                    name="project-manager-knowledge",
+                    version="1.0.0",
+                    description="project",
+                    source_type="",
+                    tool_dependencies=[],
+                    mcp_dependencies=[],
+                    skill_dependencies=[],
+                    share_config={},
+                    enabled=True,
+                    created_at=now,
+                    updated_at=now,
+                ),
+                TenantSkillCatalog(
+                    id="catalog-demo",
+                    tenant_id=10000,
+                    name="iptv-movie-recommender-demo",
+                    version="1.0.0",
+                    description="demo",
+                    source_type="",
+                    tool_dependencies=[],
+                    mcp_dependencies=[],
+                    skill_dependencies=[],
+                    share_config={},
+                    enabled=True,
+                    created_at=now,
+                    updated_at=now,
+                ),
+                TenantSkillCatalog(
+                    id="catalog-deleted",
+                    tenant_id=10000,
+                    name="quote",
+                    version="1.0.0",
+                    description="deleted",
+                    source_type="chat",
+                    tool_dependencies=[],
+                    mcp_dependencies=[],
+                    skill_dependencies=[],
+                    share_config={},
+                    enabled=True,
+                    created_at=now,
+                    updated_at=now,
+                    deleted_at=now,
+                ),
+            ):
+                session.add(row)
+            await session.commit()
+
+            repo = SkillRepository(session)
+            inferred_tenant, local_items = await repo._local_catalog_items()
+            assert inferred_tenant == 10000
+            assert {item["name"] for item in local_items} == {
+                "project-manager-knowledge",
+                "iptv-movie-recommender-demo",
+            }
+            records = await repo.reconcile_runtime_records(
+                {
+                    "project-manager-knowledge": {
+                        "source_type": "builtin",
+                        "dir_path": "skills/project-manager-knowledge",
+                        "share_config": svc.BUILTIN_SKILL_PERMISSION_CONFIG.copy(),
+                        "created_by": "system",
+                    }
+                }
+            )
+
+            assert {item.slug for item in records} == {
+                "project-manager-knowledge",
+                "iptv-movie-recommender-demo",
+            }
+            assert all(item.share_config["version"] == 2 for item in records)
+            assert {item.slug: item.source_type for item in records} == {
+                "project-manager-knowledge": "work",
+                "iptv-movie-recommender-demo": "chat",
+            }
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_reconcile_rejects_ambiguous_local_tenant(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("WEKNORA_BASE_URL", "http://127.0.0.1:9980")
+    monkeypatch.delenv("WEKNORA_APPCORE_TENANT_ID", raising=False)
+    monkeypatch.setattr("yuxi.agents.skills.repository._scope_tenant_id", lambda: None)
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(
+                text(
+                    """
+                    CREATE TABLE tenant_skill_catalog (
+                        id VARCHAR(36) PRIMARY KEY,
+                        tenant_id BIGINT NOT NULL,
+                        name VARCHAR(255) NOT NULL,
+                        version VARCHAR(64),
+                        description TEXT,
+                        bundle_sha256 VARCHAR(64),
+                        created_at TIMESTAMP,
+                        updated_at TIMESTAMP,
+                        deleted_at TIMESTAMP
+                    )
+                    """
+                )
+            )
+            await conn.execute(
+                text(
+                    """
+                    INSERT INTO tenant_skill_catalog (id, tenant_id, name)
+                    VALUES ('catalog-1', 10000, 'demo-a'), ('catalog-2', 20000, 'demo-b')
+                    """
+                )
+            )
+
+        async with async_sessionmaker(engine)() as session:
+            repo = SkillRepository(session)
+            with pytest.raises(ValueError, match="存在多个有效 tenant_id"):
+                await repo.reconcile_runtime_records({})
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_management_list_reconciles_missing_runtime(monkeypatch: pytest.MonkeyPatch):
+    missing = SkillRecord(
+        raw={"id": "catalog-demo", "name": "demo", "description": "from Go"},
+        runtime=None,
+    )
+    calls: list[str] = []
+
+    class FakeRepo:
+        def __init__(self, _db):
+            pass
+
+        async def list_all(self):
+            calls.append("list")
+            if missing.runtime is None:
+                return [missing]
+            return [missing]
+
+        async def reconcile_runtime_records(self, runtime_specs, *, operator_uid="system"):
+            calls.append("reconcile")
+            assert runtime_specs == {}
+            assert operator_uid == "system"
+            missing.runtime = SkillRuntime(
+                app_core_skill_id="catalog-demo",
+                tenant_id=10000,
+                slug="demo",
+                source_type="upload",
+                share_config={"version": 2, "read_scope": {"access_level": "global"}, "manage_scope": None},
+                enabled=True,
+            )
+
+    monkeypatch.setattr(svc, "SkillRepository", FakeRepo)
+    monkeypatch.setattr(svc, "list_builtin_skill_specs", lambda: [])
+
+    items = await svc.list_visible_skills_for_management(None, _user(role="admin"))
+
+    assert [item.slug for item in items] == ["demo"]
+    assert calls == ["list", "reconcile", "list"]
+
+
+@pytest.mark.asyncio
+async def test_init_builtin_skills_allows_missing_startup_credentials(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(svc.sys_config, "save_dir", str(tmp_path))
+    source_dir = tmp_path / "builtin" / "reporter"
+    source_dir.mkdir(parents=True)
+    (source_dir / "SKILL.md").write_text(
+        "---\nname: reporter\ndescription: SQL report\n---\n# SQL Reporter\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        svc,
+        "list_builtin_skill_specs",
+        lambda: [
+            {
+                "slug": "reporter",
+                "name": "reporter",
+                "description": "SQL report",
+                "version": "1.0.0",
+                "tool_dependencies": [],
+                "mcp_dependencies": [],
+                "skill_dependencies": [],
+                "content_hash": "hash-v1",
+                "source_dir": source_dir,
+            }
+        ],
+    )
+    reconciled: dict[str, object] = {}
+
+    class FakeRepo:
+        def __init__(self, _db):
+            pass
+
+        async def reconcile_runtime_records(self, runtime_specs, *, operator_uid):
+            reconciled["specs"] = runtime_specs
+            reconciled["operator_uid"] = operator_uid
+            return []
+
+        async def get_by_slug_unscoped(self, _slug):
+            raise svc.AppCoreAuthError("缺少用户 JWT 或 app-core API Key")
+
+    monkeypatch.setattr(svc, "SkillRepository", FakeRepo)
+
+    items = await svc.init_builtin_skills(None)
+
+    assert items == []
+    assert reconciled["operator_uid"] == "system"
+    assert reconciled["specs"]["reporter"]["source_type"] == "work"
+
+
+@pytest.mark.asyncio
+async def test_init_builtin_skills_reconciles_missing_runtime_before_upgrade(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    monkeypatch.setattr(svc.sys_config, "save_dir", str(tmp_path))
+
+    source_dir = tmp_path / "builtin" / "reporter"
+    source_dir.mkdir(parents=True, exist_ok=True)
+    (source_dir / "SKILL.md").write_text(
+        "---\nname: reporter\ndescription: SQL report\n---\n# SQL Reporter\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        svc,
+        "list_builtin_skill_specs",
+        lambda: [
+            {
+                "slug": "reporter",
+                "name": "reporter",
+                "description": "SQL report",
+                "version": "1.0.0",
+                "tool_dependencies": [],
+                "mcp_dependencies": [],
+                "skill_dependencies": [],
+                "content_hash": "hash-v1",
+                "source_dir": source_dir,
+            }
+        ],
+    )
+
+    reporter = SkillRecord(
+        raw={"id": "catalog-reporter", "name": "reporter", "description": "old"},
+        runtime=None,
+    )
+    captured: dict[str, object] = {}
+
+    class FakeRepo:
+        def __init__(self, _db):
+            pass
+
+        async def reconcile_runtime_records(self, runtime_specs, *, operator_uid):
+            captured["runtime_specs"] = runtime_specs
+            captured["operator_uid"] = operator_uid
+            reporter.runtime = SkillRuntime(
+                app_core_skill_id=reporter.app_core_id,
+                tenant_id=0,
+                slug="reporter",
+                source_type="builtin",
+                share_config=runtime_specs["reporter"]["share_config"],
+            )
+            return [reporter]
+
+        async def get_by_slug(self, slug: str):
+            assert slug == "reporter"
+            return reporter
+
+        async def get_by_slug_unscoped(self, slug: str):
+            return await self.get_by_slug(slug)
+
+        async def update_builtin_install(self, item, **kwargs):
+            captured["install"] = kwargs
+            return item
+
+    monkeypatch.setattr(svc, "SkillRepository", FakeRepo)
+    items = await svc.init_builtin_skills(None)
+
+    assert len(items) == 1
+    assert items[0].source_type == "work"
+    assert captured["operator_uid"] == "system"
+    assert captured["runtime_specs"]["reporter"]["dir_path"] == "skills/reporter"
+    assert "install" in captured
 
 
 @pytest.mark.asyncio
@@ -1484,8 +1866,18 @@ async def test_init_builtin_skills_rejects_non_builtin_conflict(tmp_path: Path, 
         def __init__(self, _db):
             pass
 
+        async def reconcile_runtime_records(self, _runtime_specs, *, operator_uid):
+            del operator_uid
+            return []
+
         async def get_by_slug(self, slug: str):
-            return Skill(slug=slug, name=slug, description="uploaded", dir_path=f"skills/{slug}", source_type="upload")
+            return _skill_record(
+                slug=slug,
+                name=slug,
+                description="uploaded",
+                dir_path=f"skills/{slug}",
+                source_type="upload",
+            )
 
         async def get_by_slug_unscoped(self, slug: str):
             return await self.get_by_slug(slug)
@@ -1498,7 +1890,7 @@ async def test_init_builtin_skills_rejects_non_builtin_conflict(tmp_path: Path, 
 
 @pytest.mark.asyncio
 async def test_update_skill_enabled_allows_builtin(monkeypatch: pytest.MonkeyPatch):
-    builtin_item = Skill(
+    builtin_item = _skill_record(
         slug="reporter",
         name="reporter",
         description="builtin",
@@ -1516,9 +1908,9 @@ async def test_update_skill_enabled_allows_builtin(monkeypatch: pytest.MonkeyPat
         def __init__(self, _db):
             pass
 
-        async def update_enabled(self, item: Skill, *, enabled: bool, updated_by: str | None):
-            item.enabled = enabled
-            item.updated_by = updated_by
+        async def update_enabled(self, item: SkillRecord, *, enabled: bool, updated_by: str | None):
+            item.runtime.enabled = enabled
+            item.runtime.updated_by = updated_by
             return item
 
     monkeypatch.setattr(svc, "get_manageable_skill_or_raise", fake_get_manageable_skill_or_raise)
@@ -1541,7 +1933,7 @@ async def test_builtin_skill_file_edit_blocked(tmp_path: Path, monkeypatch: pyte
         encoding="utf-8",
     )
 
-    builtin_item = Skill(
+    builtin_item = _skill_record(
         slug="reporter",
         name="reporter",
         description="builtin",
@@ -1572,8 +1964,8 @@ async def test_delete_skills_batch_ok(tmp_path: Path, monkeypatch: pytest.Monkey
     (tmp_path / "skills" / "skill-a").mkdir(parents=True, exist_ok=True)
     (tmp_path / "skills" / "skill-b").mkdir(parents=True, exist_ok=True)
 
-    item_a = Skill(slug="skill-a", name="skill-a", description="a", dir_path="skills/skill-a")
-    item_b = Skill(slug="skill-b", name="skill-b", description="b", dir_path="skills/skill-b")
+    item_a = _skill_record(slug="skill-a", name="skill-a", description="a", dir_path="skills/skill-a")
+    item_b = _skill_record(slug="skill-b", name="skill-b", description="b", dir_path="skills/skill-b")
 
     db_items = {"skill-a": item_a, "skill-b": item_b}
     deleted_slugs = []
@@ -1585,10 +1977,17 @@ async def test_delete_skills_batch_ok(tmp_path: Path, monkeypatch: pytest.Monkey
         async def get_by_slug(self, slug: str, *, for_update: bool = False):
             return db_items.get(slug)
 
-        async def delete(self, item: Skill):
+        async def delete(self, item: SkillRecord):
             deleted_slugs.append(item.slug)
             db_items.pop(item.slug, None)
 
+        async def list_all(self):
+            return list(db_items.values())
+
+    async def no_live_installs(_db, _item):
+        return []
+
+    monkeypatch.setattr(svc, "_live_sandbox_names", no_live_installs)
     monkeypatch.setattr(svc, "SkillRepository", FakeRepo)
 
     # 执行批量删除，skill-a, skill-b, skill-c (不存在)
@@ -1616,7 +2015,7 @@ async def test_delete_skill_concurrent_lock(tmp_path: Path, monkeypatch: pytest.
     monkeypatch.setattr(svc.sys_config, "save_dir", str(tmp_path))
     (tmp_path / "skills" / "concurrent-skill").mkdir(parents=True, exist_ok=True)
 
-    item = Skill(
+    item = _skill_record(
         slug="concurrent-skill", name="concurrent-skill", description="desc", dir_path="skills/concurrent-skill"
     )
 
@@ -1638,11 +2037,18 @@ async def test_delete_skill_concurrent_lock(tmp_path: Path, monkeypatch: pytest.
             else:
                 return db_items.get(slug)
 
-        async def delete(self, item: Skill):
+        async def delete(self, item: SkillRecord):
             db_items.pop(item.slug, None)
             if lock_active.locked():
                 lock_active.release()
 
+        async def list_all(self):
+            return list(db_items.values())
+
+    async def no_live_installs(_db, _item):
+        return []
+
+    monkeypatch.setattr(svc, "_live_sandbox_names", no_live_installs)
     monkeypatch.setattr(svc, "SkillRepository", FakeRepo)
 
     # 同时发起两个 delete_skill 调用
@@ -1777,7 +2183,7 @@ async def test_personal_skill_overrides_shared_skill_and_drops_dependencies(
     redis = _FakeRedis()
     personal_root = tmp_path / "personal"
     _write_personal_skill(personal_root, "demo", "personal")
-    shared = Skill(
+    shared = _skill_record(
         id=1,
         slug="demo",
         name="Shared Demo",
@@ -1800,7 +2206,7 @@ async def test_personal_skill_overrides_shared_skill_and_drops_dependencies(
         def __init__(self, _db):
             pass
 
-        async def list_enabled(self):
+        async def list_all(self):
             return [shared]
 
     async def fake_get_redis():
@@ -1857,7 +2263,7 @@ async def test_skill_cards_keep_shadowed_shared_item_for_management(
     redis = _FakeRedis()
     personal_root = tmp_path / "personal"
     _write_personal_skill(personal_root, "demo", "personal")
-    shared = Skill(
+    shared = _skill_record(
         id=1,
         slug="demo",
         name="Shared Demo",

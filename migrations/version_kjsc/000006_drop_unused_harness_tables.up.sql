@@ -55,6 +55,5 @@ DROP TABLE IF EXISTS h_knowledge_files CASCADE;
 DROP TABLE IF EXISTS h_knowledge_bases CASCADE;
 DROP TABLE IF EXISTS h_model_providers CASCADE;
 DROP TABLE IF EXISTS h_user_identity_map CASCADE;
-DROP TABLE IF EXISTS h_tenant_backfill_map CASCADE;
 DROP TABLE IF EXISTS h_departments CASCADE;
 DROP TABLE IF EXISTS h_users CASCADE;

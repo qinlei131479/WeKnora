@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+import json
+
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,8 +28,18 @@ from yuxi.agents.skills.service import (
     get_skill_dependency_options,
     get_skill_tree,
     init_builtin_skills,
+    install_skill_to_sandboxes,
+    list_config_skills,
+    list_skill_install_messages,
+    load_skill_transcript_frames,
+    patch_config_skill,
+    remove_config_skill,
+    retry_config_skill,
+    stop_config_skill,
+    uninstall_skill_from_sandbox,
     is_builtin_skill,
     list_accessible_skills,
+    list_skill_sandbox_board,
     list_skill_cards_for_user,
     list_skills,
     list_visible_skills_for_management,
@@ -81,6 +93,16 @@ class RemoteSkillSourceRequest(BaseModel):
 
 class RemoteSkillPrepareRequest(RemoteSkillSourceRequest):
     skills: list[str] = Field(..., description="需要安装的 skill 名称列表")
+    usage_source: str = Field("chat", description="使用侧：chat、work、common")
+
+
+class SkillSandboxInstallRequest(BaseModel):
+    sandbox_config_ids: list[str] = Field(default_factory=list)
+
+
+class SkillSandboxPatchRequest(BaseModel):
+    enabled: bool | None = None
+    envs: dict[str, str] | None = None
 
 
 class RemoteSkillSearchRequest(BaseModel):
@@ -158,6 +180,213 @@ async def list_skill_cards_route(
         raise HTTPException(status_code=500, detail="获取 Skill 列表失败")
 
 
+@user_skills.get("/sandbox-board")
+async def skill_sandbox_board_route(
+    _current_user: User = Depends(get_required_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return {"success": True, "data": await list_skill_sandbox_board(db)}
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to list skill sandbox board: {e}")
+        raise HTTPException(status_code=500, detail="获取沙箱安装状态失败")
+
+
+@user_skills.get("/sandbox-configs/{sandbox_config_id}/skills")
+async def list_sandbox_config_skills_route(
+    sandbox_config_id: str,
+    _current_user: User = Depends(get_required_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return {"success": True, "data": await list_config_skills(db, sandbox_config_id)}
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to list sandbox skills: {e}")
+        raise HTTPException(status_code=500, detail="获取沙箱技能失败")
+
+
+@user_skills.patch("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}")
+async def patch_sandbox_config_skill_route(
+    sandbox_config_id: str,
+    skill_id: str,
+    payload: SkillSandboxPatchRequest,
+    _current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        data = await patch_config_skill(
+            db,
+            sandbox_config_id=sandbox_config_id,
+            skill_id=skill_id,
+            enabled=payload.enabled,
+            envs=payload.envs,
+        )
+        return {"success": True, "data": data}
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to update sandbox skill: {e}")
+        raise HTTPException(status_code=500, detail="更新沙箱技能失败")
+
+
+@user_skills.post("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}/stop")
+async def stop_sandbox_config_skill_route(
+    sandbox_config_id: str,
+    skill_id: str,
+    _current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return {
+            "success": True,
+            "data": await stop_config_skill(db, sandbox_config_id=sandbox_config_id, skill_id=skill_id),
+        }
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to stop sandbox skill: {e}")
+        raise HTTPException(status_code=500, detail="停止安装失败")
+
+
+@user_skills.post("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}/reinstall")
+async def retry_sandbox_config_skill_route(
+    sandbox_config_id: str,
+    skill_id: str,
+    _current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        await retry_config_skill(db, sandbox_config_id=sandbox_config_id, skill_id=skill_id)
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to retry sandbox skill: {e}")
+        raise HTTPException(status_code=500, detail="重试安装失败")
+
+
+@user_skills.delete("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}")
+async def remove_sandbox_config_skill_route(
+    sandbox_config_id: str,
+    skill_id: str,
+    _current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        await remove_config_skill(db, sandbox_config_id=sandbox_config_id, skill_id=skill_id)
+        return {"success": True, "data": {"skill_id": skill_id}}
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to remove sandbox skill: {e}")
+        raise HTTPException(status_code=500, detail="卸载沙箱技能失败")
+
+
+@user_skills.get("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}/messages")
+async def sandbox_skill_messages_route(
+    sandbox_config_id: str,
+    skill_id: str,
+    _current_user: User = Depends(get_required_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return {
+            "success": True,
+            "data": await list_skill_install_messages(
+                db, sandbox_config_id=sandbox_config_id, skill_id=skill_id
+            ),
+        }
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to read sandbox skill messages: {e}")
+        raise HTTPException(status_code=500, detail="读取安装过程失败")
+
+
+@user_skills.get("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}/transcript")
+async def sandbox_skill_transcript_route(
+    sandbox_config_id: str,
+    skill_id: str,
+    _current_user: User = Depends(get_required_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        frames = await load_skill_transcript_frames(
+            db, sandbox_config_id=sandbox_config_id, skill_id=skill_id
+        )
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to read sandbox skill transcript: {e}")
+        raise HTTPException(status_code=500, detail="读取安装过程失败")
+
+    async def body():
+        for frame in frames:
+            yield f"event: message\ndata: {json.dumps(frame, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        body(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@user_skills.get("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}/guidance")
+async def sandbox_skill_guidance_route(
+    sandbox_config_id: str,
+    skill_id: str,
+    _current_user: User = Depends(get_required_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        await list_config_skills(db, sandbox_config_id)
+        return {"success": True, "data": {"accepting": False, "messages": []}}
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to read sandbox skill guidance: {e}")
+        raise HTTPException(status_code=500, detail="读取安装引导失败")
+
+
+@user_skills.post("/{slug}/sandbox-install")
+async def install_skill_to_sandboxes_route(
+    slug: str,
+    payload: SkillSandboxInstallRequest,
+    _current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        installed_ids = await install_skill_to_sandboxes(
+            db, slug=slug, sandbox_config_ids=payload.sandbox_config_ids
+        )
+        return {"success": True, "data": {"installed_ids": installed_ids}}
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to install skill '{slug}' to sandboxes: {e}")
+        raise HTTPException(status_code=500, detail="安装技能到沙箱失败")
+
+
+@user_skills.delete("/{slug}/sandbox-installs/{sandbox_config_id}")
+async def uninstall_skill_from_sandbox_route(
+    slug: str,
+    sandbox_config_id: str,
+    _current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        await uninstall_skill_from_sandbox(db, slug=slug, sandbox_config_id=sandbox_config_id)
+        return {"success": True}
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to uninstall skill '{slug}' from sandbox '{sandbox_config_id}': {e}")
+        raise HTTPException(status_code=500, detail="从沙箱卸载技能失败")
+
+
 @user_skills.get("/accessible")
 async def list_accessible_skills_route(
     current_user: User = Depends(get_required_user),
@@ -174,6 +403,7 @@ async def list_accessible_skills_route(
 @user_skills.post("/import/prepare")
 async def prepare_skill_upload_route(
     file: UploadFile = File(...),
+    usage_source: str = Form("chat"),
     current_user: User = Depends(get_required_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -183,6 +413,7 @@ async def prepare_skill_upload_route(
             filename=file.filename or "",
             file_bytes=await file.read(),
             operator=current_user,
+            usage_source=usage_source,
         )
         return {"success": True, "data": data}
     except ValueError as e:
@@ -228,6 +459,7 @@ async def prepare_remote_skills_route(
             source=payload.source,
             skills=payload.skills,
             operator=current_user,
+            usage_source=payload.usage_source,
         )
         return {"success": True, "data": data}
     except ValueError as e:
@@ -356,7 +588,7 @@ async def get_skill_dependency_options_route(
 ):
     try:
         if slug:
-            await get_manageable_skill_or_raise(db, current_user, slug)
+            await get_management_readable_skill_or_raise(db, current_user, slug)
         return {"success": True, "data": await get_skill_dependency_options(db, current_user, slug)}
     except ValueError as e:
         _raise_from_value_error(e)

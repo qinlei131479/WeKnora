@@ -1,6 +1,6 @@
 <template>
   <div class="skill-settings">
-    <div class="section-header">
+    <div v-if="!drawersOnly" class="section-header">
       <div class="section-header__title-row">
         <h2>{{ $t('settings.skills.title') }}</h2>
         <t-tooltip :content="$t('settings.skills.helpTooltip')" placement="right"
@@ -11,11 +11,11 @@
       <p class="section-description">{{ $t('settings.skills.description') }}</p>
     </div>
 
-    <div v-if="loading" class="loading-container">
+    <div v-if="!drawersOnly && loading" class="loading-container">
       <t-loading :text="$t('common.loading')" />
     </div>
 
-    <template v-else>
+    <template v-else-if="!drawersOnly">
       <div v-if="catalog.length === 0" class="empty-state">
         <t-empty :description="$t('settings.skills.emptyDesc')" />
         <p v-if="skillConfigs.length === 0" class="empty-hint">
@@ -174,6 +174,14 @@
       </article>
 
       <template v-if="addStep === 0">
+        <section v-if="persist === 'harness'" class="setting-drawer__section">
+          <h4 class="setting-drawer__section-title">{{ $t('settings.skills.scope') }}</h4>
+          <t-radio-group v-model="addUsageSource" :disabled="addBusy || !!registeredCatalog">
+            <t-radio value="chat">{{ $t('ext.tools.sourceChat') }}</t-radio>
+            <t-radio value="work">{{ $t('ext.tools.sourceWork') }}</t-radio>
+            <t-radio value="common">{{ $t('ext.skills.sourceCommon') }}</t-radio>
+          </t-radio-group>
+        </section>
         <section class="setting-drawer__section">
           <h4 class="setting-drawer__section-title">{{ $t('settings.sandbox.skillSourceSection') }}</h4>
           <p class="installer-model-hint">{{ $t('settings.sandbox.skillSourceSectionHint', { size: maxSkillBundleMB })
@@ -317,7 +325,8 @@
       width="680px" :min-width="560" :max-width="920" storage-key="setting-drawer:width:skill-catalog-manage"
       :hide-footer="true" :z-index="2600">
       <SandboxSkillsPanel v-if="showManage && manageRecord && manageSkillId" :record="manageRecord" mode="list" hide-add
-        :focus-skill-id="manageSkillId" @updated="onPanelUpdated" @skills-changed="loadCatalog" />
+        :persist="persist" :focus-skill-id="manageSkillId" @updated="onPanelUpdated"
+        @skills-changed="onSkillsChanged" />
     </SettingDrawer>
 
     <SkillFilesDrawer v-model:visible="filesDrawerVisible" :catalog-id="filesCatalogId"
@@ -360,9 +369,19 @@ import {
   listSandboxConfigs,
   type SandboxConfigRecord,
 } from '@/api/system'
+import { skillApi } from '@/api/chat-work/skill'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   initialSandboxId?: string
+  persist?: 'app-core' | 'harness'
+  drawersOnly?: boolean
+}>(), {
+  persist: 'app-core',
+  drawersOnly: false,
+})
+
+const emit = defineEmits<{
+  changed: []
 }>()
 
 const { t } = useI18n()
@@ -393,6 +412,8 @@ const filesCatalogId = ref('')
 const filesCatalogName = ref('')
 const openPanelId = ref('')
 const sourceInput = ref('')
+const addUsageSource = ref<'chat' | 'work' | 'common'>('chat')
+const harnessSlugs = ref<string[]>([])
 const uploading = ref(false)
 const addingFromSource = ref(false)
 const installing = ref(false)
@@ -831,14 +852,30 @@ function resetAddWizard() {
   registeredCatalog.value = null
   pendingFile.value = null
   sourceInput.value = ''
+  addUsageSource.value = 'chat'
+  harnessSlugs.value = []
   addTargetIds.value = []
   addSessionIds.value = []
   uploadPercent.value = 0
   if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
+async function loadHarnessSandboxes() {
+  const res = await skillApi.listSkillSandboxBoard()
+  const rows = res?.data?.sandboxes || []
+  records.value = rows.map((row: { id: string; name: string; sandbox_type: string }) => ({
+    id: row.id,
+    name: row.name,
+    sandbox_type: row.sandbox_type,
+    config: {},
+  })) as SandboxConfigRecord[]
+}
+
 async function openAdd() {
   resetAddWizard()
+  if (props.persist === 'harness') {
+    await loadHarnessSandboxes()
+  }
   await loadInstallerModel()
   showAdd.value = true
 }
@@ -858,7 +895,11 @@ function addPreviousStep() {
   addStep.value -= 1
 }
 
-function openInstall(item: SkillCatalogItem) {
+async function openInstall(item: SkillCatalogItem) {
+  if (props.persist === 'harness') {
+    harnessSlugs.value = [item.id]
+    await loadHarnessSandboxes()
+  }
   installCatalog.value = item
   installSessionIds.value = []
   const remaining = targetsFor(item)
@@ -867,8 +908,23 @@ function openInstall(item: SkillCatalogItem) {
   showInstall.value = true
 }
 
-function openManage(item: SkillCatalogItem, inst: SkillCatalogInstall) {
-  const record = recordFor(inst.sandbox_config_id)
+function onSkillsChanged() {
+  if (props.persist === 'harness') {
+    emit('changed')
+    return
+  }
+  void loadCatalog()
+}
+
+async function openManage(item: SkillCatalogItem, inst: SkillCatalogInstall) {
+  const record = recordFor(inst.sandbox_config_id) || (props.persist === 'harness'
+    ? {
+      id: inst.sandbox_config_id,
+      name: inst.sandbox_config_name || inst.sandbox_config_id,
+      sandbox_type: inst.sandbox_type || 'docker',
+      config: {},
+    } as SandboxConfigRecord
+    : undefined)
   if (!record) return
   manageRecord.value = record
   manageSkillId.value = inst.skill_id
@@ -978,6 +1034,49 @@ function skillRegisterErrorMessage(err: any, fromFile: boolean): string {
     : t('settings.sandbox.skillSourceFailed')
 }
 
+function harnessCatalogFromSkill(skill: { slug?: string; name?: string; version?: string; description?: string }, fallback: string): SkillCatalogRegisterResult {
+  return {
+    id: skill.slug || fallback,
+    name: skill.name || skill.slug || fallback,
+    version: skill.version || '',
+    description: skill.description || '',
+  }
+}
+
+async function registerHarnessThenAdvance() {
+  const source = sourceInput.value.trim()
+  const usage = addUsageSource.value
+  let draft: { draft_id?: string; items?: Array<{ slug?: string; success?: boolean }> } | null = null
+  if (pendingFile.value) {
+    uploading.value = true
+    uploadPercent.value = 0
+    const prepared = await skillApi.prepareSkillUpload(pendingFile.value, usage)
+    draft = prepared?.data || null
+  } else {
+    addingFromSource.value = true
+    const listed = await skillApi.listRemoteSkills(source)
+    const names = (listed?.data || []).map((item: { name?: string }) => item.name).filter(Boolean) as string[]
+    if (names.length === 0) throw new Error(t('ext.skills.remoteNone'))
+    const prepared = await skillApi.prepareRemoteSkills({ source, skills: names, usage_source: usage })
+    draft = prepared?.data || null
+  }
+  const slugs = (draft?.items || []).filter((item) => item.success !== false && item.slug).map((item) => item.slug as string)
+  if (!draft?.draft_id || slugs.length === 0) throw new Error(t('settings.sandbox.skillUploadFailed'))
+  const confirmed = await skillApi.confirmSkillInstallDraft(draft.draft_id, slugs)
+  const results = (confirmed?.data || []) as Array<{ success?: boolean; slug?: string; error?: string; skill?: { slug?: string; name?: string; version?: string; description?: string } }>
+  const installed = results.filter((item) => item.success && (item.skill?.slug || item.slug))
+  if (installed.length === 0) {
+    throw new Error(results.find((item) => item.error)?.error || t('settings.sandbox.skillUploadFailed'))
+  }
+  harnessSlugs.value = installed.map((item) => item.skill?.slug || item.slug || '')
+  const first = installed[0].skill || { slug: installed[0].slug }
+  registeredCatalog.value = harnessCatalogFromSkill(first, harnessSlugs.value[0])
+  addTargetIds.value = defaultAddTargets()
+  addStep.value = 1
+  MessagePlugin.success(t('settings.skills.registerAccepted'))
+  emit('changed')
+}
+
 async function registerThenAdvance() {
   if (registeredCatalog.value) {
     addTargetIds.value = defaultAddTargets()
@@ -986,6 +1085,19 @@ async function registerThenAdvance() {
   }
   const source = sourceInput.value.trim()
   if (!pendingFile.value && !source) return
+  if (props.persist === 'harness') {
+    try {
+      await registerHarnessThenAdvance()
+    } catch (e: any) {
+      MessagePlugin.error(e?.response?.data?.detail || e?.message || skillRegisterErrorMessage(e, Boolean(pendingFile.value)))
+    } finally {
+      uploading.value = false
+      addingFromSource.value = false
+      uploadPercent.value = 0
+      if (fileInputRef.value) fileInputRef.value.value = ''
+    }
+    return
+  }
 
   try {
     let registered: SkillCatalogRegisterResult | null = null
@@ -1041,6 +1153,13 @@ async function handleAddPrimary() {
   }
   installing.value = true
   try {
+    if (props.persist === 'harness') {
+      await ensureInstallerModelIfNeeded(targets)
+      const res = await installSkillCatalog(catalogId, targets)
+      finishHarnessInstall(registeredCatalog.value, targets, res)
+      showAdd.value = false
+      return
+    }
     await ensureInstallerModelIfNeeded(targets)
     const res = await installSkillCatalog(catalogId, targets)
     const failed = catalogInstallFailedCount(res)
@@ -1081,12 +1200,54 @@ function onInstallDrawerConfirm() {
   void confirmInstall()
 }
 
+function finishHarnessInstall(
+  item: { id: string; name: string } | null,
+  targets: string[],
+  res: { data?: { installs?: Record<string, string>; errors?: Record<string, string> } } | null | undefined,
+) {
+  const installs = res?.data?.installs || {}
+  const failed = catalogInstallFailedCount(res)
+  const configId = targets.find((id) => installs[id]) || Object.keys(installs)[0] || ''
+  const skillId = configId ? installs[configId] : ''
+  if (!skillId) {
+    MessagePlugin.warning(failed > 0
+      ? t('settings.skills.installPartial', { failed })
+      : t('settings.sandbox.skillUploadFailed'))
+    emit('changed')
+    return
+  }
+  if (failed > 0) MessagePlugin.warning(t('settings.skills.installPartial', { failed }))
+  else MessagePlugin.success(t('settings.skills.installAccepted'))
+  emit('changed')
+  if (!item) return
+  const record = recordFor(configId)
+  openManage(
+    { ...item, created_at: '', updated_at: '', installations: [] },
+    {
+      skill_id: skillId,
+      sandbox_config_id: configId,
+      sandbox_config_name: record?.name,
+      sandbox_type: record?.sandbox_type,
+      status: 'installing',
+      enabled: true,
+      updated_at: '',
+    },
+  )
+}
+
 async function confirmInstall() {
   const item = installCatalog.value
   const targets = [...installTargetIds.value]
   if (!item || targets.length === 0) return
   installing.value = true
   try {
+    if (props.persist === 'harness') {
+      await ensureInstallerModelIfNeeded(targets)
+      const res = await installSkillCatalog(item.id, targets)
+      finishHarnessInstall(item, targets, res)
+      showInstall.value = false
+      return
+    }
     await ensureInstallerModelIfNeeded(targets)
     const res = await installSkillCatalog(item.id, targets)
     const failed = catalogInstallFailedCount(res)
@@ -1158,6 +1319,10 @@ async function loadCatalog(silent = false) {
 }
 
 async function load() {
+  if (props.drawersOnly) {
+    loading.value = false
+    return
+  }
   loading.value = true
   try {
     const [configRes] = await Promise.all([listSandboxConfigs(), loadCatalog()])
@@ -1171,7 +1336,8 @@ async function load() {
 
 watch(showManage, (open) => {
   if (!open) {
-    void loadCatalog()
+    if (props.persist === 'harness') emit('changed')
+    else void loadCatalog()
     manageSkillId.value = ''
     manageRecord.value = null
   } else {
@@ -1194,7 +1360,11 @@ watch(showAdd, (open) => {
   }
   const catalogId = registeredCatalog.value?.id
   resetAddWizard()
-  void loadCatalog()
+  if (props.persist === 'harness') {
+    emit('changed')
+  } else {
+    void loadCatalog()
+  }
   if (catalogId) revealCatalog(catalogId)
 })
 
@@ -1220,6 +1390,8 @@ watch(busyPickTargets, (targets) => {
 }, { immediate: true })
 
 onMounted(load)
+
+defineExpose({ openAdd, openInstall, openManage })
 onUnmounted(() => {
   stopPoll()
   stopInstallProgress()

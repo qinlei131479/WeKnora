@@ -176,8 +176,6 @@ yuxi/knowledge/utils/kb_utils.py
 yuxi/knowledge/utils/mindmap_utils.py
 yuxi/knowledge/utils/sample_question_utils.py
 yuxi/knowledge/utils/security.py
-yuxi/knowledge/utils/url_fetcher.py
-yuxi/knowledge/utils/url_validator.py
 yuxi/models/__init__.py
 yuxi/models/chat.py
 yuxi/models/embed.py
@@ -199,7 +197,6 @@ yuxi/repositories/knowledge_base_repository.py
 yuxi/repositories/knowledge_file_repository.py
 yuxi/repositories/message_feedback_repository.py
 yuxi/repositories/subagent_thread_repository.py
-yuxi/repositories/task_repository.py
 yuxi/repositories/user_repository.py
 yuxi/services/agent_request_queue_service.py
 yuxi/services/agent_run_service.py
@@ -218,7 +215,6 @@ yuxi/services/run_queue_service.py
 yuxi/services/run_submission_service.py
 yuxi/services/run_worker.py
 yuxi/services/subagent_run_service.py
-yuxi/services/task_service.py
 yuxi/services/thread_files_service.py
 yuxi/services/user_identity_service.py
 yuxi/services/viewer_filesystem_service.py
