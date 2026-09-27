@@ -192,6 +192,7 @@ const fillFormFromRow = (row: ModelsVO) => {
   form.supportsVision = params.supportsVision === true;
   form.maxConcurrency = params.maxConcurrency ?? undefined;
   form.appId = params.appId ?? '';
+  form.apiKey = '';
   form.customHeaders = recordToRows(params.customHeaders);
   // 固定首项为思考模式配置，避免接口字段顺序影响绑定，并保留其他额外配置。
   form.extraConfig = [
@@ -539,14 +540,18 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         <el-input v-model="form.baseUrl" :placeholder="$t('page.models.form.baseUrlPlaceholder', '请输入 Base URL')" />
       </el-form-item>
 
-      <!-- 新增模式：凭证随 parameters 一起提交 -->
-      <el-form-item v-if="form.source !== 'local' && props.mode !== 'edit'" :label="$t('page.models.form.apiKey', 'API Key（可选）')" prop="apiKey">
+      <!-- 密钥不回填；新增随参数提交，编辑时填写新值则更新凭证。 -->
+      <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.apiKey', 'API Key（可选）')" prop="apiKey">
         <el-input
           v-model="form.apiKey"
           type="password"
           show-password
           autocomplete="new-password"
-          :placeholder="$t('page.models.form.apiKeyPlaceholder', '请输入 API Key')"
+          :placeholder="
+            props.mode === 'edit'
+              ? $t('page.models.table.credentialConfigured', '已配置')
+              : $t('page.models.form.apiKeyPlaceholder', '请输入 API Key')
+          "
         />
       </el-form-item>
 
@@ -595,11 +600,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         </span>
       </el-form-item>
 
-      <el-form-item
-        v-if="form.type === 'KnowledgeQA'"
-        :label="$t('page.models.form.thinkingControl', '思考模式参数格式')"
-        prop="extraConfig.0.value"
-      >
+      <el-form-item v-if="form.type === 'KnowledgeQA'" :label="$t('page.models.form.thinkingControl', '思考模式参数格式')" prop="extraConfig.0.value">
         <el-select v-model="form.extraConfig[0].value" class="full-width">
           <el-option
             v-for="item in THINKING_CONTROL_OPTIONS"
@@ -610,7 +611,9 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
             :value="item.value"
           >
             <div class="select-option-title">{{ $t(item.labelKey, item.label) }}</div>
-            <div class="select-option-description">{{ item.placeholderKey ? $t(item.placeholderKey, item.placeholder || '') : item.placeholder }}</div>
+            <div class="select-option-description">
+              {{ item.placeholderKey ? $t(item.placeholderKey, item.placeholder || '') : item.placeholder }}
+            </div>
           </el-option>
         </el-select>
       </el-form-item>
@@ -807,9 +810,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
           {{ $t('page.models.test.button', '测试连接') }}
         </el-button>
         <el-button @click="drawerVisible = false">{{ $t('page.normal.cancel', '取消') }}</el-button>
-        <el-button type="primary" :loading="saving" @click="handleSave">
-          {{ $t('page.normal.save', '保存') }}
-        </el-button>
+        <el-button type="primary" :loading="saving" @click="handleSave">{{ $t('page.normal.save', '保存') }}</el-button>
       </div>
     </template>
   </KjscRtlDrawer>

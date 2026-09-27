@@ -23,6 +23,7 @@ const drawerVisible = computed({
 
 const running = ref(false);
 const result = ref<ModelDebugVO | null>(null);
+const copyContainerRef = ref<HTMLElement | null>(null);
 
 const form = reactive({
   input: '',
@@ -152,13 +153,46 @@ const handleRun = () => {
     });
 };
 
-const handleCopy = async () => {
+const handleCopy = () => {
   if (!result.value) return;
   try {
-    await navigator.clipboard.writeText(JSON.stringify(result.value, null, 2));
+    const text = JSON.stringify(result.value, null, 2);
+    if (window.isSecureContext && typeof navigator.clipboard?.writeText === 'function') {
+      return Promise.resolve()
+        .then(() => navigator.clipboard.writeText(text))
+        .catch(() => copyWithTextarea(text))
+        .then(() => proxy?.$modal?.msgSuccess(t('page.normal.copySuccess', '复制成功')))
+        .catch(() => proxy?.$modal?.msgError(t('page.normal.copyFailed', '复制失败')));
+    }
+    // 局域网 HTTP 和不支持剪贴板接口的浏览器，在点击事件中直接执行复制。
+    copyWithTextarea(text);
     proxy?.$modal?.msgSuccess(t('page.normal.copySuccess', '复制成功'));
   } catch {
     proxy?.$modal?.msgError(t('page.normal.copyFailed', '复制失败'));
+  }
+};
+
+const copyWithTextarea = (text: string) => {
+  const focusedElement = document.activeElement;
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.cssText = 'position: fixed; top: 0; left: 0; opacity: 0; pointer-events: none;';
+
+  try {
+    // 放在抽屉内部，避免抽屉的焦点限制干扰传统复制方式。
+    (copyContainerRef.value || document.body).appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    if (typeof textarea.setSelectionRange === 'function') {
+      textarea.setSelectionRange(0, text.length);
+    }
+    if (!document.execCommand('copy')) {
+      throw new Error('复制失败');
+    }
+  } finally {
+    textarea.parentNode?.removeChild(textarea);
+    if (focusedElement instanceof HTMLElement) focusedElement.focus();
   }
 };
 </script>
@@ -255,7 +289,7 @@ const handleCopy = async () => {
     </template>
 
     <template #footer>
-      <div class="manage-dialog-footer">
+      <div ref="copyContainerRef" class="manage-dialog-footer">
         <el-button v-if="result" @click="handleCopy">{{ $t('page.models.debug.copy', '复制结果') }}</el-button>
         <el-button @click="drawerVisible = false">{{ $t('page.normal.close', '关闭') }}</el-button>
         <el-button
