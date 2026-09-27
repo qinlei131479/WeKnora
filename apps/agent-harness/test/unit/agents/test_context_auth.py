@@ -29,6 +29,24 @@ def _load_context_module():
     return importlib.import_module("yuxi.agents.context")
 
 
+def _fake_work_directory_tools(items):
+    async def get_directory_tool_metadata(category=None, source=None):
+        result = []
+        for item in items:
+            row = dict(item)
+            row.setdefault("source", "work")
+            row.setdefault("category", "buildin")
+            row.setdefault("enabled", True)
+            if category and row.get("category") != category:
+                continue
+            if source and row.get("source") != source:
+                continue
+            result.append(row)
+        return result
+
+    return get_directory_tool_metadata
+
+
 context_module = _load_context_module()
 BaseContext = context_module.BaseContext
 filter_config_by_role = context_module.filter_config_by_role
@@ -170,10 +188,13 @@ async def test_normalize_agent_context_config_expands_null_and_filters_explicit_
         sys.modules,
         "yuxi.agents.toolkits.service",
         types.SimpleNamespace(
-            get_tool_metadata=lambda category=None: [
-                {"slug": "ask_user_question", "name": "Ask User", "description": ""},
-                {"slug": "web_search", "name": "Web Search", "description": ""},
-            ]
+            get_directory_tool_metadata=_fake_work_directory_tools(
+                [
+                    {"slug": "ask_user_question", "name": "Ask User", "description": ""},
+                    {"slug": "web_search", "name": "Web Search", "description": ""},
+                    {"slug": "thinking", "name": "Think", "description": "", "source": "chat"},
+                ]
+            )
         ),
     )
     monkeypatch.setitem(
@@ -318,9 +339,9 @@ async def test_prepare_agent_runtime_context_filters_resources_and_derives_runti
         sys.modules,
         "yuxi.agents.toolkits.service",
         types.SimpleNamespace(
-            get_tool_metadata=lambda category=None: [
-                {"slug": "ask_user_question", "name": "Ask User", "description": ""}
-            ]
+            get_directory_tool_metadata=_fake_work_directory_tools(
+                [{"slug": "ask_user_question", "name": "Ask User", "description": ""}]
+            )
         ),
     )
     monkeypatch.setitem(

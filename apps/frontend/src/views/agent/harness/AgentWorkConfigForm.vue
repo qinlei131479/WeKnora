@@ -636,7 +636,10 @@ const getConfigOptions = (value) => {
   const schemaOptions = getSchemaConfigOptions(value)
   const kind = value?.kind
   if (kind === 'tools') {
-    const catalogOptions = (availableToolCatalog.value || []).map(toCatalogToolOption).filter(Boolean)
+    const catalogOptions = (availableToolCatalog.value || [])
+      .filter((item) => !item?.source || item.source === 'work')
+      .map(toCatalogToolOption)
+      .filter(Boolean)
     const hasKnowledge = catalogOptions.some((option) => option.category === 'knowledge')
     return mergeResourceOptions(schemaOptions.map(enrichToolOption), [
       ...catalogOptions,
@@ -656,9 +659,11 @@ watch(selectedAgentId, () => {
 
 const loadToolCatalog = async () => {
   try {
-    const res = await toolApi.getTools()
+    // 工作智能体只展示工作来源工具，对话侧内置工具不进入这个列表。
+    const res = await toolApi.getTools(null, 'work')
     const data = res?.data
-    availableToolCatalog.value = Array.isArray(data) ? data : []
+    const items = Array.isArray(data) ? data : []
+    availableToolCatalog.value = items.filter((item) => !item?.source || item.source === 'work')
   } catch {
     availableToolCatalog.value = []
   }

@@ -448,12 +448,14 @@ async def resolve_agent_resource_options(
     options: dict[str, list[dict[str, str]]] = {}
 
     if "tools" in fields_to_load:
-        from yuxi.agents.toolkits.service import get_tool_metadata
+        from yuxi.agents.toolkits.service import get_directory_tool_metadata
 
+        # 工作智能体只绑定工作来源工具，对话侧目录不进入可选项。
+        work_tools = await get_directory_tool_metadata(category="buildin", source="work")
         options["tools"] = [
             _resource_option(tool["slug"], tool.get("name"), tool.get("description"))
-            for tool in get_tool_metadata(category="buildin")
-            if tool.get("slug")
+            for tool in work_tools
+            if tool.get("slug") and tool.get("enabled", True)
         ]
     if "knowledges" in fields_to_load:
         from yuxi.knowledge.runtime import knowledge_base
