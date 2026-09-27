@@ -16,7 +16,7 @@ const title = ref(t('page.tenants.title.add', '新增空间'));
 const saveFormRef = ref<FormInstance>();
 const form = ref<TenantsDTO>({});
 const rules: FormRules<TenantsDTO> = {
-  name: [{ required: true, message: '空间名称不能为空', trigger: 'blur' }]
+  name: [{ required: true, get message() { return t('page.tenants.workspaceNameIsRequired', '空间名称不能为空'); }, trigger: 'blur' }]
 };
 
 const submitDisabled = computed(() => isEmpty(form.value.name));

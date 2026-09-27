@@ -5,7 +5,7 @@
         <el-form-item label="" prop="keyWord">
           <el-input
             v-model="queryParams.keyWord"
-            placeholder="通过租户名称进行模糊搜索"
+            :placeholder="$t('page.platformManager.tenantManager.searchByTenantName', '通过租户名称进行模糊搜索')"
             clearable
             style="width: 300px"
             @keyup.enter="handleQuery"
@@ -23,8 +23,8 @@
           ></el-date-picker>
         </el-form-item> -->
         <el-form-item style="margin-left: 8px">
-          <kjsc-button type="primary" @click="handleQuery">搜索</kjsc-button>
-          <kjsc-button plain @click="resetQuery">重置</kjsc-button>
+          <kjsc-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</kjsc-button>
+          <kjsc-button plain @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</kjsc-button>
         </el-form-item>
       </el-form>
 
@@ -32,7 +32,7 @@
         type="success"
         @click="handleAdd"
         v-hasPermi="['system:tenant:add']"
-        >新增</kjsc-button
+        >{{ $t('page.normal.add', '新增') }}</kjsc-button
       >
     </div>
 
@@ -49,7 +49,7 @@
         :show-overflow-tooltip="true"
       />
       <el-table-column
-        label="租户名称"
+        :label="$t('page.tenants.name', '租户名称')"
         key="name"
         prop="name"
         min-width="120"
@@ -65,26 +65,26 @@
               size="small"
               type="info"
               effect="light"
-              >平台管理</el-tag
+              >{{ $t('page.platformManager.tenantManager.platformManagement', '平台管理') }}</el-tag
             ></span
           >
         </template>
       </el-table-column>
       <el-table-column
-        label="创建人"
+        :label="$t('page.system.user.table.createBy', '创建人')"
         key="createBy"
         prop="createBy"
         min-width="120"
         :show-overflow-tooltip="true"
       >
       </el-table-column>
-      <el-table-column label="生效时间" prop="updateTime" min-width="160">
+      <el-table-column :label="$t('page.platformManager.tenantManager.effectivePeriod', '生效时间')" prop="updateTime" min-width="160">
         <template #default="scope">
           <span>{{ parseTime(scope.row.auditServiceValidityStart, '{y}-{m}-{d}') }} ~ {{ parseTime(scope.row.auditServiceValidityEnd, '{y}-{m}-{d}') }}</span>
         </template>
       </el-table-column>
       <el-table-column
-        label="操作"
+        :label="$t('page.normal.operation', '操作')"
         width="220"
         class-name="small-padding fixed-width"
       >
@@ -99,13 +99,13 @@
             type="primary"
             @click="handleUpdate(scope.row)"
             v-hasPermi="['system:tenant:edit']"
-            >修改</kjsc-text-button
+            >{{ $t('page.system.dict.form.update', '修改') }}</kjsc-text-button
           >
 
           <el-popconfirm
-            confirm-button-text="确定"
-            cancel-button-text="取消"
-            title="确认删除吗?"
+            :confirm-button-text="$t('component.kJSCCmpt.confirm', '确定')"
+            :cancel-button-text="$t('page.normal.cancel', '取消')"
+            :title="$t('page.system.role.deleteConfirm', '确认删除吗?')"
             :hide-after="100"
             @confirm="confirmCallback(scope.row)"
           >
@@ -113,7 +113,7 @@
               <kjsc-text-button
                 type="danger"
                 v-hasPermi="['system:tenant:remove']"
-                >删除
+                >{{ $t('page.normal.delete', '删除') }}
               </kjsc-text-button>
             </template>
           </el-popconfirm>
@@ -159,6 +159,7 @@
 </template>
 
 <script setup name="TentantManager">
+import { t } from '@/i18n';
 import AddAndEditDialog from "./module/addAndEditDialog.vue";
 // import InvokeDialog from "./module/invokeDialog.vue";
 // import DetailsDrawer from "./module/detailDrawer.vue";
@@ -239,15 +240,15 @@ const resetQuery = () => {
 const confirmCallback = async (data) => {
   let res = await api.tenantManager.deleteById(data.id);
   if (res.code === 200) {
-    proxy.$modal.msgSuccess("操作成功");
+    proxy.$modal.msgSuccess(t('common.dict.operationSuccessful', '操作成功'));
     getList();
   } else {
-    proxy.$modal.msgSuccess(res.msg || "操作失败，请重新提交");
+    proxy.$modal.msgSuccess(res.msg || t('page.platformManager.tenantManager.operationFailedPleaseTryAgain', '操作失败，请重新提交'));
   }
 };
 
 const handleRowClick = (row, column) => {
-  if (column.label === "操作") {
+  if (column.label === t('page.normal.operation', '操作')) {
     return;
   }
   handleDetail(row);
@@ -277,7 +278,7 @@ const cancel = () => {
 
 /** 新增按钮操作 */
 const handleAdd = async () => {
-  dialogParams.value.title = "新增租户";
+  dialogParams.value.title = t('page.tenants.add', '新增租户');
   dialogParams.value.addAndEditDialogVisiable = true;
   dialogParams.value.dataId = "";
 };
@@ -290,7 +291,7 @@ const DialogSubmit = () => {
 
 /** 修改按钮操作 */
 const handleUpdate = async (row) => {
-  dialogParams.value.title = "修改租户";
+  dialogParams.value.title = t('page.platformManager.tenantManager.editTenant', '修改租户');
   dialogParams.value.dataId = row.id;
   dialogParams.value.addAndEditDialogVisiable = true;
 };

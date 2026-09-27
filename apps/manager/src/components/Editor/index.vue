@@ -27,6 +27,7 @@
 </template>
 
 <script setup lang="ts">
+import { t } from '@/i18n';
 import axios from 'axios'
 import { QuillEditor } from "@vueup/vue-quill"
 import "@vueup/vue-quill/dist/vue-quill.snow.css"
@@ -92,7 +93,7 @@ const options = ref({
       ["link", "image", "video"]                      // 链接、图片、视频
     ],
   },
-  placeholder: "请输入内容",
+  get placeholder() { return t('component.editor.enterContent', '请输入内容'); },
   readOnly: props.readOnly
 })
 
@@ -136,14 +137,14 @@ function handleBeforeUpload(file: File) {
   const isJPG = type.includes(file.type)
   //检验文件格式
   if (!isJPG) {
-    proxy.$modal.msgError(`图片格式错误!`)
+    proxy.$modal.msgError(t('component.editor.invalidImageFormat', '图片格式错误!'))
     return false
   }
   // 校检文件大小
   if (props.fileSize) {
     const isLt = file.size / 1024 / 1024 < props.fileSize
     if (!isLt) {
-      proxy.$modal.msgError(`上传文件大小不能超过 ${props.fileSize} MB!`)
+      proxy.$modal.msgError(t('component.editor.uploadedFilesMustNotExceedMb', { value1: props.fileSize }, '上传文件大小不能超过 {value1} MB!'))
       return false
     }
   }
@@ -163,13 +164,13 @@ function handleUploadSuccess(res: UploadFileResult, file: File) {
     // 调整光标到最后
     quill.setSelection(length + 1)
   } else {
-    proxy.$modal.msgError("图片插入失败")
+    proxy.$modal.msgError(t('component.editor.failedToInsertImage', '图片插入失败'))
   }
 }
 
 // 上传失败处理
 function handleUploadError() {
-  proxy.$modal.msgError("图片插入失败")
+  proxy.$modal.msgError(t('component.editor.failedToInsertImage', '图片插入失败'))
 }
 
 // 复制粘贴图片处理

@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 /**
  * 通用js方法封装处理
  * Copyright (c) 2019 ruoyi
@@ -35,7 +36,7 @@ export function parseTime(time: any, pattern?: string): string | null {
   const time_str = format.replace(/{(y|m|d|h|i|s|a)+}/g, (result, key) => {
     let value = formatObj[key]
     // Note: getDay() returns 0 on Sunday
-    if (key === 'a') { return ['日', '一', '二', '三', '四', '五', '六'][value] }
+    if (key === 'a') { return [t('common.ruoyi.sun', '日'), t('common.ruoyi.mon', '一'), t('common.ruoyi.tue', '二'), t('common.ruoyi.wed', '三'), t('common.ruoyi.thu', '四'), t('common.ruoyi.fri', '五'), t('common.ruoyi.sat', '六')][value] }
     if (result.length > 0 && value < 10) {
       value = '0' + value
     }

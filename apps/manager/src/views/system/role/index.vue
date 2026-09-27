@@ -204,6 +204,7 @@
 </template>
 
 <script setup lang="ts" name="Role">
+import { t } from '@/i18n';
 import type { FormInstance } from 'element-plus/es/components/form';
 import modal from '@/plugins/modal';
 import { addDateRange } from '@/utils/ruoyi';
@@ -268,8 +269,8 @@ const data = reactive({
     tenantId: undefined
   } as RoleQueryParams,
   rules: {
-    roleName: [{ required: true, message: '角色名称不能为空', trigger: 'blur' }],
-    tenantId: [{ required: true, message: '租户不能为空', trigger: 'change' }]
+    roleName: [{ required: true, get message() { return t('page.system.role.roleNameIsRequired', '角色名称不能为空'); }, trigger: 'blur' }],
+    tenantId: [{ required: true, get message() { return t('page.system.role.tenantIsRequired', '租户不能为空'); }, trigger: 'change' }]
   }
 });
 
@@ -331,7 +332,7 @@ function confirmCallback(data: any) {
   delRole(roleIds).then((response) => {
     getList();
     if (response.code == 200) {
-      modal.msgSuccess('操作成功');
+      modal.msgSuccess(t('common.dict.operationSuccessful', '操作成功'));
     } else {
       modal.msgError(response.msg);
     }
@@ -342,13 +343,13 @@ function confirmCallback(data: any) {
 function handleDelete(row?: SysRole) {
   const roleIds = row?.roleId || ids.value;
   modal
-    .confirm('是否确认删除角色编号为"' + roleIds + '"的数据项?')
+    .confirm(t('page.system.role.deleteRolesWithIds', { value1: roleIds }, '是否确认删除角色编号为"{value1}"的数据项?'))
     .then(function () {
       return delRole(roleIds);
     })
     .then(() => {
       getList();
-      modal.msgSuccess('删除成功');
+      modal.msgSuccess(t('page.normal.confirmInfo.removeSuccess', '删除成功'));
     })
     .catch(() => {});
 }
@@ -373,14 +374,14 @@ function handleSelectionChange(selection: SysRole[]) {
 
 /** 角色状态修改 */
 function handleStatusChange(row: SysRole) {
-  const text = row.status === '0' ? '启用' : '停用';
+  const text = row.status === '0' ? t('page.normal.enable', '启用') : t('page.normal.disable', '停用');
   modal
-    .confirm('确认要"' + text + '""' + row.roleName + '"角色吗?')
+    .confirm(t('page.system.role.role', { value1: text, value2: row.roleName }, '确认要"{value1}""{value2}"角色吗?'))
     .then(function () {
       return changeRoleStatus(row.roleId!, row.status!);
     })
     .then(() => {
-      modal.msgSuccess(text + '成功');
+      modal.msgSuccess(t('page.system.dept.successful', { value1: text }, '{value1}成功'));
     })
     .catch(function () {
       row.status = row.status === '0' ? '1' : '0';
@@ -461,7 +462,7 @@ function handleAdd() {
     form.value.tenantId = cache.session.getJSON('tenantId');
   }
   open.value = true;
-  title.value = '添加角色';
+  title.value = t('page.system.role.addRole', '添加角色');
 }
 
 /** 修改角色 */
@@ -486,7 +487,7 @@ function handleUpdate(row?: SysRole) {
       });
     });
   });
-  title.value = '修改角色';
+  title.value = t('page.system.role.form.editTitle', '修改角色');
 }
 
 /** 根据角色ID查询菜单树结构 */
@@ -560,14 +561,14 @@ function submitForm() {
       if (form.value.roleId != undefined) {
         form.value.menuIds = getMenuAllCheckedKeys();
         updateRole(form.value).then(() => {
-          modal.msgSuccess('修改成功');
+          modal.msgSuccess(t('page.normal.confirmInfo.updateSuccess', '修改成功'));
           open.value = false;
           getList();
         });
       } else {
         form.value.menuIds = getMenuAllCheckedKeys();
         addRole(form.value).then(() => {
-          modal.msgSuccess('新增成功');
+          modal.msgSuccess(t('page.normal.confirmInfo.addSuccess', '新增成功'));
           open.value = false;
           getList();
         });
@@ -606,7 +607,7 @@ function handleDataScope(row: SysRole) {
       });
     });
   });
-  title.value = '分配数据权限';
+  title.value = t('page.system.role.assignDataPermissions', '分配数据权限');
 }
 
 /** 提交按钮（数据权限） */
@@ -614,7 +615,7 @@ function submitDataScope() {
   if (form.value.roleId != undefined) {
     form.value.deptIds = getDeptAllCheckedKeys();
     dataScope(form.value).then(() => {
-      modal.msgSuccess('修改成功');
+      modal.msgSuccess(t('page.normal.confirmInfo.updateSuccess', '修改成功'));
       openDataScope.value = false;
       getList();
     });

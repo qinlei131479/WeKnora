@@ -6,6 +6,7 @@
   ></div>
 </template>
 <script setup>
+import { locale, t } from '@/i18n';
 import * as echarts from "echarts";
 
 const props = defineProps({
@@ -33,13 +34,13 @@ const state = reactive({
       containLabel: true,
     },
     legend: {
-      data: ["调用次数"],
+      data: [t('component.tenant.calls', '调用次数')],
       show: false,
     },
     color: ["#6397FF"],
     xAxis: {
       type: "category",
-      data: ["衬衫", "羊毛衫", "雪纺衫", "裤子", "高跟鞋", "袜子"],
+      data: [t('component.tenant.shirts', '衬衫'), t('component.tenant.sweaters', '羊毛衫'), t('component.tenant.chiffonBlouses', '雪纺衫'), t('component.tenant.trousers', '裤子'), t('component.tenant.highHeels', '高跟鞋'), t('component.tenant.socks', '袜子')],
       axisLabel: {
         color: "#8A8C9D",
         margin: 16
@@ -81,7 +82,7 @@ const state = reactive({
     ],
     series: [
       {
-        name: "调用次数",
+        name: t('component.tenant.calls', '调用次数'),
         type: "line",
         data: [5, 20, 36, 10, 10, 20],
         smooth: true,
@@ -129,6 +130,12 @@ watch(
 );
 watchEffect(() => {
   state.chartsData = props.data;
+});
+watch(locale, () => {
+  const name = t('component.tenant.calls', '调用次数');
+  state.option.legend.data = [name];
+  state.option.series[0].name = name;
+  myChart?.setOption({ legend: { data: [name] }, series: [{ name }] });
 });
 onMounted(() => {
   if (state.chartsData.length > 0) {

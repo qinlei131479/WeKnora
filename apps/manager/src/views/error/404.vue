@@ -8,22 +8,23 @@
         <img class="pic-404__child right" src="@/assets/404_images/404_cloud.png" alt="404" />
       </div>
       <div class="bullshit">
-        <div class="bullshit__oops">404错误!</div>
+        <div class="bullshit__oops">{{ $t('page.error.404Error', '404错误!') }}</div>
         <div class="bullshit__headline">
           {{ message }}
         </div>
         <div class="bullshit__info">
-          对不起，您正在寻找的页面不存在。尝试检查URL的错误，然后按浏览器上的刷新按钮或尝试在我们的应用程序中找到其他内容。
+          {{ $t('page.error.sorryThePageYouAreLookingForDoesNotExist', '对不起，您正在寻找的页面不存在。尝试检查URL的错误，然后按浏览器上的刷新按钮或尝试在我们的应用程序中找到其他内容。') }}
         </div>
-        <router-link to="/index" class="bullshit__return-home"> 返回首页 </router-link>
+        <router-link to="/index" class="bullshit__return-home"> {{ $t('page.error.backToHome', '返回首页') }} </router-link>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { t } from '@/i18n';
 const message = computed(() => {
-  return '找不到网页！';
+  return t('page.error.pageNotFound', '找不到网页！');
 });
 </script>
 

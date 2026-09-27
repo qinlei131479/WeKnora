@@ -166,10 +166,10 @@ import { t } from '@/i18n';
 
 // 列显隐信息
 const columns = ref<Record<string, TableShowColumns>>({
-  name: { label: '模型名称', visible: true },
-  size: { label: '模型大小（字节）', visible: true },
-  modifiedAt: { label: '修改时间', visible: true },
-  digest: { label: '模型摘要', visible: true }
+  name: { get label() { return t('page.ollama.name', '模型名称'); }, visible: true },
+  size: { get label() { return t('page.model.ollama.modelSizeBytes', '模型大小（字节）'); }, visible: true },
+  modifiedAt: { get label() { return t('page.ollama.modifiedAt', '修改时间'); }, visible: true },
+  digest: { get label() { return t('page.ollama.digest', '模型摘要'); }, visible: true }
 });
 
 const queryParams = ref({
@@ -196,7 +196,7 @@ const downloadForm = ref({
   name: ''
 });
 const downloadFormRules = ref({
-  name: [{ required: true, message: '请输入模型名称', trigger: 'blur' }]
+  name: [{ required: true, get message() { return t('page.ollama.download.namePlaceholder', '请输入模型名称'); }, trigger: 'blur' }]
 });
 const downloadRef = ref();
 const downloadFormSubmitDisabled = computed(() => {

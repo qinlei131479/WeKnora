@@ -269,7 +269,7 @@ async function renderMarkdown(blob: Blob) {
 
   // 校验文本内容是否有效
   if (!text || typeof text !== 'string') {
-    markdownHtml.value = '<p style="color: var(--td-text-color-disabled); text-align: center; padding: 20px;">文档内容为空</p>';
+    markdownHtml.value = '<p style="color: var(--td-text-color-disabled); text-align: center; padding: 20px;">' + t('component.preview.emptyContent', '文档内容为空') + '</p>';
     return;
   }
 
@@ -389,7 +389,7 @@ async function loadPreview() {
     }
   } catch (err: any) {
     console.error('Document preview failed:', err);
-    error.value = err?.message || t('preview.loadFailed');
+    error.value = err?.message || t('component.preview.loadFailed');
   } finally {
     loading.value = false;
   }

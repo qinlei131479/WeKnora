@@ -255,6 +255,7 @@
 </template>
 
 <script setup lang="ts" name="User">
+import { t } from '@/i18n';
 // import { getToken } from "@/utils/auth"
 // import useAppStore from '@/store/modules/app'
 import useUserStore from '@/store/modules/user';
@@ -332,14 +333,14 @@ const tenantOptions = ref<ValueLabelOption[]>([]);
 const queryTenantOptions = ref<ValueLabelOption[]>([]);
 // 列显隐信息
 const columns = ref<Record<string, TableShowColumns>>({
-  userId: { label: '用户编号', visible: true },
-  userName: { label: '登录账号', visible: true },
-  nickName: { label: '用户昵称', visible: true },
-  createBy: { label: '创建人', visible: true },
-  roleName: { label: '所属角色', visible: true },
-  tenantName: { label: '所属租户', visible: true },
-  status: { label: '状态', visible: true },
-  updateTime: { label: '最新修改时间', visible: true }
+  userId: { get label() { return t('page.system.user.table.userId', '用户编号'); }, visible: true },
+  userName: { get label() { return t('page.system.user.form.userName', '登录账号'); }, visible: true },
+  nickName: { get label() { return t('page.system.user.form.nickName', '用户昵称'); }, visible: true },
+  createBy: { get label() { return t('page.system.user.table.createBy', '创建人'); }, visible: true },
+  roleName: { get label() { return t('page.system.user.form.roleName', '所属角色'); }, visible: true },
+  tenantName: { get label() { return t('page.system.user.form.tenantName', '所属租户'); }, visible: true },
+  status: { get label() { return t('page.tenants.status', '状态'); }, visible: true },
+  updateTime: { get label() { return t('page.system.systemConfig.lastUpdated', '最新修改时间'); }, visible: true }
 });
 const positionService = positionServiceFactory({ autoLoad: false });
 const positionProps = {
@@ -350,7 +351,7 @@ const positionProps = {
 // 校验登录账号
 const validateUserName = (rule: any, value: string, callback: Function) => {
   if (!value) {
-    callback(new Error('登录账号不能为空'));
+    callback(new Error(t('page.platformManager.tenantManager.signInAccountIsRequired', '登录账号不能为空')));
   } else {
     if (form.value.userId) {
       callback();
@@ -363,14 +364,14 @@ const validateUserName = (rule: any, value: string, callback: Function) => {
             if (!res.data) {
               callback();
             } else {
-              callback(new Error('该登陆账号已被占用、请重新输入'));
+              callback(new Error(t('page.platformManager.tenantManager.thisSignInAccountIsAlreadyInUseEnterAnother', '该登陆账号已被占用、请重新输入')));
             }
           })
           .catch((err: any) => {
             console.log(err);
           });
       } else {
-        callback(new Error('只能输入数字和字母'));
+        callback(new Error(t('page.platformManager.tenantManager.onlyDigitsAndLettersAreAllowed', '只能输入数字和字母')));
       }
     }
   }
@@ -378,13 +379,13 @@ const validateUserName = (rule: any, value: string, callback: Function) => {
 // 校验用户昵称
 const validateNickName = (rule: any, value: string, callback: Function) => {
   if (!value) {
-    callback(new Error('用户昵称不能为空'));
+    callback(new Error(t('page.platformManager.tenantManager.nicknameIsRequired', '用户昵称不能为空')));
   } else {
     const regex = /^[\u4e00-\u9fa5a-zA-Z0-9]+$/;
     if (regex.test(value)) {
       callback();
     } else {
-      callback(new Error('只能输入中文、数字、字母'));
+      callback(new Error(t('page.platformManager.tenantManager.onlyChineseCharactersDigitsAndLettersAreAllowed', '只能输入中文、数字、字母')));
     }
   }
 };
@@ -406,10 +407,10 @@ const data = reactive({
   rules: {
     nickName: [{ required: true, validator: validateNickName, trigger: 'blur' }],
     userName: [{ required: true, validator: validateUserName, trigger: 'blur' }],
-    tenantId: [{ required: true, message: '租户不能为空', trigger: 'change' }],
-    roleIds: [{ required: true, message: '所属角色不能为空', trigger: 'change' }],
-    deptIds: [{ required: true, message: '所属部门不能为空', trigger: 'change' }],
-    postIds: [{ required: true, message: '岗位不能为空', trigger: 'change' }]
+    tenantId: [{ required: true, get message() { return t('page.system.role.tenantIsRequired', '租户不能为空'); }, trigger: 'change' }],
+    roleIds: [{ required: true, get message() { return t('page.platformManager.tenantManager.roleIsRequired', '所属角色不能为空'); }, trigger: 'change' }],
+    deptIds: [{ required: true, get message() { return t('page.system.user.departmentIsRequired', '所属部门不能为空'); }, trigger: 'change' }],
+    postIds: [{ required: true, get message() { return t('page.system.user.positionIsRequired', '岗位不能为空'); }, trigger: 'change' }]
   }
 });
 
@@ -500,13 +501,13 @@ function resetQuery() {
 function handleDelete(row?: SysUser) {
   const userIds = row?.userId || ids.value;
   modal
-    .confirm('是否确认删除用户编号为"' + userIds + '"的数据项？')
+    .confirm(t('page.system.user.deleteUsersWithIds', { value1: userIds }, '是否确认删除用户编号为"{value1}"的数据项？'))
     .then(function () {
       return delUser(userIds);
     })
     .then(() => {
       getList();
-      modal.msgSuccess('删除成功');
+      modal.msgSuccess(t('page.normal.confirmInfo.removeSuccess', '删除成功'));
     })
     .catch(() => {});
 }
@@ -524,14 +525,14 @@ function handleExport() {
 
 /** 用户状态修改  */
 function handleStatusChange(row: SysUser) {
-  const text = row.status === '0' ? '启用' : '停用';
+  const text = row.status === '0' ? t('page.normal.enable', '启用') : t('page.normal.disable', '停用');
   modal
-    .confirm('确认要"' + text + '""' + row.userName + '"用户吗?')
+    .confirm(t('page.system.user.user', { value1: text, value2: row.userName }, '确认要"{value1}""{value2}"用户吗?'))
     .then(function () {
       return changeUserStatus(row.userId!, row.status!);
     })
     .then(() => {
-      modal.msgSuccess(text + '成功');
+      modal.msgSuccess(t('page.system.dept.successful', { value1: text }, '{value1}成功'));
     })
     .catch(function () {
       row.status = row.status === '0' ? '1' : '0';
@@ -560,13 +561,13 @@ function handleAuthRole(row: SysUser) {
 
 function validateResetPwd(value: string): string {
   if (!value) {
-    return '用户密码不能为空';
+    return t('page.system.user.passwordIsRequired', '用户密码不能为空');
   }
   if (!/^.{5,20}$/.test(value)) {
-    return '用户密码长度必须介于 5 和 20 之间';
+    return t('page.register.passwordMustBeBetween5And20Characters', '用户密码长度必须介于 5 和 20 之间');
   }
   if (/<|>|"|'|\||\\/.test(value)) {
-    return '不能包含非法字符：< > " \' \\ |';
+    return t('page.system.user.theFollowingCharactersAreNotAllowed', '不能包含非法字符：< > " \' \\ {\'|\'}');
   }
   return '';
 }
@@ -599,7 +600,7 @@ function submitResetPwd() {
   }
   resetPwdError.value = '';
   resetUserPwd(resetPwdUser.value.userId!, resetPwdValue.value).then(() => {
-    modal.msgSuccess('修改成功，新密码是：' + resetPwdValue.value);
+    modal.msgSuccess(t('page.system.user.passwordChangedNewPassword', { value1: resetPwdValue.value }, '修改成功，新密码是：{value1}'));
     closeResetPwd();
   });
 }
@@ -673,7 +674,7 @@ const getPostList = () => {
 /** 新增按钮操作 */
 function handleAdd() {
   reset();
-  title.value = '添加用户';
+  title.value = t('page.system.role.addUser', '添加用户');
   getTanentList();
   getInitPassword();
   if (!isPlatformRole.value) {
@@ -720,7 +721,7 @@ function handleUpdate(row?: SysUser) {
     form.value.postIds = postIds;
     const deptIds = response.deptIds || [];
     form.value.deptIds = deptIds || [];
-    title.value = '修改用户';
+    title.value = t('page.system.user.form.editTitle', '修改用户');
     getRoleList();
     getInitPassword();
     open.value = true;
@@ -737,14 +738,14 @@ function submitForm() {
       };
       if (form.value.userId != undefined) {
         updateUser(params).then(() => {
-          modal.msgSuccess('修改成功');
+          modal.msgSuccess(t('page.normal.confirmInfo.updateSuccess', '修改成功'));
           open.value = false;
           getList();
         });
       } else {
         params.password = orginPwd.value || '';
         addUser(params).then(() => {
-          modal.msgSuccess('新增成功');
+          modal.msgSuccess(t('page.normal.confirmInfo.addSuccess', '新增成功'));
           open.value = false;
           getList();
         });

@@ -33,13 +33,13 @@
             批量删除
           </button> -->
           <button type="button" class="toolbar-btn" :disabled="ids.length === 0" v-hasPermi="['business:users:edit']" @click="handleEnable()">
-            {{ $t('page.batchEnable', '批量启用') }}
+            {{ $t('page.normal.batchEnable', '批量启用') }}
           </button>
           <button type="button" class="toolbar-btn" :disabled="ids.length === 0" v-hasPermi="['business:users:edit']" @click="handleDisable()">
-            {{ $t('page.batchDisable', '批量停用') }}
+            {{ $t('page.normal.batchDisable', '批量停用') }}
           </button>
           <span class="selected-text"
-            >{{ $t('page.selected', '共选中') }} <span>{{ ids.length }}</span> {{ $t('page.items', '条') }}</span
+            ><i18n-t keypath="page.normal.selectedCount" scope="global"><template #count><span>{{ ids.length }}</span></template></i18n-t></span
           >
         </div>
 
@@ -173,7 +173,6 @@ import { API } from '@/api';
 
 import { Search } from 'lucide-vue-next';
 import { t } from '@/i18n';
-// import { useI18n } from '@/composables/i18nMock'
 
 import { useRoleLabel } from '@/composables/useRoleLabel';
 
@@ -334,14 +333,14 @@ function handleDisable(row?: UsersVO) {
   let saveIds: (number | string)[] = [];
   let isBatch = false;
   if (row && row.id) {
-    message = t('page.users.confirmInfo.disableConfirmSingle', { username: row.username }, `是否确认禁用成员名称为${row.username}的数据项？`);
+    message = t('page.users.confirmInfo.disable', { username: row.username }, '是否确认禁用成员名称为{username}的数据项？');
     saveIds.push(row.id);
   } else {
     if (ids.value.length === 0) {
       // proxy.$modal.msgError(t('page.users.disableConfirm', '请选择要操作的空间'))
       return;
     }
-    message = t('page.users.confirm.disableConfirmBatch', '是否确认禁用选中的成员？');
+    message = t('page.users.confirmInfo.disableBatch', '是否确认禁用选中的成员？');
     saveIds = ids.value;
     isBatch = true;
     return;

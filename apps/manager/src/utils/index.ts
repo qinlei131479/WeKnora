@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 import { parseTime } from './ruoyi'
 import { isHttp } from './validate'
 
@@ -61,28 +62,21 @@ export function formatTime(time: number | string, option?: string): string {
   const diff = (now - d.getTime()) / 1000
 
   if (diff < 30) {
-    return '刚刚'
+    return t('common.index.justNow', '刚刚')
   } else if (diff < 3600) {
     // less 1 hour
-    return Math.ceil(diff / 60) + '分钟前'
+    return t('common.index.minutesAgo', { value1: Math.ceil(diff / 60) }, '{value1}分钟前')
   } else if (diff < 3600 * 24) {
-    return Math.ceil(diff / 3600) + '小时前'
+    return t('common.index.hoursAgo', { value1: Math.ceil(diff / 3600) }, '{value1}小时前')
   } else if (diff < 3600 * 24 * 2) {
-    return '1天前'
+    return t('common.index.1DayAgo', '1天前')
   }
   if (option) {
     return parseTime(time, option) || ''
   } else {
     return (
-      d.getMonth() +
-      1 +
-      '月' +
-      d.getDate() +
-      '日' +
-      d.getHours() +
-      '时' +
-      d.getMinutes() +
-      '分'
+      t('common.index.formattedValue', { value1: d.getMonth() +
+      1, value2: d.getDate(), value3: d.getHours(), value4: d.getMinutes() }, '{value1}月{value2}日{value3}时{value4}分')
     )
   }
 }

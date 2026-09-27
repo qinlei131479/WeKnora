@@ -9,6 +9,7 @@
 // import request from '@/utils/request'
 // import qs from 'qs'
 import request from "@/utils/request";
+import { t } from '@/i18n';
 let api = {};
 const API = "/system";
 
@@ -157,7 +158,7 @@ api.getApiTable = (params, pageInfo) =>
   );
 // 租户请求api表格下载
 api.downloadApiTable = (data) => {
-  const filename = new Date().format("请求日志数据_yyyyMMddhhmmss.xlsx");
+  const filename = t('page.tenants.requestLogFilename', { time: new Date().format('yyyyMMddhhmmss') }, '请求日志数据_{time}.xlsx');
   return downloadPost(
     "/api-mgr/jxm-api-statistical/query-api-request-log-by-time-excel-download",
     filename,

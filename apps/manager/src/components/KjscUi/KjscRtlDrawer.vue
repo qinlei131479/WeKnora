@@ -18,9 +18,7 @@ const props = withDefaults(
   {
     modelValue: false,
     showCancel: true,
-    cancelText: '取消',
     showConfirm: true,
-    confirmText: '确定',
     loading: false
   }
 );
@@ -131,10 +129,10 @@ onBeforeUnmount(closeLoading);
     <template v-if="$slots['footer'] || props.showCancel || props.showConfirm" #footer>
       <slot name="footer">
         <el-button v-if="props.showCancel" @click="handleCancel">
-          {{ props.cancelText }}
+          {{ props.cancelText ?? $t('page.normal.cancel', '取消') }}
         </el-button>
         <el-button v-if="props.showConfirm" type="primary" @click="handleConfirm">
-          {{ props.confirmText }}
+          {{ props.confirmText ?? $t('component.kJSCCmpt.confirm', '确定') }}
         </el-button>
       </slot>
     </template>

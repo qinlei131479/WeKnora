@@ -165,6 +165,7 @@
 </template>
 
 <script setup lang="ts" name="Dept">
+import { t } from '@/i18n';
 import type { FormInstance } from 'element-plus/es/components/form';
 import modal from '@/plugins/modal';
 import { useDict } from '@/utils/dict';
@@ -192,11 +193,11 @@ const data = reactive({
     status: undefined
   } as DeptQueryParams,
   rules: {
-    parentId: [{ required: true, message: '上级部门不能为空', trigger: 'blur' }],
-    deptName: [{ required: true, message: '部门名称不能为空', trigger: 'blur' }],
-    orderNum: [{ required: true, message: '显示排序不能为空', trigger: 'blur' }],
-    email: [{ type: 'email', message: '请输入正确的邮箱地址', trigger: ['blur', 'change'] }],
-    phone: [{ pattern: /^1[3|4|5|6|7|8|9][0-9]\d{8}$/, message: '请输入正确的手机号码', trigger: 'blur' }]
+    parentId: [{ required: true, get message() { return t('page.system.dept.parentDepartmentIsRequired', '上级部门不能为空'); }, trigger: 'blur' }],
+    deptName: [{ required: true, get message() { return t('page.system.dept.departmentNameIsRequired', '部门名称不能为空'); }, trigger: 'blur' }],
+    orderNum: [{ required: true, get message() { return t('page.system.dept.displayOrderIsRequired', '显示排序不能为空'); }, trigger: 'blur' }],
+    email: [{ type: 'email', get message() { return t('page.users.error.emailFormat', '请输入正确的邮箱地址'); }, trigger: ['blur', 'change'] }],
+    phone: [{ pattern: /^1[3|4|5|6|7|8|9][0-9]\d{8}$/, get message() { return t('page.system.dept.enterAValidPhoneNumber', '请输入正确的手机号码'); }, trigger: 'blur' }]
   }
 });
 
@@ -248,7 +249,7 @@ function handleAdd(row?: SysDept) {
     form.value.parentId = row.deptId;
   }
   open.value = true;
-  title.value = '添加部门';
+  title.value = t('page.system.dept.addDepartment', '添加部门');
 }
 
 function toggleExpandAll() {
@@ -270,17 +271,17 @@ function handleUpdate(row: SysDept) {
   getDept(row.deptId!).then((response) => {
     form.value = response.data!;
     open.value = true;
-    title.value = '修改部门';
+    title.value = t('page.system.dept.form.editTitle', '修改部门');
   });
 }
 
 function handleStatusChange(row: SysDept) {
-  const text = row.status === '0' ? '启用' : '停用';
+  const text = row.status === '0' ? t('page.normal.enable', '启用') : t('page.normal.disable', '停用');
   modal
-    .confirm('确认要"' + text + '""' + row.deptName + '"部门吗?')
+    .confirm(t('page.system.dept.department', { value1: text, value2: row.deptName }, '确认要"{value1}""{value2}"部门吗?'))
     .then(() => updateDept(row))
     .then(() => {
-      modal.msgSuccess(text + '成功');
+      modal.msgSuccess(t('page.system.dept.successful', { value1: text }, '{value1}成功'));
     })
     .catch(() => {
       row.status = row.status === '0' ? '1' : '0';
@@ -292,13 +293,13 @@ function submitForm() {
     if (valid) {
       if (form.value.deptId != undefined) {
         updateDept(form.value).then(() => {
-          modal.msgSuccess('修改成功');
+          modal.msgSuccess(t('page.normal.confirmInfo.updateSuccess', '修改成功'));
           open.value = false;
           getList();
         });
       } else {
         addDept(form.value).then(() => {
-          modal.msgSuccess('新增成功');
+          modal.msgSuccess(t('page.normal.confirmInfo.addSuccess', '新增成功'));
           open.value = false;
           getList();
         });
@@ -320,13 +321,13 @@ function recordOriginalOrders(list: SysDept[]) {
 
 function handleDelete(row: SysDept) {
   modal
-    .confirm('是否确认删除名称为"' + row.deptName + '"的数据项?')
+    .confirm(t('page.system.dept.deleteTheItemNamed', { value1: row.deptName }, '是否确认删除名称为"{value1}"的数据项?'))
     .then(function () {
       return delDept(row.deptId!);
     })
     .then(() => {
       getList();
-      modal.msgSuccess('删除成功');
+      modal.msgSuccess(t('page.normal.confirmInfo.removeSuccess', '删除成功'));
     })
     .catch(() => {});
 }

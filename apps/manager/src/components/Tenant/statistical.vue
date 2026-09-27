@@ -4,33 +4,33 @@
       <img src="../../assets/images/static.png" />
     </div>
     <div>
-      <div class="statisticalCard_txt">累计调用</div>
+      <div class="statisticalCard_txt">{{ $t('component.tenant.totalCalls', '累计调用') }}</div>
       <div class="statisticalCard_num">
         {{
           props.data?.calledTimes || props.data.calledTimes == 0
             ? (props.data?.calledTimes).toLocaleString()
             : "- -"
         }}<span style="font-size: 14px; color: #8a8c9d; margin-left: 8px"
-          >次</span
+          >{{ $t('page.dashboard.callUnit', '次') }}</span
         >
       </div>
     </div>
     <div class="line"></div>
     <div>
-      <div class="statisticalCard_txt">剩余</div>
+      <div class="statisticalCard_txt">{{ $t('component.tenant.remaining', '剩余') }}</div>
       <div class="statisticalCard_num">
         {{
           props.data?.remainCalledTimes || props.data.remainCalledTimes == 0
             ? (props.data?.remainCalledTimes).toLocaleString()
             : "- -"
         }}<span style="font-size: 14px; color: #8a8c9d; margin-left: 8px"
-          >次</span
+          >{{ $t('page.dashboard.callUnit', '次') }}</span
         >
       </div>
     </div>
     <div class="line"></div>
     <div>
-      <div class="statisticalCard_txt">有效时间</div>
+      <div class="statisticalCard_txt">{{ $t('component.tenant.validityPeriod', '有效时间') }}</div>
       <div class="statisticalCard_num">
         {{
           props.tenantInfo?.auditServiceValidityStart &&

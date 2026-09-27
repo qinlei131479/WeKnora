@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 export function formatTime(millisecond) {
     // console.log(millisecond)
     var seconds = ~~(millisecond / 1000)
@@ -115,13 +116,13 @@ export function convertSecondsToHMS(seconds) {
     let state = ``;
     // 判断当前时间段
     if (hours >= 0 && hours <= 10) {
-      state = `早上好`;
+      state = t('common.time.goodMorning', '早上好');
     } else if (hours > 10 && hours <= 14) {
-      state = `中午好`;
+      state = t('common.time.goodAfternoon', '中午好');
     } else if (hours > 14 && hours <= 18) {
-      state = `下午好`;
+      state = t('common.time.goodAfternoonText', '下午好');
     } else if (hours > 18 && hours <= 24) {
-      state = `晚上好`;
+      state = t('common.time.goodEvening', '晚上好');
     }
     return state;
   }

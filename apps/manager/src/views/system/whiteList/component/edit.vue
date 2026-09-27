@@ -1,10 +1,10 @@
 <template>
-  <KJSCDialogV2 v-model="state.visible" :title="state.title + '白名单'" width="600px" show-subit-btn @submit-click="submitClick" @close="closeClick">
+  <KJSCDialogV2 v-model="state.visible" :title="$t('page.system.whiteList.allowlist', { value1: state.title }, '{value1}白名单')" width="600px" show-subit-btn @submit-click="submitClick" @close="closeClick">
     <el-form ref="saveForm" :model="state.saveInfo" :rules="state.rules" label-width="120px" label-position="left">
       <el-row>
         <el-col :span="24">
-          <el-form-item label="白名单名称" prop="tag">
-            <el-input v-model="state.saveInfo.tag" clearable placeholder="请输入白名单名称" />
+          <el-form-item :label="$t('page.system.whiteList.allowlistName', '白名单名称')" prop="tag">
+            <el-input v-model="state.saveInfo.tag" clearable :placeholder="$t('page.system.whiteList.enterAnAllowlistName', '请输入白名单名称')" />
           </el-form-item>
         </el-col>
       </el-row>
@@ -13,6 +13,7 @@
 </template>
 
 <script setup name="whiteListEdit">
+import { t } from '@/i18n';
 import cache from '@/plugins/cache';
 import { ref, reactive, watch, watchEffect } from 'vue';
 import KJSCDialogV2 from '@/components/KJSCCmpt/KJSCDialogV2.vue';
@@ -32,7 +33,7 @@ const emits = defineEmits(['update:modelValue', 'done']);
 const saveForm = ref(null);
 const state = reactive({
   visible: false,
-  title: '添加',
+  title: t('page.system.blackList.add', '添加'),
   activeName: 'menu',
   sortInfo: { orderByColumn: 'createTime', isAsc: 'desc' }, // 排序
   saveInfo: {}, // 表单数据
@@ -45,7 +46,7 @@ const state = reactive({
     tag: [
       {
         required: true,
-        message: '请输入白名单名称',
+        get message() { return t('page.system.whiteList.enterAnAllowlistName', '请输入白名单名称'); },
         trigger: 'blur'
       }
     ]
@@ -63,7 +64,7 @@ const submitClick = async () => {
         // 编辑
         const res = await whiteEdit(params);
         if (res.code == 200) {
-          proxy.$modal.msgSuccess('编辑成功');
+          proxy.$modal.msgSuccess(t('common.dict.updatedSuccessfully', '编辑成功'));
         } else {
           proxy.$modal.msgError(res.msg);
         }
@@ -71,7 +72,7 @@ const submitClick = async () => {
         // 新增
         const res = await whiteAdd(params);
         if (res.code == 200) {
-          proxy.$modal.msgSuccess('新增成功');
+          proxy.$modal.msgSuccess(t('page.normal.confirmInfo.addSuccess', '新增成功'));
         } else {
           proxy.$modal.msgError(res.msg);
         }
@@ -101,6 +102,6 @@ watch(
 watchEffect(() => {
   state.visible = props.modelValue;
   state.dataId = props.dataId;
-  state.title = props.dataId ? '编辑' : '添加';
+  state.title = props.dataId ? t('page.normal.edit', '编辑') : t('page.system.blackList.add', '添加');
 });
 </script>

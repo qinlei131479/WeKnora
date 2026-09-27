@@ -1,28 +1,33 @@
 <template>
-  <el-dialog :title="title" v-model="visible" :width="width" append-to-body @close="handleClose">
+  <el-dialog :title="title ?? $t('component.excelImportDialog.importData', '数据导入')" v-model="visible" :width="width" append-to-body @close="handleClose">
     <el-upload ref="uploadRef" :limit="1" accept=".xlsx, .xls" :headers="headers" :action="uploadUrl" :disabled="isUploading" :on-progress="handleProgress" :on-change="handleFileChange" :on-remove="handleFileRemove" :on-success="handleSuccess" :auto-upload="false" drag>
       <el-icon class="el-icon--upload"><upload-filled /></el-icon>
-      <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+      <div class="el-upload__text">
+        <i18n-t keypath="component.excelImportDialog.uploadHint" scope="global">
+          <template #action><em>{{ $t('component.excelImportDialog.clickToUpload', '点击上传') }}</em></template>
+        </i18n-t>
+      </div>
       <template #tip>
         <div class="el-upload__tip text-center">
           <div class="el-upload__tip">
-            <el-checkbox v-model="updateSupport"> {{ updateSupportLabel }} </el-checkbox>
+            <el-checkbox v-model="updateSupport"> {{ updateSupportLabel ?? $t('component.excelImportDialog.updateExistingData', '是否更新已经存在的数据') }} </el-checkbox>
           </div>
-          <span>仅允许导入xls、xlsx格式文件。</span>
-          <el-link v-if="templateUrl" type="primary" underline="never" style="font-size: 12px; vertical-align: baseline" @click="handleDownloadTemplate">下载模板</el-link>
+          <span>{{ $t('component.excelImportDialog.onlyXlsAndXlsxFilesAreSupported', '仅允许导入xls、xlsx格式文件。') }}</span>
+          <el-link v-if="templateUrl" type="primary" underline="never" style="font-size: 12px; vertical-align: baseline" @click="handleDownloadTemplate">{{ $t('component.excelImportDialog.downloadTemplate', '下载模板') }}</el-link>
         </div>
       </template>
     </el-upload>
     <template #footer>
       <div class="dialog-footer">
-        <el-button type="primary" @click="handleSubmit">确 定</el-button>
-        <el-button @click="visible = false">取 消</el-button>
+        <el-button type="primary" @click="handleSubmit">{{ $t('component.excelImportDialog.confirm', '确 定') }}</el-button>
+        <el-button @click="visible = false">{{ $t('component.excelImportDialog.cancel', '取 消') }}</el-button>
       </div>
     </template>
   </el-dialog>
 </template>
 
 <script setup lang="ts">
+import { t } from '@/i18n';
 import type {  AjaxResult } from '@/types/api/common'
 import { getToken } from '@/utils/auth'
 
@@ -32,7 +37,7 @@ const props = defineProps({
   // 对话框标题
   title: {
     type: String,
-    default: '数据导入'
+    default: undefined
   },
   // 对话框宽度
   width: {
@@ -57,7 +62,7 @@ const props = defineProps({
   // 覆盖更新勾选框的说明文字
   updateSupportLabel: {
     type: String,
-    default: '是否更新已经存在的数据'
+    default: undefined
   }
 })
 
@@ -120,7 +125,7 @@ function handleSuccess(response: AjaxResult) {
   isUploading.value = false
   selectedFile.value = null
   uploadRef.value?.clearFiles()
-  proxy.$alert("<div style='overflow:auto;overflow-x:hidden;max-height:70vh;padding:10px 20px 0;'>" + response.msg + '</div>', '导入结果', { dangerouslyUseHTMLString: true })
+  proxy.$alert("<div style='overflow:auto;overflow-x:hidden;max-height:70vh;padding:10px 20px 0;'>" + response.msg + '</div>', t('component.excelImportDialog.importResults', '导入结果'), { dangerouslyUseHTMLString: true })
   emit('success')
 }
 
@@ -128,7 +133,7 @@ function handleSuccess(response: AjaxResult) {
 function handleSubmit() {
   const file = selectedFile.value
   if (!file || file.length === 0 || !file.name.toLowerCase().endsWith('.xls') && !file.name.toLowerCase().endsWith('.xlsx')) {
-    proxy.$modal.msgError("请选择后缀为 “xls”或“xlsx”的文件。")
+    proxy.$modal.msgError(t('component.excelImportDialog.selectAnXlsOrXlsxFile', '请选择后缀为 “xls”或“xlsx”的文件。'))
     return
   }
   uploadRef.value.submit()

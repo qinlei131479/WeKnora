@@ -159,6 +159,7 @@
 </template>
 
 <script setup lang="ts" name="Post">
+import { t } from '@/i18n';
 import type { FormInstance } from 'element-plus/es/components/form';
 import modal from '@/plugins/modal';
 import { useDict } from '@/utils/dict';
@@ -189,9 +190,9 @@ const data = reactive({
     status: undefined
   } as PostQueryParams,
   rules: {
-    postName: [{ required: true, message: '岗位名称不能为空', trigger: 'blur' }],
-    postCode: [{ required: true, message: '岗位编码不能为空', trigger: 'blur' }],
-    postSort: [{ required: true, message: '岗位顺序不能为空', trigger: 'blur' }]
+    postName: [{ required: true, get message() { return t('page.system.post.positionNameIsRequired', '岗位名称不能为空'); }, trigger: 'blur' }],
+    postCode: [{ required: true, get message() { return t('page.system.post.positionCodeIsRequired', '岗位编码不能为空'); }, trigger: 'blur' }],
+    postSort: [{ required: true, get message() { return t('page.system.post.positionOrderIsRequired', '岗位顺序不能为空'); }, trigger: 'blur' }]
   }
 });
 
@@ -242,7 +243,7 @@ function handleSelectionChange(selection: SysPost[]) {
 function handleAdd() {
   reset();
   open.value = true;
-  title.value = '添加岗位';
+  title.value = t('page.system.post.addPosition', '添加岗位');
 }
 
 function handleUpdate(row?: SysPost) {
@@ -251,17 +252,17 @@ function handleUpdate(row?: SysPost) {
   getPost(postId).then((response) => {
     form.value = response.data!;
     open.value = true;
-    title.value = '修改岗位';
+    title.value = t('page.system.post.form.editTitle', '修改岗位');
   });
 }
 
 function handleStatusChange(row: SysPost) {
-  const text = row.status === '0' ? '启用' : '停用';
+  const text = row.status === '0' ? t('page.normal.enable', '启用') : t('page.normal.disable', '停用');
   modal
-    .confirm('确认要"' + text + '""' + row.postName + '"岗位吗?')
+    .confirm(t('page.system.post.position', { value1: text, value2: row.postName }, '确认要"{value1}""{value2}"岗位吗?'))
     .then(() => updatePost(row))
     .then(() => {
-      modal.msgSuccess(text + '成功');
+      modal.msgSuccess(t('page.system.dept.successful', { value1: text }, '{value1}成功'));
     })
     .catch(() => {
       row.status = row.status === '0' ? '1' : '0';
@@ -273,13 +274,13 @@ function submitForm() {
     if (valid) {
       if (form.value.postId != undefined) {
         updatePost(form.value).then(() => {
-          modal.msgSuccess('修改成功');
+          modal.msgSuccess(t('page.normal.confirmInfo.updateSuccess', '修改成功'));
           open.value = false;
           getList();
         });
       } else {
         addPost(form.value).then(() => {
-          modal.msgSuccess('新增成功');
+          modal.msgSuccess(t('page.normal.confirmInfo.addSuccess', '新增成功'));
           open.value = false;
           getList();
         });
@@ -291,13 +292,13 @@ function submitForm() {
 function handleDelete(row?: SysPost) {
   const postIds = row?.postId || ids.value;
   modal
-    .confirm('是否确认删除岗位编号为"' + postIds + '"的数据项？')
+    .confirm(t('page.system.post.deletePositionsWithIds', { value1: postIds }, '是否确认删除岗位编号为"{value1}"的数据项？'))
     .then(function () {
       return delPost(postIds);
     })
     .then(() => {
       getList();
-      modal.msgSuccess('删除成功');
+      modal.msgSuccess(t('page.normal.confirmInfo.removeSuccess', '删除成功'));
     })
     .catch(() => {});
 }

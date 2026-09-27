@@ -6,7 +6,150 @@
     "title": "ISV. AgentSphere Platform",
     "title_short": "ISV. AgentSphere 2.0"
   },
+  "common": {
+    "common": {
+      "download": "Download",
+      "lastMonth": "Last Month",
+      "lastThreeMonths": "Last Three Months",
+      "lastWeek": "Last Week"
+    },
+    "dict": {
+      "addedSuccessfully": "Added successfully",
+      "approved": "Approved",
+      "baseContent": "Base Content",
+      "featured": "Featured",
+      "finalReview": "Final Review",
+      "free": "Free",
+      "initialReview": "Initial Review",
+      "linked": "Linked",
+      "localVideos": "Local Videos",
+      "locked": "Locked",
+      "myVideos": "My Videos",
+      "newArrivals": "New Arrivals",
+      "notLinked": "Not Linked",
+      "notSubmittedDraft": "Not Submitted / Draft",
+      "operationSuccessful": "Operation successful",
+      "paid": "Paid",
+      "pendingReview": "Pending Review",
+      "publicVideos": "Public Videos",
+      "reviewFailed": "Review Failed",
+      "reviewSuccessful": "Review Successful",
+      "reviewed": "Reviewed",
+      "secondaryReview": "Secondary Review",
+      "topics": "Topics",
+      "updatedSuccessfully": "Updated successfully"
+    },
+    "download": {
+      "downloadingDataPleaseWait": "Downloading data, please wait",
+      "failedToDownloadTheFileContactYourAdministrator": "Failed to download the file. Contact your administrator."
+    },
+    "error": {
+      "fileSizeExceeded": "The file must not exceed {size} MB",
+      "invalidCredentials": "Invalid credentials. Please sign in again.",
+      "networkError": "Network error. Please try again later.",
+      "pleaseRelogin": "Please sign in again",
+      "tokenRefreshFailed": "Failed to refresh your session. Please sign in again."
+    },
+    "errorCode": {
+      "anUnknownSystemErrorOccurredContactYourAdministrator": "An unknown system error occurred. Contact your administrator.",
+      "authenticationFailedUnableToAccessSystemResources": "Authentication failed. Unable to access system resources.",
+      "theRequestedResourceDoesNotExist": "The requested resource does not exist.",
+      "youDoNotHavePermissionToPerformThisAction": "You do not have permission to perform this action."
+    },
+    "failed": "Operation failed",
+    "fastCopy": {
+      "nameCopied": "Name copied"
+    },
+    "index": {
+      "1DayAgo": "1 day ago",
+      "assignRoles": "Assign Roles",
+      "assignUsers": "Assign Users",
+      "dictionaryData": "Dictionary Data",
+      "formattedValue": "{value1}/{value2} {value3}:{value4}",
+      "hoursAgo": "{value1} hours ago",
+      "justNow": "Just now",
+      "lockScreen": "Lock Screen",
+      "minutesAgo": "{value1} minutes ago"
+    },
+    "mermaid": {
+      "close": "Close",
+      "download": "Download",
+      "downloading": "Downloading…",
+      "reset": "Reset",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out"
+    },
+    "modal": {
+      "systemNotice": "System Notice"
+    },
+    "request": {
+      "serverRequestFailed": "Server request failed ({value1})",
+      "signInAgain": "Sign In Again",
+      "theRequestIsBeingProcessedDoNotSubmitItAgain": "The request is being processed. Do not submit it again.",
+      "theServerRequestTimedOut": "The server request timed out",
+      "unableToConnectToTheServer": "Unable to connect to the server",
+      "yourSessionHasExpiredYouCanStayOnThisPage": "Your session has expired. You can stay on this page or sign in again.",
+      "yourSessionIsInvalidOrHasExpiredPleaseSignIn": "Your session is invalid or has expired. Please sign in again."
+    },
+    "ruoyi": {
+      "fri": "Fri",
+      "mon": "Mon",
+      "sat": "Sat",
+      "sun": "Sun",
+      "thu": "Thu",
+      "tue": "Tue",
+      "wed": "Wed"
+    },
+    "success": "Operation successful",
+    "time": {
+      "goodAfternoon": "Good afternoon",
+      "goodAfternoonText": "Good afternoon",
+      "goodEvening": "Good evening",
+      "goodMorning": "Good morning"
+    },
+    "user": {
+      "youAreStillUsingYourInitialPasswordPleaseChangeIt": "You are still using your initial password. Please change it!",
+      "yourPasswordHasExpiredPleaseChangeItAsSoonAs": "Your password has expired. Please change it as soon as possible!"
+    },
+    "utils": {
+      "10DaysAgo": "10 days ago",
+      "daysAgo": "{value1} days ago"
+    }
+  },
   "component": {
+    "breadcrumb": {
+      "home": "Home"
+    },
+    "editor": {
+      "enterContent": "Enter content",
+      "failedToInsertImage": "Failed to insert image",
+      "invalidImageFormat": "Invalid image format!",
+      "uploadedFilesMustNotExceedMb": "Uploaded files must not exceed {value1} MB!"
+    },
+    "excelImportDialog": {
+      "cancel": "Cancel",
+      "clickToUpload": "click to upload",
+      "confirm": "Confirm",
+      "downloadTemplate": "Download Template",
+      "importData": "Import Data",
+      "importResults": "Import Results",
+      "onlyXlsAndXlsxFilesAreSupported": "Only .xls and .xlsx files are supported.",
+      "selectAnXlsOrXlsxFile": "Select an .xls or .xlsx file.",
+      "updateExistingData": "Update existing data",
+      "uploadHint": "Drop a file here, or {action}"
+    },
+    "fileUpload": {
+      "chooseFile": "Choose File",
+      "fileUploadFailed": "File upload failed",
+      "hint": "Upload files.",
+      "hintSize": "Upload files up to {size}.",
+      "hintSizeAndTypes": "Upload files up to {size} in {types} format.",
+      "hintTypes": "Upload files in {types} format.",
+      "invalidFileFormatUploadFilesOfType": "Invalid file format. Upload files of type {value1}.",
+      "invalidFilenameCommasAreNotAllowed": "Invalid filename: commas are not allowed!",
+      "uploadingFilePleaseWait": "Uploading file, please wait...",
+      "youCanUploadAtMostFiles": "You can upload at most {value1} files."
+    },
     "graphSettings": {
       "addAttribute": "Add Attribute",
       "addEntity": "Add Entity",
@@ -58,7 +201,25 @@
       "title": "Knowledge Graph Configuration"
     },
     "headerSearch": {
-      "input.placeholder": "Search Anything"
+      "emptyResult": "No menus found for \"{keyword}\"",
+      "input.placeholder": "Search Anything",
+      "navigate": "Navigate",
+      "resultCount": "{count} results found",
+      "searchMenusByTitleOrUrl": "Search menus by title or URL",
+      "select": "Select",
+      "tryAnotherKeywordOrPath": "Try another keyword or path"
+    },
+    "iconSelect": {
+      "enterAnIconName": "Enter an icon name"
+    },
+    "imageUpload": {
+      "avatarImagesMustNotExceedMb": "Avatar images must not exceed {value1} MB!",
+      "imageUploadFailed": "Image upload failed",
+      "invalidImageFormatUploadImagesOfType": "Invalid image format. Upload images of type {value1}.",
+      "uploadingImagePleaseWait": "Uploading image, please wait..."
+    },
+    "kJSCCmpt": {
+      "confirm": "Confirm"
     },
     "kbSettings": {
       "parser": {
@@ -828,12 +989,49 @@
       "selectLanguage": "Select Language",
       "zhCN": "Simplified Chinese"
     },
+    "loginFailureDialog": {
+      "contactYourAdministratorIfYouHaveAnyQuestions": "Contact your administrator if you have any questions",
+      "continueSigningIn": "Continue signing in?",
+      "continueSigningInText": "Continue Signing In",
+      "continuingWillSignOutTheOtherDevice": "Continuing will sign out the other device",
+      "goNow": "Go now",
+      "gotIt": "Got It",
+      "invalidAccountInformationContactYourAdministrator": "Invalid account information. Contact your administrator.",
+      "passwordChangedPleaseSignInWithYourNewPassword": "Password changed. Please sign in with your new password.",
+      "pleaseSignInAgain": "Please sign in again",
+      "redirectCountdown": "Redirecting to the sign-in page in {seconds} seconds. ",
+      "securityNotice": "Security Notice",
+      "youHaveBeenSignedOutDueToInactivity": "You have been signed out due to inactivity",
+      "yourAccountHasBeenDisabledAndYouHaveBeenSigned": "Your account has been disabled and you have been signed out",
+      "yourAccountIsSignedInOnAnotherDevice": "Your account is signed in on another device",
+      "yourAccountSTenantHasChangedPleaseSignInAgain": "Your account's tenant has changed. Please sign in again.",
+      "yourAccountWasSignedInOnAnotherDeviceThisDevice": "Your account was signed in on another device. This device has been signed out.",
+      "yourPasswordHasBeenResetPleaseSignInAgain": "Your password has been reset. Please sign in again."
+    },
     "models": {
       "addModelInSettings": "Add a model",
       "builtinTag": "Built-in",
       "defaultTag": "Default",
       "loadFailed": "Failed to load models",
       "selectModelPlaceholder": "Select a model"
+    },
+    "preview": {
+      "emptyContent": "The document is empty",
+      "loadFailed": "Failed to load the document"
+    },
+    "rightToolbar": {
+      "hide": "Hide",
+      "hideSearch": "Hide Search",
+      "show": "Show",
+      "showHide": "Show / Hide",
+      "showHideColumns": "Show / Hide Columns",
+      "showSearch": "Show Search",
+      "visibleColumns": "Visible Columns"
+    },
+    "sizeSelect": {
+      "applyingLayoutSizePleaseWait": "Applying layout size, please wait...",
+      "large": "Large",
+      "small": "Small"
     },
     "system": {
       "globalSettings": {
@@ -853,6 +1051,19 @@
           }
         }
       }
+    },
+    "tenant": {
+      "calls": "Calls",
+      "chiffonBlouses": "Chiffon Blouses",
+      "highHeels": "High Heels",
+      "remaining": "Remaining",
+      "shirts": "Shirts",
+      "socks": "Socks",
+      "sweaters": "Sweaters",
+      "totalCalls": "Total Calls",
+      "trousers": "Trousers",
+      "validityPeriod": "Validity Period",
+      "viewDetails": "View details"
     },
     "tenantMember": {
       "audit": {
@@ -875,6 +1086,55 @@
       "systemDefault": "System default",
       "unavailable": "Unavailable",
       "unknownStore": "Unknown store"
+    }
+  },
+  "layout": {
+    "headerNotice": {
+      "announcement": "Announcement",
+      "markAllAsRead": "Mark All as Read",
+      "noNotices": "No notices",
+      "notices": "Notices",
+      "notification": "Notification"
+    },
+    "innerLink": {
+      "loadingPagePleaseWait": "Loading page, please wait!"
+    },
+    "settings": {
+      "checkIcon": "Check icon",
+      "clearingSettingsAndRefreshingPleaseWait": "Clearing settings and refreshing, please wait...",
+      "dynamicTitle": "Dynamic Title",
+      "enableTabs": "Enable Tabs",
+      "fixedHeader": "Fixed Header",
+      "footerCopyright": "Footer Copyright",
+      "layoutSettings": "Layout Settings",
+      "menuNavigation": "Menu Navigation",
+      "mixedMenu": "Mixed Menu",
+      "persistTabs": "Persist Tabs",
+      "resetSettings": "Reset Settings",
+      "savingLocallyPleaseWait": "Saving locally, please wait...",
+      "showLogo": "Show Logo",
+      "showTabIcons": "Show Tab Icons",
+      "sidebarMenu": "Sidebar Menu",
+      "themeColor": "Theme Color",
+      "themeStyle": "Theme Style",
+      "topMenu": "Top Menu"
+    },
+    "tagsView": {
+      "closeAll": "Close All",
+      "closeCurrent": "Close Current",
+      "closeLeft": "Close Left",
+      "closeOthers": "Close Others",
+      "closeRight": "Close Right",
+      "fullScreen": "Full Screen",
+      "refreshPage": "Refresh Page"
+    },
+    "topBar": {
+      "moreMenus": "More Menus"
+    },
+    "topRightMenu": {
+      "areYouSureYouWantToSignOut": "Are you sure you want to sign out?",
+      "profile": "Profile",
+      "signOut": "Sign Out"
     }
   },
   "page": {
@@ -1345,6 +1605,17 @@
         "title": "Web Search Settings"
       }
     },
+    "error": {
+      "401Error": "401 Error!",
+      "404Error": "404 Error!",
+      "accessDenied": "Access denied!",
+      "back": "Back",
+      "backToHome": "Back to Home",
+      "home": "Home",
+      "pageNotFound": "Page not found!",
+      "sorryThePageYouAreLookingForDoesNotExist": "Sorry, the page you are looking for does not exist. Check the URL, refresh your browser, or browse other content in the application.",
+      "sorryYouDoNotHavePermissionToAccessThisPage": "Sorry, you do not have permission to access this page. Please return to the home page."
+    },
     "integration": {
       "embedChannels": {
         "detail.agentId": "Agent ID",
@@ -1422,20 +1693,29 @@
     },
     "knowledgeBase": {
       "add": "Add knowledge base",
-      "deleteConfirm": "Are you sure you want to delete the knowledge base file {fileName}?",
+      "aiQuestionGeneration": "AI Question Generation",
+      "audioRecognition": "Speech Recognition",
+      "autoTagAssociation": "Automatic Tag Assignment",
+      "deleteConfirm": "Delete the knowledge base with ID \"{id}\"?",
       "deleteFaqConfirm": "Are you sure you want to delete the Q&A knowledge base {name}?",
+      "deleteSuccess": "Deleted successfully",
       "embeddingModel": "Embedding model",
       "id": "ID",
       "indexingStrategy": "Indexing Strategy",
       "indexingStrategys": {
         "vector": "RAG retrieval",
-        "vector_enabled": "RAG retrieval enabled"
+        "vector_enabled": "RAG retrieval enabled",
+        "wiki": "Wiki Knowledge Base"
       },
+      "knowledgeGraphs": "Knowledge Graph",
       "llmModel": "Large language model (LLM)",
       "manage": "Manage",
+      "multiModal": "Multimodal Features",
       "name": "Knowledge base name",
       "namePlaceholder": "Enter the knowledge base name",
       "searchPlaceholder": "Search knowledge base names",
+      "splitStrategy": "Chunking Strategy",
+      "standardQuestion": "Standard Question",
       "statuss": {
         "generatingSummary": "Generating summary...",
         "statusCancelled": "Canceled",
@@ -1445,11 +1725,16 @@
         "statusFinalizing": "Optimizing",
         "statusProcessing": "Processing"
       },
+      "storageEngine": "Storage Engine",
+      "tenantId": "Associated Workspace",
       "type": "Knowledge base type",
       "types": {
         "document": "Document",
         "faq": "Q&A"
-      }
+      },
+      "untitledDocument": "Untitled Document",
+      "updatedAt": "Last Updated",
+      "vectorStore": "Vector Store"
     },
     "knowledgeFaq": {
       "answers": "Answers",
@@ -1528,6 +1813,19 @@
       "fileTypePlaceholder": "File Type",
       "parseStatus": "Status",
       "searchPlaceholder": "Search documents"
+    },
+    "lock": {
+      "enterYourSignInPassword": "Enter your sign-in password",
+      "formattedValue": "{value2}/{value3}/{value1} {value4}",
+      "friday": "Friday",
+      "monday": "Monday",
+      "saturday": "Saturday",
+      "signOutAndSignInAgain": "Sign Out and Sign In Again",
+      "sunday": "Sunday",
+      "theSystemIsLockedEnterYourPasswordToUnlockIt": "The system is locked. Enter your password to unlock it.",
+      "thursday": "Thursday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday"
     },
     "login": {
       "agreement": "By signing in, you agree to the {terms} and {privacy}",
@@ -1621,12 +1919,13 @@
         "rules": {
           "nameRequired": "Please enter the service name",
           "transportRequired": "Please select a transport type",
-          "urlInvalid": "Please enter a valid URL",
+          "urlInvalid": "Invalid service URL",
           "urlRequired": "Please enter the service URL"
         },
         "serviceUrl": "Service URL",
         "serviceUrlPlaceholder": "https://example.com/mcp",
         "testAfterSaveHint": "Save first to test the connection",
+        "testResultTitle": "Test Results",
         "timeoutSec": "Timeout (s)",
         "toasts": {
           "createFailed": "Failed to create MCP service",
@@ -1669,126 +1968,169 @@
       "updateTitle": "Edit MCP service",
       "yes": "Yes"
     },
+    "model": {
+      "ollama": {
+        "modelSizeBytes": "Model Size (Bytes)"
+      }
+    },
     "models": {
       "add": "Add Model",
-      "debug.copy": "Copy Result",
-      "debug.documents": "Candidate Documents",
-      "debug.documentsPlaceholder": "One document per line, used for rerank scoring",
-      "debug.elapsed": "Elapsed",
-      "debug.emptyResult": "No debug result returned",
-      "debug.failed": "Call failed",
-      "debug.file": "Upload File",
-      "debug.fileAudioPlaceholder": "Upload an audio file",
-      "debug.fileImagePlaceholder": "Upload an image",
-      "debug.fileRequired": "Upload a file before debugging this model type",
-      "debug.fileSelect": "Choose File",
-      "debug.input": "Input",
-      "debug.inputPlaceholder": "Enter the text used for debugging",
-      "debug.observations": "Observations",
-      "debug.requestFail": "Request failed. Check the network or backend service",
-      "debug.requestPreview": "Request Preview",
-      "debug.response": "Response",
-      "debug.resultTitle": "Debug Result",
-      "debug.rowButton": "Debug",
-      "debug.run": "Run Debug",
-      "debug.succeeded": "Call succeeded",
-      "debug.systemPrompt": "System Prompt",
-      "debug.systemPromptPlaceholder": "Optional",
-      "debug.thinking": "Thinking Mode",
-      "debug.title": "Model Debug",
-      "form.alert.ollama.rerank": "Ollama does not support ReRank models, please use a remote API instead",
-      "form.apiKey": "API Key (optional)",
-      "form.apiKeyPlaceholder": "Enter API Key",
-      "form.apiKeyReplacePlaceholder": "Enter a new API Key, then click Update or simply save",
-      "form.appId": "App ID",
-      "form.appIdPlaceholder": "Required by some vendors such as WeKnoraCloud",
-      "form.appSecret": "App Secret",
-      "form.appSecretPlaceholder": "Fill in when a second secret is required (optional)",
-      "form.appSecretReplacePlaceholder": "Enter a new App Secret",
-      "form.baseUrl": "Base URL",
-      "form.baseUrlPlaceholder": "Enter Base URL",
-      "form.builtinHint": "Built-in models can be reconfigured",
-      "form.credentialHidden": "The stored secret is hidden for security reasons",
-      "form.credentialRemove": "Remove Key",
-      "form.credentialRemoveConfirm": "This model will stop working. Remove the secret?",
-      "form.credentialRemoved": "Secret removed",
-      "form.credentialUpdate": "Update Key",
-      "form.credentialUpdated": "Secret updated",
-      "form.customHeaders": "Custom Headers (optional)",
-      "form.description": "Description",
-      "form.descriptionPlaceholder": "Enter a description (optional)",
-      "form.dimension": "Vector Dimension",
-      "form.dimensionInvalid": "Invalid custom output dimension",
-      "form.dimensionPlaceholder": "e.g. 1536",
-      "form.dimensionRequired": "Please enter the custom output dimension",
-      "form.displayName": "Display Name (optional)",
-      "form.displayNamePlaceholder": "e.g. Support QA model",
-      "form.displayNameTip": "Used only in the UI. Runtime calls still use the model name above.",
-      "form.extraConfig": "Extra Configuration",
-      "form.interfaceType": "Interface Type",
-      "form.interfaceTypePlaceholder": "e.g. openai (optional)",
-      "form.headerAdd": "Add Header",
-      "form.headerNamePlaceholder": "Header name",
-      "form.headerValuePlaceholder": "Header value",
-      "form.maxConcurrency": "Background Concurrency Limit",
-      "form.maxConcurrencyPlaceholder": "0 = use global default",
-      "form.name": "Model Name",
-      "form.namePlaceholder": "e.g. {example}",
-      "form.parameterSize": "Parameter Size",
-      "form.parameterSizePlaceholder": "e.g. 7B / 13B (optional)",
-      "form.provider": "Provider",
-      "form.section.advanced": "Advanced Options",
-      "form.section.basic": "Basic Information",
-      "form.section.embedding": "Embedding Parameters",
-      "form.section.provider": "Provider Settings",
-      "form.source": "Model Source",
-      "form.sourcePlaceholder": "Select a model source",
-      "form.supportsDimensionOverride": "Custom Output Dimension",
-      "form.supportsDimensionOverrideDesc": "Enable only if the provider documentation says this model accepts a dimensions parameter.",
-      "form.supportsVision": "Supports Vision / Multimodal",
-      "form.supportsVisionDesc": "Whether the model accepts image and multimodal input",
-      "form.title.add": "Add Model",
-      "form.title.edit": "Edit Model",
-      "form.truncatePromptTokens": "Truncate Prompt Tokens",
-      "form.type": "Model Type",
-      "form.typePlaceholder": "Select a model type",
-      "search.namePlaceholder": "Search by model name",
-      "search.sourcePlaceholder": "All sources",
-      "search.typePlaceholder": "All types",
-      "source.local": "Ollama",
-      "source.remote": "API",
-      "table.createdAt": "Created Time",
-      "table.credentialConfigured": "Configured",
-      "table.credentialStatus": "Credential",
-      "table.credentialUnconfigured": "Not configured",
-      "table.displayName": "Display Name",
-      "table.isBuiltin": "Built-in",
-      "table.isDefault": "Is Default",
-      "table.isDefault_true": "Default",
-      "table.name": "Model Name",
-      "table.operation": "Operation",
-      "table.provider": "Provider",
-      "table.source": "Model Source",
-      "table.type": "Model Type",
-      "test.button": "Test Connection",
-      "test.emptyResult": "No test result returned",
-      "test.fail": "Test failed",
-      "test.requestFail": "Request failed. Check the network or backend service",
-      "test.saveFirst": "Save the model before testing the connection",
-      "test.success": "Test succeeded",
-      "tips.builtinCannotDelete": "Built-in models cannot be deleted",
-      "tips.credentialRequired": "Enter a new secret first",
-      "tips.deleteConfirm": "Delete the model \"{name}\"?",
+      "debug": {
+        "copy": "Copy Result",
+        "documents": "Candidate Documents",
+        "documentsPlaceholder": "One document per line, used for rerank scoring",
+        "elapsed": "Elapsed",
+        "emptyResult": "No debug result returned",
+        "failed": "Call failed",
+        "file": "Upload File",
+        "fileAudioPlaceholder": "Upload an audio file",
+        "fileImagePlaceholder": "Upload an image",
+        "fileRequired": "Upload a file before debugging this model type",
+        "fileSelect": "Choose File",
+        "input": "Input",
+        "inputPlaceholder": "Enter the text used for debugging",
+        "observations": "Observations",
+        "requestFail": "Request failed. Check the network or backend service",
+        "requestPreview": "Request Preview",
+        "response": "Response",
+        "resultTitle": "Debug Result",
+        "rowButton": "Debug",
+        "run": "Run Debug",
+        "succeeded": "Call succeeded",
+        "systemPrompt": "System Prompt",
+        "systemPromptPlaceholder": "Optional",
+        "thinking": "Thinking Mode",
+        "title": "Model Debug"
+      },
+      "form": {
+        "alert": {
+          "ollama": {
+            "rerank": "Ollama does not support ReRank models, please use a remote API instead"
+          }
+        },
+        "apiKey": "API Key (optional)",
+        "apiKeyPlaceholder": "Enter API Key",
+        "apiKeyReplacePlaceholder": "Enter a new API Key, then click Update or simply save",
+        "appId": "App ID",
+        "appIdPlaceholder": "Required by some vendors such as WeKnoraCloud",
+        "appSecret": "App Secret",
+        "appSecretPlaceholder": "Fill in when a second secret is required (optional)",
+        "appSecretReplacePlaceholder": "Enter a new App Secret",
+        "baseUrl": "Base URL",
+        "baseUrlPlaceholder": "Enter Base URL",
+        "builtinHint": "Built-in models can be reconfigured",
+        "credentialHidden": "The stored secret is hidden for security reasons",
+        "credentialRemove": "Remove Key",
+        "credentialRemoveConfirm": "This model will stop working. Remove the secret?",
+        "credentialRemoved": "Secret removed",
+        "credentialUpdate": "Update Key",
+        "credentialUpdated": "Secret updated",
+        "customHeaders": "Custom Headers (optional)",
+        "description": "Description",
+        "descriptionPlaceholder": "Enter a description (optional)",
+        "dimension": "Vector Dimension",
+        "dimensionInvalid": "Invalid custom output dimension",
+        "dimensionPlaceholder": "e.g. 1536",
+        "dimensionRequired": "Please enter the custom output dimension",
+        "displayName": "Display Name (optional)",
+        "displayNamePlaceholder": "e.g. Support QA model",
+        "displayNameTip": "Used only in the UI. Runtime calls still use the model name above.",
+        "extraConfig": "Extra Configuration",
+        "headerAdd": "Add Header",
+        "headerNamePlaceholder": "Header name",
+        "headerValuePlaceholder": "Header value",
+        "interfaceType": "Interface Type",
+        "interfaceTypePlaceholder": "e.g. openai (optional)",
+        "maxConcurrency": "Background Concurrency Limit",
+        "maxConcurrencyPlaceholder": "0 = use global default",
+        "name": "Model Name",
+        "namePlaceholder": "e.g. {example}",
+        "ollamaModelPlaceholder": "Search models",
+        "parameterSize": "Parameter Size",
+        "parameterSizePlaceholder": "e.g. 7B / 13B (optional)",
+        "provider": "Provider",
+        "refreshList": "Refresh list",
+        "section": {
+          "advanced": "Advanced Options",
+          "basic": "Basic Information",
+          "embedding": "Embedding Parameters",
+          "provider": "Provider Settings"
+        },
+        "source": "Model Source",
+        "sourcePlaceholder": "Select a model source",
+        "supportsDimensionOverride": "Custom Output Dimension",
+        "supportsDimensionOverrideDesc": "Enable only if the provider documentation says this model accepts a dimensions parameter.",
+        "supportsVision": "Supports Vision / Multimodal",
+        "supportsVisionDesc": "Whether the model accepts image and multimodal input",
+        "thinkingControl": {
+          "chatTemplateKwargs": "chat_template_kwargs",
+          "chatTemplateKwargsPlaceholder": "Custom OpenAI-compatible gateways, NVIDIA NIM, vLLM / local Qwen",
+          "enableThinking": "enable_thinking",
+          "enableThinkingPlaceholder": "Alibaba DashScope: qwen3, qwen-plus, qwen-max, qwen-turbo",
+          "label": "Thinking Mode Request Format",
+          "none": "Do not send thinking fields",
+          "nonePlaceholder": "Agent “Thinking mode” switch has no effect; thinking parameters are not sent in requests",
+          "thinkingType": "thinking.type",
+          "thinkingTypePlaceholder": "Volcengine Ark; Tencent LKEAP (DeepSeek V3, etc.; default for LKEAP; use “Do not send” for R1)"
+        },
+        "title": {
+          "add": "Add Model",
+          "edit": "Edit Model"
+        },
+        "truncatePromptTokens": "Truncate Prompt Tokens",
+        "type": "Model Type",
+        "typePlaceholder": "Select a model type"
+      },
+      "search": {
+        "namePlaceholder": "Search by model name",
+        "sourcePlaceholder": "All sources",
+        "typePlaceholder": "All types"
+      },
+      "source": {
+        "local": "Ollama",
+        "remote": "API"
+      },
+      "table": {
+        "createdAt": "Created Time",
+        "credentialConfigured": "Configured",
+        "credentialStatus": "Credential",
+        "credentialUnconfigured": "Not configured",
+        "displayName": "Display Name",
+        "isBuiltin": "Built-in",
+        "isDefault": "Is Default",
+        "isDefault_true": "Default",
+        "name": "Model Name",
+        "operation": "Operation",
+        "provider": "Provider",
+        "source": "Model Source",
+        "type": "Model Type"
+      },
+      "test": {
+        "button": "Test Connection",
+        "emptyResult": "No test result returned",
+        "fail": "Test failed",
+        "requestFail": "Request failed. Check the network or backend service",
+        "saveFirst": "Save the model before testing the connection",
+        "success": "Test succeeded"
+      },
+      "tips": {
+        "builtinCannotDelete": "Built-in models cannot be deleted",
+        "credentialRequired": "Enter a new secret first",
+        "deleteConfirm": "Delete the model \"{name}\"?"
+      },
       "title": "Model Management",
-      "type.ASR": "Speech",
-      "type.Embedding": "Embedding",
-      "type.KnowledgeQA": "Chat",
-      "type.Rerank": "ReRank",
-      "type.VLLM": "Vision"
+      "type": {
+        "ASR": "Speech",
+        "Embedding": "Embedding",
+        "KnowledgeQA": "Chat",
+        "Rerank": "ReRank",
+        "VLLM": "Vision"
+      }
     },
     "normal": {
       "add": "Add",
       "addNew": "Add",
+      "back": "Back",
       "batchDelete": "Batch Delete",
       "batchDeleteConfirm": "Delete the selected items?",
       "batchDisable": "Batch Disable",
@@ -1830,6 +2172,7 @@
         "update": "Replace"
       },
       "delete": "Delete",
+      "deleteSuccess": "Deleted successfully",
       "detail": "Details",
       "disable": "Disable",
       "edit": "Edit",
@@ -1840,6 +2183,7 @@
       "items": "items",
       "loading": "Loading, please wait",
       "noData": "No Data",
+      "noGeneratedQuestions": "No generated questions",
       "operation": "Actions",
       "preview": {
         "audioLoading": "Loading audio…",
@@ -1859,10 +2203,13 @@
       "save": "Save",
       "search": "Search",
       "selectPlaceholder": "Please select",
-      "selected": "Selected"
+      "selected": "Selected",
+      "selectedCount": "{count} selected",
+      "testConnection": "Test Connection"
     },
     "ollama": {
       "add": "Download Models",
+      "daysAgo": "{days} days ago",
       "digest": "Model digest",
       "download": {
         "browse": "Browse Ollama model library",
@@ -1892,11 +2239,117 @@
         "downloadStarted": "Model download started",
         "listFailed": "Failed to get model list",
         "progressFailed": "Failed to query download progress"
+      },
+      "today": "Today",
+      "unknown": "Unknown",
+      "yesterday": "Yesterday"
+    },
+    "platformManager": {
+      "tenantManager": {
+        "10000Calls": "× 10,000 calls",
+        "addCallQuota": "Add Call Quota",
+        "additionalCalls": "Additional Calls",
+        "allSystems": "All Systems",
+        "callTime": "Call Time",
+        "callsSecond": "calls/second",
+        "concurrencyLimit": "Concurrency Limit:",
+        "concurrencyLimitIsRequired": "Concurrency limit is required",
+        "createTheTenantSInitialAdministrator": "Create the Tenant's Initial Administrator",
+        "createdAt": "Created At:",
+        "createdBy": "Created By:",
+        "dataFromMoreThanOneYearAgoCannotBeQueried": "Data from more than one year ago cannot be queried",
+        "edit": "Edit",
+        "editTenant": "Edit Tenant",
+        "effectivePeriod": "Effective Period",
+        "endDate": "End Date",
+        "enterAChineseNameEGGeneralAgentPlatform": "Enter a Chinese name, e.g. General Agent Platform",
+        "enterAnInteger": "Enter an integer",
+        "enterAnIntegerFrom0To300": "Enter an integer from 0 to 300",
+        "enterAnIntegerText": "Enter an integer",
+        "exportData": "Export Data",
+        "nicknameIsRequired": "Nickname is required",
+        "numberOfCallsIsRequired": "Number of calls is required",
+        "onlyChineseCharactersDigitsAndLettersAreAllowed": "Only Chinese characters, digits and letters are allowed",
+        "onlyDigitsAndLettersAreAllowed": "Only digits and letters are allowed",
+        "operationFailedPleaseTryAgain": "Operation failed. Please try again.",
+        "platformManagement": "Platform Management",
+        "requestTrends": "Request Trends",
+        "roleIsRequired": "Role is required",
+        "searchByTenantName": "Search by tenant name",
+        "signInAccountIsRequired": "Sign-in account is required",
+        "startDate": "Start Date",
+        "startTime": "Start Time",
+        "system": "System",
+        "tenantDetails": "Tenant Details",
+        "tenantId": "Tenant ID:",
+        "tenantNameIsRequired": "Tenant name is required",
+        "thisSignInAccountIsAlreadyInUseEnterAnother": "This sign-in account is already in use. Enter another account.",
+        "thisTenantNameIsAlreadyInUseEnterAnotherName": "This tenant name is already in use. Enter another name.",
+        "updatedAt": "Updated At:",
+        "youCanSelectAMaximumOf90ConsecutiveDays": "You can select a maximum of 90 consecutive days"
       }
     },
+    "register": {
+      "accountMustBeBetween2And20Characters": "Account must be between 2 and 20 characters",
+      "confirmPassword": "Confirm Password",
+      "enterYourPasswordAgain": "Enter your password again",
+      "passwordMustBeBetween5And20Characters": "Password must be between 5 and 20 characters",
+      "register": "Register",
+      "registering": "Registering...",
+      "registrationSuccess": "Congratulations! Your account {account} has been registered.",
+      "signInWithAnExistingAccount": "Sign in with an existing account",
+      "theFollowingCharactersAreNotAllowed": "The following characters are not allowed: < > \" ' \\ {'|'}",
+      "theTwoPasswordsDoNotMatch": "The two passwords do not match"
+    },
     "system": {
+      "blackList": {
+        "add": "Add",
+        "addBlocklistEntry": "Add Blocklist Entry",
+        "allOperationTypes": "All Operation Types",
+        "blocklist": "{value1} Blocklist",
+        "blocklistId": "Blocklist ID",
+        "blocklistName": "Blocklist Name",
+        "blocklistXlsx": "Blocklist_{value1}.xlsx",
+        "deleteBlocklist": "Delete Blocklist",
+        "deleteTheSelectedBlocklistEntries": "Delete the selected blocklist entries?",
+        "disableBlocklist": "Disable Blocklist",
+        "disableTheSelectedBlocklistEntries": "Disable the selected blocklist entries?",
+        "downloadTemplate": "Download Template",
+        "enableBlocklist": "Enable Blocklist",
+        "enableTheSelectedBlocklistEntries": "Enable the selected blocklist entries?",
+        "enterABlocklistName": "Enter a blocklist name",
+        "import": "Import",
+        "invalidFileFormatUploadFilesOfType": "Invalid file format. Upload files of type {value1}.",
+        "operationFailed": "Operation failed",
+        "search": "Search",
+        "searchTheBlocklist": "Search the blocklist",
+        "uploadedSuccessfully": "Uploaded successfully"
+      },
+      "config": {
+        "addParameter": "Add Parameter",
+        "cacheRefreshed": "Cache refreshed",
+        "deleteParametersWithIds": "Delete parameters with IDs \"{value1}\"?",
+        "editParameter": "Edit Parameter",
+        "enterAParameterKey": "Enter a parameter key",
+        "enterAParameterName": "Enter a parameter name",
+        "enterAParameterValue": "Enter a parameter value",
+        "parameterId": "Parameter ID",
+        "parameterKey": "Parameter Key",
+        "parameterKeyIsRequired": "Parameter key is required",
+        "parameterName": "Parameter Name",
+        "parameterNameIsRequired": "Parameter name is required",
+        "parameterValue": "Parameter Value",
+        "parameterValueIsRequired": "Parameter value is required",
+        "refreshCache": "Refresh Cache"
+      },
       "dept": {
         "add": "Add Department",
+        "addDepartment": "Add Department",
+        "deleteTheItemNamed": "Delete the item named \"{value1}\"?",
+        "department": "{value1} department \"{value2}\"?",
+        "departmentNameIsRequired": "Department name is required",
+        "displayOrderIsRequired": "Display order is required",
+        "enterAValidPhoneNumber": "Enter a valid phone number",
         "expandCollapse": "Expand/Collapse",
         "form": {
           "addTitle": "Add Department",
@@ -1918,8 +2371,10 @@
           "phonePlaceholder": "Enter a contact number",
           "status": "Department Status"
         },
+        "parentDepartmentIsRequired": "Parent department is required",
         "searchPlaceholder": "Search department name...",
         "statusPlaceholder": "Department Status",
+        "successful": "{value1} successful",
         "table": {
           "createTime": "Created At",
           "deptName": "Department Name",
@@ -1931,6 +2386,9 @@
       },
       "dict": {
         "add": "Add Dictionary",
+        "addDictionaryData": "Add Dictionary Data",
+        "addDictionaryType": "Add Dictionary Type",
+        "danger": "Danger",
         "data": {
           "add": "Add Dictionary Data",
           "form": {
@@ -1969,6 +2427,15 @@
             "status": "Status"
           }
         },
+        "dataLabelIsRequired": "Data label is required",
+        "dataOrderIsRequired": "Data order is required",
+        "dataValueIsRequired": "Data value is required",
+        "deleteDictionariesWithIds": "Delete dictionaries with IDs \"{value1}\"?",
+        "deleteDictionaryEntriesWithCodes": "Delete dictionary entries with codes \"{value1}\"?",
+        "dictionary": "{value1} dictionary \"{value2}\"?",
+        "dictionaryEntry": "{value1} dictionary entry \"{value2}\"?",
+        "dictionaryNameIsRequired": "Dictionary name is required",
+        "dictionaryTypeIsRequired": "Dictionary type is required",
         "form": {
           "add": "Add",
           "addTitle": "Add Dictionary Type",
@@ -1983,7 +2450,11 @@
           "typePlaceholder": "Enter dictionary type",
           "update": "Update"
         },
+        "info": "Info",
         "list": "List",
+        "noDictionaryData": "No dictionary data",
+        "primary": "Primary",
+        "refreshedSuccessfully": "Refreshed successfully",
         "search": {
           "endTime": "End Time",
           "namePlaceholder": "Enter dictionary name",
@@ -2000,9 +2471,15 @@
           "remark": "Remarks",
           "status": "Status",
           "type": "Dictionary Type"
-        }
+        },
+        "totalEntries": "Total Entries",
+        "value": "Value",
+        "warning": "Warning"
       },
       "logininfor": {
+        "clearAllSignInLogs": "Clear all sign-in logs?",
+        "clearedSuccessfully": "Cleared successfully",
+        "deleteAccessLogsWithIds": "Delete access logs with IDs \"{value1}\"?",
         "search": {
           "endTimePlaceholder": "End Time",
           "rangeSeparator": "To",
@@ -2016,10 +2493,13 @@
           "message": "Description",
           "status": "Login Status",
           "userName": "Username"
-        }
+        },
+        "unlockUser": "Unlock user \"{value1}\"?",
+        "userUnlockedSuccessfully": "User {value1} unlocked successfully"
       },
       "menu": {
         "add": "Add Menu",
+        "addMenu": "Add Menu",
         "addShort": "Add",
         "form": {
           "add": "Add",
@@ -2050,6 +2530,13 @@
           "update": "Update",
           "visible": "Visibility"
         },
+        "menu": "{value1} menu \"{value2}\"?",
+        "menuNameIsRequired": "Menu name is required",
+        "menuOrderIsRequired": "Menu order is required",
+        "noOrderChangesDetected": "No order changes detected",
+        "orderSaved": "Order saved",
+        "rootCategory": "Root Category",
+        "routePathIsRequired": "Route path is required",
         "saveSort": "Save Order",
         "search": {
           "menuNamePlaceholder": "Enter menu name",
@@ -2072,7 +2559,21 @@
           "menu": "Menu"
         }
       },
+      "notice": {
+        "addAnnouncement": "Add Announcement",
+        "announcementTitle": "Announcement Title",
+        "announcementTitleIsRequired": "Announcement title is required",
+        "announcementType": "Announcement Type",
+        "announcementTypeIsRequired": "Announcement type is required",
+        "content": "Content",
+        "creator": "Creator",
+        "deleteAnnouncementsWithIds": "Delete announcements with IDs \"{value1}\"?",
+        "editAnnouncement": "Edit Announcement",
+        "enterAnAnnouncementTitle": "Enter an announcement title"
+      },
       "operlog": {
+        "clearAllOperationLogs": "Clear all operation logs?",
+        "deleteLogsWithIds": "Delete logs with IDs \"{value1}\"?",
         "detail": "Details",
         "detailDrawer": {
           "businessType": "Business Type",
@@ -2118,6 +2619,8 @@
       },
       "post": {
         "add": "Add Post",
+        "addPosition": "Add Position",
+        "deletePositionsWithIds": "Delete positions with IDs \"{value1}\"?",
         "export": "Export",
         "form": {
           "addTitle": "Add Post",
@@ -2133,6 +2636,10 @@
           "remarkPlaceholder": "Enter responsibilities",
           "status": "Post Status"
         },
+        "position": "{value1} position \"{value2}\"?",
+        "positionCodeIsRequired": "Position code is required",
+        "positionNameIsRequired": "Position name is required",
+        "positionOrderIsRequired": "Position order is required",
         "search": {
           "postCodePlaceholder": "Enter post code",
           "postNamePlaceholder": "Enter post name",
@@ -2151,9 +2658,15 @@
       },
       "role": {
         "add": "Add Role",
+        "addRole": "Add Role",
+        "addUser": "Add User",
         "allTenants": "All Tenants",
+        "assignDataPermissions": "Assign Data Permissions",
+        "authorizationRevoked": "Authorization revoked",
         "deleteConfirm": "Confirm deletion?",
+        "deleteRolesWithIds": "Delete roles with IDs \"{value1}\"?",
         "endDatePlaceholder": "End Date",
+        "enterAPhoneNumber": "Enter a phone number",
         "form": {
           "addTitle": "Add Role",
           "confirmAdd": "Confirm Add",
@@ -2170,8 +2683,18 @@
           "tenantName": "Tenant",
           "tenantPlaceholder": "Select a tenant"
         },
+        "phone": "Phone",
+        "phoneNumber": "Phone Number",
         "rangeSeparator": "to",
+        "removeRolesFromUser": "Remove roles from user \"{value1}\"?",
+        "revokeAuthorization": "Revoke Authorization",
+        "revokeAuthorizationForTheSelectedUsers": "Revoke authorization for the selected users?",
+        "revokeSelectedAuthorizations": "Revoke Selected Authorizations",
+        "role": "{value1} role \"{value2}\"?",
+        "roleNameIsRequired": "Role name is required",
         "searchPlaceholder": "Search by role name",
+        "selectUsers": "Select Users",
+        "selectUsersToAssign": "Select users to assign",
         "startDatePlaceholder": "Start Date",
         "table": {
           "operation": "Actions",
@@ -2179,10 +2702,34 @@
           "roleName": "Role Name",
           "tenantName": "Tenant Name",
           "updateTime": "Update Time"
-        }
+        },
+        "tenantIsRequired": "Tenant is required"
+      },
+      "systemConfig": {
+        "addSystem": "Add System",
+        "allTenants": "All Tenants",
+        "changingTheTenantRequiresReconfiguringTheReviewScopesAssociatedWith": "*Changing the tenant requires reconfiguring the review scopes associated with this system",
+        "confirmDeletion": "Confirm Deletion",
+        "deleteConfirm": "Delete the system {name}? Review scopes associated with it will need to be reconfigured.",
+        "editSystem": "Edit System",
+        "key": "Key",
+        "lastUpdated": "Last Updated",
+        "regenerateKey": "Regenerate Key",
+        "regenerateKeyConfirm": "Regenerate the key for {name}? The previous key will no longer work.",
+        "replaceKey": "Replace Key",
+        "searchBySystemOrTenantName": "Search by system or tenant name",
+        "systemName": "System Name",
+        "systemNameIsRequired": "System name is required",
+        "systemTenant": "System Tenant",
+        "systemTenantIsRequired": "System tenant is required",
+        "updatedAfter": "Updated After",
+        "updatedBefore": "Updated Before"
       },
       "user": {
         "add": "Add User",
+        "authorizedSuccessfully": "Authorized successfully",
+        "deleteUsersWithIds": "Delete users with IDs \"{value1}\"?",
+        "departmentIsRequired": "Department is required",
         "endDatePlaceholder": "End Date",
         "form": {
           "addTitle": "Add User",
@@ -2205,14 +2752,56 @@
           "title": "Import Users",
           "updateExisting": "Update existing user data"
         },
+        "passwordChangedNewPassword": "Password changed. New password: {value1}",
+        "passwordIsRequired": "Password is required",
+        "positionIsRequired": "Position is required",
+        "profile": {
+          "atLeast6Characters": "At least 6 characters",
+          "atLeastOneDigit": "At least one digit",
+          "atLeastOneLetter": "At least one letter",
+          "changeAvatar": "Change Avatar",
+          "changePassword": "Change Password",
+          "changePasswordText": "Change Password",
+          "confirmYourNewPassword": "Confirm your new password",
+          "currentPassword": "Current Password",
+          "currentPasswordIsRequired": "Current password is required",
+          "enterAtLeast6Characters": "Enter at least 6 characters",
+          "enterYourCurrentPassword": "Enter your current password",
+          "fair": "Fair",
+          "incorrectPassword": "Incorrect password",
+          "invalidFileFormatSelectAPngJpgOrJpegImage": "Invalid file format. Select a PNG, JPG or JPEG image.",
+          "invalidFileFormatUploadAnImageSuchAsAJpg": "Invalid file format. Upload an image such as a JPG or PNG file.",
+          "newPassword": "New Password",
+          "newPasswordIsRequired": "New password is required",
+          "passwordConfirmationIsRequired": "Password confirmation is required",
+          "passwordStrength": "Password Strength:",
+          "personalInformation": "Personal Information",
+          "secure": "Secure",
+          "strong": "Strong",
+          "submit": "Submit",
+          "tenantIsRequired": "Tenant is required",
+          "theNewPasswordMustDifferFromTheOldPassword": "The new password must differ from the old password",
+          "theTwoPasswordsDoNotMatch": "The two passwords do not match",
+          "updateFailedPleaseTryAgain": "Update failed. Please try again.",
+          "updateProfile": "Update Profile",
+          "updatedSuccessfully": "Updated successfully",
+          "userId": "User ID",
+          "verySecure": "Very Secure",
+          "veryStrong": "Very Strong",
+          "veryWeak": "Very Weak",
+          "weak": "Weak"
+        },
         "rangeSeparator": "to",
         "resetPassword": {
           "placeholder": "Enter new password",
           "prompt": "Enter a new password for “{userName}”",
           "title": "Notice"
         },
+        "roleId": "Role ID",
+        "roleInformation": "Role Information",
         "searchPlaceholder": "Search by user ID, nickname, or creator",
         "startDatePlaceholder": "Start Date",
+        "submit": "Submit",
         "table": {
           "createBy": "Created By",
           "nickName": "User Nickname",
@@ -2223,22 +2812,60 @@
           "updateTime": "Update Time",
           "userId": "User ID",
           "userName": "Login Account"
-        }
+        },
+        "theFollowingCharactersAreNotAllowed": "The following characters are not allowed: < > \" ' \\ {'|'}",
+        "user": "{value1} user \"{value2}\"?"
+      },
+      "whiteList": {
+        "addAllowlistEntry": "Add Allowlist Entry",
+        "allowlist": "{value1} Allowlist",
+        "allowlistId": "Allowlist ID",
+        "allowlistName": "Allowlist Name",
+        "allowlistXlsx": "Allowlist_{value1}.xlsx",
+        "deleteAllowlist": "Delete Allowlist",
+        "deleteTheSelectedAllowlistEntries": "Delete the selected allowlist entries?",
+        "disableAllowlist": "Disable Allowlist",
+        "disableTheSelectedAllowlistEntries": "Disable the selected allowlist entries?",
+        "enableAllowlist": "Enable Allowlist",
+        "enableTheSelectedAllowlistEntries": "Enable the selected allowlist entries?",
+        "enterAnAllowlistName": "Enter an allowlist name",
+        "searchTheAllowlist": "Search the allowlist"
       }
     },
     "tenants": {
       "add": "Add tenant",
+      "addSuccess": "Added successfully",
       "createdAt": "Created at",
+      "deleteConfirm": "Delete the tenant with ID \"{id}\"?",
+      "deleteSuccess": "Deleted successfully",
       "description": "Description",
       "descriptionPlaceholder": "Briefly describe what this tenant is for",
+      "disableConfirmBatch": "Disable the selected tenants?",
+      "disableConfirmSingle": "Disable the tenant with ID \"{id}\"?",
+      "disableSuccess": "Disabled successfully",
+      "enableConfirmBatch": "Enable the selected tenants?",
+      "enableConfirmSingle": "Enable the tenant with ID \"{id}\"?",
+      "enableSuccess": "Enabled successfully",
       "id": "Tenant ID",
       "name": "Tenant name",
       "namePlaceholder": "e.g. My new project",
+      "requestLogFilename": "Request_logs_{time}.xlsx",
       "searchPlaceholder": "Search tenant names",
       "status": "Status",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "statusSuspended": "Suspended",
+      "statusUnknown": "Unknown",
       "storageQuota": "Storage Quota",
       "storageRate": "Storage usage",
-      "storageUsed": "Storage used"
+      "storageUsed": "Storage used",
+      "title": {
+        "add": "Add Workspace",
+        "detail": "Workspace Details",
+        "update": "Edit Workspace"
+      },
+      "updateSuccess": "Updated successfully",
+      "workspaceNameIsRequired": "Workspace name is required"
     },
     "users": {
       "account": "Account",
@@ -2292,14 +2919,21 @@
       "usernamePlaceholder": "Enter a username"
     }
   },
-  "page.models.form.thinkingControl": "Thinking Mode Request Format",
-  "page.models.form.thinkingControl.chatTemplateKwargs": "chat_template_kwargs",
-  "page.models.form.thinkingControl.chatTemplateKwargsPlaceholder": "Custom OpenAI-compatible gateways, NVIDIA NIM, vLLM / local Qwen",
-  "page.models.form.thinkingControl.enableThinking": "enable_thinking",
-  "page.models.form.thinkingControl.enableThinkingPlaceholder": "Alibaba DashScope: qwen3, qwen-plus, qwen-max, qwen-turbo",
-  "page.models.form.thinkingControl.none": "Do not send thinking fields",
-  "page.models.form.thinkingControl.nonePlaceholder": "Agent “Thinking mode” switch has no effect; thinking parameters are not sent in requests",
-  "page.models.form.thinkingControl.thinkingType": "thinking.type",
-  "page.models.form.thinkingControl.thinkingTypePlaceholder": "Volcengine Ark; Tencent LKEAP (DeepSeek V3, etc.; default for LKEAP; use “Do not send” for R1)",
-  "plugins": {}
+  "plugins": {
+    "browser": {
+      "browser360": "360 Secure Browser",
+      "chooseBrowser": "Choose a more modern browser",
+      "chrome": "Chrome",
+      "firefox": "Firefox",
+      "heading": "Please upgrade your browser for a better experience!",
+      "ie": "IE 11",
+      "period": ".",
+      "recommendation": "Use the latest version of one of the browsers below. If you already have one installed, open this website in that browser.",
+      "securityNotice": "Since January 12, 2016, Microsoft has no longer provided support or updates for versions earlier than IE 11. Without essential browser security updates, your computer may be vulnerable to viruses, spyware, and other malware that could steal or damage your business data. Please see",
+      "supportEnded": "Notice: Microsoft has ended support for Windows XP and older versions of Internet Explorer",
+      "supportLink": "Microsoft’s notice on ending support for older versions of Internet Explorer on January 12, 2016",
+      "title": "Please Upgrade Your Browser",
+      "unsupported": "You are using an older version of Internet Explorer (below IE 11, or a browser using its engine). You cannot access this website until you upgrade your browser."
+    }
+  }
 }

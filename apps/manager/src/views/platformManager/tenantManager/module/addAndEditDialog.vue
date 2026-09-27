@@ -11,10 +11,10 @@
     @close="onClose"
   >
     <el-form :model="form" :rules="rules" ref="tenantRef" label-width="120px">
-      <el-form-item label="租户名称" prop="name">
+      <el-form-item :label="$t('page.tenants.name', '租户名称')" prop="name">
         <el-input
           v-model="form.name"
-          placeholder="请输入中文名称如：通用智能体中台"
+          :placeholder="$t('page.platformManager.tenantManager.enterAChineseNameEGGeneralAgentPlatform', '请输入中文名称如：通用智能体中台')"
           maxlength="15"
           show-word-limit
         />
@@ -36,12 +36,12 @@
         </el-input>
       </el-form-item> -->
 
-      <el-form-item label="生效时间" prop="effectiveTime">
+      <el-form-item :label="$t('page.platformManager.tenantManager.effectivePeriod', '生效时间')" prop="effectiveTime">
         <el-date-picker
           v-model="form.effectiveTime"
           type="daterange"
-          start-placeholder="起始时间"
-          end-placeholder="结束时间"
+          :start-placeholder="$t('page.platformManager.tenantManager.startTime', '起始时间')"
+          :end-placeholder="$t('page.system.dict.search.endTime', '结束时间')"
           value-format="YYYY-MM-DD"
           :disabled-date="disabledDate"
           @change="handleChangeTime"
@@ -55,32 +55,32 @@
             v-model="initialCreate"
             @change="changeInitialCreate"
           />
-          <div class="add-form-create-text">租户初始管理员创建</div>
+          <div class="add-form-create-text">{{ $t('page.platformManager.tenantManager.createTheTenantSInitialAdministrator', '租户初始管理员创建') }}</div>
         </div>
         <div v-if="initialCreate">
-          <el-form-item label="用户昵称" prop="initAdminUser.nickName">
+          <el-form-item :label="$t('page.system.user.form.nickName', '用户昵称')" prop="initAdminUser.nickName">
             <el-input
               v-model="form.initAdminUser.nickName"
-              placeholder="支持中文、数字、字母"
+              :placeholder="$t('page.system.user.form.nickNamePlaceholder', '支持中文、数字、字母')"
               maxlength="6"
               show-word-limit
             />
           </el-form-item>
-          <el-form-item label="登录账号" prop="initAdminUser.userName">
+          <el-form-item :label="$t('page.system.user.form.userName', '登录账号')" prop="initAdminUser.userName">
             <el-input
               v-model="form.initAdminUser.userName"
-              placeholder="支持数字、字母，推荐使用手机号"
+              :placeholder="$t('page.system.user.form.userNamePlaceholder', '支持数字、字母，推荐使用手机号')"
               :disabled="form.id"
               maxlength="20"
               show-word-limit
             />
           </el-form-item>
-          <el-form-item label="所属角色" prop="initAdminUser.roleId">
+          <el-form-item :label="$t('page.system.user.form.roleName', '所属角色')" prop="initAdminUser.roleId">
             <el-select
               style="width: 100%"
               v-model="form.initAdminUser.roleId"
               disabled
-              placeholder="请选择角色"
+              :placeholder="$t('page.users.rolePlaceholder', '请选择角色')"
             >
               <template #prefix>
                 <el-tag
@@ -89,7 +89,7 @@
                   size="small"
                   type="info"
                   effect="light"
-                  >系统内置</el-tag
+                  >{{ $t('page.normal.builtin', '系统内置') }}</el-tag
                 >
               </template>
               <el-option
@@ -102,19 +102,19 @@
           </el-form-item>
           <div style="margin-left: 42px">
             <span style="color: #fe595d; margin-right: 5px">!</span
-            >账号初始密码为{{ orginPwd }}
+            >{{ $t('page.system.user.form.initialPassword', '账号初始密码为') }}{{ orginPwd }}
           </div>
         </div>
       </div>
     </el-form>
     <template #prefixFooter>
       <div class="dialog-footer">
-        <kjsc-button @click="cancel">取 消</kjsc-button>
+        <kjsc-button @click="cancel">{{ $t('component.excelImportDialog.cancel', '取 消') }}</kjsc-button>
         <kjsc-button
           type="primary"
           @click="submitForm"
           :disabled="submitDisabled"
-          >确认{{ isEdit ? "修改" : "新增" }}</kjsc-button
+          >{{ isEdit ? $t('page.system.user.form.confirmEdit', '确认修改') : $t('page.system.user.form.confirmAdd', '确认新增') }}</kjsc-button
         >
       </div>
     </template>
@@ -122,6 +122,7 @@
 </template>
 
 <script setup>
+import { t } from '@/i18n';
 import KJSCDialogV2 from "@/components/KJSCCmpt/KJSCDialogV2.vue";
 import api from "@/utils/api";
 import { isEmpty, disabledDate } from "@/utils/common.js";
@@ -155,7 +156,7 @@ const { proxy } = getCurrentInstance();
 // 校验租户名称
 const validateName = async (rule, value, callback) => {
   if (!value) {
-    callback(new Error("租户名称不能为空"));
+    callback(new Error(t('page.platformManager.tenantManager.tenantNameIsRequired', '租户名称不能为空')));
   } else {
     const regex = /^[\u4e00-\u9fa5a-zA-Z0-9]+$/;
     if (regex.test(value)) {
@@ -165,13 +166,13 @@ const validateName = async (rule, value, callback) => {
         if (!res.data) {
           callback();
         } else {
-          callback(new Error("租户名称重复，请重新输入"));
+          callback(new Error(t('page.platformManager.tenantManager.thisTenantNameIsAlreadyInUseEnterAnotherName', '租户名称重复，请重新输入')));
         }
       } else {
         callback(new Error(res.msg));
       }
     } else {
-      callback(new Error("只能输入中文、数字、字母"));
+      callback(new Error(t('page.platformManager.tenantManager.onlyChineseCharactersDigitsAndLettersAreAllowed', '只能输入中文、数字、字母')));
     }
   }
 };
@@ -179,13 +180,13 @@ const validateName = async (rule, value, callback) => {
 // 校验调用次数
 const validateMaxCallTimes = (rule, value, callback) => {
   if (!value) {
-    callback(new Error("调用次数不能为空"));
+    callback(new Error(t('page.platformManager.tenantManager.numberOfCallsIsRequired', '调用次数不能为空')));
   } else {
     const regex = /[^\d]/g;
     if (!regex.test(value)) {
       callback();
     } else {
-      callback(new Error("只能输入整数数字"));
+      callback(new Error(t('page.platformManager.tenantManager.enterAnInteger', '只能输入整数数字')));
     }
   }
 };
@@ -193,12 +194,12 @@ const validateMaxCallTimes = (rule, value, callback) => {
 // 校验并发限制
 const validateQps = (rule, value, callback) => {
   if (!value) {
-    callback(new Error("并发限制不能为空"));
+    callback(new Error(t('page.platformManager.tenantManager.concurrencyLimitIsRequired', '并发限制不能为空')));
   } else {
     const pattern = /^(\d{1,3})?$/;
     if (!pattern.test(value)) {
       value = value.replace(/[^\d]/g, "");
-      callback(new Error("只能输入0-300整数数字"));
+      callback(new Error(t('page.platformManager.tenantManager.enterAnIntegerFrom0To300', '只能输入0-300整数数字')));
     } else {
       if (value > 300) {
         value = 300;
@@ -214,7 +215,7 @@ const validateQps = (rule, value, callback) => {
 // 校验登录账号
 const validateUserName = async (rule, value, callback) => {
   if (!value) {
-    callback(new Error("登录账号不能为空"));
+    callback(new Error(t('page.platformManager.tenantManager.signInAccountIsRequired', '登录账号不能为空')));
   } else {
     if (form.value.userId) {
       callback();
@@ -226,13 +227,13 @@ const validateUserName = async (rule, value, callback) => {
           if (!res.data) {
             callback();
           } else {
-            callback(new Error("该登陆账号已被占用、请重新输入"));
+            callback(new Error(t('page.platformManager.tenantManager.thisSignInAccountIsAlreadyInUseEnterAnother', '该登陆账号已被占用、请重新输入')));
           }
         } else {
           callback(new Error(res.msg));
         }
       } else {
-        callback(new Error("只能输入数字和字母"));
+        callback(new Error(t('page.platformManager.tenantManager.onlyDigitsAndLettersAreAllowed', '只能输入数字和字母')));
       }
     }
   }
@@ -241,13 +242,13 @@ const validateUserName = async (rule, value, callback) => {
 // 校验用户昵称
 const validateNickName = (rule, value, callback) => {
   if (!value) {
-    callback(new Error("用户昵称不能为空"));
+    callback(new Error(t('page.platformManager.tenantManager.nicknameIsRequired', '用户昵称不能为空')));
   } else {
     const regex = /^[\u4e00-\u9fa5a-zA-Z0-9]+$/;
     if (regex.test(value)) {
       callback();
     } else {
-      callback(new Error("只能输入中文、数字、字母"));
+      callback(new Error(t('page.platformManager.tenantManager.onlyChineseCharactersDigitsAndLettersAreAllowed', '只能输入中文、数字、字母')));
     }
   }
 };
@@ -288,7 +289,7 @@ const data = reactive({
       roleId: [
         {
           required: true,
-          message: "所属角色不能为空",
+          get message() { return t('page.platformManager.tenantManager.roleIsRequired', '所属角色不能为空'); },
           trigger: "change",
         },
       ],
@@ -429,11 +430,11 @@ const submitForm = () => {
         res = await api.tenantManager.add(form.value);
       }
       if (res.code === 200) {
-        proxy.$modal.msgSuccess("操作成功");
+        proxy.$modal.msgSuccess(t('common.dict.operationSuccessful', '操作成功'));
         emits("update:modelValue", false);
         emits("submitClick");
       } else {
-        proxy.$modal.msgSuccess(res.msg || "操作失败，请重新提交");
+        proxy.$modal.msgSuccess(res.msg || t('page.platformManager.tenantManager.operationFailedPleaseTryAgain', '操作失败，请重新提交'));
       }
     }
   });

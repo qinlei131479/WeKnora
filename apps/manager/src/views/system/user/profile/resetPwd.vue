@@ -1,22 +1,22 @@
 <template>
   <el-form ref="pwdRef" :model="user" :rules="rules" label-width="80px" style="margin-top: 35px">
-    <el-form-item label="旧密码" prop="oldPassword">
-      <el-input v-model="user.oldPassword" placeholder="请输入旧密码" type="password" show-password />
+    <el-form-item :label="$t('page.system.user.profile.currentPassword', '旧密码')" prop="oldPassword">
+      <el-input v-model="user.oldPassword" :placeholder="$t('page.system.user.profile.enterYourCurrentPassword', '请输入旧密码')" type="password" show-password />
     </el-form-item>
-    <el-form-item label="新密码" prop="newPassword">
-      <el-input v-model="user.newPassword" placeholder="请输入新密码" type="password" show-password />
+    <el-form-item :label="$t('page.system.user.profile.newPassword', '新密码')" prop="newPassword">
+      <el-input v-model="user.newPassword" :placeholder="$t('page.system.user.resetPassword.placeholder', '请输入新密码')" type="password" show-password />
     </el-form-item>
-    <el-form-item label="确认密码" prop="confirmPassword">
-      <el-input v-model="user.confirmPassword" placeholder="请确认新密码" type="password" show-password />
+    <el-form-item :label="$t('page.register.confirmPassword', '确认密码')" prop="confirmPassword">
+      <el-input v-model="user.confirmPassword" :placeholder="$t('page.system.user.profile.confirmYourNewPassword', '请确认新密码')" type="password" show-password />
     </el-form-item>
     <el-form-item>
       <el-form-item>
         <div style="width: 100%; margin-bottom: 50px">
           <div class="showRules" :style="{ color: state.haveLength ? '#68C23A' : '#666' }">
-            <el-icon :size="12"><CircleCheck /></el-icon> 至少6个字符
+            <el-icon :size="12"><CircleCheck /></el-icon> {{ $t('page.system.user.profile.atLeast6Characters', '至少6个字符') }}
           </div>
           <div class="showRules" :style="{ color: state.haveNum ? '#68C23A' : '#666' }">
-            <el-icon :size="12"><CircleCheck /></el-icon> 至少一个数字
+            <el-icon :size="12"><CircleCheck /></el-icon> {{ $t('page.system.user.profile.atLeastOneDigit', '至少一个数字') }}
           </div>
           <!-- <div
             class="showRules"
@@ -25,10 +25,10 @@
             <el-icon :size="12"><CircleCheck /></el-icon> 至少一个大写字母
           </div> -->
           <div class="showRules" :style="{ color: state.haveLowerCase ? '#68C23A' : '#666' }">
-            <el-icon :size="12"><CircleCheck /></el-icon> 至少一个字母
+            <el-icon :size="12"><CircleCheck /></el-icon> {{ $t('page.system.user.profile.atLeastOneLetter', '至少一个字母') }}
           </div>
           <p>
-            密码强度:
+            {{ $t('page.system.user.profile.passwordStrength', '密码强度:') }}
             <span v-show="user.newPassword" class="left5">
               {{ checkPassword(user.newPassword) }}
             </span>
@@ -40,7 +40,7 @@
     </el-form-item>
     <el-form-item>
       <div style="width: 100%; text-align: right">
-        <el-button :disabled="!isSubmit" type="primary" @click="submit">更改密码</el-button>
+        <el-button :disabled="!isSubmit" type="primary" @click="submit">{{ $t('page.system.user.profile.changePasswordText', '更改密码') }}</el-button>
       </div>
     </el-form-item>
   </el-form>
@@ -49,6 +49,7 @@
 </template>
 
 <script setup>
+import { t } from '@/i18n';
 import { updateUserPwd, checkPasswordValue } from '@/api/system/user';
 import LoginFailureDialog from '@/components/LoginFailureDialog'; //测试
 import { Rsa } from '@/utils/rsa';
@@ -83,21 +84,21 @@ const checkPasswordInspect = async (rule, value, callback) => {
   let password = rsa.encryptWithRSA(user.oldPassword);
   const res = await checkPasswordValue({ password: password, userId: props.userInfo.userId });
   if (!res.data) {
-    callback(new Error('密码错误'));
+    callback(new Error(t('page.system.user.profile.incorrectPassword', '密码错误')));
   } else {
     callback();
   }
 };
 const equalToPassword = (rule, value, callback) => {
   if (user.newPassword !== value) {
-    callback(new Error('两次输入的密码不匹配'));
+    callback(new Error(t('page.system.user.profile.theTwoPasswordsDoNotMatch', '两次输入的密码不匹配')));
   } else {
     callback();
   }
 };
 const equalNewPassword = async (rule, value, callback) => {
   if (user.oldPassword === value) {
-    callback(new Error('新密码与旧密码不能相同'));
+    callback(new Error(t('page.system.user.profile.theNewPasswordMustDifferFromTheOldPassword', '新密码与旧密码不能相同')));
     isSubmit.value = false;
   } else {
     callback();
@@ -105,16 +106,16 @@ const equalNewPassword = async (rule, value, callback) => {
 };
 const rules = ref({
   oldPassword: [
-    { required: true, message: '旧密码不能为空', trigger: 'blur' },
+    { required: true, get message() { return t('page.system.user.profile.currentPasswordIsRequired', '旧密码不能为空'); }, trigger: 'blur' },
     { required: true, validator: checkPasswordInspect, trigger: 'blur' }
   ],
   newPassword: [
-    { required: true, message: '新密码不能为空', trigger: 'blur' },
-    { min: 6, message: '最少输入6个字符', trigger: 'blur' },
+    { required: true, get message() { return t('page.system.user.profile.newPasswordIsRequired', '新密码不能为空'); }, trigger: 'blur' },
+    { min: 6, get message() { return t('page.system.user.profile.enterAtLeast6Characters', '最少输入6个字符'); }, trigger: 'blur' },
     { required: true, validator: equalNewPassword, trigger: 'blur' }
   ],
   confirmPassword: [
-    { required: true, message: '确认密码不能为空', trigger: 'blur' },
+    { required: true, get message() { return t('page.system.user.profile.passwordConfirmationIsRequired', '确认密码不能为空'); }, trigger: 'blur' },
     { required: true, validator: equalToPassword, trigger: 'blur' }
   ]
 });
@@ -138,7 +139,7 @@ const submit = async () => {
           state.failureType = 8;
         })
         .catch((err) => {
-          proxy.$modal.msgError('更改失败、请重新提交');
+          proxy.$modal.msgError(t('page.system.user.profile.updateFailedPleaseTryAgain', '更改失败、请重新提交'));
         });
     }
   });
@@ -264,19 +265,19 @@ const checkPassword = (str) => {
     state.totalMark = totalMark;
     let strength = '';
     if (totalMark < 25) {
-      strength = '非常弱';
+      strength = t('page.system.user.profile.veryWeak', '非常弱');
     } else if (totalMark >= 25 && totalMark < 50) {
-      strength = '弱';
+      strength = t('page.system.user.profile.weak', '弱');
     } else if (totalMark >= 50 && totalMark < 60) {
-      strength = '一般';
+      strength = t('page.system.user.profile.fair', '一般');
     } else if (totalMark >= 60 && totalMark < 70) {
-      strength = '强';
+      strength = t('page.system.user.profile.strong', '强');
     } else if (totalMark >= 70 && totalMark < 80) {
-      strength = '非常强';
+      strength = t('page.system.user.profile.veryStrong', '非常强');
     } else if (totalMark >= 86 && totalMark < 90) {
-      strength = '安全';
+      strength = t('page.system.user.profile.secure', '安全');
     } else {
-      strength = '非常安全';
+      strength = t('page.system.user.profile.verySecure', '非常安全');
     }
     return strength;
   }

@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 import { ElMessage, ElMessageBox, ElNotification, ElLoading } from 'element-plus'
 
 let loadingInstance: ReturnType<typeof ElLoading.service>
@@ -21,19 +22,19 @@ export default {
   },
   // 弹出提示
   alert(content: string) {
-    ElMessageBox.alert(content, "系统提示")
+    ElMessageBox.alert(content, t('common.modal.systemNotice', '系统提示'))
   },
   // 错误提示
   alertError(content: string) {
-    ElMessageBox.alert(content, "系统提示", { type: 'error' })
+    ElMessageBox.alert(content, t('common.modal.systemNotice', '系统提示'), { type: 'error' })
   },
   // 成功提示
   alertSuccess(content: string) {
-    ElMessageBox.alert(content, "系统提示", { type: 'success' })
+    ElMessageBox.alert(content, t('common.modal.systemNotice', '系统提示'), { type: 'success' })
   },
   // 警告提示
   alertWarning(content: string) {
-    ElMessageBox.alert(content, "系统提示", { type: 'warning' })
+    ElMessageBox.alert(content, t('common.modal.systemNotice', '系统提示'), { type: 'warning' })
   },
   // 通知提示
   notify(content: string) {
@@ -53,17 +54,17 @@ export default {
   },
   // 确认窗体
   confirm(content: string) {
-    return ElMessageBox.confirm(content, "系统提示", {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    return ElMessageBox.confirm(content, t('common.modal.systemNotice', '系统提示'), {
+      confirmButtonText: t('component.kJSCCmpt.confirm', '确定'),
+      cancelButtonText: t('page.normal.cancel', '取消'),
       type: "warning",
     })
   },
   // 提交内容
   prompt(content: string) {
-    return ElMessageBox.prompt(content, "系统提示", {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
+    return ElMessageBox.prompt(content, t('common.modal.systemNotice', '系统提示'), {
+      confirmButtonText: t('component.kJSCCmpt.confirm', '确定'),
+      cancelButtonText: t('page.normal.cancel', '取消'),
       type: "warning",
     })
   },

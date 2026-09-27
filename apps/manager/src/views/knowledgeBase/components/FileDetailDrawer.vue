@@ -232,7 +232,7 @@ const details = computed(() => {
   return {
     ...entity,
     fileType: fileType,
-    title: entity.fileName || entity.title || entity.source || t('knowledgeBase.untitledDocument'),
+    title: entity.fileName || entity.title || entity.source || t('page.knowledgeBase.untitledDocument'),
     time: parseTime(entity.updatedAt, '{y}-{m}-{d} {h}:{i}:{s}') || '',
     type: entity.type || 'file',
     customMetadata: customMetadata

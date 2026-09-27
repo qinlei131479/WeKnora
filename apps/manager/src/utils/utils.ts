@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 
 import { throttle } from "lodash";
 
@@ -58,9 +59,9 @@ export const formatTimestamp = (timestamp: number | string): string => {
   if (diffTime <= ONE_DAY_MS) {
     return inputDate.toLocaleString();
   } else if (diffTime < TEN_DAYS_MS) {
-    return `${Math.ceil(diffTime / ONE_DAY_MS)}天前`;
+    return t('common.utils.daysAgo', { value1: Math.ceil(diffTime / ONE_DAY_MS) }, '{value1}天前');
   }
-  return "10天前";
+  return t('common.utils.10DaysAgo', '10天前');
 };
 /**
  * 从 URL 中获取查询参数

@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 import { resolveStaticPath } from './index';
 // 图片类型
 export const imgTypeArr = ['png', 'jpeg', 'jpg', 'gif', 'PNG', 'JPEG', 'JPG'];
@@ -228,7 +229,7 @@ export const getSevenDayDate = () => {
 // 数据流下载
 export function downloadDataStream(url, fileName) {
   const a = document.createElement("a");
-  a.download = fileName || `下载`;
+  a.download = fileName || t('common.common.download', '下载');
   a.style.display = "none";
   a.target = "_blank";
   // a.href = window.location.origin + url;
@@ -256,7 +257,7 @@ export const isEmpty = (val) => {
 // 日期范围选择，快捷选择配置 带上时分秒
 export const daterangeShortcuts2 = [
   {
-    text: '一周内',
+    get text() { return t('common.common.lastWeek', '一周内'); },
     value: () => {
       const end = new Date();
       const start = new Date();
@@ -269,7 +270,7 @@ export const daterangeShortcuts2 = [
     }
   },
   {
-    text: '一个月内',
+    get text() { return t('common.common.lastMonth', '一个月内'); },
     value: () => {
       const end = new Date();
       const start = new Date();
@@ -282,7 +283,7 @@ export const daterangeShortcuts2 = [
     }
   },
   {
-    text: '三个月内',
+    get text() { return t('common.common.lastThreeMonths', '三个月内'); },
     value: () => {
       const end = new Date();
       const start = new Date();

@@ -18,7 +18,7 @@
         size="large"
         @input="querySearch"
         prefix-icon="Search"
-        placeholder="菜单搜索，支持标题、URL模糊查询"
+        :placeholder="$t('component.headerSearch.searchMenusByTitleOrUrl', '菜单搜索，支持标题、URL模糊查询')"
         clearable
         @keyup.enter="selectActiveResult"
         @keydown.up.prevent="navigateResult('up')"
@@ -27,7 +27,9 @@
       </el-input>
 
       <div class="result-count" v-if="search && options.length > 0">
-        找到 <strong>{{ options.length }}</strong> 个结果
+        <i18n-t keypath="component.headerSearch.resultCount" scope="global">
+          <template #count><strong>{{ options.length }}</strong></template>
+        </i18n-t>
       </div>
 
       <div class="result-wrap">
@@ -57,18 +59,19 @@
           <div class="empty-state" v-else-if="search && options.length === 0">
             <el-icon class="empty-icon"><Search /></el-icon>
             <p class="empty-text">
-              未找到 "<strong>{{ search }}</strong
-              >" 相关菜单
+              <i18n-t keypath="component.headerSearch.emptyResult" scope="global">
+                <template #keyword><strong>{{ search }}</strong></template>
+              </i18n-t>
             </p>
-            <p class="empty-tip">试试其他关键词或路径</p>
+            <p class="empty-tip">{{ $t('component.headerSearch.tryAnotherKeywordOrPath', '试试其他关键词或路径') }}</p>
           </div>
         </el-scrollbar>
       </div>
 
       <div class="search-footer">
-        <span class="shortcut-item"> <kbd>↑</kbd><kbd>↓</kbd> 切换 </span>
-        <span class="shortcut-item"> <kbd>↵</kbd> 选择 </span>
-        <span class="shortcut-item"> <kbd>Esc</kbd> 关闭 </span>
+        <span class="shortcut-item"> <kbd>↑</kbd><kbd>↓</kbd> {{ $t('component.headerSearch.navigate', '切换') }} </span>
+        <span class="shortcut-item"> <kbd>↵</kbd> {{ $t('component.headerSearch.select', '选择') }} </span>
+        <span class="shortcut-item"> <kbd>Esc</kbd> {{ $t('page.normal.close', '关闭') }} </span>
       </div>
     </el-dialog>
   </div>

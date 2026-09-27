@@ -1,53 +1,53 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryRef" v-show="showSearch" :inline="true">
-      <el-form-item label="用户名称" prop="userName">
-        <el-input v-model="queryParams.userName" placeholder="请输入用户名称" clearable style="width: 240px" @keyup.enter="handleQuery" />
+      <el-form-item :label="$t('page.system.logininfor.table.userName', '用户名称')" prop="userName">
+        <el-input v-model="queryParams.userName" :placeholder="$t('page.system.logininfor.search.userNamePlaceholder', '请输入用户名称')" clearable style="width: 240px" @keyup.enter="handleQuery" />
       </el-form-item>
-      <el-form-item label="手机号码" prop="phonenumber">
-        <el-input v-model="queryParams.phonenumber" placeholder="请输入手机号码" clearable style="width: 240px" @keyup.enter="handleQuery" />
+      <el-form-item :label="$t('page.system.role.phoneNumber', '手机号码')" prop="phonenumber">
+        <el-input v-model="queryParams.phonenumber" :placeholder="$t('page.system.role.enterAPhoneNumber', '请输入手机号码')" clearable style="width: 240px" @keyup.enter="handleQuery" />
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
-        <el-button icon="Refresh" @click="resetQuery">重置</el-button>
+        <el-button type="primary" icon="Search" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
+        <el-button icon="Refresh" @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
       </el-form-item>
     </el-form>
 
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
-        <el-button type="primary" plain icon="Plus" @click="openSelectUser" v-hasPermi="['system:role:add']">添加用户</el-button>
+        <el-button type="primary" plain icon="Plus" @click="openSelectUser" v-hasPermi="['system:role:add']">{{ $t('page.system.role.addUser', '添加用户') }}</el-button>
       </el-col>
       <el-col :span="1.5">
         <el-button type="danger" plain icon="CircleClose" :disabled="multiple" @click="cancelAuthUserAll" v-hasPermi="['system:role:remove']"
-          >批量取消授权</el-button
+          >{{ $t('page.system.role.revokeSelectedAuthorizations', '批量取消授权') }}</el-button
         >
       </el-col>
       <el-col :span="1.5">
-        <el-button type="warning" plain icon="Close" @click="handleClose">关闭</el-button>
+        <el-button type="warning" plain icon="Close" @click="handleClose">{{ $t('page.normal.close', '关闭') }}</el-button>
       </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
     <el-table v-loading="loading" :data="userList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="用户名称" prop="userName" :show-overflow-tooltip="true" />
-      <el-table-column label="用户昵称" prop="nickName" :show-overflow-tooltip="true" />
-      <el-table-column label="邮箱" prop="email" :show-overflow-tooltip="true" />
-      <el-table-column label="手机" prop="phonenumber" :show-overflow-tooltip="true" />
-      <el-table-column label="状态" align="center" prop="status">
+      <el-table-column :label="$t('page.system.logininfor.table.userName', '用户名称')" prop="userName" :show-overflow-tooltip="true" />
+      <el-table-column :label="$t('page.system.user.form.nickName', '用户昵称')" prop="nickName" :show-overflow-tooltip="true" />
+      <el-table-column :label="$t('page.users.email', '邮箱')" prop="email" :show-overflow-tooltip="true" />
+      <el-table-column :label="$t('page.system.role.phone', '手机')" prop="phonenumber" :show-overflow-tooltip="true" />
+      <el-table-column :label="$t('page.tenants.status', '状态')" align="center" prop="status">
         <template #default="scope">
           <dict-tag :options="sys_normal_disable" :value="scope.row.status" />
         </template>
       </el-table-column>
-      <el-table-column label="创建时间" align="center" prop="createTime" width="180">
+      <el-table-column :label="$t('page.tenants.createdAt', '创建时间')" align="center" prop="createTime" width="180">
         <template #default="scope">
           <span>{{ parseTime(scope.row.createTime) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
+      <el-table-column :label="$t('page.system.role.table.operation', '操作')" align="center" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="CircleClose" @click="cancelAuthUser(scope.row)" v-hasPermi="['system:role:remove']"
-            >取消授权</el-button
+            >{{ $t('page.system.role.revokeAuthorization', '取消授权') }}</el-button
           >
         </template>
       </el-table-column>
@@ -59,6 +59,7 @@
 </template>
 
 <script setup lang="ts" name="AuthUser">
+import { t } from '@/i18n';
 import type { FormInstance } from 'element-plus/es/components/form';
 import modal from '@/plugins/modal';
 import tab from '@/plugins/tab';
@@ -129,13 +130,13 @@ function openSelectUser() {
 /** 取消授权按钮操作 */
 function cancelAuthUser(row: SysUser) {
   modal
-    .confirm('确认要取消该用户"' + row.userName + '"角色吗？')
+    .confirm(t('page.system.role.removeRolesFromUser', { value1: row.userName }, '确认要取消该用户"{value1}"角色吗？'))
     .then(function () {
       return authUserCancel({ userId: row.userId!, roleId: queryParams.roleId });
     })
     .then(() => {
       getList();
-      modal.msgSuccess('取消授权成功');
+      modal.msgSuccess(t('page.system.role.authorizationRevoked', '取消授权成功'));
     })
     .catch(() => {});
 }
@@ -145,13 +146,13 @@ function cancelAuthUserAll() {
   const roleId = queryParams.roleId;
   const uIds = userIds.value.join(',');
   modal
-    .confirm('是否取消选中用户授权数据项?')
+    .confirm(t('page.system.role.revokeAuthorizationForTheSelectedUsers', '是否取消选中用户授权数据项?'))
     .then(function () {
       return authUserCancelAll({ roleId: roleId, userIds: uIds });
     })
     .then(() => {
       getList();
-      modal.msgSuccess('取消授权成功');
+      modal.msgSuccess(t('page.system.role.authorizationRevoked', '取消授权成功'));
     })
     .catch(() => {});
 }

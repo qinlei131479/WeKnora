@@ -30,7 +30,7 @@
         <el-col :lg="2" :md="2">
           <el-upload action="#" :http-request="requestUpload" :show-file-list="false" :before-upload="beforeUpload">
             <el-button>
-              选择
+              {{ $t('component.headerSearch.select', '选择') }}
               <el-icon class="el-icon--right"><Upload /></el-icon>
             </el-button>
           </el-upload>
@@ -48,7 +48,7 @@
           <el-button icon="RefreshRight" @click="rotateRight()"></el-button>
         </el-col>
         <el-col :lg="{ span: 2, offset: 6 }" :md="2">
-          <el-button type="primary" @click="uploadImg()" :loading="options.loading">提 交</el-button>
+          <el-button type="primary" @click="uploadImg()" :loading="options.loading">{{ $t('page.system.user.profile.submit', '提 交') }}</el-button>
         </el-col>
       </el-row>
     </el-dialog>
@@ -56,6 +56,7 @@
 </template>
 
 <script setup>
+import { t } from '@/i18n';
 import 'vue-cropper/dist/index.css';
 import { VueCropper } from 'vue-cropper';
 import { uploadAvatar } from '@/api/system/user';
@@ -67,7 +68,7 @@ const { proxy } = getCurrentInstance();
 
 const open = ref(false);
 const visible = ref(false);
-const title = ref('修改头像');
+const title = ref(t('page.system.user.profile.changeAvatar', '修改头像'));
 const fileData = ref('');
 //图片裁剪数据
 const options = reactive({
@@ -107,12 +108,12 @@ function changeScale(num) {
 /** 上传预处理 */
 function beforeUpload(file) {
   if (file.type.indexOf('image/') == -1) {
-    proxy.$modal.msgError('文件格式错误，请上传图片类型,如：JPG，PNG后缀的文件。');
+    proxy.$modal.msgError(t('page.system.user.profile.invalidFileFormatUploadAnImageSuchAsAJpg', '文件格式错误，请上传图片类型,如：JPG，PNG后缀的文件。'));
   } else {
     let type = file.type.split('image/');
     let typeList = ['png', 'jpg', 'jpeg', 'PNG', 'JPG', 'JPEG'];
     if (typeList.indexOf(type[1]) == -1) {
-      proxy.$modal.msgError('文件格式无效，请从新选择PNG、JPG、JPEG格式进行上传。');
+      proxy.$modal.msgError(t('page.system.user.profile.invalidFileFormatSelectAPngJpgOrJpegImage', '文件格式无效，请从新选择PNG、JPG、JPEG格式进行上传。'));
       return;
     }
     const reader = new FileReader();
@@ -166,7 +167,7 @@ function uploadImg() {
       open.value = false;
       userStore.avatar = resolveStaticPath(data.imgUrl || data.url || '');
       options.img = userStore.avatar;
-      proxy.$modal.msgSuccess('修改成功');
+      proxy.$modal.msgSuccess(t('page.normal.confirmInfo.updateSuccess', '修改成功'));
       visible.value = false;
       // console.log('data', data)
     });

@@ -62,7 +62,21 @@ function createDefaultForm(): FormEntity {
 }
 
 const form = ref<FormEntity>(createDefaultForm());
-const rules: FormRules<FormEntity> = {};
+const rules = computed<FormRules<FormEntity>>(() => ({
+  url: [
+    {
+      required: true,
+      whitespace: true,
+      message: t('page.mcp.mcpServiceDialog.rules.urlRequired', '请输入服务 URL'),
+      trigger: 'blur'
+    },
+    {
+      pattern: /^https?:\/\//i,
+      message: t('page.mcp.mcpServiceDialog.rules.urlInvalid', '服务 URL 不正确'),
+      trigger: 'blur'
+    }
+  ]
+}));
 
 const submitDisabled = computed(() => isEmpty(form.value.name));
 
@@ -515,8 +529,8 @@ defineExpose({
             <el-radio-button value="sse">SSE</el-radio-button>
           </el-radio-group>
         </el-form-item>
-        <el-form-item :label="t('page.mcp.mcpServiceDialog.serviceUrl')" prop="url">
-          <el-input v-model="form.url" :placeholder="t('page.mcp.mcpServiceDialog.serviceUrlPlaceholder')"
+        <el-form-item :label="t('page.mcp.mcpServiceDialog.serviceUrl', '服务 URL')" prop="url">
+          <el-input v-model="form.url" :placeholder="t('page.mcp.mcpServiceDialog.serviceUrlPlaceholder', 'https://example.com/mcp')"
             maxlength="9999" :show-word-limit="false" />
         </el-form-item>
         <el-form-item prop="custom_headers">
@@ -542,7 +556,7 @@ defineExpose({
                 class="custom-header-key" />
               <el-input v-model="item.value" :placeholder="t('page.mcp.mcpServiceDialog.customHeaders.valuePlaceholder')"
                 class="custom-header-value" />
-              <el-button text size="small" class="custom-header-remove" :aria-label="t('common.delete')"
+              <el-button text size="small" class="custom-header-remove" :aria-label="t('page.normal.delete')"
                 @click="removeCustomHeader(idx)">
                 <el-icon>
                   <X />
@@ -622,13 +636,13 @@ defineExpose({
             <el-icon v-else-if="!testing && lastTestOk === false" class="status-icon unavailable">
               <CircleX />
             </el-icon>
-          </template>{{ t('form.button.test', '测试连接') }}
+          </template>{{ t('page.normal.testConnection', '测试连接') }}
         </el-button>
         <el-button class="close-btn" @click="closeDialog">
-          {{ t('form.button.close', '取消') }}
+          {{ t('page.normal.cancel', '取消') }}
         </el-button>
         <el-button type="primary" class="submit-btn" :disabled="submitDisabled" @click="submitForm">
-          {{ t('form.button.submit', '保存') }}
+          {{ t('page.normal.save', '保存') }}
         </el-button>
       </div>
     </template>

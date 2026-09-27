@@ -50,7 +50,7 @@ export const THINKING_CONTROL_OPTIONS: SelectOption[] = [
     labelKey: 'page.models.form.thinkingControl.chatTemplateKwargs',
     label: 'chat_template_kwargs',
     placeholderKey: 'page.models.form.thinkingControl.chatTemplateKwargsPlaceholder',
-    placeholder: '中文："自定义 OpenAI 兼容、NVIDIA NIM、vLLM / 本地 Qwen 部署'
+    placeholder: '自定义 OpenAI 兼容、NVIDIA NIM、vLLM / 本地 Qwen 部署'
   },
   {
     value: 'enable_thinking',

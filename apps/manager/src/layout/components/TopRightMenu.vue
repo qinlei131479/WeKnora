@@ -38,7 +38,7 @@
       </div>
       <template #dropdown>
         <el-dropdown-menu>
-          <el-dropdown-item command="zh-CN">简体中文</el-dropdown-item>
+          <el-dropdown-item command="zh-CN">{{ $t('component.language.zhCN', '简体中文') }}</el-dropdown-item>
           <el-dropdown-item divided command="en-US">English</el-dropdown-item>
         </el-dropdown-menu>
       </template>
@@ -52,7 +52,7 @@
       <template #dropdown>
         <el-dropdown-menu>
           <router-link to="/user/profile">
-            <el-dropdown-item>个人中心</el-dropdown-item>
+            <el-dropdown-item>{{ $t('layout.topRightMenu.profile', '个人中心') }}</el-dropdown-item>
           </router-link>
           <!--
           <el-dropdown-item command="setLayout" v-if="settingsStore.showSettings">
@@ -63,7 +63,7 @@
           </el-dropdown-item>
           -->
           <el-dropdown-item divided command="logout">
-            <span>退出登录</span>
+            <span>{{ $t('layout.topRightMenu.signOut', '退出登录') }}</span>
           </el-dropdown-item>
         </el-dropdown-menu>
       </template>
@@ -114,9 +114,9 @@ function handleCommand(command: string): void {
 }
 
 function logout(): void {
-  ElMessageBox.confirm('确定注销并退出系统吗？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
+  ElMessageBox.confirm(t('layout.topRightMenu.areYouSureYouWantToSignOut', '确定注销并退出系统吗？'), t('page.system.user.resetPassword.title', '提示'), {
+    confirmButtonText: t('component.kJSCCmpt.confirm', '确定'),
+    cancelButtonText: t('page.normal.cancel', '取消'),
     type: 'warning'
   })
     .then(() => {

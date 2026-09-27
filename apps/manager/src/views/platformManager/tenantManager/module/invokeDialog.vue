@@ -1,7 +1,7 @@
 <template>
   <!-- 添加调用次数对话框 -->
   <KJSCDialogV2
-    title="添加调用次数"
+    :title="$t('page.platformManager.tenantManager.addCallQuota', '添加调用次数')"
     v-model="state.visible"
     width="750px"
     append-to-body
@@ -18,21 +18,21 @@
         ref="callRef"
         class="content-style-form"
       >
-        <el-form-item label="添加次数" prop="callTimes">
-          <el-input v-model="state.form.callTimes" placeholder="请输入整数数字">
-            <template #append>万次</template>
+        <el-form-item :label="$t('page.platformManager.tenantManager.additionalCalls', '添加次数')" prop="callTimes">
+          <el-input v-model="state.form.callTimes" :placeholder="$t('page.platformManager.tenantManager.enterAnIntegerText', '请输入整数数字')">
+            <template #append>{{ $t('page.platformManager.tenantManager.10000Calls', '万次') }}</template>
           </el-input>
         </el-form-item>
       </el-form>
     </div>
     <template #prefixFooter>
       <div class="dialog-footer">
-        <kjsc-button @click="cancel">取 消</kjsc-button>
+        <kjsc-button @click="cancel">{{ $t('component.excelImportDialog.cancel', '取 消') }}</kjsc-button>
         <kjsc-button
           type="primary"
           :disabled="!state.form.callTimes"
           @click="invokeSubmitForm"
-          >确 定</kjsc-button
+          >{{ $t('component.excelImportDialog.confirm', '确 定') }}</kjsc-button
         >
       </div>
     </template>
@@ -40,6 +40,7 @@
 </template>
 
 <script setup>
+import { t } from '@/i18n';
 import KJSCDialogV2 from "@/components/KJSCCmpt/KJSCDialogV2.vue";
 import Statistical from "@/components/Tenant/statistical";
 import api from "@/utils/api";
@@ -69,13 +70,13 @@ const { proxy } = getCurrentInstance();
 // 校验调用次数
 const validateCallTimes = (rule, value, callback) => {
   if (!value) {
-    callback(new Error("调用次数不能为空"));
+    callback(new Error(t('page.platformManager.tenantManager.numberOfCallsIsRequired', '调用次数不能为空')));
   } else {
     const regex = /[^\d]/g;
     if (!regex.test(value)) {
       callback();
     } else {
-      callback(new Error("只能输入整数数字"));
+      callback(new Error(t('page.platformManager.tenantManager.enterAnInteger', '只能输入整数数字')));
     }
   }
 };
@@ -125,12 +126,12 @@ const invokeSubmitForm = () => {
       state.form.tenantId = state.dataId;
       let res = await api.tenantManager.addCallCount(state.form);
       if (res.code === 200) {
-        proxy.$modal.msgSuccess("操作成功");
+        proxy.$modal.msgSuccess(t('common.dict.operationSuccessful', '操作成功'));
         reset();
         emits("update:modelValue", false);
         emits("submitClick");
       } else {
-        proxy.$modal.msgSuccess(res.msg || "操作失败，请重新提交");
+        proxy.$modal.msgSuccess(res.msg || t('page.platformManager.tenantManager.operationFailedPleaseTryAgain', '操作失败，请重新提交'));
       }
     }
   });

@@ -23,19 +23,18 @@
     </el-upload>
     <!-- 上传提示 -->
     <div class="el-upload__tip" v-if="showTip && !disabled">
-      请上传
-      <template v-if="fileSize">
-        大小不超过 <b style="color: #f56c6c">{{ fileSize }}MB</b>
-      </template>
-      <template v-if="fileType">
-        格式为 <b style="color: #f56c6c">{{ fileType.join("/") }}</b>
-      </template>
-      的文件
+      <i18n-t
+        :keypath="fileSize ? (fileType ? 'component.fileUpload.hintSizeAndTypes' : 'component.fileUpload.hintSize') : (fileType ? 'component.fileUpload.hintTypes' : 'component.fileUpload.hint')"
+        scope="global"
+      >
+        <template #size><b style="color: #f56c6c">{{ fileSize }}MB</b></template>
+        <template #types><b style="color: #f56c6c">{{ fileType.join('/') }}</b></template>
+      </i18n-t>
     </div>
 
     <el-dialog
       v-model="dialogVisible"
-      title="预览"
+      :title="$t('page.normal.preview.tab', '预览')"
       width="800px"
       append-to-body
     >
@@ -48,6 +47,7 @@
 </template>
 
 <script setup lang="ts">
+import { t } from '@/i18n';
 import { getToken } from "@/utils/auth"
 import Sortable from 'sortablejs'
 import type { UploadFileResult } from '@/types/api/common'
@@ -149,28 +149,28 @@ function handleBeforeUpload(file: File): boolean {
     isImg = file.type.indexOf("image") > -1
   }
   if (!isImg) {
-    proxy.$modal.msgError(`文件格式不正确，请上传${props.fileType.join("/")}图片格式文件!`)
+    proxy.$modal.msgError(t('component.imageUpload.invalidImageFormatUploadImagesOfType', { value1: props.fileType.join("/") }, '文件格式不正确，请上传{value1}图片格式文件!'))
     return false
   }
   if (file.name.includes(',')) {
-    proxy.$modal.msgError('文件名不正确，不能包含英文逗号!')
+    proxy.$modal.msgError(t('component.fileUpload.invalidFilenameCommasAreNotAllowed', '文件名不正确，不能包含英文逗号!'))
     return false
   }
   if (props.fileSize) {
     const isLt = file.size / 1024 / 1024 < props.fileSize
     if (!isLt) {
-      proxy.$modal.msgError(`上传头像图片大小不能超过 ${props.fileSize} MB!`)
+      proxy.$modal.msgError(t('component.imageUpload.avatarImagesMustNotExceedMb', { value1: props.fileSize }, '上传头像图片大小不能超过 {value1} MB!'))
       return false
     }
   }
-  proxy.$modal.loading("正在上传图片，请稍候...")
+  proxy.$modal.loading(t('component.imageUpload.uploadingImagePleaseWait', '正在上传图片，请稍候...'))
   number.value++
   return true
 }
 
 // 文件个数超出
 function handleExceed(): void {
-  proxy.$modal.msgError(`上传文件数量不能超过 ${props.limit} 个!`)
+  proxy.$modal.msgError(t('component.fileUpload.youCanUploadAtMostFiles', { value1: props.limit }, '上传文件数量不能超过 {value1} 个!'))
 }
 
 // 上传成功回调
@@ -211,7 +211,7 @@ function uploadedSuccessfully(): void {
 
 // 上传失败
 function handleUploadError(): void {
-  proxy.$modal.msgError("上传图片失败")
+  proxy.$modal.msgError(t('component.imageUpload.imageUploadFailed', '上传图片失败'))
   proxy.$modal.closeLoading()
 }
 

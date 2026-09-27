@@ -8,7 +8,7 @@
   >
     <template #header="{ close, titleId, titleClass }">
       <div class="header-box">
-        <div class="header-top-box">租户详情</div>
+        <div class="header-top-box">{{ $t('page.platformManager.tenantManager.tenantDetails', '租户详情') }}</div>
       </div>
     </template>
     <div class="content-box">
@@ -20,25 +20,25 @@
           <el-col :span="10">
             <div class="detail-box">
               <div class="detail-box-item">
-                <span>租户ID：</span>
+                <span>{{ $t('page.platformManager.tenantManager.tenantId', '租户ID：') }}</span>
                 <span>{{ state.dataObj.id || "- -" }}</span>
               </div>
               <div class="detail-box-item">
-                <span>创建人：</span>
+                <span>{{ $t('page.platformManager.tenantManager.createdBy', '创建人：') }}</span>
                 <span>{{ state.dataObj.createBy || "- -" }}</span>
               </div>
               <div class="detail-box-item">
-                <span>并发限制：</span>
-                <span>{{ state.dataObj.qps || "- -" }}次/秒</span>
+                <span>{{ $t('page.platformManager.tenantManager.concurrencyLimit', '并发限制：') }}</span>
+                <span>{{ state.dataObj.qps || "- -" }}{{ $t('page.platformManager.tenantManager.callsSecond', '次/秒') }}</span>
               </div>
             </div>
             <div class="detail-box">
               <div class="detail-box-item">
-                <span>创建时间：</span>
+                <span>{{ $t('page.platformManager.tenantManager.createdAt', '创建时间：') }}</span>
                 <span>{{ state.dataObj.createTime || "- -" }}</span>
               </div>
               <div class="detail-box-item">
-                <span>更新时间：</span>
+                <span>{{ $t('page.platformManager.tenantManager.updatedAt', '更新时间：') }}</span>
                 <span>{{ state.dataObj.updateTime || "- -" }}</span>
               </div>
             </div>
@@ -54,13 +54,13 @@
                 type="primary"
                 v-hasPermi="['system:tenant:edit']"
                 @click="handleUpdate"
-                >编 辑</kjsc-button
+                >{{ $t('page.platformManager.tenantManager.edit', '编 辑') }}</kjsc-button
               >
               <kjsc-button
                 type="success"
                 v-hasPermi="['system:tenant:invoke']"
                 @click="handleInvoke"
-                >添加调用次数</kjsc-button
+                >{{ $t('page.platformManager.tenantManager.addCallQuota', '添加调用次数') }}</kjsc-button
               >
             </div>
           </el-col>
@@ -69,11 +69,11 @@
       <div class="content-box-static">
         <div class="content-box-static-title">
           <div class="d-flex">
-            <div class="box-static-left">数据请求趋势</div>
+            <div class="box-static-left">{{ $t('page.platformManager.tenantManager.requestTrends', '数据请求趋势') }}</div>
             <el-tooltip
               class="box-item"
               effect="dark"
-              content="不支持查询一年之前的数据"
+              :content="$t('page.platformManager.tenantManager.dataFromMoreThanOneYearAgoCannotBeQueried', '不支持查询一年之前的数据')"
               placement="bottom"
             >
               <el-icon color="rgba(138, 140, 157, 1)"
@@ -82,19 +82,19 @@
             </el-tooltip>
             <div class="d-flex m-l-24">
               <svg-icon icon-class="static_icon" />
-              <div class="static-title">调用次数</div>
+              <div class="static-title">{{ $t('component.tenant.calls', '调用次数') }}</div>
             </div>
           </div>
           <el-form :inline="true" :model="form" label-width="auto">
-            <el-form-item label="所属系统">
+            <el-form-item :label="$t('page.platformManager.tenantManager.system', '所属系统')">
               <el-select
                 v-model="state.queryParams.systemId"
-                placeholder="全部系统"
+                :placeholder="$t('page.platformManager.tenantManager.allSystems', '全部系统')"
                 clearable
                 style="width: 160px"
                 @change="handleQuery"
               >
-                <el-option label="全部系统" value=""></el-option>
+                <el-option :label="$t('page.platformManager.tenantManager.allSystems', '全部系统')" value=""></el-option>
                 <el-option
                   v-for="dict in state.system_type"
                   :key="dict.value"
@@ -120,14 +120,14 @@
                 />
               </el-select>
             </el-form-item> -->
-            <el-form-item label="调用时间">
+            <el-form-item :label="$t('page.platformManager.tenantManager.callTime', '调用时间')">
               <el-date-picker
                 v-model="state.dateRange"
                 value-format="YYYY-MM-DD"
                 type="daterange"
-                range-separator="至"
-                start-placeholder="开始日期"
-                end-placeholder="结束日期"
+                :range-separator="$t('page.system.role.rangeSeparator', '至')"
+                :start-placeholder="$t('page.platformManager.tenantManager.startDate', '开始日期')"
+                :end-placeholder="$t('page.platformManager.tenantManager.endDate', '结束日期')"
                 style="width: 250px"
                 :disabled-date="disabledDateLastYear"
                 @change="selectData"
@@ -140,7 +140,7 @@
                   icon-class="export"
                   style="margin-right: 8px"
                 ></svg-icon
-                >数据导出</el-button
+                >{{ $t('page.platformManager.tenantManager.exportData', '数据导出') }}</el-button
               >
             </el-form-item>
           </el-form>
@@ -170,6 +170,7 @@
   />
 </template>
 <script setup>
+import { t } from '@/i18n';
 import LineStctic from "@/components/Tenant/lineStatic.vue";
 import Statistical from "@/components/Tenant/statistical";
 import AddAndEditDialog from "./addAndEditDialog.vue";
@@ -272,7 +273,7 @@ watchEffect(() => {
 const selectData = async () => {
   if (state.dateRange[0] != null && state.dateRange[1] != null) {
     if (DateDiff(state.dateRange[0], state.dateRange[1]) > 90) {
-      proxy.$modal.msgError("最多支持连续选择90天的数据");
+      proxy.$modal.msgError(t('page.platformManager.tenantManager.youCanSelectAMaximumOf90ConsecutiveDays', '最多支持连续选择90天的数据'));
       state.dateRange = [getDate(state.dateRange[1]), state.dateRange[1]];
     }
   }
@@ -320,7 +321,7 @@ const DialogSubmit = () => {
 
 /** 修改按钮操作 */
 const handleUpdate = async () => {
-  state.dialogParams.title = "修改租户";
+  state.dialogParams.title = t('page.platformManager.tenantManager.editTenant', '修改租户');
   state.dialogParams.addAndEditDialogVisiable = true;
 };
 

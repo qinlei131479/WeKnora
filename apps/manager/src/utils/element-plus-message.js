@@ -1,10 +1,11 @@
+import { t } from '@/i18n';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { h } from 'vue';
 
-export const showConfirm = (title = '提示', message, successCallback, errorCallback) => {
+export const showConfirm = (title = t('page.system.user.resetPassword.title', '提示'), message, successCallback, errorCallback) => {
   ElMessageBox.confirm(message, title, {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
+    confirmButtonText: t('component.kJSCCmpt.confirm', '确定'),
+    cancelButtonText: t('page.normal.cancel', '取消'),
     type: 'warning'
     // confirmButtonClass: "el-button--danger"
   })
@@ -79,8 +80,8 @@ export const showMessageBox = (
       ]
     ),
     showCancelButton: true,
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
+    confirmButtonText: t('component.kJSCCmpt.confirm', '确定'),
+    cancelButtonText: t('page.normal.cancel', '取消'),
     // center: true,
     confirmButtonClass: confirmStyle,
     cancelButtonClass: cancelStyle,

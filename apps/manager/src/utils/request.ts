@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 import axios from 'axios';
 import { ElNotification, ElMessageBox, ElMessage, ElLoading } from 'element-plus';
 import { getToken } from '@/utils/auth';
@@ -67,7 +68,7 @@ service.interceptors.request.use(
         const s_data = sessionObj.data; // 请求数据
         const s_time = sessionObj.time; // 请求时间
         if (s_data === requestObj.data && requestObj.time - s_time < interval && s_url === requestObj.url) {
-          const message = '数据正在处理，请勿重复提交';
+          const message = t('common.request.theRequestIsBeingProcessedDoNotSubmitItAgain', '数据正在处理，请勿重复提交');
           console.warn(`[${s_url}]: ` + message);
           return Promise.reject(new Error(message));
         } else {
@@ -97,9 +98,9 @@ service.interceptors.response.use(
     if (code === 401) {
       if (!isRelogin.show) {
         isRelogin.show = true;
-        ElMessageBox.confirm('登录状态已过期，您可以继续留在该页面，或者重新登录', '系统提示', {
-          confirmButtonText: '重新登录',
-          cancelButtonText: '取消',
+        ElMessageBox.confirm(t('common.request.yourSessionHasExpiredYouCanStayOnThisPage', '登录状态已过期，您可以继续留在该页面，或者重新登录'), t('common.modal.systemNotice', '系统提示'), {
+          confirmButtonText: t('common.request.signInAgain', '重新登录'),
+          cancelButtonText: t('page.normal.cancel', '取消'),
           type: 'warning'
         })
           .then(() => {
@@ -114,7 +115,7 @@ service.interceptors.response.use(
             isRelogin.show = false;
           });
       }
-      return Promise.reject('无效的会话，或者会话已过期，请重新登录。');
+      return Promise.reject(t('common.request.yourSessionIsInvalidOrHasExpiredPleaseSignIn', '无效的会话，或者会话已过期，请重新登录。'));
     } else if (code === 500) {
       ElMessage({ message: msg, type: 'error' });
       return Promise.reject(new Error(msg));
@@ -135,11 +136,11 @@ service.interceptors.response.use(
     }
     let { message } = error;
     if (message == 'Network Error') {
-      message = '后端接口连接异常';
+      message = t('common.request.unableToConnectToTheServer', '后端接口连接异常');
     } else if (message.includes('timeout')) {
-      message = '系统接口请求超时';
+      message = t('common.request.theServerRequestTimedOut', '系统接口请求超时');
     } else if (message.includes('Request failed with status code')) {
-      message = '系统接口' + message.slice(-3) + '异常';
+      message = t('common.request.serverRequestFailed', { value1: message.slice(-3) }, '系统接口{value1}异常');
     } else if (axios.isCancel(error)) {
       return Promise.reject(error);
     }
@@ -150,7 +151,7 @@ service.interceptors.response.use(
 
 export function getBlob(url: string, config?: any, loading?: boolean) {
   if (loading) {
-    downloadLoadingInstance = ElLoading.service({ text: '正在下载数据，请稍候', background: 'rgba(0, 0, 0, 0.7)' });
+    downloadLoadingInstance = ElLoading.service({ text: t('common.download.downloadingDataPleaseWait', '正在下载数据，请稍候'), background: 'rgba(0, 0, 0, 0.7)' });
   }
   return service
     .get(url, {
@@ -176,7 +177,7 @@ export function getBlob(url: string, config?: any, loading?: boolean) {
 
 // 通用下载方法
 export function download(url: string, params: any, filename: string, config?: any) {
-  downloadLoadingInstance = ElLoading.service({ text: '正在下载数据，请稍候', background: 'rgba(0, 0, 0, 0.7)' });
+  downloadLoadingInstance = ElLoading.service({ text: t('common.download.downloadingDataPleaseWait', '正在下载数据，请稍候'), background: 'rgba(0, 0, 0, 0.7)' });
   if (!config) {
     config = {};
   }
@@ -202,7 +203,7 @@ export function download(url: string, params: any, filename: string, config?: an
     })
     .catch((r: any) => {
       console.error(r);
-      ElMessage.error('下载文件出现错误，请联系管理员！');
+      ElMessage.error(t('common.download.failedToDownloadTheFileContactYourAdministrator', '下载文件出现错误，请联系管理员！'));
       downloadLoadingInstance.close();
     });
 }
@@ -221,9 +222,9 @@ const downloadCallback = async (data: any, filename: string) => {
     if (code === 401) {
       if (!isRelogin.show) {
         isRelogin.show = true;
-        ElMessageBox.confirm('登录状态已过期，您可以继续留在该页面，或者重新登录', '系统提示', {
-          confirmButtonText: '重新登录',
-          cancelButtonText: '取消',
+        ElMessageBox.confirm(t('common.request.yourSessionHasExpiredYouCanStayOnThisPage', '登录状态已过期，您可以继续留在该页面，或者重新登录'), t('common.modal.systemNotice', '系统提示'), {
+          confirmButtonText: t('common.request.signInAgain', '重新登录'),
+          cancelButtonText: t('page.normal.cancel', '取消'),
           type: 'warning'
         })
           .then(

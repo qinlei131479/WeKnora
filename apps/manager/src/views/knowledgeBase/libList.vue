@@ -343,7 +343,7 @@ function resetQuery() {
 /** 删除按钮操作 */
 function handleDelete(row: KnowledgeBaseEntity) {
   const id = row.id!;
-  const message = t('page.users.deleteConfirm', '是否确认删除知识库编号为"' + id + '"的数据项？');
+  const message = t('page.knowledgeBase.deleteConfirm', { id }, '是否确认删除知识库编号为"{id}"的数据项？');
   modal.confirm(message).then(
     function () {
       return doDelete(id);

@@ -43,11 +43,11 @@
         </div>
 
         <div class="action-toolbar">
-          <el-button :disabled="single" v-hasPermi="['system:dict:edit']" @click="handleUpdate()">修改</el-button>
-          <el-button :disabled="multiple" v-hasPermi="['system:dict:remove']" @click="handleDelete()">删除</el-button>
-          <el-text>共选中 {{ ids.length }} 条</el-text>
-          <el-button v-hasPermi="['system:dict:export']" @click="handleExport">导出</el-button>
-          <el-button style="margin-left: auto" @click="handleClose">关闭</el-button>
+          <el-button :disabled="single" v-hasPermi="['system:dict:edit']" @click="handleUpdate()">{{ $t('page.system.dict.form.update', '修改') }}</el-button>
+          <el-button :disabled="multiple" v-hasPermi="['system:dict:remove']" @click="handleDelete()">{{ $t('page.normal.delete', '删除') }}</el-button>
+          <el-text>{{ $t('page.normal.selected', '共选中') }} {{ ids.length }} {{ $t('page.normal.items', '条') }}</el-text>
+          <el-button v-hasPermi="['system:dict:export']" @click="handleExport">{{ $t('page.system.post.export', '导出') }}</el-button>
+          <el-button style="margin-left: auto" @click="handleClose">{{ $t('page.normal.close', '关闭') }}</el-button>
           <!-- <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" /> -->
         </div>
       </template>
@@ -190,6 +190,7 @@
 </template>
 
 <script setup lang="ts" name="Data">
+import { t } from '@/i18n';
 import type { FormInstance } from 'element-plus/es/components/form';
 import modal from '@/plugins/modal';
 import tab from '@/plugins/tab';
@@ -229,12 +230,12 @@ const defaultDictType = ref<string>('');
 const typeOptions = ref<SysDictType[]>([]);
 
 const listClassOptions = ref<ListClassOption[]>([
-  { value: 'default', label: '默认' },
-  { value: 'primary', label: '主要' },
-  { value: 'success', label: '成功' },
-  { value: 'info', label: '信息' },
-  { value: 'warning', label: '警告' },
-  { value: 'danger', label: '危险' }
+  { value: 'default', get label() { return t('component.models.defaultTag', '默认'); } },
+  { value: 'primary', get label() { return t('page.system.dict.primary', '主要'); } },
+  { value: 'success', get label() { return t('component.knowledgeEditor.activity.outcomes.success', '成功'); } },
+  { value: 'info', get label() { return t('page.system.dict.info', '信息'); } },
+  { value: 'warning', get label() { return t('page.system.dict.warning', '警告'); } },
+  { value: 'danger', get label() { return t('page.system.dict.danger', '危险'); } }
 ]);
 
 const data = reactive({
@@ -247,9 +248,9 @@ const data = reactive({
     status: undefined
   } as DictDataQueryParams,
   rules: {
-    dictLabel: [{ required: true, message: '数据标签不能为空', trigger: 'blur' }],
-    dictValue: [{ required: true, message: '数据键值不能为空', trigger: 'blur' }],
-    dictSort: [{ required: true, message: '数据顺序不能为空', trigger: 'blur' }]
+    dictLabel: [{ required: true, get message() { return t('page.system.dict.dataLabelIsRequired', '数据标签不能为空'); }, trigger: 'blur' }],
+    dictValue: [{ required: true, get message() { return t('page.system.dict.dataValueIsRequired', '数据键值不能为空'); }, trigger: 'blur' }],
+    dictSort: [{ required: true, get message() { return t('page.system.dict.dataOrderIsRequired', '数据顺序不能为空'); }, trigger: 'blur' }]
   }
 });
 
@@ -315,7 +316,7 @@ function resetQuery() {
 function handleAdd() {
   reset();
   open.value = true;
-  title.value = '添加字典数据';
+  title.value = t('page.system.dict.addDictionaryData', '添加字典数据');
   form.value.dictType = queryParams.value.dictType;
 }
 
@@ -331,18 +332,18 @@ function handleUpdate(row?: SysDictData) {
   getData(dictCode).then((response) => {
     form.value = response.data!;
     open.value = true;
-    title.value = '修改字典数据';
+    title.value = t('page.system.dict.data.form.editTitle', '修改字典数据');
   });
 }
 
 function handleStatusChange(row: SysDictData) {
-  const text = row.status === '0' ? '启用' : '停用';
+  const text = row.status === '0' ? t('page.normal.enable', '启用') : t('page.normal.disable', '停用');
   modal
-    .confirm('确认要"' + text + '""' + row.dictLabel + '"字典数据吗?')
+    .confirm(t('page.system.dict.dictionaryEntry', { value1: text, value2: row.dictLabel }, '确认要"{value1}""{value2}"字典数据吗?'))
     .then(() => updateData(row))
     .then(() => {
       useDictStore().removeDict(queryParams.value.dictType!);
-      modal.msgSuccess(text + '成功');
+      modal.msgSuccess(t('page.system.dept.successful', { value1: text }, '{value1}成功'));
     })
     .catch(() => {
       row.status = row.status === '0' ? '1' : '0';
@@ -355,14 +356,14 @@ function submitForm() {
       if (form.value.dictCode != undefined) {
         updateData(form.value).then(() => {
           useDictStore().removeDict(queryParams.value.dictType!);
-          modal.msgSuccess('修改成功');
+          modal.msgSuccess(t('page.normal.confirmInfo.updateSuccess', '修改成功'));
           open.value = false;
           getList();
         });
       } else {
         addData(form.value).then(() => {
           useDictStore().removeDict(queryParams.value.dictType!);
-          modal.msgSuccess('新增成功');
+          modal.msgSuccess(t('page.normal.confirmInfo.addSuccess', '新增成功'));
           open.value = false;
           getList();
         });
@@ -374,13 +375,13 @@ function submitForm() {
 function handleDelete(row?: SysDictData) {
   const dictCodes = row?.dictCode || ids.value;
   modal
-    .confirm('是否确认删除字典编码为"' + dictCodes + '"的数据项？')
+    .confirm(t('page.system.dict.deleteDictionaryEntriesWithCodes', { value1: dictCodes }, '是否确认删除字典编码为"{value1}"的数据项？'))
     .then(function () {
       return delData(dictCodes);
     })
     .then(() => {
       getList();
-      modal.msgSuccess('删除成功');
+      modal.msgSuccess(t('page.normal.confirmInfo.removeSuccess', '删除成功'));
       useDictStore().removeDict(queryParams.value.dictType!);
     })
     .catch(() => {});

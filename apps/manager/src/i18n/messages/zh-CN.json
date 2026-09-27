@@ -6,7 +6,150 @@
     "title": "智能体中台 2.0",
     "title_short": "智能体中台 2.0"
   },
+  "common": {
+    "common": {
+      "download": "下载",
+      "lastMonth": "一个月内",
+      "lastThreeMonths": "三个月内",
+      "lastWeek": "一周内"
+    },
+    "dict": {
+      "addedSuccessfully": "增加成功",
+      "approved": "审核通过",
+      "baseContent": "底量",
+      "featured": "精选",
+      "finalReview": "终审中",
+      "free": "免费",
+      "initialReview": "初审中",
+      "linked": "已关联",
+      "localVideos": "本地视频",
+      "locked": "锁定",
+      "myVideos": "我的视频",
+      "newArrivals": "上新",
+      "notLinked": "未关联",
+      "notSubmittedDraft": "未提交/草稿",
+      "operationSuccessful": "操作成功",
+      "paid": "付费",
+      "pendingReview": "待审核",
+      "publicVideos": "公共视频",
+      "reviewFailed": "审核失败",
+      "reviewSuccessful": "审核成功",
+      "reviewed": "已审核",
+      "secondaryReview": "复审中",
+      "topics": "专题",
+      "updatedSuccessfully": "编辑成功"
+    },
+    "download": {
+      "downloadingDataPleaseWait": "正在下载数据，请稍候",
+      "failedToDownloadTheFileContactYourAdministrator": "下载文件出现错误，请联系管理员！"
+    },
+    "error": {
+      "fileSizeExceeded": "文件大小不能超过 {size} MB",
+      "invalidCredentials": "登录凭据无效，请重新登录",
+      "networkError": "网络连接异常，请稍后重试",
+      "pleaseRelogin": "请重新登录",
+      "tokenRefreshFailed": "登录状态刷新失败，请重新登录"
+    },
+    "errorCode": {
+      "anUnknownSystemErrorOccurredContactYourAdministrator": "系统未知错误，请反馈给管理员",
+      "authenticationFailedUnableToAccessSystemResources": "认证失败，无法访问系统资源",
+      "theRequestedResourceDoesNotExist": "访问资源不存在",
+      "youDoNotHavePermissionToPerformThisAction": "当前操作没有权限"
+    },
+    "failed": "操作失败",
+    "fastCopy": {
+      "nameCopied": "复制名称成功"
+    },
+    "index": {
+      "1DayAgo": "1天前",
+      "assignRoles": "分配角色",
+      "assignUsers": "分配用户",
+      "dictionaryData": "字典数据",
+      "formattedValue": "{value1}月{value2}日{value3}时{value4}分",
+      "hoursAgo": "{value1}小时前",
+      "justNow": "刚刚",
+      "lockScreen": "锁定屏幕",
+      "minutesAgo": "{value1}分钟前"
+    },
+    "mermaid": {
+      "close": "关闭",
+      "download": "下载",
+      "downloading": "正在下载…",
+      "reset": "重置",
+      "zoomIn": "放大",
+      "zoomOut": "缩小"
+    },
+    "modal": {
+      "systemNotice": "系统提示"
+    },
+    "request": {
+      "serverRequestFailed": "系统接口{value1}异常",
+      "signInAgain": "重新登录",
+      "theRequestIsBeingProcessedDoNotSubmitItAgain": "数据正在处理，请勿重复提交",
+      "theServerRequestTimedOut": "系统接口请求超时",
+      "unableToConnectToTheServer": "后端接口连接异常",
+      "yourSessionHasExpiredYouCanStayOnThisPage": "登录状态已过期，您可以继续留在该页面，或者重新登录",
+      "yourSessionIsInvalidOrHasExpiredPleaseSignIn": "无效的会话，或者会话已过期，请重新登录。"
+    },
+    "ruoyi": {
+      "fri": "五",
+      "mon": "一",
+      "sat": "六",
+      "sun": "日",
+      "thu": "四",
+      "tue": "二",
+      "wed": "三"
+    },
+    "success": "操作成功",
+    "time": {
+      "goodAfternoon": "中午好",
+      "goodAfternoonText": "下午好",
+      "goodEvening": "晚上好",
+      "goodMorning": "早上好"
+    },
+    "user": {
+      "youAreStillUsingYourInitialPasswordPleaseChangeIt": "您的密码还是初始密码，请修改密码！",
+      "yourPasswordHasExpiredPleaseChangeItAsSoonAs": "您的密码已过期，请尽快修改密码！"
+    },
+    "utils": {
+      "10DaysAgo": "10天前",
+      "daysAgo": "{value1}天前"
+    }
+  },
   "component": {
+    "breadcrumb": {
+      "home": "首页"
+    },
+    "editor": {
+      "enterContent": "请输入内容",
+      "failedToInsertImage": "图片插入失败",
+      "invalidImageFormat": "图片格式错误!",
+      "uploadedFilesMustNotExceedMb": "上传文件大小不能超过 {value1} MB!"
+    },
+    "excelImportDialog": {
+      "cancel": "取 消",
+      "clickToUpload": "点击上传",
+      "confirm": "确 定",
+      "downloadTemplate": "下载模板",
+      "importData": "数据导入",
+      "importResults": "导入结果",
+      "onlyXlsAndXlsxFilesAreSupported": "仅允许导入xls、xlsx格式文件。",
+      "selectAnXlsOrXlsxFile": "请选择后缀为 “xls”或“xlsx”的文件。",
+      "updateExistingData": "是否更新已经存在的数据",
+      "uploadHint": "将文件拖到此处，或{action}"
+    },
+    "fileUpload": {
+      "chooseFile": "选取文件",
+      "fileUploadFailed": "上传文件失败",
+      "hint": "请上传文件",
+      "hintSize": "请上传大小不超过 {size} 的文件",
+      "hintSizeAndTypes": "请上传大小不超过 {size}、格式为 {types} 的文件",
+      "hintTypes": "请上传格式为 {types} 的文件",
+      "invalidFileFormatUploadFilesOfType": "文件格式不正确，请上传{value1}格式文件!",
+      "invalidFilenameCommasAreNotAllowed": "文件名不正确，不能包含英文逗号!",
+      "uploadingFilePleaseWait": "正在上传文件，请稍候...",
+      "youCanUploadAtMostFiles": "上传文件数量不能超过 {value1} 个!"
+    },
     "graphSettings": {
       "addAttribute": "新增属性",
       "addEntity": "新增实体",
@@ -58,7 +201,25 @@
       "title": "知识图谱配置"
     },
     "headerSearch": {
-      "input.placeholder": "搜索全局资源"
+      "emptyResult": "未找到 \"{keyword}\" 相关菜单",
+      "input.placeholder": "搜索全局资源",
+      "navigate": "切换",
+      "resultCount": "找到 {count} 个结果",
+      "searchMenusByTitleOrUrl": "菜单搜索，支持标题、URL模糊查询",
+      "select": "选择",
+      "tryAnotherKeywordOrPath": "试试其他关键词或路径"
+    },
+    "iconSelect": {
+      "enterAnIconName": "请输入图标名称"
+    },
+    "imageUpload": {
+      "avatarImagesMustNotExceedMb": "上传头像图片大小不能超过 {value1} MB!",
+      "imageUploadFailed": "上传图片失败",
+      "invalidImageFormatUploadImagesOfType": "文件格式不正确，请上传{value1}图片格式文件!",
+      "uploadingImagePleaseWait": "正在上传图片，请稍候..."
+    },
+    "kJSCCmpt": {
+      "confirm": "确定"
     },
     "kbSettings": {
       "parser": {
@@ -828,12 +989,49 @@
       "selectLanguage": "选择语言",
       "zhCN": "简体中文"
     },
+    "loginFailureDialog": {
+      "contactYourAdministratorIfYouHaveAnyQuestions": "如有疑问请联系管理员",
+      "continueSigningIn": "是否继续登录",
+      "continueSigningInText": "继续登录",
+      "continuingWillSignOutTheOtherDevice": "如果继续登录对方设备会强制下线",
+      "goNow": "立即跳转!",
+      "gotIt": "知道了",
+      "invalidAccountInformationContactYourAdministrator": "账号信息错误，请联系系统管理员",
+      "passwordChangedPleaseSignInWithYourNewPassword": "密码修改成功，请使用新密码登录",
+      "pleaseSignInAgain": "请重新登录",
+      "redirectCountdown": "{seconds} 秒后页面将跳转登录页面，",
+      "securityNotice": "安全提示",
+      "youHaveBeenSignedOutDueToInactivity": "账号因长时间未操作，已自动退出",
+      "yourAccountHasBeenDisabledAndYouHaveBeenSigned": "账号已被停用，系统自动退出",
+      "yourAccountIsSignedInOnAnotherDevice": "检测到当前账户在其它设备已登录",
+      "yourAccountSTenantHasChangedPleaseSignInAgain": "该账户所属租户发生更改，请重新登陆",
+      "yourAccountWasSignedInOnAnotherDeviceThisDevice": "该账户在其他设备登录，当前设备已下线",
+      "yourPasswordHasBeenResetPleaseSignInAgain": "该账户密码被重置，请重新登陆"
+    },
     "models": {
       "addModelInSettings": "去添加模型",
       "builtinTag": "内置",
       "defaultTag": "默认",
       "loadFailed": "加载模型失败",
       "selectModelPlaceholder": "请选择模型"
+    },
+    "preview": {
+      "emptyContent": "文档内容为空",
+      "loadFailed": "文档加载失败"
+    },
+    "rightToolbar": {
+      "hide": "隐藏",
+      "hideSearch": "隐藏搜索",
+      "show": "显示",
+      "showHide": "显示/隐藏",
+      "showHideColumns": "显隐列",
+      "showSearch": "显示搜索",
+      "visibleColumns": "列展示"
+    },
+    "sizeSelect": {
+      "applyingLayoutSizePleaseWait": "正在设置布局大小，请稍候...",
+      "large": "较大",
+      "small": "稍小"
     },
     "system": {
       "globalSettings": {
@@ -853,6 +1051,19 @@
           }
         }
       }
+    },
+    "tenant": {
+      "calls": "调用次数",
+      "chiffonBlouses": "雪纺衫",
+      "highHeels": "高跟鞋",
+      "remaining": "剩余",
+      "shirts": "衬衫",
+      "socks": "袜子",
+      "sweaters": "羊毛衫",
+      "totalCalls": "累计调用",
+      "trousers": "裤子",
+      "validityPeriod": "有效时间",
+      "viewDetails": "点击查看"
     },
     "tenantMember": {
       "audit": {
@@ -875,6 +1086,55 @@
       "systemDefault": "系统默认",
       "unavailable": "不可用",
       "unknownStore": "未知存储"
+    }
+  },
+  "layout": {
+    "headerNotice": {
+      "announcement": "公告",
+      "markAllAsRead": "全部已读",
+      "noNotices": "暂无公告",
+      "notices": "通知公告",
+      "notification": "通知"
+    },
+    "innerLink": {
+      "loadingPagePleaseWait": "正在加载页面，请稍候！"
+    },
+    "settings": {
+      "checkIcon": "图标: check",
+      "clearingSettingsAndRefreshingPleaseWait": "正在清除设置缓存并刷新，请稍候...",
+      "dynamicTitle": "动态标题",
+      "enableTabs": "开启 Tags-Views",
+      "fixedHeader": "固定 Header",
+      "footerCopyright": "底部版权",
+      "layoutSettings": "系统布局配置",
+      "menuNavigation": "菜单导航设置",
+      "mixedMenu": "混合菜单",
+      "persistTabs": "持久化标签页",
+      "resetSettings": "重置配置",
+      "savingLocallyPleaseWait": "正在保存到本地，请稍候...",
+      "showLogo": "显示 Logo",
+      "showTabIcons": "显示页签图标",
+      "sidebarMenu": "左侧菜单",
+      "themeColor": "主题颜色",
+      "themeStyle": "主题风格设置",
+      "topMenu": "顶部菜单"
+    },
+    "tagsView": {
+      "closeAll": "全部关闭",
+      "closeCurrent": "关闭当前",
+      "closeLeft": "关闭左侧",
+      "closeOthers": "关闭其他",
+      "closeRight": "关闭右侧",
+      "fullScreen": "全屏显示",
+      "refreshPage": "刷新页面"
+    },
+    "topBar": {
+      "moreMenus": "更多菜单"
+    },
+    "topRightMenu": {
+      "areYouSureYouWantToSignOut": "确定注销并退出系统吗？",
+      "profile": "个人中心",
+      "signOut": "退出登录"
     }
   },
   "page": {
@@ -1345,6 +1605,17 @@
         "title": "网络搜索配置"
       }
     },
+    "error": {
+      "401Error": "401错误!",
+      "404Error": "404错误!",
+      "accessDenied": "您没有访问权限！",
+      "back": "返回",
+      "backToHome": "返回首页",
+      "home": "回首页",
+      "pageNotFound": "找不到网页！",
+      "sorryThePageYouAreLookingForDoesNotExist": "对不起，您正在寻找的页面不存在。尝试检查URL的错误，然后按浏览器上的刷新按钮或尝试在我们的应用程序中找到其他内容。",
+      "sorryYouDoNotHavePermissionToAccessThisPage": "对不起，您没有访问权限，请不要进行非法操作！您可以返回主页面"
+    },
     "integration": {
       "embedChannels": {
         "detail.agentId": "智能体 ID",
@@ -1422,20 +1693,29 @@
     },
     "knowledgeBase": {
       "add": "新增知识库",
-      "deleteConfirm": "是否确认删除知识库文件 {fileName} 数据项？",
+      "aiQuestionGeneration": "AI问题生成",
+      "audioRecognition": "音频语音识别",
+      "autoTagAssociation": "自动关联标签",
+      "deleteConfirm": "是否确认删除知识库编号为\"{id}\"的数据项？",
       "deleteFaqConfirm": "是否确认删除问答库 {name} 数据项？",
+      "deleteSuccess": "删除成功",
       "embeddingModel": "Embedding嵌入模型",
       "id": "编号",
       "indexingStrategy": "索引策略",
       "indexingStrategys": {
         "vector": "RAG检索",
-        "vector_enabled": "RAG检索已启用"
+        "vector_enabled": "RAG检索已启用",
+        "wiki": "Wiki 知识库"
       },
+      "knowledgeGraphs": "知识图谱",
       "llmModel": "LLM语言大模型",
       "manage": "管理",
+      "multiModal": "多模态功能",
       "name": "知识库名称",
       "namePlaceholder": "请输入知识库名称",
       "searchPlaceholder": "搜索知识库名称",
+      "splitStrategy": "分块策略",
+      "standardQuestion": "标准问题",
       "statuss": {
         "generatingSummary": "生成摘要中...",
         "statusCancelled": "已取消",
@@ -1445,11 +1725,16 @@
         "statusFinalizing": "优化中",
         "statusProcessing": "解析中"
       },
+      "storageEngine": "存储引擎",
+      "tenantId": "关联空间",
       "type": "知识库类型",
       "types": {
         "document": "文档",
         "faq": "问答"
-      }
+      },
+      "untitledDocument": "未命名文档",
+      "updatedAt": "最新修改时间",
+      "vectorStore": "向量储存"
     },
     "knowledgeFaq": {
       "answers": "答案",
@@ -1528,6 +1813,19 @@
       "fileTypePlaceholder": "文件类型",
       "parseStatus": "解析状态",
       "searchPlaceholder": "搜索文档"
+    },
+    "lock": {
+      "enterYourSignInPassword": "请输入登录密码",
+      "formattedValue": "{value1}年{value2}月{value3}日 {value4}",
+      "friday": "星期五",
+      "monday": "星期一",
+      "saturday": "星期六",
+      "signOutAndSignInAgain": "退出重新登录",
+      "sunday": "星期日",
+      "theSystemIsLockedEnterYourPasswordToUnlockIt": "系统已锁定，请输入密码解锁",
+      "thursday": "星期四",
+      "tuesday": "星期二",
+      "wednesday": "星期三"
     },
     "login": {
       "agreement": "登录即代表您同意 {terms} 及 {privacy}",
@@ -1621,12 +1919,13 @@
         "rules": {
           "nameRequired": "请输入服务名称",
           "transportRequired": "请选择传输类型",
-          "urlInvalid": "请输入有效的 URL",
+          "urlInvalid": "服务 URL 不正确",
           "urlRequired": "请输入服务 URL"
         },
         "serviceUrl": "服务 URL",
         "serviceUrlPlaceholder": "https://example.com/mcp",
         "testAfterSaveHint": "保存后可测试连接",
+        "testResultTitle": "测试结果",
         "timeoutSec": "超时时间(秒)",
         "toasts": {
           "createFailed": "创建 MCP 服务失败",
@@ -1669,126 +1968,169 @@
       "updateTitle": "编辑MCP",
       "yes": "是"
     },
+    "model": {
+      "ollama": {
+        "modelSizeBytes": "模型大小（字节）"
+      }
+    },
     "models": {
       "add": "新增模型",
-      "debug.copy": "复制结果",
-      "debug.documents": "候选文档",
-      "debug.documentsPlaceholder": "每行一条文档，用于重排序打分",
-      "debug.elapsed": "耗时",
-      "debug.emptyResult": "未返回调试结果",
-      "debug.failed": "调用失败",
-      "debug.file": "上传文件",
-      "debug.fileAudioPlaceholder": "请上传一段音频",
-      "debug.fileImagePlaceholder": "请上传一张图片",
-      "debug.fileRequired": "该类型需要先上传文件再调试",
-      "debug.fileSelect": "选择文件",
-      "debug.input": "输入内容",
-      "debug.inputPlaceholder": "请输入用于调试的文本",
-      "debug.observations": "观察指标",
-      "debug.requestFail": "请求失败，请检查网络或后端服务",
-      "debug.requestPreview": "请求预览",
-      "debug.response": "响应内容",
-      "debug.resultTitle": "调试结果",
-      "debug.rowButton": "调试",
-      "debug.run": "开始调试",
-      "debug.succeeded": "调用成功",
-      "debug.systemPrompt": "系统提示词",
-      "debug.systemPromptPlaceholder": "可选",
-      "debug.thinking": "思考模式",
-      "debug.title": "模型调试",
-      "form.alert.ollama.rerank": "Ollama 不支持 ReRank 模型，请使用远程接口配置",
-      "form.apiKey": "API Key（可选）",
-      "form.apiKeyPlaceholder": "请输入 API Key",
-      "form.apiKeyReplacePlaceholder": "输入新的 API Key，点击「更新密钥」或直接保存均可生效",
-      "form.appId": "App ID",
-      "form.appIdPlaceholder": "部分厂商（如 WeKnoraCloud）需要填写",
-      "form.appSecret": "App Secret",
-      "form.appSecretPlaceholder": "需要第二段密钥时填写（可选）",
-      "form.appSecretReplacePlaceholder": "输入新的 App Secret",
-      "form.baseUrl": "Base URL",
-      "form.baseUrlPlaceholder": "请输入 Base URL",
-      "form.builtinHint": "内置模型可修改配置与凭证",
-      "form.credentialHidden": "出于安全考虑不显示已保存的密钥",
-      "form.credentialRemove": "清除密钥",
-      "form.credentialRemoveConfirm": "清除后该模型将无法调用，确认清除密钥吗？",
-      "form.credentialRemoved": "密钥已清除",
-      "form.credentialUpdate": "更新密钥",
-      "form.credentialUpdated": "密钥更新成功",
-      "form.customHeaders": "自定义请求头（可选）",
-      "form.description": "描述",
-      "form.descriptionPlaceholder": "请输入描述（可选）",
-      "form.dimension": "向量维度",
-      "form.dimensionInvalid": "自定义输出维度填写不正确",
-      "form.dimensionPlaceholder": "例如：1536",
-      "form.dimensionRequired": "请填写自定义输出维度",
-      "form.displayName": "显示名称（可选）",
-      "form.displayNamePlaceholder": "例如：客户问答模型",
-      "form.displayNameTip": "仅用于界面展示，实际调用仍使用上面的模型名称。",
-      "form.extraConfig": "额外配置",
-      "form.interfaceType": "接口类型",
-      "form.interfaceTypePlaceholder": "例如 openai（可选）",
-      "form.headerAdd": "添加请求头",
-      "form.headerNamePlaceholder": "Header 名称",
-      "form.headerValuePlaceholder": "Header 值",
-      "form.maxConcurrency": "后台并发上限",
-      "form.maxConcurrencyPlaceholder": "0 表示使用全局默认",
-      "form.name": "模型名称",
-      "form.namePlaceholder": "例如：{example}",
-      "form.parameterSize": "参数规模",
-      "form.parameterSizePlaceholder": "例如 7B / 13B（可选）",
-      "form.provider": "服务商",
-      "form.section.advanced": "高级选项",
-      "form.section.basic": "基本信息",
-      "form.section.embedding": "嵌入参数",
-      "form.section.provider": "接入配置",
-      "form.source": "模型来源",
-      "form.sourcePlaceholder": "请选择模型来源",
-      "form.supportsDimensionOverride": "自定义输出维度",
-      "form.supportsDimensionOverrideDesc": "仅在确认该模型支持 dimensions 参数时开启；默认只使用检测到的实际维度。",
-      "form.supportsVision": "支持视觉/多模态",
-      "form.supportsVisionDesc": "模型是否支持图片等多模态输入",
-      "form.title.add": "新增模型",
-      "form.title.edit": "编辑模型",
-      "form.truncatePromptTokens": "截断提示词 token 数",
-      "form.type": "模型类型",
-      "form.typePlaceholder": "请选择模型类型",
-      "search.namePlaceholder": "输入模型名称查询",
-      "search.sourcePlaceholder": "全部来源",
-      "search.typePlaceholder": "全部类型",
-      "source.local": "Ollama",
-      "source.remote": "API",
-      "table.createdAt": "创建时间",
-      "table.credentialConfigured": "已配置",
-      "table.credentialStatus": "凭证状态",
-      "table.credentialUnconfigured": "未配置",
-      "table.displayName": "显示名称",
-      "table.isBuiltin": "是否内置",
-      "table.isDefault": "是否默认",
-      "table.isDefault_true": "默认",
-      "table.name": "模型名称",
-      "table.operation": "操作",
-      "table.provider": "提供商",
-      "table.source": "模型来源",
-      "table.type": "模型类型",
-      "test.button": "测试连接",
-      "test.emptyResult": "未返回测试结果",
-      "test.fail": "测试失败",
-      "test.requestFail": "请求失败，请检查网络或后端服务",
-      "test.saveFirst": "请先保存后再测试连接",
-      "test.success": "测试成功",
-      "tips.builtinCannotDelete": "内置模型不能删除",
-      "tips.credentialRequired": "请先输入新的密钥",
-      "tips.deleteConfirm": "是否确认删除模型 {name}？",
+      "debug": {
+        "copy": "复制结果",
+        "documents": "候选文档",
+        "documentsPlaceholder": "每行一条文档，用于重排序打分",
+        "elapsed": "耗时",
+        "emptyResult": "未返回调试结果",
+        "failed": "调用失败",
+        "file": "上传文件",
+        "fileAudioPlaceholder": "请上传一段音频",
+        "fileImagePlaceholder": "请上传一张图片",
+        "fileRequired": "该类型需要先上传文件再调试",
+        "fileSelect": "选择文件",
+        "input": "输入内容",
+        "inputPlaceholder": "请输入用于调试的文本",
+        "observations": "观察指标",
+        "requestFail": "请求失败，请检查网络或后端服务",
+        "requestPreview": "请求预览",
+        "response": "响应内容",
+        "resultTitle": "调试结果",
+        "rowButton": "调试",
+        "run": "开始调试",
+        "succeeded": "调用成功",
+        "systemPrompt": "系统提示词",
+        "systemPromptPlaceholder": "可选",
+        "thinking": "思考模式",
+        "title": "模型调试"
+      },
+      "form": {
+        "alert": {
+          "ollama": {
+            "rerank": "Ollama 不支持 ReRank 模型，请使用远程接口配置"
+          }
+        },
+        "apiKey": "API Key（可选）",
+        "apiKeyPlaceholder": "请输入 API Key",
+        "apiKeyReplacePlaceholder": "输入新的 API Key，点击「更新密钥」或直接保存均可生效",
+        "appId": "App ID",
+        "appIdPlaceholder": "部分厂商（如 WeKnoraCloud）需要填写",
+        "appSecret": "App Secret",
+        "appSecretPlaceholder": "需要第二段密钥时填写（可选）",
+        "appSecretReplacePlaceholder": "输入新的 App Secret",
+        "baseUrl": "Base URL",
+        "baseUrlPlaceholder": "请输入 Base URL",
+        "builtinHint": "内置模型可修改配置与凭证",
+        "credentialHidden": "出于安全考虑不显示已保存的密钥",
+        "credentialRemove": "清除密钥",
+        "credentialRemoveConfirm": "清除后该模型将无法调用，确认清除密钥吗？",
+        "credentialRemoved": "密钥已清除",
+        "credentialUpdate": "更新密钥",
+        "credentialUpdated": "密钥更新成功",
+        "customHeaders": "自定义请求头（可选）",
+        "description": "描述",
+        "descriptionPlaceholder": "请输入描述（可选）",
+        "dimension": "向量维度",
+        "dimensionInvalid": "自定义输出维度填写不正确",
+        "dimensionPlaceholder": "例如：1536",
+        "dimensionRequired": "请填写自定义输出维度",
+        "displayName": "显示名称（可选）",
+        "displayNamePlaceholder": "例如：客户问答模型",
+        "displayNameTip": "仅用于界面展示，实际调用仍使用上面的模型名称。",
+        "extraConfig": "额外配置",
+        "headerAdd": "添加请求头",
+        "headerNamePlaceholder": "Header 名称",
+        "headerValuePlaceholder": "Header 值",
+        "interfaceType": "接口类型",
+        "interfaceTypePlaceholder": "例如 openai（可选）",
+        "maxConcurrency": "后台并发上限",
+        "maxConcurrencyPlaceholder": "0 表示使用全局默认",
+        "name": "模型名称",
+        "namePlaceholder": "例如：{example}",
+        "ollamaModelPlaceholder": "搜索模型",
+        "parameterSize": "参数规模",
+        "parameterSizePlaceholder": "例如 7B / 13B（可选）",
+        "provider": "服务商",
+        "refreshList": "刷新列表",
+        "section": {
+          "advanced": "高级选项",
+          "basic": "基本信息",
+          "embedding": "嵌入参数",
+          "provider": "接入配置"
+        },
+        "source": "模型来源",
+        "sourcePlaceholder": "请选择模型来源",
+        "supportsDimensionOverride": "自定义输出维度",
+        "supportsDimensionOverrideDesc": "仅在确认该模型支持 dimensions 参数时开启；默认只使用检测到的实际维度。",
+        "supportsVision": "支持视觉/多模态",
+        "supportsVisionDesc": "模型是否支持图片等多模态输入",
+        "thinkingControl": {
+          "chatTemplateKwargs": "chat_template_kwargs",
+          "chatTemplateKwargsPlaceholder": "自定义 OpenAI 兼容、NVIDIA NIM、vLLM / 本地 Qwen 部署",
+          "enableThinking": "enable_thinking",
+          "enableThinkingPlaceholder": "阿里云 DashScope：qwen3、qwen-plus、qwen-max、qwen-turbo",
+          "label": "思考模式参数格式",
+          "none": "不写入思考参数",
+          "nonePlaceholder": "智能体「思考模式」开关不生效，不会在请求中写入思考相关参数",
+          "thinkingType": "thinking.type",
+          "thinkingTypePlaceholder": "火山引擎 Ark；腾讯云 LKEAP（DeepSeek V3 等，选 LKEAP 时默认此项；R1 请改「不写入」）"
+        },
+        "title": {
+          "add": "新增模型",
+          "edit": "编辑模型"
+        },
+        "truncatePromptTokens": "截断提示词 token 数",
+        "type": "模型类型",
+        "typePlaceholder": "请选择模型类型"
+      },
+      "search": {
+        "namePlaceholder": "输入模型名称查询",
+        "sourcePlaceholder": "全部来源",
+        "typePlaceholder": "全部类型"
+      },
+      "source": {
+        "local": "Ollama",
+        "remote": "API"
+      },
+      "table": {
+        "createdAt": "创建时间",
+        "credentialConfigured": "已配置",
+        "credentialStatus": "凭证状态",
+        "credentialUnconfigured": "未配置",
+        "displayName": "显示名称",
+        "isBuiltin": "是否内置",
+        "isDefault": "是否默认",
+        "isDefault_true": "默认",
+        "name": "模型名称",
+        "operation": "操作",
+        "provider": "提供商",
+        "source": "模型来源",
+        "type": "模型类型"
+      },
+      "test": {
+        "button": "测试连接",
+        "emptyResult": "未返回测试结果",
+        "fail": "测试失败",
+        "requestFail": "请求失败，请检查网络或后端服务",
+        "saveFirst": "请先保存后再测试连接",
+        "success": "测试成功"
+      },
+      "tips": {
+        "builtinCannotDelete": "内置模型不能删除",
+        "credentialRequired": "请先输入新的密钥",
+        "deleteConfirm": "是否确认删除模型 {name}？"
+      },
       "title": "模型管理",
-      "type.ASR": "语音",
-      "type.Embedding": "Embedding",
-      "type.KnowledgeQA": "对话",
-      "type.Rerank": "ReRank",
-      "type.VLLM": "视觉"
+      "type": {
+        "ASR": "语音",
+        "Embedding": "Embedding",
+        "KnowledgeQA": "对话",
+        "Rerank": "ReRank",
+        "VLLM": "视觉"
+      }
     },
     "normal": {
       "add": "新增",
       "addNew": "新增",
+      "back": "返回",
       "batchDelete": "批量删除",
       "batchDeleteConfirm": "确认批量删除选中项吗？",
       "batchDisable": "批量停用",
@@ -1830,6 +2172,7 @@
         "update": "更换"
       },
       "delete": "删除",
+      "deleteSuccess": "删除成功",
       "detail": "详情",
       "disable": "停用",
       "edit": "编辑",
@@ -1840,6 +2183,7 @@
       "items": "条",
       "loading": "加载中，请稍候",
       "noData": "暂无数据",
+      "noGeneratedQuestions": "暂无辅助召回问题",
       "operation": "操作",
       "preview": {
         "audioLoading": "加载音频中…",
@@ -1859,10 +2203,13 @@
       "save": "保存",
       "search": "搜索",
       "selectPlaceholder": "请选择",
-      "selected": "共选中"
+      "selected": "共选中",
+      "selectedCount": "共选中 {count} 条",
+      "testConnection": "测试连接"
     },
     "ollama": {
       "add": "下载新模型",
+      "daysAgo": "{days} 天前",
       "digest": "模型摘要",
       "download": {
         "browse": "浏览 Ollama 模型库",
@@ -1892,11 +2239,117 @@
         "downloadStarted": "已开始下载模型",
         "listFailed": "获取模型列表失败",
         "progressFailed": "查询下载进度失败"
+      },
+      "today": "今天",
+      "unknown": "未知",
+      "yesterday": "昨天"
+    },
+    "platformManager": {
+      "tenantManager": {
+        "10000Calls": "万次",
+        "addCallQuota": "添加调用次数",
+        "additionalCalls": "添加次数",
+        "allSystems": "全部系统",
+        "callTime": "调用时间",
+        "callsSecond": "次/秒",
+        "concurrencyLimit": "并发限制：",
+        "concurrencyLimitIsRequired": "并发限制不能为空",
+        "createTheTenantSInitialAdministrator": "租户初始管理员创建",
+        "createdAt": "创建时间：",
+        "createdBy": "创建人：",
+        "dataFromMoreThanOneYearAgoCannotBeQueried": "不支持查询一年之前的数据",
+        "edit": "编 辑",
+        "editTenant": "修改租户",
+        "effectivePeriod": "生效时间",
+        "endDate": "结束日期",
+        "enterAChineseNameEGGeneralAgentPlatform": "请输入中文名称如：通用智能体中台",
+        "enterAnInteger": "只能输入整数数字",
+        "enterAnIntegerFrom0To300": "只能输入0-300整数数字",
+        "enterAnIntegerText": "请输入整数数字",
+        "exportData": "数据导出",
+        "nicknameIsRequired": "用户昵称不能为空",
+        "numberOfCallsIsRequired": "调用次数不能为空",
+        "onlyChineseCharactersDigitsAndLettersAreAllowed": "只能输入中文、数字、字母",
+        "onlyDigitsAndLettersAreAllowed": "只能输入数字和字母",
+        "operationFailedPleaseTryAgain": "操作失败，请重新提交",
+        "platformManagement": "平台管理",
+        "requestTrends": "数据请求趋势",
+        "roleIsRequired": "所属角色不能为空",
+        "searchByTenantName": "通过租户名称进行模糊搜索",
+        "signInAccountIsRequired": "登录账号不能为空",
+        "startDate": "开始日期",
+        "startTime": "起始时间",
+        "system": "所属系统",
+        "tenantDetails": "租户详情",
+        "tenantId": "租户ID：",
+        "tenantNameIsRequired": "租户名称不能为空",
+        "thisSignInAccountIsAlreadyInUseEnterAnother": "该登陆账号已被占用、请重新输入",
+        "thisTenantNameIsAlreadyInUseEnterAnotherName": "租户名称重复，请重新输入",
+        "updatedAt": "更新时间：",
+        "youCanSelectAMaximumOf90ConsecutiveDays": "最多支持连续选择90天的数据"
       }
     },
+    "register": {
+      "accountMustBeBetween2And20Characters": "用户账号长度必须介于 2 和 20 之间",
+      "confirmPassword": "确认密码",
+      "enterYourPasswordAgain": "请再次输入您的密码",
+      "passwordMustBeBetween5And20Characters": "用户密码长度必须介于 5 和 20 之间",
+      "register": "注 册",
+      "registering": "注 册 中...",
+      "registrationSuccess": "恭喜你，您的账号 {account} 注册成功！",
+      "signInWithAnExistingAccount": "使用已有账户登录",
+      "theFollowingCharactersAreNotAllowed": "不能包含非法字符：< > \" ' \\ {'|'}",
+      "theTwoPasswordsDoNotMatch": "两次输入的密码不一致"
+    },
     "system": {
+      "blackList": {
+        "add": "添加",
+        "addBlocklistEntry": "新增黑名单",
+        "allOperationTypes": "全部操作类型",
+        "blocklist": "{value1}黑名单",
+        "blocklistId": "黑名单ID",
+        "blocklistName": "黑名单名称",
+        "blocklistXlsx": "黑名单_{value1}.xlsx",
+        "deleteBlocklist": "删除黑名单",
+        "deleteTheSelectedBlocklistEntries": "是否确认批量删除选中黑名单？",
+        "disableBlocklist": "停用黑名单",
+        "disableTheSelectedBlocklistEntries": "是否确认停用选中黑名单？",
+        "downloadTemplate": "模板下载",
+        "enableBlocklist": "启用黑名单",
+        "enableTheSelectedBlocklistEntries": "是否确认启用选中黑名单？",
+        "enterABlocklistName": "请输入黑名单名称",
+        "import": "导入",
+        "invalidFileFormatUploadFilesOfType": "文件格式不正确, 请上传{value1}格式文件!",
+        "operationFailed": "操作失败",
+        "search": "查询",
+        "searchTheBlocklist": "通过黑名单搜索",
+        "uploadedSuccessfully": "上传成功"
+      },
+      "config": {
+        "addParameter": "添加参数",
+        "cacheRefreshed": "刷新缓存成功",
+        "deleteParametersWithIds": "是否确认删除参数编号为\"{value1}\"的数据项？",
+        "editParameter": "修改参数",
+        "enterAParameterKey": "请输入参数键名",
+        "enterAParameterName": "请输入参数名称",
+        "enterAParameterValue": "请输入参数键值",
+        "parameterId": "参数主键",
+        "parameterKey": "参数键名",
+        "parameterKeyIsRequired": "参数键名不能为空",
+        "parameterName": "参数名称",
+        "parameterNameIsRequired": "参数名称不能为空",
+        "parameterValue": "参数键值",
+        "parameterValueIsRequired": "参数键值不能为空",
+        "refreshCache": "刷新缓存"
+      },
       "dept": {
         "add": "新增部门",
+        "addDepartment": "添加部门",
+        "deleteTheItemNamed": "是否确认删除名称为\"{value1}\"的数据项?",
+        "department": "确认要\"{value1}\"\"{value2}\"部门吗?",
+        "departmentNameIsRequired": "部门名称不能为空",
+        "displayOrderIsRequired": "显示排序不能为空",
+        "enterAValidPhoneNumber": "请输入正确的手机号码",
         "expandCollapse": "展开/折叠",
         "form": {
           "addTitle": "新增部门",
@@ -1918,8 +2371,10 @@
           "phonePlaceholder": "请输入联系电话",
           "status": "部门状态"
         },
+        "parentDepartmentIsRequired": "上级部门不能为空",
         "searchPlaceholder": "搜索部门名称...",
         "statusPlaceholder": "部门状态",
+        "successful": "{value1}成功",
         "table": {
           "createTime": "创建时间",
           "deptName": "部门名称",
@@ -1931,6 +2386,9 @@
       },
       "dict": {
         "add": "新增字典",
+        "addDictionaryData": "添加字典数据",
+        "addDictionaryType": "添加字典类型",
+        "danger": "危险",
         "data": {
           "add": "新增字典数据",
           "form": {
@@ -1969,6 +2427,15 @@
             "status": "状态"
           }
         },
+        "dataLabelIsRequired": "数据标签不能为空",
+        "dataOrderIsRequired": "数据顺序不能为空",
+        "dataValueIsRequired": "数据键值不能为空",
+        "deleteDictionariesWithIds": "是否确认删除字典编号为\"{value1}\"的数据项？",
+        "deleteDictionaryEntriesWithCodes": "是否确认删除字典编码为\"{value1}\"的数据项？",
+        "dictionary": "确认要\"{value1}\"\"{value2}\"字典吗?",
+        "dictionaryEntry": "确认要\"{value1}\"\"{value2}\"字典数据吗?",
+        "dictionaryNameIsRequired": "字典名称不能为空",
+        "dictionaryTypeIsRequired": "字典类型不能为空",
         "form": {
           "add": "新增",
           "addTitle": "新增字典类型",
@@ -1983,7 +2450,11 @@
           "typePlaceholder": "请输入字典类型",
           "update": "修改"
         },
+        "info": "信息",
         "list": "列表",
+        "noDictionaryData": "暂无字典数据",
+        "primary": "主要",
+        "refreshedSuccessfully": "刷新成功",
         "search": {
           "endTime": "结束时间",
           "namePlaceholder": "请输入字典名称",
@@ -2000,9 +2471,15 @@
           "remark": "备注",
           "status": "状态",
           "type": "字典类型"
-        }
+        },
+        "totalEntries": "共计条目",
+        "value": "键值",
+        "warning": "警告"
       },
       "logininfor": {
+        "clearAllSignInLogs": "是否确认清空所有登录日志数据项?",
+        "clearedSuccessfully": "清空成功",
+        "deleteAccessLogsWithIds": "是否确认删除访问编号为\"{value1}\"的数据项?",
         "search": {
           "endTimePlaceholder": "结束时间",
           "rangeSeparator": "至",
@@ -2016,10 +2493,13 @@
           "message": "描述",
           "status": "登录状态",
           "userName": "用户名称"
-        }
+        },
+        "unlockUser": "是否确认解锁用户\"{value1}\"数据项?",
+        "userUnlockedSuccessfully": "用户{value1}解锁成功"
       },
       "menu": {
         "add": "新增菜单",
+        "addMenu": "添加菜单",
         "addShort": "新增",
         "form": {
           "add": "新增",
@@ -2050,6 +2530,13 @@
           "update": "修改",
           "visible": "显示状态"
         },
+        "menu": "确认要\"{value1}\"\"{value2}\"菜单吗?",
+        "menuNameIsRequired": "菜单名称不能为空",
+        "menuOrderIsRequired": "菜单顺序不能为空",
+        "noOrderChangesDetected": "未检测到排序修改",
+        "orderSaved": "排序保存成功",
+        "rootCategory": "主类目",
+        "routePathIsRequired": "路由地址不能为空",
         "saveSort": "保存排序",
         "search": {
           "menuNamePlaceholder": "请输入菜单名称",
@@ -2072,7 +2559,21 @@
           "menu": "菜单"
         }
       },
+      "notice": {
+        "addAnnouncement": "添加公告",
+        "announcementTitle": "公告标题",
+        "announcementTitleIsRequired": "公告标题不能为空",
+        "announcementType": "公告类型",
+        "announcementTypeIsRequired": "公告类型不能为空",
+        "content": "内容",
+        "creator": "创建者",
+        "deleteAnnouncementsWithIds": "是否确认删除公告编号为\"{value1}\"的数据项？",
+        "editAnnouncement": "修改公告",
+        "enterAnAnnouncementTitle": "请输入公告标题"
+      },
       "operlog": {
+        "clearAllOperationLogs": "是否确认清空所有操作日志数据项?",
+        "deleteLogsWithIds": "是否确认删除日志编号为\"{value1}\"的数据项?",
         "detail": "详细",
         "detailDrawer": {
           "businessType": "业务类型",
@@ -2118,6 +2619,8 @@
       },
       "post": {
         "add": "新增岗位",
+        "addPosition": "添加岗位",
+        "deletePositionsWithIds": "是否确认删除岗位编号为\"{value1}\"的数据项？",
         "export": "导出",
         "form": {
           "addTitle": "新增岗位",
@@ -2133,6 +2636,10 @@
           "remarkPlaceholder": "请输入职责描述",
           "status": "岗位状态"
         },
+        "position": "确认要\"{value1}\"\"{value2}\"岗位吗?",
+        "positionCodeIsRequired": "岗位编码不能为空",
+        "positionNameIsRequired": "岗位名称不能为空",
+        "positionOrderIsRequired": "岗位顺序不能为空",
         "search": {
           "postCodePlaceholder": "请输入岗位编码",
           "postNamePlaceholder": "请输入岗位名称",
@@ -2151,9 +2658,15 @@
       },
       "role": {
         "add": "新增角色",
+        "addRole": "添加角色",
+        "addUser": "添加用户",
         "allTenants": "全部租户",
+        "assignDataPermissions": "分配数据权限",
+        "authorizationRevoked": "取消授权成功",
         "deleteConfirm": "确认删除吗?",
+        "deleteRolesWithIds": "是否确认删除角色编号为\"{value1}\"的数据项?",
         "endDatePlaceholder": "结束时间",
+        "enterAPhoneNumber": "请输入手机号码",
         "form": {
           "addTitle": "新增角色",
           "confirmAdd": "确认新增",
@@ -2170,8 +2683,18 @@
           "tenantName": "所属租户",
           "tenantPlaceholder": "请选择租户"
         },
+        "phone": "手机",
+        "phoneNumber": "手机号码",
         "rangeSeparator": "至",
+        "removeRolesFromUser": "确认要取消该用户\"{value1}\"角色吗？",
+        "revokeAuthorization": "取消授权",
+        "revokeAuthorizationForTheSelectedUsers": "是否取消选中用户授权数据项?",
+        "revokeSelectedAuthorizations": "批量取消授权",
+        "role": "确认要\"{value1}\"\"{value2}\"角色吗?",
+        "roleNameIsRequired": "角色名称不能为空",
         "searchPlaceholder": "通过角色名称进行模糊搜索",
+        "selectUsers": "选择用户",
+        "selectUsersToAssign": "请选择要分配的用户",
         "startDatePlaceholder": "开始时间",
         "table": {
           "operation": "操作",
@@ -2179,10 +2702,34 @@
           "roleName": "角色名称",
           "tenantName": "所属租户",
           "updateTime": "更新时间"
-        }
+        },
+        "tenantIsRequired": "租户不能为空"
+      },
+      "systemConfig": {
+        "addSystem": "添加系统",
+        "allTenants": "所有租户",
+        "changingTheTenantRequiresReconfiguringTheReviewScopesAssociatedWith": "*修改所属租户后，关联了该系统的审核范围需要重新配置",
+        "confirmDeletion": "删除确认",
+        "deleteConfirm": "您确定要删除{name}这个系统吗？删除后关联了该系统的审核范围需要重新配置",
+        "editSystem": "修改系统",
+        "key": "密钥",
+        "lastUpdated": "最新修改时间",
+        "regenerateKey": "重新生成密钥",
+        "regenerateKeyConfirm": "您确定要重新生成{name}的密钥吗？之前的密钥将无法使用",
+        "replaceKey": "更换密钥",
+        "searchBySystemOrTenantName": "通过名称、租户名称进行模糊搜索",
+        "systemName": "系统名称",
+        "systemNameIsRequired": "系统名称不能为空",
+        "systemTenant": "系统所属租户",
+        "systemTenantIsRequired": "系统所属租户不能为空",
+        "updatedAfter": "修改开始时间",
+        "updatedBefore": "修改结束时间"
       },
       "user": {
         "add": "新增用户",
+        "authorizedSuccessfully": "授权成功",
+        "deleteUsersWithIds": "是否确认删除用户编号为\"{value1}\"的数据项？",
+        "departmentIsRequired": "所属部门不能为空",
         "endDatePlaceholder": "结束时间",
         "form": {
           "addTitle": "新增用户",
@@ -2205,14 +2752,56 @@
           "title": "用户导入",
           "updateExisting": "是否更新已经存在的用户数据"
         },
+        "passwordChangedNewPassword": "修改成功，新密码是：{value1}",
+        "passwordIsRequired": "用户密码不能为空",
+        "positionIsRequired": "岗位不能为空",
+        "profile": {
+          "atLeast6Characters": "至少6个字符",
+          "atLeastOneDigit": "至少一个数字",
+          "atLeastOneLetter": "至少一个字母",
+          "changeAvatar": "修改头像",
+          "changePassword": "修改密码",
+          "changePasswordText": "更改密码",
+          "confirmYourNewPassword": "请确认新密码",
+          "currentPassword": "旧密码",
+          "currentPasswordIsRequired": "旧密码不能为空",
+          "enterAtLeast6Characters": "最少输入6个字符",
+          "enterYourCurrentPassword": "请输入旧密码",
+          "fair": "一般",
+          "incorrectPassword": "密码错误",
+          "invalidFileFormatSelectAPngJpgOrJpegImage": "文件格式无效，请从新选择PNG、JPG、JPEG格式进行上传。",
+          "invalidFileFormatUploadAnImageSuchAsAJpg": "文件格式错误，请上传图片类型,如：JPG，PNG后缀的文件。",
+          "newPassword": "新密码",
+          "newPasswordIsRequired": "新密码不能为空",
+          "passwordConfirmationIsRequired": "确认密码不能为空",
+          "passwordStrength": "密码强度:",
+          "personalInformation": "个人资料",
+          "secure": "安全",
+          "strong": "强",
+          "submit": "提 交",
+          "tenantIsRequired": "所属租户不能为空",
+          "theNewPasswordMustDifferFromTheOldPassword": "新密码与旧密码不能相同",
+          "theTwoPasswordsDoNotMatch": "两次输入的密码不匹配",
+          "updateFailedPleaseTryAgain": "更改失败、请重新提交",
+          "updateProfile": "更改资料",
+          "updatedSuccessfully": "更改成功",
+          "userId": "用户ID",
+          "verySecure": "非常安全",
+          "veryStrong": "非常强",
+          "veryWeak": "非常弱",
+          "weak": "弱"
+        },
         "rangeSeparator": "至",
         "resetPassword": {
           "placeholder": "请输入新密码",
           "prompt": "请输入“{userName}”的新密码",
           "title": "提示"
         },
+        "roleId": "角色编号",
+        "roleInformation": "角色信息",
         "searchPlaceholder": "通过用户ID、昵称、创建人进行模糊搜索",
         "startDatePlaceholder": "开始时间",
+        "submit": "提交",
         "table": {
           "createBy": "创建人",
           "nickName": "用户昵称",
@@ -2223,22 +2812,60 @@
           "updateTime": "更新时间",
           "userId": "用户编号",
           "userName": "登录账号"
-        }
+        },
+        "theFollowingCharactersAreNotAllowed": "不能包含非法字符：< > \" ' \\ {'|'}",
+        "user": "确认要\"{value1}\"\"{value2}\"用户吗?"
+      },
+      "whiteList": {
+        "addAllowlistEntry": "新增白名单",
+        "allowlist": "{value1}白名单",
+        "allowlistId": "白名单ID",
+        "allowlistName": "白名单名称",
+        "allowlistXlsx": "白名单_{value1}.xlsx",
+        "deleteAllowlist": "删除白名单",
+        "deleteTheSelectedAllowlistEntries": "是否确认批量删除选中白名单？",
+        "disableAllowlist": "停用白名单",
+        "disableTheSelectedAllowlistEntries": "是否确认停用选中白名单？",
+        "enableAllowlist": "启用白名单",
+        "enableTheSelectedAllowlistEntries": "是否确认启用选中白名单？",
+        "enterAnAllowlistName": "请输入白名单名称",
+        "searchTheAllowlist": "通过白名单搜索"
       }
     },
     "tenants": {
       "add": "新增租户",
+      "addSuccess": "新增成功",
       "createdAt": "创建时间",
+      "deleteConfirm": "是否确认删除租户编号为\"{id}\"的数据项？",
+      "deleteSuccess": "删除成功",
       "description": "描述",
       "descriptionPlaceholder": "简单描述一下这个租户的用途",
+      "disableConfirmBatch": "是否确认停用选中的租户？",
+      "disableConfirmSingle": "是否确认停用租户编号为\"{id}\"的数据项？",
+      "disableSuccess": "停用成功",
+      "enableConfirmBatch": "是否确认启用选中的租户？",
+      "enableConfirmSingle": "是否确认启用租户编号为\"{id}\"的数据项？",
+      "enableSuccess": "启用成功",
       "id": "租户ID",
       "name": "租户名称",
       "namePlaceholder": "例如：我的新项目",
+      "requestLogFilename": "请求日志数据_{time}.xlsx",
       "searchPlaceholder": "搜索租户名称",
       "status": "状态",
+      "statusActive": "活跃",
+      "statusInactive": "未激活",
+      "statusSuspended": "已暂停",
+      "statusUnknown": "未知",
       "storageQuota": "存储配额",
       "storageRate": "储存使用率",
-      "storageUsed": "已使用储存"
+      "storageUsed": "已使用储存",
+      "title": {
+        "add": "新增空间",
+        "detail": "空间详情",
+        "update": "修改空间信息"
+      },
+      "updateSuccess": "修改成功",
+      "workspaceNameIsRequired": "空间名称不能为空"
     },
     "users": {
       "account": "账号",
@@ -2292,14 +2919,21 @@
       "usernamePlaceholder": "请输入用户名"
     }
   },
-  "page.models.form.thinkingControl": "思考模式参数格式",
-  "page.models.form.thinkingControl.chatTemplateKwargs": "chat_template_kwargs",
-  "page.models.form.thinkingControl.chatTemplateKwargsPlaceholder": "自定义 OpenAI 兼容、NVIDIA NIM、vLLM / 本地 Qwen 部署",
-  "page.models.form.thinkingControl.enableThinking": "enable_thinking",
-  "page.models.form.thinkingControl.enableThinkingPlaceholder": "阿里云 DashScope：qwen3、qwen-plus、qwen-max、qwen-turbo",
-  "page.models.form.thinkingControl.none": "不写入思考参数",
-  "page.models.form.thinkingControl.nonePlaceholder": "智能体「思考模式」开关不生效，不会在请求中写入思考相关参数",
-  "page.models.form.thinkingControl.thinkingType": "thinking.type",
-  "page.models.form.thinkingControl.thinkingTypePlaceholder": "火山引擎 Ark；腾讯云 LKEAP（DeepSeek V3 等，选 LKEAP 时默认此项；R1 请改「不写入」）",
-  "plugins": {}
+  "plugins": {
+    "browser": {
+      "browser360": "360安全浏览器",
+      "chooseBrowser": "您可以选择更先进的浏览器",
+      "chrome": "谷歌浏览器",
+      "firefox": "火狐浏览器",
+      "heading": "请升级您的浏览器，以便我们更好的为您提供服务！",
+      "ie": "IE 11 浏览器",
+      "period": "。",
+      "recommendation": "推荐使用以下浏览器的最新版本。如果您的电脑已有以下浏览器的最新版本则直接使用该浏览器访问即可。",
+      "securityNotice": "自 2016 年 1 月 12 日起，Microsoft 不再为 IE 11 以下版本提供相应支持和更新。没有关键的浏览器安全更新，您的电脑可能易受有害病毒、间谍软件和其他恶意软件的攻击，它们可以窃取或损害您的业务数据和信息。请参阅",
+      "supportEnded": "请注意：微软公司对Windows XP 及 Internet Explorer 早期版本的支持已经结束",
+      "supportLink": "微软对 Internet Explorer 早期版本的支持将于 2016 年 1 月 12 日结束的说明",
+      "title": "请升级您的浏览器",
+      "unsupported": "您正在使用 Internet Explorer 的早期版本（IE11以下版本或使用该内核的浏览器）。这意味着在升级浏览器前，您将无法访问此网站。"
+    }
+  }
 }

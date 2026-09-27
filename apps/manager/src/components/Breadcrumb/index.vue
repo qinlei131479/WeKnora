@@ -10,6 +10,7 @@
 </template>
 
 <script setup lang="ts">
+import { t } from '@/i18n';
 import usePermissionStore from '@/store/modules/permission';
 
 const route = useRoute();
@@ -35,7 +36,7 @@ function getBreadcrumb(): void {
   }
   // 判断是否为首页
   if (!isDashboard(matched[0])) {
-    matched = [{ path: '/index', meta: { title: '首页' } }].concat(matched);
+    matched = [{ path: '/index', meta: { title: t('component.breadcrumb.home', '首页') } }].concat(matched);
   }
   levelList.value = matched.filter((item) => item.meta && item.meta.title && (item.meta.breadcrumb as boolean) !== false);
 }

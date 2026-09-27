@@ -242,6 +242,7 @@
 </template>
 
 <script setup lang="ts" name="Menu">
+import { t } from '@/i18n';
 import type { FormInstance } from 'element-plus/es/components/form';
 import modal from '@/plugins/modal';
 import { useDict } from '@/utils/dict';
@@ -271,9 +272,9 @@ const data = reactive({
     status: undefined
   } as MenuQueryParams,
   rules: {
-    menuName: [{ required: true, message: '菜单名称不能为空', trigger: 'blur' }],
-    orderNum: [{ required: true, message: '菜单顺序不能为空', trigger: 'blur' }],
-    path: [{ required: true, message: '路由地址不能为空', trigger: 'blur' }]
+    menuName: [{ required: true, get message() { return t('page.system.menu.menuNameIsRequired', '菜单名称不能为空'); }, trigger: 'blur' }],
+    orderNum: [{ required: true, get message() { return t('page.system.menu.menuOrderIsRequired', '菜单顺序不能为空'); }, trigger: 'blur' }],
+    path: [{ required: true, get message() { return t('page.system.menu.routePathIsRequired', '路由地址不能为空'); }, trigger: 'blur' }]
   }
 });
 
@@ -294,7 +295,7 @@ function getList() {
 function getTreeselect() {
   menuOptions.value = [];
   listMenu().then((response) => {
-    const menu: SysMenu = { menuId: 0, menuName: '主类目', children: [] };
+    const menu: SysMenu = { menuId: 0, menuName: t('page.system.menu.rootCategory', '主类目'), children: [] };
     menu.children = handleTree(response.data || [], 'menuId');
     menuOptions.value.push(menu);
   });
@@ -343,7 +344,7 @@ function handleAdd(row?: SysMenu) {
     form.value.parentId = 0;
   }
   open.value = true;
-  title.value = '添加菜单';
+  title.value = t('page.system.menu.addMenu', '添加菜单');
 }
 
 function toggleExpandAll() {
@@ -363,17 +364,17 @@ async function handleUpdate(row: SysMenu) {
   getMenu(row.menuId!).then((response) => {
     form.value = response.data!;
     open.value = true;
-    title.value = '修改菜单';
+    title.value = t('page.system.menu.form.editTitle', '修改菜单');
   });
 }
 
 function handleStatusChange(row: SysMenu) {
-  const text = row.status === '0' ? '启用' : '停用';
+  const text = row.status === '0' ? t('page.normal.enable', '启用') : t('page.normal.disable', '停用');
   modal
-    .confirm('确认要"' + text + '""' + row.menuName + '"菜单吗?')
+    .confirm(t('page.system.menu.menu', { value1: text, value2: row.menuName }, '确认要"{value1}""{value2}"菜单吗?'))
     .then(() => updateMenu(row))
     .then(() => {
-      modal.msgSuccess(text + '成功');
+      modal.msgSuccess(t('page.system.dept.successful', { value1: text }, '{value1}成功'));
     })
     .catch(() => {
       row.status = row.status === '0' ? '1' : '0';
@@ -385,13 +386,13 @@ function submitForm() {
     if (valid) {
       if (form.value.menuId != undefined) {
         updateMenu(form.value).then(() => {
-          modal.msgSuccess('修改成功');
+          modal.msgSuccess(t('page.normal.confirmInfo.updateSuccess', '修改成功'));
           open.value = false;
           getList();
         });
       } else {
         addMenu(form.value).then(() => {
-          modal.msgSuccess('新增成功');
+          modal.msgSuccess(t('page.normal.confirmInfo.addSuccess', '新增成功'));
           open.value = false;
           getList();
         });
@@ -425,24 +426,24 @@ function handleSaveSort() {
   };
   collectChanged(menuList.value);
   if (changedMenuIds.length === 0) {
-    modal.msgWarning('未检测到排序修改');
+    modal.msgWarning(t('page.system.menu.noOrderChangesDetected', '未检测到排序修改'));
     return;
   }
   updateMenuSort({ menuIds: changedMenuIds.join(','), orderNums: changedOrderNums.join(',') }).then(() => {
-    modal.msgSuccess('排序保存成功');
+    modal.msgSuccess(t('page.system.menu.orderSaved', '排序保存成功'));
     recordOriginalOrders(menuList.value);
   });
 }
 
 function handleDelete(row: SysMenu) {
   modal
-    .confirm('是否确认删除名称为"' + row.menuName + '"的数据项?')
+    .confirm(t('page.system.dept.deleteTheItemNamed', { value1: row.menuName }, '是否确认删除名称为"{value1}"的数据项?'))
     .then(function () {
       return delMenu(row.menuId!);
     })
     .then(() => {
       getList();
-      modal.msgSuccess('删除成功');
+      modal.msgSuccess(t('page.normal.confirmInfo.removeSuccess', '删除成功'));
     })
     .catch(() => {});
 }

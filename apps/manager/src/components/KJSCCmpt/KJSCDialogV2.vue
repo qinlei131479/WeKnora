@@ -14,10 +14,10 @@
       <div>
         <slot name="prefixFooter" />
         <el-button v-if="props.showCloseBtn" @click="closeClick">
-          {{ props.closeBtnText }}
+          {{ props.closeBtnText ?? $t('page.normal.cancel', '取消') }}
         </el-button>
         <el-button v-if="props.showSubitBtn" :is-async="props.isAsync" type="primary" @click="submitClick">
-          {{ props.subitBtnText }}
+          {{ props.subitBtnText ?? $t('component.kJSCCmpt.confirm', '确定') }}
         </el-button>
         <slot name="suffixFooter" />
       </div>
@@ -43,11 +43,11 @@ const props = defineProps({
   },
   subitBtnText: {
     type: String,
-    default: '确定'
+    default: undefined
   },
   closeBtnText: {
     type: String,
-    default: '取消'
+    default: undefined
   },
   customClass: {
     type: String,

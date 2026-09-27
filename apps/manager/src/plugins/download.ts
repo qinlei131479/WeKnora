@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 import axios from 'axios'
 import { ElLoading, ElMessage } from 'element-plus'
 import { saveAs } from 'file-saver'
@@ -11,7 +12,7 @@ let downloadLoadingInstance: ReturnType<typeof ElLoading.service>
 export default {
   zip(url: string, name: string) {
     const downloadUrl = baseURL + url
-    downloadLoadingInstance = ElLoading.service({ text: "正在下载数据，请稍候", background: "rgba(0, 0, 0, 0.7)", })
+    downloadLoadingInstance = ElLoading.service({ text: t('common.download.downloadingDataPleaseWait', '正在下载数据，请稍候'), background: "rgba(0, 0, 0, 0.7)", })
     axios({
       method: 'get',
       url: downloadUrl,
@@ -28,7 +29,7 @@ export default {
       downloadLoadingInstance.close()
     }).catch((r: any) => {
       console.error(r)
-      ElMessage.error('下载文件出现错误，请联系管理员！')
+      ElMessage.error(t('common.download.failedToDownloadTheFileContactYourAdministrator', '下载文件出现错误，请联系管理员！'))
       downloadLoadingInstance.close()
     })
   },

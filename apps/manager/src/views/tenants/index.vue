@@ -31,7 +31,7 @@
           <el-button :disabled="ids.length === 0" v-hasPermi="['business:tenants:edit']" @click="handleDisable()">
             {{ $t('page.normal.batchDisable', '批量停用') }}
           </el-button>
-          <el-text class="selected-text"> {{ $t('page.normal.selected', '共选中') }} {{ ids.length }} {{ $t('page.normal.items', '条') }} </el-text>
+          <el-text class="selected-text"> {{ $t('page.normal.selectedCount', { count: ids.length }) }} </el-text>
         </div>
       </template>
 
@@ -223,13 +223,13 @@ function getStatusTheme(status: string | undefined): string {
 function getStatusText(status: string | undefined): string {
   switch (status) {
     case 'active':
-      return t('tenant.statusActive', '活跃');
+      return t('page.tenants.statusActive', '活跃');
     case 'inactive':
-      return t('tenant.statusInactive', '未激活');
+      return t('page.tenants.statusInactive', '未激活');
     case 'suspended':
-      return t('tenant.statusSuspended', '已暂停');
+      return t('page.tenants.statusSuspended', '已暂停');
     default:
-      return t('tenant.statusUnknown', '未知');
+      return t('page.tenants.statusUnknown', '未知');
   }
 }
 
@@ -289,7 +289,7 @@ function resetQuery() {
 /** 删除按钮操作 */
 function handleDelete(row: TenantsVO) {
   const id = row.id!;
-  const message = t('page.tenants.deleteConfirm', '是否确认删除租户编号为"' + id + '"的数据项？');
+  const message = t('page.tenants.deleteConfirm', { id }, '是否确认删除租户编号为"{id}"的数据项？');
   modal.confirm(message).then(
     function () {
       return doDelete(id);
@@ -333,7 +333,7 @@ function handleEnable(row?: TenantsVO) {
   let message = '';
   let saveIds: number[] = [];
   if (row) {
-    message = t('page.tenants.enableConfirmSingle', '是否确认启用租户编号为"' + row.id + '"的数据项？');
+    message = t('page.tenants.enableConfirmSingle', { id: row.id }, '是否确认启用租户编号为"{id}"的数据项？');
     saveIds.push(row.id!);
   } else {
     if (ids.value.length === 0) {
@@ -364,7 +364,7 @@ function handleDisable(row?: TenantsVO) {
   let message = '';
   let saveIds: number[] = [];
   if (row) {
-    message = t('page.tenants.disableConfirmSingle', '是否确认停用租户编号为"' + row.id + '"的数据项？');
+    message = t('page.tenants.disableConfirmSingle', { id: row.id }, '是否确认停用租户编号为"{id}"的数据项？');
     saveIds.push(row.id!);
   } else {
     if (ids.value.length === 0) {

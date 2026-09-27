@@ -1,13 +1,13 @@
 <template>
   <div class="top-right-btn" :style="style">
     <el-row>
-      <el-tooltip class="item" effect="dark" :content="showSearch ? '隐藏搜索' : '显示搜索'" placement="top" v-if="search">
+      <el-tooltip class="item" effect="dark" :content="showSearch ? $t('component.rightToolbar.hideSearch', '隐藏搜索') : $t('component.rightToolbar.showSearch', '显示搜索')" placement="top" v-if="search">
         <el-button circle icon="Search" @click="toggleSearch()" />
       </el-tooltip>
-      <el-tooltip class="item" effect="dark" content="刷新" placement="top">
+      <el-tooltip class="item" effect="dark" :content="$t('component.knowledgeEditor.activity.refresh', '刷新')" placement="top">
         <el-button circle icon="Refresh" @click="refresh()" />
       </el-tooltip>
-      <el-tooltip class="item" effect="dark" content="显隐列" placement="top" v-if="Object.keys(columns).length > 0">
+      <el-tooltip class="item" effect="dark" :content="$t('component.rightToolbar.showHideColumns', '显隐列')" placement="top" v-if="Object.keys(columns).length > 0">
         <el-button circle icon="Menu" @click="showColumn()" v-if="showColumnsType == 'transfer'"/>
         <el-dropdown trigger="click" :hide-on-click="false" style="padding-left: 12px" v-if="showColumnsType == 'checkbox'">
           <el-button circle icon="Menu" />
@@ -15,7 +15,7 @@
             <el-dropdown-menu>
               <!-- 全选/反选 按钮 -->
               <el-dropdown-item>
-                <el-checkbox :indeterminate="isIndeterminate" v-model="isChecked" @change="toggleCheckAll"> 列展示 </el-checkbox>
+                <el-checkbox :indeterminate="isIndeterminate" v-model="isChecked" @change="toggleCheckAll"> {{ $t('component.rightToolbar.visibleColumns', '列展示') }} </el-checkbox>
               </el-dropdown-item>
               <div class="check-line"></div>
               <template v-for="(item, key) in columns" :key="item.key">
@@ -30,7 +30,7 @@
     </el-row>
     <el-dialog :title="title" v-model="open" append-to-body>
       <el-transfer
-        :titles="['显示', '隐藏']"
+        :titles="[$t('component.rightToolbar.show', '显示'), $t('component.rightToolbar.hide', '隐藏')]"
         v-model="value"
         :data="transferData"
         @change="dataChange"
@@ -40,6 +40,7 @@
 </template>
 
 <script setup lang="ts">
+import { t } from '@/i18n';
 import cache from '@/plugins/cache'
 import type { TableShowColumns } from '@/types/api/common'
 
@@ -81,7 +82,7 @@ const emits = defineEmits(['update:showSearch', 'queryTable'])
 // 显隐数据
 const value = ref<number[]>([])
 // 弹出层标题
-const title = ref("显示/隐藏")
+const title = computed(() => t('component.rightToolbar.showHide', '显示/隐藏'))
 // 是否显示弹出层
 const open = ref(false)
 
@@ -99,7 +100,7 @@ const isChecked = computed({
   set: () => {}
 })
 const isIndeterminate = computed(() => Array.isArray(props.columns) ? props.columns.some((col: TableShowColumns) => col.visible) && !isChecked.value : Object.values(props.columns).some((col) => (col as TableShowColumns).visible) && !isChecked.value)
-const transferData = computed(() => Array.isArray(props.columns) ? props.columns.map((item: TableShowColumns, index: number) => ({ key: index, label: item.label })) : Object.keys(props.columns).map((key, index) => ({ key: index, label: props.columns[key].label })))
+const transferData = computed(() => Array.isArray(props.columns) ? (props.columns as TableShowColumns[]).map((item, index) => ({ key: index, label: item.label })) : Object.keys(props.columns).map((key, index) => ({ key: index, label: (props.columns as Record<string, TableShowColumns>)[key].label })))
 
 // 搜索
 const { proxy } = getCurrentInstance()!
@@ -147,7 +148,7 @@ function dataChange(data: number[]): void {
     }
   } else {
     Object.keys(props.columns).forEach((key, index) => {
-      props.columns[key].visible = !data.includes(index)
+      (props.columns as Record<string, TableShowColumns>)[key].visible = !data.includes(index)
     })
   }
   saveStorage()
@@ -169,7 +170,7 @@ if (props.storageKey) {
         })
       } else {
         Object.keys(props.columns).forEach(key => {
-          if (saved[key] !== undefined) props.columns[key].visible = saved[key]
+          if (saved[key] !== undefined) (props.columns as Record<string, TableShowColumns>)[key].visible = saved[key]
         })
       }
     }
@@ -185,7 +186,7 @@ if (props.showColumnsType == "transfer") {
     }
   } else {
     Object.keys(props.columns).forEach((key, index) => {
-      if (props.columns[key].visible === false) {
+      if ((props.columns as Record<string, TableShowColumns>)[key].visible === false) {
         value.value.push(index)
       }
     })
@@ -200,7 +201,7 @@ function checkboxChange(event: boolean, key: string): void {
       col.visible = event
     }
   } else {
-    props.columns[key].visible = event
+    (props.columns as Record<string, TableShowColumns>)[key].visible = event
   }
   saveStorage()
 }
@@ -224,7 +225,7 @@ function saveStorage(): void {
     if (Array.isArray(props.columns)) {
       props.columns.forEach((col: TableShowColumns, index: number) => { state[index] = col.visible })
     } else {
-      Object.keys(props.columns).forEach(key => { state[key] = props.columns[key].visible })
+      Object.keys(props.columns).forEach(key => { state[key] = (props.columns as Record<string, TableShowColumns>)[key].visible })
     }
     cache.local.setJSON(props.storageKey, state)
   } catch (e) {}

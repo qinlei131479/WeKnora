@@ -12,19 +12,19 @@
       <el-descriptions-item label="id" label-width="180px">
         <span class="detail-value">{{ entity?.id || '' }}</span>
       </el-descriptions-item>
-      <el-descriptions-item label="标准问题" label-width="180px">
+      <el-descriptions-item :label="$t('page.knowledgeBase.standardQuestion', '标准问题')" label-width="180px">
         <span class="detail-value">{{ entity?.standardQuestion || '' }}</span>
       </el-descriptions-item>
-      <el-descriptions-item label="相似问题" label-width="180px">
+      <el-descriptions-item :label="$t('page.knowledgeFaq.similarQuestions', '相似问题')" label-width="180px">
         <div v-for="(item, index) in entity?.similarQuestions || []" :key="index" class="detail-value">{{ item }}</div>
       </el-descriptions-item>
-      <el-descriptions-item label="反例问题" label-width="180px">
+      <el-descriptions-item :label="$t('page.knowledgeFaq.negativeQuestions', '反例问题')" label-width="180px">
         <div v-for="(item, index) in entity?.negativeQuestions || []" :key="index" class="detail-value">{{ item }}</div>
       </el-descriptions-item>
-      <el-descriptions-item label="答案" label-width="180px">
+      <el-descriptions-item :label="$t('page.knowledgeFaq.answers', '答案')" label-width="180px">
         <div v-for="(item, index) in entity?.answers || []" :key="index" class="detail-value">{{ item }}</div>
       </el-descriptions-item>
-      <el-descriptions-item label="标签" label-width="180px">
+      <el-descriptions-item :label="$t('component.knowledgeEditor.activity.targets.knowledge_tag', '标签')" label-width="180px">
         <span class="detail-value">{{ entity?.tagName || '' }}</span>
       </el-descriptions-item>
     </el-descriptions>

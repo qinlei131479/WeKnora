@@ -2,8 +2,9 @@
 import { t } from '@/i18n';
 import { API } from '@/api';
 import { toProviderModelType } from '@/api/model/models';
+import { getOllamaModelsApi } from '@/api/model/ollama';
 import { MODEL_TYPE_OPTIONS, MODEL_SOURCE_OPTIONS, THINKING_CONTROL_OPTIONS } from '../constants';
-import type { ModelProviderVO, ModelTestRequestDTO, ModelTestResultVO, ModelsDTO, ModelsVO } from '@/types/api';
+import type { ModelProviderVO, ModelTestRequestDTO, ModelTestResultVO, ModelsDTO, ModelsVO, OllamaModelsResp } from '@/types/api';
 import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 
 const { proxy } = getCurrentInstance() as any;
@@ -42,6 +43,8 @@ const credentialBusy = ref(false);
 
 /** GET /providers 返回的厂商列表，按当前模型类型过滤 */
 const providers = ref<ModelProviderVO[]>([]);
+const ollamaModels = ref<OllamaModelsResp[]>([]);
+const loadingOllamaModels = ref(false);
 
 const testResult = ref<ModelTestResultVO | null>(null);
 
@@ -76,7 +79,16 @@ const form = reactive({
 });
 
 const rules = computed(() => ({
-  name: [{ required: true, message: t('page.models.form.namePlaceholder', '请输入模型名称'), trigger: 'blur' }],
+  name: [
+    {
+      required: true,
+      message:
+        form.source === 'local'
+          ? t('component.models.selectModelPlaceholder', '请选择模型')
+          : t('page.models.form.namePlaceholder', '请输入模型名称'),
+      trigger: form.source === 'local' ? 'change' : 'blur'
+    }
+  ],
   type: [{ required: true, message: t('page.models.form.typePlaceholder', '请选择模型类型'), trigger: 'change' }],
   source: [{ required: true, message: t('page.models.form.sourcePlaceholder', '请选择模型来源'), trigger: 'change' }],
   dimension:
@@ -126,6 +138,15 @@ const rowsToRecord = (rows: KeyValueRow[]) => {
   return record;
 };
 
+/** 思考模式控件隐藏时不提交其配置，其他额外配置保持不变。 */
+const buildExtraConfig = () => {
+  const extraConfig = rowsToRecord(form.extraConfig);
+  if (form.type !== 'KnowledgeQA' || form.source === 'local') {
+    delete extraConfig.thinking_control;
+  }
+  return extraConfig;
+};
+
 const recordToRows = (record?: Record<string, string>): KeyValueRow[] =>
   Object.entries(record ?? {}).map(([key, value]) => ({ key, value: value ?? '' }));
 
@@ -169,6 +190,22 @@ const loadProviders = () => {
     .catch((error) => {
       console.error('[Models] load providers failed:', error);
       providers.value = [];
+    });
+};
+
+const loadOllamaModels = () => {
+  if (loadingOllamaModels.value) return;
+  loadingOllamaModels.value = true;
+  return getOllamaModelsApi()
+    .then((res) => {
+      ollamaModels.value = res.data ?? [];
+    })
+    .catch((error) => {
+      console.error('[Models] load Ollama models failed:', error);
+      ollamaModels.value = [];
+    })
+    .finally(() => {
+      loadingOllamaModels.value = false;
     });
 };
 
@@ -251,7 +288,7 @@ const buildParameters = (includeSecrets: boolean) => {
     maxConcurrency: form.maxConcurrency ?? undefined,
     appId: form.appId || undefined,
     customHeaders: rowsToRecord(form.customHeaders),
-    extraConfig: rowsToRecord(form.extraConfig)
+    extraConfig: buildExtraConfig()
   };
 
   if (form.type === 'Embedding') {
@@ -302,6 +339,13 @@ watch(
   () => props.visible,
   (visible: boolean) => {
     if (visible) initDrawer();
+  }
+);
+
+watch(
+  () => props.visible && form.source === 'local',
+  (visible) => {
+    if (visible) loadOllamaModels();
   }
 );
 
@@ -392,7 +436,7 @@ const handleTest = () => {
     interfaceType: form.interfaceType || undefined,
     source: form.source || undefined,
     customHeaders: rowsToRecord(form.customHeaders),
-    extraConfig: rowsToRecord(form.extraConfig)
+    extraConfig: buildExtraConfig()
   };
 
   if (form.apiKey) payload.apiKey = form.apiKey;
@@ -461,7 +505,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         type="primary"
         show-icon
         :closable="false"
-        :title="$t('form.alert.ollama.rerank', 'Ollama 不支持 ReRank 模型，请使用远程接口配置')"
+        :title="$t('page.models.form.alert.ollama.rerank', 'Ollama 不支持 ReRank 模型，请使用远程接口配置')"
       />
 
       <el-divider />
@@ -486,6 +530,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
 
       <el-form-item :label="$t('page.models.form.name', '模型名称')" prop="name">
         <el-input
+          v-if="form.source !== 'local'"
           v-model="form.name"
           :placeholder="
             $t(
@@ -496,6 +541,19 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
           "
           maxlength="100"
         />
+        <div v-else class="ollama-model-selector">
+          <el-select
+            v-model="form.name"
+            filterable
+            :loading="loadingOllamaModels"
+            :placeholder="$t('page.models.form.ollamaModelPlaceholder', '搜索模型')"
+          >
+            <el-option v-for="item in ollamaModels" :key="item.name" :label="item.name" :value="item.name" />
+          </el-select>
+          <el-button link type="primary" icon="Refresh" :loading="loadingOllamaModels" @click="loadOllamaModels">
+            {{ $t('page.models.form.refreshList', '刷新列表') }}
+          </el-button>
+        </div>
       </el-form-item>
 
       <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.displayName', '显示名称（可选）')" prop="displayName">
@@ -566,7 +624,11 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         </span>
       </el-form-item>
 
-      <el-form-item v-if="form.type === 'KnowledgeQA'" :label="$t('page.models.form.thinkingControl', '思考模式参数格式')" prop="extraConfig.0.value">
+      <el-form-item
+        v-if="form.type === 'KnowledgeQA' && form.source !== 'local'"
+        :label="$t('page.models.form.thinkingControl.label', '思考模式参数格式')"
+        prop="extraConfig.0.value"
+      >
         <el-select v-model="form.extraConfig[0].value" class="full-width">
           <el-option
             v-for="item in THINKING_CONTROL_OPTIONS"
@@ -662,6 +724,22 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
 
 .full-width {
   width: 100%;
+}
+
+.ollama-model-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+
+  :deep(.el-select) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  :deep(.el-button) {
+    flex-shrink: 0;
+  }
 }
 
 .form-desc {

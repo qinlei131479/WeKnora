@@ -1,10 +1,9 @@
 // src/utils/request.js
 import axios from "axios";
 import { generateRandomString, MAX_FILE_SIZE_MB } from "./index";
-import i18n from '@/i18n'
+import { i18n, t } from '@/i18n'
 import { getApiBaseUrl } from './api-base';
 
-const t = (key: string) => i18n.global.t(key)
 
 // API基础URL
 const BASE_URL = getApiBaseUrl();
@@ -123,7 +122,7 @@ instance.interceptors.response.use(
     const originalRequest = error.config;
     
     if (!error.response) {
-      return Promise.reject({ message: t('error.networkError') });
+      return Promise.reject({ message: t('common.error.networkError') });
     }
     
     // 公开接口（auto-setup / login / register / oidc）的 401 不走 refresh 逻辑，直接返回错误
@@ -132,7 +131,7 @@ instance.interceptors.response.use(
       const msg = typeof data === 'object'
         ? (typeof data?.error === 'string' ? data.error : (data?.error?.message || data?.message))
         : data;
-      return Promise.reject({ status, message: msg || t('error.invalidCredentials') });
+      return Promise.reject({ status, message: msg || t('common.error.invalidCredentials') });
     }
 
     // Embed 调试页/挂件：无 JWT 时直接拒绝，勿走 refresh → /login
@@ -141,7 +140,7 @@ instance.interceptors.response.use(
       const msg = typeof data === 'object'
         ? (typeof data?.error === 'string' ? data.error : (data?.error?.message || data?.message))
         : data;
-      return Promise.reject({ status, message: msg || t('error.invalidCredentials') });
+      return Promise.reject({ status, message: msg || t('common.error.invalidCredentials') });
     }
 
     // 如果是401错误且不是刷新token的请求，尝试刷新token
@@ -184,7 +183,7 @@ instance.interceptors.response.use(
             
             return instance(originalRequest);
           } else {
-            throw new Error(response.message || t('error.tokenRefreshFailed'));
+            throw new Error(response.message || t('common.error.tokenRefreshFailed'));
           }
         } catch (refreshError) {
           // 刷新失败，清除所有token并跳转到登录页
@@ -209,7 +208,7 @@ instance.interceptors.response.use(
         
         redirectToLogin();
         
-        return Promise.reject({ message: t('error.pleaseRelogin') });
+        return Promise.reject({ message: t('common.error.pleaseRelogin') });
       }
     }
     
@@ -217,7 +216,7 @@ instance.interceptors.response.use(
     if (error.response.status === 413) {
       return Promise.reject({ 
         status: 413, 
-        message: i18n.global.t('error.fileSizeExceeded', { size: MAX_FILE_SIZE_MB }),
+        message: i18n.global.t('common.error.fileSizeExceeded', { size: MAX_FILE_SIZE_MB }),
         success: false
       });
     }

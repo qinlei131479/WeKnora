@@ -73,10 +73,10 @@
       </el-col> -->
       <el-col :span="12">
         <el-tabs v-model="activeTab" style="height: 100%">
-          <el-tab-pane label="个人资料" name="userinfo">
+          <el-tab-pane :label="$t('page.system.user.profile.personalInformation', '个人资料')" name="userinfo">
             <userInfo :user="state.user" />
           </el-tab-pane>
-          <el-tab-pane label="修改密码" name="resetPwd">
+          <el-tab-pane :label="$t('page.system.user.profile.changePassword', '修改密码')" name="resetPwd">
             <resetPwd :userInfo="state.user" />
           </el-tab-pane>
         </el-tabs>

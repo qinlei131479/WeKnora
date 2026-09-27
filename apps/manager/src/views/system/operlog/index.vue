@@ -190,6 +190,7 @@
 </template>
 
 <script setup lang="ts" name="Operlog">
+import { t } from '@/i18n';
 import modal from '@/plugins/modal';
 import { useDict } from '@/utils/dict';
 import { addDateRange } from '@/utils/ruoyi';
@@ -278,26 +279,26 @@ function handleDetail(row: SysOperLog) {
 function handleDelete(row?: SysOperLog) {
   const operIds = row?.operId || ids.value;
   modal
-    .confirm('是否确认删除日志编号为"' + operIds + '"的数据项?')
+    .confirm(t('page.system.operlog.deleteLogsWithIds', { value1: operIds }, '是否确认删除日志编号为"{value1}"的数据项?'))
     .then(function () {
       return delOperlog(operIds);
     })
     .then(() => {
       getList();
-      modal.msgSuccess('删除成功');
+      modal.msgSuccess(t('page.normal.confirmInfo.removeSuccess', '删除成功'));
     })
     .catch(() => {});
 }
 
 function handleClean() {
   modal
-    .confirm('是否确认清空所有操作日志数据项?')
+    .confirm(t('page.system.operlog.clearAllOperationLogs', '是否确认清空所有操作日志数据项?'))
     .then(function () {
       return cleanOperlog();
     })
     .then(() => {
       getList();
-      modal.msgSuccess('清空成功');
+      modal.msgSuccess(t('page.system.logininfor.clearedSuccessfully', '清空成功'));
     })
     .catch(() => {});
 }

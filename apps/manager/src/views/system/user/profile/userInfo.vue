@@ -3,28 +3,29 @@
     <div class="text-center avatar-style">
       <userAvatar />
     </div>
-    <div class="userid">用户ID&nbsp;{{ user.userId }}</div>
-    <el-form-item label="用户昵称" prop="nickName">
+    <div class="userid">{{ $t('page.system.user.profile.userId', '用户ID') }}{{ user.userId }}</div>
+    <el-form-item :label="$t('page.system.user.form.nickName', '用户昵称')" prop="nickName">
       <el-input v-model="user.nickName" maxlength="6" show-word-limit />
     </el-form-item>
-    <el-form-item label="登录账号" prop="userName">
+    <el-form-item :label="$t('page.system.user.form.userName', '登录账号')" prop="userName">
       <el-input v-model="user.userName" maxlength="30" disabled />
     </el-form-item>
-    <el-form-item label="所属租户" prop="tenantName">
+    <el-form-item :label="$t('page.system.role.form.tenantName', '所属租户')" prop="tenantName">
       <el-input v-model="user.tenantName" maxlength="50" disabled />
     </el-form-item>
-    <el-form-item label="所属角色" prop="roleName">
+    <el-form-item :label="$t('page.system.user.form.roleName', '所属角色')" prop="roleName">
       <el-input v-model="user.roleName" maxlength="50" disabled />
     </el-form-item>
     <el-form-item>
       <div style="text-align: right; width: 100%">
-        <el-button style="border-radius: 50px" type="primary" @click="submit" :disabled="user.nickName == ''" :loading="loading">更改资料</el-button>
+        <el-button style="border-radius: 50px" type="primary" @click="submit" :disabled="user.nickName == ''" :loading="loading">{{ $t('page.system.user.profile.updateProfile', '更改资料') }}</el-button>
       </div>
     </el-form-item>
   </el-form>
 </template>
 
 <script setup>
+import { t } from '@/i18n';
 import userAvatar from './userAvatar';
 import { updateUserProfile } from '@/api/system/user';
 import { encrypt, decrypt } from '@/utils/jsencrypt';
@@ -42,10 +43,10 @@ const loading = ref(false);
 const { proxy } = getCurrentInstance();
 
 const rules = ref({
-  nickName: [{ required: true, message: '用户昵称不能为空', trigger: 'blur' }],
-  userName: [{ required: true, message: '登录账号不能为空', trigger: 'blur' }],
-  tenantName: [{ required: true, message: '所属租户不能为空', trigger: 'blur' }],
-  roleName: [{ required: true, message: '所属角色不能为空', trigger: 'blur' }]
+  nickName: [{ required: true, get message() { return t('page.platformManager.tenantManager.nicknameIsRequired', '用户昵称不能为空'); }, trigger: 'blur' }],
+  userName: [{ required: true, get message() { return t('page.platformManager.tenantManager.signInAccountIsRequired', '登录账号不能为空'); }, trigger: 'blur' }],
+  tenantName: [{ required: true, get message() { return t('page.system.user.profile.tenantIsRequired', '所属租户不能为空'); }, trigger: 'blur' }],
+  roleName: [{ required: true, get message() { return t('page.platformManager.tenantManager.roleIsRequired', '所属角色不能为空'); }, trigger: 'blur' }]
 });
 
 /** 提交按钮 */
@@ -59,7 +60,7 @@ function submit() {
         (response) => {
           userStore.avatarTop = userStore.avatar;
           loading.value = false;
-          proxy.$modal.msgSuccess('更改成功');
+          proxy.$modal.msgSuccess(t('page.system.user.profile.updatedSuccessfully', '更改成功'));
         },
         (error) => {
           loading.value = false;

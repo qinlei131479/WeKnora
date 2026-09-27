@@ -3,6 +3,7 @@
 </template>
 <script setup name="notification" >
 import { ElNotification } from 'element-plus'
+import { t } from '@/i18n';
 const props = defineProps({
     msg:{
         type:String,
@@ -47,7 +48,7 @@ watchEffect(() => {
         }else if(props.type==2){
             const ElNotification2 = ElNotification({
                 title: '',
-                message: props.msg+'<span style="color:#5677fc;cursor: pointer;">点击查看</span>',
+                message: props.msg+'<span style="color:#5677fc;cursor: pointer;">' + t('component.tenant.viewDetails', '点击查看') + '</span>',
                 type: 'success',
                 dangerouslyUseHTMLString: true,
                 duration: 10000,

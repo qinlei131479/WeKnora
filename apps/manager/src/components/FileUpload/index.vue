@@ -17,18 +17,17 @@
       v-if="!disabled"
     >
       <!-- 上传按钮 -->
-      <el-button type="primary">选取文件</el-button>
+      <el-button type="primary">{{ $t('component.fileUpload.chooseFile', '选取文件') }}</el-button>
     </el-upload>
     <!-- 上传提示 -->
     <div class="el-upload__tip" v-if="showTip && !disabled">
-      请上传
-      <template v-if="fileSize">
-        大小不超过 <b style="color: #f56c6c">{{ fileSize }}MB</b>
-      </template>
-      <template v-if="fileType">
-        格式为 <b style="color: #f56c6c">{{ fileType.join('/') }}</b>
-      </template>
-      的文件
+      <i18n-t
+        :keypath="fileSize ? (fileType ? 'component.fileUpload.hintSizeAndTypes' : 'component.fileUpload.hintSize') : (fileType ? 'component.fileUpload.hintTypes' : 'component.fileUpload.hint')"
+        scope="global"
+      >
+        <template #size><b style="color: #f56c6c">{{ fileSize }}MB</b></template>
+        <template #types><b style="color: #f56c6c">{{ fileType.join('/') }}</b></template>
+      </i18n-t>
     </div>
     <!-- 文件列表 -->
     <transition-group ref="uploadFileList" class="upload-file-list el-upload-list el-upload-list--text" name="el-fade-in-linear" tag="ul">
@@ -37,7 +36,7 @@
           <span class="el-icon-document"> {{ getFileName(file.name) }} </span>
         </el-link>
         <div class="ele-upload-list__item-content-action">
-          <el-link underline="never" @click="handleDelete(index)" type="danger" v-if="!disabled">&nbsp;删除</el-link>
+          <el-link underline="never" @click="handleDelete(index)" type="danger" v-if="!disabled">&nbsp;{{ $t('page.normal.delete', '删除') }}</el-link>
         </div>
       </li>
     </transition-group>
@@ -45,6 +44,7 @@
 </template>
 
 <script setup lang="ts">
+import { t } from '@/i18n';
 import { getToken } from '@/utils/auth';
 import Sortable from 'sortablejs';
 import type { UploadFileResult } from '@/types/api/common';
@@ -113,7 +113,7 @@ watch(
     if (val) {
       let temp = 1;
       // 首先将值转为数组
-      const list = Array.isArray(val) ? val : props.modelValue.split(',');
+      const list = Array.isArray(val) ? val : val.split(',');
       // 然后将数组转为对象数组
       fileList.value = list.map((item: any) => {
         if (typeof item === 'string') {
@@ -138,36 +138,36 @@ function handleBeforeUpload(file: File): boolean {
     const fileExt = fileName[fileName.length - 1];
     const isTypeOk = props.fileType.indexOf(fileExt) >= 0;
     if (!isTypeOk) {
-      proxy.$modal.msgError(`文件格式不正确，请上传${props.fileType.join('/')}格式文件!`);
+      proxy.$modal.msgError(t('component.fileUpload.invalidFileFormatUploadFilesOfType', { value1: props.fileType.join('/') }, '文件格式不正确，请上传{value1}格式文件!'));
       return false;
     }
   }
   // 校检文件名是否包含特殊字符
   if (file.name.includes(',')) {
-    proxy.$modal.msgError('文件名不正确，不能包含英文逗号!');
+    proxy.$modal.msgError(t('component.fileUpload.invalidFilenameCommasAreNotAllowed', '文件名不正确，不能包含英文逗号!'));
     return false;
   }
   // 校检文件大小
   if (props.fileSize) {
     const isLt = file.size / 1024 / 1024 < props.fileSize;
     if (!isLt) {
-      proxy.$modal.msgError(`上传文件大小不能超过 ${props.fileSize} MB!`);
+      proxy.$modal.msgError(t('component.editor.uploadedFilesMustNotExceedMb', { value1: props.fileSize }, '上传文件大小不能超过 {value1} MB!'));
       return false;
     }
   }
-  proxy.$modal.loading('正在上传文件，请稍候...');
+  proxy.$modal.loading(t('component.fileUpload.uploadingFilePleaseWait', '正在上传文件，请稍候...'));
   number.value++;
   return true;
 }
 
 // 文件个数超出
 function handleExceed(): void {
-  proxy.$modal.msgError(`上传文件数量不能超过 ${props.limit} 个!`);
+  proxy.$modal.msgError(t('component.fileUpload.youCanUploadAtMostFiles', { value1: props.limit }, '上传文件数量不能超过 {value1} 个!'));
 }
 
 // 上传失败
 function handleUploadError(err: Error): void {
-  proxy.$modal.msgError('上传文件失败');
+  proxy.$modal.msgError(t('component.fileUpload.fileUploadFailed', '上传文件失败'));
   proxy.$modal.closeLoading();
 }
 

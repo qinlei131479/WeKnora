@@ -108,6 +108,7 @@
 </template>
 
 <script setup lang="ts" name="Logininfor">
+import { t } from '@/i18n';
 import modal from '@/plugins/modal';
 import { useDict } from '@/utils/dict';
 import { addDateRange } from '@/utils/ruoyi';
@@ -185,26 +186,26 @@ function handleSortChange(column: any) {
 function handleDelete(row?: SysLogininfor) {
   const infoIds = row?.infoId || ids.value;
   modal
-    .confirm('是否确认删除访问编号为"' + infoIds + '"的数据项?')
+    .confirm(t('page.system.logininfor.deleteAccessLogsWithIds', { value1: infoIds }, '是否确认删除访问编号为"{value1}"的数据项?'))
     .then(function () {
       return delLogininfor(infoIds);
     })
     .then(() => {
       getList();
-      modal.msgSuccess('删除成功');
+      modal.msgSuccess(t('page.normal.confirmInfo.removeSuccess', '删除成功'));
     })
     .catch(() => {});
 }
 
 function handleClean() {
   modal
-    .confirm('是否确认清空所有登录日志数据项?')
+    .confirm(t('page.system.logininfor.clearAllSignInLogs', '是否确认清空所有登录日志数据项?'))
     .then(function () {
       return cleanLogininfor();
     })
     .then(() => {
       getList();
-      modal.msgSuccess('清空成功');
+      modal.msgSuccess(t('page.system.logininfor.clearedSuccessfully', '清空成功'));
     })
     .catch(() => {});
 }
@@ -213,12 +214,12 @@ function handleUnlock() {
   const username = selectName.value[0];
   if (!username) return;
   modal
-    .confirm('是否确认解锁用户"' + username + '"数据项?')
+    .confirm(t('page.system.logininfor.unlockUser', { value1: username }, '是否确认解锁用户"{value1}"数据项?'))
     .then(function () {
       return unlockLogininfor(username);
     })
     .then(() => {
-      modal.msgSuccess('用户' + username + '解锁成功');
+      modal.msgSuccess(t('page.system.logininfor.userUnlockedSuccessfully', { value1: username }, '用户{value1}解锁成功'));
     })
     .catch(() => {});
 }

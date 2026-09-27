@@ -14,14 +14,14 @@
         <div class="lock-icon">🔒</div>
       </div>
       <div class="lock-username">{{ userStore.nickName }}</div>
-      <div class="lock-hint">系统已锁定，请输入密码解锁</div>
+      <div class="lock-hint">{{ $t('page.lock.theSystemIsLockedEnterYourPasswordToUnlockIt', '系统已锁定，请输入密码解锁') }}</div>
 
       <div class="input-wrap" :class="{ shake: isShaking }">
         <input
           ref="passwordInput"
           v-model="password"
           type="password"
-          placeholder="请输入登录密码"
+          :placeholder="$t('page.lock.enterYourSignInPassword', '请输入登录密码')"
           class="lock-input"
           @keydown.enter="handleUnlock"
           autocomplete="off"
@@ -35,13 +35,14 @@
       <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div>
 
       <div class="lock-footer">
-        <a href="javascript:;" @click="goLogin">退出重新登录</a>
+        <a href="javascript:;" @click="goLogin">{{ $t('page.lock.signOutAndSignInAgain', '退出重新登录') }}</a>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import { t } from '@/i18n';
 import { useRouter } from 'vue-router';
 import useUserStore from '@/store/modules/user';
 import useLockStore from '@/store/modules/lock';
@@ -82,8 +83,8 @@ const startClock = () => {
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     currentTime.value = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-    const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-    currentDate.value = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 ${days[now.getDay()]}`;
+    const days = [t('page.lock.sunday', '星期日'), t('page.lock.monday', '星期一'), t('page.lock.tuesday', '星期二'), t('page.lock.wednesday', '星期三'), t('page.lock.thursday', '星期四'), t('page.lock.friday', '星期五'), t('page.lock.saturday', '星期六')];
+    currentDate.value = t('page.lock.formattedValue', { value1: now.getFullYear(), value2: now.getMonth() + 1, value3: now.getDate(), value4: days[now.getDay()] }, '{value1}年{value2}月{value3}日 {value4}');
   };
   update();
   timer = setInterval(update, 1000);
@@ -91,7 +92,7 @@ const startClock = () => {
 
 const handleUnlock = async () => {
   if (!password.value) {
-    showError('请输入密码');
+    showError(t('page.users.passwordPlaceholder', '请输入密码'));
     return;
   }
   loading.value = true;

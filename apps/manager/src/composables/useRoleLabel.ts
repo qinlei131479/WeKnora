@@ -1,7 +1,6 @@
 // import { computed } from 'vue'
 import { ValueLabelOption } from '@/types';
 import { t } from '@/i18n';
-// import { useI18n } from '@/composables/i18nMock'
 
 // import { useAuthStore } from '@/stores/auth'
 

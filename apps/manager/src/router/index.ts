@@ -1,3 +1,4 @@
+import { t } from '@/i18n';
 import { createWebHistory, createRouter } from 'vue-router';
 /* Layout */
 import Layout from '@/layout/index.vue';
@@ -65,7 +66,7 @@ export const constantRoutes = [
     path: '/lock',
     component: () => import('@/views/lock.vue'),
     hidden: true,
-    meta: { title: '锁定屏幕' }
+    meta: { get title() { return t('common.index.lockScreen', '锁定屏幕'); } }
   },
   {
     path: '/user',
@@ -77,7 +78,7 @@ export const constantRoutes = [
         path: 'profile/:activeTab?',
         component: () => import('@/views/system/user/profile/index.vue'),
         name: 'Profile',
-        meta: { title: '个人中心', icon: 'user' }
+        meta: { get title() { return t('layout.topRightMenu.profile', '个人中心'); }, icon: 'user' }
       }
     ]
   },
@@ -100,7 +101,7 @@ export const dynamicRoutes = [
         path: 'role/:userId(\\d+)',
         component: () => import('@/views/system/user/authRole.vue'),
         name: 'AuthRole',
-        meta: { title: '分配角色', activeMenu: '/system/user' }
+        meta: { get title() { return t('common.index.assignRoles', '分配角色'); }, activeMenu: '/system/user' }
       }
     ]
   },
@@ -114,7 +115,7 @@ export const dynamicRoutes = [
         path: 'user/:roleId(\\d+)',
         component: () => import('@/views/system/role/authUser.vue'),
         name: 'AuthUser',
-        meta: { title: '分配用户', activeMenu: '/system/role' }
+        meta: { get title() { return t('common.index.assignUsers', '分配用户'); }, activeMenu: '/system/role' }
       }
     ]
   },
@@ -128,7 +129,7 @@ export const dynamicRoutes = [
         path: 'index/:dictId(\\d+)',
         component: () => import('@/views/system/dict/data.vue'),
         name: 'Data',
-        meta: { title: '字典数据', activeMenu: '/system/dict' }
+        meta: { get title() { return t('common.index.dictionaryData', '字典数据'); }, activeMenu: '/system/dict' }
       }
     ]
   }

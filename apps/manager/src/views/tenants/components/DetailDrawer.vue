@@ -32,13 +32,13 @@ function getStatusTheme(status: string | undefined): string {
 function getStatusText(status: string | undefined): string {
   switch (status) {
     case 'active':
-      return t('tenant.statusActive', '活跃');
+      return t('page.tenants.statusActive', '活跃');
     case 'inactive':
-      return t('tenant.statusInactive', '未激活');
+      return t('page.tenants.statusInactive', '未激活');
     case 'suspended':
-      return t('tenant.statusSuspended', '已暂停');
+      return t('page.tenants.statusSuspended', '已暂停');
     default:
-      return t('tenant.statusUnknown', '未知');
+      return t('page.tenants.statusUnknown', '未知');
   }
 }
 
