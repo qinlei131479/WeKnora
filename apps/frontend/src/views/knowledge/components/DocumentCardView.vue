@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { localizeBackendErrorMessage } from '@/utils/backendErrorMessage';
 import { formatFileSize } from '@/utils/files';
 import { useTagChipsOverflow } from '@/composables/useTagChipsOverflow';
 import DocumentActionMenu from './DocumentActionMenu.vue';
@@ -79,6 +80,8 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+
+const shownText = (message?: string) => localizeBackendErrorMessage(message, t) || message || '';
 
 const {
   setupTagChipsObserver,
@@ -509,7 +512,7 @@ const handleAction = (action: 'edit' | 'view-trace' | 'reparse' | 'cancel-parse'
           <span class="card-analyze-txt">{{ $t('knowledgeBase.generatingSummary') }}</span>
         </div>
         <div v-else-if="item.parse_status === 'completed'" class="card-content-txt">
-          {{ item.description }}
+          {{ shownText(item.description) }}
         </div>
       </div>
 
@@ -623,7 +626,7 @@ const handleAction = (action: 'edit' | 'view-trace' | 'reparse' | 'cancel-parse'
           {{ $t('knowledgeBase.draft') }}
         </div>
         <template v-else>
-          <div v-if="hoveredCardItem.description" class="card-popover-desc">{{ hoveredCardItem.description }}</div>
+          <div v-if="hoveredCardItem.description" class="card-popover-desc">{{ shownText(hoveredCardItem.description) }}</div>
           <div v-if="(hoveredCardItem as any).source" class="card-popover-source" :title="(hoveredCardItem as any).source">
             <t-icon name="link" size="12px" /> {{ (hoveredCardItem as any).source }}
           </div>

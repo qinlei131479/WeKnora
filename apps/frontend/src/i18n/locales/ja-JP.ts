@@ -2522,18 +2522,6 @@ export default {
       logoutFailed: 'ログアウトに失敗しました',
       validateTokenFailed: 'トークンの検証に失敗しました'
     },
-    kb: {
-      noPermissionOperate: 'No permission to operate on this knowledge base',
-      noPermissionDelete: 'No permission to delete this knowledge',
-      noPermissionModify: 'No permission to modify this knowledge',
-      noPermissionUpdate: 'No permission to update this knowledge base',
-      noPermissionCreate: 'No permission to create knowledge',
-      noPermissionUpdateTags: 'No permission to update knowledge tags',
-      moveNotCompleted: 'This file is not ready to move (current status: {status})',
-      moveReuseAcrossStores: 'Reusing vectors is not supported across different vector stores. Use Re-parse to move into another store.',
-      moveTypeMismatch: 'Source and target knowledge bases must be the same type',
-      moveEmbeddingMismatch: 'Source and target knowledge bases must use the same embedding model'
-    }
   },
   mcp: {
     testResult: {
@@ -4425,6 +4413,7 @@ export default {
       emptySearchDesc: 'Try another keyword or clear the search.',
       groupBuiltin: '組み込み',
       groupShared: 'テナント共有',
+      builtinWorkNoSandbox: '組み込みのワークスキルはサンドボックスにインストールしません',
       sourceCommon: '共通',
       scopeAll: 'すべての範囲',
       fileTab: 'ファイル管理',
@@ -7376,6 +7365,7 @@ export default {
     untitledTab: '無題のタブ',
     contentTruncated: 'ページ内容の一部を表示しています。',
     controlScope: 'この会話のブラウザー操作のみを制御',
+    viewOnly: 'この会話のブラウザー画面は閲覧のみ',
     pauseHint: 'ブラウザー操作を中断し、再開できるようページを保持します。会話は停止しません。',
     stopHint: 'このタスクが作成したタブを閉じ、借用したタブを返却します。ブラウザーと接続設定は保持します。',
     openPage: 'ページを開く',

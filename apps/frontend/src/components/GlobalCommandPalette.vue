@@ -143,7 +143,7 @@
       <div class="cmdk__footer">
         <span class="cmdk__hotkey"><kbd>↑</kbd><kbd>↓</kbd> {{ t('commandPalette.hotkey.select') }}</span>
         <span class="cmdk__hotkey"><kbd>↵</kbd> {{ t('commandPalette.hotkey.enter') }}</span>
-        <span class="cmdk__hotkey"><kbd>⌘</kbd><kbd>1</kbd>-<kbd>6</kbd> {{ t('commandPalette.hotkey.cmdNumber')
+        <span class="cmdk__hotkey"><kbd>⌘</kbd><kbd>1</kbd>-<kbd>5</kbd> {{ t('commandPalette.hotkey.cmdNumber')
           }}</span>
         <span class="cmdk__hotkey"><kbd>⌘</kbd><kbd>↵</kbd> {{ t('commandPalette.hotkey.cmdEnter') }}</span>
         <span class="cmdk__hotkey"><kbd>Esc</kbd> {{ t('commandPalette.hotkey.esc') }}</span>

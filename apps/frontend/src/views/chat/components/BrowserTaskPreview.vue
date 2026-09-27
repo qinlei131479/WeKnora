@@ -4,20 +4,20 @@
     <div class="preview-heading" @pointerdown="!pipTarget && startDrag($event)" @pointermove="moveDrag" @pointerup="stopDrag" @pointercancel="stopDrag" @lostpointercapture="stopDrag"><BrowserIcon class="preview-browser-icon" width="20" height="20" /><strong>{{ t('localBrowser.local') }}</strong><span>{{ t(!status.connected ? 'localBrowser.offline' : status.stopping ? 'localBrowser.stopping' : status.paused ? 'localBrowser.paused' : status.needs_help ? 'localBrowser.needHelp' : status.task_id ? 'localBrowser.connected' : 'localBrowser.waiting') }}</span>
       <button v-if="pipSupported" class="preview-popout" :disabled="pipOpening" :title="t(pipTarget ? 'localBrowser.pipReturn' : 'localBrowser.pipOpen')" :aria-label="t(pipTarget ? 'localBrowser.pipReturn' : 'localBrowser.pipOpen')" @pointerdown.stop @click="togglePictureInPicture"><t-icon :name="pipTarget ? 'fullscreen-exit' : 'fullscreen'" size="16px" /></button>
     </div>
-    <button class="preview-image" :disabled="!status.connected || !status.task_id || busy || status.stopping" :aria-label="t('localBrowser.locateWindow')" @click="act('focus')">
+    <button class="preview-image" :disabled="readonly || !status.connected || !status.task_id || busy || status.stopping" :aria-label="t(readonly ? 'localBrowser.preview' : 'localBrowser.locateWindow')" @click="act('focus')">
       <img v-if="preview" :src="preview" :alt="t('localBrowser.preview')" />
       <span v-else>{{ t(status.connected ? 'localBrowser.waiting' : 'localBrowser.reconnectShort') }}</span>
-      <span v-if="status.connected && status.task_id" class="locate"><t-icon name="jump" size="13px" />{{ t('localBrowser.locateWindow') }}</span>
+      <span v-if="!readonly && status.connected && status.task_id" class="locate"><t-icon name="jump" size="13px" />{{ t('localBrowser.locateWindow') }}</span>
     </button>
     <p v-if="status.action" class="preview-progress">{{ browserActionLabel(t, status.action) }} · {{ t('localBrowser.elapsedSeconds', { seconds: Math.floor((status.action_elapsed_ms || 0) / 1000) }) }}</p>
     <p v-if="browserPageAddress(status.page_url)" class="preview-address">{{ browserPageAddress(status.page_url) }}</p>
     <p v-if="status.last_error" class="preview-error">{{ status.last_error }}</p>
     <p class="preview-sync" role="status">{{ t(!status.connected ? 'localBrowser.reconnectShort' : status.idle ? 'localBrowser.previewIdle' : previewStale ? 'localBrowser.previewStale' : preview ? 'localBrowser.previewLive' : 'localBrowser.previewLoading') }}</p>
-    <p v-if="status.needs_help" class="preview-help"><span v-if="status.help_prompt">{{ status.help_prompt }}<br /></span>{{ t('localBrowser.helpHint') }}</p>
+    <p v-if="status.needs_help && (status.help_prompt || !readonly)" class="preview-help"><span v-if="status.help_prompt">{{ status.help_prompt }}<br v-if="!readonly" /></span><template v-if="!readonly">{{ t('localBrowser.helpHint') }}</template></p>
     <p v-if="pipFailed" class="preview-error" role="alert">{{ t('localBrowser.pipFailed') }}</p>
     <p v-if="error" class="preview-error" role="alert">{{ error }}</p>
-    <p class="preview-scope">{{ t('localBrowser.controlScope') }}</p>
-    <div class="preview-actions">
+    <p class="preview-scope">{{ t(readonly ? 'localBrowser.viewOnly' : 'localBrowser.controlScope') }}</p>
+    <div v-if="!readonly" class="preview-actions">
       <t-button v-if="status.connected" :title="t(status.paused ? 'localBrowser.resume' : 'localBrowser.pauseHint')" size="small" theme="default" variant="text" :disabled="busy || status.stopping" @click="act(status.paused ? 'resume' : 'pause')">{{ t(status.paused ? 'localBrowser.resume' : 'localBrowser.pause') }}</t-button>
       <t-button v-else size="small" theme="default" variant="text" @click="openBrowserSettings">{{ t('localBrowser.settingsTitle') }}</t-button>
       <t-button :title="t('localBrowser.stopHint')" size="small" theme="default" variant="text" :disabled="busy || status.stopping" @click="act('stop')">{{ t('localBrowser.stop') }}</t-button>
@@ -34,7 +34,7 @@ import { browserActionLabel, browserPageAddress } from '@/utils/browserToolDispl
 import BrowserIcon from '@/components/icons/BrowserIcon.vue'
 import { useFloatingPreviewDrag } from '@/composables/useFloatingPreviewDrag'
 import { useDocumentPictureInPicture } from '@/composables/useDocumentPictureInPicture'
-const props = defineProps<{ sessionId: string }>()
+const props = withDefaults(defineProps<{ sessionId: string; readonly?: boolean }>(), { readonly: false })
 const { t } = useI18n(), uiStore = useUIStore()
 const status = ref({ enabled: false, selected: false, connected: false, paused: false, idle: false, needs_help: false, help_prompt: '', task_id: '', action: '', action_elapsed_ms: 0, page_url: '', last_error: '', stopping: false })
 const busy = ref(false), error = ref(''), preview = ref(''), previewStale = ref(false)
@@ -59,6 +59,7 @@ const endpoint = `/api/v1/sessions/${encodeURIComponent(props.sessionId)}/local-
 const controller = new AbortController()
 let alive = true, cancelTimer: (() => void) | undefined, revision = 0
 async function act(action: string) {
+  if (props.readonly && action !== 'preview') return
   if (busy.value) return
   busy.value = true; error.value = ''; revision++
   try {

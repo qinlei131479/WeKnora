@@ -1,9 +1,14 @@
 package service
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -34,6 +39,7 @@ type SkillCatalogView struct {
 	Version       string                    `json:"version,omitempty"`
 	Description   string                    `json:"description,omitempty"`
 	SourceType    string                    `json:"source_type,omitempty"`
+	Builtin       bool                      `json:"builtin,omitempty"`
 	BundleSHA256  string                    `json:"bundle_sha256,omitempty"`
 	CreatedAt     time.Time                 `json:"created_at"`
 	UpdatedAt     time.Time                 `json:"updated_at"`
@@ -81,34 +87,70 @@ func (s *TenantSkillService) ListCatalog(
 		unattached = append(unattached, row)
 	}
 
-	out := make([]SkillCatalogView, 0, len(catalogs)+len(unattached))
-	seenName := make(map[string]struct{}, len(catalogs))
-	seenCatalog := make(map[string]struct{}, len(catalogs))
+	var builtins []*types.TenantSkillCatalogEntity
+	if tenantID != 0 {
+		var builtinErr error
+		builtins, builtinErr = s.skills.ListCatalogsByTenant(ctx, 0)
+		if builtinErr != nil {
+			return nil, builtinErr
+		}
+	}
+	builtinByName := make(map[string]*types.TenantSkillCatalogEntity, len(builtins))
+	for _, cat := range builtins {
+		if cat == nil || cat.Name == "" {
+			continue
+		}
+		builtinByName[cat.Name] = cat
+	}
+
+	out := make([]SkillCatalogView, 0, len(catalogs)+len(builtins)+len(unattached))
+	seenName := make(map[string]struct{}, len(catalogs)+len(builtins))
+	seenCatalog := make(map[string]struct{}, len(catalogs)+len(builtins))
+	// 安装内置技能时曾经复制出同名的空间目录。列表只保留内置卡片，安装记录并回去。
+	cloneIDs := make(map[string]string, len(catalogs))
 	for _, cat := range catalogs {
 		if cat == nil {
+			continue
+		}
+		if builtin, ok := builtinByName[cat.Name]; ok && builtin != nil {
+			cloneIDs[cat.ID] = cat.Name
+			seenCatalog[cat.ID] = struct{}{}
 			continue
 		}
 		seenName[cat.Name] = struct{}{}
 		seenCatalog[cat.ID] = struct{}{}
 		out = append(out, catalogView(cat, byCatalog[cat.ID], configByID))
 	}
-	// 内置技能写在 tenant_id=0，当前空间目录里没有同名行时也要能列出来并安装。
-	if tenantID != 0 {
-		builtins, builtinErr := s.skills.ListCatalogsByTenant(ctx, 0)
-		if builtinErr != nil {
-			return nil, builtinErr
+	for _, cat := range builtins {
+		if cat == nil {
+			continue
 		}
-		for _, cat := range builtins {
-			if cat == nil {
+		if _, ok := seenName[cat.Name]; ok {
+			continue
+		}
+		rows := append([]*types.TenantSkillEntity{}, byCatalog[cat.ID]...)
+		for cloneID, name := range cloneIDs {
+			if name != cat.Name {
 				continue
 			}
-			if _, ok := seenName[cat.Name]; ok {
+			rows = append(rows, byCatalog[cloneID]...)
+		}
+		seenRow := make(map[string]struct{}, len(rows))
+		deduped := rows[:0]
+		for _, row := range rows {
+			if row == nil {
 				continue
 			}
-			seenName[cat.Name] = struct{}{}
-			seenCatalog[cat.ID] = struct{}{}
-			out = append(out, catalogView(cat, byCatalog[cat.ID], configByID))
+			if _, ok := seenRow[row.ID]; ok {
+				continue
+			}
+			seenRow[row.ID] = struct{}{}
+			deduped = append(deduped, row)
 		}
+		rows = deduped
+		seenName[cat.Name] = struct{}{}
+		seenCatalog[cat.ID] = struct{}{}
+		out = append(out, catalogView(cat, rows, configByID))
 	}
 	// Installs whose catalog row was deleted (or never existed) would otherwise
 	// vanish: they are not unattached (catalog_id is set) and they are not
@@ -153,6 +195,7 @@ func catalogView(
 		Version:       cat.Version,
 		Description:   cat.Description,
 		SourceType:    cat.SourceType,
+		Builtin:       cat.TenantID == 0,
 		BundleSHA256:  cat.BundleSHA256,
 		CreatedAt:     cat.CreatedAt,
 		UpdatedAt:     cat.UpdatedAt,
@@ -241,7 +284,14 @@ func (s *TenantSkillService) InstallCatalogToConfigs(
 	}
 	var firstErr error
 	for _, configID := range ids {
-		skillID, installErr := s.InstallSkill(ctx, tenantID, configID, archive)
+		if catalog.TenantID == 0 && catalog.SourceType == "work" {
+			result.Errors[configID] = "内置工作技能不安装到沙箱"
+			if firstErr == nil {
+				firstErr = apperrors.NewBadRequestError("内置工作技能不安装到沙箱")
+			}
+			continue
+		}
+		skillID, installErr := s.installCatalogSkill(ctx, tenantID, configID, catalog, archive)
 		if installErr != nil {
 			logger.Warnf(ctx, "[skill] install catalog %s onto config %s failed: %v",
 				catalogID, configID, installErr)
@@ -626,28 +676,37 @@ func (s *TenantSkillService) catalogBundleArchive(
 		return nil, apperrors.NewNotFoundError("skill not found")
 	}
 	wantSHA := strings.TrimSpace(catalog.BundleSHA256)
-	tryRow := func(row *types.TenantSkillEntity) ([]byte, bool) {
+	// 内置技能的压缩包写在 tenant 0。设置页用当前空间的存储去读，读不到时再试归属空间。
+	owners := []uint64{tenantID}
+	if catalog.TenantID != tenantID {
+		owners = append(owners, catalog.TenantID)
+	}
+	var stale []byte
+	tryStored := func(owner uint64, row *types.TenantSkillEntity) ([]byte, bool) {
 		if row == nil || strings.TrimSpace(row.BundleRef) == "" {
 			return nil, false
 		}
-		// Through the same cache the install rows use: the file drawer lists a
-		// tree and then opens files out of it, and a definition-owned archive
-		// is no cheaper to pull twice than a row-owned one.
-		archive, ok := s.trySkillBundle(ctx, tenantID, row)
+		archive, ok := s.trySkillBundle(ctx, owner, row)
 		if !ok || len(archive) == 0 {
 			return nil, false
 		}
 		if wantSHA != "" && !archiveMatchesSHA(archive, wantSHA) {
+			if stale == nil {
+				stale = archive
+			}
 			return nil, false
 		}
 		return archive, true
 	}
 
 	if ref := strings.TrimSpace(catalog.BundleRef); ref != "" {
-		if archive, ok := tryRow(&types.TenantSkillEntity{
+		row := &types.TenantSkillEntity{
 			Name: catalog.Name, BundleRef: catalog.BundleRef, BundleSHA256: catalog.BundleSHA256,
-		}); ok {
-			return archive, nil
+		}
+		for _, owner := range owners {
+			if archive, ok := tryStored(owner, row); ok {
+				return archive, nil
+			}
 		}
 	}
 	installs, err := s.skills.ListSkillsByCatalog(ctx, tenantID, catalog.ID)
@@ -655,8 +714,10 @@ func (s *TenantSkillService) catalogBundleArchive(
 		return nil, err
 	}
 	for _, row := range installs {
-		if archive, ok := tryRow(row); ok {
-			return archive, nil
+		for _, owner := range owners {
+			if archive, ok := tryStored(owner, row); ok {
+				return archive, nil
+			}
 		}
 	}
 	all, err := s.skills.ListSkillsByTenant(ctx, tenantID)
@@ -670,10 +731,100 @@ func (s *TenantSkillService) catalogBundleArchive(
 		if row.ID != catalog.ID && row.Name != catalog.Name {
 			continue
 		}
-		if archive, ok := tryRow(row); ok {
-			return archive, nil
+		for _, owner := range owners {
+			if archive, ok := tryStored(owner, row); ok {
+				return archive, nil
+			}
 		}
+	}
+	// 存储里的包缺失或校验对不上时，内置技能仍可从仓库里的原始目录打包。
+	if archive, ok := builtinSourceArchive(catalog); ok {
+		return archive, nil
+	}
+	if len(stale) > 0 {
+		logger.Warnf(ctx, "[skill] catalog %s bundle digest does not match the stored object; using the stored bytes", catalog.ID)
+		return stale, nil
 	}
 	return nil, apperrors.NewBadRequestError(
 		"the archive of this skill is no longer stored; add it again from the original bundle")
+}
+
+// builtinSkillSourceDirs 是内置技能原始目录。目录 id 即 slug。
+func builtinSkillSourceDirs(slug string) []string {
+	slug = strings.TrimSpace(slug)
+	if slug == "" || strings.Contains(slug, "..") || strings.ContainsAny(slug, `/\`) {
+		return nil
+	}
+	return []string{
+		filepath.Join("skills", "preloaded", slug),
+		filepath.Join("apps", "agent-harness", "package", "yuxi", "agents", "skills", "buildin", slug),
+	}
+}
+
+func builtinSourceArchive(catalog *types.TenantSkillCatalogEntity) ([]byte, bool) {
+	if catalog == nil || catalog.TenantID != 0 {
+		return nil, false
+	}
+	for _, dir := range builtinSkillSourceDirs(catalog.ID) {
+		info, err := os.Stat(filepath.Join(dir, "SKILL.md"))
+		if err != nil || info.IsDir() {
+			continue
+		}
+		archive, err := zipSkillDirectory(dir)
+		if err != nil || len(archive) == 0 {
+			continue
+		}
+		return archive, true
+	}
+	return nil, false
+}
+
+func zipSkillDirectory(root string) ([]byte, error) {
+	var payload bytes.Buffer
+	writer := zip.NewWriter(&payload)
+	err := filepath.Walk(root, func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if info.IsDir() {
+			base := info.Name()
+			if base == "__pycache__" || base == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return nil
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		rel = filepath.ToSlash(rel)
+		if rel == "." || strings.Contains(rel, "..") {
+			return nil
+		}
+		entry, err := writer.Create(rel)
+		if err != nil {
+			return err
+		}
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		_, copyErr := io.Copy(entry, file)
+		closeErr := file.Close()
+		if copyErr != nil {
+			return copyErr
+		}
+		return closeErr
+	})
+	if err != nil {
+		_ = writer.Close()
+		return nil, err
+	}
+	if err := writer.Close(); err != nil {
+		return nil, err
+	}
+	return payload.Bytes(), nil
 }

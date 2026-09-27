@@ -582,15 +582,15 @@ def test_deep_research_builtin_skill_includes_html_preview_dependency():
     assert specs["deep-research"]["skill_dependencies"] == ["html-preview"]
 
 
-def test_quote_builtin_skill_includes_knowledge_base_dependency():
+def test_quote_builtin_skill_is_work_mode():
     specs = {spec["slug"]: spec for spec in svc.list_builtin_skill_specs()}
 
     assert "quote" in specs
     quote = specs["quote"]
     assert quote["name"] == "quote"
-    assert quote["usage_source"] == "common"
-    assert quote["skill_dependencies"] == []
-    assert quote["tool_dependencies"] == []
+    assert quote["usage_source"] == "work"
+    assert quote["skill_dependencies"] == ["skill"]
+    assert quote["tool_dependencies"] == ["ask_user_question", "present_artifacts"]
     assert (quote["source_dir"] / "SKILL.md").exists()
     assert (quote["source_dir"] / "scripts" / "fill_quote.py").exists()
 

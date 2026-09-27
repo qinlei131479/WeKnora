@@ -1147,7 +1147,8 @@ function followBusySkills() {
 }
 
 function followProgress(skillId: string) {
-  if (usesHarness() || !props.record || abortBySkill.has(skillId)) return
+  // 进度百分比同样来自平台的安装事件，技能页和设置页都要跟上。
+  if (!props.record || abortBySkill.has(skillId)) return
   const configId = props.record.id
   const controller = new AbortController()
   abortBySkill.set(skillId, controller)

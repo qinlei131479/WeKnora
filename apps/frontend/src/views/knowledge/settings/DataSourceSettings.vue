@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useI18n } from 'vue-i18n'
+import { localizeBackendErrorMessage } from '@/utils/backendErrorMessage'
 import {
   listDataSources,
   deleteDataSource,
@@ -19,6 +20,8 @@ import { useAuthStore } from '@/stores/auth'
 const props = defineProps<{ kbId: string }>()
 const emit = defineEmits<{ (e: 'count', value: number): void }>()
 const { t } = useI18n()
+
+const shownError = (message?: string) => localizeBackendErrorMessage(message, t) || message || ''
 const authStore = useAuthStore()
 
 // 后端 /datasource 的 list/logs 是 Viewer+，但所有写操作（POST/PUT/DELETE
@@ -305,7 +308,7 @@ onBeforeUnmount(stopPolling)
             </p>
             <div v-if="ds.error_message" class="ds-card__error">
               <t-icon name="error-circle-filled" size="14px" />
-              <span>{{ ds.error_message }}</span>
+              <span>{{ shownError(ds.error_message) }}</span>
             </div>
           </div>
         </component>

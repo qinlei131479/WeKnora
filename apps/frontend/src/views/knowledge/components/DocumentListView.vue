@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { localizeBackendErrorMessage } from '@/utils/backendErrorMessage';
 import { formatFileSize, getFileIcon } from '@/utils/files';
 import { useTagChipsOverflow } from '@/composables/useTagChipsOverflow';
 import DocumentActionMenu from './DocumentActionMenu.vue';
@@ -74,6 +75,8 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+
+const shownText = (message?: string) => localizeBackendErrorMessage(message, t) || message || '';
 
 const {
   setupTagChipsObserver,
@@ -317,7 +320,7 @@ const handleAction = (action: 'edit' | 'reparse' | 'cancel-parse' | 'move' | 'mo
               <t-icon name="folder" />
               <span>{{ item.folder_path }}</span>
             </button>
-            <span v-if="item.description" class="row-file-desc" :title="item.description">{{ item.description }}</span>
+            <span v-if="item.description" class="row-file-desc" :title="shownText(item.description)">{{ shownText(item.description) }}</span>
           </div>
         </div>
 

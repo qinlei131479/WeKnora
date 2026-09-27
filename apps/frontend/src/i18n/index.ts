@@ -4,14 +4,15 @@ import ruRU from './locales/ru-RU.ts'
 import enUS from './locales/en-US.ts'
 import koKR from './locales/ko-KR.ts'
 import jaJP from './locales/ja-JP.ts'
+import { attachBackendMessages, backendMessages } from './locales_backend/index.ts'
 import { BUILT_IN_DEFAULT, resolveDefaultLocale } from './resolveDefaultLocale.ts'
 
 const messages = {
-  'zh-CN': zhCN,
-  'en-US': enUS,
-  'ru-RU': ruRU,
-  'ko-KR': koKR,
-  'ja-JP': jaJP
+  'zh-CN': attachBackendMessages(zhCN, backendMessages['zh-CN']),
+  'en-US': attachBackendMessages(enUS, backendMessages['en-US']),
+  'ru-RU': attachBackendMessages(ruRU, backendMessages['ru-RU']),
+  'ko-KR': attachBackendMessages(koKR, backendMessages['ko-KR']),
+  'ja-JP': attachBackendMessages(jaJP, backendMessages['ja-JP']),
 }
 
 const savedLocale = localStorage.getItem('locale') || resolveDefaultLocale(

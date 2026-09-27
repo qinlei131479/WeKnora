@@ -115,7 +115,8 @@
                     <span class="chat-global-wait__spinner" aria-hidden="true"></span>
                 </div>
             </div>
-            <BrowserTaskPreview v-if="!embeddedMode && session_id" :key="session_id" :session-id="session_id" />
+            <BrowserTaskPreview v-if="showLocalBrowserPreview" :key="session_id" :session-id="session_id"
+                :readonly="localBrowserReadonly" />
             <ChatQuestionMinimap v-if="!embeddedMode" :scroll-container="scrollContainer" :messages="messagesList"
                 @jump="jumpToQuestion" />
         </div>
@@ -247,6 +248,27 @@ const attachStreamDebugToMessage = (message) => {
 const route = useRoute();
 const session_id = ref(props.session_id || route.params.chatid);
 const currentSession = ref(null);
+// API、钉钉等 IM、弹窗会话记在密钥或访客名下，控制台只能看画面，不能操作。
+const isForeignChannelSession = (session) => {
+    if (!session) return false;
+    if (session.im_platform) return true;
+    const userId = String(session.user_id || '');
+    if (
+        userId.startsWith('api_tenant_key:')
+        || userId.startsWith('api_external_user:')
+        || userId.startsWith('embed_session:')
+    ) {
+        return true;
+    }
+    return String(session.description || '').startsWith('embed_channel:');
+};
+const localBrowserReadonly = computed(() => isForeignChannelSession(currentSession.value));
+const showLocalBrowserPreview = computed(() => {
+    if (props.embeddedMode || !session_id.value) return false;
+    const session = currentSession.value;
+    if (!session || String(session.id) !== String(session_id.value)) return false;
+    return true;
+});
 
 // 拉 session 详情，并按其 last_request_state 把输入栏状态恢复到当时的发起态。
 // 嵌入式（embeddedMode）由宿主页面注入 agent/KB，所以跳过整套恢复逻辑，
@@ -412,7 +434,8 @@ const handleAnswerRenderComplete = (message, ready) => {
 const loadFollowUpSuggestions = async (message, ensure = false, regenerate = false) => {
     const messageId = resolveAssistantMessageId(message);
     const targetSessionId = session_id.value;
-    if (!messageId || !targetSessionId || message.suggestionsDismissed) return;
+    // IM 回复不走本页生成推荐问题，打开历史记录时请求只会 404。
+    if (!messageId || !targetSessionId || message.suggestionsDismissed || message.channel === 'im') return;
     message.suggestionLoading = true;
     try {
         let response = ensure

@@ -82,11 +82,39 @@ func (s *TenantSkillService) installSkillArchive(
 	if err != nil {
 		return "", err
 	}
-	return s.installParsedSkill(ctx, tenantID, configID, bundle, archive, instructions...)
+	return s.installParsedSkill(ctx, tenantID, configID, bundle, archive, nil, instructions...)
+}
+
+// installCatalogSkill installs a catalog definition. A builtin definition stays
+// on tenant 0; copying it into the current tenant would show a second card.
+func (s *TenantSkillService) installCatalogSkill(
+	ctx context.Context, tenantID uint64, configID string, catalog *types.TenantSkillCatalogEntity, archive []byte,
+) (string, error) {
+	bundle, err := ParseSkillBundle(archive)
+	if err != nil {
+		return "", err
+	}
+	var bound *types.TenantSkillCatalogEntity
+	if catalog != nil && catalog.TenantID == 0 {
+		bound = catalog
+	}
+	return s.installParsedSkill(ctx, tenantID, configID, bundle, archive, bound)
+}
+
+// catalogForInstall keeps a builtin definition on tenant 0. Copying it into the
+// current tenant is what made a second shared card appear after install.
+func (s *TenantSkillService) catalogForInstall(
+	ctx context.Context, tenantID uint64, bundle *SkillBundle, archive []byte, bound *types.TenantSkillCatalogEntity,
+) (*types.TenantSkillCatalogEntity, error) {
+	if bound != nil && bound.TenantID == 0 && strings.TrimSpace(bound.BundleRef) != "" {
+		return bound, nil
+	}
+	return s.upsertCatalogFromBundle(ctx, tenantID, bundle, archive, true)
 }
 
 func (s *TenantSkillService) installParsedSkill(
-	ctx context.Context, tenantID uint64, configID string, bundle *SkillBundle, archive []byte, instructions ...string,
+	ctx context.Context, tenantID uint64, configID string, bundle *SkillBundle, archive []byte,
+	bound *types.TenantSkillCatalogEntity, instructions ...string,
 ) (string, error) {
 	if bundle == nil {
 		return "", fmt.Errorf("skill bundle is required")
@@ -110,7 +138,7 @@ func (s *TenantSkillService) installParsedSkill(
 		)
 	}
 	if guidance == "" && s.canSkipInstall(ctx, existing, bundle) {
-		catalog, catalogErr := s.upsertCatalogFromBundle(ctx, tenantID, bundle, archive, true)
+		catalog, catalogErr := s.catalogForInstall(ctx, tenantID, bundle, archive, bound)
 		if catalogErr != nil {
 			return "", fmt.Errorf("store bundle for skill %s: %w", existing.ID, catalogErr)
 		}
@@ -159,7 +187,7 @@ func (s *TenantSkillService) installParsedSkill(
 	// The zip lives on the catalog, not on this sandbox: uninstalling from
 	// the last config must not take the definition's files with it. The
 	// install row only stores CatalogID; readers follow that to the zip.
-	catalog, err := s.upsertCatalogFromBundle(ctx, tenantID, bundle, archive, true)
+	catalog, err := s.catalogForInstall(ctx, tenantID, bundle, archive, bound)
 	if err != nil {
 		failCtx, cancelFail := s.cleanupContext(ctx)
 		defer cancelFail()

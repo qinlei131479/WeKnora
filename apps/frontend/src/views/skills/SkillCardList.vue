@@ -67,13 +67,15 @@
                 <div class="skill-card-footer" @click.stop>
                   <template v-for="view in [installView(skill)]" :key="skill.slug">
                     <button
-                      v-if="!view.needsPanel"
+                      v-if="sandboxInstallLocked(skill) || !view.needsPanel"
                       type="button"
                       class="skill-sandbox-chip"
                       :class="view.installs.length ? 'is-installed' : 'is-idle'"
+                      :disabled="sandboxInstallLocked(skill)"
+                      :title="sandboxInstallLocked(skill) ? t('ext.skills.builtinWorkNoSandbox') : undefined"
                       @click="onInstallChip(skill, view)"
                     >
-                      <span>{{ installChipText(skill, view) }}</span>
+                      <span>{{ sandboxInstallLocked(skill) ? t('settings.skills.installToSandbox') : installChipText(skill, view) }}</span>
                     </button>
                     <t-popup
                       v-else
@@ -158,7 +160,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { ChevronDown, ChevronRight } from 'lucide-vue-next'
@@ -231,6 +233,25 @@ const pageSkills = computed(() =>
   })
 )
 const isBuiltinSkill = (skill) => skill.sourceScope === 'builtin' || skill.is_builtin === true
+const sandboxInstallLocked = (skill) =>
+  isBuiltinSkill(skill) && (skill.source_type || skill.sourceType) === 'work'
+const builtinIdentity = computed(() => {
+  const keys = new Set()
+  for (const skill of pageSkills.value) {
+    if (!isBuiltinSkill(skill)) continue
+    for (const value of [skill.name, skill.slug]) {
+      const text = String(value || '').trim()
+      if (text) keys.add(text)
+    }
+  }
+  return keys
+})
+const isBuiltinClone = (skill) => {
+  if (isBuiltinSkill(skill)) return false
+  const name = String(skill?.name || '').trim()
+  const slug = String(skill?.slug || '').trim()
+  return Boolean((name && builtinIdentity.value.has(name)) || (slug && builtinIdentity.value.has(slug)))
+}
 const skillGroups = computed(() => [
   {
     key: 'builtin',
@@ -240,7 +261,7 @@ const skillGroups = computed(() => [
   {
     key: 'uploaded',
     title: t('ext.skills.groupShared'),
-    skills: pageSkills.value.filter((skill) => !isBuiltinSkill(skill))
+    skills: pageSkills.value.filter((skill) => !isBuiltinSkill(skill) && !isBuiltinClone(skill))
   }
 ])
 const visibleSkillGroups = computed(() => skillGroups.value.filter((group) => group.skills.length))
@@ -319,10 +340,21 @@ const usageSourceLabel = (skill) => {
   return t('ext.tools.sourceChat')
 }
 
+const skillIdentityKeys = (skill) => [skill?.id, skill?.slug, skill?.app_core_id, skill?.name]
+  .map((value) => String(value || '').trim())
+  .filter(Boolean)
+
+// 内置技能卡片的 id/slug 是目录 slug，安装记录的 catalog_id 可能是空间内同名副本，name 则是展示名。
+const sameSkillInstall = (skill, inst) => {
+  const keys = skillIdentityKeys(skill)
+  if (!keys.length) return false
+  return keys.includes(String(inst?.catalog_id || '').trim()) || keys.includes(String(inst?.name || '').trim())
+}
+
 const liveInstallsFor = (skill) =>
   (sandboxBoard.value.installations || []).filter((inst) => {
     if (!inst?.status || inst.status === 'removed') return false
-    return inst.catalog_id === skill.id || inst.name === skill.slug
+    return sameSkillInstall(skill, inst)
   })
 
 const installView = (skill) => {
@@ -381,6 +413,7 @@ const openInstalledManage = (skill, install) => {
 }
 
 const onInstallChip = (skill, view) => {
+  if (sandboxInstallLocked(skill)) return
   if (view.installs.length === 1) {
     openInstalledManage(skill, view.installs[0])
     return
@@ -397,6 +430,7 @@ const fetchSkills = async ({ refreshPersonal = false, silent = false } = {}) => 
     ])
     skills.value = skillResult?.data || []
     sandboxBoard.value = boardResult?.data || { sandboxes: [], installations: [] }
+    ensureBoardPoll()
   } catch {
     MessagePlugin.error(t('ext.skills.loadFailed'))
   } finally {
@@ -404,8 +438,34 @@ const fetchSkills = async ({ refreshPersonal = false, silent = false } = {}) => 
   }
 }
 
+let boardPoll = null
+function stopBoardPoll() {
+  if (boardPoll != null) {
+    window.clearInterval(boardPoll)
+    boardPoll = null
+  }
+}
+
+function ensureBoardPoll() {
+  const busy = (sandboxBoard.value.installations || []).some((inst) =>
+    inst?.status === 'installing' || inst?.status === 'removing',
+  )
+  if (!busy) {
+    stopBoardPoll()
+    return
+  }
+  if (boardPoll != null) return
+  boardPoll = window.setInterval(() => {
+    void fetchSkills({ silent: true })
+  }, 2500)
+}
+
 onMounted(() => {
   fetchSkills()
+})
+
+onUnmounted(() => {
+  stopBoardPoll()
 })
 
 defineExpose({
@@ -637,6 +697,11 @@ defineExpose({
 
 .skill-sandbox-chip.is-installed {
   color: var(--td-brand-color, #0052d9);
+}
+
+.skill-sandbox-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .skill-card-source {

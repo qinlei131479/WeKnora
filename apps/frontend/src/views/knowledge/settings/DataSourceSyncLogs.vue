@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { localizeBackendErrorMessage } from '@/utils/backendErrorMessage'
 import { getSyncLogs, type SyncLog, type SyncItemError } from '@/api/datasource'
 
 const props = defineProps<{
@@ -148,9 +149,9 @@ function formatSyncError(e: SyncItemError): string {
   if (e.code) {
     const key = `datasource.syncError.${e.code}`
     const localised = t(key, (e.params || {}) as Record<string, unknown>)
-    reason = localised === key ? (e.message || e.code) : localised
+    reason = localised === key ? (localizeBackendErrorMessage(e.message, t) || e.message || e.code) : localised
   } else {
-    reason = e.message || ''
+    reason = localizeBackendErrorMessage(e.message, t) || e.message || ''
   }
   return e.title ? (reason ? `${e.title} — ${reason}` : e.title) : reason
 }
@@ -288,7 +289,7 @@ const groupedLogs = computed(() => {
                   {{ t('datasource.logDetail.docsFailedSummary', { n: log.items_failed }) }}
                 </div>
                 <div v-else-if="log.error_message" class="tl-error">
-                  {{ log.error_message }}
+                  {{ localizeBackendErrorMessage(log.error_message, t) || log.error_message }}
                 </div>
 
                 <!-- Per-item failures: which documents failed and why.

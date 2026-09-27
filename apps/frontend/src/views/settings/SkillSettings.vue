@@ -64,13 +64,14 @@
                 {{ compactText(item.description) }}
               </p>
               <div v-for="view in [installsView(item)]" :key="'installs'" class="skill-card__installs">
-                <span v-if="view.installs.length === 0 && !view.canAdd" class="skill-card__installs-label">
+                <span v-if="view.installs.length === 0 && !view.canAdd && !view.locked" class="skill-card__installs-label">
                   {{ $t('settings.skills.noInstalls') }}
                 </span>
-                <button v-else-if="!view.needsPanel" type="button" class="skill-card__chip"
+                <button v-else-if="view.locked || !view.needsPanel" type="button" class="skill-card__chip"
                   :class="chipClass(item, view)"
-                  :disabled="Boolean(view.installs[0] && !recordFor(view.installs[0].sandbox_config_id))"
-                  :title="installSummaryTooltip(item, view)" :aria-label="installSummary(item, view)"
+                  :disabled="view.locked || Boolean(view.installs[0] && !recordFor(view.installs[0].sandbox_config_id))"
+                  :title="view.locked ? $t('ext.skills.builtinWorkNoSandbox') : installSummaryTooltip(item, view)"
+                  :aria-label="installSummary(item, view)"
                   @click="onInstallChipClick(item, view)">
                   <span v-if="view.installs.some(isInstallBusy)" class="skill-card__entry-dot" aria-hidden="true" />
                   <span class="skill-card__chip-text">{{ installSummary(item, view) }}</span>
@@ -506,8 +507,26 @@ const manageDesc = computed(() => {
   return t('settings.skills.manageDrawerDesc', { name: record.name })
 })
 
-function liveInstalls(item: SkillCatalogItem): SkillCatalogInstall[] {
+function rawInstalls(item: SkillCatalogItem): SkillCatalogInstall[] {
   return (item.installations || []).filter((inst) => inst.status && inst.status !== 'removed')
+}
+
+function liveInstalls(item: SkillCatalogItem): SkillCatalogInstall[] {
+  const own = rawInstalls(item)
+  const name = (item.name || '').trim()
+  if (!name) return own
+  // 内置技能装到沙箱后，安装记录可能挂在同名的另一条目录上。列表按展示名把状态收回到当前卡片。
+  const seen = new Set(own.map((inst) => inst.skill_id))
+  const merged = [...own]
+  for (const other of catalog.value) {
+    if (!other || other.id === item.id || (other.name || '').trim() !== name) continue
+    for (const inst of rawInstalls(other)) {
+      if (seen.has(inst.skill_id)) continue
+      seen.add(inst.skill_id)
+      merged.push(inst)
+    }
+  }
+  return merged
 }
 
 function canDelete(item: SkillCatalogItem): boolean {
@@ -625,15 +644,6 @@ function setPickId(ids: { value: string[] }, id: string, checked: boolean) {
   ids.value = ids.value.filter((item) => item !== id)
 }
 
-function prunePicks(ids: { value: string[] }, rows: SandboxPickRow[]) {
-  const allowed = new Set(rows.filter((row) => row.selectable).map((row) => row.cfg.id))
-  ids.value = ids.value.filter((id) => allowed.has(id))
-}
-
-function rememberSession(session: { value: string[] }, ids: string[]) {
-  session.value = [...new Set([...session.value, ...ids])]
-}
-
 function catalogFromRegister(data: SkillCatalogRegisterResult | undefined, fallbackName: string): SkillCatalogRegisterResult | null {
   const id = data?.id || ''
   if (!id) return null
@@ -713,18 +723,24 @@ function unusedTargets(item: SkillCatalogItem): SandboxConfigRecord[] {
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
 }
 
+function sandboxInstallLocked(item: SkillCatalogItem): boolean {
+  return Boolean(item.builtin) && item.source_type === 'work'
+}
+
 function installsView(item: SkillCatalogItem) {
   const installs = [...liveInstalls(item)].sort((a, b) => {
     const diff = installPriority(item, a) - installPriority(item, b)
     if (diff !== 0) return diff
     return installName(a).localeCompare(installName(b), undefined, { sensitivity: 'base' })
   })
-  const available = unusedTargets(item)
+  const locked = sandboxInstallLocked(item)
+  const available = locked ? [] : unusedTargets(item)
   return {
     installs,
     available,
-    canAdd: available.length > 0,
-    needsPanel: installs.length + available.length > 1,
+    canAdd: !locked && available.length > 0,
+    needsPanel: !locked && installs.length + available.length > 1,
+    locked,
   }
 }
 
@@ -758,6 +774,7 @@ function installSummaryTooltip(item: SkillCatalogItem, view: ReturnType<typeof i
 }
 
 function onInstallChipClick(item: SkillCatalogItem, view: ReturnType<typeof installsView>) {
+  if (view.locked) return
   if (view.installs[0]) {
     openManage(item, view.installs[0])
     return
@@ -779,6 +796,7 @@ function openManageFromPanel(item: SkillCatalogItem, inst: SkillCatalogInstall) 
 }
 
 function openInstallTo(item: SkillCatalogItem, cfg: SandboxConfigRecord) {
+  if (sandboxInstallLocked(item)) return
   openPanelId.value = ''
   installCatalog.value = item
   installSessionIds.value = []
@@ -896,6 +914,7 @@ function addPreviousStep() {
 }
 
 async function openInstall(item: SkillCatalogItem) {
+  if (sandboxInstallLocked(item)) return
   if (props.persist === 'harness') {
     harnessSlugs.value = [item.id]
     await loadHarnessSandboxes()
@@ -917,15 +936,15 @@ function onSkillsChanged() {
 }
 
 async function openManage(item: SkillCatalogItem, inst: SkillCatalogInstall) {
-  const record = recordFor(inst.sandbox_config_id) || (props.persist === 'harness'
-    ? {
-      id: inst.sandbox_config_id,
-      name: inst.sandbox_config_name || inst.sandbox_config_id,
-      sandbox_type: inst.sandbox_type || 'docker',
-      config: {},
-    } as SandboxConfigRecord
-    : undefined)
-  if (!record) return
+  const configId = (inst.sandbox_config_id || '').trim()
+  if (!configId) return
+  // 设置页和技能页都要能打开安装进度。配置列表还没刷新时，用这次安装带回的沙箱信息兜底。
+  const record = recordFor(configId) || {
+    id: configId,
+    name: inst.sandbox_config_name || configId,
+    sandbox_type: inst.sandbox_type || 'docker',
+    config: {},
+  } as SandboxConfigRecord
   manageRecord.value = record
   manageSkillId.value = inst.skill_id
   manageTitle.value = item.name
@@ -1153,24 +1172,11 @@ async function handleAddPrimary() {
   }
   installing.value = true
   try {
-    if (props.persist === 'harness') {
-      await ensureInstallerModelIfNeeded(targets)
-      const res = await installSkillCatalog(catalogId, targets)
-      finishHarnessInstall(registeredCatalog.value, targets, res)
-      showAdd.value = false
-      return
-    }
     await ensureInstallerModelIfNeeded(targets)
     const res = await installSkillCatalog(catalogId, targets)
-    const failed = catalogInstallFailedCount(res)
-    if (failed > 0) {
-      MessagePlugin.warning(t('settings.skills.installPartial', { failed }))
-    } else {
-      MessagePlugin.success(t('settings.skills.installAccepted'))
-    }
-    rememberSession(addSessionIds, targets)
-    await loadCatalog()
-    prunePicks(addTargetIds, addPickRows.value)
+    finishHarnessInstall(registeredCatalog.value, targets, res)
+    showAdd.value = false
+    if (props.persist !== 'harness') await loadCatalog()
   } catch (e: any) {
     MessagePlugin.error(e?.message || t('settings.sandbox.skillUploadFailed'))
   } finally {
@@ -1241,24 +1247,11 @@ async function confirmInstall() {
   if (!item || targets.length === 0) return
   installing.value = true
   try {
-    if (props.persist === 'harness') {
-      await ensureInstallerModelIfNeeded(targets)
-      const res = await installSkillCatalog(item.id, targets)
-      finishHarnessInstall(item, targets, res)
-      showInstall.value = false
-      return
-    }
     await ensureInstallerModelIfNeeded(targets)
     const res = await installSkillCatalog(item.id, targets)
-    const failed = catalogInstallFailedCount(res)
-    if (failed > 0) {
-      MessagePlugin.warning(t('settings.skills.installPartial', { failed }))
-    } else {
-      MessagePlugin.success(t('settings.skills.installAccepted'))
-    }
-    rememberSession(installSessionIds, targets)
-    await loadCatalog()
-    prunePicks(installTargetIds, installPickRows.value)
+    finishHarnessInstall(item, targets, res)
+    showInstall.value = false
+    if (props.persist !== 'harness') await loadCatalog()
   } catch (e: any) {
     MessagePlugin.error(e?.message || t('settings.sandbox.skillUploadFailed'))
   } finally {

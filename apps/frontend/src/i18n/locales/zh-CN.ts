@@ -2522,18 +2522,6 @@ export default {
       logoutFailed: '登出失败',
       validateTokenFailed: 'Token验证失败'
     },
-    kb: {
-      noPermissionOperate: '无权操作该知识库',
-      noPermissionDelete: '无权删除该知识',
-      noPermissionModify: '无权修改该知识',
-      noPermissionUpdate: '无权更新该知识库',
-      noPermissionCreate: '无权创建知识',
-      noPermissionUpdateTags: '无权更新知识标签',
-      moveNotCompleted: '该文件尚未解析完成，当前状态：{status}',
-      moveReuseAcrossStores: '目标知识库使用了不同的向量存储，不支持复用向量。请改用「重新解析」后再移动。',
-      moveTypeMismatch: '源知识库与目标知识库类型必须相同',
-      moveEmbeddingMismatch: '源知识库与目标知识库必须使用相同的向量模型'
-    }
   },
   mcp: {
     testResult: {
@@ -4427,6 +4415,7 @@ export default {
       emptySearchDesc: '换个关键词试试，或清空搜索条件。',
       groupBuiltin: '内置',
       groupShared: '租户共享',
+      builtinWorkNoSandbox: '内置工作技能不安装到沙箱',
       sourceCommon: '通用',
       scopeAll: '全部范围',
       fileTab: '文件管理',
@@ -7372,6 +7361,7 @@ export default {
     untitledTab: '未命名标签页',
     contentTruncated: '仅显示部分网页内容。',
     controlScope: '仅控制本对话的浏览器操作',
+    viewOnly: '仅查看本对话的浏览器画面',
     pauseHint: '中断当前浏览器操作并保留页面，可继续操作；不会停止整段对话。',
     stopHint: '关闭本任务新建的标签页，归还借用的标签页；不会关闭浏览器或撤销配对。',
     openPage: '打开网页',

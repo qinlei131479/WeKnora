@@ -2,6 +2,7 @@
 import { ref, reactive, onMounted, onBeforeUnmount, watch, computed, nextTick } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useI18n } from 'vue-i18n'
+import { localizeBackendErrorMessage } from '@/utils/backendErrorMessage'
 import { getKnowledgeSpans, reparseKnowledge, cancelKnowledgeParse, getKnowledgeDetails } from '@/api/knowledge-base/index'
 import {
   groupPostprocessGraphSpans,
@@ -80,6 +81,8 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+const shownError = (message?: string) => localizeBackendErrorMessage(message, t) || message || ''
 
 const STAGES = ['docreader', 'chunking', 'embedding', 'multimodal', 'postprocess'] as const
 const POLL_INTERVAL_MS = 2000
@@ -1519,7 +1522,7 @@ const processConfigLines = computed<string[]>(() => {
               </div>
               <div class="kp-last-error-suggestion">{{ localizedErrorSuggestion(data.last_error.error_code) }}</div>
               <div v-if="data.last_error.error_message" class="kp-last-error-raw kp-mono">{{
-                data.last_error.error_message }}
+                shownError(data.last_error.error_message) }}
               </div>
             </div>
           </div>
@@ -1770,7 +1773,7 @@ const processConfigLines = computed<string[]>(() => {
                       selectedRow.node.error_code }}</span>
                   </div>
                   <pre v-if="selectedRow.node.error_message"
-                    class="kp-error-msg kp-mono">{{ selectedRow.node.error_message }}</pre>
+                    class="kp-error-msg kp-mono">{{ shownError(selectedRow.node.error_message) }}</pre>
                 </div>
 
                 <div v-if="!selectedRow.node.span_id && !selectedRow.node.started_at" class="kp-detail-hint">

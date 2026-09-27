@@ -11,6 +11,45 @@ function localizeApiErrorMessage(message: string | undefined): string | undefine
   return localizeBackendErrorMessage(message, t)
 }
 
+function isBinaryBody(data: unknown): boolean {
+  return typeof Blob !== 'undefined' && data instanceof Blob
+    || typeof ArrayBuffer !== 'undefined' && data instanceof ArrayBuffer
+}
+
+/** 把响应里直接展示的错误字段换成当前语言，嵌套 error.message 与顶层 message 保持一致。 */
+function localizeErrorEnvelope<T>(data: T): T {
+  if (!data || typeof data !== 'object' || Array.isArray(data) || isBinaryBody(data)) return data
+  const record = data as Record<string, unknown>
+  const next: Record<string, unknown> = { ...record }
+  if (typeof next.message === 'string') {
+    next.message = localizeApiErrorMessage(next.message) ?? next.message
+  }
+  if (typeof next.error_message === 'string') {
+    next.error_message = localizeApiErrorMessage(next.error_message) ?? next.error_message
+  }
+  if (typeof next.error === 'string') {
+    next.error = localizeApiErrorMessage(next.error) ?? next.error
+  } else if (next.error && typeof next.error === 'object' && !Array.isArray(next.error)) {
+    const err = { ...(next.error as Record<string, unknown>) }
+    if (typeof err.message === 'string') {
+      err.message = localizeApiErrorMessage(err.message) ?? err.message
+    }
+    next.error = err
+  }
+  return next as T
+}
+
+function localizedRejectMessage(data: unknown): string | undefined {
+  if (typeof data === 'string') return localizeApiErrorMessage(data)
+  if (!data || typeof data !== 'object') return undefined
+  const record = data as Record<string, unknown>
+  if (typeof record.message === 'string' && record.message) return record.message
+  if (typeof record.error === 'string') return record.error
+  const nested = record.error as { message?: unknown } | undefined
+  if (typeof nested?.message === 'string') return nested.message
+  return undefined
+}
+
 export type WithStatus<T> = T & {
   readonly $httpStatus: number
 }
@@ -137,9 +176,9 @@ instance.interceptors.response.use(
     // 根据业务状态码处理逻辑
     const { status, data } = response;
     if (status >= 200 && status < 300) {
-      return withHttpStatus(data, status);
+      return withHttpStatus(localizeErrorEnvelope(data), status);
     } else {
-      return Promise.reject(withHttpStatus(data, status));
+      return Promise.reject(withHttpStatus(localizeErrorEnvelope(data), status));
     }
   },
   async (error: any) => {
@@ -152,19 +191,23 @@ instance.interceptors.response.use(
     // 公开接口（auto-setup / login / register / oidc）的 401 不走 refresh 逻辑，直接返回错误
     if ((error.response.status === 401 || error.response.status === 403) && isPublicAuthRequest(originalRequest?.url)) {
       const { status, data } = error.response;
-      const msg = typeof data === 'object'
-        ? (typeof data?.error === 'string' ? data.error : (data?.error?.message || data?.message))
-        : data;
-      return Promise.reject({ status, message: localizeApiErrorMessage(msg) || t('error.invalidCredentials') });
+      const body = localizeErrorEnvelope(data);
+      return Promise.reject({
+        status,
+        ...(typeof body === 'object' && body ? body : {}),
+        message: localizedRejectMessage(body) || t('error.invalidCredentials'),
+      });
     }
 
     // Embed 调试页/挂件：无 JWT 时直接拒绝，勿走 refresh → /login
     if (error.response.status === 401 && isEmbedPage()) {
       const { status, data } = error.response;
-      const msg = typeof data === 'object'
-        ? (typeof data?.error === 'string' ? data.error : (data?.error?.message || data?.message))
-        : data;
-      return Promise.reject({ status, message: localizeApiErrorMessage(msg) || t('error.invalidCredentials') });
+      const body = localizeErrorEnvelope(data);
+      return Promise.reject({
+        status,
+        ...(typeof body === 'object' && body ? body : {}),
+        message: localizedRejectMessage(body) || t('error.invalidCredentials'),
+      });
     }
 
     // 如果是401错误且不是刷新token的请求，尝试刷新token
@@ -246,25 +289,14 @@ instance.interceptors.response.use(
     }
 
     const { status, data } = error.response;
-    // 将HTTP状态码一并抛出，方便上层判断401等场景
-    // 后端返回格式: { success: false, error: { code, message, details } }
-    // 提取 error.message 作为顶层 message，方便前端使用 error?.message 获取
-    let errorMessage: string | undefined;
-    if (typeof data === 'object') {
-      if (typeof data?.error === 'string') {
-        errorMessage = data.error;
-      } else if (data?.error?.message) {
-        errorMessage = data.error.message;
-      } else {
-        errorMessage = data?.message;
-      }
-    } else if (typeof data === 'string') {
-      errorMessage = data;
-    }
+    // 后端格式为 { success: false, error: { code, message } }，或 { error: "..." }。
+    // 顶层 message 与嵌套 error.message 都换成当前语言，页面无论读哪一层都一致。
+    const body = localizeErrorEnvelope(typeof data === 'object' && data ? data : {});
+    const errorMessage = localizedRejectMessage(typeof data === 'string' ? data : body);
     return Promise.reject({ 
       status, 
-      ...(typeof data === 'object' ? data : {}),
-      message: localizeApiErrorMessage(errorMessage),
+      ...(typeof body === 'object' ? body : {}),
+      message: errorMessage,
     });
   }
 );

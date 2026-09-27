@@ -2522,18 +2522,6 @@ export default {
       logoutFailed: '로그아웃 실패',
       validateTokenFailed: '토큰 검증 실패'
     },
-    kb: {
-      noPermissionOperate: '이 지식베이스를 조작할 권한이 없습니다',
-      noPermissionDelete: '이 지식을 삭제할 권한이 없습니다',
-      noPermissionModify: '이 지식을 수정할 권한이 없습니다',
-      noPermissionUpdate: '이 지식베이스를 업데이트할 권한이 없습니다',
-      noPermissionCreate: '지식을 생성할 권한이 없습니다',
-      noPermissionUpdateTags: '지식 태그를 업데이트할 권한이 없습니다',
-      moveNotCompleted: '이 파일은 아직 파싱이 완료되지 않았습니다. 현재 상태: {status}',
-      moveReuseAcrossStores: '대상 지식베이스가 다른 벡터 저장소를 사용하므로 벡터를 재사용할 수 없습니다. 「다시 파싱」으로 이동하세요.',
-      moveTypeMismatch: '원본과 대상 지식베이스 유형이 같아야 합니다',
-      moveEmbeddingMismatch: '원본과 대상 지식베이스는 동일한 임베딩 모델을 사용해야 합니다'
-    }
   },
   mcp: {
     testResult: {
@@ -4431,6 +4419,7 @@ export default {
       emptySearchDesc: '다른 키워드를 시도하거나 검색을 지우세요.',
       groupBuiltin: '내장',
       groupShared: '테넌트 공유',
+      builtinWorkNoSandbox: '내장 작업 스킬은 샌드박스에 설치하지 않습니다',
       sourceCommon: '공통',
       scopeAll: '전체 범위',
       fileTab: '파일 관리',
@@ -7388,6 +7377,7 @@ export default {
     untitledTab: '제목 없는 탭',
     contentTruncated: '페이지 내용의 일부만 표시됩니다.',
     controlScope: '이 대화의 브라우저 작업만 제어',
+    viewOnly: '이 대화의 브라우저 화면은 보기만 가능',
     pauseHint: '브라우저 작업을 중단하고 재개할 수 있도록 페이지를 유지합니다. 대화는 중단하지 않습니다.',
     stopHint: '이 작업에서 만든 탭을 닫고 빌린 탭을 반환합니다. 브라우저와 페어링은 유지합니다.',
     openPage: '페이지 열기',

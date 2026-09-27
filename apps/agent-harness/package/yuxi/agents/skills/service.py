@@ -919,10 +919,20 @@ async def list_skill_cards_for_user(
 
 async def list_visible_skills_for_management(db: AsyncSession, user: User) -> list[SkillRecord]:
     items = await _list_all_with_runtime_reconcile(db)
+    builtin_keys = {
+        key
+        for item in items
+        if is_builtin_skill(item)
+        for key in (item.name, item.slug)
+        if key
+    }
     visible: list[SkillRecord] = []
     seen: set[str] = set()
     for item in items:
         if item.slug in seen:
+            continue
+        # 安装内置技能时复制出的同名空间目录不单独成卡，状态留在内置卡片上。
+        if not is_builtin_skill(item) and (item.name in builtin_keys or item.slug in builtin_keys):
             continue
         if user_can_manage_skill(user, item) or (item.enabled and user_can_access_skill(user, item)):
             visible.append(item)

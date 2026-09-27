@@ -58,7 +58,7 @@ import { fetchEventSource } from '@microsoft/fetch-event-source'
 import { useChatStreamHandler } from '@/composables/useChatStreamHandler'
 import { getMessageList } from '@/api/chat'
 import { configSkillTranscriptUrl, getConfigSkillGuidance, steerConfigSkill, reinstallConfigSkill, type SkillInstallGuidanceState } from '@/api/system'
-import { getHarnessConfigSkillGuidance, getHarnessConfigSkillMessages, harnessSkillTranscriptUrl, reinstallHarnessConfigSkill } from '@/api/chat-work/skill'
+import { getHarnessConfigSkillGuidance, getHarnessConfigSkillMessages, reinstallHarnessConfigSkill } from '@/api/chat-work/skill'
 import { getApiBaseUrl } from '@/utils/api-base'
 import { generateRandomString } from '@/utils/index'
 import { makeSteerClientId } from '@/utils/steerId'
@@ -225,9 +225,8 @@ function stop() {
 // reports whether it ever produced anything: a 404 means the event log has
 // expired and the durable history is the only remaining source.
 async function follow(run: number): Promise<boolean> {
-  const url = props.persist === 'harness'
-    ? `${getApiBaseUrl()}${harnessSkillTranscriptUrl(props.configId, props.skillId)}`
-    : `${getApiBaseUrl()}${configSkillTranscriptUrl(props.configId, props.skillId)}`
+  // 安装过程由平台写入并持续推送。技能页若改走一次性回放，事件尚未落盘时会直接 404，进度停在 0%。
+  const url = `${getApiBaseUrl()}${configSkillTranscriptUrl(props.configId, props.skillId)}`
   const token = localStorage.getItem('weknora_token')
   const tenantId = localStorage.getItem('weknora_selected_tenant_id')
   const ac = new AbortController()

@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from yuxi.tenancy.context import stamp_tenant_id
 from yuxi.tenancy.tenant_query import apply_tenant_filters, row_in_tenant, slug_taken_clauses, visible_or_none
 from yuxi.permissions import ResourcePermission, normalize_permission_config, resolve_agent_permission
-from yuxi.storage.postgres.models_business import Agent, User
+from yuxi.storage.postgres.models_business import Agent, AgentRun, AgentRunRequest, Conversation, User
 from yuxi.utils.datetime_utils import utc_now_naive
 
 DEFAULT_AGENT_SLUG = "default-chatbot"
@@ -107,6 +107,7 @@ FACT_VERIFIER_SYSTEM_PROMPT = """你是「事实核查员」子智能体，专�
 - 不要编造来源或链接。"""
 
 QUOTE_AGENT_SLUG = "quote"
+_QUOTE_DUP_SLUG = re.compile(r"^quote-dup-[0-9]+$")
 QUOTE_AGENT_NAME = "报价评估"
 QUOTE_AGENT_DESCRIPTION = (
     "按 P1 标准产品 / P2 历史项目 / P3 AI 评估三层规则评估项目工时，并导出可追溯的报价单 Excel。"
@@ -363,8 +364,44 @@ class AgentRepository:
             created_by=created_by,
         )
 
+    async def _collapse_quote_duplicates(self) -> None:
+        """迁移曾把重复报价智能体改成 quote-dup-数字，名称未变，列表会多一张卡。"""
+        result = await self.db.execute(select(Agent).where(Agent.name == QUOTE_AGENT_NAME))
+        rows = list(result.scalars().all())
+        duplicates = [row for row in rows if _QUOTE_DUP_SLUG.match(row.slug or "")]
+        if not duplicates:
+            return
+
+        canonical = next((row for row in rows if row.slug == QUOTE_AGENT_SLUG), None)
+        if canonical is None:
+            canonical = min(duplicates, key=lambda row: row.id)
+            canonical.slug = QUOTE_AGENT_SLUG
+            canonical.updated_at = utc_now_naive()
+            await self.db.flush()
+            duplicates = [row for row in duplicates if row.id != canonical.id]
+
+        duplicate_slugs = [row.slug for row in duplicates]
+        if duplicate_slugs:
+            await self.db.execute(
+                update(Conversation)
+                .where(Conversation.agent_id.in_(duplicate_slugs))
+                .values(agent_id=QUOTE_AGENT_SLUG)
+            )
+            await self.db.execute(
+                update(AgentRun).where(AgentRun.agent_slug.in_(duplicate_slugs)).values(agent_slug=QUOTE_AGENT_SLUG)
+            )
+            await self.db.execute(
+                update(AgentRunRequest)
+                .where(AgentRunRequest.agent_slug.in_(duplicate_slugs))
+                .values(agent_slug=QUOTE_AGENT_SLUG)
+            )
+            for row in duplicates:
+                await self.db.delete(row)
+        await self.db.commit()
+
     async def ensure_quote_agent(self, *, created_by: str | None = None) -> Agent:
         """落库内置「报价评估」智能体。"""
+        await self._collapse_quote_duplicates()
         return await self._ensure_builtin_agent(
             slug=QUOTE_AGENT_SLUG,
             backend_id=DEFAULT_AGENT_BACKEND_ID,

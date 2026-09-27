@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPost, apiPut, apiRequest, harnessUrl } from './base'
+import { apiDelete, apiGet, apiPost, apiPut, apiRequest } from './base'
 
 const BASE_URL = '/api/system/skills'
 const USER_BASE_URL = '/api/skills'
@@ -78,9 +78,6 @@ export const getHarnessConfigSkillMessages = async (configId: string, skillId: s
   const res: any = await apiGet(`${sandboxSkillUrl(configId, skillId)}/messages`)
   return { data: res?.data || [] }
 }
-
-export const harnessSkillTranscriptUrl = (configId: string, skillId: string) =>
-  harnessUrl(`${sandboxSkillUrl(configId, skillId)}/transcript`)
 
 export const getSkillDependencyOptions = (slug?: string) => {
   const query = slug ? `?slug=${encodeURIComponent(slug)}` : ''
