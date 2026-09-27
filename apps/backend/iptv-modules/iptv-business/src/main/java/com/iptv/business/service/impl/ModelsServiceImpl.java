@@ -1,6 +1,7 @@
 package com.iptv.business.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.io.file.FileNameUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
@@ -29,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -359,7 +361,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
                     response = debugVLLM(buildChatUrl(baseUrl), apiKey, dto, file, observations);
                     break;
                 case "ASR":
-                    response = debugASR(buildChatUrl(baseUrl), apiKey, dto, file, observations);
+                    response = debugASR(buildASRUrl(baseUrl), apiKey, dto, file, observations);
                     break;
                 default:
                     throw new ServiceException("不支持的模型类型: " + modelType);
@@ -592,36 +594,78 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
 
     /**
      * 调试 ASR 模型（语音识别）
+     * 对齐 Go 端 OpenAIASR.Transcribe：OpenAI 兼容 /audio/transcriptions 端点、
+     * 300s 超时、空文件名兜底；先携带 response_format=verbose_json（对齐 Go），
+     * 部分厂商（如 SiliconFlow）不支持该参数返回 400 时自动降级去掉重试
      */
     private Object debugASR(String url, String apiKey, ModelDebugDTO dto, MultipartFile file, Map<String, Object> observations) {
         if (file == null || file.isEmpty()) {
             throw new ServiceException("音频文件不能为空");
         }
         try {
-            // 构建 multipart/form-data 请求
-            HttpRequest request = HttpRequest.post(url)
-                    .header("Authorization", "Bearer " + apiKey)
-                    .form("file", file.getBytes(), file.getOriginalFilename())
-                    .form("model", dto.getModelName())
-                    .timeout(120000);
-
-            String response = request.execute().body();
-            Map<String, Object> result = JSONUtil.toBean(response, Map.class);
-
-            // 统计字符数和片段数
-            if (result.containsKey("text")) {
-                String text = (String) result.get("text");
-                observations.put("text_characters", text != null ? text.length() : 0);
+            // 文件名兜底与 basename 处理，保证服务端 MIME 类型识别
+            // （对齐 Go Transcribe 默认 audio.mp3 与 go-openai CreateFormFileReader 的 filepath.Base）
+            String fileName = FileNameUtil.getName(StrUtil.blankToDefault(file.getOriginalFilename(), "audio.mp3"));
+            log.info("ASR调试请求: url={}, model={}, file={}, size={}", url, dto.getModelName(), fileName, file.getSize());
+            try (HttpResponse first = buildASRRequest(url, apiKey, dto, file, fileName, true).execute()) {
+                if (first.getStatus() == 400) {
+                    // 部分厂商不支持 response_format 参数（如 SiliconFlow 仅接受 file/model），降级重试
+                    log.warn("ASR调试请求携带response_format返回400，降级重试: url={}, body={}", url, first.body());
+                    try (HttpResponse retry = buildASRRequest(url, apiKey, dto, file, fileName, false).execute()) {
+                        return handleASRResponse(retry, url, observations);
+                    }
+                }
+                return handleASRResponse(first, url, observations);
             }
-            if (result.containsKey("segments")) {
-                List<?> segments = (List<?>) result.get("segments");
-                observations.put("segment_count", segments.size());
-            }
-
-            return result;
+        } catch (ServiceException e) {
+            throw e;
         } catch (Exception e) {
             throw new ServiceException("处理音频失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 构建 ASR 转写 multipart 请求；verboseJson 为 true 时携带 response_format=verbose_json
+     * （对齐 Go AudioResponseFormatVerboseJSON，支持分段明细）
+     */
+    private HttpRequest buildASRRequest(String url, String apiKey, ModelDebugDTO dto, MultipartFile file,
+                                        String fileName, boolean verboseJson) throws IOException {
+        HttpRequest request = HttpRequest.post(url)
+                .header("Authorization", "Bearer " + apiKey)
+                // Accept 对齐 go-openai 客户端默认头
+                .header("Accept", "application/json")
+                .form("file", file.getBytes(), fileName)
+                .form("model", dto.getModelName());
+        if (verboseJson) {
+            request.form("response_format", "verbose_json");
+        }
+        // 300s 超时对齐 Go asrDefaultTimeout，音频转写可能较慢
+        return request.timeout(300000);
+    }
+
+    /**
+     * 校验 ASR 响应状态并统计字符数与片段数
+     */
+    private Object handleASRResponse(HttpResponse response, String url, Map<String, Object> observations) {
+        int statusCode = response.getStatus();
+        String responseBody = response.body();
+        if (statusCode < 200 || statusCode >= 300) {
+            log.warn("ASR调试请求失败: status={}, url={}, body={}", statusCode, url, responseBody);
+            throw new ServiceException("ASR转写请求失败，HTTP " + statusCode + ": " + StrUtil.subPre(responseBody, 300));
+        }
+        Map<String, Object> result = JSONUtil.toBean(responseBody, Map.class);
+
+        // 统计字符数和片段数
+        if (result.containsKey("text")) {
+            String text = (String) result.get("text");
+            observations.put("text_characters", text != null ? text.length() : 0);
+        }
+        if (result.containsKey("segments")) {
+            List<?> segments = (List<?>) result.get("segments");
+            observations.put("segment_count", segments.size());
+        }
+
+        return result;
     }
 
     /**
@@ -1262,12 +1306,11 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
 
     /**
      * 构建 ASR API URL
-     * 使用 OpenAI 兼容的 /audio/transcriptions 端点
+     * 所有厂商使用 OpenAI 兼容的 /audio/transcriptions 端点（对齐 go-openai CreateTranscription）
      */
     private String buildASRUrl(String baseUrl) {
         String url = trimTrailingSlash(baseUrl);
-        //  + "/audio/asr/transcriptions"
-        return url;
+        return url + "/audio/transcriptions";
     }
 
     /**
