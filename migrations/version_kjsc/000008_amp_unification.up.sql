@@ -263,6 +263,26 @@ CREATE INDEX IF NOT EXISTS ix_amp_agents_is_default ON amp_agents(is_default);
 CREATE INDEX IF NOT EXISTS ix_amp_agents_is_subagent ON amp_agents(is_subagent);
 CREATE INDEX IF NOT EXISTS ix_amp_agents_created_by ON amp_agents(created_by);
 CREATE INDEX IF NOT EXISTS ix_amp_agents_tenant_id ON amp_agents(tenant_id);
+
+-- 目录里相同 slug 只保留默认或最小 id 的一条。其余改名，会话仍按原 slug 命中保留行。
+WITH ranked_catalog_agents AS (
+    SELECT
+        id,
+        ROW_NUMBER() OVER (
+            PARTITION BY slug
+            ORDER BY is_default DESC, id ASC
+        ) AS slug_rank
+    FROM amp_agents
+    WHERE tenant_id IS NULL
+)
+UPDATE amp_agents AS agent
+SET slug = LEFT(agent.slug, 60) || '-dup-' || agent.id::text,
+    is_default = FALSE,
+    updated_at = NOW()
+FROM ranked_catalog_agents AS ranked
+WHERE agent.id = ranked.id
+  AND ranked.slug_rank > 1;
+
 CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_agents_default ON amp_agents(is_default) WHERE is_default IS TRUE;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_agents_slug_tenant ON amp_agents(tenant_id, slug) WHERE tenant_id IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_agents_slug_catalog ON amp_agents(slug) WHERE tenant_id IS NULL;
