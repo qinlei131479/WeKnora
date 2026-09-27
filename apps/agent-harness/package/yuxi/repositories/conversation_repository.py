@@ -4,23 +4,18 @@
 
 import uuid as uuid_lib
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy.orm.attributes import flag_modified
 
 from yuxi.tenancy.context import stamp_tenant_id
 from yuxi.tenancy.tenant_query import tenant_clauses, visible_or_none
-from yuxi.storage.postgres.models_business import Conversation, ConversationStats, Message, ToolCall
+from yuxi.storage.postgres.models_business import Conversation, Message, ToolCall
 from yuxi.utils import logger
 from yuxi.utils.datetime_utils import utc_now_naive
 
 MAX_CONVERSATION_TITLE_LENGTH = 255
-MESSAGE_SEARCH_SNIPPET_RADIUS = 72
-MESSAGE_SEARCH_SNIPPET_MAX_LENGTH = 180
-MESSAGE_SEARCH_SNIPPETS_PER_THREAD = 2
-MESSAGE_SEARCH_ROLES = ("user", "assistant")
-MESSAGE_SEARCH_EXCLUDED_TYPES = ("tool_call", "tool_result")
 INVOCATION_CONVERSATION_SOURCES = ("agent_call", "agent_evaluation")
 
 
@@ -41,17 +36,6 @@ class ConversationRepository:
             return normalized[:MAX_CONVERSATION_TITLE_LENGTH]
         return normalized
 
-    def _escape_like_query(self, query: str) -> str:
-        return query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-
-    def _message_search_conditions(self, query: str):
-        pattern = f"%{self._escape_like_query(query)}%"
-        return [
-            Message.role.in_(MESSAGE_SEARCH_ROLES),
-            or_(Message.message_type.is_(None), Message.message_type.notin_(MESSAGE_SEARCH_EXCLUDED_TYPES)),
-            Message.content.ilike(pattern, escape="\\"),
-        ]
-
     def _exclude_source_conditions(self, sources: tuple[str, ...]):
         if not sources:
             return []
@@ -63,24 +47,6 @@ class ConversationRepository:
                 source.notin_(sources),
             )
         ]
-
-    def _build_message_search_snippet(self, content: str, query: str) -> str:
-        normalized = " ".join(str(content or "").split())
-        if not normalized:
-            return ""
-
-        match_index = normalized.lower().find(query.lower())
-        if match_index < 0:
-            return normalized[:MESSAGE_SEARCH_SNIPPET_MAX_LENGTH]
-
-        start = max(0, match_index - MESSAGE_SEARCH_SNIPPET_RADIUS)
-        end = min(len(normalized), match_index + len(query) + MESSAGE_SEARCH_SNIPPET_RADIUS)
-        snippet = normalized[start:end].strip()
-        if start > 0:
-            snippet = f"...{snippet}"
-        if end < len(normalized):
-            snippet = f"{snippet}..."
-        return snippet[:MESSAGE_SEARCH_SNIPPET_MAX_LENGTH]
 
     async def add_conversation(
         self,
@@ -112,10 +78,9 @@ class ConversationRepository:
 
         self.db.add(conversation)
         await self.db.flush()
+        from yuxi.services.usage_telemetry import record_session_created
 
-        stats = ConversationStats(conversation_id=conversation.id)
-        self.db.add(stats)
-        await self.db.flush()
+        await record_session_created(self.db, conversation)
 
         logger.info(f"Created conversation: {conversation.thread_id} for user {uid}")
         return conversation
@@ -196,11 +161,14 @@ class ConversationRepository:
         conversation = await self.get_conversation_by_id(conversation_id)
         if conversation:
             conversation.updated_at = utc_now_naive()
+        await self.db.flush()
+        from yuxi.services.usage_telemetry import record_message_activity, record_token_usage
 
+        await record_message_activity(self.db, message)
         await self.db.commit()
         await self.db.refresh(message)
-
-        await self._update_message_count(conversation_id)
+        if conversation is not None:
+            await record_token_usage(message, conversation)
 
         logger.debug(f"Added {role} message to conversation {conversation_id}")
         return message
@@ -275,7 +243,6 @@ class ConversationRepository:
             select(Message)
             .options(
                 selectinload(Message.tool_calls),
-                selectinload(Message.feedbacks),
             )
             .where(Message.conversation_id == conversation_id)
             .order_by(Message.created_at.asc())
@@ -371,83 +338,6 @@ class ConversationRepository:
         )
         return list(result.scalars().all())
 
-    async def search_conversations_by_message_content(
-        self,
-        *,
-        uid: str,
-        query: str,
-        agent_id: str | None = None,
-        limit: int = 20,
-        offset: int = 0,
-        exclude_sources: tuple[str, ...] = (),
-    ) -> tuple[list[dict], bool]:
-        normalized_query = str(query or "").strip()
-        if not normalized_query:
-            return [], False
-
-        conversation_conditions = [
-            Conversation.uid == str(uid),
-            Conversation.status == "active",
-            *tenant_clauses(Conversation.tenant_id),
-        ]
-        if agent_id:
-            conversation_conditions.append(Conversation.agent_id == agent_id)
-        conversation_conditions.extend(self._exclude_source_conditions(exclude_sources))
-
-        message_conditions = self._message_search_conditions(normalized_query)
-        summary = (
-            select(
-                Message.conversation_id.label("conversation_id"),
-                func.count(Message.id).label("matched_count"),
-                func.max(Message.created_at).label("latest_match_at"),
-            )
-            .join(Conversation, Conversation.id == Message.conversation_id)
-            .where(*conversation_conditions, *message_conditions)
-            .group_by(Message.conversation_id)
-            .subquery()
-        )
-
-        result = await self.db.execute(
-            select(Conversation, summary.c.matched_count, summary.c.latest_match_at)
-            .join(summary, Conversation.id == summary.c.conversation_id)
-            .order_by(summary.c.latest_match_at.desc(), Conversation.updated_at.desc(), Conversation.id.desc())
-            .limit(limit + 1)
-            .offset(offset)
-        )
-        rows = list(result.all())
-        has_more = len(rows) > limit
-        rows = rows[:limit]
-
-        items: list[dict] = []
-        for conversation, matched_count, latest_match_at in rows:
-            snippet_result = await self.db.execute(
-                select(Message.id, Message.content, Message.created_at)
-                .where(Message.conversation_id == conversation.id, *message_conditions)
-                .order_by(Message.created_at.desc(), Message.id.desc())
-                .limit(MESSAGE_SEARCH_SNIPPETS_PER_THREAD)
-            )
-            snippet_rows = list(snippet_result.all())
-            snippets = [
-                {
-                    "message_id": message_id,
-                    "content": self._build_message_search_snippet(content, normalized_query),
-                    "created_at": created_at,
-                }
-                for message_id, content, created_at in snippet_rows
-            ]
-
-            items.append(
-                {
-                    "conversation": conversation,
-                    "matched_count": int(matched_count or 0),
-                    "latest_match_at": latest_match_at,
-                    "message_id": snippets[0]["message_id"] if snippets else None,
-                    "snippets": snippets,
-                }
-            )
-
-        return items, has_more
-
     async def update_conversation(
         self,
         thread_id: str,
@@ -496,36 +386,6 @@ class ConversationRepository:
 
         return True
 
-    async def get_stats(self, conversation_id: int) -> ConversationStats | None:
-        result = await self.db.execute(
-            select(ConversationStats).where(ConversationStats.conversation_id == conversation_id)
-        )
-        return result.scalar_one_or_none()
-
-    async def update_stats(
-        self,
-        conversation_id: int,
-        tokens_used: int | None = None,
-        model_used: str | None = None,
-        user_feedback: dict | None = None,
-    ) -> ConversationStats | None:
-        stats = await self.get_stats(conversation_id)
-        if not stats:
-            return None
-
-        if tokens_used is not None:
-            stats.total_tokens += tokens_used
-        if model_used is not None:
-            stats.model_used = model_used
-        if user_feedback is not None:
-            stats.user_feedback = user_feedback
-
-        stats.updated_at = utc_now_naive()
-        await self.db.commit()
-        await self.db.refresh(stats)
-
-        return stats
-
     async def get_tool_call_by_langgraph_id(self, langgraph_tool_call_id: str) -> ToolCall | None:
         result = await self.db.execute(
             select(ToolCall)
@@ -554,19 +414,12 @@ class ConversationRepository:
 
         await self.db.commit()
         await self.db.refresh(tool_call)
+        from yuxi.services.usage_telemetry import record_tool_finished
+
+        await record_tool_finished(self.db, tool_call)
 
         logger.debug(f"Updated tool call {langgraph_tool_call_id} with output")
         return tool_call
-
-    async def _update_message_count(self, conversation_id: int) -> None:
-        from sqlalchemy import func
-
-        stats = await self.get_stats(conversation_id)
-        if stats:
-            result = await self.db.execute(select(func.count()).where(Message.conversation_id == conversation_id))
-            message_count = result.scalar()
-            stats.message_count = message_count
-            await self.db.commit()
 
     async def get_attachments(self, conversation_id: int) -> list[dict]:
         conversation = await self.get_conversation_by_id(conversation_id)
@@ -574,25 +427,6 @@ class ConversationRepository:
             return []
         metadata = self._ensure_metadata(conversation)
         return list(metadata.get("attachments", []))
-
-    async def get_attachments_by_thread_id(self, thread_id: str) -> list[dict]:
-        conversation = await self.get_conversation_by_thread_id(thread_id)
-        if not conversation:
-            return []
-        return await self.get_attachments(conversation.id)
-
-    async def add_attachment(self, conversation_id: int, attachment_info: dict) -> dict | None:
-        conversation = await self.get_conversation_by_id(conversation_id)
-        if not conversation:
-            return None
-
-        metadata = self._ensure_metadata(conversation)
-        attachments = metadata.get("attachments", [])
-        attachments = [item for item in attachments if item.get("file_id") != attachment_info.get("file_id")]
-        attachments.append(attachment_info)
-        metadata["attachments"] = attachments
-        await self._save_metadata(conversation, metadata)
-        return attachment_info
 
     async def add_attachments(self, conversation_id: int, attachment_infos: list[dict]) -> list[dict] | None:
         conversation = await self.get_conversation_by_id(conversation_id)
@@ -607,29 +441,6 @@ class ConversationRepository:
         metadata["attachments"] = attachments
         await self._save_metadata(conversation, metadata)
         return attachment_infos
-
-    async def update_attachment_status(
-        self, conversation_id: int, file_id: str, status: str, update_fields: dict | None = None
-    ) -> dict | None:
-        conversation = await self.get_conversation_by_id(conversation_id)
-        if not conversation:
-            return None
-
-        metadata = self._ensure_metadata(conversation)
-        attachments = metadata.get("attachments", [])
-        target = None
-        for item in attachments:
-            if item.get("file_id") == file_id:
-                item["status"] = status
-                if update_fields:
-                    item.update(update_fields)
-                target = item
-                break
-
-        if target is not None:
-            metadata["attachments"] = attachments
-            await self._save_metadata(conversation, metadata)
-        return target
 
     async def bind_attachments_to_request(
         self, conversation_id: int, request_id: str, file_ids: list[str]

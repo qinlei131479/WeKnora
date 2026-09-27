@@ -53,15 +53,28 @@ async def _list_skills_from_db(db: AsyncSession | None = None, user=None) -> lis
     """从数据库加载 skills 列表"""
     if db is not None:
         if user is not None:
-            return await list_accessible_skills(db, user)
+            return _for_work_mode(await list_accessible_skills(db, user))
         repo = SkillRepository(db)
-        return await repo.list_enabled()
+        return _for_work_mode(await repo.list_enabled())
 
     async with pg_manager.get_async_session_context() as session:
         if user is not None:
-            return await list_accessible_skills(session, user)
+            return _for_work_mode(await list_accessible_skills(session, user))
         repo = SkillRepository(session)
-        return await repo.list_enabled()
+        return _for_work_mode(await repo.list_enabled())
+
+
+def _for_work_mode(items: list) -> list:
+    """工作模式只加载工作技能、通用技能和个人技能。"""
+    kept = []
+    for item in items:
+        if getattr(item, "source_scope", None) == PERSONAL_SKILL_SOURCE_TYPE:
+            kept.append(item)
+            continue
+        usage = getattr(item, "source_type", None) or "work"
+        if usage in {"work", "common"}:
+            kept.append(item)
+    return kept
 
 
 def build_prompt_metadata(skills: list) -> dict[str, SkillPromptMetadata]:
@@ -106,15 +119,6 @@ def build_source_map(skills: list) -> dict[str, str]:
         and getattr(item, "source_dir", None)
     }
 
-
-async def get_prompt_metadata(db: AsyncSession | None = None, user=None) -> dict[str, SkillPromptMetadata]:
-    """获取提示词元数据（直接从数据库加载）"""
-    return build_prompt_metadata(await _list_skills_from_db(db, user))
-
-
-async def get_dependency_map(db: AsyncSession | None = None, user=None) -> dict[str, SkillDependencyNode]:
-    """获取依赖关系映射（直接从数据库加载）"""
-    return build_dependency_map(await _list_skills_from_db(db, user))
 
 
 def expand_skill_closure(

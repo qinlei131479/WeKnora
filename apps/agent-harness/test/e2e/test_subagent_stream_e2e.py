@@ -168,34 +168,29 @@ def _find_tool_call_ids(value: Any) -> set[str]:
     return ids
 
 
-async def _read_thread_file(
+async def _read_thread_artifact(
     client: httpx.AsyncClient,
     headers: dict[str, str],
     thread_id: str,
     path: str,
 ) -> str:
     response = await client.get(
-        f"/api/chat/thread/{thread_id}/files/content",
-        params={"path": path},
+        f"/api/chat/thread/{thread_id}/artifacts/{path.lstrip('/')}",
         headers=headers,
     )
     _assert_ok(response)
-    content = response.json().get("content")
-    assert isinstance(content, list), response.text
-    return "\n".join(str(line) for line in content)
+    return response.text
 
 
 async def test_subagent_stream_records_run_and_shares_output_files(
     e2e_client: httpx.AsyncClient,
     e2e_headers: dict[str, str],
+    e2e_identity: dict[str, object],
 ):
-    me_response = await e2e_client.get("/api/auth/me", headers=e2e_headers)
-    _assert_ok(me_response)
-    me = me_response.json()
-    if me.get("role") not in {"admin", "superadmin"}:
+    if e2e_identity.get("role") not in {"admin", "superadmin"}:
         pytest.skip("Subagent E2E needs an admin user to create temporary agents.")
-    uid = str(me.get("uid") or "")
-    assert uid, me
+    uid = str(e2e_identity.get("uid") or "")
+    assert uid, e2e_identity
 
     suffix = uuid.uuid4().hex[:8]
     marker = f"YUXI_SUBAGENT_STREAM_E2E_{suffix}"
@@ -370,7 +365,9 @@ async def test_subagent_stream_records_run_and_shares_output_files(
             "files": files_payload,
             "subagent_run": completed_run,
         }
-        assert (await _read_thread_file(e2e_client, e2e_headers, thread_id, output_path)).strip() == expected_content
+        assert (
+            await _read_thread_artifact(e2e_client, e2e_headers, thread_id, output_path)
+        ).strip() == expected_content
 
         tree_response = await e2e_client.get(
             "/api/viewer/filesystem/tree",

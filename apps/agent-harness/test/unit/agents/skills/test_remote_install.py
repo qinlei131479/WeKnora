@@ -118,7 +118,8 @@ async def test_install_remote_skill_imports_from_cli_output_dir(monkeypatch: pyt
         "-y",
         "--copy",
     ]
-    assert captured["source_dir"] == Path(calls[1][1]) / ".agents" / "skills" / "frontend-design"
+    expected_source_dir = Path(calls[1][1]).resolve() / ".agents" / "skills" / "frontend-design"
+    assert captured["source_dir"] == expected_source_dir
     assert captured["created_by"] == "root"
 
 

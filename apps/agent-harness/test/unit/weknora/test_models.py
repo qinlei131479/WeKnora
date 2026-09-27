@@ -3,7 +3,9 @@ from __future__ import annotations
 import pytest
 
 from yuxi.agents.models import resolve_chat_model_spec
+from yuxi.models import weknora_proxy
 from yuxi.models.weknora_proxy import grouped_v2_models, resolve_weknora_model
+from yuxi.weknora import client as weknora_client
 
 
 CHAT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
@@ -84,9 +86,9 @@ def test_load_chat_model_uses_proxy_not_cache(monkeypatch):
     from yuxi.agents.models import load_chat_model, _ToolCallChunkFixChatOpenAI
 
     monkeypatch.setenv("WEKNORA_BASE_URL", "http://weknora.example/api/v1")
-    monkeypatch.setattr("yuxi.models.weknora_proxy.list_weknora_models", lambda: MODELS)
-    monkeypatch.setattr("yuxi.weknora.client.get_request_access_token", lambda: "user-jwt")
-    monkeypatch.setattr("yuxi.weknora.client.current_tenant_id", lambda: 7)
+    monkeypatch.setattr(weknora_proxy, "list_weknora_models", lambda: MODELS)
+    monkeypatch.setattr(weknora_client, "get_request_access_token", lambda: "user-jwt")
+    monkeypatch.setattr(weknora_client, "current_tenant_id", lambda: 7)
 
     model = load_chat_model("DeepSeek-V4-Flash")
     assert isinstance(model, _ToolCallChunkFixChatOpenAI)

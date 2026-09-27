@@ -1,6 +1,7 @@
 #!/bin/bash
 # Company migrations: migrations/version_kjsc + schema_migrations_kjsc
 # There is no "down" command. 000002 must never drop h_* tables.
+# 000008 在同一事务里复制 h_、回填用量，再删除已退役的旧 h_ 表。上线只执行 up。
 set -e
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"

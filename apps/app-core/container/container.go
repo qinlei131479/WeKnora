@@ -34,6 +34,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/Tencent/WeKnora/apps/app-core/agent/approval"
+	"github.com/Tencent/WeKnora/apps/app-core/agent/tools"
 	"github.com/Tencent/WeKnora/apps/app-core/application/repository"
 	dorisRepo "github.com/Tencent/WeKnora/apps/app-core/application/repository/retriever/doris"
 	elasticsearchRepoV7 "github.com/Tencent/WeKnora/apps/app-core/application/repository/retriever/elasticsearch/v7"
@@ -764,6 +765,11 @@ func initDatabase(cfg *config.Config) (*gorm.DB, error) {
 		}
 	} else {
 		logger.Infof(context.Background(), "Auto-migration is disabled (AUTO_MIGRATE=false)")
+	}
+
+	// 内置工具目录由各运行时代码定义，启动时幂等同步；迁移失败时只降级为工具目录不可用。
+	if err := tools.SyncBuiltinToolDefinitions(context.Background(), db); err != nil {
+		logger.Warnf(context.Background(), "Sync builtin tool directory failed: %v", err)
 	}
 
 	// Get underlying SQL DB object

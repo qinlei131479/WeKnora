@@ -731,7 +731,6 @@ import { AgentValidator } from '@/utils/harness/agentValidator'
 import { useAgentStore } from '@/stores/harness/agent'
 import { useChatThreadsStore } from '@/stores/chatWork'
 import { useChatUIStore } from '@/stores/harness/chatUI'
-import { useConfigStore } from '@/stores/harness/config'
 import { storeToRefs } from 'pinia'
 import { MessageProcessor } from '@/utils/harness/messageProcessor'
 import { agentApi, threadApi } from '@/api/chat-work/agent'
@@ -776,7 +775,6 @@ const isDefaultThreadTitle = (title) =>
 const agentStore = useAgentStore()
 const chatThreadsStore = useChatThreadsStore()
 const chatUIStore = useChatUIStore()
-const configStore = useConfigStore()
 const { agents, selectedAgentId, agentConfig, configurableItems, availableKnowledgeBases } =
   storeToRefs(agentStore)
 const { threads, currentThreadId, currentThread } = storeToRefs(chatThreadsStore)
@@ -1158,7 +1156,6 @@ const agentDefaultModel = computed(
   () =>
     agentConfig.value?.model ||
     currentAgent.value?.config_json?.context?.model ||
-    configStore.config?.default_model ||
     ''
 )
 const currentModelSpec = computed(
@@ -2850,7 +2847,7 @@ const handleSendMessage = async ({ image, queuePolicy = 'enqueue' } = {}) => {
         try {
           const generatedTitle = await agentApi.generateTitle(
             autoTitle,
-            currentModelSpec.value || configStore.config?.fast_model
+            currentModelSpec.value
           )
           if (generatedTitle) {
             const finalTitle = generatedTitle.slice(0, 30).replace(/\s+/g, ' ').trim()

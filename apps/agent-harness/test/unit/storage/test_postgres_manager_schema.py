@@ -87,31 +87,10 @@ async def test_ensure_business_schema_cleans_duplicate_active_agent_runs_before_
 
     assert "WITH duplicated_active_runs AS" in statements
     assert "active_run_migration_conflict" in statements
-    assert "CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_runs_one_active_per_thread" in statements
+    assert "CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_agent_runs_one_active_per_thread" in statements
     assert statements.index("WITH duplicated_active_runs AS") < statements.index(
-        "CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_runs_one_active_per_thread"
+        "CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_agent_runs_one_active_per_thread"
     )
-
-
-@pytest.mark.asyncio
-async def test_ensure_business_schema_creates_user_config_table():
-    manager = PostgresManager()
-    original_initialized = manager._initialized
-    original_engine = manager.async_engine
-    connection = _RecordingConnection()
-
-    manager._initialized = True
-    manager.async_engine = _RecordingEngine(connection)
-    try:
-        await manager.ensure_business_schema()
-    finally:
-        manager._initialized = original_initialized
-        manager.async_engine = original_engine
-
-    statements = "\n".join(connection.statements)
-
-    assert "CREATE TABLE IF NOT EXISTS h_user_config" in statements
-    assert "enable_memory BOOLEAN NOT NULL DEFAULT FALSE" in statements
 
 
 @pytest.mark.asyncio
@@ -135,29 +114,6 @@ async def test_ensure_business_schema_fails_when_tenant_backfill_is_incomplete(m
     finally:
         manager._initialized = original_initialized
         manager.async_engine = original_engine
-
-
-@pytest.mark.asyncio
-async def test_ensure_business_schema_creates_generic_config_options_table():
-    manager = PostgresManager()
-    original_initialized = manager._initialized
-    original_engine = manager.async_engine
-    connection = _RecordingConnection()
-
-    manager._initialized = True
-    manager.async_engine = _RecordingEngine(connection)
-    try:
-        await manager.ensure_business_schema()
-    finally:
-        manager._initialized = original_initialized
-        manager.async_engine = original_engine
-
-    statements = "\n".join(connection.statements)
-
-    assert "CREATE TABLE IF NOT EXISTS h_config_options" in statements
-    assert "params JSONB NOT NULL" in statements
-    assert "value JSONB NOT NULL" in statements
-    assert "CREATE UNIQUE INDEX IF NOT EXISTS ix_config_options_key" in statements
 
 
 @pytest.mark.asyncio
@@ -186,6 +142,25 @@ async def test_ensure_business_schema_adds_run_origin_snapshot_columns():
 
 
 @pytest.mark.asyncio
+async def test_ensure_business_schema_adds_skill_runtime_operators():
+    manager = PostgresManager()
+    original_initialized = manager._initialized
+    original_engine = manager.async_engine
+    connection = _RecordingConnection()
+
+    manager._initialized = True
+    manager.async_engine = _RecordingEngine(connection)
+    try:
+        await manager.ensure_business_schema()
+    finally:
+        manager._initialized = original_initialized
+        manager.async_engine = original_engine
+
+    statements = "\n".join(connection.statements)
+    assert "amp_sessions ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE" in statements
+
+
+@pytest.mark.asyncio
 async def test_ensure_business_schema_does_not_touch_dropped_identity_tables():
     manager = PostgresManager()
     original_initialized = manager._initialized
@@ -207,8 +182,8 @@ async def test_ensure_business_schema_does_not_touch_dropped_identity_tables():
 
 
 @pytest.mark.asyncio
-async def test_share_config_migration_wraps_legacy_scopes_as_read_only():
-    """Agent/skill 迁移只把旧 scope 写入 read_scope，manage_scope 置空，避免把历史只读/使用权限追溯升级为 MANAGE。"""
+async def test_share_config_migration_wraps_agent_legacy_scopes_as_read_only():
+    """Agent 迁移只把旧 scope 写入 read_scope，manage_scope 置空，避免把历史只读权限追溯升级为 MANAGE。"""
     manager = PostgresManager()
     original_initialized = manager._initialized
     original_engine = manager.async_engine
@@ -224,21 +199,18 @@ async def test_share_config_migration_wraps_legacy_scopes_as_read_only():
         manager.async_engine = original_engine
 
     statements = "\n".join(connection.statements)
-    assert "UPDATE h_agents SET share_config = jsonb_build_object" in statements
-    assert "UPDATE h_skills SET share_config = jsonb_build_object" in statements
+    assert "UPDATE amp_agents SET share_config = jsonb_build_object" in statements
+    assert "h_skills" not in statements
     assert "h_knowledge_bases" not in statements
     assert "'read_scope'" in statements
     assert "'manage_scope', NULL" in statements
-    assert "ALTER TABLE IF EXISTS h_agents ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb" in statements
-    assert "ALTER TABLE IF EXISTS h_skills ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb" in statements
+    assert (
+        "ALTER TABLE IF EXISTS amp_agents ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb" in statements
+    )
     assert statements.index(
-        "ALTER TABLE IF EXISTS h_agents ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb"
-    ) < statements.index("UPDATE h_agents SET share_config = jsonb_build_object")
-    assert statements.index(
-        "ALTER TABLE IF EXISTS h_skills ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb"
-    ) < statements.index("UPDATE h_skills SET share_config = jsonb_build_object")
-    assert "ALTER TABLE IF EXISTS h_agents ALTER COLUMN share_config DROP DEFAULT" in statements
-    assert "ALTER TABLE IF EXISTS h_skills ALTER COLUMN share_config DROP DEFAULT" in statements
+        "ALTER TABLE IF EXISTS amp_agents ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb"
+    ) < statements.index("UPDATE amp_agents SET share_config = jsonb_build_object")
+    assert "ALTER TABLE IF EXISTS amp_agents ALTER COLUMN share_config DROP DEFAULT" in statements
 
 
 @pytest.mark.asyncio

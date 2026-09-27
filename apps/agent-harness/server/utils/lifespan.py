@@ -4,7 +4,6 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
-from yuxi.services.task_service import tasker
 from yuxi.agents.mcp.service import ensure_builtin_mcp_servers_in_db
 from yuxi.services.run_queue_service import close_queue_clients, get_redis_client
 from yuxi.storage.postgres.manager import pg_manager
@@ -47,6 +46,13 @@ async def lifespan(app: FastAPI):
         logger.error(f"Failed to initialize builtin skills during startup: {e}")
 
     try:
+        from yuxi.agents.toolkits.service import sync_builtin_tool_directory
+
+        await sync_builtin_tool_directory()
+    except Exception as e:
+        logger.error(f"Failed to initialize builtin tool directory during startup: {e}")
+
+    try:
         from yuxi.repositories.agent_repository import AgentRepository
 
         async with pg_manager.get_async_session_context() as session:
@@ -58,14 +64,6 @@ async def lifespan(app: FastAPI):
             await repository.ensure_quote_agent()
     except Exception as e:
         logger.error(f"Failed to ensure default agent during startup: {e}")
-
-    try:
-        from yuxi.config.options import ensure_options_in_db
-
-        async with pg_manager.get_async_session_context() as session:
-            await ensure_options_in_db(session)
-    except Exception as e:
-        logger.error(f"Failed to initialize config options during startup: {e}")
 
     # 初始化知识库管理器
     if os.environ.get("LITE_MODE", "").lower() in ("true", "1"):
@@ -102,7 +100,6 @@ async def lifespan(app: FastAPI):
     await checkpointer.setup()
     print("LangGraph Checkpoint tables verified/created!")
 
-    await tasker.start()
     logger.info(f"""
 
     _                    _     _   _
@@ -115,7 +112,6 @@ async def lifespan(app: FastAPI):
     """)
     logger.info("Agent Harness startup complete")
     yield
-    await tasker.shutdown()
     shutdown_sandbox_provider()
     await close_queue_clients()
     close_shared_neo4j_connection()

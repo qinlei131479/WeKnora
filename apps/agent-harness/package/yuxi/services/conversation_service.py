@@ -1,5 +1,4 @@
 import uuid
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -19,10 +18,10 @@ from yuxi.services.mention_search_service import invalidate_mention_cache
 from yuxi.services.ocr_service import parse_document
 from yuxi.storage.minio import StorageError, get_minio_client
 from yuxi.storage.postgres.models_business import AgentRun, User
-from yuxi.utils.datetime_utils import format_utc_datetime, utc_isoformat
+from yuxi.utils.datetime_utils import utc_isoformat
 from yuxi.utils.logging_config import logger
 from yuxi.utils.paths import VIRTUAL_PATH_UPLOADS
-from yuxi.utils.upload_utils import read_upload_with_limit, write_upload_to_path
+from yuxi.utils.upload_utils import read_upload_with_limit
 
 ATTACHMENT_ALLOWED_EXTENSIONS: tuple[str, ...] = ()
 MAX_ATTACHMENT_SIZE_BYTES = 5 * 1024 * 1024  # 5 MB
@@ -34,33 +33,6 @@ TMP_ATTACHMENT_OCR_METHODS = ("weknora",)
 TMP_ATTACHMENT_PARSE_METHODS = ("weknora",)
 
 
-@dataclass(slots=True)
-class ConversionResult:
-    """Represents the normalized output of an uploaded attachment."""
-
-    file_id: str
-    file_name: str
-    file_type: str | None
-    file_size: int
-    markdown: str
-    truncated: bool
-
-
-def _ensure_workdir() -> Path:
-    workdir = Path(app_config.save_dir) / "uploads" / "chat_attachments"
-    workdir.mkdir(parents=True, exist_ok=True)
-    return workdir
-
-
-async def _write_upload_to_disk(upload: UploadFile, dest: Path) -> int:
-    return await write_upload_to_path(
-        upload,
-        dest,
-        max_size_bytes=MAX_ATTACHMENT_SIZE_BYTES,
-        too_large_message="附件过大，当前仅支持 5 MB 以内的文件",
-    )
-
-
 def _truncate_markdown(markdown: str) -> tuple[str, bool]:
     if len(markdown) <= MAX_ATTACHMENT_MARKDOWN_CHARS:
         return markdown, False
@@ -68,38 +40,6 @@ def _truncate_markdown(markdown: str) -> tuple[str, bool]:
     truncated_content = markdown[: MAX_ATTACHMENT_MARKDOWN_CHARS - 100].rstrip()
     truncated_content = f"{truncated_content}\n\n[内容已截断，超出 {MAX_ATTACHMENT_MARKDOWN_CHARS} 字符限制]"
     return truncated_content, True
-
-
-async def _convert_upload_to_markdown(upload: UploadFile) -> ConversionResult:
-    """Persist an UploadFile temporarily, convert it to markdown, and clean up."""
-    if not upload.filename:
-        raise ValueError("无法识别的文件名")
-
-    file_name = Path(upload.filename).name
-    suffix = Path(file_name).suffix.lower()
-
-    if ATTACHMENT_ALLOWED_EXTENSIONS and suffix not in ATTACHMENT_ALLOWED_EXTENSIONS:
-        allowed = ", ".join(ATTACHMENT_ALLOWED_EXTENSIONS)
-        raise ValueError(f"不支持的文件类型: {suffix or '未知'}，当前仅支持 {allowed}")
-
-    temp_dir = _ensure_workdir()
-    temp_path = temp_dir / f"{uuid.uuid4().hex}{suffix}"
-
-    try:
-        file_size = await _write_upload_to_disk(upload, temp_path)
-        markdown = await parse_document(str(temp_path))
-        markdown, truncated = _truncate_markdown(markdown)
-        return ConversionResult(
-            file_id=uuid.uuid4().hex,
-            file_name=file_name,
-            file_type=upload.content_type,
-            file_size=file_size,
-            markdown=markdown,
-            truncated=truncated,
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.error(f"Attachment conversion failed: {exc}")
-        raise
 
 
 async def require_user_conversation(conv_repo: ConversationRepository, thread_id: str, uid: str):
@@ -291,64 +231,6 @@ def serialize_attachment(record: dict) -> dict:
     }
 
 
-async def _materialize_attachment_files(
-    *,
-    thread_id: str,
-    uid: str,
-    upload: UploadFile,
-    file_name: str,
-    file_content: bytes,
-) -> dict:
-    """将原始附件与可选 markdown 副本落盘到线程 user-data。"""
-    ensure_thread_dirs(thread_id, uid)
-
-    upload_virtual_path = _make_upload_virtual_path(file_name)
-    uploads_dir = sandbox_uploads_dir(thread_id)
-    upload_actual_path = uploads_dir / Path(upload_virtual_path).name
-    upload_actual_path.write_bytes(file_content)
-
-    record = {
-        "status": "uploaded",
-        "path": upload_virtual_path,
-        "artifact_url": _artifact_url(thread_id, upload_virtual_path),
-        "storage_path": str(upload_actual_path),
-        "original_path": upload_virtual_path,
-        "original_artifact_url": _artifact_url(thread_id, upload_virtual_path),
-        "original_storage_path": str(upload_actual_path),
-        "minio_url": None,
-    }
-
-    try:
-        await upload.seek(0)
-        conversion = await _convert_upload_to_markdown(upload)
-    except ValueError:
-        return record
-    except Exception as exc:  # noqa: BLE001
-        logger.warning(f"Attachment markdown materialization failed for {file_name}: {exc}")
-        return record
-
-    markdown_virtual_path, markdown_host_path = _build_attachment_storage_path(
-        uid=uid,
-        thread_id=thread_id,
-        file_name=file_name,
-    )
-    markdown_host_path.write_text(conversion.markdown, encoding="utf-8")
-
-    record.update(
-        {
-            "status": "parsed",
-            "path": markdown_virtual_path,
-            "artifact_url": _artifact_url(thread_id, markdown_virtual_path),
-            "storage_path": str(markdown_host_path),
-            "file_path": markdown_virtual_path,
-            "markdown": conversion.markdown,
-            "truncated": conversion.truncated,
-            "markdown_storage_path": str(markdown_host_path),
-        }
-    )
-    return record
-
-
 def _materialize_tmp_attachment_files(
     *,
     thread_id: str,
@@ -475,61 +357,6 @@ async def list_threads_view(
         }
         for conv in conversations
     ]
-
-
-async def search_threads_view(
-    *,
-    query: str,
-    agent_id: str | None,
-    db: AsyncSession,
-    current_uid: str,
-    limit: int = 20,
-    offset: int = 0,
-) -> dict:
-    normalized_query = str(query or "").strip()
-    if not normalized_query:
-        return {"items": [], "has_more": False, "limit": limit, "offset": offset}
-
-    conv_repo = ConversationRepository(db)
-    search_items, has_more = await conv_repo.search_conversations_by_message_content(
-        uid=str(current_uid),
-        agent_id=agent_id,
-        query=normalized_query,
-        limit=limit,
-        offset=offset,
-        exclude_sources=INVOCATION_CONVERSATION_SOURCES,
-    )
-
-    items = []
-    for item in search_items:
-        conv = item["conversation"]
-        snippets = [
-            {
-                "message_id": snippet.get("message_id"),
-                "content": snippet.get("content") or "",
-                "created_at": format_utc_datetime(snippet.get("created_at")),
-            }
-            for snippet in item.get("snippets", [])
-        ]
-        items.append(
-            {
-                "id": conv.thread_id,
-                "thread_id": conv.thread_id,
-                "uid": conv.uid,
-                "agent_id": conv.agent_id,
-                "title": conv.title,
-                "is_pinned": bool(conv.is_pinned),
-                "created_at": format_utc_datetime(conv.created_at),
-                "updated_at": format_utc_datetime(conv.updated_at),
-                "metadata": conv.extra_metadata or {},
-                "matched_count": item.get("matched_count", 0),
-                "message_id": item.get("message_id"),
-                "latest_match_at": format_utc_datetime(item.get("latest_match_at")),
-                "snippets": snippets,
-            }
-        )
-
-    return {"items": items, "has_more": has_more, "limit": limit, "offset": offset}
 
 
 async def delete_thread_view(
@@ -780,67 +607,6 @@ async def confirm_tmp_thread_attachments_view(
     return {"attachments": [serialize_attachment(item) for item in added_records]}
 
 
-async def upload_thread_attachment_view(
-    *,
-    thread_id: str,
-    file: UploadFile,
-    db: AsyncSession,
-    current_uid: str,
-) -> dict:
-    conv_repo = ConversationRepository(db)
-    conversation = await require_user_conversation(conv_repo, thread_id, str(current_uid))
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="无法识别的文件名")
-
-    file_name = Path(file.filename).name
-    await file.seek(0)
-    file_content = await file.read()
-    file_size = len(file_content)
-    if file_size > MAX_ATTACHMENT_SIZE_BYTES:
-        max_size_mb = MAX_ATTACHMENT_SIZE_BYTES // (1024 * 1024)
-        raise HTTPException(status_code=400, detail=f"附件过大，当前仅支持 {max_size_mb} MB 以内的文件")
-    materialized = await _materialize_attachment_files(
-        thread_id=thread_id,
-        uid=str(conversation.uid),
-        upload=file,
-        file_name=file_name,
-        file_content=file_content,
-    )
-
-    attachment_record = {
-        "file_id": uuid.uuid4().hex,
-        "file_name": file_name,
-        "file_type": file.content_type,
-        "file_size": file_size,
-        "status": materialized["status"],
-        "uploaded_at": utc_isoformat(),
-        "path": materialized["path"],
-        "artifact_url": materialized["artifact_url"],
-        "storage_path": materialized["storage_path"],
-        "original_path": materialized["original_path"],
-        "original_artifact_url": materialized["original_artifact_url"],
-        "original_storage_path": materialized["original_storage_path"],
-        "minio_url": materialized["minio_url"],
-    }
-    for optional_key in ("file_path", "markdown", "truncated", "markdown_storage_path"):
-        if optional_key in materialized:
-            attachment_record[optional_key] = materialized[optional_key]
-
-    await conv_repo.add_attachment(conversation.id, attachment_record)
-    all_attachments = await conv_repo.get_attachments(conversation.id)
-    await _sync_thread_upload_state(
-        thread_id=thread_id,
-        uid=str(current_uid),
-        agent_id=conversation.agent_id,
-        backend_id=(conversation.extra_metadata or {}).get("backend_id"),
-        attachments=all_attachments,
-    )
-
-    await invalidate_mention_cache(thread_id)
-
-    return serialize_attachment(attachment_record)
-
-
 async def list_thread_attachments_view(
     *,
     thread_id: str,
@@ -961,18 +727,6 @@ async def get_thread_history_view(
     role_type_map = {"user": "human", "assistant": "ai", "tool": "tool", "system": "system"}
 
     for msg in messages:
-        user_feedback = None
-        if msg.feedbacks:
-            for feedback in msg.feedbacks:
-                if feedback.uid == str(current_uid):
-                    user_feedback = {
-                        "id": feedback.id,
-                        "rating": feedback.rating,
-                        "reason": feedback.reason,
-                        "created_at": feedback.created_at.isoformat() if feedback.created_at else None,
-                    }
-                    break
-
         extra_metadata = dict(msg.extra_metadata or {})
         request_id = extra_metadata.get("request_id")
         if msg.role == "user" and request_id and not extra_metadata.get("attachments"):
@@ -991,7 +745,6 @@ async def get_thread_history_view(
             "extra_metadata": extra_metadata,
             "message_type": msg.message_type,
             "image_content": msg.image_content,
-            "feedback": user_feedback,
         }
 
         if msg.tool_calls:
@@ -1010,5 +763,5 @@ async def get_thread_history_view(
 
         history.append(msg_dict)
 
-    logger.info(f"Loaded {len(history)} messages with feedback for thread {thread_id}")
+    logger.info(f"Loaded {len(history)} messages for thread {thread_id}")
     return {"history": history}

@@ -7,6 +7,7 @@ import json
 import os
 import time
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 
 from sqlalchemy import select, update
 from sqlalchemy.exc import OperationalError
@@ -152,12 +153,26 @@ async def append_run_event(run_id: str, event_type: str, payload: dict, *, threa
 
 
 async def mark_run_running(run_id: str):
+    snapshot = None
     async with pg_manager.get_async_session_context() as db:
         repo = AgentRunRepository(db)
-        await repo.mark_running(run_id)
+        run = await repo.mark_running(run_id)
+        if run is not None and run.status == "running":
+            snapshot = _usage_run_snapshot(run)
+    if snapshot is not None:
+        from yuxi.services.usage_telemetry import record_run_started
+
+        await record_run_started(snapshot)
 
 
-async def mark_run_terminal(run_id: str, status: str, error_type: str | None = None, error_message: str | None = None):
+async def mark_run_terminal(
+    run_id: str,
+    status: str,
+    error_type: str | None = None,
+    error_message: str | None = None,
+    *,
+    retry_count: int = 0,
+):
     async with pg_manager.get_async_session_context() as db:
         repo = AgentRunRepository(db)
         run, changed = await repo.set_terminal_status(
@@ -172,7 +187,28 @@ async def mark_run_terminal(run_id: str, status: str, error_type: str | None = N
             await db.execute(
                 update(Message).where(Message.id == run.input_message_id).values(delivery_status=delivery_status)
             )
-        return TerminalTransition(status=persisted_status, changed=changed)
+        snapshot = _usage_run_snapshot(run) if changed and run is not None else None
+    if snapshot is not None:
+        from yuxi.services.usage_telemetry import record_run_finished
+
+        await record_run_finished(snapshot, retry_count=retry_count)
+    return TerminalTransition(status=persisted_status, changed=changed)
+
+
+def _usage_run_snapshot(run):
+    return SimpleNamespace(
+        id=run.id,
+        status=run.status,
+        agent_slug=run.agent_slug,
+        uid=run.uid,
+        tenant_id=run.tenant_id,
+        conversation_id=run.conversation_id,
+        run_type=run.run_type,
+        started_at=run.started_at,
+        finished_at=run.finished_at,
+        error_type=run.error_type,
+        error_message=run.error_message,
+    )
 
 
 async def _load_user(uid: str):
@@ -275,12 +311,14 @@ async def _finish_run(
     chunk: dict,
     error_type: str | None = None,
     error_message: str | None = None,
+    ctx=None,
 ) -> TerminalTransition:
     transition = await mark_run_terminal(
         run_id,
         status,
         error_type=error_type,
         error_message=error_message,
+        retry_count=max(_job_try(ctx) - 1, 0),
     )
     if transition.changed and transition.status:
         await _append_end_event(run_id, transition.status, thread_id=thread_id, payload={"chunk": chunk})
@@ -531,6 +569,7 @@ async def _process_agent_run(ctx, run_id: str):
                             "completed",
                             thread_id=thread_id,
                             chunk=chunk,
+                            ctx=ctx,
                         )
                         terminal_set = transition.status is not None
                     elif status == "error":
@@ -541,6 +580,7 @@ async def _process_agent_run(ctx, run_id: str):
                             chunk=chunk,
                             error_type=chunk.get("error_type") or "stream_error",
                             error_message=chunk.get("error_message") or chunk.get("message"),
+                            ctx=ctx,
                         )
                         terminal_set = transition.status is not None
                     elif status == "interrupted":
@@ -552,6 +592,7 @@ async def _process_agent_run(ctx, run_id: str):
                             chunk=chunk,
                             error_type=status_value,
                             error_message=chunk.get("message"),
+                            ctx=ctx,
                         )
                         terminal_set = transition.status is not None
 
@@ -574,6 +615,7 @@ async def _process_agent_run(ctx, run_id: str):
                 "interrupted",
                 thread_id=thread_id,
                 chunk=interrupt_chunk,
+                ctx=ctx,
                 error_type=interrupt_status,
                 error_message=(
                     "需要用户审批工具操作"
@@ -592,6 +634,7 @@ async def _process_agent_run(ctx, run_id: str):
                 "completed",
                 thread_id=thread_id,
                 chunk=finished_chunk,
+                ctx=ctx,
             )
 
     except asyncio.CancelledError:
@@ -602,6 +645,7 @@ async def _process_agent_run(ctx, run_id: str):
             "cancelled",
             error_type="cancelled",
             error_message="对话已取消",
+            retry_count=max(_job_try(ctx) - 1, 0),
         )
         if transition.changed:
             await append_run_event(
@@ -641,6 +685,7 @@ async def _process_agent_run(ctx, run_id: str):
                     chunk=retryable_error_chunk,
                     error_type="retryable_worker_error",
                     error_message=str(e),
+                    ctx=ctx,
                 )
                 logger.error(f"Run failed after retries exhausted {run_id}: {e}")
                 return
@@ -670,6 +715,7 @@ async def _process_agent_run(ctx, run_id: str):
             chunk=error_chunk,
             error_type="worker_error",
             error_message=str(e),
+            ctx=ctx,
         )
         return
     finally:
@@ -704,9 +750,6 @@ async def _worker_startup(ctx):
     await ensure_builtin_mcp_servers_in_db()
     async with pg_manager.get_async_session_context() as session:
         await init_builtin_skills(session)
-        from yuxi.config.options import ensure_options_in_db
-
-        await ensure_options_in_db(session)
     sys_config.start_runtime_sync()
     await recover_pending_dispatches()
 

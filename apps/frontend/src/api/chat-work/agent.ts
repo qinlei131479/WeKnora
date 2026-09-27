@@ -26,13 +26,6 @@ ${String(requestContent || '').slice(0, 2000)}
 
 export const agentApi = {
   /**
-   * 简单聊天调用（非流式）
-   * @param {string} query - 查询内容
-   * @returns {Promise} - 聊天响应
-   */
-  simpleCall: (query) => apiPost('/api/chat/call', { query }),
-
-  /**
    * 生成对话标题
    * @param {string} query - 查询内容
    * @param {Object} modelSpec - 模型配置
@@ -248,27 +241,6 @@ export const threadApi = {
   },
 
   /**
-   * 搜索历史对话
-   * @param {string} query - 搜索关键词
-   * @param {Object} options - 搜索选项
-   * @param {string | null | undefined} options.agentId - 智能体ID，可选
-   * @param {number} options.limit - 返回数量限制
-   * @param {number} options.offset - 偏移量
-   * @returns {Promise} - 搜索结果
-   */
-  searchThreads: (query, { agentId = null, limit = 20, offset = 0 } = {}) => {
-    const params = new URLSearchParams({
-      q: query,
-      limit: String(limit),
-      offset: String(offset)
-    })
-    if (agentId) {
-      params.set('agent_id', agentId)
-    }
-    return apiGet(`/api/chat/threads/search?${params.toString()}`)
-  },
-
-  /**
    * 创建新对话线程
    * @param {string} agentId - 智能体ID
    * @param {string} title - 对话标题
@@ -324,45 +296,6 @@ export const threadApi = {
     ),
 
   /**
-   * 读取线程文本文件内容（分页）
-   * @param {string} threadId
-   * @param {string} path
-   * @param {number} offset
-   * @param {number} limit
-   * @returns {Promise}
-   */
-  readThreadFile: (threadId, path, offset = 0, limit = 2000) =>
-    apiGet(
-      `/api/chat/thread/${threadId}/files/content?path=${encodeURIComponent(path)}&offset=${offset}&limit=${limit}`
-    ),
-
-  /**
-   * 获取线程文件下载/预览 URL
-   * @param {string} threadId
-   * @param {string} path
-   * @param {boolean} download
-   * @returns {string}
-   */
-  getThreadArtifactUrl: (threadId, path, download = false) => {
-    const encodedPath = path
-      .split('/')
-      .filter(Boolean)
-      .map((segment) => encodeURIComponent(segment))
-      .join('/')
-    const query = download ? '?download=true' : ''
-    return harnessUrl(`/api/chat/thread/${threadId}/artifacts/${encodedPath}${query}`)
-  },
-
-  /**
-   * 下载线程文件（带鉴权）
-   * @param {string} threadId
-   * @param {string} path
-   * @returns {Promise<Response>}
-   */
-  downloadThreadArtifact: (threadId, path) =>
-    apiGet(threadApi.getThreadArtifactUrl(threadId, path, true), {}, true, 'blob'),
-
-  /**
    * 保存交付物到 workspace/saved_artifacts
    * @param {string} threadId
    * @param {string} path
@@ -400,21 +333,6 @@ export const threadApi = {
    */
   confirmTmpThreadAttachments: (threadId, attachments) =>
     apiPost(`/api/chat/thread/${threadId}/attachments/confirm`, { attachments }),
-
-  /**
-   * 上传附件
-   * @param {string} threadId
-   * @param {File} file
-   * @returns {Promise}
-   */
-  uploadThreadAttachment: (threadId, file) => {
-    const formData = new FormData()
-    formData.append('file', file)
-    return apiRequest(`/api/chat/thread/${threadId}/attachments`, {
-      method: 'POST',
-      body: formData
-    })
-  },
 
   /**
    * 删除附件

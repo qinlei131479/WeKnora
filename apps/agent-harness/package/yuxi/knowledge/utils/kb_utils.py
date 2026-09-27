@@ -1,4 +1,3 @@
-import hashlib
 import time
 
 from yuxi.knowledge.chunking.ragflow_like.presets import resolve_chunk_processing_params
@@ -38,13 +37,6 @@ def resolve_processing_params(
     )
     merged_params.update(chunk_params)
     return merged_params
-
-
-async def calculate_content_hash(data: bytes | bytearray) -> str:
-    """计算文件内容的 SHA-256 哈希值。"""
-    sha256 = hashlib.sha256()
-    sha256.update(data)
-    return sha256.hexdigest()
 
 
 async def prepare_item_metadata(item: str, content_type: str, kb_id: str, params: dict | None = None) -> dict:

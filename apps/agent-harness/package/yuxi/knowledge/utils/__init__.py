@@ -1,7 +1,6 @@
 """知识库工具模块。"""
 
 from .kb_utils import (
-    calculate_content_hash,
     is_minio_url,
     merge_processing_params,
     parse_minio_url,
@@ -11,7 +10,6 @@ from .kb_utils import (
 )
 
 __all__ = [
-    "calculate_content_hash",
     "is_minio_url",
     "merge_processing_params",
     "parse_minio_url",

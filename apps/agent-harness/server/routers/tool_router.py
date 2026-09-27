@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
-from yuxi.agents.toolkits.service import get_tool_metadata
-from server.utils.auth_middleware import get_admin_user
+from yuxi.agents.toolkits.service import get_directory_tool_metadata
+from server.utils.auth_middleware import get_required_user
 from yuxi.storage.postgres.models_business import User
 
 tools = APIRouter(prefix="/system/tools", tags=["tools"])
@@ -10,16 +10,8 @@ tools = APIRouter(prefix="/system/tools", tags=["tools"])
 @tools.get("")
 async def list_tools(
     category: str = None,
-    user: User = Depends(get_admin_user),
+    source: str = None,
+    _user: User = Depends(get_required_user),
 ):
-    """获取工具列表"""
-    return {"success": True, "data": get_tool_metadata(category)}
-
-
-@tools.get("/options")
-async def get_tool_options(
-    user: User = Depends(get_admin_user),
-):
-    """获取工具选项（前端下拉框用）"""
-    all_tools = get_tool_metadata()
-    return {"success": True, "data": [{"label": t["name"], "value": t["slug"]} for t in all_tools]}
+    """获取工具列表。能打开工具页的登录成员即可访问，不再额外要求管理员。"""
+    return {"success": True, "data": await get_directory_tool_metadata(category, source)}

@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import io
 import mimetypes
 import shutil
 from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
-from fastapi import HTTPException, UploadFile
+from fastapi import HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from yuxi.agents.backends import create_agent_composite_backend
@@ -33,10 +32,6 @@ from yuxi.services.file_preview import (
     is_office_pdf_preview_file,
     render_preview_payload,
     render_preview_too_large_payload,
-)
-from yuxi.services.workspace_service import (
-    MAX_WORKSPACE_UPLOAD_FILES,
-    _write_workspace_upload,
 )
 from yuxi.services.mention_search_service import invalidate_mention_cache
 from yuxi.storage.postgres.models_business import User
@@ -195,15 +190,6 @@ def _list_local_entries(thread_id: str, uid: str, actual_path) -> list[dict]:
             continue
         entries.append(_entry_for_local_path(thread_id, uid, resolved_child, listing_root))
     return entries
-
-
-def _validate_viewer_child_name(name: str, *, field_name: str) -> str:
-    clean_name = str(name or "").strip()
-    if not clean_name:
-        raise HTTPException(status_code=422, detail=f"{field_name} 不能为空")
-    if clean_name in {".", ".."} or "/" in clean_name or "\\" in clean_name:
-        raise HTTPException(status_code=422, detail=f"{field_name} 不能包含路径分隔符")
-    return clean_name
 
 
 def _list_user_data_root_entries(thread_id: str, uid: str) -> list[dict]:
@@ -465,111 +451,3 @@ async def delete_viewer_file(
         raise HTTPException(status_code=422, detail=str(e)) from e
 
     return {"success": True, "path": normalized_path}
-
-
-async def create_viewer_directory(
-    *,
-    thread_id: str,
-    parent_path: str,
-    name: str,
-    current_user: User,
-    db: AsyncSession,
-) -> dict:
-    if not thread_id:
-        raise HTTPException(status_code=422, detail="thread_id 不能为空")
-
-    await _resolve_viewer_state(
-        thread_id=thread_id,
-        current_user=current_user,
-        db=db,
-    )
-
-    normalized_parent = _normalize_path(parent_path)
-    if not _is_workspace_path(normalized_parent):
-        raise HTTPException(status_code=400, detail="当前路径不支持写入")
-
-    uid = str(current_user.uid)
-    parent = _resolve_local_user_data_path(thread_id, uid, normalized_parent)
-    if not parent.exists():
-        raise HTTPException(status_code=404, detail="目标目录不存在")
-    if not parent.is_dir():
-        raise HTTPException(status_code=400, detail="目标路径不是目录")
-
-    directory_name = _validate_viewer_child_name(name, field_name="文件夹名")
-    target = parent / directory_name
-    if target.exists():
-        raise HTTPException(status_code=400, detail="同名文件或文件夹已存在")
-    try:
-        await asyncio.to_thread(target.mkdir)
-    except PermissionError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    await invalidate_mention_cache(thread_id)
-    workspace_root = sandbox_workspace_dir(thread_id, uid).resolve()
-    return {"success": True, "entry": _entry_for_local_path(thread_id, uid, target, workspace_root)}
-
-
-async def upload_viewer_files(
-    *,
-    thread_id: str,
-    parent_path: str,
-    files: list[UploadFile],
-    current_user: User,
-    db: AsyncSession,
-) -> dict:
-    if not thread_id:
-        raise HTTPException(status_code=422, detail="thread_id 不能为空")
-
-    await _resolve_viewer_state(
-        thread_id=thread_id,
-        current_user=current_user,
-        db=db,
-    )
-
-    normalized_parent = _normalize_path(parent_path)
-    if not _is_workspace_path(normalized_parent):
-        raise HTTPException(status_code=400, detail="当前路径不支持写入")
-
-    if not files:
-        raise HTTPException(status_code=400, detail="请选择至少一个文件")
-    if len(files) > MAX_WORKSPACE_UPLOAD_FILES:
-        raise HTTPException(status_code=400, detail=f"一次最多上传 {MAX_WORKSPACE_UPLOAD_FILES} 个文件")
-
-    uid = str(current_user.uid)
-    parent = _resolve_local_user_data_path(thread_id, uid, normalized_parent)
-    if not parent.exists():
-        raise HTTPException(status_code=404, detail="目标目录不存在")
-    if not parent.is_dir():
-        raise HTTPException(status_code=400, detail="目标路径不是目录")
-
-    seen_names: set[str] = set()
-    upload_targets: list[tuple[UploadFile, Path]] = []
-    for file in files:
-        file_name = _validate_viewer_child_name(Path(file.filename or "").name, field_name="文件名")
-        if file_name in seen_names:
-            raise HTTPException(status_code=400, detail=f"选择的文件中存在重复文件名: {file_name}")
-        seen_names.add(file_name)
-        target = parent / file_name
-        if target.exists():
-            raise HTTPException(status_code=400, detail="同名文件或文件夹已存在")
-        upload_targets.append((file, target))
-
-    completed_targets: list[Path] = []
-    try:
-        for file, target in upload_targets:
-            await _write_workspace_upload(file, target)
-            completed_targets.append(target)
-    except HTTPException:
-        for target in completed_targets:
-            with contextlib.suppress(OSError):
-                await asyncio.to_thread(target.unlink)
-        raise
-
-    await invalidate_mention_cache(thread_id)
-    workspace_root = sandbox_workspace_dir(thread_id, uid).resolve()
-    return {
-        "success": True,
-        "entries": [
-            _entry_for_local_path(thread_id, uid, target, workspace_root) for _file, target in upload_targets
-        ],
-    }

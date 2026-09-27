@@ -17,36 +17,6 @@ async def _fake_require_user_conversation(_repo, _thread_id: str, _current_uid: 
 
 
 @pytest.mark.asyncio
-async def test_read_thread_file_content_runs_file_read_in_worker_thread(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-):
-    file_path = tmp_path / "notes.txt"
-    file_path.write_text("first\nsecond\nthird", encoding="utf-8")
-    threaded_calls = []
-
-    async def _fake_to_thread(func, *args, **kwargs):
-        threaded_calls.append(func)
-        return func(*args, **kwargs)
-
-    monkeypatch.setattr(svc, "require_user_conversation", _fake_require_user_conversation)
-    monkeypatch.setattr(svc, "ConversationRepository", lambda _db: object())
-    monkeypatch.setattr(svc, "resolve_virtual_path", lambda _thread_id, _path, *, uid: file_path)
-    monkeypatch.setattr(svc.asyncio, "to_thread", _fake_to_thread)
-
-    result = await svc.read_thread_file_content_view(
-        thread_id="thread-1",
-        current_uid="user-1",
-        db=None,
-        path="/home/gem/user-data/workspace/notes.txt",
-        offset=1,
-        limit=1,
-    )
-
-    assert result["content"] == ["second"]
-    assert threaded_calls == [file_path.read_text]
-
-
-@pytest.mark.asyncio
 async def test_list_thread_files_runs_directory_scan_in_worker_thread(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     directory = tmp_path / "outputs"
     directory.mkdir()

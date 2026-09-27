@@ -12,6 +12,7 @@ from yuxi.agents.backends.sandbox.paths import (
     virtual_path_for_thread_file,
 )
 from yuxi.agents.toolkits.buildin.tools import ocr_parse_file
+from yuxi.services import ocr_service
 
 pytestmark = pytest.mark.unit
 
@@ -49,7 +50,7 @@ async def test_ocr_parse_file_writes_markdown_to_outputs(tmp_path, monkeypatch: 
         captured["params"] = params
         return "识别结果\n" + ("长文本" * 500)
 
-    monkeypatch.setattr("yuxi.services.ocr_service.parse_document", fake_parse_document)
+    monkeypatch.setattr(ocr_service, "parse_document", fake_parse_document)
 
     result = await ocr_parse_file.coroutine(
         file_path=source_virtual_path,
@@ -87,7 +88,7 @@ async def test_ocr_parse_file_uses_default_engine(tmp_path, monkeypatch: pytest.
         captured["params"] = params
         return "OCR content"
 
-    monkeypatch.setattr("yuxi.services.ocr_service.parse_document", fake_parse_document)
+    monkeypatch.setattr(ocr_service, "parse_document", fake_parse_document)
 
     result = await ocr_parse_file.coroutine(
         file_path=source_virtual_path,
@@ -114,7 +115,7 @@ async def test_ocr_parse_file_accepts_disable_for_pdf(tmp_path, monkeypatch: pyt
         captured["params"] = params
         return "PDF text layer"
 
-    monkeypatch.setattr("yuxi.services.ocr_service.parse_document", fake_parse_document)
+    monkeypatch.setattr(ocr_service, "parse_document", fake_parse_document)
 
     result = await ocr_parse_file.coroutine(
         file_path=source_virtual_path,

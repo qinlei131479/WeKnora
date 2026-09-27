@@ -151,9 +151,20 @@ type TenantSkillCatalogEntity struct {
 	// do not own a copy: sandbox uninstall must not delete this object.
 	BundleRef    string `gorm:"type:varchar(1024)"`
 	BundleSHA256 string `gorm:"type:varchar(64)"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	DeletedAt    gorm.DeletedAt
+	// SourceType 是使用侧：chat 对话、work 工作、common 通用。
+	// 内置技能用 tenant_id = 0 区分，不写进这个字段。
+	SourceType        string `gorm:"type:varchar(16);not null;default:chat"`
+	ToolDependencies  JSON   `gorm:"type:jsonb"`
+	MCPDependencies   JSON   `gorm:"type:jsonb"`
+	SkillDependencies JSON   `gorm:"type:jsonb"`
+	ShareConfig       JSON   `gorm:"type:jsonb"`
+	Enabled           bool   `gorm:"default:true"`
+	CreatedBy         string `gorm:"type:varchar(64)"`
+	UpdatedBy         string `gorm:"type:varchar(64)"`
+	SourceMtime       *time.Time
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
+	DeletedAt         gorm.DeletedAt
 }
 
 // TableName pins the table so GORM's pluralizer cannot drift.

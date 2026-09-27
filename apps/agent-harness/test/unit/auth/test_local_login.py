@@ -24,6 +24,14 @@ async def test_removed_harness_identity_routes_are_404():
         assert oidc.status_code == 404
         cli = await client.post("/api/auth/cli/sessions", json={"key_name": "x"})
         assert cli.status_code == 404
+        legacy_token = await client.post(
+            "/api/auth/token", data={"username": "invalid", "password": "invalid"}
+        )
+        assert legacy_token.status_code == 404
+        current_user = await client.get("/api/auth/me")
+        assert current_user.status_code == 404
+        access_options = await client.get("/api/auth/users/access-options")
+        assert access_options.status_code == 404
         departments = await client.get("/api/departments")
         assert departments.status_code == 404
         evaluation = await client.get("/api/evaluation/databases/kb_1/datasets")

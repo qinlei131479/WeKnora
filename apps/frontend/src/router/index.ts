@@ -565,6 +565,14 @@ router.beforeEach(async (to, from, next) => {
     next('/platform/creatChat')
     return
   }
+  if (
+    (to.path === '/platform/dashboard' || to.path.startsWith('/platform/harness/dashboard')) &&
+    !authStore.hasRole('admin') &&
+    !authStore.isSystemAdmin
+  ) {
+    next('/platform/creatChat')
+    return
+  }
   if (to.path === '/platform/knowledge-bases' && String(to.query.surface || '') === 'runtime') {
     const query = { ...to.query }
     delete query.surface

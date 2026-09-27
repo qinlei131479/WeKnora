@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from yuxi.knowledge.parser import unified
+from yuxi.models import weknora_proxy
 from yuxi.weknora.errors import WeKnoraKBError
 from yuxi.services.ocr_service import get_ocr_options, parse_document
 
@@ -26,7 +27,7 @@ async def test_parse_document_posts_to_weknora(tmp_path, monkeypatch):
         captured["content"] = content
         return "# parsed"
 
-    monkeypatch.setattr("yuxi.models.weknora_proxy.parse_file_via_weknora", fake_parse)
+    monkeypatch.setattr(weknora_proxy, "parse_file_via_weknora", fake_parse)
 
     markdown = await parse_document(str(file_path), params={"ocr_engine": "rapid_ocr"})
     assert markdown == "# parsed"
@@ -42,7 +43,7 @@ async def test_parse_document_does_not_call_native_parser(tmp_path, monkeypatch)
     async def fake_weknora(source: str) -> str:
         return f"weknora:{source}"
 
-    monkeypatch.setattr("yuxi.models.weknora_proxy.parse_source_via_weknora", fake_weknora)
+    monkeypatch.setattr(weknora_proxy, "parse_source_via_weknora", fake_weknora)
 
     markdown = await parse_document(str(file_path), params={"ocr_engine": "rapid_ocr"})
     assert markdown.startswith("weknora:")
@@ -58,7 +59,7 @@ async def test_parse_document_raises_value_error_on_weknora_failure(tmp_path, mo
         del source
         raise WeKnoraKBError("weknora parse failed")
 
-    monkeypatch.setattr("yuxi.models.weknora_proxy.parse_source_via_weknora", fake_weknora)
+    monkeypatch.setattr(weknora_proxy, "parse_source_via_weknora", fake_weknora)
 
     with pytest.raises(ValueError, match="weknora parse failed"):
         await parse_document(str(file_path))

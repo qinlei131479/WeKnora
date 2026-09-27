@@ -115,8 +115,6 @@
       <!-- 错误消息 -->
     </div>
 
-    <div v-if="infoStore.debugMode" class="status-info">{{ message }}</div>
-
     <!-- 自定义内容 -->
     <slot></slot>
   </div>
@@ -165,7 +163,6 @@ import ToolCallsGroupComponent from '@/components/harness/ToolCallsGroupComponen
 import MarkdownPreview from '@/components/harness/common/MarkdownPreview.vue'
 import MentionTextRenderer from '@/components/harness/common/MentionTextRenderer.vue'
 import { useAgentStore } from '@/stores/harness/agent'
-import { useInfoStore } from '@/stores/harness/info'
 import { storeToRefs } from 'pinia'
 import { MessageProcessor } from '@/utils/harness/messageProcessor'
 import { inferImageMimeTypeFromBase64, normalizeAttachmentPreviews } from '@/utils/harness/file_utils'
@@ -214,11 +211,6 @@ const props = defineProps({
     type: Object,
     default: () => null
   },
-  // 是否显示调试信息 (已废弃，使用 infoStore.debugMode)
-  debugMode: {
-    type: Boolean,
-    default: false
-  }
 })
 
 const emit = defineEmits(['retry', 'retryStoppedMessage', 'openRefs'])
@@ -321,7 +313,6 @@ const getErrorMessage = computed(() => {
 // 引入智能体 store
 const agentStore = useAgentStore()
 const { availableKnowledgeBases } = storeToRefs(agentStore)
-const infoStore = useInfoStore()
 const messageAttachments = computed(() =>
   normalizeAttachmentPreviews(props.message.extra_metadata?.attachments)
 )

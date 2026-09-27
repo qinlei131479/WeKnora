@@ -2,55 +2,34 @@
   <div class="skill-cards-page extension-page-root">
     <Teleport defer to="#extension-page-header-actions">
       <div class="extension-header-actions">
-        <t-button
-          variant="outline"
-          @click="handleOpenRemoteInstall"
-          :disabled="loading || importing"
-        >
-          <template #icon><t-icon name="cloud-download" /></template>
-          {{ t('ext.skills.remoteInstall') }}
-        </t-button>
-        <t-button
-          theme="primary"
-          :loading="importing"
-          :disabled="loading || importing"
-          @click="skillFileInput?.click()"
-        >
-          <template #icon><t-icon name="upload" /></template>
-          {{ t('ext.skills.upload') }}
+        <t-button theme="primary" :disabled="loading" @click="skillSettingsRef?.openAdd()">
+          {{ t('settings.skills.addSkill') }}
         </t-button>
       </div>
     </Teleport>
 
-    <input
-      ref="skillFileInput"
-      type="file"
-      accept=".zip,.md"
-      style="display: none"
-      :disabled="loading || importing"
-      @change="onSkillFileChange"
-    />
+    <PageShoulder :search-placeholder="t('ext.skills.searchPlaceholder')" v-model:search="searchQuery">
+      <template #filters>
+        <t-select
+          v-model="selectedScope"
+          style="width: 140px"
+          :placeholder="t('ext.skills.scopeAll')"
+          clearable
+        >
+          <t-option value="" :label="t('ext.skills.scopeAll')" />
+          <t-option value="chat" :label="t('ext.tools.sourceChat')" />
+          <t-option value="work" :label="t('ext.tools.sourceWork')" />
+          <t-option value="common" :label="t('ext.skills.sourceCommon')" />
+        </t-select>
+      </template>
+    </PageShoulder>
 
-    <PageShoulder :search-placeholder="t('ext.skills.searchPlaceholder')" v-model:search="searchQuery" />
-
-    <div
-      v-if="visibleSkillGroups.length === 0"
-      class="extension-page-body extension-card-grid-empty-state skill-empty-state"
-    >
-      <div class="skill-empty-card">
-        <div class="skill-empty-icon">
-          <WandSparkles :size="22" />
-        </div>
-        <div class="skill-empty-title">
-          {{ searchQuery ? t('ext.skills.emptySearchTitle') : t('ext.skills.emptyTitle') }}
-        </div>
-        <div class="skill-empty-desc">
-          {{
-            searchQuery
-              ? t('ext.skills.emptySearchDesc')
-              : t('ext.skills.emptyDesc')
-          }}
-        </div>
+    <div v-if="visibleSkillGroups.length === 0" class="extension-page-body">
+      <div class="extension-card-grid-empty-state">
+        <t-empty
+          :title="searchQuery || selectedScope ? t('ext.skills.emptySearchTitle') : t('ext.skills.emptyTitle')"
+          :description="searchQuery || selectedScope ? t('ext.skills.emptySearchDesc') : t('ext.skills.emptyDesc')"
+        />
       </div>
     </div>
 
@@ -82,23 +61,70 @@
               :description="skill.description || t('ext.noDescription')"
               :tags="skillCardTags(skill)"
               :default-icon="getSkillIcon(skill.slug)"
-              @click="openSkillPreview(skill)"
+              @click="openSkillFiles(skill)"
             >
+              <template #footer>
+                <div class="skill-card-footer" @click.stop>
+                  <template v-for="view in [installView(skill)]" :key="skill.slug">
+                    <button
+                      v-if="!view.needsPanel"
+                      type="button"
+                      class="skill-sandbox-chip"
+                      :class="view.installs.length ? 'is-installed' : 'is-idle'"
+                      @click="onInstallChip(skill, view)"
+                    >
+                      <span>{{ installChipText(skill, view) }}</span>
+                    </button>
+                    <t-popup
+                      v-else
+                      :visible="openInstallPanelId === skill.slug"
+                      trigger="click"
+                      placement="bottom-left"
+                      attach="body"
+                      @visible-change="(visible) => setInstallPanel(skill.slug, visible)"
+                    >
+                      <button type="button" class="skill-sandbox-chip is-installed">
+                        <span>{{ installChipText(skill, view) }}</span>
+                      </button>
+                      <template #content>
+                        <div class="skill-install-panel">
+                          <button
+                            v-for="inst in view.installs"
+                            :key="inst.skill_id"
+                            type="button"
+                            class="skill-install-panel__item"
+                            @click="openInstalledManage(skill, inst)"
+                          >
+                            {{ inst.sandbox_config_name || inst.name }}
+                            <span v-if="inst.status === 'installing'"> · {{ t('settings.sandbox.skillStatusInstalling') }}</span>
+                          </button>
+                          <button
+                            v-for="sandbox in view.available"
+                            :key="sandbox.id"
+                            type="button"
+                            class="skill-install-panel__item is-available"
+                            @click="openSkillInstall(skill)"
+                          >
+                            {{ sandbox.name }} · {{ t('settings.skills.installPanelAvailable') }}
+                          </button>
+                        </div>
+                      </template>
+                    </t-popup>
+                  </template>
+                  <span class="skill-card-source">{{ usageSourceLabel(skill) }}</span>
+                </div>
+              </template>
               <template #actions>
                 <button
-                  v-if="skill.sourceScope !== 'personal'"
+                  v-if="canDeleteSkill(skill)"
                   type="button"
-                  class="skill-enabled-action"
-                  :class="{ enabled: skill.enabled !== false }"
-                  :disabled="!canManageSkill(skill) || isSkillToggling(skill.slug)"
-                  :aria-label="skill.enabled === false ? t('ext.skills.enable') : t('ext.skills.disable')"
-                  @click.stop="handleToggleSkillEnabled(skill)"
+                  class="skill-card__icon-btn skill-card__icon-btn--danger"
+                  :disabled="deletingSlug === skillFileKey(skill)"
+                  :title="t('settings.skills.deleteCatalog')"
+                  :aria-label="t('settings.skills.deleteCatalog')"
+                  @click.stop="askDeleteSkill(skill)"
                 >
-                  <Plus v-if="skill.enabled === false" :size="15" class="action-icon" />
-                  <template v-else>
-                    <Check :size="15" class="action-icon action-icon-check" />
-                    <Minus :size="15" class="action-icon action-icon-minus" />
-                  </template>
+                  <DeleteIcon size="14px" />
                 </button>
               </template>
             </InfoCard>
@@ -107,365 +133,70 @@
       </template>
     </div>
 
-    <SkillEditorModal
-      v-model:open="skillPreviewVisible"
-      :skill="previewSkill"
-      @submitted="handleSkillEditorSubmitted"
+    <SkillFilesDrawer
+      v-model:visible="filesVisible"
+      persist="harness"
+      :catalog-id="filesCatalogId"
+      :skill-name="filesCatalogName"
+      :builtin="filesBuiltin"
+      :installed="filesInstalled"
+      :source-type="filesSourceType"
+      :tool-dependencies="filesToolDeps"
+      :mcp-dependencies="filesMcpDeps"
+      :skill-dependencies="filesSkillDeps"
+      @changed="() => fetchSkills({ silent: true })"
     />
 
-    <SkillInstallFlowModal
-      :open="installFlowOpen"
-      :flow="installFlow"
-      @close="closeInstallFlow"
-      @completed="handleInstallFlowCompleted"
-    >
-      <template #selection>
-        <div class="remote-install-panel">
-          <t-tabs v-model="activeTab" class="install-tabs">
-            <!-- Tab 1: 按仓库拉取 -->
-            <t-tab-panel value="repo" :label="t('ext.skills.pullTab')">
-              <div class="tab-content-wrapper">
-                <t-form layout="vertical" class="remote-install-form">
-                  <div class="repo-input-row">
-                    <div class="repo-input-field">
-                      <t-input
-                        v-model="remoteInstallForm.source"
-                        :placeholder="t('ext.skills.repoPlaceholder')"
-                      >
-                        <template #suffix>
-                          <t-dropdown
-                            trigger="click"
-                            placement="bottom-right"
-                            :popup-props="{ overlayClassName: 'history-dropdown-menu' }"
-                          >
-                            <div class="history-trigger-wrapper">
-                              <t-tooltip :content="t('ext.skills.repoHistory')">
-                                <History
-                                  :size="14"
-                                  class="history-icon-trigger"
-                                  :class="{ 'has-history': repoHistory.length > 0 }"
-                                />
-                              </t-tooltip>
-                            </div>
-                            <template #dropdown>
-                            <t-dropdown-menu>
-                              <t-dropdown-item v-if="repoHistory.length === 0" disabled>
-                                <span class="history-empty-text">{{ t('ext.skills.noHistory') }}</span>
-                              </t-dropdown-item>
-                              <template v-else>
-                                <t-dropdown-item
-                                  v-for="item in repoHistory"
-                                  :key="item"
-                                  :value="item"
-                                  @click="handleSelectHistory({ key: item })"
-                                >
-                                  <div class="history-item-menu-row">
-                                    <span class="history-item-text" :title="item">{{
-                                      item
-                                    }}</span>
-                                    <span
-                                      class="history-item-del-btn"
-                                      @click.stop="deleteHistoryItem(item)"
-                                    >
-                                      <Trash2 :size="12" />
-                                    </span>
-                                  </div>
-                                </t-dropdown-item>
-                                <t-dropdown-item
-                                  value="clear-all-history"
-                                  divider
-                                  class="clear-history-menu-item"
-                                  @click="handleSelectHistory({ key: 'clear-all-history' })"
-                                >
-                                  <div class="clear-history-btn-content">
-                                    <Trash2 :size="12" class="clear-icon" />
-                                    <span>{{ t('ext.skills.clearHistory') }}</span>
-                                  </div>
-                                </t-dropdown-item>
-                              </template>
-                            </t-dropdown-menu>
-                            </template>
-                          </t-dropdown>
-                        </template>
-                      </t-input>
-                    </div>
-                    <t-button
-                      theme="primary"
-                      :loading="listingRemoteSkills"
-                      @click="handleListRemoteSkills"
-                    >
-                      {{ t('ext.skills.pullSkills') }}
-                    </t-button>
-                  </div>
-                  <div class="repo-hint-text">
-                    {{ t('ext.skills.repoHintBefore') }}
-                    <a href="https://skills.sh/" target="_blank" rel="noopener noreferrer"
-                      >skills.sh</a
-                    >
-                    {{ t('ext.skills.repoHintAfterLink') }}
-                    <a href="https://modelscope.cn/skills" target="_blank" rel="noopener noreferrer">{{
-                      t('ext.skills.repoHintMarket')
-                    }}</a>
-                    {{ t('ext.skills.repoHintAfterMarket') }}
-                  </div>
+    <SkillSettings
+      ref="skillSettingsRef"
+      persist="harness"
+      drawers-only
+      @changed="() => fetchSkills({ silent: true })"
+    />
 
-                  <!-- 仓库技能多选列表 -->
-                  <div v-if="remoteSkillOptions.length" class="skills-list-section">
-                    <template v-if="hasSingleRepoSkill">
-                      <div class="single-remote-skill-card">
-                        <div class="single-remote-skill-name">{{ singleRepoSkill.name }}</div>
-                        <div class="single-remote-skill-meta">
-                          {{ singleRepoSkill.description || t('ext.noDescription') }}
-                        </div>
-                      </div>
-                    </template>
-                    <template v-else>
-                      <div class="list-operations-bar">
-                        <div class="op-buttons">
-                          <t-button size="small" variant="text" @click="handleRepoSelectAll"
-                            >{{ t('ext.skills.selectAll') }}</t-button
-                          >
-                          <t-button size="small" variant="text" @click="handleRepoSelectInvert"
-                            >{{ t('ext.skills.invert') }}</t-button
-                          >
-                          <t-button size="small" variant="text" @click="handleRepoSelectNone"
-                            >{{ t('ext.skills.clear') }}</t-button
-                          >
-                        </div>
-                        <t-input
-                          v-model="repoFilterKeyword"
-                          :placeholder="t('ext.skills.localFilter')"
-                          size="small"
-                          style="width: 180px"
-                          clearable
-                        />
-                      </div>
-                      <div class="skills-list-viewport">
-                        <div class="remote-skills-list-container">
-                          <div
-                            v-for="item in filteredRepoSkills"
-                            :key="item.name"
-                            class="remote-skill-row"
-                            :class="{ selected: selectedRepoSkills.includes(item.name) }"
-                            role="checkbox"
-                            tabindex="0"
-                            :aria-checked="selectedRepoSkills.includes(item.name)"
-                            @click="toggleRepoSkillFromRow(item.name)"
-                            @keydown.enter.prevent="toggleRepoSkillFromRow(item.name)"
-                            @keydown.space.prevent="toggleRepoSkillFromRow(item.name)"
-                          >
-                            <t-checkbox
-                              class="remote-row-checkbox"
-                              :checked="selectedRepoSkills.includes(item.name)"
-                              :tabindex="-1"
-                              aria-hidden="true"
-                            />
-                            <div class="remote-skill-row-content">
-                              <span class="skill-item-name">{{ item.name }}</span>
-                              <span class="skill-item-desc">{{
-                                item.description || t('ext.noDescription')
-                              }}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </template>
-                  </div>
-                </t-form>
-              </div>
-            </t-tab-panel>
-
-            <!-- Tab 2: 全局搜索发现 -->
-            <t-tab-panel value="search" :label="t('ext.skills.searchTab')">
-              <div class="tab-content-wrapper">
-                <t-form layout="vertical" class="remote-install-form">
-                  <div class="repo-input-row">
-                    <div class="repo-input-field">
-                      <t-input
-                        v-model="searchKeyword"
-                        :placeholder="t('ext.skills.searchPlaceholderRemote')"
-                        @enter="handleSearchRemoteSkills"
-                      />
-                    </div>
-                    <t-button
-                      theme="primary"
-                      :loading="searchingRemoteSkills"
-                      @click="handleSearchRemoteSkills"
-                    >
-                      {{ t('ext.skills.findSkills') }}
-                    </t-button>
-                  </div>
-                  <div class="repo-hint-text">
-                    {{ t('ext.skills.searchHint') }}
-                  </div>
-
-                  <!-- 搜索结果列表 -->
-                  <div v-if="searchedSkills.length" class="skills-list-section">
-                    <template v-if="hasSingleSearchedSkill">
-                      <div class="single-remote-skill-card">
-                        <div class="single-remote-skill-header">
-                          <div class="single-remote-skill-name">
-                            {{ singleSearchedSkill.name }}
-                          </div>
-                          <t-tag v-if="singleSearchedSkill.installs" size="small" variant="light-outline" class="wk-chip skill-item-installs">
-                            {{ singleSearchedSkill.installs }}
-                          </t-tag>
-                        </div>
-                        <div class="single-remote-skill-meta">
-                          {{ singleSearchedSkill.source }}
-                        </div>
-                      </div>
-                    </template>
-                    <template v-else>
-                      <div class="list-operations-bar">
-                        <div class="op-buttons">
-                          <t-button size="small" variant="text" @click="handleSearchSelectAll"
-                            >{{ t('ext.skills.selectAll') }}</t-button
-                          >
-                          <t-button size="small" variant="text" @click="handleSearchSelectInvert"
-                            >{{ t('ext.skills.invert') }}</t-button
-                          >
-                          <t-button size="small" variant="text" @click="handleSearchSelectNone"
-                            >{{ t('ext.skills.clear') }}</t-button
-                          >
-                        </div>
-                      </div>
-                      <div class="skills-list-viewport">
-                        <div class="remote-skills-list-container">
-                          <div
-                            v-for="item in searchedSkills"
-                            :key="`${item.source}:${item.name}`"
-                            class="remote-skill-row"
-                            :class="{ selected: isSearchSkillSelected(item) }"
-                            role="checkbox"
-                            tabindex="0"
-                            :aria-checked="isSearchSkillSelected(item)"
-                            @click="toggleSearchSkillFromRow(item)"
-                            @keydown.enter.prevent="toggleSearchSkillFromRow(item)"
-                            @keydown.space.prevent="toggleSearchSkillFromRow(item)"
-                          >
-                            <t-checkbox
-                              class="remote-row-checkbox"
-                              :checked="isSearchSkillSelected(item)"
-                              :tabindex="-1"
-                              aria-hidden="true"
-                            />
-                            <div class="remote-skill-row-content">
-                              <span class="skill-item-name">{{ item.name }}</span>
-                              <span class="skill-item-desc">{{ item.source }}</span>
-                            </div>
-                            <span v-if="item.installs" class="skill-install-count">
-                              {{ item.installs }}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </template>
-                  </div>
-                </t-form>
-              </div>
-            </t-tab-panel>
-          </t-tabs>
-        </div>
-      </template>
-
-      <template #selection-footer>
-        <span class="modal-footer-summary">{{ remoteSelectionSummary }}</span>
-        <div class="modal-footer-buttons">
-          <t-button variant="outline" @click="closeInstallFlow">{{ t('ext.cancel') }}</t-button>
-          <t-button
-            theme="primary"
-            :disabled="
-              activeTab === 'repo'
-                ? selectedRepoSkills.length === 0
-                : selectedSearchSkills.length === 0
-            "
-            @click="startInstallRemoteSkills"
-          >
-            {{ t('ext.skills.confirmParse') }}
-          </t-button>
-        </div>
-      </template>
-    </SkillInstallFlowModal>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { MessagePlugin } from 'tdesign-vue-next'
-import {
-  WandSparkles,
-  History,
-  Trash2,
-  Check,
-  Plus,
-  Minus,
-  ChevronDown,
-  ChevronRight
-} from 'lucide-vue-next'
+import { ChevronDown, ChevronRight } from 'lucide-vue-next'
+import { DeleteIcon } from 'tdesign-icons-vue-next'
+import { useConfirmDelete } from '@/components/settings/useConfirmDelete'
 import { skillApi } from '@/api/chat-work/skill'
 import ExtensionCardGrid from '@/components/harness/extensions/ExtensionCardGrid.vue'
-import SkillInstallFlowModal from './SkillInstallFlowModal.vue'
-import SkillEditorModal from './SkillEditorModal.vue'
+import SkillFilesDrawer from '@/components/SkillFilesDrawer.vue'
+import SkillSettings from '@/views/settings/SkillSettings.vue'
 import InfoCard from '@/components/harness/shared/InfoCard.vue'
 import PageShoulder from '@/components/harness/shared/PageShoulder.vue'
 import { formatExtensionCardTitle } from '@/utils/harness/extensionDisplayName'
 import { getSkillIcon } from '@/utils/harness/skill_icon_utils'
 
 const { t } = useI18n()
+const confirmDelete = useConfirmDelete()
 
 const emit = defineEmits(['loading-change'])
 
 const loading = ref(false)
-const skillFileInput = ref(null)
-const importing = ref(false)
-const listingRemoteSkills = ref(false)
 const searchQuery = ref('')
+const selectedScope = ref('')
 
-const togglingSkillSlugs = ref([])
+const deletingSlug = ref('')
 
 const skills = ref([])
-const skillPreviewVisible = ref(false)
-const previewSkill = ref(null)
-const installFlowOpen = ref(false)
-const installFlow = ref(null)
-
-const activeTab = ref('repo') // 'repo' 或 'search'
-
-const remoteInstallForm = reactive({
-  source: 'https://github.com/anthropics/skills',
-  skills: []
-})
-const remoteSkillOptions = ref([])
-const repoFilterKeyword = ref('')
-const selectedRepoSkills = ref([])
-const hasSingleRepoSkill = computed(() => remoteSkillOptions.value.length === 1)
-const singleRepoSkill = computed(() => remoteSkillOptions.value[0] || null)
-
-const searchKeyword = ref('')
-const searchingRemoteSkills = ref(false)
-const searchedSkills = ref([])
-const selectedSearchSkills = ref([])
-const hasSingleSearchedSkill = computed(() => searchedSkills.value.length === 1)
-const singleSearchedSkill = computed(() => searchedSkills.value[0] || null)
-const remoteSelectionSummary = computed(() => {
-  if (activeTab.value === 'repo') {
-    if (!remoteSkillOptions.value.length) return t('ext.skills.pickRepoFirst')
-    return t('ext.skills.repoSelected', {
-      selected: selectedRepoSkills.value.length,
-      total: remoteSkillOptions.value.length
-    })
-  }
-
-  if (!searchedSkills.value.length) return t('ext.skills.typeKeywordFirst')
-  return t('ext.skills.searchSelected', {
-    selected: selectedSearchSkills.value.length,
-    total: searchedSkills.value.length
-  })
-})
-
-const repoHistory = ref([])
+const skillSettingsRef = ref(null)
+const sandboxBoard = ref({ sandboxes: [], installations: [] })
+const openInstallPanelId = ref('')
+const filesVisible = ref(false)
+const filesCatalogId = ref('')
+const filesCatalogName = ref('')
+const filesBuiltin = ref(false)
+const filesInstalled = ref(false)
+const filesSourceType = ref('')
+const filesToolDeps = ref([])
+const filesMcpDeps = ref([])
+const filesSkillDeps = ref([])
 
 watch(loading, (v) => emit('loading-change', v), { immediate: true })
 
@@ -492,23 +223,24 @@ const installedSkillCards = computed(() =>
 )
 
 const filteredInstalledSkills = computed(() => installedSkillCards.value.filter(matchesSearch))
+const pageSkills = computed(() =>
+  filteredInstalledSkills.value.filter((skill) => {
+    if (skill.sourceScope === 'personal') return false
+    if (!selectedScope.value) return true
+    return (skill.source_type || skill.sourceType) === selectedScope.value
+  })
+)
+const isBuiltinSkill = (skill) => skill.sourceScope === 'builtin' || skill.is_builtin === true
 const skillGroups = computed(() => [
-  {
-    key: 'personal',
-    title: t('ext.skills.groupPersonal'),
-    skills: filteredInstalledSkills.value.filter((skill) => skill.sourceScope === 'personal')
-  },
   {
     key: 'builtin',
     title: t('ext.skills.groupBuiltin'),
-    skills: filteredInstalledSkills.value.filter((skill) => skill.sourceType === 'builtin')
+    skills: pageSkills.value.filter((skill) => isBuiltinSkill(skill))
   },
   {
     key: 'uploaded',
     title: t('ext.skills.groupShared'),
-    skills: filteredInstalledSkills.value.filter(
-      (skill) => skill.sourceType !== 'builtin' && skill.sourceScope !== 'personal'
-    )
+    skills: pageSkills.value.filter((skill) => !isBuiltinSkill(skill))
   }
 ])
 const visibleSkillGroups = computed(() => skillGroups.value.filter((group) => group.skills.length))
@@ -519,92 +251,6 @@ const toggleSkillSection = (key) => {
   if (next.has(key)) next.delete(key)
   else next.add(key)
   collapsedSkillSections.value = next
-}
-
-// 仓库拉取的技能列表过滤
-const filteredRepoSkills = computed(() => {
-  if (!repoFilterKeyword.value.trim()) return remoteSkillOptions.value
-  const kw = repoFilterKeyword.value.trim().toLowerCase()
-  return remoteSkillOptions.value.filter(
-    (item) =>
-      item.name.toLowerCase().includes(kw) ||
-      (item.description && item.description.toLowerCase().includes(kw))
-  )
-})
-
-// 批量选择/反选/清空管理
-const handleRepoSelectAll = () => {
-  selectedRepoSkills.value = filteredRepoSkills.value.map((item) => item.name)
-}
-const handleRepoSelectNone = () => {
-  selectedRepoSkills.value = []
-}
-const handleRepoSelectInvert = () => {
-  const currentSelected = new Set(selectedRepoSkills.value)
-  const newSelected = []
-  filteredRepoSkills.value.forEach((item) => {
-    if (!currentSelected.has(item.name)) {
-      newSelected.push(item.name)
-    }
-  })
-  selectedRepoSkills.value = newSelected
-}
-
-const handleSearchSelectAll = () => {
-  selectedSearchSkills.value = [...searchedSkills.value]
-}
-const handleSearchSelectNone = () => {
-  selectedSearchSkills.value = []
-}
-const handleSearchSelectInvert = () => {
-  const newSelected = []
-  searchedSkills.value.forEach((item) => {
-    const isSelected = selectedSearchSkills.value.some(
-      (s) => s.name === item.name && s.source === item.source
-    )
-    if (!isSelected) {
-      newSelected.push(item)
-    }
-  })
-  selectedSearchSkills.value = newSelected
-}
-
-const handleToggleRepoSkill = (name, checked) => {
-  if (checked) {
-    if (!selectedRepoSkills.value.includes(name)) {
-      selectedRepoSkills.value.push(name)
-    }
-  } else {
-    selectedRepoSkills.value = selectedRepoSkills.value.filter((n) => n !== name)
-  }
-}
-
-const toggleRepoSkillFromRow = (name) => {
-  handleToggleRepoSkill(name, !selectedRepoSkills.value.includes(name))
-}
-
-const isSearchSkillSelected = (item) =>
-  selectedSearchSkills.value.some(
-    (skill) => skill.name === item.name && skill.source === item.source
-  )
-
-const handleToggleSearchSkill = (item, checked) => {
-  if (checked) {
-    const isExist = selectedSearchSkills.value.some(
-      (s) => s.name === item.name && s.source === item.source
-    )
-    if (!isExist) {
-      selectedSearchSkills.value.push(item)
-    }
-  } else {
-    selectedSearchSkills.value = selectedSearchSkills.value.filter(
-      (s) => !(s.name === item.name && s.source === item.source)
-    )
-  }
-}
-
-const toggleSearchSkillFromRow = (item) => {
-  handleToggleSearchSkill(item, !isSearchSkillSelected(item))
 }
 
 const skillCardTags = (skill) => {
@@ -619,52 +265,138 @@ const skillCardTags = (skill) => {
   ]
 }
 
-const canManageSkill = (skill) => skill?.can_manage !== false
-const isSkillToggling = (slug) => togglingSkillSlugs.value.includes(slug)
-
-const openSkillPreview = (skill) => {
-  if (!skill?.slug) return
-  previewSkill.value = skill
-  skillPreviewVisible.value = true
+const skillFileKey = (skill) => {
+  if (skill?.sourceScope === 'builtin' || skill?.is_builtin) return skill.slug
+  return skill?.id || skill?.slug
 }
 
-const handleSkillEditorSubmitted = async () => {
-  await fetchSkills()
+const openSkillFiles = (skill) => {
+  const key = skillFileKey(skill)
+  if (!key) return
+  filesCatalogId.value = key
+  filesCatalogName.value = skill.name || skill.slug || ''
+  filesBuiltin.value = isBuiltinSkill(skill)
+  filesInstalled.value = installView(skill).installs.length > 0
+  filesSourceType.value = skill.source_type || skill.sourceType || ''
+  filesToolDeps.value = [...(skill.tool_dependencies || [])]
+  filesMcpDeps.value = [...(skill.mcp_dependencies || [])]
+  filesSkillDeps.value = [...(skill.skill_dependencies || [])]
+  filesVisible.value = true
 }
 
-const handleToggleSkillEnabled = async (skill) => {
-  if (!skill || !canManageSkill(skill) || isSkillToggling(skill.slug)) return
-  const enabled = skill.enabled === false
-  togglingSkillSlugs.value.push(skill.slug)
+const canDeleteSkill = (skill) => {
+  if (!skill || skill.sourceScope === 'builtin' || skill.is_builtin || skill.sourceScope === 'personal') return false
+  return installView(skill).installs.length === 0
+}
+
+const askDeleteSkill = (skill) => {
+  if (!canDeleteSkill(skill) || deletingSlug.value) return
+  confirmDelete({
+    body: t('settings.skills.deleteCatalogConfirm', { name: skill.name || skill.slug }),
+    onConfirm: () => removeSkill(skill),
+  })
+}
+
+const removeSkill = async (skill) => {
+  const key = skillFileKey(skill)
+  if (!key) return
+  deletingSlug.value = key
   try {
-    const result = await skillApi.updateSkillEnabled(skill.slug, enabled)
-    const updatedSkill = result?.data
-    const index = skills.value.findIndex(
-      (item) => item.slug === skill.slug && item.source_scope !== 'personal'
-    )
-    if (updatedSkill && index > -1) {
-      skills.value[index] = updatedSkill
-    } else {
-      await fetchSkills()
-    }
-    if (previewSkill.value?.slug === skill.slug) {
-      previewSkill.value = updatedSkill
-        ? { ...updatedSkill, sourceType: updatedSkill.source_type || 'upload' }
-        : { ...previewSkill.value, enabled }
-    }
-    MessagePlugin.success(t(enabled ? 'ext.skills.enabled' : 'ext.skills.disabledOk'))
+    await skillApi.deleteSkill(key)
+    MessagePlugin.success(t('ext.skills.uninstalled'))
+    await fetchSkills()
   } catch (error) {
-    MessagePlugin.error(error?.response?.data?.detail || error.message || t('ext.skills.toggleFailed'))
+    MessagePlugin.error(error?.message || t('ext.skills.uninstallFailed'))
   } finally {
-    togglingSkillSlugs.value = togglingSkillSlugs.value.filter((slug) => slug !== skill.slug)
+    deletingSlug.value = ''
   }
 }
 
-const fetchSkills = async ({ refreshPersonal = false } = {}) => {
-  loading.value = true
+const usageSourceLabel = (skill) => {
+  const value = skill.source_type || skill.sourceType
+  if (value === 'work') return t('ext.tools.sourceWork')
+  if (value === 'common') return t('ext.skills.sourceCommon')
+  return t('ext.tools.sourceChat')
+}
+
+const liveInstallsFor = (skill) =>
+  (sandboxBoard.value.installations || []).filter((inst) => {
+    if (!inst?.status || inst.status === 'removed') return false
+    return inst.catalog_id === skill.id || inst.name === skill.slug
+  })
+
+const installView = (skill) => {
+  const installs = liveInstallsFor(skill)
+  const taken = new Set(
+    installs
+      .filter((inst) => ['installing', 'ready', 'removing'].includes(inst.status))
+      .map((inst) => inst.sandbox_config_id)
+  )
+  const available = (sandboxBoard.value.sandboxes || []).filter((sandbox) => !taken.has(sandbox.id))
+  return {
+    installs,
+    available,
+    needsPanel: installs.length + available.length > 1
+  }
+}
+
+const installChipText = (skill, view) => {
+  if (!view.installs.length) return t('settings.skills.installToSandbox')
+  if (view.installs.length === 1) {
+    const name = view.installs[0].sandbox_config_name || view.installs[0].name
+    return t('settings.skills.installedOnName', { name })
+  }
+  return t('settings.skills.installedCount', { count: view.installs.length })
+}
+
+const catalogItemFor = (skill) => ({
+  id: skillFileKey(skill),
+  name: skill.name,
+  description: skill.description || '',
+  created_at: skill.created_at || '',
+  updated_at: skill.updated_at || '',
+  installations: liveInstallsFor(skill).map((inst) => ({
+    skill_id: inst.skill_id,
+    sandbox_config_id: inst.sandbox_config_id,
+    sandbox_config_name: inst.sandbox_config_name,
+    sandbox_type: inst.sandbox_type,
+    status: inst.status,
+    enabled: inst.enabled !== false,
+    updated_at: inst.updated_at || ''
+  }))
+})
+
+const setInstallPanel = (slug, visible) => {
+  openInstallPanelId.value = visible ? slug : ''
+}
+
+const openSkillInstall = (skill) => {
+  openInstallPanelId.value = ''
+  skillSettingsRef.value?.openInstall(catalogItemFor(skill))
+}
+
+const openInstalledManage = (skill, install) => {
+  openInstallPanelId.value = ''
+  skillSettingsRef.value?.openManage(catalogItemFor(skill), install)
+}
+
+const onInstallChip = (skill, view) => {
+  if (view.installs.length === 1) {
+    openInstalledManage(skill, view.installs[0])
+    return
+  }
+  openSkillInstall(skill)
+}
+
+const fetchSkills = async ({ refreshPersonal = false, silent = false } = {}) => {
+  if (!silent) loading.value = true
   try {
-    const skillResult = await skillApi.listSkillCards({ refreshPersonal })
+    const [skillResult, boardResult] = await Promise.all([
+      skillApi.listSkillCards({ refreshPersonal }),
+      skillApi.listSkillSandboxBoard().catch(() => ({ data: { sandboxes: [], installations: [] } }))
+    ])
     skills.value = skillResult?.data || []
+    sandboxBoard.value = boardResult?.data || { sandboxes: [], installations: [] }
   } catch {
     MessagePlugin.error(t('ext.skills.loadFailed'))
   } finally {
@@ -672,224 +404,12 @@ const fetchSkills = async ({ refreshPersonal = false } = {}) => {
   }
 }
 
-const beforeSkillUpload = (file) => {
-  const lower = file.name.toLowerCase()
-  if (!lower.endsWith('.zip') && lower !== 'skill.md') {
-    MessagePlugin.error(t('ext.skills.uploadType'))
-    return false
-  }
-  return true
-}
-
-const onSkillFileChange = async (event) => {
-  const file = event.target.files?.[0]
-  event.target.value = ''
-  if (!file) return
-  if (beforeSkillUpload(file) === false) return
-  await handleImportUpload({ file })
-}
-
-const openInstallFlow = (flow) => {
-  installFlow.value = flow
-  installFlowOpen.value = true
-}
-
-const resetRemoteSelection = () => {
-  selectedRepoSkills.value = []
-  selectedSearchSkills.value = []
-  remoteSkillOptions.value = []
-  searchedSkills.value = []
-  repoFilterKeyword.value = ''
-  searchKeyword.value = ''
-}
-
-const closeInstallFlow = () => {
-  const wasRemoteFlow = installFlow.value?.kind === 'remote'
-  installFlowOpen.value = false
-  installFlow.value = null
-  if (wasRemoteFlow) resetRemoteSelection()
-}
-
-const handleInstallFlowCompleted = async ({ success, failed }) => {
-  if (failed === 0) MessagePlugin.success(t('ext.skills.addedCount', { count: success }))
-  else MessagePlugin.warning(t('ext.skills.installPartial', { success, failed }))
-  await fetchSkills()
-}
-
-const handleImportUpload = async ({ file, onSuccess, onError }) => {
-  importing.value = true
-  try {
-    const result = await skillApi.prepareSkillUpload(file)
-    openInstallFlow({
-      kind: 'draft',
-      title: t('ext.skills.installFile', { name: file.name }),
-      description: t('ext.skills.installFileDesc'),
-      drafts: [result?.data]
-    })
-    onSuccess?.(result)
-  } catch (e) {
-    MessagePlugin.error(e?.response?.data?.detail || e.message || t('ext.skills.parseFailed'))
-    onError?.(e)
-  } finally {
-    importing.value = false
-  }
-}
-
-const handleOpenRemoteInstall = () => {
-  resetRemoteSelection()
-  openInstallFlow({
-    kind: 'remote',
-    title: t('ext.skills.remoteTitle'),
-    description: t('ext.skills.remoteDesc')
-  })
-}
-
-const rememberRemoteSource = (source) => {
-  let history = [...repoHistory.value]
-  history = history.filter((item) => item !== source)
-  history.unshift(source)
-  if (history.length > 10) {
-    history = history.slice(0, 10)
-  }
-  repoHistory.value = history
-  localStorage.setItem('yuxi_remote_repo_history', JSON.stringify(history))
-}
-
-const handleListRemoteSkills = async () => {
-  const source = remoteInstallForm.source.trim()
-  if (!source) {
-    MessagePlugin.warning(t('ext.skills.remoteNeedSource'))
-    return
-  }
-  listingRemoteSkills.value = true
-  try {
-    const result = await skillApi.listRemoteSkills(source)
-    remoteSkillOptions.value = result?.data || []
-    selectedRepoSkills.value =
-      remoteSkillOptions.value.length === 1 ? [remoteSkillOptions.value[0].name] : []
-    if (!remoteSkillOptions.value.length) {
-      MessagePlugin.warning(t('ext.skills.remoteNone'))
-      return
-    }
-    if (remoteSkillOptions.value.length === 1) {
-      MessagePlugin.success(t('ext.skills.remoteFoundOne'))
-    } else {
-      MessagePlugin.success(t('ext.skills.remoteFoundMany', { count: remoteSkillOptions.value.length }))
-    }
-
-    rememberRemoteSource(source)
-  } catch (error) {
-    MessagePlugin.error(error?.response?.data?.detail || error.message || t('ext.skills.remoteFetchFailed'))
-  } finally {
-    listingRemoteSkills.value = false
-  }
-}
-
-const loadHistory = () => {
-  try {
-    const raw = localStorage.getItem('yuxi_remote_repo_history')
-    if (raw) {
-      repoHistory.value = JSON.parse(raw)
-    }
-  } catch (e) {
-    console.error('Failed to load repo history', e)
-  }
-}
-
-const deleteHistoryItem = (item) => {
-  repoHistory.value = repoHistory.value.filter((h) => h !== item)
-  localStorage.setItem('yuxi_remote_repo_history', JSON.stringify(repoHistory.value))
-}
-
-const clearAllHistory = () => {
-  repoHistory.value = []
-  localStorage.removeItem('yuxi_remote_repo_history')
-  MessagePlugin.success(t('ext.skills.historyCleared'))
-}
-
-const handleSelectHistory = ({ key }) => {
-  if (key === 'clear-all-history') {
-    clearAllHistory()
-    return
-  }
-  remoteInstallForm.source = key
-}
-
-const handleSearchRemoteSkills = async () => {
-  const query = searchKeyword.value.trim()
-  if (!query) {
-    MessagePlugin.warning(t('ext.skills.needKeyword'))
-    return
-  }
-  searchingRemoteSkills.value = true
-  try {
-    const result = await skillApi.searchRemoteSkills(query)
-    searchedSkills.value = result?.data || []
-    selectedSearchSkills.value = searchedSkills.value.length === 1 ? [...searchedSkills.value] : []
-    if (!searchedSkills.value.length) {
-      MessagePlugin.warning(t('ext.skills.searchNone'))
-    } else if (searchedSkills.value.length === 1) {
-      MessagePlugin.success(t('ext.skills.searchFoundOne'))
-    } else {
-      MessagePlugin.success(t('ext.skills.searchFoundMany', { count: searchedSkills.value.length }))
-    }
-  } catch (error) {
-    MessagePlugin.error(error?.response?.data?.detail || error.message || t('ext.skills.searchFailed'))
-  } finally {
-    searchingRemoteSkills.value = false
-  }
-}
-
-const startInstallRemoteSkills = () => {
-  const requests = []
-  if (activeTab.value === 'repo') {
-    requests.push({
-      source: remoteInstallForm.source.trim(),
-      skills: [...selectedRepoSkills.value],
-      skillDetails: remoteSkillOptions.value
-        .filter((item) => selectedRepoSkills.value.includes(item.name))
-        .map((item) => ({ ...item, slug: item.name }))
-    })
-  } else {
-    const groups = new Map()
-    selectedSearchSkills.value.forEach((item) => {
-      if (!groups.has(item.source)) groups.set(item.source, [])
-      groups.get(item.source).push(item)
-    })
-    groups.forEach((items, source) => {
-      requests.push({
-        source,
-        skills: items.map((item) => item.name),
-        skillDetails: items.map((item) => ({ ...item, slug: item.name }))
-      })
-    })
-  }
-
-  openInstallFlow({
-    kind: 'remote',
-    title: t('ext.skills.remoteTitle'),
-    description: t('ext.skills.remoteSummary', {
-      sources: requests.length,
-      count: requests.reduce((total, item) => total + item.skills.length, 0)
-    }),
-    requests
-  })
-}
-
-watch(activeTab, () => {
-  selectedRepoSkills.value = []
-  selectedSearchSkills.value = []
-})
-
 onMounted(() => {
   fetchSkills()
-  loadHistory()
 })
 
 defineExpose({
   fetchSkills,
-  handleImportUpload,
-  openRemoteInstallModal: handleOpenRemoteInstall,
   loading
 })
 </script>
@@ -939,52 +459,6 @@ defineExpose({
   }
 }
 
-.skill-empty-state {
-  width: 100%;
-  min-height: 280px;
-  padding: 40px var(--page-padding);
-}
-
-.skill-empty-card {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 220px;
-  flex-direction: column;
-  border: 1px dashed var(--gray-150);
-  border-radius: 16px;
-  background: linear-gradient(180deg, var(--gray-0) 0%, var(--gray-25) 100%);
-  color: var(--gray-500);
-  text-align: center;
-}
-
-.skill-empty-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  margin-bottom: 12px;
-  border-radius: 14px;
-  background: var(--gray-50);
-  color: var(--gray-600);
-}
-
-.skill-empty-title {
-  color: var(--gray-800);
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 22px;
-}
-
-.skill-empty-desc {
-  margin-top: 4px;
-  color: var(--gray-500);
-  font-size: 13px;
-  line-height: 20px;
-}
-
 .card-wrapper {
   position: relative;
 
@@ -1003,68 +477,30 @@ defineExpose({
   }
 }
 
-.skill-enabled-action {
+.skill-card__icon-btn {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid var(--gray-150);
-  border-radius: 8px;
-  background: var(--gray-0);
-  color: var(--gray-600);
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--td-text-color-placeholder);
   cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    background-color 0.18s ease,
-    color 0.18s ease;
 
-  &:hover,
-  &:focus {
-    outline: none;
-    border-color: var(--gray-300);
-    background: var(--gray-50);
+  &:hover:not(:disabled) {
+    color: var(--td-error-color);
+    background: var(--td-bg-color-container-hover);
   }
 
   &:disabled {
     cursor: not-allowed;
     opacity: 0.45;
   }
-
-  &.loading:disabled {
-    cursor: wait;
-    opacity: 1;
-  }
-
-  &.enabled {
-    color: var(--color-success-700);
-
-    .action-icon-minus {
-      display: none;
-    }
-
-    &:hover,
-    &:focus {
-      border-color: var(--color-error-200, #ffccc7);
-      background: var(--color-error-50, #fff2f0);
-      color: var(--color-error-700, #cf1322);
-
-      .action-icon-check {
-        display: none;
-      }
-
-      .action-icon-minus {
-        display: block;
-      }
-    }
-  }
-}
-
-.action-icon {
-  flex-shrink: 0;
 }
 
 .skill-preview-panel {
@@ -1168,337 +604,66 @@ defineExpose({
   align-items: center;
   gap: 8px;
 }
-
-.remote-install-panel {
-  :deep(.install-tabs > .t-tabs__nav) {
-    justify-content: center;
-  }
-
-  .repo-input-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 4px;
-
-    .repo-input-field {
-      flex: 1;
-      min-width: 0;
-    }
-  }
-
-  .history-trigger-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    cursor: pointer;
-    outline: none;
-    margin-right: -4px;
-    border-radius: 4px;
-    transition: background-color 0.2s ease;
-
-    &:hover {
-      background-color: var(--gray-100);
-    }
-
-    &:focus,
-    &:focus-visible {
-      outline: none;
-    }
-  }
-
-  .history-icon-trigger {
-    color: var(--gray-400);
-    transition: color 0.2s ease;
-    outline: none;
-
-    &:hover {
-      color: var(--gray-700);
-    }
-
-    &.has-history {
-      color: var(--gray-500);
-
-      &:hover {
-        color: var(--gray-700);
-      }
-    }
-  }
-
-  .repo-hint-text {
-    font-size: 12px;
-    color: var(--gray-400);
-    margin-bottom: 12px;
-    line-height: 1.4;
-
-    a {
-      color: var(--gray-700);
-      text-decoration: underline;
-    }
-  }
-
-  .tab-content-wrapper {
-    padding: 4px 0 8px 0;
-  }
-
-  .skills-list-section {
-    margin-top: 12px;
-    border: 1px solid var(--gray-150);
-    border-radius: 8px;
-    overflow: hidden;
-    background: var(--gray-0);
-  }
-
-  .list-operations-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid var(--gray-150);
-    padding: 8px 10px;
-
-    .op-buttons {
-      display: flex;
-      gap: 2px;
-
-      .t-button {
-        padding: 0 4px;
-        height: auto;
-        font-size: 12px;
-        color: var(--gray-600);
-
-        &:hover {
-          color: var(--gray-900);
-        }
-      }
-    }
-  }
-
-  .skills-list-viewport {
-    max-height: min(42vh, 420px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    background: var(--gray-0);
-  }
-
-  .remote-skills-list-container {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1px;
-    background: var(--gray-100);
-  }
-
-  .remote-skill-row {
-    display: flex;
-    align-items: center;
-    min-height: 46px;
-    padding: 6px 10px;
-    gap: 8px;
-    background: var(--gray-0);
-    cursor: pointer;
-    transition: background-color 0.18s ease;
-
-    &:hover,
-    &.selected {
-      background: var(--gray-25);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--gray-400);
-      outline-offset: -2px;
-    }
-
-    &[aria-disabled='true'] {
-      cursor: not-allowed;
-    }
-  }
-
-  .remote-row-checkbox {
-    pointer-events: none;
-  }
-
-  .single-remote-skill-card {
-    border: 1px solid var(--gray-150);
-    border-radius: 6px;
-    background: var(--gray-0);
-    padding: 12px;
-  }
-
-  .single-remote-skill-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    min-width: 0;
-
-    .t-tag {
-      flex-shrink: 0;
-      margin-inline-end: 0;
-    }
-  }
-
-  .single-remote-skill-name {
-    line-height: 20px;
-    font-weight: 600;
-    color: var(--gray-900);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .single-remote-skill-meta {
-    margin-top: 2px;
-    font-size: 12px;
-    line-height: 18px;
-    color: var(--gray-500);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .remote-skill-row-content {
-    display: flex;
-    min-width: 0;
-    flex: 1;
-    flex-direction: column;
-
-    .skill-item-name {
-      font-weight: 600;
-      color: var(--gray-900);
-    }
-
-    .skill-item-desc {
-      display: block;
-      font-size: 12px;
-      color: var(--gray-500);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-  }
-
-  .skill-install-count {
-    flex-shrink: 0;
-    color: var(--gray-500);
-    font-size: 11px;
-  }
-}
-
-@media (max-width: 600px) {
-  .remote-install-panel {
-    .skills-list-viewport {
-      max-height: 40vh;
-      overflow-y: auto;
-    }
-
-    .remote-skills-list-container {
-      grid-template-columns: 1fr;
-    }
-  }
-}
-
-.modal-footer-summary {
-  color: var(--gray-500);
-  font-size: 12px;
-  line-height: 18px;
-}
-
-.modal-footer-buttons {
-  display: flex;
-  margin-left: auto;
-  gap: 8px;
-
-  :deep(.t-button--variant-outline) {
-    background: var(--gray-0);
-  }
-}
 </style>
 
-<!-- NOTE: unscoped style block 用于 dropdown overlay 样式穿透 teleport -->
+<!-- NOTE: unscoped style block 用于卡片底部芯片，挂在卡片外层 -->
 <style lang="less">
-/* TDesign Dropdown overlay 通过 teleport 挂载到 body，
-   scoped CSS 无法穿透，因此必须使用 unscoped 样式。
-   使用 .history-dropdown-menu 作为 overlayClassName 命名空间。 */
-.history-dropdown-menu {
-  min-width: 280px;
-
-  .t-dropdown__menu {
-    padding: 4px;
-  }
-
-  .t-dropdown__item {
-    padding: 8px 12px;
-    border-radius: 6px;
-
-    .t-dropdown__item-text {
-      display: flex;
-      align-items: center;
-      width: 100%;
-    }
-  }
+.card-wrapper :deep(.info-card--kb) {
+  height: auto;
+  overflow: visible;
 }
 
-/* 历史记录行：仓库地址 + 删除按钮 */
-.history-item-menu-row {
+.skill-card-footer {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   width: 100%;
-  gap: 12px;
-
-  .history-item-text {
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: 13px;
-    color: var(--gray-800);
-    line-height: 1;
-  }
-
-  .history-item-del-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    color: var(--gray-400);
-    cursor: pointer;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-
-    svg {
-      display: block;
-    }
-
-    &:hover {
-      color: var(--color-error-500, #ff4d4f);
-      background: var(--color-error-10, rgba(255, 77, 79, 0.1));
-    }
-  }
+  gap: 8px;
+  margin-top: 4px;
 }
 
-.history-empty-text {
-  color: var(--gray-400);
+.skill-sandbox-chip {
+  flex-shrink: 0;
+  max-width: none;
+  padding: 2px 8px;
+  border: 1px solid var(--td-component-stroke, var(--gray-150));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--td-text-color-secondary, var(--gray-600));
   font-size: 12px;
+  line-height: 20px;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
-/* 清空历史记录按钮内容 — 图标在左文字在右，水平居中 */
-.clear-history-btn-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  color: var(--color-error-500, #ff4d4f);
-  font-weight: 500;
-  font-size: 13px;
-  width: 100%;
+.skill-sandbox-chip.is-installed {
+  color: var(--td-brand-color, #0052d9);
+}
 
-  .clear-icon {
-    display: flex;
-    align-items: center;
-  }
+.skill-card-source {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: #7dcea0;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.skill-install-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 6px;
+}
+
+.skill-install-panel__item {
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.skill-install-panel__item:hover {
+  background: var(--td-bg-color-container-hover, var(--gray-50));
 }
 </style>

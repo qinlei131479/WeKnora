@@ -33,6 +33,7 @@ type SkillCatalogView struct {
 	Name          string                    `json:"name"`
 	Version       string                    `json:"version,omitempty"`
 	Description   string                    `json:"description,omitempty"`
+	SourceType    string                    `json:"source_type,omitempty"`
 	BundleSHA256  string                    `json:"bundle_sha256,omitempty"`
 	CreatedAt     time.Time                 `json:"created_at"`
 	UpdatedAt     time.Time                 `json:"updated_at"`
@@ -91,6 +92,24 @@ func (s *TenantSkillService) ListCatalog(
 		seenCatalog[cat.ID] = struct{}{}
 		out = append(out, catalogView(cat, byCatalog[cat.ID], configByID))
 	}
+	// 内置技能写在 tenant_id=0，当前空间目录里没有同名行时也要能列出来并安装。
+	if tenantID != 0 {
+		builtins, builtinErr := s.skills.ListCatalogsByTenant(ctx, 0)
+		if builtinErr != nil {
+			return nil, builtinErr
+		}
+		for _, cat := range builtins {
+			if cat == nil {
+				continue
+			}
+			if _, ok := seenName[cat.Name]; ok {
+				continue
+			}
+			seenName[cat.Name] = struct{}{}
+			seenCatalog[cat.ID] = struct{}{}
+			out = append(out, catalogView(cat, byCatalog[cat.ID], configByID))
+		}
+	}
 	// Installs whose catalog row was deleted (or never existed) would otherwise
 	// vanish: they are not unattached (catalog_id is set) and they are not
 	// rendered under any live definition.
@@ -133,6 +152,7 @@ func catalogView(
 		Name:          cat.Name,
 		Version:       cat.Version,
 		Description:   cat.Description,
+		SourceType:    cat.SourceType,
 		BundleSHA256:  cat.BundleSHA256,
 		CreatedAt:     cat.CreatedAt,
 		UpdatedAt:     cat.UpdatedAt,
@@ -314,11 +334,16 @@ func (s *TenantSkillService) upsertCatalogFromBundle(
 		return existing, nil
 	}
 
+	emptyJSON := types.JSON([]byte("[]"))
 	row := &types.TenantSkillCatalogEntity{
 		ID: uuid.NewString(), TenantID: tenantID, Name: bundle.Name,
 		Version: bundle.Version, Description: bundle.Description,
-		Instructions: bundle.Instructions,
-		CreatedAt:    now, UpdatedAt: now,
+		Instructions:     bundle.Instructions,
+		SourceType:       "chat",
+		ToolDependencies: emptyJSON, MCPDependencies: emptyJSON, SkillDependencies: emptyJSON,
+		ShareConfig: types.JSON([]byte(`{"version":2,"read_scope":{"access_level":"global","department_ids":[],"user_uids":[]},"manage_scope":null}`)),
+		Enabled:     true,
+		CreatedAt:   now, UpdatedAt: now,
 	}
 	stored, _, err := s.storeCatalogBundle(ctx, tenantID, row, archive, requireStore)
 	if err != nil {
@@ -499,6 +524,18 @@ func (s *TenantSkillService) resolveCatalog(
 	cat, err := s.skills.GetCatalog(ctx, tenantID, id)
 	if err != nil {
 		return nil, err
+	}
+	if cat == nil && tenantID != 0 {
+		cat, err = s.skills.GetCatalog(ctx, 0, id)
+		if err != nil {
+			return nil, err
+		}
+		if cat == nil {
+			cat, err = s.skills.GetCatalogByName(ctx, 0, id)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 	if cat != nil {
 		return cat, nil

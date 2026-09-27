@@ -1,39 +1,33 @@
-"""h_* 表 tenant_id 影子列 DDL 与历史回填。WeKnora users / tenant_members 不得走 prefix_sql。"""
+"""租户影子列 DDL 与历史回填。WeKnora users / tenant_members 不参与 Harness 回填。"""
 
 from __future__ import annotations
 
 from sqlalchemy import text
 
 from yuxi.tenancy.backfill import is_catalog_owner, resolve_owner_tenant, summarize_scan
-from yuxi.storage.postgres.naming import ht
 from yuxi.utils import logger
 
 TENANT_SCOPE_TABLES: tuple[str, ...] = (
-    "conversations",
-    "agents",
-    "skills",
-    "mcp_servers",
-    "agent_runs",
-    "agent_run_requests",
-    "subagent_threads",
-    "message_feedbacks",
-    "agent_envs",
-    "user_config",
+    "amp_sessions",
+    "amp_agents",
+    "amp_agent_runs",
+    "amp_agent_run_requests",
+    "amp_subagent_threads",
 )
 
-# (table, pk, uid_col, created_by_col)
+# (物理表名, 主键, uid 字段, created_by 字段)
 _BACKFILL_SOURCES: tuple[tuple[str, str, str | None, str | None], ...] = (
-    ("conversations", "id", "uid", None),
-    ("agents", "id", None, "created_by"),
-    ("skills", "id", None, "created_by"),
-    ("mcp_servers", "id", None, "created_by"),
-    ("agent_runs", "id", "uid", None),
-    ("agent_run_requests", "id", "uid", None),
-    ("subagent_threads", "id", "uid", None),
-    ("message_feedbacks", "id", "uid", None),
-    ("agent_envs", "id", "uid", None),
-    ("user_config", "id", "uid", None),
+    ("amp_sessions", "id", "uid", None),
+    ("amp_agents", "id", None, "created_by"),
+    ("amp_agent_runs", "id", "uid", None),
+    ("amp_agent_run_requests", "id", "uid", None),
+    ("amp_subagent_threads", "id", "uid", None),
 )
+
+_AMP_TABLES = frozenset(
+    {"amp_sessions", "amp_agents", "amp_agent_runs", "amp_agent_run_requests", "amp_subagent_threads"}
+)
+
 
 def tenant_scope_ddl_statements() -> list[str]:
     stmts: list[str] = []
@@ -42,27 +36,27 @@ def tenant_scope_ddl_statements() -> list[str]:
         stmts.append(f"CREATE INDEX IF NOT EXISTS ix_{table}_tenant_id ON {table}(tenant_id)")
     stmts.append(
         """
-        CREATE INDEX IF NOT EXISTS ix_agent_run_requests_queue_tenant
-        ON agent_run_requests(tenant_id, uid, agent_slug, conversation_thread_id, status, created_at, id)
+        CREATE INDEX IF NOT EXISTS ix_amp_agent_run_requests_queue_tenant
+        ON amp_agent_run_requests(tenant_id, uid, agent_slug, conversation_thread_id, status, created_at, id)
         """
     )
     stmts.append(
         """
-        CREATE INDEX IF NOT EXISTS idx_agent_runs_tenant_thread
-        ON agent_runs(tenant_id, uid, agent_slug, conversation_thread_id)
+        CREATE INDEX IF NOT EXISTS idx_amp_agent_runs_tenant_thread
+        ON amp_agent_runs(tenant_id, uid, agent_slug, conversation_thread_id)
         """
     )
-    for table in ("agents", "skills", "mcp_servers"):
+    for table in ("amp_agents",):
+        prefix = table.removeprefix("amp_")
         stmts.append(f"ALTER TABLE IF EXISTS {table} DROP CONSTRAINT IF EXISTS {table}_slug_key")
         stmts.append(f"ALTER TABLE IF EXISTS {table} DROP CONSTRAINT IF EXISTS h_{table}_slug_key")
-        stmts.append(f"DROP INDEX IF EXISTS ix_{table}_slug")
+        stmts.append(f"DROP INDEX IF EXISTS ix_{prefix}_slug")
         stmts.append(
-            f"CREATE UNIQUE INDEX IF NOT EXISTS uq_{table}_slug_tenant "
+            f"CREATE UNIQUE INDEX IF NOT EXISTS uq_{prefix}_slug_tenant "
             f"ON {table}(tenant_id, slug) WHERE tenant_id IS NOT NULL"
         )
         stmts.append(
-            f"CREATE UNIQUE INDEX IF NOT EXISTS uq_{table}_slug_catalog "
-            f"ON {table}(slug) WHERE tenant_id IS NULL"
+            f"CREATE UNIQUE INDEX IF NOT EXISTS uq_{prefix}_slug_catalog ON {table}(slug) WHERE tenant_id IS NULL"
         )
     return stmts
 
@@ -70,10 +64,7 @@ def tenant_scope_ddl_statements() -> list[str]:
 async def _fetch_maps(conn) -> tuple[dict[str, int], dict[str, int]]:
     weknora_id_to_tenant: dict[str, int] = {}
     result = await conn.execute(
-        text(
-            "SELECT id::text AS id, tenant_id FROM users "
-            "WHERE deleted_at IS NULL AND tenant_id IS NOT NULL"
-        )
+        text("SELECT id::text AS id, tenant_id FROM users WHERE deleted_at IS NULL AND tenant_id IS NOT NULL")
     )
     for row in result.mappings():
         weknora_id_to_tenant[str(row["id"])] = int(row["tenant_id"])
@@ -93,10 +84,7 @@ async def _fetch_maps(conn) -> tuple[dict[str, int], dict[str, int]]:
 
     uid_to_tenant: dict[str, int] = dict(weknora_id_to_tenant)
     result = await conn.execute(
-        text(
-            "SELECT id::text AS id, username FROM users "
-            "WHERE deleted_at IS NULL AND tenant_id IS NOT NULL"
-        )
+        text("SELECT id::text AS id, username FROM users WHERE deleted_at IS NULL AND tenant_id IS NOT NULL")
     )
     for row in result.mappings():
         user_id = str(row["id"] or "").strip()
@@ -117,7 +105,7 @@ async def backfill_tenant_scope(conn) -> dict[str, int]:
 
     scan_rows: list[dict] = []
     for table, pk, uid_col, created_by_col in _BACKFILL_SOURCES:
-        physical = ht(table)
+        physical = table
         select_uid = uid_col or "NULL"
         select_cb = created_by_col or "NULL"
         rows = await conn.execute(
@@ -141,10 +129,7 @@ async def backfill_tenant_scope(conn) -> dict[str, int]:
             scan_rows.append({"source": source})
             if source != "unresolved" and source != "catalog" and tenant_id is not None:
                 await conn.execute(
-                    text(
-                        f"UPDATE {physical} SET tenant_id = :tenant_id "
-                        f"WHERE {pk} = :pk AND tenant_id IS NULL"
-                    ),
+                    text(f"UPDATE {physical} SET tenant_id = :tenant_id WHERE {pk} = :pk AND tenant_id IS NULL"),
                     {"tenant_id": int(tenant_id), "pk": row["pk"]},
                 )
 

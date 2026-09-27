@@ -24,15 +24,6 @@ class KnowledgeFileRepository:
     async def exists_by_filename(self, kb_id: str, filename: str) -> bool:
         return False
 
-    async def exists_by_content_hash(self, kb_id: str, content_hash: str) -> bool:
-        return False
-
-    async def list_file_ids_by_exact_statuses(self, *args, **kwargs) -> list[str]:
-        return []
-
-    async def list_same_name_files(self, kb_id: str, filename: str) -> list[Any]:
-        return []
-
     async def count_all(self) -> int:
         return 0
 
@@ -48,8 +39,3 @@ class KnowledgeFileRepository:
     async def delete(self, file_id: str) -> None:
         return None
 
-    async def get_filenames_by_file_ids(self, **kwargs) -> dict:
-        return {}
-
-    async def list_file_ids_by_filename_contains(self, **kwargs) -> list[str]:
-        return []

@@ -162,14 +162,6 @@ class WeKnoraKBClient:
         total = int(payload.get("total") or len(items)) if isinstance(payload, dict) else len(items)
         return items, total
 
-    async def search_knowledge(self, *, keyword: str, offset: int = 0, limit: int = 20) -> list[dict[str, Any]]:
-        data = await self.request(
-            "GET",
-            "/knowledge/search",
-            params={"keyword": keyword, "offset": offset, "limit": limit},
-        )
-        return data if isinstance(data, list) else []
-
     async def get_knowledge(self, knowledge_id: str) -> dict[str, Any]:
         data = await self.request("GET", f"/knowledge/{knowledge_id}")
         if not isinstance(data, dict):

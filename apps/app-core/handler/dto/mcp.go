@@ -123,13 +123,17 @@ func NewMCPServiceResponse(ctx context.Context, svc *types.MCPService) *MCPServi
 		resp.AuthConfig = auth
 	}
 	if svc.IsBuiltin {
-		// Builtin services are shared across tenants — strip everything that
-		// could leak how this tenant configured the underlying provider.
+		// 内置服务不回传地址、请求头、环境变量和认证。stdio 回传库里的启动命令，供页面展示。
 		resp.URL = nil
 		resp.Headers = nil
 		resp.EnvVars = nil
-		resp.StdioConfig = nil
 		resp.AuthConfig = nil
+		resp.StdioConfig = nil
+		if svc.TransportType == types.MCPTransportStdio && svc.StdioConfig != nil {
+			copied := *svc.StdioConfig
+			copied.Args = append([]string(nil), svc.StdioConfig.Args...)
+			resp.StdioConfig = &copied
+		}
 	} else {
 		resp.Credentials = map[string]CredentialFieldMetadata{
 			"api_key": {Configured: svc.AuthConfig != nil && svc.AuthConfig.APIKey != ""},

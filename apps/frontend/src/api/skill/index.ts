@@ -24,6 +24,7 @@ export interface SkillCatalogItem {
   name: string;
   version?: string;
   description?: string;
+  source_type?: string;
   bundle_sha256?: string;
   created_at: string;
   updated_at: string;

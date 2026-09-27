@@ -19,11 +19,6 @@ def _utc_now() -> dt:
 class UserRepository:
     """用户数据访问层"""
 
-    async def get_by_id(self, id: int) -> User | None:
-        """根据 ID 获取用户"""
-        async with pg_manager.get_async_session_context() as session:
-            return await self.get_by_id_with_db(session, id)
-
     async def get_by_id_with_db(self, db: AsyncSession, id: int) -> User | None:
         """使用指定的 db 根据 ID 获取用户"""
         result = await db.execute(select(User).where(User.id == id))
@@ -47,16 +42,6 @@ class UserRepository:
 
         async with pg_manager.get_async_session_context() as session:
             result = await session.execute(select(User).where(User.uid.in_(normalized_uids)))
-            return list(result.scalars().all())
-
-    async def list_users(self, skip: int = 0, limit: int = 100, role: str | None = None) -> list[User]:
-        """获取用户列表"""
-        async with pg_manager.get_async_session_context() as session:
-            query = select(User).where(User.is_deleted == 0)
-            if role is not None:
-                query = query.where(User.role == role)
-            query = query.order_by(User.id.asc()).offset(skip).limit(limit)
-            result = await session.execute(query)
             return list(result.scalars().all())
 
     async def create(self, data: dict[str, Any]) -> User:
@@ -97,12 +82,6 @@ class UserRepository:
                 user.username = f"已注销用户-{hash_suffix}"
         return True
 
-    async def exists_by_uid(self, uid: str) -> bool:
-        """检查 uid 是否存在"""
-        async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(select(User.id).where(User.uid == uid))
-            return result.scalar_one_or_none() is not None
-
     async def count(self) -> int:
         """统计用户数量"""
         async with pg_manager.get_async_session_context() as session:
@@ -110,8 +89,3 @@ class UserRepository:
             result = await session.execute(query)
             return result.scalar() or 0
 
-    async def get_all_uids(self) -> list[str]:
-        """获取所有 uid"""
-        async with pg_manager.get_async_session_context() as session:
-            result = await session.execute(select(User.uid))
-            return [uid for (uid,) in result.all()]

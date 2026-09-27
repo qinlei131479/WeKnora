@@ -133,9 +133,21 @@ func (s *mcpServiceService) UpdateMCPService(
 		return fmt.Errorf("MCP service not found")
 	}
 
-	// Builtin MCP services cannot be updated
+	// 内置服务只允许改启用状态，连接参数仍不可改。
+	// 更新必须落在原行的 tenant_id 上（内置行通常是 0），不能用当前空间的 tenant_id 去匹配。
 	if existing.IsBuiltin {
-		return fmt.Errorf("builtin MCP services cannot be updated")
+		if len(updateFields) != 1 || !updateFields["enabled"] {
+			return fmt.Errorf("builtin MCP services cannot be updated")
+		}
+		existing.Enabled = service.Enabled
+		existing.UpdatedAt = time.Now()
+		if err := s.mcpServiceRepo.Update(ctx, existing); err != nil {
+			return fmt.Errorf("failed to update MCP service: %w", err)
+		}
+		if !existing.Enabled && s.mcpManager != nil {
+			s.mcpManager.CloseClient(existing.ID)
+		}
+		return nil
 	}
 
 	// Determine the final transport type after merge

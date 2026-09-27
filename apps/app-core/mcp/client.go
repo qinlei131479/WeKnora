@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -151,6 +152,32 @@ func asOAuthRequired(err error) *OAuthRequiredError {
 	return nil
 }
 
+// builtinStdioLaunch 放行所有内置 stdio，启动参数使用库里的 command、args 和 env。
+// 非内置 stdio 仍然拒绝，避免用户配置启动本地进程。
+func builtinStdioLaunch(service *types.MCPService) (command string, args []string, env []string, err error) {
+	if service == nil || !service.IsBuiltin || service.TransportType != types.MCPTransportStdio {
+		return "", nil, nil, fmt.Errorf("stdio transport is disabled for security reasons; please use SSE or HTTP Streamable transport instead")
+	}
+	if service.StdioConfig == nil || strings.TrimSpace(service.StdioConfig.Command) == "" {
+		return "", nil, nil, fmt.Errorf("builtin stdio MCP service is missing a launch command")
+	}
+	command = strings.TrimSpace(service.StdioConfig.Command)
+	args = append([]string(nil), service.StdioConfig.Args...)
+	if len(service.EnvVars) == 0 {
+		return command, args, nil, nil
+	}
+	keys := make([]string, 0, len(service.EnvVars))
+	for key := range service.EnvVars {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	env = make([]string, 0, len(keys))
+	for _, key := range keys {
+		env = append(env, key+"="+service.EnvVars[key])
+	}
+	return command, args, env, nil
+}
+
 // NewMCPClient creates a new MCP client based on the transport type
 func NewMCPClient(config *ClientConfig) (MCPClient, error) {
 	if config == nil || config.Service == nil {
@@ -227,8 +254,11 @@ func NewMCPClient(config *ClientConfig) (MCPClient, error) {
 			return nil, fmt.Errorf("failed to create HTTP streamable client: %w", err)
 		}
 	case types.MCPTransportStdio:
-		// Stdio transport is disabled for security reasons (potential command injection vulnerabilities)
-		return nil, fmt.Errorf("stdio transport is disabled for security reasons; please use SSE or HTTP Streamable transport instead")
+		command, args, env, launchErr := builtinStdioLaunch(config.Service)
+		if launchErr != nil {
+			return nil, launchErr
+		}
+		mcpClient = client.NewClient(transport.NewStdio(command, env, args...))
 	default:
 		return nil, ErrUnsupportedTransport
 	}
@@ -290,7 +320,11 @@ func buildOAuthConfig(config *ClientConfig, httpClient *http.Client) (transport.
 // onConnectionLost callback when the connection is lost
 func (c *mcpGoClient) onConnectionLost(err error) {
 	_ = c.Disconnect()
-	logger.Warnf(context.Background(), "MCP server connection has been lost, URL:%s, error:%v", *c.service.URL, err)
+	target := c.service.ID
+	if c.service.URL != nil && *c.service.URL != "" {
+		target = *c.service.URL
+	}
+	logger.Warnf(context.Background(), "MCP server connection has been lost, target:%s, error:%v", target, err)
 }
 
 // checkErrorAndDisconnectIfNeeded checks for transport errors that indicate the
@@ -350,7 +384,7 @@ func (c *mcpGoClient) Connect(ctx context.Context) error {
 		return fmt.Errorf("failed to start client: %w", err)
 	}
 	c.connected.Store(true)
-	if c.service.TransportType == types.MCPTransportStdio {
+	if c.service.TransportType == types.MCPTransportStdio && c.service.StdioConfig != nil {
 		logger.GetLogger(ctx).Infof("MCP stdio client connected: %s %v",
 			c.service.StdioConfig.Command, c.service.StdioConfig.Args)
 	} else {

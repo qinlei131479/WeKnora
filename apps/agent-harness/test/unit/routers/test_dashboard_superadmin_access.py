@@ -1,24 +1,33 @@
 from __future__ import annotations
 
+from datetime import date, datetime
+
 import pytest
 import pytest_asyncio
-from fastapi import HTTPException
 from fastapi.routing import APIRoute
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from server.routers.dashboard_router import (
     dashboard,
-    get_all_conversations,
-    get_conversation_detail,
+    get_call_timeseries_stats,
     get_dashboard_stats,
     get_knowledge_stats,
     get_tool_call_stats,
     get_user_activity_stats,
 )
-from server.utils.auth_middleware import get_required_user
+from server.utils.auth_middleware import get_admin_user, get_required_user
 from yuxi.tenancy.context import TenantPrincipal, bind_tenant_principal
-from yuxi.storage.postgres.models_business import Base, Conversation, Message, ToolCall, User
-from yuxi.utils.datetime_utils import utc_now_naive
+from yuxi.storage.postgres.models_business import (
+    AgentUsageDaily,
+    Base,
+    Conversation,
+    Message,
+    ToolCall,
+    TokenUsageEvent,
+    ToolUsageEvent,
+    User,
+)
+from yuxi.utils.datetime_utils import UTC, utc_now_naive
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.unit]
 
@@ -85,6 +94,53 @@ async def dashboard_session():
         message_b = Message(conversation=conversation_b, role="assistant", content="B", created_at=now)
         tool_call_a = ToolCall(message=message_a, tool_name="dept_a_tool", status="success", created_at=now)
         tool_call_b = ToolCall(message=message_b, tool_name="dept_b_tool", status="success", created_at=now)
+        daily_a = AgentUsageDaily(
+            stat_date=date.today(),
+            tenant_id=10000,
+            agent_id="agent-shared",
+            session_count=1,
+            message_count=1,
+        )
+        tool_event_a = ToolUsageEvent(
+            event_id="tool-a",
+            tenant_id=10000,
+            uid="user_a",
+            agent_id="agent-shared",
+            tool_name="dept_a_tool",
+            status="success",
+            occurred_at=now,
+        )
+        tool_event_b = ToolUsageEvent(
+            event_id="tool-b",
+            tenant_id=20000,
+            uid="user_b",
+            agent_id="agent-shared",
+            tool_name="dept_b_tool",
+            status="success",
+            occurred_at=now,
+        )
+        token_event_a = TokenUsageEvent(
+            event_id="token-a",
+            tenant_id=10000,
+            uid="user_a",
+            agent_id="agent-shared",
+            model="model-a",
+            prompt_tokens=30,
+            completion_tokens=12,
+            total_tokens=42,
+            occurred_at=datetime(2026, 9, 24, 2, 30, tzinfo=UTC).replace(tzinfo=None),
+        )
+        token_event_b = TokenUsageEvent(
+            event_id="token-b",
+            tenant_id=20000,
+            uid="user_b",
+            agent_id="agent-shared",
+            model="model-b",
+            prompt_tokens=90,
+            completion_tokens=8,
+            total_tokens=98,
+            occurred_at=datetime(2026, 9, 24, 2, 30, tzinfo=UTC).replace(tzinfo=None),
+        )
         db.add_all(
             [
                 superadmin,
@@ -98,6 +154,11 @@ async def dashboard_session():
                 message_b,
                 tool_call_a,
                 tool_call_b,
+                daily_a,
+                tool_event_a,
+                tool_event_b,
+                token_event_a,
+                token_event_b,
             ]
         )
         await db.commit()
@@ -115,37 +176,18 @@ async def dashboard_session():
     await engine.dispose()
 
 
-async def test_dashboard_routes_require_logged_in_user():
+async def test_dashboard_routes_require_admin():
     dashboard_routes = [route for route in dashboard.routes if isinstance(route, APIRoute)]
 
     assert dashboard_routes
     for route in dashboard_routes:
         dependency_calls = {dependency.call for dependency in route.dependant.dependencies}
-        assert get_required_user in dependency_calls
+        assert get_admin_user in dependency_calls
 
 
 async def test_dashboard_allows_department_admin(dashboard_session):
     user = await get_required_user(dashboard_session["admin_a"])
     assert user.uid == "admin_a"
-
-
-async def test_conversation_list_without_tenant_is_empty(dashboard_session):
-    bind_tenant_principal(None)
-    response = await get_all_conversations(db=dashboard_session["db"], current_user=dashboard_session["superadmin"])
-
-    assert response == []
-
-
-async def test_conversation_detail_without_tenant_is_hidden(dashboard_session):
-    bind_tenant_principal(None)
-    with pytest.raises(HTTPException) as exc:
-        await get_conversation_detail(
-            "thread-b",
-            db=dashboard_session["db"],
-            current_user=dashboard_session["superadmin"],
-        )
-
-    assert exc.value.status_code == 404
 
 
 async def test_user_activity_stats_without_tenant_are_zero(dashboard_session):
@@ -166,6 +208,43 @@ async def test_tool_stats_without_tenant_are_empty(dashboard_session):
     assert stats.most_used_tools == []
 
 
+async def test_token_timeseries_returns_input_output_and_model_detail(
+    dashboard_session,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from sqlalchemy import func
+
+    async def fake_model_names(_db, model_ids):
+        return {model_id: f"{model_id}-label" for model_id in model_ids}
+
+    def fake_time_group(_column, _time_range):
+        return func.strftime("%Y-%m-%d", _column)
+
+    monkeypatch.setattr(
+        "server.routers.dashboard_router.shanghai_now",
+        lambda: datetime(2026, 9, 24, 10, 30, tzinfo=UTC),
+    )
+    monkeypatch.setattr("server.routers.dashboard_router._model_display_names", fake_model_names)
+    monkeypatch.setattr("server.routers.dashboard_router._get_time_group_format", fake_time_group)
+    bind_tenant_principal(TenantPrincipal(uid="superadmin", tenant_id=10000, role="superadmin"))
+    try:
+        stats = await get_call_timeseries_stats(
+            type="tokens",
+            time_range="14days",
+            db=dashboard_session["db"],
+            current_user=dashboard_session["superadmin"],
+        )
+    finally:
+        bind_tenant_principal(None)
+
+    assert stats.categories == ["input", "output"]
+    assert stats.total_count == 42
+    today = [item for item in stats.data if item["total"] > 0]
+    assert len(today) == 1
+    assert today[0]["data"] == {"input": 30, "output": 12}
+    assert today[0]["models"] == {"model-a-label": {"input": 30, "output": 12}}
+
+
 async def test_dashboard_filters_to_token_tenant(dashboard_session, monkeypatch: pytest.MonkeyPatch):
     from yuxi.dashboard.stats import WeKnoraOverview
 
@@ -183,9 +262,6 @@ async def test_dashboard_filters_to_token_tenant(dashboard_session, monkeypatch:
     monkeypatch.setattr("server.routers.dashboard_router.fetch_weknora_daily_active_users", fake_daily)
     bind_tenant_principal(TenantPrincipal(uid="superadmin", tenant_id=10000, role="superadmin"))
     try:
-        conversations = await get_all_conversations(
-            db=dashboard_session["db"], current_user=dashboard_session["superadmin"]
-        )
         stats = await get_user_activity_stats(
             db=dashboard_session["db"], current_user=dashboard_session["superadmin"]
         )
@@ -193,7 +269,6 @@ async def test_dashboard_filters_to_token_tenant(dashboard_session, monkeypatch:
     finally:
         bind_tenant_principal(None)
 
-    assert {item["thread_id"] for item in conversations} == {"thread-a"}
     assert stats.total_users == 1
     assert stats.active_users_24h == 1
     assert tools.total_calls == 1
@@ -237,4 +312,3 @@ async def test_p6_dashboard_split_does_not_count_h_users(dashboard_session, monk
     assert users.active_users_24h == 2
     assert knowledge.source == "weknora"
     assert knowledge.total_databases == 3
-
