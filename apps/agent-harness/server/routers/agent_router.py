@@ -37,7 +37,7 @@ from yuxi.services.run_submission_service import RunOrigin, RunSubmissionCommand
 from yuxi.storage.postgres.manager import pg_manager
 from yuxi.storage.postgres.models_business import User
 
-from server.utils.auth_middleware import get_admin_user, get_db, get_required_user
+from server.utils.auth_middleware import get_db, get_required_user
 
 agent_router = APIRouter(prefix="/agent", tags=["agent"])
 
@@ -116,18 +116,6 @@ async def _serialize_agent(
 async def list_agent_backends(current_user: User = Depends(get_required_user)):
     infos = await agent_manager.get_agents_info(include_configurable_items=False)
     return {"backends": [_backend_info(info) for info in infos]}
-
-
-@agent_router.get("/backends/{backend_id}")
-async def get_agent_backend(
-    backend_id: str,
-    current_user: User = Depends(get_required_user),
-    db: AsyncSession = Depends(get_db),
-):
-    backend = agent_manager.get_agent(backend_id)
-    if not backend:
-        raise HTTPException(status_code=404, detail=f"智能体后端 {backend_id} 不存在")
-    return _backend_info(await backend.get_info(user_role=current_user.role, db=db, user=current_user))
 
 
 @agent_router.get("")
@@ -249,24 +237,6 @@ async def delete_agent(
         raise HTTPException(status_code=409, detail="内置智能体不能删除")
     await repo.delete(agent=item)
     return {"success": True}
-
-
-@agent_router.post("/{agent_id}/set_default")
-async def set_agent_default(
-    agent_id: str,
-    current_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
-):
-    repo = AgentRepository(db)
-    agent_slug = agent_id  # 兼容既有路径参数名；这里实际是 Agent.slug。
-    item = await repo.get_by_slug(agent_slug)
-    if not item:
-        raise HTTPException(status_code=404, detail="智能体不存在")
-    try:
-        updated = await repo.set_default(agent=item, updated_by=str(current_user.uid))
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-    return {"agent": await _serialize_agent(repo, updated, current_user, include_configurable_items=True)}
 
 
 @agent_router.post("/runs")

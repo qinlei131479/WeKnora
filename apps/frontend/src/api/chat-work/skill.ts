@@ -30,28 +30,13 @@ export const listRemoteSkills = (source: unknown) => apiPost(`${USER_BASE_URL}/r
 
 export const prepareRemoteSkills = (payload: unknown) => apiPost(`${USER_BASE_URL}/remote/prepare`, payload)
 
-export const searchRemoteSkills = (query: string) => apiPost(`${USER_BASE_URL}/remote/search`, { query })
-
 export const confirmSkillInstallDraft = (draftId: string, slugs: unknown) =>
   apiPost(`${USER_BASE_URL}/install-drafts/${encodeURIComponent(draftId)}/confirm`, {
     share_config: TENANT_GLOBAL_SHARE_CONFIG,
     slugs,
   })
 
-export const discardSkillInstallDraft = (draftId: string) =>
-  apiDelete(`${USER_BASE_URL}/install-drafts/${encodeURIComponent(draftId)}`)
-
 export const listSkillSandboxBoard = () => apiGet(`${USER_BASE_URL}/sandbox-board`)
-
-export const installSkillToSandboxes = (slug: string, sandboxConfigIds: string[]) =>
-  apiPost(`${USER_BASE_URL}/${encodeURIComponent(slug)}/sandbox-install`, {
-    sandbox_config_ids: sandboxConfigIds,
-  })
-
-export const uninstallSkillFromSandbox = (slug: string, sandboxConfigId: string) =>
-  apiDelete(
-    `${USER_BASE_URL}/${encodeURIComponent(slug)}/sandbox-installs/${encodeURIComponent(sandboxConfigId)}`,
-  )
 
 const sandboxSkillUrl = (configId: string, skillId = '') => {
   const base = `${USER_BASE_URL}/sandbox-configs/${encodeURIComponent(configId)}/skills`
@@ -107,9 +92,6 @@ export const getSkillTree = (slug: string) => apiGet(`${BASE_URL}/${encodeURICom
 export const getSkillFile = (slug: string, path: string) =>
   apiGet(`${BASE_URL}/${encodeURIComponent(slug)}/file?path=${encodeURIComponent(path)}`)
 
-export const getPersonalSkillFile = (slug: string, path: string) =>
-  apiGet(`${USER_BASE_URL}/personal/${encodeURIComponent(slug)}/file?path=${encodeURIComponent(path)}`)
-
 export const createSkillFile = (slug: string, payload: unknown) =>
   apiPost(`${BASE_URL}/${encodeURIComponent(slug)}/file`, payload)
 
@@ -122,16 +104,10 @@ export const updateSkillDependencies = (slug: string, payload: unknown) =>
 export const updateSkillEnabled = (slug: string, enabled: boolean) =>
   apiPut(`${BASE_URL}/${encodeURIComponent(slug)}/enabled`, { enabled })
 
-export const deleteSkillFile = (slug: string, path: string) =>
-  apiDelete(`${BASE_URL}/${encodeURIComponent(slug)}/file?path=${encodeURIComponent(path)}`)
-
 export const exportSkill = (slug: string) =>
   apiGet(`${BASE_URL}/${encodeURIComponent(slug)}/export`, {}, true, 'blob')
 
 export const deleteSkill = (slug: string) => apiDelete(`${BASE_URL}/${encodeURIComponent(slug)}`)
-
-export const deletePersonalSkill = (slug: string) =>
-  apiDelete(`${USER_BASE_URL}/personal/${encodeURIComponent(slug)}`)
 
 export const skillApi = {
   listSkills,
@@ -140,24 +116,17 @@ export const skillApi = {
   prepareSkillUpload,
   listRemoteSkills,
   prepareRemoteSkills,
-  searchRemoteSkills,
   confirmSkillInstallDraft,
-  discardSkillInstallDraft,
   listSkillSandboxBoard,
-  installSkillToSandboxes,
-  uninstallSkillFromSandbox,
   getSkillDependencyOptions,
   getSkillTree,
   getSkillFile,
-  getPersonalSkillFile,
   createSkillFile,
   updateSkillFile,
   updateSkillDependencies,
   updateSkillEnabled,
-  deleteSkillFile,
   exportSkill,
   deleteSkill,
-  deletePersonalSkill,
 }
 
 export default skillApi

@@ -1375,7 +1375,7 @@ async def test_init_builtin_skills_create_missing(tmp_path: Path, monkeypatch: p
 
     assert len(items) == 1
     assert items[0].slug == "reporter"
-    assert FakeRepo.created_payload["source_type"] == "builtin"
+    assert FakeRepo.created_payload["source_type"] == "work"
     assert FakeRepo.created_payload["share_config"] == svc.BUILTIN_SKILL_PERMISSION_CONFIG
     assert FakeRepo.created_payload["enabled"] is True
     assert FakeRepo.created_payload["created_by"] == "system"
@@ -1485,12 +1485,14 @@ async def test_init_builtin_skills_updates_existing_record_and_preserves_disable
             version: str,
             content_hash: str,
             updated_by: str | None,
+            source_type: str,
+            source_mtime: float | None = None,
         ) -> SkillRecord:
             item.raw["version"] = version
             item.raw["bundle_sha256"] = content_hash
             item.raw["name"] = "reporter"
             item.raw["description"] = "new markdown description"
-            item.runtime.source_type = "builtin"
+            item.runtime.source_type = source_type
             item.runtime.share_config = svc.BUILTIN_SKILL_SHARE_CONFIG.copy()
             item.runtime.updated_by = updated_by
             captured["install"] = {"version": version, "content_hash": content_hash, "updated_by": updated_by}

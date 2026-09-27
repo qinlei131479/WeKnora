@@ -4,15 +4,12 @@ from datetime import date, datetime
 
 import pytest
 import pytest_asyncio
-from fastapi import HTTPException
 from fastapi.routing import APIRoute
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from server.routers.dashboard_router import (
     dashboard,
-    get_all_conversations,
     get_call_timeseries_stats,
-    get_conversation_detail,
     get_dashboard_stats,
     get_knowledge_stats,
     get_tool_call_stats,
@@ -193,25 +190,6 @@ async def test_dashboard_allows_department_admin(dashboard_session):
     assert user.uid == "admin_a"
 
 
-async def test_conversation_list_without_tenant_is_empty(dashboard_session):
-    bind_tenant_principal(None)
-    response = await get_all_conversations(db=dashboard_session["db"], current_user=dashboard_session["superadmin"])
-
-    assert response == []
-
-
-async def test_conversation_detail_without_tenant_is_hidden(dashboard_session):
-    bind_tenant_principal(None)
-    with pytest.raises(HTTPException) as exc:
-        await get_conversation_detail(
-            "thread-b",
-            db=dashboard_session["db"],
-            current_user=dashboard_session["superadmin"],
-        )
-
-    assert exc.value.status_code == 404
-
-
 async def test_user_activity_stats_without_tenant_are_zero(dashboard_session):
     bind_tenant_principal(None)
     stats = await get_user_activity_stats(db=dashboard_session["db"], current_user=dashboard_session["superadmin"])
@@ -284,9 +262,6 @@ async def test_dashboard_filters_to_token_tenant(dashboard_session, monkeypatch:
     monkeypatch.setattr("server.routers.dashboard_router.fetch_weknora_daily_active_users", fake_daily)
     bind_tenant_principal(TenantPrincipal(uid="superadmin", tenant_id=10000, role="superadmin"))
     try:
-        conversations = await get_all_conversations(
-            db=dashboard_session["db"], current_user=dashboard_session["superadmin"]
-        )
         stats = await get_user_activity_stats(
             db=dashboard_session["db"], current_user=dashboard_session["superadmin"]
         )
@@ -294,7 +269,6 @@ async def test_dashboard_filters_to_token_tenant(dashboard_session, monkeypatch:
     finally:
         bind_tenant_principal(None)
 
-    assert {item["thread_id"] for item in conversations} == {"thread-a"}
     assert stats.total_users == 1
     assert stats.active_users_24h == 1
     assert tools.total_calls == 1

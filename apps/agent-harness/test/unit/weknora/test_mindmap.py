@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from yuxi.agents.toolkits.kbs import tools as kb_tools
+from yuxi.models import weknora_proxy
 
 
 def _mindmap_callable():
@@ -25,7 +26,7 @@ async def test_get_mindmap_uses_weknora(monkeypatch):
         return {"content": "Docs", "children": [{"content": "a.pdf", "children": []}]}
 
     monkeypatch.setattr(kb_tools, "_resolve_visible_knowledge_bases_for_query", fake_visible)
-    monkeypatch.setattr("yuxi.models.weknora_proxy.get_or_generate_mindmap", fake_mindmap)
+    monkeypatch.setattr(weknora_proxy, "get_or_generate_mindmap", fake_mindmap)
 
     text = await _mindmap_callable()(kb_name="Docs", runtime=SimpleNamespace())
     assert "Docs" in text
@@ -48,7 +49,7 @@ async def test_get_mindmap_surfaces_weknora_error_without_crashing(monkeypatch):
         raise WeKnoraKBError("知识库还没有可展示的思维导图")
 
     monkeypatch.setattr(kb_tools, "_resolve_visible_knowledge_bases_for_query", fake_visible)
-    monkeypatch.setattr("yuxi.models.weknora_proxy.get_or_generate_mindmap", fake_mindmap_error)
+    monkeypatch.setattr(weknora_proxy, "get_or_generate_mindmap", fake_mindmap_error)
 
     text = await _mindmap_callable()(kb_name="Docs", runtime=SimpleNamespace())
     assert text == "知识库还没有可展示的思维导图"

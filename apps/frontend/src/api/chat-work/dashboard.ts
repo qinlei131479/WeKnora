@@ -1,45 +1,8 @@
 import { apiGet } from './base'
 
-type QueryRecord = Record<string, string | number | undefined>
-
-function toQuery(params: QueryRecord): string {
-  const queryParams = new URLSearchParams()
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      queryParams.append(key, String(value))
-    }
-  })
-  const encoded = queryParams.toString()
-  return encoded ? `?${encoded}` : ''
-}
-
 export const dashboardApi = {
-  getConversations: (params: QueryRecord = {}) => {
-    return apiGet(`/api/dashboard/conversations${toQuery(params)}`)
-  },
-
-  getConversationDetail: (threadId: string) => {
-    return apiGet(`/api/dashboard/conversations/${threadId}`)
-  },
-
   getStats: () => {
     return apiGet('/api/dashboard/stats')
-  },
-
-  getUserStats: () => {
-    return apiGet('/api/dashboard/stats/users')
-  },
-
-  getToolStats: () => {
-    return apiGet('/api/dashboard/stats/tools')
-  },
-
-  getKnowledgeStats: () => {
-    return apiGet('/api/dashboard/stats/knowledge')
-  },
-
-  getAgentStats: () => {
-    return apiGet('/api/dashboard/stats/agents')
   },
 
   getAllStats: async () => {

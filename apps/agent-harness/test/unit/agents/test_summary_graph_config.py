@@ -10,7 +10,7 @@ from yuxi.agents.buildin.subagent import graph as subagent_graph
 
 def _context(summary_threshold: int = 123) -> SimpleNamespace:
     return SimpleNamespace(
-        model="",
+        model="test-chat-model",
         summary_threshold=summary_threshold,
         summary_keep_messages=7,
         summary_prompt="SUMMARY {messages}",

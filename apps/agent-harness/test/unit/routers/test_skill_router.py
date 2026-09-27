@@ -162,32 +162,6 @@ def test_list_skill_cards_route_forces_personal_refresh(monkeypatch):
     assert captured == {"uid": "user", "refresh_personal": True}
 
 
-def test_personal_skill_confirm_and_delete_routes(monkeypatch):
-    async def fake_confirm(*, draft_id, slugs, operator):
-        assert draft_id == "draft-1"
-        assert slugs == ["demo-v2"]
-        assert operator.uid == "user"
-        return [{"slug": "demo", "requested_slug": "demo-v2", "success": True}]
-
-    async def fake_delete(uid, slug):
-        assert (uid, slug) == ("user", "demo")
-        return SimpleNamespace(scanned_at="2026-07-30T00:00:00Z", from_cache=False)
-
-    monkeypatch.setattr("server.routers.skill_router.confirm_personal_skill_install_draft", fake_confirm)
-    monkeypatch.setattr("server.routers.skill_router.delete_personal_skill", fake_delete)
-
-    client = TestClient(_build_app(role="user"))
-    confirm_resp = client.post(
-        "/api/skills/personal/install-drafts/draft-1/confirm",
-        json={"slugs": ["demo-v2"]},
-    )
-    delete_resp = client.delete("/api/skills/personal/demo")
-
-    assert confirm_resp.status_code == 200, confirm_resp.text
-    assert confirm_resp.json()["data"][0]["slug"] == "demo"
-    assert delete_resp.status_code == 200, delete_resp.text
-
-
 def test_prepare_skill_upload_route(monkeypatch):
     captured: dict[str, object] = {}
 
@@ -287,22 +261,6 @@ def test_normal_user_cannot_confirm_shared_skill_install(monkeypatch):
     )
 
     assert response.status_code == 403
-
-
-def test_discard_skill_draft_route(monkeypatch):
-    captured: dict[str, str] = {}
-
-    async def fake_discard_skill_install_draft(*, draft_id, operator):
-        captured["draft_id"] = draft_id
-        captured["operator_uid"] = operator.uid
-
-    monkeypatch.setattr("server.routers.skill_router.discard_skill_install_draft", fake_discard_skill_install_draft)
-
-    client = TestClient(_build_app(role="user"))
-    resp = client.delete("/api/skills/install-drafts/draft-1")
-
-    assert resp.status_code == 200, resp.text
-    assert captured == {"draft_id": "draft-1", "operator_uid": "user"}
 
 
 def test_dependency_options_route_checks_manage_permission(monkeypatch):
@@ -430,28 +388,3 @@ def test_update_skill_dependencies_route_passes_operator(monkeypatch):
         "skill_dependencies": ["other-skill"],
         "operator_uid": "admin",
     }
-
-
-def test_builtin_routes_require_admin():
-    client = TestClient(_build_app(role="user"))
-
-    resp = client.get("/api/system/skills/builtin")
-
-    assert resp.status_code == 403
-
-
-def test_sync_builtin_skills_route(monkeypatch):
-    captured: dict[str, str] = {}
-
-    async def fake_init_builtin_skills(_db, *, created_by):
-        captured["created_by"] = created_by
-        return [_skill(slug="builtin-demo", source_type="builtin")]
-
-    monkeypatch.setattr("server.routers.skill_router.init_builtin_skills", fake_init_builtin_skills)
-
-    client = TestClient(_build_app())
-    resp = client.post("/api/system/skills/builtin/sync")
-
-    assert resp.status_code == 200, resp.text
-    assert resp.json()["data"][0]["slug"] == "builtin-demo"
-    assert captured == {"created_by": "admin"}

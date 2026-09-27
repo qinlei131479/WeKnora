@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.utils.auth_middleware import get_admin_user, get_db
 from yuxi.tenancy.tenant_query import apply_tenant_filters
+from yuxi.repositories.agent_repository import AgentRepository
 from yuxi.dashboard.stats import (
     count_weknora_active_users,
     fetch_weknora_agent_stats,
@@ -27,20 +28,12 @@ from yuxi.dashboard.stats import (
     simple_sum,
     weknora_user_total,
 )
-from yuxi.repositories.agent_repository import AgentRepository
-from yuxi.repositories.conversation_repository import ConversationRepository
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils.datetime_utils import UTC, shanghai_now, utc_now
 from yuxi.utils.logging_config import logger
 
 
 dashboard = APIRouter(prefix="/dashboard", tags=["Dashboard"])
-
-
-def _scope_conversations(stmt):
-    from yuxi.storage.postgres.models_business import Conversation
-
-    return apply_tenant_filters(stmt, Conversation.tenant_id)
 
 
 def _scope_column(stmt, column):
@@ -150,163 +143,6 @@ class AgentAnalytics(BaseModel):
     weknora_total_agents: int = 0
     weknora_agent_conversation_counts: list[dict] = Field(default_factory=list)
     weknora_agent_names: dict[str, str] = Field(default_factory=dict)
-
-
-class ConversationListItem(BaseModel):
-    """Conversation list item"""
-
-    thread_id: str
-    uid: str
-    agent_id: str
-    title: str
-    status: str
-    message_count: int
-    created_at: str
-    updated_at: str
-
-
-class ConversationDetailResponse(BaseModel):
-    """Conversation detail"""
-
-    thread_id: str
-    uid: str
-    agent_id: str
-    title: str
-    status: str
-    message_count: int
-    created_at: str
-    updated_at: str
-    total_tokens: int
-    messages: list[dict]
-
-
-# =============================================================================
-# Conversation Management - 对话管理
-# =============================================================================
-
-
-@dashboard.get("/conversations", response_model=list[ConversationListItem])
-async def get_all_conversations(
-    uid: str | None = None,
-    agent_id: str | None = None,
-    status: str = "active",
-    limit: int = 100,
-    offset: int = 0,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
-):
-    """获取当前 token 空间内的对话"""
-    from yuxi.storage.postgres.models_business import Conversation, Message
-
-    try:
-        query = select(Conversation, func.count(Message.id).label("message_count")).outerjoin(
-            Message, Message.conversation_id == Conversation.id
-        )
-        query = _scope_conversations(query)
-
-        # Apply filters
-        if uid:
-            query = query.filter(Conversation.uid == uid)
-        if agent_id:
-            query = query.filter(Conversation.agent_id == agent_id)
-        if status != "all":
-            query = query.filter(Conversation.status == status)
-
-        query = query.group_by(Conversation).order_by(Conversation.updated_at.desc()).limit(limit).offset(offset)
-
-        result = await db.execute(query)
-        results = result.all()
-
-        return [
-            {
-                "thread_id": conv.thread_id,
-                "uid": conv.uid,
-                "agent_id": conv.agent_id,
-                "title": conv.title,
-                "status": conv.status,
-                "message_count": message_count,
-                "created_at": conv.created_at.isoformat(),
-                "updated_at": conv.updated_at.isoformat(),
-            }
-            for conv, message_count in results
-        ]
-    except Exception as e:
-        logger.error(f"Error getting conversations: {e}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Failed to get conversations: {str(e)}")
-
-
-@dashboard.get("/conversations/{thread_id}", response_model=ConversationDetailResponse)
-async def get_conversation_detail(
-    thread_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_admin_user),
-):
-    """获取当前 token 空间内的对话详情"""
-    try:
-        conv_manager = ConversationRepository(db)
-        conversation = await conv_manager.get_conversation_by_thread_id(thread_id)
-
-        if not conversation:
-            raise HTTPException(status_code=404, detail="Conversation not found")
-
-        messages = await conv_manager.get_messages(conversation.id)
-        from yuxi.storage.postgres.models_business import TokenUsageEvent
-
-        token_result = await db.execute(
-            apply_tenant_filters(
-                select(func.coalesce(func.sum(TokenUsageEvent.total_tokens), 0)).where(
-                    TokenUsageEvent.session_id == conversation.id
-                ),
-                TokenUsageEvent.tenant_id,
-            )
-        )
-        total_tokens = int(token_result.scalar() or 0)
-
-        # Format messages
-        message_list = []
-        for msg in messages:
-            msg_dict = {
-                "id": msg.id,
-                "role": msg.role,
-                "content": msg.content,
-                "message_type": msg.message_type,
-                "created_at": msg.created_at.isoformat(),
-            }
-
-            # Include tool calls if present
-            if msg.tool_calls:
-                msg_dict["tool_calls"] = [
-                    {
-                        "id": tc.id,
-                        "tool_name": tc.tool_name,
-                        "tool_input": tc.tool_input,
-                        "tool_output": tc.tool_output,
-                        "status": tc.status,
-                    }
-                    for tc in msg.tool_calls
-                ]
-
-            message_list.append(msg_dict)
-
-        return {
-            "thread_id": conversation.thread_id,
-            "uid": conversation.uid,
-            "agent_id": conversation.agent_id,
-            "title": conversation.title,
-            "status": conversation.status,
-            "message_count": len(message_list),
-            "created_at": conversation.created_at.isoformat(),
-            "updated_at": conversation.updated_at.isoformat(),
-            "total_tokens": total_tokens,
-            "messages": message_list,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error getting conversation detail: {e}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Failed to get conversation detail: {str(e)}")
 
 
 # =============================================================================

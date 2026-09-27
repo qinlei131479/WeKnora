@@ -23,15 +23,12 @@ from yuxi.services.conversation_service import (
     list_thread_attachments_view,
     list_threads_view,
     parse_tmp_attachment_view,
-    search_threads_view,
     update_thread_view,
-    upload_thread_attachment_view,
     upload_tmp_attachment_view,
 )
 from yuxi.services.file_preview import detect_media_type
 from yuxi.services.thread_files_service import (
     list_thread_files_view,
-    read_thread_file_content_view,
     resolve_thread_artifact_view,
     save_thread_artifact_to_workspace_view,
 )
@@ -135,27 +132,6 @@ class ThreadResponse(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
-class ThreadSearchSnippet(BaseModel):
-    message_id: int | None = None
-    content: str
-    created_at: str | None = None
-
-
-class ThreadSearchItem(ThreadResponse):
-    thread_id: str
-    matched_count: int
-    message_id: int | None = None
-    latest_match_at: str | None = None
-    snippets: list[ThreadSearchSnippet] = Field(default_factory=list)
-
-
-class ThreadSearchResponse(BaseModel):
-    items: list[ThreadSearchItem]
-    has_more: bool
-    limit: int
-    offset: int
-
-
 class AttachmentResponse(BaseModel):
     file_id: str
     file_name: str
@@ -244,15 +220,6 @@ class ThreadFileListResponse(BaseModel):
     files: list[ThreadFileEntry]
 
 
-class ThreadFileContentResponse(BaseModel):
-    path: str
-    content: list[str]
-    offset: int
-    limit: int
-    total_lines: int
-    artifact_url: str
-
-
 class SaveThreadArtifactRequest(BaseModel):
     path: str
 
@@ -294,26 +261,6 @@ async def list_threads(
     """获取用户的所有对话线程 (使用新存储系统)"""
     return await list_threads_view(
         agent_slug=agent_id, db=db, current_uid=str(current_user.uid), limit=limit, offset=offset
-    )
-
-
-@chat.get("/threads/search", response_model=ThreadSearchResponse)
-async def search_threads(
-    q: str = Query(..., min_length=1, max_length=200),
-    agent_id: str | None = Query(None),
-    limit: int = Query(20, ge=1, le=50),
-    offset: int = Query(0, ge=0),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_required_user),
-):
-    """搜索当前用户的历史对话。"""
-    return await search_threads_view(
-        query=q,
-        agent_id=agent_id,
-        db=db,
-        current_uid=str(current_user.uid),
-        limit=limit,
-        offset=offset,
     )
 
 
@@ -391,22 +338,6 @@ async def confirm_tmp_thread_attachments(
     )
 
 
-@chat.post("/thread/{thread_id}/attachments", response_model=AttachmentResponse)
-async def upload_thread_attachment(
-    thread_id: str,
-    file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_required_user),
-):
-    """上传原始附件并关联到指定对话线程。"""
-    return await upload_thread_attachment_view(
-        thread_id=thread_id,
-        file=file,
-        db=db,
-        current_uid=str(current_user.uid),
-    )
-
-
 @chat.get("/thread/{thread_id}/attachments", response_model=AttachmentListResponse)
 async def list_thread_attachments(
     thread_id: str,
@@ -452,26 +383,6 @@ async def list_thread_files(
         db=db,
         path=path,
         recursive=recursive,
-    )
-
-
-@chat.get("/thread/{thread_id}/files/content", response_model=ThreadFileContentResponse)
-async def read_thread_file_content(
-    thread_id: str,
-    path: str = Query(...),
-    offset: int = Query(0, ge=0),
-    limit: int = Query(2000, ge=1, le=5000),
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_required_user),
-):
-    """读取线程文本文件（按行分页）。"""
-    return await read_thread_file_content_view(
-        thread_id=thread_id,
-        current_uid=str(current_user.uid),
-        db=db,
-        path=path,
-        offset=offset,
-        limit=limit,
     )
 
 

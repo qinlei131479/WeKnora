@@ -84,10 +84,6 @@ class FakeConversationRepository:
     async def get_conversation_by_thread_id(self, thread_id: str):
         return self.conversation
 
-    async def add_attachment(self, conversation_id: int, attachment_info: dict):
-        self.attachments.append(attachment_info)
-        return attachment_info
-
     async def add_attachments(self, conversation_id: int, attachment_infos: list[dict]):
         self.attachments.extend(attachment_infos)
         return attachment_infos

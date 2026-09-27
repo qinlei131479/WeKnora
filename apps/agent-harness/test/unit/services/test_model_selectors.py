@@ -1,4 +1,3 @@
-import json
 from types import SimpleNamespace
 
 import httpx
@@ -9,38 +8,6 @@ from yuxi.agents.models import load_chat_model, resolve_chat_model_spec
 from yuxi.models.chat import LangChainChatAdapter, select_model
 from yuxi.models.embed import OtherEmbedding, select_embedding_model
 from yuxi.models.rerank import OpenAIReranker, get_reranker
-from yuxi.models.providers.cache import ModelInfo
-
-
-def _model_info(model_type: str) -> ModelInfo:
-    return ModelInfo(
-        provider_id="test-provider",
-        model_id=f"namespace/{model_type}-model",
-        model_type=model_type,
-        display_name=f"Test {model_type}",
-        api_key="test-key",
-        base_url="https://example.com/v1",
-        provider_type="openai",
-        dimension=1024 if model_type == "embedding" else None,
-    )
-
-
-def _chat_model_info(
-    provider_id: str,
-    model_id: str,
-    provider_type: str = "openai",
-    request_body_overrides: dict | None = None,
-) -> ModelInfo:
-    return ModelInfo(
-        provider_id=provider_id,
-        model_id=model_id,
-        model_type="chat",
-        display_name=model_id,
-        api_key="test-key",
-        base_url="https://example.com/v1",
-        provider_type=provider_type,
-        request_body_overrides=request_body_overrides or {},
-    )
 
 
 def _capture_embed_warnings(monkeypatch: pytest.MonkeyPatch) -> list[str]:
@@ -78,33 +45,46 @@ def _httpx_embedding_response(status_code: int, content: str | None = None) -> h
         (get_reranker, {"model_id": "unknown-provider:namespace/model"}),
     ],
 )
-def test_selectors_report_unknown_unconfigured_specs(selector, args):
-    with pytest.raises(ValueError, match="Unknown|未找到模型"):
+def test_selectors_report_unknown_unconfigured_specs(selector, args, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr("yuxi.models.weknora_proxy.list_weknora_models", lambda: [])
+    with pytest.raises(ValueError, match="找不到|未指定"):
         selector(**args)
 
 
-def test_resolve_chat_model_spec_prefers_explicit_then_fallback_then_default(monkeypatch):
-    monkeypatch.setattr("yuxi.agents.models.sys_config.default_model", "system-default:model")
-
+def test_resolve_chat_model_spec_prefers_explicit_then_fallback():
     assert resolve_chat_model_spec(" explicit:model ", fallback="fallback:model") == "explicit:model"
     assert resolve_chat_model_spec("", fallback=" fallback:model ") == "fallback:model"
-    assert resolve_chat_model_spec(None, fallback="") == "system-default:model"
 
 
-def test_resolve_chat_model_spec_rejects_all_empty(monkeypatch):
-    monkeypatch.setattr("yuxi.agents.models.sys_config.default_model", "")
-
+def test_resolve_chat_model_spec_rejects_all_empty():
     with pytest.raises(ValueError, match="model spec 不能为空"):
         resolve_chat_model_spec("", fallback=None)
 
 
 def test_select_embedding_model_loads_model_from_cache(monkeypatch):
     monkeypatch.setattr(
-        "yuxi.models.embed.model_cache.get_model_info",
-        lambda spec: _model_info("embedding") if spec == "test-provider:namespace/embedding-model" else None,
+        "yuxi.models.weknora_proxy.resolve_weknora_model",
+        lambda spec, model_type: {
+            "id": "namespace/embedding-model",
+            "parameters": {"embedding_parameters": {"dimension": 1024}},
+        },
+    )
+    monkeypatch.setattr(
+        "yuxi.models.weknora_proxy.embeddings_proxy_url",
+        lambda model_id: f"https://example.com/{model_id}",
+    )
+    monkeypatch.setattr("yuxi.models.weknora_proxy.request_access_token", lambda: "test-token")
+    monkeypatch.setattr("yuxi.models.weknora_proxy.extra_request_headers", lambda: {})
+
+    monkeypatch.setattr(
+        "yuxi.models.weknora_proxy.resolve_weknora_model",
+        lambda spec, model_type: {
+            "id": spec,
+            "parameters": {"embedding_parameters": {"dimension": 1024}},
+        },
     )
 
-    model = select_embedding_model("test-provider:namespace/embedding-model")
+    model = select_embedding_model("namespace/embedding-model")
 
     assert isinstance(model, OtherEmbedding)
     assert model.model == "namespace/embedding-model"
@@ -116,12 +96,12 @@ def test_select_model_wraps_langchain_model_and_expands_model_params(monkeypatch
     captured = {}
 
     monkeypatch.setattr(
-        "yuxi.models.chat.model_cache.get_model_info",
-        lambda spec: (
-            _chat_model_info("test-provider", "namespace/chat-model")
-            if spec == "test-provider:namespace/chat-model"
-            else None
-        ),
+        "yuxi.models.weknora_proxy.resolve_weknora_model",
+        lambda spec, model_type: {"id": spec, "source": "remote"},
+    )
+    monkeypatch.setattr(
+        "yuxi.models.weknora_proxy.chat_proxy_base_url",
+        lambda model_id: f"https://example.com/{model_id}",
     )
 
     def fake_load_chat_model(spec, **kwargs):
@@ -139,45 +119,26 @@ def test_select_model_wraps_langchain_model_and_expands_model_params(monkeypatch
 
     assert isinstance(model, LangChainChatAdapter)
     assert model.model is fake_model
-    assert model.model_name == "namespace/chat-model"
+    assert model.model_name == "test-provider:namespace/chat-model"
     assert captured == {
         "spec": "test-provider:namespace/chat-model",
         "kwargs": {"temperature": 0.2, "timeout": 60.0},
     }
 
 
-def test_select_model_maps_anthropic_max_completion_tokens(monkeypatch):
-    captured = {}
-
-    monkeypatch.setattr(
-        "yuxi.models.chat.model_cache.get_model_info",
-        lambda spec: (
-            _chat_model_info("anthropic", "mimo-v2.5", provider_type="anthropic")
-            if spec == "anthropic:mimo-v2.5"
-            else None
-        ),
-    )
-    monkeypatch.setattr(
-        "yuxi.models.chat.load_chat_model",
-        lambda spec, **kwargs: captured.update({"spec": spec, "kwargs": kwargs}) or SimpleNamespace(),
-    )
-
-    select_model("anthropic:mimo-v2.5", model_params={"max_completion_tokens": 123})
-
-    assert captured == {"spec": "anthropic:mimo-v2.5", "kwargs": {"max_tokens": 123}}
-
-
 def test_load_chat_model_uses_toolcall_chunk_fix_for_openai_compatible(monkeypatch):
     from yuxi.agents.models import _ToolCallChunkFixChatOpenAI
 
     monkeypatch.setattr(
-        "yuxi.agents.models.model_cache.get_model_info",
-        lambda spec: (
-            _chat_model_info("siliconflow-cn", "deepseek-ai/DeepSeek-V4-Flash")
-            if spec == "siliconflow-cn:deepseek-ai/DeepSeek-V4-Flash"
-            else None
-        ),
+        "yuxi.models.weknora_proxy.resolve_weknora_model",
+        lambda spec, model_type: {"id": spec},
     )
+    monkeypatch.setattr("yuxi.models.weknora_proxy.request_access_token", lambda: "test-token")
+    monkeypatch.setattr(
+        "yuxi.models.weknora_proxy.chat_proxy_base_url",
+        lambda model_id: f"https://example.com/{model_id}",
+    )
+    monkeypatch.setattr("yuxi.models.weknora_proxy.extra_request_headers", lambda: {})
 
     model = load_chat_model("siliconflow-cn:deepseek-ai/DeepSeek-V4-Flash")
 
@@ -188,77 +149,21 @@ def test_load_chat_model_uses_toolcall_chunk_fix_for_openai_compatible(monkeypat
 
 def test_load_chat_model_keeps_non_siliconflow_openai_streaming(monkeypatch):
     monkeypatch.setattr(
-        "yuxi.agents.models.model_cache.get_model_info",
-        lambda spec: (
-            _chat_model_info("openai-compatible", "namespace/chat-model")
-            if spec == "openai-compatible:namespace/chat-model"
-            else None
-        ),
+        "yuxi.models.weknora_proxy.resolve_weknora_model",
+        lambda spec, model_type: {"id": spec},
     )
+    monkeypatch.setattr("yuxi.models.weknora_proxy.request_access_token", lambda: "test-token")
+    monkeypatch.setattr(
+        "yuxi.models.weknora_proxy.chat_proxy_base_url",
+        lambda model_id: f"https://example.com/{model_id}",
+    )
+    monkeypatch.setattr("yuxi.models.weknora_proxy.extra_request_headers", lambda: {})
 
     model = load_chat_model("openai-compatible:namespace/chat-model")
     explicit = load_chat_model("openai-compatible:namespace/chat-model", disable_streaming=True)
 
     assert model.disable_streaming is False
     assert explicit.disable_streaming is True
-
-
-def test_load_chat_model_merges_request_body_overrides_into_extra_body(monkeypatch):
-    captured_body = {}
-
-    monkeypatch.setattr(
-        "yuxi.agents.models.model_cache.get_model_info",
-        lambda spec: (
-            _chat_model_info(
-                "siliconflow-cn",
-                "Qwen/Qwen3-8B",
-                request_body_overrides={
-                    "enable_thinking": False,
-                    "reasoning_effort": "high",
-                    "thinking_budget": 1024,
-                },
-            )
-            if spec == "siliconflow-cn:Qwen/Qwen3-8B"
-            else None
-        ),
-    )
-
-    def capture_request(request: httpx.Request) -> httpx.Response:
-        captured_body.update(json.loads(request.content))
-        return httpx.Response(
-            200,
-            json={
-                "id": "chatcmpl-test",
-                "object": "chat.completion",
-                "created": 0,
-                "model": "Qwen/Qwen3-8B",
-                "choices": [
-                    {
-                        "index": 0,
-                        "message": {"role": "assistant", "content": "ok"},
-                        "finish_reason": "stop",
-                    }
-                ],
-                "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
-            },
-        )
-
-    with httpx.Client(transport=httpx.MockTransport(capture_request)) as http_client:
-        model = load_chat_model(
-            "siliconflow-cn:Qwen/Qwen3-8B",
-            reasoning_effort="low",
-            temperature=0.1,
-            extra_body={"thinking_budget": 256, "caller_only": True},
-            http_client=http_client,
-        )
-        response = model.invoke("hello")
-
-    assert response.content == "ok"
-    assert captured_body["temperature"] == 0.1
-    assert captured_body["caller_only"] is True
-    assert captured_body["enable_thinking"] is False
-    assert captured_body["reasoning_effort"] == "high"
-    assert captured_body["thinking_budget"] == 1024
 
 
 @pytest.mark.asyncio
@@ -467,9 +372,18 @@ async def test_embedding_async_429_retries_ten_times_before_success(monkeypatch)
 
 def test_get_reranker_loads_model_from_cache(monkeypatch):
     monkeypatch.setattr(
-        "yuxi.models.rerank.model_cache.get_model_info",
-        lambda spec: _model_info("rerank") if spec == "test-provider:namespace/rerank-model" else None,
+        "yuxi.models.weknora_proxy.resolve_weknora_model",
+        lambda spec, model_type: {"id": "namespace/rerank-model"},
     )
+    monkeypatch.setattr(
+        "yuxi.models.weknora_proxy.request_access_token",
+        lambda: "test-token",
+    )
+    monkeypatch.setattr(
+        "yuxi.models.weknora_proxy.rerank_proxy_url",
+        lambda model_id: f"https://example.com/{model_id}",
+    )
+    monkeypatch.setattr("yuxi.models.weknora_proxy.extra_request_headers", lambda: {})
 
     reranker = get_reranker("test-provider:namespace/rerank-model")
 

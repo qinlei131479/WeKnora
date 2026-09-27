@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPost } from './base'
+import { apiDelete, apiGet } from './base'
 
 const buildQuery = (params) => {
   const query = new URLSearchParams()
@@ -35,20 +35,4 @@ export const downloadViewerFile = (threadId, path) => {
 export const deleteViewerFile = (threadId, path) => {
   const query = buildViewerQuery(threadId, path)
   return apiDelete(`/api/viewer/filesystem/file?${query}`)
-}
-
-export const createViewerDirectory = (threadId, parentPath, name) => {
-  return apiPost('/api/viewer/filesystem/directory', {
-    thread_id: threadId,
-    parent_path: parentPath,
-    name
-  })
-}
-
-export const uploadViewerFiles = (threadId, parentPath, files) => {
-  const formData = new FormData()
-  formData.set('thread_id', threadId)
-  formData.set('parent_path', parentPath)
-  files.forEach((file) => formData.append('files', file))
-  return apiPost('/api/viewer/filesystem/upload', formData)
 }

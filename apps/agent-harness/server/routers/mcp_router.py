@@ -15,7 +15,6 @@ from yuxi.agents.mcp.service import (
     get_all_mcp_servers,
     get_all_mcp_tools,
     get_mcp_server,
-    get_mcp_tools_stats,
     is_builtin_mcp_server,
     live_mcp_tools,
     metadata_from_live_tools,
@@ -286,7 +285,12 @@ async def test_mcp_connection(
             request.url,
             request.headers,
         )
-        return {"success": True, "message": payload.get("message"), "tool_count": payload.get("tool_count", 0), "data": payload}
+        return {
+            "success": True,
+            "message": payload.get("message"),
+            "tool_count": payload.get("tool_count", 0),
+            "data": payload,
+        }
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
@@ -637,48 +641,6 @@ async def get_mcp_server_tools(
         raise
     except Exception as e:
         logger.error(f"Failed to get MCP server tools: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@mcp.post("/{slug}/tools/refresh")
-async def refresh_mcp_server_tools(
-    slug: str,
-    current_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """刷新 MCP 服务器的工具列表（清除缓存重新获取）"""
-    try:
-        server = await get_server_or_404(db, slug)
-        ensure_mcp_server_runnable(server)
-
-        try:
-            # 获取所有工具（不过滤 disabled_tools）
-            tools = await get_all_mcp_tools(slug)
-
-            # 获取统计信息
-            stats = get_mcp_tools_stats(slug)
-            enabled_count = stats.get("enabled", len(tools)) if stats else len(tools)
-            disabled_count = stats.get("disabled", 0) if stats else 0
-
-            message = "工具列表已刷新"
-            if disabled_count > 0:
-                message += f"，{enabled_count} 个已启用，{disabled_count} 个已禁用"
-            else:
-                message += f"，共发现 {enabled_count} 个工具"
-
-            return {
-                "success": True,
-                "message": message,
-                "tool_count": enabled_count,
-                "enabled_count": enabled_count,
-                "disabled_count": disabled_count,
-            }
-        except Exception as tool_error:
-            raise HTTPException(status_code=500, detail=f"刷新失败: {str(tool_error)}")
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to refresh MCP server tools: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

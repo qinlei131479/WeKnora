@@ -70,43 +70,6 @@ async def test_create_run_returns_request_info(test_client, admin_headers):
         await _cancel_run_and_wait(test_client, admin_headers, data["run_id"])
 
 
-async def test_async_agent_call_uses_request_intake(test_client, admin_headers):
-    agent_slug = await _get_default_agent_slug(test_client, admin_headers)
-    request_id = f"agent-call-queue-{uuid.uuid4()}"
-
-    response = await test_client.post(
-        "/api/agent-invocation/agent-call/runs",
-        json={
-            "agent_slug": agent_slug,
-            "messages": [{"role": "user", "content": "queue integration"}],
-            "request_id": request_id,
-            "async_mode": True,
-        },
-        headers=admin_headers,
-    )
-
-    assert response.status_code == 200, response.text
-    assert response.json()["request_id"] == request_id
-
-    request_response = await test_client.get(
-        f"/api/agent/requests/{request_id}",
-        headers=admin_headers,
-    )
-    assert request_response.status_code == 200, request_response.text
-    request = request_response.json()["request"]
-    assert request["source"] == "agent_call"
-    assert request["queue_policy"] == "enqueue"
-    assert request["status"] in {"queued", "dispatched"}
-    if request.get("dispatched_run_id"):
-        await _cancel_run_and_wait(test_client, admin_headers, request["dispatched_run_id"])
-    elif request["status"] == "queued":
-        cancel_response = await test_client.post(
-            f"/api/agent/requests/{request_id}/cancel",
-            headers=admin_headers,
-        )
-        assert cancel_response.status_code == 200, cancel_response.text
-
-
 async def test_steer_policy_reuses_request_intake(test_client, admin_headers):
     agent_slug = await _get_default_agent_slug(test_client, admin_headers)
     thread_id = await _create_thread(test_client, admin_headers, agent_slug)

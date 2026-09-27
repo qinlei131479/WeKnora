@@ -64,9 +64,6 @@ export const updateMcpServerStatus = (name: string, enabled: boolean) =>
 export const getMcpServerTools = (name: string) =>
   apiAdminGet(`${BASE_URL}/${encodeURIComponent(name)}/tools`)
 
-export const refreshMcpServerTools = (name: string) =>
-  apiAdminPost(`${BASE_URL}/${encodeURIComponent(name)}/tools/refresh`, {})
-
 export const toggleMcpServerTool = (serverName: string, toolName: string) =>
   apiAdminPut(
     `${BASE_URL}/${encodeURIComponent(serverName)}/tools/${encodeURIComponent(toolName)}/toggle`,
@@ -92,7 +89,6 @@ export const mcpApi = {
   revokeMcpOAuthToken,
   updateMcpServerStatus,
   getMcpServerTools,
-  refreshMcpServerTools,
   toggleMcpServerTool,
 }
 

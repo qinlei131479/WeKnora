@@ -13,7 +13,7 @@ from yuxi.tenancy.resolve import TenantHeaderError, resolve_request_tenant_id
 from yuxi.services.weknora_identity_service import WeKnoraIdentityError, load_user_from_claims
 from yuxi.utils.weknora_auth import WeKnoraTokenError, verify_weknora_access_token
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 
 def _bind_principal(user: User | None, tenant_id: int | None) -> User | None:
@@ -105,5 +105,4 @@ async def get_admin_user(current_user: User = Depends(get_required_user)):
             detail="需要管理员权限",
         )
     return current_user
-
 
