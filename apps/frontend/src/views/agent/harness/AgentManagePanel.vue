@@ -62,7 +62,8 @@ const groupedAgents = computed(() => {
 })
 
 const canManageAgent = (agent) => !!agent?.can_manage
-const getAgentDefaultIconSrc = (agent) => (agent.id ? generatePixelAvatar(agent.id) : '')
+const getAgentDefaultIconSrc = (agent) =>
+  agent?.name || agent?.id ? generatePixelAvatar(agent.name || agent.id) : ''
 
 const getAgentShareLabel = (agent) => {
   const config = agent?.share_config || {}

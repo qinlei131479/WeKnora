@@ -1,4 +1,5 @@
-const DICEBEAR_GLYPHS_AVATAR_BASE_URL = 'https://api.dicebear.com/10.x/glyphs/svg'
+// 内网打不开 api.dicebear.com，头像改用本地 SVG，颜色与浅色主题色板一致。
+const AVATAR_FILL_COLORS = ['#049b38', '#9581cc', '#1890ff', '#d48806', '#cf1322']
 
 export const AVATAR_BACKGROUND_TOKENS = [
   { background: 'linear-gradient(135deg, var(--main-600), var(--color-info-500))', color: '#fff' },
@@ -27,9 +28,23 @@ const normalizeSeed = (id) => {
   return String(id).trim()
 }
 
+const escapeSvgText = (value) =>
+  value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+
 export const generatePixelAvatar = (id) => {
   const seed = normalizeSeed(id)
-  return `${DICEBEAR_GLYPHS_AVATAR_BASE_URL}?seed=${encodeURIComponent(seed)}`
+  let hash = 0
+  for (const char of seed) {
+    hash = (hash * 31 + char.codePointAt(0)) >>> 0
+  }
+  const fill = AVATAR_FILL_COLORS[hash % AVATAR_FILL_COLORS.length]
+  const label = escapeSvgText(Array.from(seed).slice(0, 1).join('') || '智')
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="${fill}"/><text x="32" y="42" text-anchor="middle" font-size="28" font-family="sans-serif" fill="#ffffff">${label}</text></svg>`
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`
 }
 
 export const getAvatarInitials = (name, kind = 'user') => {

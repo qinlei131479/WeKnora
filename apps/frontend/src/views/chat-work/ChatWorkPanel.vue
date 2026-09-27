@@ -1011,8 +1011,11 @@ const getSubagentIconSrc = (run) => {
   return agent?.icon || ''
 }
 
-const getSubagentDefaultIconSrc = (run) =>
-  run?.subagent_slug ? generatePixelAvatar(run.subagent_slug) : ''
+const getSubagentDefaultIconSrc = (run) => {
+  const agent = getSubagentAgent(run)
+  const seed = agent?.name || run?.subagent_slug
+  return seed ? generatePixelAvatar(seed) : ''
+}
 
 const getSubagentRunMeta = (run) => {
   const artifacts = Array.isArray(run?.artifacts) ? run.artifacts.length : 0

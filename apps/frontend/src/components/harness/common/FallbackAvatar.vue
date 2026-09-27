@@ -59,10 +59,12 @@ const props = defineProps({
 
 const failedImageCount = ref(0)
 
+const isUnreachableAvatarUrl = (value) => /dicebear\.com/i.test(value)
+
 const imageCandidates = computed(() => {
   const candidates = [props.src, props.defaultSrc]
     .map((value) => String(value || '').trim())
-    .filter(Boolean)
+    .filter((value) => value && !isUnreachableAvatarUrl(value))
   return [...new Set(candidates)]
 })
 

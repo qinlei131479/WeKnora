@@ -215,9 +215,10 @@ const normalizeShareConfigForPayload = () => {
 const agentModalTitle = computed(() =>
   editingAgentId.value ? t('agent.editor.editTitle') : t('agent.editor.createTitle')
 )
-const agentPreviewDefaultIcon = computed(() =>
-  editingAgentId.value ? generatePixelAvatar(editingAgentId.value) : ''
-)
+const agentPreviewDefaultIcon = computed(() => {
+  const seed = agentForm.name || editingAgentId.value
+  return seed ? generatePixelAvatar(seed) : ''
+})
 const agentPreviewName = computed(
   () => agentForm.name || editingAgentId.value || t('agent.title')
 )
