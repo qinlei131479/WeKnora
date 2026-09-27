@@ -435,6 +435,72 @@ class PostgresManager(metaclass=SingletonMeta):
             """,
             "CREATE INDEX IF NOT EXISTS ix_amp_agent_run_requests_dispatched_run_id "
             "ON amp_agent_run_requests(dispatched_run_id)",
+            "ALTER TABLE IF EXISTS amp_agent_usage_events "
+            "ADD COLUMN IF NOT EXISTS usage_side VARCHAR(16) NOT NULL DEFAULT 'work'",
+            "ALTER TABLE IF EXISTS amp_agent_usage_events "
+            "ADD COLUMN IF NOT EXISTS channel VARCHAR(50) NOT NULL DEFAULT ''",
+            "ALTER TABLE IF EXISTS amp_agent_usage_events "
+            "ADD COLUMN IF NOT EXISTS external_session_id VARCHAR(64)",
+            "ALTER TABLE IF EXISTS amp_tool_usage_events "
+            "ADD COLUMN IF NOT EXISTS usage_side VARCHAR(16) NOT NULL DEFAULT 'work'",
+            "ALTER TABLE IF EXISTS amp_tool_usage_events "
+            "ADD COLUMN IF NOT EXISTS channel VARCHAR(50) NOT NULL DEFAULT ''",
+            "ALTER TABLE IF EXISTS amp_tool_usage_events "
+            "ADD COLUMN IF NOT EXISTS external_session_id VARCHAR(64)",
+            "ALTER TABLE IF EXISTS amp_token_usage_events "
+            "ADD COLUMN IF NOT EXISTS usage_side VARCHAR(16) NOT NULL DEFAULT 'work'",
+            "ALTER TABLE IF EXISTS amp_token_usage_events "
+            "ADD COLUMN IF NOT EXISTS channel VARCHAR(50) NOT NULL DEFAULT ''",
+            "ALTER TABLE IF EXISTS amp_token_usage_events "
+            "ADD COLUMN IF NOT EXISTS external_session_id VARCHAR(64)",
+            "ALTER TABLE IF EXISTS amp_agent_usage_daily "
+            "ADD COLUMN IF NOT EXISTS usage_side VARCHAR(16) NOT NULL DEFAULT 'work'",
+            "ALTER TABLE IF EXISTS amp_agent_usage_events "
+            "DROP CONSTRAINT IF EXISTS ck_amp_agent_usage_events_usage_side",
+            "ALTER TABLE IF EXISTS amp_agent_usage_events "
+            "ADD CONSTRAINT ck_amp_agent_usage_events_usage_side CHECK (usage_side IN ('chat', 'work'))",
+            "ALTER TABLE IF EXISTS amp_tool_usage_events "
+            "DROP CONSTRAINT IF EXISTS ck_amp_tool_usage_events_usage_side",
+            "ALTER TABLE IF EXISTS amp_tool_usage_events "
+            "ADD CONSTRAINT ck_amp_tool_usage_events_usage_side CHECK (usage_side IN ('chat', 'work'))",
+            "ALTER TABLE IF EXISTS amp_token_usage_events "
+            "DROP CONSTRAINT IF EXISTS ck_amp_token_usage_events_usage_side",
+            "ALTER TABLE IF EXISTS amp_token_usage_events "
+            "ADD CONSTRAINT ck_amp_token_usage_events_usage_side CHECK (usage_side IN ('chat', 'work'))",
+            "ALTER TABLE IF EXISTS amp_agent_usage_daily "
+            "DROP CONSTRAINT IF EXISTS ck_amp_agent_usage_daily_usage_side",
+            "ALTER TABLE IF EXISTS amp_agent_usage_daily "
+            "ADD CONSTRAINT ck_amp_agent_usage_daily_usage_side CHECK (usage_side IN ('chat', 'work'))",
+            "DROP INDEX IF EXISTS uq_amp_agent_usage_daily_dimensions",
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_agent_usage_daily_dimensions "
+            "ON amp_agent_usage_daily(stat_date, tenant_id, agent_id, usage_side)",
+            "CREATE INDEX IF NOT EXISTS idx_amp_agent_usage_events_side "
+            "ON amp_agent_usage_events(tenant_id, usage_side, occurred_at)",
+            "CREATE INDEX IF NOT EXISTS idx_amp_tool_usage_events_side "
+            "ON amp_tool_usage_events(tenant_id, usage_side, occurred_at)",
+            "CREATE INDEX IF NOT EXISTS idx_amp_token_usage_events_side "
+            "ON amp_token_usage_events(tenant_id, usage_side, occurred_at)",
+            """
+            CREATE TABLE IF NOT EXISTS amp_usage_sync_state (
+                sync_key VARCHAR(64) PRIMARY KEY,
+                cursor_updated_at TIMESTAMPTZ,
+                cursor_id VARCHAR(64),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            )
+            """,
+            """
+            DO $$
+            BEGIN
+                IF to_regclass('messages') IS NOT NULL THEN
+                    CREATE INDEX IF NOT EXISTS idx_messages_usage_sync_cursor
+                    ON messages(updated_at, id)
+                    WHERE deleted_at IS NULL
+                      AND role = 'assistant'
+                      AND is_completed IS TRUE;
+                END IF;
+            END
+            $$;
+            """,
         ]
         from yuxi.tenancy.schema import tenant_scope_ddl_statements
 

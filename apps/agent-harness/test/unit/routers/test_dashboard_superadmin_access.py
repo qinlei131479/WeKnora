@@ -19,6 +19,7 @@ from server.utils.auth_middleware import get_admin_user, get_required_user
 from yuxi.tenancy.context import TenantPrincipal, bind_tenant_principal
 from yuxi.storage.postgres.models_business import (
     AgentUsageDaily,
+    AgentUsageEvent,
     Base,
     Conversation,
     Message,
@@ -110,6 +111,29 @@ async def dashboard_session():
             status="success",
             occurred_at=now,
         )
+        agent_event_work = AgentUsageEvent(
+            event_id="agent-work",
+            tenant_id=10000,
+            uid="user_a",
+            agent_id="agent-shared",
+            event_type="start",
+            run_type="chat",
+            status="running",
+            occurred_at=now,
+        )
+        agent_event_chat = AgentUsageEvent(
+            event_id="agent-chat",
+            tenant_id=10000,
+            uid="user_b",
+            agent_id="chat-agent",
+            event_type="start",
+            run_type="platform",
+            status="succeed",
+            occurred_at=now,
+            usage_side="chat",
+            channel="web",
+            external_session_id="chat-session",
+        )
         tool_event_b = ToolUsageEvent(
             event_id="tool-b",
             tenant_id=20000,
@@ -157,6 +181,8 @@ async def dashboard_session():
                 daily_a,
                 tool_event_a,
                 tool_event_b,
+                agent_event_work,
+                agent_event_chat,
                 token_event_a,
                 token_event_b,
             ]
@@ -172,7 +198,13 @@ async def dashboard_session():
             conversation_b,
         ]:
             await db.refresh(item)
-        yield {"db": db, "superadmin": superadmin, "admin_a": admin_a, "user_a": user_a}
+        yield {
+            "db": db,
+            "superadmin": superadmin,
+            "admin_a": admin_a,
+            "user_a": user_a,
+            "conversation_a": conversation_a,
+        }
     await engine.dispose()
 
 
@@ -251,28 +283,38 @@ async def test_dashboard_filters_to_token_tenant(dashboard_session, monkeypatch:
     async def fake_overview(_db):
         return WeKnoraOverview(users=1, sessions=1, messages=1, agents=1)
 
-    async def fake_active(_db, *, since, until=None):
-        return 1
-
-    async def fake_daily(_db, *, days=7):
-        return [{"date": "2026-09-01", "active_users": 1}]
-
     monkeypatch.setattr("server.routers.dashboard_router.fetch_weknora_overview", fake_overview)
-    monkeypatch.setattr("server.routers.dashboard_router.count_weknora_active_users", fake_active)
-    monkeypatch.setattr("server.routers.dashboard_router.fetch_weknora_daily_active_users", fake_daily)
     bind_tenant_principal(TenantPrincipal(uid="superadmin", tenant_id=10000, role="superadmin"))
     try:
+        basic_before = await get_dashboard_stats(
+            db=dashboard_session["db"], current_user=dashboard_session["superadmin"]
+        )
         stats = await get_user_activity_stats(
             db=dashboard_session["db"], current_user=dashboard_session["superadmin"]
         )
         tools = await get_tool_call_stats(db=dashboard_session["db"], current_user=dashboard_session["superadmin"])
+        await dashboard_session["db"].delete(dashboard_session["conversation_a"])
+        await dashboard_session["db"].commit()
+        basic_after = await get_dashboard_stats(
+            db=dashboard_session["db"], current_user=dashboard_session["superadmin"]
+        )
+        stats_after = await get_user_activity_stats(
+            db=dashboard_session["db"], current_user=dashboard_session["superadmin"]
+        )
+        tools_after = await get_tool_call_stats(
+            db=dashboard_session["db"], current_user=dashboard_session["superadmin"]
+        )
     finally:
         bind_tenant_principal(None)
 
+    assert basic_after == basic_before
     assert stats.total_users == 1
-    assert stats.active_users_24h == 1
+    assert stats.active_users_24h == 2
     assert tools.total_calls == 1
     assert {tool["tool_name"] for tool in tools.most_used_tools} == {"dept_a_tool"}
+    assert stats_after.active_users_24h == stats.active_users_24h
+    assert tools_after.total_calls == tools.total_calls
+    assert tools_after.most_used_tools == tools.most_used_tools
 
 
 async def test_p6_dashboard_split_does_not_count_h_users(dashboard_session, monkeypatch: pytest.MonkeyPatch):
@@ -286,16 +328,8 @@ async def test_p6_dashboard_split_does_not_count_h_users(dashboard_session, monk
     async def fake_knowledge(_db):
         return WeKnoraKnowledgeStats(total_databases=3, total_files=9)
 
-    async def fake_active(_db, *, since, until=None):
-        return 2
-
-    async def fake_daily(_db, *, days=7):
-        return [{"date": "2026-09-01", "active_users": 1}]
-
     monkeypatch.setattr("server.routers.dashboard_router.fetch_weknora_overview", fake_overview)
     monkeypatch.setattr("server.routers.dashboard_router.fetch_weknora_knowledge_stats", fake_knowledge)
-    monkeypatch.setattr("server.routers.dashboard_router.count_weknora_active_users", fake_active)
-    monkeypatch.setattr("server.routers.dashboard_router.fetch_weknora_daily_active_users", fake_daily)
     try:
         basic = await get_dashboard_stats(db=dashboard_session["db"], current_user=dashboard_session["superadmin"])
         users = await get_user_activity_stats(db=dashboard_session["db"], current_user=dashboard_session["superadmin"])
@@ -304,9 +338,9 @@ async def test_p6_dashboard_split_does_not_count_h_users(dashboard_session, monk
         bind_tenant_principal(None)
 
     assert basic["split_by_system"] is True
-    assert basic["weknora_sessions"] == 7
+    assert basic["weknora_sessions"] == 1
     assert basic["yuxi_conversations"] == 1
-    assert basic["total_conversations"] == 8
+    assert basic["total_conversations"] == 2
     assert basic["total_users"] == 4
     assert users.total_users == 4
     assert users.active_users_24h == 2

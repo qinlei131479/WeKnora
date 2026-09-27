@@ -6,7 +6,7 @@ import math
 from datetime import UTC, date, datetime
 from typing import Any
 
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,12 +22,64 @@ from yuxi.storage.postgres.models_business import (
 from yuxi.utils.datetime_utils import utc_now
 from yuxi.utils.logging_config import logger
 
+USAGE_SIDE_WORK = "work"
+USAGE_SIDE_CHAT = "chat"
+DEFAULT_CHAT_AGENT_ID = "builtin-quick-answer"
+DEFAULT_WORK_AGENT_ID = "default-chatbot"
+_UNRESOLVED_USAGE_LABELS = frozenset({"", "unknown", "none", "null", "unknown_model"})
+
 _TERMINAL_EVENT_TYPES = {
     "completed": "succeed",
     "failed": "fail",
     "cancelled": "cancel",
     "interrupted": "fail",
 }
+
+
+def is_unresolved_usage_label(value: str | None) -> bool:
+    """空值或占位名无法对应到真实模型、智能体。"""
+    return str(value or "").strip().lower() in _UNRESOLVED_USAGE_LABELS
+
+
+def fold_usage_agent_id(agent_id: str | None, usage_side: str) -> str:
+    """对不上的智能体并入该侧默认智能体，不再单独显示 unknown。"""
+    raw = str(agent_id or "").strip()
+    if not is_unresolved_usage_label(raw):
+        return raw[:64]
+    if usage_side == USAGE_SIDE_CHAT:
+        return DEFAULT_CHAT_AGENT_ID
+    return DEFAULT_WORK_AGENT_ID
+
+
+async def default_knowledge_model_id(db: AsyncSession, tenant_id: int | None) -> str | None:
+    """当前空间的默认对话模型：优先 is_default，否则取最早的可用 KnowledgeQA。"""
+    if tenant_id is None:
+        return None
+    try:
+        async with db.begin_nested():
+            row = (
+                await db.execute(
+                    text(
+                        """
+                        SELECT id
+                        FROM models
+                        WHERE deleted_at IS NULL
+                          AND type = 'KnowledgeQA'
+                          AND (status IS NULL OR status = '' OR status = 'active')
+                          AND tenant_id = :tid
+                        ORDER BY is_default DESC, created_at ASC
+                        LIMIT 1
+                        """
+                    ),
+                    {"tid": int(tenant_id)},
+                )
+            ).first()
+    except Exception:
+        logger.warning("默认对话模型读取失败")
+        return None
+    if row is None or not row.id:
+        return None
+    return str(row.id)[:128]
 
 
 def capability_type_for_tool(tool_name: str | None) -> str:
@@ -84,7 +136,8 @@ def _as_utc(value: datetime | None) -> datetime:
     return current.astimezone(UTC)
 
 
-def _stat_date(value: datetime) -> date:
+def stat_date(value: datetime) -> date:
+    """把遥测时间归一到 UTC 日期，供日聚合和同步器共用。"""
     return _as_utc(value).date()
 
 
@@ -114,7 +167,14 @@ async def _insert_ignore(db: AsyncSession, model, values: dict[str, Any]) -> Non
         db.add(model(**values))
 
 
-async def _refresh_daily(db: AsyncSession, *, tenant_id: int, agent_id: str, stat_date: date) -> None:
+async def _refresh_daily(
+    db: AsyncSession,
+    *,
+    tenant_id: int,
+    agent_id: str,
+    stat_date: date,
+    usage_side: str = USAGE_SIDE_WORK,
+) -> None:
     agent_rows = await db.execute(
         select(
             AgentUsageEvent.event_type,
@@ -125,6 +185,7 @@ async def _refresh_daily(db: AsyncSession, *, tenant_id: int, agent_id: str, sta
         .where(
             AgentUsageEvent.tenant_id == tenant_id,
             AgentUsageEvent.agent_id == agent_id,
+            AgentUsageEvent.usage_side == usage_side,
             func.date(AgentUsageEvent.occurred_at) == stat_date,
             AgentUsageEvent.event_type.in_(["succeed", "fail", "cancel"]),
         )
@@ -151,6 +212,7 @@ async def _refresh_daily(db: AsyncSession, *, tenant_id: int, agent_id: str, sta
         ).where(
             ToolUsageEvent.tenant_id == tenant_id,
             ToolUsageEvent.agent_id == agent_id,
+            ToolUsageEvent.usage_side == usage_side,
             func.date(ToolUsageEvent.occurred_at) == stat_date,
         )
     )
@@ -164,6 +226,7 @@ async def _refresh_daily(db: AsyncSession, *, tenant_id: int, agent_id: str, sta
         ).where(
             TokenUsageEvent.tenant_id == tenant_id,
             TokenUsageEvent.agent_id == agent_id,
+            TokenUsageEvent.usage_side == usage_side,
             func.date(TokenUsageEvent.occurred_at) == stat_date,
         )
     )
@@ -174,6 +237,7 @@ async def _refresh_daily(db: AsyncSession, *, tenant_id: int, agent_id: str, sta
             AgentUsageDaily.stat_date == stat_date,
             AgentUsageDaily.tenant_id == tenant_id,
             AgentUsageDaily.agent_id == agent_id,
+            AgentUsageDaily.usage_side == usage_side,
         )
     )
     row = existing.scalar_one_or_none()
@@ -182,6 +246,7 @@ async def _refresh_daily(db: AsyncSession, *, tenant_id: int, agent_id: str, sta
             stat_date=stat_date,
             tenant_id=tenant_id,
             agent_id=agent_id,
+            usage_side=usage_side,
             session_count=0,
             message_count=0,
         )
@@ -218,24 +283,27 @@ async def _bump_counter(
     occurred_at: datetime,
     session_delta: int = 0,
     message_delta: int = 0,
+    usage_side: str = USAGE_SIDE_WORK,
 ) -> None:
     if not agent_id or (session_delta == 0 and message_delta == 0):
         return
     async with db.begin_nested():
-        stat_date = _stat_date(occurred_at)
+        stat_day = stat_date(occurred_at)
         existing = await db.execute(
             select(AgentUsageDaily).where(
-                AgentUsageDaily.stat_date == stat_date,
+                AgentUsageDaily.stat_date == stat_day,
                 AgentUsageDaily.tenant_id == tenant_id,
                 AgentUsageDaily.agent_id == agent_id,
+                AgentUsageDaily.usage_side == usage_side,
             )
         )
         row = existing.scalar_one_or_none()
         if row is None:
             row = AgentUsageDaily(
-                stat_date=stat_date,
+                stat_date=stat_day,
                 tenant_id=tenant_id,
                 agent_id=agent_id,
+                usage_side=usage_side,
             )
             db.add(row)
             await db.flush()
@@ -270,6 +338,8 @@ async def record_run_started(run) -> None:
                 "error_type": None,
                 "error_message": None,
                 "event_metadata": {},
+                "usage_side": USAGE_SIDE_WORK,
+                "channel": "",
                 "occurred_at": occurred_at,
             },
         )
@@ -308,10 +378,18 @@ async def record_run_finished(run, *, retry_count: int = 0) -> None:
                 "error_type": run.error_type,
                 "error_message": run.error_message,
                 "event_metadata": {},
+                "usage_side": USAGE_SIDE_WORK,
+                "channel": "",
                 "occurred_at": occurred_at,
             },
         )
-        await _refresh_daily(db, tenant_id=tenant_id, agent_id=agent_id, stat_date=_stat_date(occurred_at))
+        await _refresh_daily(
+            db,
+            tenant_id=tenant_id,
+            agent_id=agent_id,
+            stat_date=stat_date(occurred_at),
+            usage_side=USAGE_SIDE_WORK,
+        )
 
     await _safe(action)
 
@@ -357,10 +435,18 @@ async def record_tool_finished(db: AsyncSession, tool_call) -> None:
                 "error_type": "tool_error" if status == "error" else None,
                 "error_code": None,
                 "event_metadata": {},
+                "usage_side": USAGE_SIDE_WORK,
+                "channel": "",
                 "occurred_at": occurred_at,
             },
         )
-        await _refresh_daily(write_db, tenant_id=tenant_id, agent_id=agent_id, stat_date=_stat_date(occurred_at))
+        await _refresh_daily(
+            write_db,
+            tenant_id=tenant_id,
+            agent_id=agent_id,
+            stat_date=stat_date(occurred_at),
+            usage_side=USAGE_SIDE_WORK,
+        )
 
     await _safe(action)
 
@@ -437,7 +523,7 @@ def _usage_numbers(metadata: dict | None, *, token_count: int | None = None) -> 
     model = _model_name(metadata, usage or token_usage, response_metadata)
     if total <= 0 and not model:
         return None
-    return model or "unknown", prompt, completion, total
+    return model, prompt, completion, total
 
 
 async def record_message_activity(db: AsyncSession, message: Message) -> None:
@@ -467,6 +553,8 @@ async def record_token_usage(message: Message, conversation: Conversation) -> No
     if usage is None:
         return
     model, prompt, completion, total = usage
+    if is_unresolved_usage_label(model):
+        model = ""
     state_usage = message.extra_metadata.get("token_usage") if isinstance(message.extra_metadata, dict) else {}
     state_usage = state_usage if isinstance(state_usage, dict) else {}
     response_metadata = message.extra_metadata.get("response_metadata")
@@ -485,26 +573,39 @@ async def record_token_usage(message: Message, conversation: Conversation) -> No
     message_id = message.id
 
     async def action(write_db: AsyncSession) -> None:
+        resolved_model = model
+        if is_unresolved_usage_label(resolved_model):
+            resolved_model = await default_knowledge_model_id(write_db, tenant_id) or ""
+        if is_unresolved_usage_label(resolved_model):
+            resolved_model = "unknown"
         await _insert_ignore(
             write_db,
             TokenUsageEvent,
             {
-                "event_id": f"token:{message_id}:{model}"[:64],
+                "event_id": f"token:{message_id}:{resolved_model}"[:64],
                 "tenant_id": tenant_id,
                 "uid": uid,
                 "agent_id": agent_id,
                 "run_id": run_id,
                 "session_id": session_id,
                 "message_id": message_id,
-                "model": model,
+                "model": resolved_model,
                 "prompt_tokens": prompt,
                 "completion_tokens": completion,
                 "total_tokens": total,
                 "event_metadata": {"token_source": token_source},
+                "usage_side": USAGE_SIDE_WORK,
+                "channel": "",
                 "occurred_at": occurred_at,
             },
         )
-        await _refresh_daily(write_db, tenant_id=tenant_id, agent_id=agent_id, stat_date=_stat_date(occurred_at))
+        await _refresh_daily(
+            write_db,
+            tenant_id=tenant_id,
+            agent_id=agent_id,
+            stat_date=stat_date(occurred_at),
+            usage_side=USAGE_SIDE_WORK,
+        )
 
     await _safe(action)
 

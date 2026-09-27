@@ -149,8 +149,18 @@ const renderCallStatsChart = () => {
     if (cat === 'input' || cat === 'input_tokens') return t('dashboard.calls.input')
     if (cat === 'output' || cat === 'output_tokens') return t('dashboard.calls.output')
     if (cat === 'None' || cat === 'unknown' || cat === 'unknown_model') return t('dashboard.calls.unknownModel')
+    if (cat.startsWith('chat:') || cat.startsWith('work:')) {
+      const separator = cat.indexOf(':')
+      const side = cat.slice(0, separator)
+      const agentId = cat.slice(separator + 1)
+      const name = agentNames[cat] || agentId
+      return `${name} · ${t(`dashboard.stats.${side}`)}`
+    }
     return agentNames[cat] || cat
   }
+  const formatModelName = (model: string) => (
+    ['None', 'unknown', 'unknown_model', ''].includes(model) ? t('dashboard.calls.unknownModel') : model
+  )
   const series = categories.map((category: string, index: number) => ({
     name: resolveCategoryLabel(category),
     type: 'bar',
@@ -193,8 +203,8 @@ const renderCallStatsChart = () => {
         const modelStats = bucket?.models && typeof bucket.models === 'object' ? bucket.models : null
         if (isTokenView.value && modelStats) {
           Object.entries(modelStats as Record<string, { input?: number; output?: number }>).forEach(([modelName, item]) => {
-            result += `${truncateLegend(modelName)} ${t('dashboard.calls.input')}: ${formatValueForDisplay(Number(item?.input || 0))}<br/>`
-            result += `${truncateLegend(modelName)} ${t('dashboard.calls.output')}: ${formatValueForDisplay(Number(item?.output || 0))}<br/>`
+            result += `${truncateLegend(formatModelName(modelName))} ${t('dashboard.calls.input')}: ${formatValueForDisplay(Number(item?.input || 0))}<br/>`
+            result += `${truncateLegend(formatModelName(modelName))} ${t('dashboard.calls.output')}: ${formatValueForDisplay(Number(item?.output || 0))}<br/>`
           })
         }
         visibleParams.forEach((param) => {

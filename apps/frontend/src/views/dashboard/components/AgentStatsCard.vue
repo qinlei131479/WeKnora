@@ -18,19 +18,26 @@
             {{ $t('dashboard.stats.work') }} {{ workConversations }}
           </div>
         </div>
-        <t-statistic class="stat-warning" :title="$t('dashboard.agents.toolCalls')" :value="totalToolUsage" :suffix="$t('dashboard.agents.times')" />
+        <div>
+          <t-statistic class="stat-warning" :title="$t('dashboard.agents.toolCalls')" :value="totalToolUsage" :suffix="$t('dashboard.agents.times')" />
+          <div v-if="agentStats?.split_by_system" class="stat-split">
+            {{ $t('dashboard.stats.chat') }} {{ chatToolUsage }}
+            ·
+            {{ $t('dashboard.stats.work') }} {{ workToolUsage }}
+          </div>
+        </div>
       </div>
       <t-divider />
       <h4>{{ $t('dashboard.agents.distribution') }}</h4>
       <div ref="conversationToolChartRef" class="chart" />
       <t-divider />
       <h4>{{ $t('dashboard.agents.topPerformers') }}</h4>
-      <t-table :data="topPerformers" :columns="performerColumns" size="small" row-key="agent_id">
+      <t-table :data="topPerformers" :columns="performerColumns" size="small" row-key="row_key">
         <template #rank="{ rowIndex }">
           <span class="rank-number" :class="{ featured: rowIndex < 3 }">{{ rowIndex + 1 }}</span>
         </template>
         <template #agent_id="{ row }">
-          <span class="agent-name" :title="resolveAgentName(row.agent_id)">{{ resolveAgentName(row.agent_id) }}</span>
+          <span class="agent-name" :title="resolveAgentName(row.agent_id, row.usage_side)">{{ resolveAgentName(row.agent_id, row.usage_side) }}</span>
         </template>
         <template #score="{ row }">
           <span>{{ Number(row.score || 0).toFixed(2) }}</span>
@@ -71,40 +78,64 @@ const workConversations = computed(() =>
   (props.agentStats?.agent_conversation_counts || []).reduce((sum: number, item: { conversation_count: number }) => sum + item.conversation_count, 0),
 )
 const totalConversations = computed(() => chatConversations.value + workConversations.value)
-const totalToolUsage = computed(() =>
+const workToolUsage = computed(() =>
   (props.agentStats?.agent_tool_usage || []).reduce((sum: number, item: { tool_usage_count: number }) => sum + item.tool_usage_count, 0),
 )
-const topPerformers = computed(() => props.agentStats?.top_performing_agents || [])
+const chatToolUsage = computed(() =>
+  (props.agentStats?.weknora_agent_tool_usage || []).reduce((sum: number, item: { tool_usage_count: number }) => sum + item.tool_usage_count, 0),
+)
+const totalToolUsage = computed(() => workToolUsage.value + chatToolUsage.value)
+const topPerformers = computed(() =>
+  (props.agentStats?.top_performing_agents || []).map((item: Record<string, any>) => ({
+    ...item,
+    row_key: `${item.usage_side || 'work'}:${item.agent_id}`,
+  })),
+)
 const agentNames = computed(() => props.agentStats?.agent_names || {})
 const weknoraAgentNames = computed(() => props.agentStats?.weknora_agent_names || {})
-const resolveAgentName = (agentId: string) =>
-  agentNames.value[agentId] || weknoraAgentNames.value[agentId] || agentId
+const resolveAgentName = (agentId: string, usageSide?: string) => {
+  const side = usageSide === 'chat' ? 'chat' : 'work'
+  const name = side === 'chat'
+    ? weknoraAgentNames.value[agentId] || agentId
+    : agentNames.value[agentId] || agentId
+  return `${name} · ${t(`dashboard.stats.${side}`)}`
+}
+const resolveStatsAgentName = (statsKey: string) => {
+  const separator = statsKey.indexOf(':')
+  if (separator < 0) return resolveAgentName(statsKey)
+  return resolveAgentName(statsKey.slice(separator + 1), statsKey.slice(0, separator))
+}
 
 const initConversationToolChart = () => {
   if (!conversationToolChartRef.value) return
   const conversationData = [
-    ...(props.agentStats?.weknora_agent_conversation_counts || []),
-    ...(props.agentStats?.agent_conversation_counts || []),
+    ...(props.agentStats?.weknora_agent_conversation_counts || []).map((item: { agent_id: string; conversation_count: number }) => ({ ...item, usage_side: 'chat' })),
+    ...(props.agentStats?.agent_conversation_counts || []).map((item: { agent_id: string; conversation_count: number }) => ({ ...item, usage_side: 'work' })),
   ]
-  const toolData = props.agentStats?.agent_tool_usage || []
+  const toolData = [
+    ...(props.agentStats?.agent_tool_usage || []).map((item: { agent_id: string; tool_usage_count: number }) => ({ ...item, usage_side: 'work' })),
+    ...(props.agentStats?.weknora_agent_tool_usage || []).map((item: { agent_id: string; tool_usage_count: number }) => ({ ...item, usage_side: 'chat' })),
+  ]
   if (!conversationData.length && !toolData.length) return
   conversationToolChart?.dispose()
   conversationToolChart = echarts.init(conversationToolChartRef.value)
   const allAgentStats: Record<string, { conversation: number; tool: number; total: number }> = {}
-  conversationData.forEach((item: { agent_id: string; conversation_count: number }) => {
-    allAgentStats[item.agent_id] = allAgentStats[item.agent_id] || { conversation: 0, tool: 0, total: 0 }
-    allAgentStats[item.agent_id].conversation = item.conversation_count
-    allAgentStats[item.agent_id].total += item.conversation_count
+  conversationData.forEach((item: { agent_id: string; usage_side: string; conversation_count: number }) => {
+    const key = `${item.usage_side}:${item.agent_id}`
+    allAgentStats[key] = allAgentStats[key] || { conversation: 0, tool: 0, total: 0 }
+    allAgentStats[key].conversation += item.conversation_count
+    allAgentStats[key].total += item.conversation_count
   })
-  toolData.forEach((item: { agent_id: string; tool_usage_count: number }) => {
-    allAgentStats[item.agent_id] = allAgentStats[item.agent_id] || { conversation: 0, tool: 0, total: 0 }
-    allAgentStats[item.agent_id].tool = item.tool_usage_count
-    allAgentStats[item.agent_id].total += item.tool_usage_count
+  toolData.forEach((item: { agent_id: string; usage_side: string; tool_usage_count: number }) => {
+    const key = `${item.usage_side}:${item.agent_id}`
+    allAgentStats[key] = allAgentStats[key] || { conversation: 0, tool: 0, total: 0 }
+    allAgentStats[key].tool += item.tool_usage_count
+    allAgentStats[key].total += item.tool_usage_count
   })
   const topAgentIds = Object.entries(allAgentStats)
     .sort(([, a], [, b]) => b.total - a.total)
     .slice(0, 3)
-    .map(([agentId]) => agentId)
+    .map(([statsKey]) => statsKey)
   conversationToolChart.setOption({
     tooltip: {
       trigger: 'axis',
@@ -123,7 +154,7 @@ const initConversationToolChart = () => {
     grid: { left: '3%', right: '15%', bottom: '3%', top: '10%', containLabel: true },
     xAxis: {
       type: 'category',
-      data: topAgentIds.map(resolveAgentName),
+      data: topAgentIds.map(resolveStatsAgentName),
       axisLine: { lineStyle: { color: getCSSVariable('--gray-200') } },
       axisLabel: { color: getCSSVariable('--gray-500'), interval: 0 },
     },
@@ -137,7 +168,7 @@ const initConversationToolChart = () => {
       {
         name: t('dashboard.agents.conversationCount'),
         type: 'bar',
-        data: topAgentIds.map((agentId) => allAgentStats[agentId]?.conversation || 0),
+        data: topAgentIds.map((statsKey) => allAgentStats[statsKey]?.conversation || 0),
         itemStyle: { color: getColorByIndex(0), borderRadius: [4, 4, 0, 0] },
         emphasis: {
           itemStyle: {
@@ -150,7 +181,7 @@ const initConversationToolChart = () => {
       {
         name: t('dashboard.agents.toolCallCount'),
         type: 'bar',
-        data: topAgentIds.map((agentId) => allAgentStats[agentId]?.tool || 0),
+        data: topAgentIds.map((statsKey) => allAgentStats[statsKey]?.tool || 0),
         itemStyle: { color: getColorByIndex(1), borderRadius: [4, 4, 0, 0] },
         emphasis: {
           itemStyle: {

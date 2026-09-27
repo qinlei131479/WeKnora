@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from types import SimpleNamespace
 from typing import Any
 
 from sqlalchemy import bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from yuxi.tenancy.context import current_tenant_id
-from yuxi.utils.datetime_utils import UTC, utc_now
 from yuxi.utils.logging_config import logger
 
 KB_TYPE_LABELS = {
@@ -155,62 +152,6 @@ async def fetch_weknora_overview(db: AsyncSession) -> WeKnoraOverview:
     return WeKnoraOverview(users=users, sessions=sessions, messages=messages, agents=agents)
 
 
-async def count_weknora_active_users(
-    db: AsyncSession,
-    *,
-    since: datetime,
-    until: datetime | None = None,
-) -> int:
-    tenant_id = dashboard_tenant_id()
-    if tenant_id is None:
-        return 0
-    params: dict[str, Any] = {"tid": tenant_id, "since": since}
-    until_sql_sessions = ""
-    until_sql_messages = ""
-    if until is not None:
-        params["until"] = until
-        until_sql_sessions = " AND s.updated_at < :until"
-        until_sql_messages = " AND m.created_at < :until"
-    return await _scalar(
-        db,
-        f"""
-        SELECT COUNT(*) FROM (
-          SELECT s.user_id
-          FROM sessions s
-          INNER JOIN users u ON u.id = s.user_id AND u.deleted_at IS NULL
-          WHERE s.deleted_at IS NULL
-            AND s.tenant_id = :tid
-            AND s.user_id IS NOT NULL AND s.user_id <> ''
-            AND s.updated_at >= :since
-            {until_sql_sessions}
-          UNION
-          SELECT s.user_id
-          FROM messages m
-          INNER JOIN sessions s ON s.id = m.session_id
-          INNER JOIN users u ON u.id = s.user_id AND u.deleted_at IS NULL
-          WHERE m.deleted_at IS NULL
-            AND s.deleted_at IS NULL
-            AND s.tenant_id = :tid
-            AND s.user_id IS NOT NULL AND s.user_id <> ''
-            AND m.created_at >= :since
-            {until_sql_messages}
-        ) t
-        """,
-        params,
-    )
-
-
-async def fetch_weknora_daily_active_users(db: AsyncSession, *, days: int = 7) -> list[dict]:
-    now = utc_now()
-    rows: list[dict] = []
-    for i in range(days):
-        day_start = now - timedelta(days=i + 1)
-        day_end = now - timedelta(days=i)
-        count = await count_weknora_active_users(db, since=day_start, until=day_end)
-        rows.append({"date": day_start.strftime("%Y-%m-%d"), "active_users": count})
-    return list(reversed(rows))
-
-
 async def fetch_weknora_knowledge_stats(db: AsyncSession) -> WeKnoraKnowledgeStats:
     tenant_id = dashboard_tenant_id()
     if tenant_id is None:
@@ -297,91 +238,7 @@ async def fetch_weknora_agent_stats(db: AsyncSession) -> WeKnoraAgentStats:
         """,
         params,
     )
-
-    name_result = await db.execute(
-        text(
-            """
-            SELECT id, name
-            FROM custom_agents
-            WHERE deleted_at IS NULL AND tenant_id = :tid
-            """
-        ),
-        params,
-    )
-    agent_names = {str(agent_id): str(name or agent_id) for agent_id, name in name_result.all()}
-
-    conv_result = await db.execute(
-        text(
-            """
-            SELECT m.agent_id, COUNT(DISTINCT m.session_id)
-            FROM messages m
-            INNER JOIN sessions s ON s.id = m.session_id
-            WHERE m.deleted_at IS NULL
-              AND s.deleted_at IS NULL
-              AND s.tenant_id = :tid
-              AND m.agent_id IS NOT NULL AND m.agent_id <> ''
-            GROUP BY m.agent_id
-            ORDER BY COUNT(DISTINCT m.session_id) DESC
-            """
-        ),
-        params,
-    )
-    agent_conversation_counts = [
-        {"agent_id": agent_id, "conversation_count": int(count or 0), "system": "weknora"}
-        for agent_id, count in conv_result.all()
-    ]
-
-    return WeKnoraAgentStats(
-        total_agents=total_agents,
-        agent_conversation_counts=agent_conversation_counts,
-        agent_names=agent_names,
-    )
-
-
-_CALL_BUCKET_FORMAT = {
-    "14hours": "YYYY-MM-DD HH24:00",
-    "14weeks": "YYYY-IW",
-}
-
-
-async def fetch_weknora_agent_call_buckets(db: AsyncSession, *, time_range: str, start_time: datetime) -> list:
-    """平台对话按智能体分桶。消息时间是 timestamptz，换到上海时区后和遥测图对齐。"""
-    tenant_id = dashboard_tenant_id()
-    if tenant_id is None:
-        return []
-    start_at = start_time.astimezone(UTC) if start_time.tzinfo else start_time.replace(tzinfo=UTC)
-    pattern = _CALL_BUCKET_FORMAT.get(time_range, "YYYY-MM-DD")
-    try:
-        async with db.begin_nested():
-            rows = (
-                await db.execute(
-                    text(
-                        """
-                        SELECT to_char(timezone('Asia/Shanghai', m.created_at), :pattern) AS date,
-                               m.agent_id AS category,
-                               COUNT(DISTINCT m.session_id) AS count
-                        FROM messages m
-                        INNER JOIN sessions s ON s.id = m.session_id
-                        WHERE m.deleted_at IS NULL
-                          AND s.deleted_at IS NULL
-                          AND s.tenant_id = :tid
-                          AND m.agent_id IS NOT NULL
-                          AND m.agent_id <> ''
-                          AND m.created_at >= :start_at
-                        GROUP BY 1, 2
-                        """
-                    ),
-                    {"pattern": pattern, "tid": tenant_id, "start_at": start_at},
-                )
-            ).all()
-    except Exception:
-        logger.warning("平台智能体调用分桶读取失败，调用图只保留工作侧遥测")
-        return []
-    return [
-        SimpleNamespace(date=row.date, category=str(row.category), count=int(row.count or 0))
-        for row in rows
-        if row.date and row.category
-    ]
+    return WeKnoraAgentStats(total_agents=total_agents)
 
 
 async def fetch_weknora_agent_names(db: AsyncSession, agent_ids: list[str]) -> dict[str, str]:

@@ -63,6 +63,7 @@ const errorColumns = computed(() => [
 const hasErrorData = computed(() =>
   Boolean(props.toolStats?.tool_error_distribution && Object.keys(props.toolStats.tool_error_distribution).length),
 )
+
 const successRateClass = computed(() => {
   const rate = props.toolStats?.success_rate || 0
   if (rate >= 90) return 'stat-success'
@@ -76,7 +77,6 @@ const errorData = computed(() => {
     .map(([tool_name, error_count]) => ({ tool_name, error_count }))
     .sort((a, b) => Number(b.error_count) - Number(a.error_count))
 })
-
 const initToolsChart = () => {
   if (!toolsChartRef.value || !props.toolStats?.most_used_tools?.length) return
   toolsChart?.dispose()

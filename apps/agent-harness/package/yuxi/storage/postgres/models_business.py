@@ -768,6 +768,9 @@ class AgentUsageEvent(Base):
     error_type = Column(String(64), nullable=True)
     error_message = Column(Text, nullable=True)
     event_metadata = Column(JSON_VALUE, nullable=False, default=dict)
+    usage_side = Column(String(16), nullable=False, default="work", server_default="work")
+    channel = Column(String(50), nullable=False, default="", server_default="")
+    external_session_id = Column(String(64), nullable=True)
     occurred_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now_naive)
 
@@ -793,6 +796,9 @@ class ToolUsageEvent(Base):
     error_type = Column(String(64), nullable=True)
     error_code = Column(String(64), nullable=True)
     event_metadata = Column(JSON_VALUE, nullable=False, default=dict)
+    usage_side = Column(String(16), nullable=False, default="work", server_default="work")
+    channel = Column(String(50), nullable=False, default="", server_default="")
+    external_session_id = Column(String(64), nullable=True)
     occurred_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now_naive)
 
@@ -815,6 +821,9 @@ class TokenUsageEvent(Base):
     completion_tokens = Column(BigInteger, nullable=False, default=0)
     total_tokens = Column(BigInteger, nullable=False, default=0)
     event_metadata = Column(JSON_VALUE, nullable=False, default=dict)
+    usage_side = Column(String(16), nullable=False, default="work", server_default="work")
+    channel = Column(String(50), nullable=False, default="", server_default="")
+    external_session_id = Column(String(64), nullable=True)
     occurred_at = Column(DateTime(timezone=True), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utc_now_naive)
 
@@ -828,6 +837,7 @@ class AgentUsageDaily(Base):
     stat_date = Column(Date, nullable=False)
     tenant_id = Column(BigInteger, nullable=False)
     agent_id = Column(String(64), nullable=False)
+    usage_side = Column(String(16), nullable=False, default="work", server_default="work")
     session_count = Column(BigInteger, nullable=False, default=0)
     message_count = Column(BigInteger, nullable=False, default=0)
     run_count = Column(BigInteger, nullable=False, default=0)
@@ -845,5 +855,12 @@ class AgentUsageDaily(Base):
     computed_at = Column(DateTime(timezone=True), nullable=False, default=utc_now_naive)
 
     __table_args__ = (
-        Index("uq_amp_agent_usage_daily_dimensions", "stat_date", "tenant_id", "agent_id", unique=True),
+        Index(
+            "uq_amp_agent_usage_daily_dimensions",
+            "stat_date",
+            "tenant_id",
+            "agent_id",
+            "usage_side",
+            unique=True,
+        ),
     )

@@ -20,15 +20,18 @@ from server.utils.auth_middleware import get_admin_user, get_db
 from yuxi.tenancy.tenant_query import apply_tenant_filters
 from yuxi.repositories.agent_repository import AgentRepository
 from yuxi.dashboard.stats import (
-    count_weknora_active_users,
-    fetch_weknora_agent_call_buckets,
+    dashboard_tenant_id,
     fetch_weknora_agent_names,
     fetch_weknora_agent_stats,
-    fetch_weknora_daily_active_users,
     fetch_weknora_knowledge_stats,
     fetch_weknora_overview,
     simple_sum,
     weknora_user_total,
+)
+from yuxi.services.usage_telemetry import (
+    default_knowledge_model_id,
+    fold_usage_agent_id,
+    is_unresolved_usage_label,
 )
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils.datetime_utils import UTC, shanghai_now, utc_now
@@ -40,6 +43,34 @@ dashboard = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 def _scope_column(stmt, column):
     return apply_tenant_filters(stmt, column)
+
+
+def _fold_model_categories(rows, default_model: str | None) -> list[SimpleNamespace]:
+    """只折叠对话侧未知模型；工作侧未知用量保留，避免污染模型归属。"""
+    merged: dict[tuple, int] = {}
+    for row in rows:
+        category = str(getattr(row, "category", "") or "").strip()
+        usage_side = str(getattr(row, "usage_side", "") or "work")
+        if is_unresolved_usage_label(category) and usage_side == "chat" and default_model:
+            category = default_model
+        key = (row.date, category)
+        merged[key] = merged.get(key, 0) + int(row.count or 0)
+    return [SimpleNamespace(date=date, category=category, count=count) for (date, category), count in merged.items()]
+
+
+def _fold_agent_categories(rows) -> list[SimpleNamespace]:
+    """按来源折叠未知智能体，并用来源前缀避免两侧同 ID 合并。"""
+    merged: dict[tuple, int] = {}
+    for row in rows:
+        usage_side = str(getattr(row, "usage_side", "") or "work")
+        agent_id = fold_usage_agent_id(getattr(row, "category", ""), usage_side)
+        category = f"{usage_side}:{agent_id}"
+        key = (row.date, usage_side, category)
+        merged[key] = merged.get(key, 0) + int(row.count or 0)
+    return [
+        SimpleNamespace(date=date, category=category, count=count, usage_side=usage_side)
+        for (date, usage_side, category), count in merged.items()
+    ]
 
 
 async def _model_display_names(db: AsyncSession, model_ids: list[str]) -> dict[str, str]:
@@ -60,8 +91,10 @@ async def _model_display_names(db: AsyncSession, model_ids: list[str]) -> dict[s
     return {row.id: row.label for row in rows}
 
 
-async def _count_usage_users(db: AsyncSession, model, *, since=None, until=None) -> int:
+async def _count_usage_users(db: AsyncSession, model, *, since=None, until=None, usage_side: str = "work") -> int:
     stmt = select(func.count(distinct(model.uid)))
+    if usage_side and hasattr(model, "usage_side"):
+        stmt = stmt.where(model.usage_side == usage_side)
     if since is not None:
         stmt = stmt.where(model.occurred_at >= since)
     if until is not None:
@@ -78,7 +111,13 @@ async def _harness_daily_active_users(db: AsyncSession) -> list[dict]:
     for i in range(7):
         day_start = now - timedelta(days=i + 1)
         day_end = now - timedelta(days=i)
-        count = await _count_usage_users(db, AgentUsageEvent, since=day_start, until=day_end)
+        count = await _count_usage_users(
+            db,
+            AgentUsageEvent,
+            since=day_start,
+            until=day_end,
+            usage_side="",
+        )
         rows.append({"date": day_start.strftime("%Y-%m-%d"), "active_users": count})
     return list(reversed(rows))
 
@@ -144,6 +183,7 @@ class AgentAnalytics(BaseModel):
     yuxi_total_agents: int = 0
     weknora_total_agents: int = 0
     weknora_agent_conversation_counts: list[dict] = Field(default_factory=list)
+    weknora_agent_tool_usage: list[dict] = Field(default_factory=list)
     weknora_agent_names: dict[str, str] = Field(default_factory=dict)
 
 
@@ -157,34 +197,29 @@ async def get_user_activity_stats(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_admin_user),
 ):
-    """获取当前 token 空间的用户活动统计。工作侧活跃用户来自运行事实表。"""
+    """获取当前 token 空间的用户活动统计。活跃用户来自运行事实表。"""
     try:
         from yuxi.storage.postgres.models_business import AgentUsageEvent
 
         now = utc_now()
         overview = await fetch_weknora_overview(db)
-        harness_total = await _count_usage_users(db, AgentUsageEvent)
-        harness_24h = await _count_usage_users(db, AgentUsageEvent, since=now - timedelta(days=1))
-        harness_30d = await _count_usage_users(db, AgentUsageEvent, since=now - timedelta(days=30))
-        weknora_daily = await fetch_weknora_daily_active_users(db)
-        harness_daily = {row["date"]: row["active_users"] for row in await _harness_daily_active_users(db)}
-        daily_active_users = [
-            {
-                "date": row["date"],
-                "active_users": int(row["active_users"] or 0) + int(harness_daily.get(row["date"], 0)),
-            }
-            for row in weknora_daily
-        ]
+        harness_24h = await _count_usage_users(
+            db,
+            AgentUsageEvent,
+            since=now - timedelta(days=1),
+            usage_side="",
+        )
+        harness_30d = await _count_usage_users(
+            db,
+            AgentUsageEvent,
+            since=now - timedelta(days=30),
+            usage_side="",
+        )
+        daily_active_users = await _harness_daily_active_users(db)
         return UserActivityStats(
-            total_users=simple_sum(weknora_user_total(weknora_users=overview.users), harness_total),
-            active_users_24h=simple_sum(
-                await count_weknora_active_users(db, since=now - timedelta(days=1)),
-                harness_24h,
-            ),
-            active_users_30d=simple_sum(
-                await count_weknora_active_users(db, since=now - timedelta(days=30)),
-                harness_30d,
-            ),
+            total_users=weknora_user_total(weknora_users=overview.users),
+            active_users_24h=harness_24h,
+            active_users_30d=harness_30d,
             daily_active_users=daily_active_users,
         )
 
@@ -331,37 +366,61 @@ async def get_agent_analytics(
             _scope_column(
                 select(
                     AgentUsageDaily.agent_id,
+                    AgentUsageDaily.usage_side,
                     func.coalesce(func.sum(AgentUsageDaily.session_count), 0).label("conversation_count"),
                     func.coalesce(func.sum(AgentUsageDaily.tool_call_count), 0).label("tool_usage_count"),
                     func.coalesce(func.sum(AgentUsageDaily.score), 0).label("score"),
                 )
                 .where(AgentUsageDaily.stat_date >= start_date, AgentUsageDaily.stat_date <= end_date)
-                .group_by(AgentUsageDaily.agent_id),
+                .group_by(AgentUsageDaily.agent_id, AgentUsageDaily.usage_side),
                 AgentUsageDaily.tenant_id,
             )
         )
-        agents = agents_result.all()
-        total_agents = len(agents)
+        folded: dict[tuple[str, str], dict] = {}
+        for row in agents_result.all():
+            agent_id = fold_usage_agent_id(row.agent_id, row.usage_side)
+            bucket = folded.setdefault(
+                (agent_id, row.usage_side),
+                {
+                    "agent_id": agent_id,
+                    "usage_side": row.usage_side,
+                    "conversation_count": 0,
+                    "tool_usage_count": 0,
+                    "score": 0.0,
+                },
+            )
+            bucket["conversation_count"] += int(row.conversation_count or 0)
+            bucket["tool_usage_count"] += int(row.tool_usage_count or 0)
+            bucket["score"] += float(row.score or 0)
+        agents = [SimpleNamespace(**item) for item in folded.values()]
+        work_agents = [row for row in agents if row.usage_side == "work"]
+        chat_agents = [row for row in agents if row.usage_side == "chat"]
+        total_agents = len(work_agents)
         agent_conversation_counts = [
-            {"agent_id": agent_id, "conversation_count": int(count or 0)}
-            for agent_id, count, _tool_count, _score in agents
+            {"agent_id": row.agent_id, "conversation_count": int(row.conversation_count or 0)} for row in work_agents
         ]
         agent_tool_usage = [
-            {"agent_id": agent_id, "tool_usage_count": int(tool_count or 0)}
-            for agent_id, _count, tool_count, _score in agents
+            {"agent_id": row.agent_id, "tool_usage_count": int(row.tool_usage_count or 0)} for row in work_agents
+        ]
+        chat_conversation_counts = [
+            {"agent_id": row.agent_id, "conversation_count": int(row.conversation_count or 0)} for row in chat_agents
+        ]
+        chat_tool_usage = [
+            {"agent_id": row.agent_id, "tool_usage_count": int(row.tool_usage_count or 0)} for row in chat_agents
         ]
         top_performing_agents = [
             {
-                "agent_id": agent_id,
-                "conversation_count": int(count or 0),
-                "score": float(score or 0),
+                "agent_id": row.agent_id,
+                "conversation_count": int(row.conversation_count or 0),
+                "score": float(row.score or 0),
+                "usage_side": row.usage_side,
             }
-            for agent_id, count, _tool_count, score in agents
+            for row in agents
         ]
         top_performing_agents.sort(key=lambda item: item["score"], reverse=True)
         top_performing_agents = top_performing_agents[:5]
 
-        agent_slugs = [agent_id for agent_id, *_rest in agents if agent_id]
+        agent_slugs = [row.agent_id for row in work_agents if row.agent_id]
         agent_names = {}
         if agent_slugs:
             agent_repo = AgentRepository(db)
@@ -369,19 +428,20 @@ async def get_agent_analytics(
 
         wk = await fetch_weknora_agent_stats(db)
         wk_agents = wk.total_agents if wk else 0
-        wk_counts = wk.agent_conversation_counts if wk else []
-        wk_names = wk.agent_names if wk else {}
+        chat_ids = [row.agent_id for row in chat_agents if row.agent_id]
+        wk_names = await fetch_weknora_agent_names(db, chat_ids) if chat_ids else {}
 
         return AgentAnalytics(
-            total_agents=simple_sum(total_agents, wk_agents) if wk is not None else total_agents,
+            total_agents=simple_sum(total_agents, wk_agents),
             agent_conversation_counts=agent_conversation_counts,
             agent_tool_usage=agent_tool_usage,
             top_performing_agents=top_performing_agents,
             agent_names=agent_names,
-            split_by_system=wk is not None,
+            split_by_system=True,
             yuxi_total_agents=total_agents,
             weknora_total_agents=wk_agents,
-            weknora_agent_conversation_counts=wk_counts,
+            weknora_agent_conversation_counts=chat_conversation_counts,
+            weknora_agent_tool_usage=chat_tool_usage,
             weknora_agent_names=wk_names,
         )
 
@@ -410,17 +470,33 @@ async def get_dashboard_stats(
                 select(
                     func.coalesce(func.sum(AgentUsageDaily.session_count), 0),
                     func.coalesce(func.sum(AgentUsageDaily.message_count), 0),
-                ),
+                ).where(AgentUsageDaily.usage_side == "work"),
                 AgentUsageDaily.tenant_id,
             )
         )
         total_conversations, total_messages = daily_result.one()
         total_conversations = int(total_conversations or 0)
         total_messages = int(total_messages or 0)
+        chat_daily = await db.execute(
+            _scope_column(
+                select(
+                    func.count(distinct(AgentUsageEvent.external_session_id)),
+                    func.count(AgentUsageEvent.id),
+                ).where(
+                    AgentUsageEvent.usage_side == "chat",
+                    AgentUsageEvent.event_type == "start",
+                ),
+                AgentUsageEvent.tenant_id,
+            )
+        )
+        chat_sessions, chat_messages = chat_daily.one()
+        chat_sessions = int(chat_sessions or 0)
+        chat_messages = int(chat_messages or 0)
         active_since = utc_now() - timedelta(days=1)
         active_result = await db.execute(
             _scope_column(
                 select(func.count(distinct(AgentUsageEvent.session_id))).where(
+                    AgentUsageEvent.usage_side == "work",
                     AgentUsageEvent.event_type == "start",
                     AgentUsageEvent.occurred_at >= active_since,
                     AgentUsageEvent.session_id.isnot(None),
@@ -428,29 +504,30 @@ async def get_dashboard_stats(
                 AgentUsageEvent.tenant_id,
             )
         )
-        active_conversations = int(active_result.scalar() or 0)
-        harness_users = await _count_usage_users(db, AgentUsageEvent)
-        total_users = harness_users
-
-        payload = {
-            "total_conversations": total_conversations,
-            "active_conversations": active_conversations,
-            "total_messages": total_messages,
-            "total_users": total_users,
-        }
-        wk = await fetch_weknora_overview(db)
-        payload.update(
-            {
-                "split_by_system": True,
-                "weknora_sessions": wk.sessions,
-                "yuxi_conversations": total_conversations,
-                "total_conversations": simple_sum(wk.sessions, total_conversations),
-                "weknora_messages": wk.messages,
-                "yuxi_messages": total_messages,
-                "total_messages": simple_sum(wk.messages, total_messages),
-                "total_users": simple_sum(weknora_user_total(weknora_users=wk.users), total_users),
-            }
+        chat_active_result = await db.execute(
+            _scope_column(
+                select(func.count(distinct(AgentUsageEvent.external_session_id))).where(
+                    AgentUsageEvent.usage_side == "chat",
+                    AgentUsageEvent.event_type == "start",
+                    AgentUsageEvent.occurred_at >= active_since,
+                    AgentUsageEvent.external_session_id.isnot(None),
+                ),
+                AgentUsageEvent.tenant_id,
+            )
         )
+        active_conversations = int(active_result.scalar() or 0) + int(chat_active_result.scalar() or 0)
+        wk = await fetch_weknora_overview(db)
+        payload = {
+            "split_by_system": True,
+            "weknora_sessions": chat_sessions,
+            "yuxi_conversations": total_conversations,
+            "total_conversations": simple_sum(chat_sessions, total_conversations),
+            "weknora_messages": chat_messages,
+            "yuxi_messages": total_messages,
+            "total_messages": simple_sum(chat_messages, total_messages),
+            "active_conversations": active_conversations,
+            "total_users": weknora_user_total(weknora_users=wk.users),
+        }
         return payload
     except Exception as e:
         logger.error(f"Error getting dashboard stats: {e}")
@@ -513,6 +590,7 @@ async def get_call_timeseries_stats(
             base_local_time = local_start
 
         query_start_time = start_time
+        default_model = await default_knowledge_model_id(db, dashboard_tenant_id())
 
         if type == "models":
             group_format = _get_time_group_format(TokenUsageEvent.occurred_at, time_range)
@@ -522,14 +600,15 @@ async def get_call_timeseries_stats(
                         group_format.label("date"),
                         func.count(TokenUsageEvent.id).label("count"),
                         TokenUsageEvent.model.label("category"),
+                        TokenUsageEvent.usage_side.label("usage_side"),
                     )
                     .where(TokenUsageEvent.occurred_at >= query_start_time)
-                    .group_by(group_format, TokenUsageEvent.model)
+                    .group_by(group_format, TokenUsageEvent.model, TokenUsageEvent.usage_side)
                     .order_by(group_format),
                     TokenUsageEvent.tenant_id,
                 )
             )
-            query = query_result.all()
+            query = _fold_model_categories(query_result.all(), default_model)
         elif type == "agents":
             group_format = _get_time_group_format(AgentUsageEvent.occurred_at, time_range)
             query_result = await db.execute(
@@ -538,19 +617,18 @@ async def get_call_timeseries_stats(
                         group_format.label("date"),
                         func.count(AgentUsageEvent.id).label("count"),
                         AgentUsageEvent.agent_id.label("category"),
+                        AgentUsageEvent.usage_side.label("usage_side"),
                     )
                     .where(
                         AgentUsageEvent.occurred_at >= query_start_time,
                         AgentUsageEvent.event_type == "start",
                     )
-                    .group_by(group_format, AgentUsageEvent.agent_id)
+                    .group_by(group_format, AgentUsageEvent.agent_id, AgentUsageEvent.usage_side)
                     .order_by(group_format),
                     AgentUsageEvent.tenant_id,
                 )
             )
-            query = list(query_result.all()) + await fetch_weknora_agent_call_buckets(
-                db, time_range=time_range, start_time=query_start_time
-            )
+            query = _fold_agent_categories(query_result.all())
         elif type == "tokens":
             group_format = _get_time_group_format(TokenUsageEvent.occurred_at, time_range)
             token_rows = (
@@ -559,25 +637,32 @@ async def get_call_timeseries_stats(
                         select(
                             group_format.label("date"),
                             TokenUsageEvent.model.label("model"),
+                            TokenUsageEvent.usage_side.label("usage_side"),
                             func.coalesce(func.sum(TokenUsageEvent.prompt_tokens), 0).label("input_tokens"),
                             func.coalesce(func.sum(TokenUsageEvent.completion_tokens), 0).label("output_tokens"),
                             func.coalesce(func.sum(TokenUsageEvent.total_tokens), 0).label("total_tokens"),
                         )
                         .where(TokenUsageEvent.occurred_at >= query_start_time)
-                        .group_by(group_format, TokenUsageEvent.model)
+                        .group_by(group_format, TokenUsageEvent.model, TokenUsageEvent.usage_side)
                         .order_by(group_format),
                         TokenUsageEvent.tenant_id,
                     )
                 )
             ).all()
-            token_model_names = await _model_display_names(db, [row.model or "" for row in token_rows])
+            model_ids = [row.model or "" for row in token_rows]
+            if default_model:
+                model_ids.append(default_model)
+            token_model_names = await _model_display_names(db, model_ids)
             results = []
             token_models: dict[str, dict[str, dict[str, int]]] = {}
             for row in token_rows:
-                model_id = row.model or "unknown"
-                model_label = token_model_names.get(model_id) or (
-                    "unknown" if model_id == "unknown" else model_id
-                )
+                model_id = str(row.model or "").strip()
+                usage_side = str(getattr(row, "usage_side", "") or "work")
+                if is_unresolved_usage_label(model_id) and usage_side == "chat" and default_model:
+                    model_id = default_model
+                if is_unresolved_usage_label(model_id):
+                    model_id = "unknown"
+                model_label = token_model_names.get(model_id) or model_id
                 prompt = int(row.input_tokens or 0)
                 completion = int(row.output_tokens or 0)
                 total = int(row.total_tokens or 0)
@@ -626,13 +711,16 @@ async def get_call_timeseries_stats(
         if type == "models" and categories:
             agent_names = await _model_display_names(db, categories)
         elif type == "agents" and categories:
-            agent_slugs = [c for c in categories if c]
-            if agent_slugs:
+            agent_names = {}
+            work_slugs = [category.removeprefix("work:") for category in categories if category.startswith("work:")]
+            chat_ids = [category.removeprefix("chat:") for category in categories if category.startswith("chat:")]
+            if work_slugs:
                 agent_repo = AgentRepository(db)
-                agent_names = {agent.slug: agent.name for agent in await agent_repo.list_by_slugs(agent_slugs)}
-                missing = [agent_id for agent_id in agent_slugs if agent_id not in agent_names]
-                if missing:
-                    agent_names.update(await fetch_weknora_agent_names(db, missing))
+                work_names = {agent.slug: agent.name for agent in await agent_repo.list_by_slugs(work_slugs)}
+                agent_names = {f"work:{agent_id}": name for agent_id, name in work_names.items()}
+            if chat_ids:
+                chat_names = await fetch_weknora_agent_names(db, chat_ids)
+                agent_names.update({f"chat:{agent_id}": name for agent_id, name in chat_names.items()})
 
         # 重新组织数据：按时间点分组每个类别的数据
         time_data = {}
@@ -649,16 +737,13 @@ async def get_call_timeseries_stats(
             date_key = result.date
             if time_range == "14weeks":
                 date_key = normalize_week_key(date_key)
-            category = getattr(result, "category", "unknown")
+            category = getattr(result, "category", "") or ""
             count = result.count
 
             if date_key not in time_data:
                 time_data[date_key] = {}
 
-            if type == "tokens":
-                time_data[date_key][category] = time_data[date_key].get(category, 0) + count
-            else:
-                time_data[date_key][category] = count
+            time_data[date_key][category] = time_data[date_key].get(category, 0) + count
 
         # 填充缺失的时间点（使用北京时间）
         data = []

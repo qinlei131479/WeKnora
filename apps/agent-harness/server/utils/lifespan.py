@@ -1,3 +1,4 @@
+import asyncio
 import os
 from contextlib import asynccontextmanager
 
@@ -110,8 +111,16 @@ async def lifespan(app: FastAPI):
         |___/  Agent Harness  v{get_version()}
 
     """)
+    from yuxi.services.chat_usage_sync import chat_usage_sync_loop
+
+    usage_sync_task = asyncio.create_task(chat_usage_sync_loop())
     logger.info("Agent Harness startup complete")
     yield
+    usage_sync_task.cancel()
+    try:
+        await usage_sync_task
+    except asyncio.CancelledError:
+        pass
     shutdown_sandbox_provider()
     await close_queue_clients()
     close_shared_neo4j_connection()
