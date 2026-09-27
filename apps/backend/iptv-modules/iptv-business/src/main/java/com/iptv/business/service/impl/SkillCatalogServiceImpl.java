@@ -26,7 +26,6 @@ import com.iptv.business.pgmapper.StorageBackendsMapper;
 import com.iptv.business.pgmapper.TenantsMapper;
 import com.iptv.business.service.SkillCatalogService;
 import com.iptv.business.service.StorageBackendFileServiceFactory;
-import com.iptv.common.core.constant.TenantConstant;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
 import com.iptv.common.core.web.page.PageDTO;
@@ -73,9 +72,11 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
     private final StorageBackendFileServiceFactory storageBackendFileServiceFactory;
 
     /**
-     * 管理后台内置租户 ID（最高权限后台新增的技能归属该租户）
+     * 内置技能书租户 ID（tenant_id=0，管理后台新增的技能书均为内置技能书）；
+     * bundle_ref 直连存储格式 minio://{bucket}/{tenantId}/tenant-skills/catalog/{name}.zip，
+     * 存储-{}-后端取同租户（tenant_id=0）的 StorageBackends，不注册 resources 记录
      */
-    private static final long BUILTIN_TENANT_ID = TenantConstant.BUSINESS_BUILTIN_TENANT_ID;
+    private static final long BUILTIN_TENANT_ID = 0L;
 
     /**
      * 资源引用前缀（对齐 Go types.ResourceScheme）
@@ -342,7 +343,9 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
     // ==================================================================
 
     /**
-     * 按名称 upsert 技能目录定义（tenant_id 固定为内置租户 9999）
+     * 按名称 upsert 技能目录定义；
+     * 管理后台新增均为内置技能书（tenant_id=0），bundle_ref 直连存储；
+     * tenant_id≠0 时走 resource:// 资源注册逻辑
      */
     private SkillCatalogVO upsertCatalog(SkillBundle bundle, byte[] archive) {
         SkillCatalog existing = skillCatalogMapper.selectOne(new LambdaQueryWrapper<SkillCatalog>()
@@ -363,17 +366,18 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
         entity.setInstructions(bundle.instructions());
         entity.setCreatedAt(new Date());
         entity.setUpdatedAt(new Date());
-        // 先存对象并注册资源，再写库；插入失败时回滚已写入的对象（资源记录随事务回滚）
-        StorageBackends backend = resolveTenantBackend();
-        String objectKey = builtinObjectKey();
+        // 先存对象再写库；插入失败时回滚已写入的对象（资源记录随事务回滚）
+        StorageBackends backend = resolveBuiltinBackend();
+        String objectKey = builtinObjectKey(bundle.name());
         String providerPath = storageBackendFileServiceFactory.saveBytes(backend, objectKey, archive);
-        entity.setBundleRef(registerBundleResource(backend, providerPath, archive, bundle.name()));
+        // 内置直连格式：saveBytes 返回值即 minio://{bucket}/{key} 或 local://{key}
+        entity.setBundleRef(providerPath);
         entity.setBundleSha256(DigestUtil.sha256Hex(archive));
         try {
             skillCatalogMapper.insert(entity);
         } catch (Exception e) {
             storageBackendFileServiceFactory.deleteObject(backend, objectKey);
-            // 并发上传同名技能触发 (tenant_id, name) 唯一索引冲突时给出业务提示（resources 记录随事务回滚）
+            // 并发上传同名技能触发 (tenant_id, name) 唯一索引冲突时给出业务提示
             if (isDuplicateKeyError(e)) {
                 throw new ServiceException("技能已存在，请刷新列表后编辑已有技能");
             }
@@ -401,14 +405,26 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
     }
 
     /**
-     * 同名更新：写入新 bundle 对象并更新元数据；无安装引用时清理旧对象与资源记录
+     * 同名更新：写入新 bundle 对象并更新元数据；无安装引用时清理旧对象与资源记录。
+     * 内置技能书（tenant_id=0）直连存储且对象键含技能名（同键覆盖）；tenant_id≠0 走 resource:// 注册
      */
     private void updateCatalogBundle(SkillCatalog existing, SkillBundle bundle, byte[] archive) {
-        StorageBackends backend = resolveTenantBackend();
+        long tenantId = existing.getTenantId() == null ? BUILTIN_TENANT_ID : existing.getTenantId();
         String oldRef = StrUtil.trimToEmpty(existing.getBundleRef());
-        String newObjectKey = builtinObjectKey();
-        String providerPath = storageBackendFileServiceFactory.saveBytes(backend, newObjectKey, archive);
-        String newRef = registerBundleResource(backend, providerPath, archive, bundle.name());
+        String newRef;
+        StorageBackends backend;
+        String newObjectKey;
+        if (tenantId == BUILTIN_TENANT_ID) {
+            // 内置直连格式：saveBytes 返回值即 minio://{bucket}/{key}；同键覆盖，oldRef 相同时不清理
+            backend = resolveBuiltinBackend();
+            newObjectKey = builtinObjectKey(existing.getName());
+            newRef = storageBackendFileServiceFactory.saveBytes(backend, newObjectKey, archive);
+        } else {
+            backend = resolveTenantBackend(tenantId);
+            newObjectKey = builtinObjectKey();
+            String providerPath = storageBackendFileServiceFactory.saveBytes(backend, newObjectKey, archive);
+            newRef = registerBundleResource(backend, providerPath, archive, tenantId, bundle.name());
+        }
         existing.setVersion(bundle.version());
         existing.setDescription(bundle.description());
         existing.setInstructions(bundle.instructions());
@@ -416,7 +432,7 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
         existing.setBundleSha256(DigestUtil.sha256Hex(archive));
         existing.setUpdatedAt(new Date());
         skillCatalogMapper.updateById(existing);
-        // Java 侧不写 tenant_skills：仅当无安装引用时才允许清理旧对象，
+        // Java 侧不写 tenant_skills：仅当无安装引用且引用变化时才清理旧对象，
         // 有引用时保留旧包（对齐 Go keep 路径），避免破坏已装沙箱读取
         if (StrUtil.isNotBlank(oldRef) && !StrUtil.equals(oldRef, newRef)
                 && skillCatalogMapper.countInstallRefs(existing.getId()) == 0) {
@@ -428,7 +444,8 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
      * 注册 bundle 资源记录并返回 resource://handle 引用（对齐 Go resourceCatalog.Register）：
      * physical_path = storage://{backendId}/{providerPath}，handle 为 22 字符 base64url 随机串
      */
-    private String registerBundleResource(StorageBackends backend, String providerPath, byte[] archive, String skillName) {
+    private String registerBundleResource(StorageBackends backend, String providerPath, byte[] archive,
+                                          long tenantId, String skillName) {
         String physicalPath = StrUtil.isNotBlank(backend.getId())
                 ? "storage://" + backend.getId() + "/" + providerPath
                 : providerPath;
@@ -436,7 +453,7 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
         Resources resource = new Resources();
         resource.setId(UUID.randomUUID().toString());
         resource.setHandle(handle);
-        resource.setTenantId(BUILTIN_TENANT_ID);
+        resource.setTenantId(tenantId);
         resource.setStorageBackendId(StrUtil.emptyToNull(backend.getId()));
         resource.setProvider(StrUtil.blankToDefault(backend.getProvider(), "local").toLowerCase());
         resource.setPhysicalPath(physicalPath);
@@ -495,16 +512,24 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
     }
 
     /**
-     * 内置租户的 bundle 对象键（对齐 Go SaveBytes：{tenantId}/exports/{uuid}.zip）
+     * 内置技能书直连对象键（对齐 Go SaveBytes：{tenantId}/tenant-skills/catalog/{name}.zip）；
+     * 同名技能更新时同键覆盖
+     */
+    private String builtinObjectKey(String skillName) {
+        return BUILTIN_TENANT_ID + "/tenant-skills/catalog/" + skillName + ".zip";
+    }
+
+    /**
+     * 非内置租户的 bundle 对象键（对齐 Go SaveBytes：{tenantId}/exports/{uuid}.zip）
      */
     private String builtinObjectKey() {
         return BUILTIN_TENANT_ID + "/exports/" + UUID.randomUUID() + ".zip";
     }
 
     /**
-     * 解析 bundle 引用为可读取位置：
-     * resource://handle → resources 表 → physical_path（storage://{backendId}/{providerPath}）→ storage_backends 配置；
-     * 其余格式（历史 minio://{bucket}/{key}、local://{key}、裸 key）回退内置租户后端
+     * 解析 bundle 引用为可读取位置，两种格式：
+     * 1. tenant_id=0 内置技能书直连格式 minio://{bucket}/{key}（或历史 local://{key}、裸 key）→ 直接取 tenant_id=0 的 StorageBackends；
+     * 2. tenant_id≠0 的 resource://handle → resources 表 → physical_path（storage://{backendId}/{providerPath}）→ storage_backends 配置
      */
     private BundleLocation resolveBundleLocation(String ref) {
         String value = StrUtil.trimToEmpty(ref);
@@ -528,8 +553,8 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
             }
             return new BundleLocation(backend, objectKeyFromPhysicalPath(resource.getPhysicalPath(), backend), resource);
         }
-        // 历史格式兼容
-        return new BundleLocation(resolveTenantBackend(), objectKeyFromRef(value), null);
+        // 内置直连格式（minio://{bucket}/{key} 等）：直接取 tenant_id=0 的存储后端读取
+        return new BundleLocation(resolveBuiltinBackend(), objectKeyFromRef(value), null);
     }
 
     /**
@@ -586,18 +611,25 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
     }
 
     /**
-     * 解析内置租户的存储后端（优先 default_storage_backend_id，回退 storage_engine_config）
+     * 解析内置技能书的存储后端（tenant_id=0，直连格式读写共用）
      */
-    private StorageBackends resolveTenantBackend() {
+    private StorageBackends resolveBuiltinBackend() {
+        return resolveTenantBackend(BUILTIN_TENANT_ID);
+    }
+
+    /**
+     * 解析指定租户的存储后端（取该租户下第一个 active 且未删除的 StorageBackends）
+     */
+    private StorageBackends resolveTenantBackend(long tenantId) {
         StorageBackends backend = storageBackendsMapper.selectOne(new LambdaQueryWrapper<StorageBackends>()
-                .eq(StorageBackends::getTenantId, BUILTIN_TENANT_ID)
+                .eq(StorageBackends::getTenantId, tenantId)
                 .eq(StorageBackends::getStatus, "active")
                 .isNull(StorageBackends::getDeletedAt)
                 .last("limit 1"));
         if (BeanUtil.isNotEmpty(backend)) {
             return backend;
         }
-        throw new ServiceException("未配置可用的内置存储后端");
+        throw new ServiceException("未配置可用的存储后端（tenant_id=" + tenantId + "）");
     }
 
     /**
