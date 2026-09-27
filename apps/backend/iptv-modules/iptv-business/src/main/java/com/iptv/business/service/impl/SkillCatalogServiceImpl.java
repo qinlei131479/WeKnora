@@ -691,9 +691,9 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
         if (StrUtil.isBlank(name)) {
             throw new ServiceException("SKILL.md frontmatter 缺少 name");
         }
-        if (name.length() > MAX_NAME_LENGTH || !SKILL_NAME_PATTERN.matcher(name).matches()) {
-            throw new ServiceException("无效的技能名称: " + name);
-        }
+//        if (name.length() > MAX_NAME_LENGTH || !SKILL_NAME_PATTERN.matcher(name).matches()) {
+//            throw new ServiceException("无效的技能名称: " + name);
+//        }
         for (String reserved : RESERVED_WORDS) {
             if (name.toLowerCase().contains(reserved)) {
                 throw new ServiceException("技能名称包含保留字: " + reserved);
