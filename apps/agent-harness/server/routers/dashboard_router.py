@@ -21,6 +21,8 @@ from yuxi.tenancy.tenant_query import apply_tenant_filters
 from yuxi.repositories.agent_repository import AgentRepository
 from yuxi.dashboard.stats import (
     count_weknora_active_users,
+    fetch_weknora_agent_call_buckets,
+    fetch_weknora_agent_names,
     fetch_weknora_agent_stats,
     fetch_weknora_daily_active_users,
     fetch_weknora_knowledge_stats,
@@ -546,7 +548,9 @@ async def get_call_timeseries_stats(
                     AgentUsageEvent.tenant_id,
                 )
             )
-            query = query_result.all()
+            query = list(query_result.all()) + await fetch_weknora_agent_call_buckets(
+                db, time_range=time_range, start_time=query_start_time
+            )
         elif type == "tokens":
             group_format = _get_time_group_format(TokenUsageEvent.occurred_at, time_range)
             token_rows = (
@@ -626,6 +630,9 @@ async def get_call_timeseries_stats(
             if agent_slugs:
                 agent_repo = AgentRepository(db)
                 agent_names = {agent.slug: agent.name for agent in await agent_repo.list_by_slugs(agent_slugs)}
+                missing = [agent_id for agent_id in agent_slugs if agent_id not in agent_names]
+                if missing:
+                    agent_names.update(await fetch_weknora_agent_names(db, missing))
 
         # 重新组织数据：按时间点分组每个类别的数据
         time_data = {}

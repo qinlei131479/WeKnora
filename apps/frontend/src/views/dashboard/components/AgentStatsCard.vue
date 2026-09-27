@@ -76,11 +76,16 @@ const totalToolUsage = computed(() =>
 )
 const topPerformers = computed(() => props.agentStats?.top_performing_agents || [])
 const agentNames = computed(() => props.agentStats?.agent_names || {})
-const resolveAgentName = (agentId: string) => agentNames.value[agentId] || agentId
+const weknoraAgentNames = computed(() => props.agentStats?.weknora_agent_names || {})
+const resolveAgentName = (agentId: string) =>
+  agentNames.value[agentId] || weknoraAgentNames.value[agentId] || agentId
 
 const initConversationToolChart = () => {
   if (!conversationToolChartRef.value) return
-  const conversationData = props.agentStats?.agent_conversation_counts || []
+  const conversationData = [
+    ...(props.agentStats?.weknora_agent_conversation_counts || []),
+    ...(props.agentStats?.agent_conversation_counts || []),
+  ]
   const toolData = props.agentStats?.agent_tool_usage || []
   if (!conversationData.length && !toolData.length) return
   conversationToolChart?.dispose()
@@ -132,7 +137,7 @@ const initConversationToolChart = () => {
       {
         name: t('dashboard.agents.conversationCount'),
         type: 'bar',
-        data: topAgentIds.map((agentId) => conversationData.find((d: { agent_id: string }) => d.agent_id === agentId)?.conversation_count || 0),
+        data: topAgentIds.map((agentId) => allAgentStats[agentId]?.conversation || 0),
         itemStyle: { color: getColorByIndex(0), borderRadius: [4, 4, 0, 0] },
         emphasis: {
           itemStyle: {
@@ -145,7 +150,7 @@ const initConversationToolChart = () => {
       {
         name: t('dashboard.agents.toolCallCount'),
         type: 'bar',
-        data: topAgentIds.map((agentId) => toolData.find((d: { agent_id: string }) => d.agent_id === agentId)?.tool_usage_count || 0),
+        data: topAgentIds.map((agentId) => allAgentStats[agentId]?.tool || 0),
         itemStyle: { color: getColorByIndex(1), borderRadius: [4, 4, 0, 0] },
         emphasis: {
           itemStyle: {

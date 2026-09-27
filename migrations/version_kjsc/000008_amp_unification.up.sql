@@ -2,6 +2,7 @@
 -- 同一次迁移完成三件事：把仍在使用的 h_ 运行表复制到 amp_，按复制结果回填用量，再删除旧 h_ 表。
 -- 复制、回填、删除在同一个事务里。先锁旧表，避免删除前还有新行写进 h_。
 -- 执行前停掉仍读写 h_ 表的旧进程。
+-- 注释、重复活跃运行和技能来源值都做了容错：对象缺失或历史脏数据不能把整段事务回滚。
 
 DO $$
 DECLARE
@@ -166,6 +167,30 @@ SELECT
 FROM h_operation_logs
 ON CONFLICT (id) DO NOTHING;
 
+-- 历史行里悬空的可空外键先清空，避免补外键时整段迁移回滚。
+UPDATE amp_messages AS message
+SET run_id = NULL
+WHERE message.run_id IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM amp_agent_runs AS run WHERE run.id = message.run_id);
+
+UPDATE amp_agent_runs AS run
+SET conversation_id = NULL
+WHERE run.conversation_id IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM amp_sessions AS session WHERE session.id = run.conversation_id);
+
+UPDATE amp_agent_runs AS run
+SET subagent_thread_relation_id = NULL
+WHERE run.subagent_thread_relation_id IS NOT NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM amp_subagent_threads AS thread
+      WHERE thread.id = run.subagent_thread_relation_id
+  );
+
+UPDATE amp_agent_run_requests AS request
+SET dispatched_run_id = NULL
+WHERE request.dispatched_run_id IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM amp_agent_runs AS run WHERE run.id = request.dispatched_run_id);
+
 DO $$
 BEGIN
     IF NOT EXISTS (
@@ -266,6 +291,34 @@ CREATE INDEX IF NOT EXISTS ix_amp_agent_runs_external_id ON amp_agent_runs(exter
 CREATE INDEX IF NOT EXISTS ix_amp_agent_runs_subagent_thread_relation_id ON amp_agent_runs(subagent_thread_relation_id);
 CREATE INDEX IF NOT EXISTS ix_amp_agent_runs_tenant_id ON amp_agent_runs(tenant_id);
 CREATE UNIQUE INDEX IF NOT EXISTS ix_amp_agent_runs_request_id ON amp_agent_runs(request_id);
+
+-- 同一线程上重复的活跃运行只保留最新一条，避免唯一索引把整段迁移回滚。
+WITH duplicated_active_runs AS (
+    SELECT
+        id,
+        ROW_NUMBER() OVER (
+            PARTITION BY uid, agent_slug, conversation_thread_id
+            ORDER BY created_at DESC NULLS LAST, id DESC
+        ) AS active_rank
+    FROM amp_agent_runs
+    WHERE status NOT IN ('completed', 'failed', 'cancelled', 'interrupted')
+      AND uid IS NOT NULL
+      AND agent_slug IS NOT NULL
+      AND conversation_thread_id IS NOT NULL
+)
+UPDATE amp_agent_runs AS run
+SET status = 'failed',
+    error_type = COALESCE(run.error_type, 'active_run_migration_conflict'),
+    error_message = COALESCE(
+        run.error_message,
+        '旧库存在同一用户、智能体和线程的重复活跃运行，迁移时已保留最新一条并终结本记录。'
+    ),
+    finished_at = COALESCE(run.finished_at, NOW()),
+    updated_at = NOW()
+FROM duplicated_active_runs AS duplicated
+WHERE run.id = duplicated.id
+  AND duplicated.active_rank > 1;
+
 CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_agent_runs_one_active_per_thread
     ON amp_agent_runs(uid, agent_slug, conversation_thread_id)
     WHERE status NOT IN ('completed', 'failed', 'cancelled', 'interrupted');
@@ -287,179 +340,220 @@ CREATE INDEX IF NOT EXISTS ix_amp_agent_run_requests_queue_tenant
 CREATE INDEX IF NOT EXISTS idx_amp_agent_runs_tenant_thread
     ON amp_agent_runs(tenant_id, uid, agent_slug, conversation_thread_id);
 
-COMMENT ON INDEX ix_amp_agents_slug IS '按智能体 slug 加速目录查询';
-COMMENT ON INDEX ix_amp_agents_backend_id IS '按执行后端筛选智能体';
-COMMENT ON INDEX ix_amp_agents_is_default IS '按默认智能体标记查询';
-COMMENT ON INDEX ix_amp_agents_is_subagent IS '区分主智能体和子智能体';
-COMMENT ON INDEX ix_amp_agents_created_by IS '按创建人查询智能体';
-COMMENT ON INDEX ix_amp_agents_tenant_id IS '按工作空间隔离智能体';
-COMMENT ON INDEX uq_amp_agents_default IS '保证全目录最多一个默认智能体';
-COMMENT ON INDEX uq_amp_agents_slug_tenant IS '同一工作空间内智能体 slug 唯一';
-COMMENT ON INDEX uq_amp_agents_slug_catalog IS '平台目录内智能体 slug 唯一';
+-- 目录里没有的表、列、索引只跳过，不让注释失败把复制和删表一起回滚。
+CREATE OR REPLACE FUNCTION pg_temp.weknora_comment_table(p_table text, p_comment text)
+RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  IF to_regclass(format('%I', p_table)) IS NULL THEN
+    RAISE NOTICE 'skip COMMENT ON TABLE % (missing)', p_table;
+    RETURN;
+  END IF;
+  EXECUTE format('COMMENT ON TABLE %I IS %L', p_table, p_comment);
+END;
+$$;
 
-COMMENT ON INDEX ix_amp_sessions_is_pinned IS '加速置顶会话筛选';
-COMMENT ON INDEX ix_amp_sessions_uid IS '按用户查询会话';
-COMMENT ON INDEX ix_amp_sessions_agent_id IS '按智能体查询会话';
-COMMENT ON INDEX ix_amp_sessions_tenant_id IS '按工作空间隔离会话';
-COMMENT ON INDEX ix_amp_sessions_thread_id IS '保证运行线程 ID 唯一并加速定位';
+CREATE OR REPLACE FUNCTION pg_temp.weknora_comment_column(p_table text, p_column text, p_comment text)
+RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  IF to_regclass(format('%I', p_table)) IS NULL THEN
+    RAISE NOTICE 'skip COMMENT ON COLUMN %.% (table missing)', p_table, p_column;
+    RETURN;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = current_schema() AND table_name = p_table AND column_name = p_column
+  ) THEN
+    RAISE NOTICE 'skip COMMENT ON COLUMN %.% (column missing)', p_table, p_column;
+    RETURN;
+  END IF;
+  EXECUTE format('COMMENT ON COLUMN %I.%I IS %L', p_table, p_column, p_comment);
+END;
+$$;
 
-COMMENT ON INDEX ix_amp_subagent_threads_uid IS '按用户查询子智能体线程关系';
-COMMENT ON INDEX ix_amp_subagent_threads_parent_conversation_id IS '按父会话查询子智能体线程关系';
-COMMENT ON INDEX ix_amp_subagent_threads_subagent_slug IS '按子智能体筛选线程关系';
-COMMENT ON INDEX ix_amp_subagent_threads_created_by_run_id IS '按创建运行追溯子智能体线程关系';
-COMMENT ON INDEX ix_amp_subagent_threads_tenant_id IS '按工作空间隔离子智能体线程关系';
-COMMENT ON INDEX ix_amp_subagent_threads_child_conversation_id IS '保证一个子会话只属于一条线程关系';
-COMMENT ON INDEX ix_amp_subagent_threads_child_thread_id IS '保证子线程 ID 唯一并加速定位';
+CREATE OR REPLACE FUNCTION pg_temp.weknora_comment_index(p_index text, p_comment text)
+RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  IF to_regclass(format('%I', p_index)) IS NULL THEN
+    RAISE NOTICE 'skip COMMENT ON INDEX % (missing)', p_index;
+    RETURN;
+  END IF;
+  EXECUTE format('COMMENT ON INDEX %I IS %L', p_index, p_comment);
+END;
+$$;
 
-COMMENT ON INDEX ix_amp_agent_runs_conversation_thread_id IS '按会话线程查询运行记录';
-COMMENT ON INDEX ix_amp_agent_runs_status IS '按运行状态筛选和监控';
-COMMENT ON INDEX ix_amp_agent_runs_conversation_id IS '按会话 ID 查询运行记录';
-COMMENT ON INDEX ix_amp_agent_runs_agent_slug IS '按智能体统计和查询运行记录';
-COMMENT ON INDEX ix_amp_agent_runs_created_by_run_id IS '追溯父运行创建的子运行';
-COMMENT ON INDEX ix_amp_agent_runs_uid IS '按用户查询运行记录';
-COMMENT ON INDEX ix_amp_agent_runs_external_id IS '按来源外部 ID 定位运行记录';
-COMMENT ON INDEX ix_amp_agent_runs_subagent_thread_relation_id IS '按子智能体线程关系查询运行记录';
-COMMENT ON INDEX ix_amp_agent_runs_tenant_id IS '按工作空间隔离运行记录';
-COMMENT ON INDEX ix_amp_agent_runs_request_id IS '保证运行幂等请求 ID 唯一并加速定位';
-COMMENT ON INDEX uq_amp_agent_runs_one_active_per_thread IS '保证同一会话线程同一智能体只有一个活跃运行';
+SELECT pg_temp.weknora_comment_index('ix_amp_agents_slug', '按智能体 slug 加速目录查询');
+SELECT pg_temp.weknora_comment_index('ix_amp_agents_backend_id', '按执行后端筛选智能体');
+SELECT pg_temp.weknora_comment_index('ix_amp_agents_is_default', '按默认智能体标记查询');
+SELECT pg_temp.weknora_comment_index('ix_amp_agents_is_subagent', '区分主智能体和子智能体');
+SELECT pg_temp.weknora_comment_index('ix_amp_agents_created_by', '按创建人查询智能体');
+SELECT pg_temp.weknora_comment_index('ix_amp_agents_tenant_id', '按工作空间隔离智能体');
+SELECT pg_temp.weknora_comment_index('uq_amp_agents_default', '保证全目录最多一个默认智能体');
+SELECT pg_temp.weknora_comment_index('uq_amp_agents_slug_tenant', '同一工作空间内智能体 slug 唯一');
+SELECT pg_temp.weknora_comment_index('uq_amp_agents_slug_catalog', '平台目录内智能体 slug 唯一');
 
-COMMENT ON INDEX ix_amp_messages_conversation_id IS '按会话加载消息列表';
-COMMENT ON INDEX ix_amp_messages_run_id IS '按运行追溯消息';
-COMMENT ON INDEX ix_amp_messages_request_id IS '按幂等请求定位消息';
+SELECT pg_temp.weknora_comment_index('ix_amp_sessions_is_pinned', '加速置顶会话筛选');
+SELECT pg_temp.weknora_comment_index('ix_amp_sessions_uid', '按用户查询会话');
+SELECT pg_temp.weknora_comment_index('ix_amp_sessions_agent_id', '按智能体查询会话');
+SELECT pg_temp.weknora_comment_index('ix_amp_sessions_tenant_id', '按工作空间隔离会话');
+SELECT pg_temp.weknora_comment_index('ix_amp_sessions_thread_id', '保证运行线程 ID 唯一并加速定位');
 
-COMMENT ON INDEX ix_amp_tool_calls_message_id IS '按消息加载工具调用明细';
-COMMENT ON INDEX ix_amp_tool_calls_langgraph_tool_call_id IS '按 LangGraph 工具调用 ID 对齐结果';
+SELECT pg_temp.weknora_comment_index('ix_amp_subagent_threads_uid', '按用户查询子智能体线程关系');
+SELECT pg_temp.weknora_comment_index('ix_amp_subagent_threads_parent_conversation_id', '按父会话查询子智能体线程关系');
+SELECT pg_temp.weknora_comment_index('ix_amp_subagent_threads_subagent_slug', '按子智能体筛选线程关系');
+SELECT pg_temp.weknora_comment_index('ix_amp_subagent_threads_created_by_run_id', '按创建运行追溯子智能体线程关系');
+SELECT pg_temp.weknora_comment_index('ix_amp_subagent_threads_tenant_id', '按工作空间隔离子智能体线程关系');
+SELECT pg_temp.weknora_comment_index('ix_amp_subagent_threads_child_conversation_id', '保证一个子会话只属于一条线程关系');
+SELECT pg_temp.weknora_comment_index('ix_amp_subagent_threads_child_thread_id', '保证子线程 ID 唯一并加速定位');
 
-COMMENT ON INDEX ix_amp_agent_run_requests_external_id IS '按来源外部 ID 定位排队请求';
-COMMENT ON INDEX ix_amp_agent_run_requests_tenant_id IS '按工作空间隔离排队请求';
-COMMENT ON INDEX ix_amp_agent_run_requests_request_id IS '保证排队请求幂等 ID 唯一';
-COMMENT ON INDEX ix_amp_agent_run_requests_queue IS '按队列维度加载待派发请求';
-COMMENT ON INDEX ix_amp_agent_run_requests_queue_tenant IS '在租户隔离下加载待派发请求';
-COMMENT ON INDEX idx_amp_agent_runs_tenant_thread IS '在租户隔离下按线程和智能体分析运行';
+SELECT pg_temp.weknora_comment_index('ix_amp_agent_runs_conversation_thread_id', '按会话线程查询运行记录');
+SELECT pg_temp.weknora_comment_index('ix_amp_agent_runs_status', '按运行状态筛选和监控');
+SELECT pg_temp.weknora_comment_index('ix_amp_agent_runs_conversation_id', '按会话 ID 查询运行记录');
+SELECT pg_temp.weknora_comment_index('ix_amp_agent_runs_agent_slug', '按智能体统计和查询运行记录');
+SELECT pg_temp.weknora_comment_index('ix_amp_agent_runs_created_by_run_id', '追溯父运行创建的子运行');
+SELECT pg_temp.weknora_comment_index('ix_amp_agent_runs_uid', '按用户查询运行记录');
+SELECT pg_temp.weknora_comment_index('ix_amp_agent_runs_external_id', '按来源外部 ID 定位运行记录');
+SELECT pg_temp.weknora_comment_index('ix_amp_agent_runs_subagent_thread_relation_id', '按子智能体线程关系查询运行记录');
+SELECT pg_temp.weknora_comment_index('ix_amp_agent_runs_tenant_id', '按工作空间隔离运行记录');
+SELECT pg_temp.weknora_comment_index('ix_amp_agent_runs_request_id', '保证运行幂等请求 ID 唯一并加速定位');
+SELECT pg_temp.weknora_comment_index('uq_amp_agent_runs_one_active_per_thread', '保证同一会话线程同一智能体只有一个活跃运行');
 
-COMMENT ON TABLE amp_agents IS 'Harness 智能体主表：保存智能体配置、共享状态和运行标识';
-COMMENT ON COLUMN amp_agents.id IS '智能体自增主键';
-COMMENT ON COLUMN amp_agents.slug IS '智能体稳定标识，历史数据与接口引用使用该值';
-COMMENT ON COLUMN amp_agents.backend_id IS '执行后端标识';
-COMMENT ON COLUMN amp_agents.name IS '智能体展示名称';
-COMMENT ON COLUMN amp_agents.description IS '智能体描述';
-COMMENT ON COLUMN amp_agents.icon IS '智能体图标地址';
-COMMENT ON COLUMN amp_agents.pics IS '智能体配图地址列表';
-COMMENT ON COLUMN amp_agents.config_json IS '智能体运行配置';
-COMMENT ON COLUMN amp_agents.share_config IS '智能体共享与授权配置';
-COMMENT ON COLUMN amp_agents.is_default IS '是否默认智能体';
-COMMENT ON COLUMN amp_agents.is_subagent IS '是否子智能体';
-COMMENT ON COLUMN amp_agents.created_by IS '创建人用户标识';
-COMMENT ON COLUMN amp_agents.updated_by IS '最近更新人用户标识';
-COMMENT ON COLUMN amp_agents.tenant_id IS '所属工作空间 ID；空值表示平台目录';
-COMMENT ON COLUMN amp_agents.created_at IS '创建时间';
-COMMENT ON COLUMN amp_agents.updated_at IS '最后更新时间';
+SELECT pg_temp.weknora_comment_index('ix_amp_messages_conversation_id', '按会话加载消息列表');
+SELECT pg_temp.weknora_comment_index('ix_amp_messages_run_id', '按运行追溯消息');
+SELECT pg_temp.weknora_comment_index('ix_amp_messages_request_id', '按幂等请求定位消息');
 
-COMMENT ON TABLE amp_sessions IS 'Harness 运行时会话主表，对应原 conversations 数据';
-COMMENT ON COLUMN amp_sessions.id IS '会话自增主键';
-COMMENT ON COLUMN amp_sessions.thread_id IS '运行时线程 ID';
-COMMENT ON COLUMN amp_sessions.uid IS '所属用户标识';
-COMMENT ON COLUMN amp_sessions.tenant_id IS '所属工作空间 ID';
-COMMENT ON COLUMN amp_sessions.agent_id IS '会话绑定的智能体 slug；字段名保留历史协议';
-COMMENT ON COLUMN amp_sessions.title IS '会话标题';
-COMMENT ON COLUMN amp_sessions.status IS '会话状态：active/archived/deleted';
-COMMENT ON COLUMN amp_sessions.is_pinned IS '是否置顶';
-COMMENT ON COLUMN amp_sessions.created_at IS '创建时间';
-COMMENT ON COLUMN amp_sessions.updated_at IS '最后更新时间';
-COMMENT ON COLUMN amp_sessions.extra_metadata IS '会话扩展元数据';
+SELECT pg_temp.weknora_comment_index('ix_amp_tool_calls_message_id', '按消息加载工具调用明细');
+SELECT pg_temp.weknora_comment_index('ix_amp_tool_calls_langgraph_tool_call_id', '按 LangGraph 工具调用 ID 对齐结果');
 
-COMMENT ON TABLE amp_subagent_threads IS '子智能体线程与会话归属关系表';
-COMMENT ON COLUMN amp_subagent_threads.id IS '子智能体线程关系自增主键';
-COMMENT ON COLUMN amp_subagent_threads.uid IS '所属用户标识';
-COMMENT ON COLUMN amp_subagent_threads.tenant_id IS '所属工作空间 ID';
-COMMENT ON COLUMN amp_subagent_threads.parent_conversation_id IS '父会话 ID';
-COMMENT ON COLUMN amp_subagent_threads.child_conversation_id IS '子会话 ID';
-COMMENT ON COLUMN amp_subagent_threads.child_thread_id IS '子线程 ID';
-COMMENT ON COLUMN amp_subagent_threads.subagent_slug IS '子智能体 slug';
-COMMENT ON COLUMN amp_subagent_threads.created_by_run_id IS '创建该关系的运行 ID';
-COMMENT ON COLUMN amp_subagent_threads.created_at IS '创建时间';
-COMMENT ON COLUMN amp_subagent_threads.updated_at IS '最后更新时间';
+SELECT pg_temp.weknora_comment_index('ix_amp_agent_run_requests_external_id', '按来源外部 ID 定位排队请求');
+SELECT pg_temp.weknora_comment_index('ix_amp_agent_run_requests_tenant_id', '按工作空间隔离排队请求');
+SELECT pg_temp.weknora_comment_index('ix_amp_agent_run_requests_request_id', '保证排队请求幂等 ID 唯一');
+SELECT pg_temp.weknora_comment_index('ix_amp_agent_run_requests_queue', '按队列维度加载待派发请求');
+SELECT pg_temp.weknora_comment_index('ix_amp_agent_run_requests_queue_tenant', '在租户隔离下加载待派发请求');
+SELECT pg_temp.weknora_comment_index('idx_amp_agent_runs_tenant_thread', '在租户隔离下按线程和智能体分析运行');
 
-COMMENT ON TABLE amp_agent_runs IS '智能体运行生命周期主表';
-COMMENT ON COLUMN amp_agent_runs.id IS '运行 UUID 主键';
-COMMENT ON COLUMN amp_agent_runs.conversation_thread_id IS '会话线程 ID 快照';
-COMMENT ON COLUMN amp_agent_runs.agent_slug IS '执行智能体 slug';
-COMMENT ON COLUMN amp_agent_runs.uid IS '发起用户标识';
-COMMENT ON COLUMN amp_agent_runs.tenant_id IS '所属工作空间 ID';
-COMMENT ON COLUMN amp_agent_runs.status IS '运行状态：pending/running/completed/failed/cancel_requested/cancelled/interrupted';
-COMMENT ON COLUMN amp_agent_runs.request_id IS '幂等请求 ID';
-COMMENT ON COLUMN amp_agent_runs.source IS '请求来源快照';
-COMMENT ON COLUMN amp_agent_runs.channel IS '请求通道快照';
-COMMENT ON COLUMN amp_agent_runs.external_id IS '来源侧外部消息或调用 ID';
-COMMENT ON COLUMN amp_agent_runs.origin_metadata IS '不可变来源元数据';
-COMMENT ON COLUMN amp_agent_runs.conversation_id IS '会话 ID';
-COMMENT ON COLUMN amp_agent_runs.created_by_run_id IS '父运行 ID；普通运行为空';
-COMMENT ON COLUMN amp_agent_runs.subagent_thread_relation_id IS '子智能体线程关系 ID';
-COMMENT ON COLUMN amp_agent_runs.run_type IS '运行类型：chat/resume/subagent';
-COMMENT ON COLUMN amp_agent_runs.input_message_id IS '输入消息 ID';
-COMMENT ON COLUMN amp_agent_runs.output_message_id IS '输出消息 ID';
-COMMENT ON COLUMN amp_agent_runs.last_event_id IS '最后的 Redis Stream 事件 ID';
-COMMENT ON COLUMN amp_agent_runs.input_payload IS '原始输入载荷';
-COMMENT ON COLUMN amp_agent_runs.error_type IS '错误类型';
-COMMENT ON COLUMN amp_agent_runs.error_message IS '错误信息';
-COMMENT ON COLUMN amp_agent_runs.started_at IS '开始时间';
-COMMENT ON COLUMN amp_agent_runs.finished_at IS '结束时间';
-COMMENT ON COLUMN amp_agent_runs.created_at IS '创建时间';
-COMMENT ON COLUMN amp_agent_runs.updated_at IS '最后更新时间';
+SELECT pg_temp.weknora_comment_table('amp_agents', 'Harness 智能体主表：保存智能体配置、共享状态和运行标识');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'id', '智能体自增主键');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'slug', '智能体稳定标识，历史数据与接口引用使用该值');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'backend_id', '执行后端标识');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'name', '智能体展示名称');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'description', '智能体描述');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'icon', '智能体图标地址');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'pics', '智能体配图地址列表');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'config_json', '智能体运行配置');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'share_config', '智能体共享与授权配置');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'is_default', '是否默认智能体');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'is_subagent', '是否子智能体');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'created_by', '创建人用户标识');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'updated_by', '最近更新人用户标识');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'tenant_id', '所属工作空间 ID；空值表示平台目录');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'updated_at', '最后更新时间');
 
-COMMENT ON TABLE amp_messages IS 'Harness 运行时消息主表';
-COMMENT ON COLUMN amp_messages.id IS '消息自增主键';
-COMMENT ON COLUMN amp_messages.conversation_id IS '所属会话 ID';
-COMMENT ON COLUMN amp_messages.role IS '消息角色：user/assistant/system/tool';
-COMMENT ON COLUMN amp_messages.content IS '消息内容';
-COMMENT ON COLUMN amp_messages.message_type IS '消息类型：text/tool_call/tool_result';
-COMMENT ON COLUMN amp_messages.created_at IS '创建时间';
-COMMENT ON COLUMN amp_messages.token_count IS '消息粗粒度 token 数；精确消耗以遥测表为准';
-COMMENT ON COLUMN amp_messages.extra_metadata IS '消息完整扩展元数据';
-COMMENT ON COLUMN amp_messages.image_content IS '多模态图片内容';
-COMMENT ON COLUMN amp_messages.run_id IS '关联运行 ID';
-COMMENT ON COLUMN amp_messages.request_id IS '幂等请求 ID';
-COMMENT ON COLUMN amp_messages.delivery_status IS '消息投递状态';
+SELECT pg_temp.weknora_comment_table('amp_sessions', 'Harness 运行时会话主表，对应原 conversations 数据');
+SELECT pg_temp.weknora_comment_column('amp_sessions', 'id', '会话自增主键');
+SELECT pg_temp.weknora_comment_column('amp_sessions', 'thread_id', '运行时线程 ID');
+SELECT pg_temp.weknora_comment_column('amp_sessions', 'uid', '所属用户标识');
+SELECT pg_temp.weknora_comment_column('amp_sessions', 'tenant_id', '所属工作空间 ID');
+SELECT pg_temp.weknora_comment_column('amp_sessions', 'agent_id', '会话绑定的智能体 slug；字段名保留历史协议');
+SELECT pg_temp.weknora_comment_column('amp_sessions', 'title', '会话标题');
+SELECT pg_temp.weknora_comment_column('amp_sessions', 'status', '会话状态：active/archived/deleted');
+SELECT pg_temp.weknora_comment_column('amp_sessions', 'is_pinned', '是否置顶');
+SELECT pg_temp.weknora_comment_column('amp_sessions', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('amp_sessions', 'updated_at', '最后更新时间');
+SELECT pg_temp.weknora_comment_column('amp_sessions', 'extra_metadata', '会话扩展元数据');
 
-COMMENT ON TABLE amp_tool_calls IS '会话内工具调用过程明细表';
-COMMENT ON COLUMN amp_tool_calls.id IS '工具调用自增主键';
-COMMENT ON COLUMN amp_tool_calls.message_id IS '所属消息 ID';
-COMMENT ON COLUMN amp_tool_calls.langgraph_tool_call_id IS 'LangGraph 工具调用 ID';
-COMMENT ON COLUMN amp_tool_calls.tool_name IS '工具名称';
-COMMENT ON COLUMN amp_tool_calls.tool_input IS '工具输入参数';
-COMMENT ON COLUMN amp_tool_calls.tool_output IS '工具执行结果';
-COMMENT ON COLUMN amp_tool_calls.status IS '执行状态：pending/success/error';
-COMMENT ON COLUMN amp_tool_calls.error_message IS '失败信息';
-COMMENT ON COLUMN amp_tool_calls.created_at IS '创建时间';
+SELECT pg_temp.weknora_comment_table('amp_subagent_threads', '子智能体线程与会话归属关系表');
+SELECT pg_temp.weknora_comment_column('amp_subagent_threads', 'id', '子智能体线程关系自增主键');
+SELECT pg_temp.weknora_comment_column('amp_subagent_threads', 'uid', '所属用户标识');
+SELECT pg_temp.weknora_comment_column('amp_subagent_threads', 'tenant_id', '所属工作空间 ID');
+SELECT pg_temp.weknora_comment_column('amp_subagent_threads', 'parent_conversation_id', '父会话 ID');
+SELECT pg_temp.weknora_comment_column('amp_subagent_threads', 'child_conversation_id', '子会话 ID');
+SELECT pg_temp.weknora_comment_column('amp_subagent_threads', 'child_thread_id', '子线程 ID');
+SELECT pg_temp.weknora_comment_column('amp_subagent_threads', 'subagent_slug', '子智能体 slug');
+SELECT pg_temp.weknora_comment_column('amp_subagent_threads', 'created_by_run_id', '创建该关系的运行 ID');
+SELECT pg_temp.weknora_comment_column('amp_subagent_threads', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('amp_subagent_threads', 'updated_at', '最后更新时间');
 
-COMMENT ON TABLE amp_agent_run_requests IS '智能体请求排队、幂等和取消链路表';
-COMMENT ON COLUMN amp_agent_run_requests.id IS '请求自增主键，用于 FIFO 排序';
-COMMENT ON COLUMN amp_agent_run_requests.request_id IS '幂等请求 ID';
-COMMENT ON COLUMN amp_agent_run_requests.uid IS '发起用户标识';
-COMMENT ON COLUMN amp_agent_run_requests.tenant_id IS '所属工作空间 ID';
-COMMENT ON COLUMN amp_agent_run_requests.agent_slug IS '目标智能体 slug';
-COMMENT ON COLUMN amp_agent_run_requests.conversation_thread_id IS '目标会话线程 ID';
-COMMENT ON COLUMN amp_agent_run_requests.source IS '请求来源：chat/agent_call/eval';
-COMMENT ON COLUMN amp_agent_run_requests.channel IS '请求通道：web/api/im/internal';
-COMMENT ON COLUMN amp_agent_run_requests.external_id IS '来源侧消息或调用 ID';
-COMMENT ON COLUMN amp_agent_run_requests.origin_metadata IS '来源元数据快照';
-COMMENT ON COLUMN amp_agent_run_requests.queue_policy IS '排队策略：enqueue/reject/steer';
-COMMENT ON COLUMN amp_agent_run_requests.status IS '请求状态：queued/dispatched/cancelled/rejected/failed';
-COMMENT ON COLUMN amp_agent_run_requests.input_message_id IS '输入消息 ID';
-COMMENT ON COLUMN amp_agent_run_requests.dispatched_run_id IS '派发运行 ID';
-COMMENT ON COLUMN amp_agent_run_requests.input_payload IS '原始输入载荷快照';
-COMMENT ON COLUMN amp_agent_run_requests.error_message IS '拒绝或失败原因';
-COMMENT ON COLUMN amp_agent_run_requests.created_at IS '创建时间';
-COMMENT ON COLUMN amp_agent_run_requests.dispatched_at IS '派发时间';
-COMMENT ON COLUMN amp_agent_run_requests.updated_at IS '最后更新时间';
+SELECT pg_temp.weknora_comment_table('amp_agent_runs', '智能体运行生命周期主表');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'id', '运行 UUID 主键');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'conversation_thread_id', '会话线程 ID 快照');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'agent_slug', '执行智能体 slug');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'uid', '发起用户标识');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'tenant_id', '所属工作空间 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'status', '运行状态：pending/running/completed/failed/cancel_requested/cancelled/interrupted');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'request_id', '幂等请求 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'source', '请求来源快照');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'channel', '请求通道快照');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'external_id', '来源侧外部消息或调用 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'origin_metadata', '不可变来源元数据');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'conversation_id', '会话 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'created_by_run_id', '父运行 ID；普通运行为空');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'subagent_thread_relation_id', '子智能体线程关系 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'run_type', '运行类型：chat/resume/subagent');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'input_message_id', '输入消息 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'output_message_id', '输出消息 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'last_event_id', '最后的 Redis Stream 事件 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'input_payload', '原始输入载荷');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'error_type', '错误类型');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'error_message', '错误信息');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'started_at', '开始时间');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'finished_at', '结束时间');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'updated_at', '最后更新时间');
 
-COMMENT ON TABLE amp_audit_logs IS 'Harness 审计日志表';
-COMMENT ON COLUMN amp_audit_logs.id IS '审计日志自增主键';
-COMMENT ON COLUMN amp_audit_logs.user_id IS '操作用户标识；系统操作可为空';
-COMMENT ON COLUMN amp_audit_logs.operation IS '操作类型';
-COMMENT ON COLUMN amp_audit_logs.details IS '操作详情';
-COMMENT ON COLUMN amp_audit_logs.ip_address IS '操作来源 IP';
-COMMENT ON COLUMN amp_audit_logs.timestamp IS '操作时间';
+SELECT pg_temp.weknora_comment_table('amp_messages', 'Harness 运行时消息主表');
+SELECT pg_temp.weknora_comment_column('amp_messages', 'id', '消息自增主键');
+SELECT pg_temp.weknora_comment_column('amp_messages', 'conversation_id', '所属会话 ID');
+SELECT pg_temp.weknora_comment_column('amp_messages', 'role', '消息角色：user/assistant/system/tool');
+SELECT pg_temp.weknora_comment_column('amp_messages', 'content', '消息内容');
+SELECT pg_temp.weknora_comment_column('amp_messages', 'message_type', '消息类型：text/tool_call/tool_result');
+SELECT pg_temp.weknora_comment_column('amp_messages', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('amp_messages', 'token_count', '消息粗粒度 token 数；精确消耗以遥测表为准');
+SELECT pg_temp.weknora_comment_column('amp_messages', 'extra_metadata', '消息完整扩展元数据');
+SELECT pg_temp.weknora_comment_column('amp_messages', 'image_content', '多模态图片内容');
+SELECT pg_temp.weknora_comment_column('amp_messages', 'run_id', '关联运行 ID');
+SELECT pg_temp.weknora_comment_column('amp_messages', 'request_id', '幂等请求 ID');
+SELECT pg_temp.weknora_comment_column('amp_messages', 'delivery_status', '消息投递状态');
+
+SELECT pg_temp.weknora_comment_table('amp_tool_calls', '会话内工具调用过程明细表');
+SELECT pg_temp.weknora_comment_column('amp_tool_calls', 'id', '工具调用自增主键');
+SELECT pg_temp.weknora_comment_column('amp_tool_calls', 'message_id', '所属消息 ID');
+SELECT pg_temp.weknora_comment_column('amp_tool_calls', 'langgraph_tool_call_id', 'LangGraph 工具调用 ID');
+SELECT pg_temp.weknora_comment_column('amp_tool_calls', 'tool_name', '工具名称');
+SELECT pg_temp.weknora_comment_column('amp_tool_calls', 'tool_input', '工具输入参数');
+SELECT pg_temp.weknora_comment_column('amp_tool_calls', 'tool_output', '工具执行结果');
+SELECT pg_temp.weknora_comment_column('amp_tool_calls', 'status', '执行状态：pending/success/error');
+SELECT pg_temp.weknora_comment_column('amp_tool_calls', 'error_message', '失败信息');
+SELECT pg_temp.weknora_comment_column('amp_tool_calls', 'created_at', '创建时间');
+
+SELECT pg_temp.weknora_comment_table('amp_agent_run_requests', '智能体请求排队、幂等和取消链路表');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'id', '请求自增主键，用于 FIFO 排序');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'request_id', '幂等请求 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'uid', '发起用户标识');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'tenant_id', '所属工作空间 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'agent_slug', '目标智能体 slug');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'conversation_thread_id', '目标会话线程 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'source', '请求来源：chat/agent_call/eval');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'channel', '请求通道：web/api/im/internal');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'external_id', '来源侧消息或调用 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'origin_metadata', '来源元数据快照');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'queue_policy', '排队策略：enqueue/reject/steer');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'status', '请求状态：queued/dispatched/cancelled/rejected/failed');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'input_message_id', '输入消息 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'dispatched_run_id', '派发运行 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'input_payload', '原始输入载荷快照');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'error_message', '拒绝或失败原因');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'dispatched_at', '派发时间');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'updated_at', '最后更新时间');
+
+SELECT pg_temp.weknora_comment_table('amp_audit_logs', 'Harness 审计日志表');
+SELECT pg_temp.weknora_comment_column('amp_audit_logs', 'id', '审计日志自增主键');
+SELECT pg_temp.weknora_comment_column('amp_audit_logs', 'user_id', '操作用户标识；系统操作可为空');
+SELECT pg_temp.weknora_comment_column('amp_audit_logs', 'operation', '操作类型');
+SELECT pg_temp.weknora_comment_column('amp_audit_logs', 'details', '操作详情');
+SELECT pg_temp.weknora_comment_column('amp_audit_logs', 'ip_address', '操作来源 IP');
+SELECT pg_temp.weknora_comment_column('amp_audit_logs', 'timestamp', '操作时间');
 
 CREATE TABLE IF NOT EXISTS amp_agent_usage_events (
     id BIGSERIAL PRIMARY KEY,
@@ -485,28 +579,28 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_agent_usage_events_event_id ON amp_agen
 CREATE INDEX IF NOT EXISTS idx_amp_agent_usage_events_dimensions
     ON amp_agent_usage_events(tenant_id, agent_id, occurred_at);
 CREATE INDEX IF NOT EXISTS idx_amp_agent_usage_events_run ON amp_agent_usage_events(run_id);
-COMMENT ON INDEX uq_amp_agent_usage_events_event_id IS '保证运行事件幂等';
-COMMENT ON INDEX idx_amp_agent_usage_events_dimensions IS '按租户、智能体和时间聚合运行事件';
-COMMENT ON INDEX idx_amp_agent_usage_events_run IS '按运行 ID 关联事件';
-COMMENT ON TABLE amp_agent_usage_events IS '智能体运行遥测事实表：只追加运行生命周期事件';
-COMMENT ON COLUMN amp_agent_usage_events.id IS '运行事件自增主键';
-COMMENT ON COLUMN amp_agent_usage_events.event_id IS '事件唯一 ID';
-COMMENT ON COLUMN amp_agent_usage_events.tenant_id IS '所属工作空间 ID';
-COMMENT ON COLUMN amp_agent_usage_events.uid IS '用户标识';
-COMMENT ON COLUMN amp_agent_usage_events.agent_id IS '智能体 slug';
-COMMENT ON COLUMN amp_agent_usage_events.run_id IS '运行 ID';
-COMMENT ON COLUMN amp_agent_usage_events.session_id IS '会话 ID';
-COMMENT ON COLUMN amp_agent_usage_events.event_type IS '事件类型：start/succeed/fail/cancel';
-COMMENT ON COLUMN amp_agent_usage_events.run_type IS '运行类型：chat/resume/subagent';
-COMMENT ON COLUMN amp_agent_usage_events.is_subagent IS '是否子智能体运行';
-COMMENT ON COLUMN amp_agent_usage_events.status IS '事件状态';
-COMMENT ON COLUMN amp_agent_usage_events.duration_ms IS '运行耗时毫秒数';
-COMMENT ON COLUMN amp_agent_usage_events.retry_count IS '重试次数';
-COMMENT ON COLUMN amp_agent_usage_events.error_type IS '错误类型';
-COMMENT ON COLUMN amp_agent_usage_events.error_message IS '错误信息';
-COMMENT ON COLUMN amp_agent_usage_events.event_metadata IS '事件扩展元数据';
-COMMENT ON COLUMN amp_agent_usage_events.occurred_at IS '业务发生时间';
-COMMENT ON COLUMN amp_agent_usage_events.created_at IS '入库时间';
+SELECT pg_temp.weknora_comment_index('uq_amp_agent_usage_events_event_id', '保证运行事件幂等');
+SELECT pg_temp.weknora_comment_index('idx_amp_agent_usage_events_dimensions', '按租户、智能体和时间聚合运行事件');
+SELECT pg_temp.weknora_comment_index('idx_amp_agent_usage_events_run', '按运行 ID 关联事件');
+SELECT pg_temp.weknora_comment_table('amp_agent_usage_events', '智能体运行遥测事实表：只追加运行生命周期事件');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'id', '运行事件自增主键');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'event_id', '事件唯一 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'tenant_id', '所属工作空间 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'uid', '用户标识');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'agent_id', '智能体 slug');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'run_id', '运行 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'session_id', '会话 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'event_type', '事件类型：start/succeed/fail/cancel');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'run_type', '运行类型：chat/resume/subagent');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'is_subagent', '是否子智能体运行');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'status', '事件状态');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'duration_ms', '运行耗时毫秒数');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'retry_count', '重试次数');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'error_type', '错误类型');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'error_message', '错误信息');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'event_metadata', '事件扩展元数据');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'occurred_at', '业务发生时间');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_events', 'created_at', '入库时间');
 
 CREATE TABLE IF NOT EXISTS amp_tool_usage_events (
     id BIGSERIAL PRIMARY KEY,
@@ -532,28 +626,28 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_tool_usage_events_event_id ON amp_tool_
 CREATE INDEX IF NOT EXISTS idx_amp_tool_usage_events_dimensions
     ON amp_tool_usage_events(tenant_id, agent_id, tool_name, occurred_at);
 CREATE INDEX IF NOT EXISTS idx_amp_tool_usage_events_run ON amp_tool_usage_events(run_id);
-COMMENT ON INDEX uq_amp_tool_usage_events_event_id IS '保证工具事件幂等';
-COMMENT ON INDEX idx_amp_tool_usage_events_dimensions IS '按租户、智能体、工具和时间聚合工具事件';
-COMMENT ON INDEX idx_amp_tool_usage_events_run IS '按运行 ID 关联工具事件';
-COMMENT ON TABLE amp_tool_usage_events IS '工具使用遥测事实表：覆盖内置工具、MCP 和 Skill 工具';
-COMMENT ON COLUMN amp_tool_usage_events.id IS '工具事件自增主键';
-COMMENT ON COLUMN amp_tool_usage_events.event_id IS '事件唯一 ID';
-COMMENT ON COLUMN amp_tool_usage_events.tenant_id IS '所属工作空间 ID';
-COMMENT ON COLUMN amp_tool_usage_events.uid IS '用户标识';
-COMMENT ON COLUMN amp_tool_usage_events.agent_id IS '智能体 slug';
-COMMENT ON COLUMN amp_tool_usage_events.run_id IS '运行 ID';
-COMMENT ON COLUMN amp_tool_usage_events.session_id IS '会话 ID';
-COMMENT ON COLUMN amp_tool_usage_events.message_id IS '消息 ID';
-COMMENT ON COLUMN amp_tool_usage_events.tool_call_id IS '工具调用明细 ID';
-COMMENT ON COLUMN amp_tool_usage_events.capability_type IS '能力类型：builtin/mcp/skill';
-COMMENT ON COLUMN amp_tool_usage_events.tool_name IS '工具名称';
-COMMENT ON COLUMN amp_tool_usage_events.status IS '执行状态：success/error/cancelled';
-COMMENT ON COLUMN amp_tool_usage_events.duration_ms IS '执行耗时毫秒数';
-COMMENT ON COLUMN amp_tool_usage_events.error_type IS '错误类型';
-COMMENT ON COLUMN amp_tool_usage_events.error_code IS '错误码';
-COMMENT ON COLUMN amp_tool_usage_events.event_metadata IS '事件扩展元数据';
-COMMENT ON COLUMN amp_tool_usage_events.occurred_at IS '业务发生时间';
-COMMENT ON COLUMN amp_tool_usage_events.created_at IS '入库时间';
+SELECT pg_temp.weknora_comment_index('uq_amp_tool_usage_events_event_id', '保证工具事件幂等');
+SELECT pg_temp.weknora_comment_index('idx_amp_tool_usage_events_dimensions', '按租户、智能体、工具和时间聚合工具事件');
+SELECT pg_temp.weknora_comment_index('idx_amp_tool_usage_events_run', '按运行 ID 关联工具事件');
+SELECT pg_temp.weknora_comment_table('amp_tool_usage_events', '工具使用遥测事实表：覆盖内置工具、MCP 和 Skill 工具');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'id', '工具事件自增主键');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'event_id', '事件唯一 ID');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'tenant_id', '所属工作空间 ID');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'uid', '用户标识');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'agent_id', '智能体 slug');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'run_id', '运行 ID');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'session_id', '会话 ID');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'message_id', '消息 ID');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'tool_call_id', '工具调用明细 ID');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'capability_type', '能力类型：builtin/mcp/skill');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'tool_name', '工具名称');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'status', '执行状态：success/error/cancelled');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'duration_ms', '执行耗时毫秒数');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'error_type', '错误类型');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'error_code', '错误码');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'event_metadata', '事件扩展元数据');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'occurred_at', '业务发生时间');
+SELECT pg_temp.weknora_comment_column('amp_tool_usage_events', 'created_at', '入库时间');
 
 CREATE TABLE IF NOT EXISTS amp_token_usage_events (
     id BIGSERIAL PRIMARY KEY,
@@ -576,25 +670,25 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_token_usage_events_event_id ON amp_toke
 CREATE INDEX IF NOT EXISTS idx_amp_token_usage_events_dimensions
     ON amp_token_usage_events(tenant_id, agent_id, model, occurred_at);
 CREATE INDEX IF NOT EXISTS idx_amp_token_usage_events_run ON amp_token_usage_events(run_id);
-COMMENT ON INDEX uq_amp_token_usage_events_event_id IS '保证 token 事件幂等';
-COMMENT ON INDEX idx_amp_token_usage_events_dimensions IS '按租户、智能体、模型和时间聚合 token 消耗';
-COMMENT ON INDEX idx_amp_token_usage_events_run IS '按运行 ID 关联 token 事件';
-COMMENT ON TABLE amp_token_usage_events IS '模型 token 遥测事实表：保存每次模型调用的精确消耗';
-COMMENT ON COLUMN amp_token_usage_events.id IS 'token 事件自增主键';
-COMMENT ON COLUMN amp_token_usage_events.event_id IS '事件唯一 ID';
-COMMENT ON COLUMN amp_token_usage_events.tenant_id IS '所属工作空间 ID';
-COMMENT ON COLUMN amp_token_usage_events.uid IS '用户标识';
-COMMENT ON COLUMN amp_token_usage_events.agent_id IS '智能体 slug';
-COMMENT ON COLUMN amp_token_usage_events.run_id IS '运行 ID';
-COMMENT ON COLUMN amp_token_usage_events.session_id IS '会话 ID';
-COMMENT ON COLUMN amp_token_usage_events.message_id IS '消息 ID';
-COMMENT ON COLUMN amp_token_usage_events.model IS '模型名称';
-COMMENT ON COLUMN amp_token_usage_events.prompt_tokens IS '输入 token 数';
-COMMENT ON COLUMN amp_token_usage_events.completion_tokens IS '输出 token 数';
-COMMENT ON COLUMN amp_token_usage_events.total_tokens IS '总 token 数';
-COMMENT ON COLUMN amp_token_usage_events.event_metadata IS '事件扩展元数据';
-COMMENT ON COLUMN amp_token_usage_events.occurred_at IS '业务发生时间';
-COMMENT ON COLUMN amp_token_usage_events.created_at IS '入库时间';
+SELECT pg_temp.weknora_comment_index('uq_amp_token_usage_events_event_id', '保证 token 事件幂等');
+SELECT pg_temp.weknora_comment_index('idx_amp_token_usage_events_dimensions', '按租户、智能体、模型和时间聚合 token 消耗');
+SELECT pg_temp.weknora_comment_index('idx_amp_token_usage_events_run', '按运行 ID 关联 token 事件');
+SELECT pg_temp.weknora_comment_table('amp_token_usage_events', '模型 token 遥测事实表：保存每次模型调用的精确消耗');
+SELECT pg_temp.weknora_comment_column('amp_token_usage_events', 'id', 'token 事件自增主键');
+SELECT pg_temp.weknora_comment_column('amp_token_usage_events', 'event_id', '事件唯一 ID');
+SELECT pg_temp.weknora_comment_column('amp_token_usage_events', 'tenant_id', '所属工作空间 ID');
+SELECT pg_temp.weknora_comment_column('amp_token_usage_events', 'uid', '用户标识');
+SELECT pg_temp.weknora_comment_column('amp_token_usage_events', 'agent_id', '智能体 slug');
+SELECT pg_temp.weknora_comment_column('amp_token_usage_events', 'run_id', '运行 ID');
+SELECT pg_temp.weknora_comment_column('amp_token_usage_events', 'session_id', '会话 ID');
+SELECT pg_temp.weknora_comment_column('amp_token_usage_events', 'message_id', '消息 ID');
+SELECT pg_temp.weknora_comment_column('amp_token_usage_events', 'model', '模型名称');
+SELECT pg_temp.weknora_comment_column('amp_token_usage_events', 'prompt_tokens', '输入 token 数');
+SELECT pg_temp.weknora_comment_column('amp_token_usage_events', 'completion_tokens', '输出 token 数');
+SELECT pg_temp.weknora_comment_column('amp_token_usage_events', 'total_tokens', '总 token 数');
+SELECT pg_temp.weknora_comment_column('amp_token_usage_events', 'event_metadata', '事件扩展元数据');
+SELECT pg_temp.weknora_comment_column('amp_token_usage_events', 'occurred_at', '业务发生时间');
+SELECT pg_temp.weknora_comment_column('amp_token_usage_events', 'created_at', '入库时间');
 
 CREATE TABLE IF NOT EXISTS amp_agent_usage_daily (
     id BIGSERIAL PRIMARY KEY,
@@ -619,27 +713,27 @@ CREATE TABLE IF NOT EXISTS amp_agent_usage_daily (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_agent_usage_daily_dimensions
     ON amp_agent_usage_daily(stat_date, tenant_id, agent_id);
-COMMENT ON INDEX uq_amp_agent_usage_daily_dimensions IS '保证每日每租户每智能体只有一条聚合记录';
-COMMENT ON TABLE amp_agent_usage_daily IS '智能体按天聚合表：服务数据总览和最佳智能体 TOP 5';
-COMMENT ON COLUMN amp_agent_usage_daily.id IS '聚合记录自增主键';
-COMMENT ON COLUMN amp_agent_usage_daily.stat_date IS '统计日期';
-COMMENT ON COLUMN amp_agent_usage_daily.tenant_id IS '所属工作空间 ID';
-COMMENT ON COLUMN amp_agent_usage_daily.agent_id IS '智能体 slug';
-COMMENT ON COLUMN amp_agent_usage_daily.session_count IS '活跃会话数';
-COMMENT ON COLUMN amp_agent_usage_daily.message_count IS '消息数';
-COMMENT ON COLUMN amp_agent_usage_daily.run_count IS '运行数';
-COMMENT ON COLUMN amp_agent_usage_daily.success_count IS '成功运行数';
-COMMENT ON COLUMN amp_agent_usage_daily.failure_count IS '失败运行数';
-COMMENT ON COLUMN amp_agent_usage_daily.cancelled_count IS '取消运行数';
-COMMENT ON COLUMN amp_agent_usage_daily.tool_call_count IS '工具调用数';
-COMMENT ON COLUMN amp_agent_usage_daily.tool_success_count IS '工具成功数';
-COMMENT ON COLUMN amp_agent_usage_daily.total_duration_ms IS '运行总耗时毫秒数';
-COMMENT ON COLUMN amp_agent_usage_daily.max_duration_ms IS '运行最大耗时毫秒数';
-COMMENT ON COLUMN amp_agent_usage_daily.prompt_tokens IS '输入 token 总数';
-COMMENT ON COLUMN amp_agent_usage_daily.completion_tokens IS '输出 token 总数';
-COMMENT ON COLUMN amp_agent_usage_daily.total_tokens IS '总 token 数';
-COMMENT ON COLUMN amp_agent_usage_daily.score IS '综合评分，用于最佳智能体排序';
-COMMENT ON COLUMN amp_agent_usage_daily.computed_at IS '聚合计算时间';
+SELECT pg_temp.weknora_comment_index('uq_amp_agent_usage_daily_dimensions', '保证每日每租户每智能体只有一条聚合记录');
+SELECT pg_temp.weknora_comment_table('amp_agent_usage_daily', '智能体按天聚合表：服务数据总览和最佳智能体 TOP 5');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'id', '聚合记录自增主键');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'stat_date', '统计日期');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'tenant_id', '所属工作空间 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'agent_id', '智能体 slug');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'session_count', '活跃会话数');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'message_count', '消息数');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'run_count', '运行数');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'success_count', '成功运行数');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'failure_count', '失败运行数');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'cancelled_count', '取消运行数');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'tool_call_count', '工具调用数');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'tool_success_count', '工具成功数');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'total_duration_ms', '运行总耗时毫秒数');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'max_duration_ms', '运行最大耗时毫秒数');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'prompt_tokens', '输入 token 总数');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'completion_tokens', '输出 token 总数');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'total_tokens', '总 token 数');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'score', '综合评分，用于最佳智能体排序');
+SELECT pg_temp.weknora_comment_column('amp_agent_usage_daily', 'computed_at', '聚合计算时间');
 
 CREATE TABLE IF NOT EXISTS amp_builtin_tools (
     id BIGSERIAL PRIMARY KEY,
@@ -658,371 +752,371 @@ CREATE TABLE IF NOT EXISTS amp_builtin_tools (
 CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_builtin_tools_slug_source
     ON amp_builtin_tools(tool_slug, source);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_builtin_tools_capability ON amp_builtin_tools(capability_key);
-COMMENT ON INDEX uq_amp_builtin_tools_slug_source IS '同一工具标识可按 chat/work 各保留一份目录';
-COMMENT ON INDEX uq_amp_builtin_tools_capability IS '保证统一能力标识唯一';
-COMMENT ON TABLE amp_builtin_tools IS 'Harness 内置工具只读目录，用于统一预览、依赖解析和统计';
-COMMENT ON COLUMN amp_builtin_tools.id IS '内置工具目录自增主键';
-COMMENT ON COLUMN amp_builtin_tools.tool_slug IS '工具稳定标识';
-COMMENT ON COLUMN amp_builtin_tools.capability_key IS '统一能力标识';
-COMMENT ON COLUMN amp_builtin_tools.name IS '工具展示名称';
-COMMENT ON COLUMN amp_builtin_tools.description IS '工具描述';
-COMMENT ON COLUMN amp_builtin_tools.category IS '工具分类';
-COMMENT ON COLUMN amp_builtin_tools.input_schema IS '工具输入 JSON Schema';
-COMMENT ON COLUMN amp_builtin_tools.enabled IS '是否启用';
-COMMENT ON COLUMN amp_builtin_tools.source IS '目录来源；chat 为平台侧，work 为 Harness 侧';
-COMMENT ON COLUMN amp_builtin_tools.capability_key IS '来源前缀 + 工具标识的能力键';
-COMMENT ON COLUMN amp_builtin_tools.version IS '工具版本';
-COMMENT ON COLUMN amp_builtin_tools.created_at IS '创建时间';
-COMMENT ON COLUMN amp_builtin_tools.updated_at IS '最后更新时间';
+SELECT pg_temp.weknora_comment_index('uq_amp_builtin_tools_slug_source', '同一工具标识可按 chat/work 各保留一份目录');
+SELECT pg_temp.weknora_comment_index('uq_amp_builtin_tools_capability', '保证统一能力标识唯一');
+SELECT pg_temp.weknora_comment_table('amp_builtin_tools', 'Harness 内置工具只读目录，用于统一预览、依赖解析和统计');
+SELECT pg_temp.weknora_comment_column('amp_builtin_tools', 'id', '内置工具目录自增主键');
+SELECT pg_temp.weknora_comment_column('amp_builtin_tools', 'tool_slug', '工具稳定标识');
+SELECT pg_temp.weknora_comment_column('amp_builtin_tools', 'capability_key', '统一能力标识');
+SELECT pg_temp.weknora_comment_column('amp_builtin_tools', 'name', '工具展示名称');
+SELECT pg_temp.weknora_comment_column('amp_builtin_tools', 'description', '工具描述');
+SELECT pg_temp.weknora_comment_column('amp_builtin_tools', 'category', '工具分类');
+SELECT pg_temp.weknora_comment_column('amp_builtin_tools', 'input_schema', '工具输入 JSON Schema');
+SELECT pg_temp.weknora_comment_column('amp_builtin_tools', 'enabled', '是否启用');
+SELECT pg_temp.weknora_comment_column('amp_builtin_tools', 'source', '目录来源；chat 为平台侧，work 为 Harness 侧');
+SELECT pg_temp.weknora_comment_column('amp_builtin_tools', 'capability_key', '来源前缀 + 工具标识的能力键');
+SELECT pg_temp.weknora_comment_column('amp_builtin_tools', 'version', '工具版本');
+SELECT pg_temp.weknora_comment_column('amp_builtin_tools', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('amp_builtin_tools', 'updated_at', '最后更新时间');
 
-COMMENT ON INDEX amp_agents_pkey IS '智能体主键索引，按 ID 精确定位记录';
-COMMENT ON INDEX amp_sessions_pkey IS '会话主键索引，按 ID 精确定位记录';
-COMMENT ON INDEX amp_subagent_threads_pkey IS '子智能体线程主键索引，按 ID 精确定位记录';
-COMMENT ON INDEX amp_agent_runs_pkey IS '智能体运行主键索引，按 ID 精确定位记录';
-COMMENT ON INDEX amp_messages_pkey IS '消息主键索引，按 ID 精确定位记录';
-COMMENT ON INDEX amp_tool_calls_pkey IS '工具调用主键索引，按 ID 精确定位记录';
-COMMENT ON INDEX amp_agent_run_requests_pkey IS '运行请求主键索引，按 ID 精确定位记录';
-COMMENT ON INDEX amp_audit_logs_pkey IS '审计日志主键索引，按 ID 精确定位记录';
-COMMENT ON INDEX amp_agent_usage_events_pkey IS '智能体遥测事件主键索引，保证事件 ID 定位';
-COMMENT ON INDEX amp_tool_usage_events_pkey IS '工具遥测事件主键索引，保证事件 ID 定位';
-COMMENT ON INDEX amp_token_usage_events_pkey IS 'Token 遥测事件主键索引，保证事件 ID 定位';
-COMMENT ON INDEX amp_agent_usage_daily_pkey IS '智能体日聚合主键索引，保证统计维度唯一';
-COMMENT ON INDEX amp_builtin_tools_pkey IS '内置工具目录主键索引，按 ID 精确定位记录';
+SELECT pg_temp.weknora_comment_index('amp_agents_pkey', '智能体主键索引，按 ID 精确定位记录');
+SELECT pg_temp.weknora_comment_index('amp_sessions_pkey', '会话主键索引，按 ID 精确定位记录');
+SELECT pg_temp.weknora_comment_index('amp_subagent_threads_pkey', '子智能体线程主键索引，按 ID 精确定位记录');
+SELECT pg_temp.weknora_comment_index('amp_agent_runs_pkey', '智能体运行主键索引，按 ID 精确定位记录');
+SELECT pg_temp.weknora_comment_index('amp_messages_pkey', '消息主键索引，按 ID 精确定位记录');
+SELECT pg_temp.weknora_comment_index('amp_tool_calls_pkey', '工具调用主键索引，按 ID 精确定位记录');
+SELECT pg_temp.weknora_comment_index('amp_agent_run_requests_pkey', '运行请求主键索引，按 ID 精确定位记录');
+SELECT pg_temp.weknora_comment_index('amp_audit_logs_pkey', '审计日志主键索引，按 ID 精确定位记录');
+SELECT pg_temp.weknora_comment_index('amp_agent_usage_events_pkey', '智能体遥测事件主键索引，保证事件 ID 定位');
+SELECT pg_temp.weknora_comment_index('amp_tool_usage_events_pkey', '工具遥测事件主键索引，保证事件 ID 定位');
+SELECT pg_temp.weknora_comment_index('amp_token_usage_events_pkey', 'Token 遥测事件主键索引，保证事件 ID 定位');
+SELECT pg_temp.weknora_comment_index('amp_agent_usage_daily_pkey', '智能体日聚合主键索引，保证统计维度唯一');
+SELECT pg_temp.weknora_comment_index('amp_builtin_tools_pkey', '内置工具目录主键索引，按 ID 精确定位记录');
 -- 补充 0.8.0 新增对象和 amp 统一表的注释。
 
-COMMENT ON COLUMN messages.artifacts IS '消息产物';
-COMMENT ON COLUMN messages.used_memories IS '引用记忆';
-COMMENT ON COLUMN messages.usage IS 'Token 用量';
-COMMENT ON COLUMN tenants.memory_config IS '记忆配置';
+SELECT pg_temp.weknora_comment_column('messages', 'artifacts', '消息产物');
+SELECT pg_temp.weknora_comment_column('messages', 'used_memories', '引用记忆');
+SELECT pg_temp.weknora_comment_column('messages', 'usage', 'Token 用量');
+SELECT pg_temp.weknora_comment_column('tenants', 'memory_config', '记忆配置');
 
-COMMENT ON TABLE tenant_sandbox_configs IS '租户沙箱配置';
-COMMENT ON COLUMN tenant_sandbox_configs.id IS '主键';
-COMMENT ON COLUMN tenant_sandbox_configs.tenant_id IS '租户 ID';
-COMMENT ON COLUMN tenant_sandbox_configs.name IS '配置名称';
-COMMENT ON COLUMN tenant_sandbox_configs.description IS '配置描述';
-COMMENT ON COLUMN tenant_sandbox_configs.sandbox_type IS '沙箱类型';
-COMMENT ON COLUMN tenant_sandbox_configs.created_at IS '创建时间';
-COMMENT ON COLUMN tenant_sandbox_configs.updated_at IS '更新时间';
-COMMENT ON COLUMN tenant_sandbox_configs.deleted_at IS '删除时间';
+SELECT pg_temp.weknora_comment_table('tenant_sandbox_configs', '租户沙箱配置');
+SELECT pg_temp.weknora_comment_column('tenant_sandbox_configs', 'id', '主键');
+SELECT pg_temp.weknora_comment_column('tenant_sandbox_configs', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('tenant_sandbox_configs', 'name', '配置名称');
+SELECT pg_temp.weknora_comment_column('tenant_sandbox_configs', 'description', '配置描述');
+SELECT pg_temp.weknora_comment_column('tenant_sandbox_configs', 'sandbox_type', '沙箱类型');
+SELECT pg_temp.weknora_comment_column('tenant_sandbox_configs', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('tenant_sandbox_configs', 'updated_at', '更新时间');
+SELECT pg_temp.weknora_comment_column('tenant_sandbox_configs', 'deleted_at', '删除时间');
 
-COMMENT ON TABLE tenant_skills IS '租户技能安装';
-COMMENT ON COLUMN tenant_skills.id IS '主键';
-COMMENT ON COLUMN tenant_skills.tenant_id IS '租户 ID';
-COMMENT ON COLUMN tenant_skills.sandbox_config_id IS '沙箱配置 ID';
-COMMENT ON COLUMN tenant_skills.version IS '技能版本';
-COMMENT ON COLUMN tenant_skills.description IS '技能描述';
-COMMENT ON COLUMN tenant_skills.instructions IS '技能指令';
-COMMENT ON COLUMN tenant_skills.bundle_ref IS '技能包引用';
-COMMENT ON COLUMN tenant_skills.bundle_sha256 IS '技能包哈希';
-COMMENT ON COLUMN tenant_skills.installed_snapshot_id IS '安装快照 ID';
-COMMENT ON COLUMN tenant_skills.status IS '安装状态';
-COMMENT ON COLUMN tenant_skills.error IS '安装错误';
-COMMENT ON COLUMN tenant_skills.installing_since IS '安装开始时间';
-COMMENT ON COLUMN tenant_skills.created_at IS '创建时间';
-COMMENT ON COLUMN tenant_skills.updated_at IS '更新时间';
-COMMENT ON COLUMN tenant_skills.deleted_at IS '删除时间';
-COMMENT ON COLUMN tenant_skills.catalog_id IS '技能目录 ID';
+SELECT pg_temp.weknora_comment_table('tenant_skills', '租户技能安装');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'id', '主键');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'sandbox_config_id', '沙箱配置 ID');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'version', '技能版本');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'description', '技能描述');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'instructions', '技能指令');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'bundle_ref', '技能包引用');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'bundle_sha256', '技能包哈希');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'installed_snapshot_id', '安装快照 ID');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'status', '安装状态');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'error', '安装错误');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'installing_since', '安装开始时间');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'updated_at', '更新时间');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'deleted_at', '删除时间');
+SELECT pg_temp.weknora_comment_column('tenant_skills', 'catalog_id', '技能目录 ID');
 
-COMMENT ON COLUMN tenant_skill_snapshots.id IS '主键';
-COMMENT ON COLUMN tenant_skill_snapshots.tenant_id IS '租户 ID';
-COMMENT ON COLUMN tenant_skill_snapshots.sandbox_config_id IS '沙箱配置 ID';
-COMMENT ON COLUMN tenant_skill_snapshots.skill_id IS '技能 ID';
-COMMENT ON COLUMN tenant_skill_snapshots.snapshot_id IS '快照 ID';
-COMMENT ON COLUMN tenant_skill_snapshots.parent_snapshot_id IS '父快照 ID';
-COMMENT ON COLUMN tenant_skill_snapshots.generation IS '快照代数';
-COMMENT ON COLUMN tenant_skill_snapshots.trigger IS '触发方式';
-COMMENT ON COLUMN tenant_skill_snapshots.state IS '快照状态';
-COMMENT ON COLUMN tenant_skill_snapshots.superseded_at IS '替换时间';
-COMMENT ON COLUMN tenant_skill_snapshots.created_at IS '创建时间';
-COMMENT ON COLUMN tenant_skill_snapshots.updated_at IS '更新时间';
+SELECT pg_temp.weknora_comment_column('tenant_skill_snapshots', 'id', '主键');
+SELECT pg_temp.weknora_comment_column('tenant_skill_snapshots', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('tenant_skill_snapshots', 'sandbox_config_id', '沙箱配置 ID');
+SELECT pg_temp.weknora_comment_column('tenant_skill_snapshots', 'skill_id', '技能 ID');
+SELECT pg_temp.weknora_comment_column('tenant_skill_snapshots', 'snapshot_id', '快照 ID');
+SELECT pg_temp.weknora_comment_column('tenant_skill_snapshots', 'parent_snapshot_id', '父快照 ID');
+SELECT pg_temp.weknora_comment_column('tenant_skill_snapshots', 'generation', '快照代数');
+SELECT pg_temp.weknora_comment_column('tenant_skill_snapshots', 'trigger', '触发方式');
+SELECT pg_temp.weknora_comment_column('tenant_skill_snapshots', 'state', '快照状态');
+SELECT pg_temp.weknora_comment_column('tenant_skill_snapshots', 'superseded_at', '替换时间');
+SELECT pg_temp.weknora_comment_column('tenant_skill_snapshots', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('tenant_skill_snapshots', 'updated_at', '更新时间');
 
-COMMENT ON COLUMN tenant_skill_catalog.id IS '主键';
-COMMENT ON COLUMN tenant_skill_catalog.tenant_id IS '租户 ID';
-COMMENT ON COLUMN tenant_skill_catalog.name IS '技能名称';
-COMMENT ON COLUMN tenant_skill_catalog.version IS '技能版本';
-COMMENT ON COLUMN tenant_skill_catalog.description IS '技能描述';
-COMMENT ON COLUMN tenant_skill_catalog.instructions IS '技能指令';
-COMMENT ON COLUMN tenant_skill_catalog.bundle_ref IS '技能包引用';
-COMMENT ON COLUMN tenant_skill_catalog.bundle_sha256 IS '技能包哈希';
-COMMENT ON COLUMN tenant_skill_catalog.created_at IS '创建时间';
-COMMENT ON COLUMN tenant_skill_catalog.updated_at IS '更新时间';
-COMMENT ON COLUMN tenant_skill_catalog.deleted_at IS '删除时间';
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'id', '主键');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'name', '技能名称');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'version', '技能版本');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'description', '技能描述');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'instructions', '技能指令');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'bundle_ref', '技能包引用');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'bundle_sha256', '技能包哈希');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'updated_at', '更新时间');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'deleted_at', '删除时间');
 
-COMMENT ON COLUMN tenant_user_env_vars.id IS '主键';
-COMMENT ON COLUMN tenant_user_env_vars.tenant_id IS '租户 ID';
-COMMENT ON COLUMN tenant_user_env_vars.principal_type IS '主体类型';
-COMMENT ON COLUMN tenant_user_env_vars.principal_id IS '主体 ID';
-COMMENT ON COLUMN tenant_user_env_vars.sandbox_config_id IS '沙箱配置 ID';
-COMMENT ON COLUMN tenant_user_env_vars.skill_id IS '技能 ID';
-COMMENT ON COLUMN tenant_user_env_vars.name IS '变量名称';
-COMMENT ON COLUMN tenant_user_env_vars.created_at IS '创建时间';
-COMMENT ON COLUMN tenant_user_env_vars.updated_at IS '更新时间';
+SELECT pg_temp.weknora_comment_column('tenant_user_env_vars', 'id', '主键');
+SELECT pg_temp.weknora_comment_column('tenant_user_env_vars', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('tenant_user_env_vars', 'principal_type', '主体类型');
+SELECT pg_temp.weknora_comment_column('tenant_user_env_vars', 'principal_id', '主体 ID');
+SELECT pg_temp.weknora_comment_column('tenant_user_env_vars', 'sandbox_config_id', '沙箱配置 ID');
+SELECT pg_temp.weknora_comment_column('tenant_user_env_vars', 'skill_id', '技能 ID');
+SELECT pg_temp.weknora_comment_column('tenant_user_env_vars', 'name', '变量名称');
+SELECT pg_temp.weknora_comment_column('tenant_user_env_vars', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('tenant_user_env_vars', 'updated_at', '更新时间');
 
-COMMENT ON COLUMN mcp_services.usage_instructions IS '使用说明';
-COMMENT ON COLUMN mcp_tool_approvals.enabled IS '是否启用审批';
-COMMENT ON TABLE mcp_metadata IS 'MCP 工具同步元数据';
-COMMENT ON COLUMN mcp_metadata.tenant_id IS '租户 ID';
-COMMENT ON COLUMN mcp_metadata.service_id IS 'MCP 服务 ID';
-COMMENT ON COLUMN mcp_metadata.principal IS '访问主体';
-COMMENT ON COLUMN mcp_metadata.config_fingerprint IS '配置指纹';
-COMMENT ON COLUMN mcp_metadata.tools IS '工具清单';
-COMMENT ON COLUMN mcp_metadata.instructions IS '使用说明';
-COMMENT ON COLUMN mcp_metadata.server_name IS '服务名称';
-COMMENT ON COLUMN mcp_metadata.server_version IS '服务版本';
-COMMENT ON COLUMN mcp_metadata.server_description IS '服务描述';
-COMMENT ON COLUMN mcp_metadata.synced_at IS '同步时间';
+SELECT pg_temp.weknora_comment_column('mcp_services', 'usage_instructions', '使用说明');
+SELECT pg_temp.weknora_comment_column('mcp_tool_approvals', 'enabled', '是否启用审批');
+SELECT pg_temp.weknora_comment_table('mcp_metadata', 'MCP 工具同步元数据');
+SELECT pg_temp.weknora_comment_column('mcp_metadata', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('mcp_metadata', 'service_id', 'MCP 服务 ID');
+SELECT pg_temp.weknora_comment_column('mcp_metadata', 'principal', '访问主体');
+SELECT pg_temp.weknora_comment_column('mcp_metadata', 'config_fingerprint', '配置指纹');
+SELECT pg_temp.weknora_comment_column('mcp_metadata', 'tools', '工具清单');
+SELECT pg_temp.weknora_comment_column('mcp_metadata', 'instructions', '使用说明');
+SELECT pg_temp.weknora_comment_column('mcp_metadata', 'server_name', '服务名称');
+SELECT pg_temp.weknora_comment_column('mcp_metadata', 'server_version', '服务版本');
+SELECT pg_temp.weknora_comment_column('mcp_metadata', 'server_description', '服务描述');
+SELECT pg_temp.weknora_comment_column('mcp_metadata', 'synced_at', '同步时间');
 
-COMMENT ON TABLE browser_devices IS '浏览器设备授权';
-COMMENT ON COLUMN browser_devices.scope_key IS '作用域键';
-COMMENT ON COLUMN browser_devices.id IS '设备 ID';
-COMMENT ON COLUMN browser_devices.tenant IS '租户 ID';
-COMMENT ON COLUMN browser_devices."user" IS '用户 ID';
-COMMENT ON COLUMN browser_devices.label IS '设备名称';
-COMMENT ON COLUMN browser_devices.token_hash IS '令牌哈希';
-COMMENT ON COLUMN browser_devices.previous_hash IS '前一令牌哈希';
-COMMENT ON COLUMN browser_devices.previous_until IS '前一令牌有效期';
-COMMENT ON COLUMN browser_devices.expires_at IS '过期时间';
-COMMENT ON COLUMN browser_devices.renew_after IS '可续期时间';
-COMMENT ON COLUMN browser_devices.created_at IS '创建时间';
-COMMENT ON COLUMN browser_devices.last_seen_at IS '最近使用时间';
-COMMENT ON COLUMN browser_devices.revoked_at IS '撤销时间';
-COMMENT ON COLUMN browser_devices.owner IS '归属进程';
-COMMENT ON COLUMN browser_devices.owner_url IS '进程地址';
-COMMENT ON COLUMN browser_devices.lease_key IS '租约键';
-COMMENT ON COLUMN browser_devices.lease_until IS '租约有效期';
+SELECT pg_temp.weknora_comment_table('browser_devices', '浏览器设备授权');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'scope_key', '作用域键');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'id', '设备 ID');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'tenant', '租户 ID');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'user', '用户 ID');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'label', '设备名称');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'token_hash', '令牌哈希');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'previous_hash', '前一令牌哈希');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'previous_until', '前一令牌有效期');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'expires_at', '过期时间');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'renew_after', '可续期时间');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'last_seen_at', '最近使用时间');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'revoked_at', '撤销时间');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'owner', '归属进程');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'owner_url', '进程地址');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'lease_key', '租约键');
+SELECT pg_temp.weknora_comment_column('browser_devices', 'lease_until', '租约有效期');
 
-COMMENT ON TABLE browser_pairings IS '浏览器配对记录';
-COMMENT ON COLUMN browser_pairings.scope_key IS '作用域键';
-COMMENT ON COLUMN browser_pairings.token_hash IS '令牌哈希';
-COMMENT ON COLUMN browser_pairings.tenant IS '租户 ID';
-COMMENT ON COLUMN browser_pairings."user" IS '用户 ID';
-COMMENT ON COLUMN browser_pairings.expires_at IS '过期时间';
+SELECT pg_temp.weknora_comment_table('browser_pairings', '浏览器配对记录');
+SELECT pg_temp.weknora_comment_column('browser_pairings', 'scope_key', '作用域键');
+SELECT pg_temp.weknora_comment_column('browser_pairings', 'token_hash', '令牌哈希');
+SELECT pg_temp.weknora_comment_column('browser_pairings', 'tenant', '租户 ID');
+SELECT pg_temp.weknora_comment_column('browser_pairings', 'user', '用户 ID');
+SELECT pg_temp.weknora_comment_column('browser_pairings', 'expires_at', '过期时间');
 
-COMMENT ON TABLE browser_task_interruptions IS '浏览器任务中断';
-COMMENT ON COLUMN browser_task_interruptions.scope_key IS '作用域键';
-COMMENT ON COLUMN browser_task_interruptions.session IS '会话 ID';
+SELECT pg_temp.weknora_comment_table('browser_task_interruptions', '浏览器任务中断');
+SELECT pg_temp.weknora_comment_column('browser_task_interruptions', 'scope_key', '作用域键');
+SELECT pg_temp.weknora_comment_column('browser_task_interruptions', 'session', '会话 ID');
 
-COMMENT ON TABLE memory_subjects IS '记忆主体';
-COMMENT ON COLUMN memory_subjects.id IS '主键';
-COMMENT ON COLUMN memory_subjects.tenant_id IS '租户 ID';
-COMMENT ON COLUMN memory_subjects.subject_id IS '主体 ID';
-COMMENT ON COLUMN memory_subjects.enabled IS '是否启用';
-COMMENT ON COLUMN memory_subjects.block_text IS '记忆文本';
-COMMENT ON COLUMN memory_subjects.block_updated_at IS '记忆更新时间';
-COMMENT ON COLUMN memory_subjects.item_count IS '条目数量';
-COMMENT ON COLUMN memory_subjects.last_extracted_at IS '最近抽取时间';
-COMMENT ON COLUMN memory_subjects.extract_cursor IS '抽取游标';
-COMMENT ON COLUMN memory_subjects.pending_sessions IS '待抽取会话';
-COMMENT ON COLUMN memory_subjects.extract_scheduled_at IS '计划抽取时间';
-COMMENT ON COLUMN memory_subjects.created_at IS '创建时间';
-COMMENT ON COLUMN memory_subjects.updated_at IS '更新时间';
-COMMENT ON COLUMN memory_subjects.consolidated_at IS '归并时间';
-COMMENT ON COLUMN memory_subjects.forced_consolidated_at IS '手动归并时间';
-COMMENT ON COLUMN memory_subjects.extraction_state IS '抽取状态';
+SELECT pg_temp.weknora_comment_table('memory_subjects', '记忆主体');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'id', '主键');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'subject_id', '主体 ID');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'enabled', '是否启用');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'block_text', '记忆文本');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'block_updated_at', '记忆更新时间');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'item_count', '条目数量');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'last_extracted_at', '最近抽取时间');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'extract_cursor', '抽取游标');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'pending_sessions', '待抽取会话');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'extract_scheduled_at', '计划抽取时间');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'updated_at', '更新时间');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'consolidated_at', '归并时间');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'forced_consolidated_at', '手动归并时间');
+SELECT pg_temp.weknora_comment_column('memory_subjects', 'extraction_state', '抽取状态');
 
-COMMENT ON TABLE memory_items IS '记忆条目';
-COMMENT ON COLUMN memory_items.id IS '主键';
-COMMENT ON COLUMN memory_items.tenant_id IS '租户 ID';
-COMMENT ON COLUMN memory_items.subject_id IS '主体 ID';
-COMMENT ON COLUMN memory_items.kind IS '记忆类型';
-COMMENT ON COLUMN memory_items.content IS '记忆内容';
-COMMENT ON COLUMN memory_items.topic IS '记忆主题';
-COMMENT ON COLUMN memory_items.normalized_key IS '主题键';
-COMMENT ON COLUMN memory_items.importance IS '重要程度';
-COMMENT ON COLUMN memory_items.origin IS '记忆来源';
-COMMENT ON COLUMN memory_items.status IS '状态';
-COMMENT ON COLUMN memory_items.source_session_id IS '来源会话 ID';
-COMMENT ON COLUMN memory_items.source_message_id IS '来源消息 ID';
-COMMENT ON COLUMN memory_items.valid_from IS '生效时间';
-COMMENT ON COLUMN memory_items.invalid_at IS '失效时间';
-COMMENT ON COLUMN memory_items.expires_at IS '过期时间';
-COMMENT ON COLUMN memory_items.superseded_by IS '替换记录 ID';
-COMMENT ON COLUMN memory_items.last_used_at IS '最近使用时间';
-COMMENT ON COLUMN memory_items.use_count IS '使用次数';
-COMMENT ON COLUMN memory_items.created_at IS '创建时间';
-COMMENT ON COLUMN memory_items.updated_at IS '更新时间';
-COMMENT ON COLUMN memory_items.replaces_id IS '被替换记录 ID';
+SELECT pg_temp.weknora_comment_table('memory_items', '记忆条目');
+SELECT pg_temp.weknora_comment_column('memory_items', 'id', '主键');
+SELECT pg_temp.weknora_comment_column('memory_items', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('memory_items', 'subject_id', '主体 ID');
+SELECT pg_temp.weknora_comment_column('memory_items', 'kind', '记忆类型');
+SELECT pg_temp.weknora_comment_column('memory_items', 'content', '记忆内容');
+SELECT pg_temp.weknora_comment_column('memory_items', 'topic', '记忆主题');
+SELECT pg_temp.weknora_comment_column('memory_items', 'normalized_key', '主题键');
+SELECT pg_temp.weknora_comment_column('memory_items', 'importance', '重要程度');
+SELECT pg_temp.weknora_comment_column('memory_items', 'origin', '记忆来源');
+SELECT pg_temp.weknora_comment_column('memory_items', 'status', '状态');
+SELECT pg_temp.weknora_comment_column('memory_items', 'source_session_id', '来源会话 ID');
+SELECT pg_temp.weknora_comment_column('memory_items', 'source_message_id', '来源消息 ID');
+SELECT pg_temp.weknora_comment_column('memory_items', 'valid_from', '生效时间');
+SELECT pg_temp.weknora_comment_column('memory_items', 'invalid_at', '失效时间');
+SELECT pg_temp.weknora_comment_column('memory_items', 'expires_at', '过期时间');
+SELECT pg_temp.weknora_comment_column('memory_items', 'superseded_by', '替换记录 ID');
+SELECT pg_temp.weknora_comment_column('memory_items', 'last_used_at', '最近使用时间');
+SELECT pg_temp.weknora_comment_column('memory_items', 'use_count', '使用次数');
+SELECT pg_temp.weknora_comment_column('memory_items', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('memory_items', 'updated_at', '更新时间');
+SELECT pg_temp.weknora_comment_column('memory_items', 'replaces_id', '被替换记录 ID');
 
-COMMENT ON TABLE memory_tombstones IS '记忆删除记录';
-COMMENT ON COLUMN memory_tombstones.id IS '主键';
-COMMENT ON COLUMN memory_tombstones.tenant_id IS '租户 ID';
-COMMENT ON COLUMN memory_tombstones.subject_id IS '主体 ID';
-COMMENT ON COLUMN memory_tombstones.topic IS '记忆主题';
-COMMENT ON COLUMN memory_tombstones.fingerprint IS '内容指纹';
-COMMENT ON COLUMN memory_tombstones.source_message_id IS '来源消息 ID';
-COMMENT ON COLUMN memory_tombstones.created_at IS '创建时间';
+SELECT pg_temp.weknora_comment_table('memory_tombstones', '记忆删除记录');
+SELECT pg_temp.weknora_comment_column('memory_tombstones', 'id', '主键');
+SELECT pg_temp.weknora_comment_column('memory_tombstones', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('memory_tombstones', 'subject_id', '主体 ID');
+SELECT pg_temp.weknora_comment_column('memory_tombstones', 'topic', '记忆主题');
+SELECT pg_temp.weknora_comment_column('memory_tombstones', 'fingerprint', '内容指纹');
+SELECT pg_temp.weknora_comment_column('memory_tombstones', 'source_message_id', '来源消息 ID');
+SELECT pg_temp.weknora_comment_column('memory_tombstones', 'created_at', '创建时间');
 
-COMMENT ON TABLE memory_topic_stats IS '记忆主题统计';
-COMMENT ON COLUMN memory_topic_stats.id IS '主键';
-COMMENT ON COLUMN memory_topic_stats.tenant_id IS '租户 ID';
-COMMENT ON COLUMN memory_topic_stats.subject_id IS '主体 ID';
-COMMENT ON COLUMN memory_topic_stats.normalized_key IS '主题键';
-COMMENT ON COLUMN memory_topic_stats.topic IS '记忆主题';
-COMMENT ON COLUMN memory_topic_stats.hits IS '出现次数';
-COMMENT ON COLUMN memory_topic_stats.last_seen_at IS '最近出现时间';
-COMMENT ON COLUMN memory_topic_stats.promoted_at IS '提升时间';
-COMMENT ON COLUMN memory_topic_stats.created_at IS '创建时间';
-COMMENT ON COLUMN memory_topic_stats.updated_at IS '更新时间';
-COMMENT ON COLUMN memory_topic_stats.aliases IS '主题别名';
+SELECT pg_temp.weknora_comment_table('memory_topic_stats', '记忆主题统计');
+SELECT pg_temp.weknora_comment_column('memory_topic_stats', 'id', '主键');
+SELECT pg_temp.weknora_comment_column('memory_topic_stats', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('memory_topic_stats', 'subject_id', '主体 ID');
+SELECT pg_temp.weknora_comment_column('memory_topic_stats', 'normalized_key', '主题键');
+SELECT pg_temp.weknora_comment_column('memory_topic_stats', 'topic', '记忆主题');
+SELECT pg_temp.weknora_comment_column('memory_topic_stats', 'hits', '出现次数');
+SELECT pg_temp.weknora_comment_column('memory_topic_stats', 'last_seen_at', '最近出现时间');
+SELECT pg_temp.weknora_comment_column('memory_topic_stats', 'promoted_at', '提升时间');
+SELECT pg_temp.weknora_comment_column('memory_topic_stats', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('memory_topic_stats', 'updated_at', '更新时间');
+SELECT pg_temp.weknora_comment_column('memory_topic_stats', 'aliases', '主题别名');
 
-COMMENT ON TABLE memory_doc_affinity IS '文档使用偏好';
-COMMENT ON COLUMN memory_doc_affinity.id IS '主键';
-COMMENT ON COLUMN memory_doc_affinity.tenant_id IS '租户 ID';
-COMMENT ON COLUMN memory_doc_affinity.subject_id IS '主体 ID';
-COMMENT ON COLUMN memory_doc_affinity.knowledge_id IS '知识 ID';
-COMMENT ON COLUMN memory_doc_affinity.knowledge_base_id IS '知识库 ID';
-COMMENT ON COLUMN memory_doc_affinity.title IS '文档标题';
-COMMENT ON COLUMN memory_doc_affinity.hits IS '使用次数';
-COMMENT ON COLUMN memory_doc_affinity.last_used_at IS '最近使用时间';
-COMMENT ON COLUMN memory_doc_affinity.created_at IS '创建时间';
-COMMENT ON COLUMN memory_doc_affinity.updated_at IS '更新时间';
+SELECT pg_temp.weknora_comment_table('memory_doc_affinity', '文档使用偏好');
+SELECT pg_temp.weknora_comment_column('memory_doc_affinity', 'id', '主键');
+SELECT pg_temp.weknora_comment_column('memory_doc_affinity', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('memory_doc_affinity', 'subject_id', '主体 ID');
+SELECT pg_temp.weknora_comment_column('memory_doc_affinity', 'knowledge_id', '知识 ID');
+SELECT pg_temp.weknora_comment_column('memory_doc_affinity', 'knowledge_base_id', '知识库 ID');
+SELECT pg_temp.weknora_comment_column('memory_doc_affinity', 'title', '文档标题');
+SELECT pg_temp.weknora_comment_column('memory_doc_affinity', 'hits', '使用次数');
+SELECT pg_temp.weknora_comment_column('memory_doc_affinity', 'last_used_at', '最近使用时间');
+SELECT pg_temp.weknora_comment_column('memory_doc_affinity', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('memory_doc_affinity', 'updated_at', '更新时间');
 
-COMMENT ON TABLE memory_item_embeddings IS '记忆向量';
-COMMENT ON COLUMN memory_item_embeddings.item_id IS '记忆条目 ID';
-COMMENT ON COLUMN memory_item_embeddings.tenant_id IS '租户 ID';
-COMMENT ON COLUMN memory_item_embeddings.subject_id IS '主体 ID';
-COMMENT ON COLUMN memory_item_embeddings.model_id IS '模型 ID';
-COMMENT ON COLUMN memory_item_embeddings.dims IS '向量维度';
-COMMENT ON COLUMN memory_item_embeddings.vector IS '向量数据';
-COMMENT ON COLUMN memory_item_embeddings.created_at IS '创建时间';
-COMMENT ON COLUMN memory_item_embeddings.updated_at IS '更新时间';
-COMMENT ON COLUMN memory_item_embeddings.embedding IS '向量索引';
+SELECT pg_temp.weknora_comment_table('memory_item_embeddings', '记忆向量');
+SELECT pg_temp.weknora_comment_column('memory_item_embeddings', 'item_id', '记忆条目 ID');
+SELECT pg_temp.weknora_comment_column('memory_item_embeddings', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('memory_item_embeddings', 'subject_id', '主体 ID');
+SELECT pg_temp.weknora_comment_column('memory_item_embeddings', 'model_id', '模型 ID');
+SELECT pg_temp.weknora_comment_column('memory_item_embeddings', 'dims', '向量维度');
+SELECT pg_temp.weknora_comment_column('memory_item_embeddings', 'vector', '向量数据');
+SELECT pg_temp.weknora_comment_column('memory_item_embeddings', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('memory_item_embeddings', 'updated_at', '更新时间');
+SELECT pg_temp.weknora_comment_column('memory_item_embeddings', 'embedding', '向量索引');
 
-COMMENT ON TABLE memory_extraction_sessions IS '记忆抽取进度';
-COMMENT ON COLUMN memory_extraction_sessions.tenant_id IS '租户 ID';
-COMMENT ON COLUMN memory_extraction_sessions.subject_id IS '主体 ID';
-COMMENT ON COLUMN memory_extraction_sessions.session_id IS '会话 ID';
-COMMENT ON COLUMN memory_extraction_sessions.revision IS '修订号';
-COMMENT ON COLUMN memory_extraction_sessions.cursor_at IS '游标时间';
-COMMENT ON COLUMN memory_extraction_sessions.cursor_id IS '游标 ID';
-COMMENT ON COLUMN memory_extraction_sessions.pending IS '是否待处理';
-COMMENT ON COLUMN memory_extraction_sessions.failure_count IS '失败次数';
-COMMENT ON COLUMN memory_extraction_sessions.failure_code IS '失败编码';
-COMMENT ON COLUMN memory_extraction_sessions.failed_from_at IS '失败段开始时间';
-COMMENT ON COLUMN memory_extraction_sessions.failed_from_id IS '失败段开始 ID';
-COMMENT ON COLUMN memory_extraction_sessions.failed_to_at IS '失败段结束时间';
-COMMENT ON COLUMN memory_extraction_sessions.failed_to_id IS '失败段结束 ID';
-COMMENT ON COLUMN memory_extraction_sessions.failed_at IS '失败时间';
-COMMENT ON COLUMN memory_extraction_sessions.updated_at IS '更新时间';
+SELECT pg_temp.weknora_comment_table('memory_extraction_sessions', '记忆抽取进度');
+SELECT pg_temp.weknora_comment_column('memory_extraction_sessions', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('memory_extraction_sessions', 'subject_id', '主体 ID');
+SELECT pg_temp.weknora_comment_column('memory_extraction_sessions', 'session_id', '会话 ID');
+SELECT pg_temp.weknora_comment_column('memory_extraction_sessions', 'revision', '修订号');
+SELECT pg_temp.weknora_comment_column('memory_extraction_sessions', 'cursor_at', '游标时间');
+SELECT pg_temp.weknora_comment_column('memory_extraction_sessions', 'cursor_id', '游标 ID');
+SELECT pg_temp.weknora_comment_column('memory_extraction_sessions', 'pending', '是否待处理');
+SELECT pg_temp.weknora_comment_column('memory_extraction_sessions', 'failure_count', '失败次数');
+SELECT pg_temp.weknora_comment_column('memory_extraction_sessions', 'failure_code', '失败编码');
+SELECT pg_temp.weknora_comment_column('memory_extraction_sessions', 'failed_from_at', '失败段开始时间');
+SELECT pg_temp.weknora_comment_column('memory_extraction_sessions', 'failed_from_id', '失败段开始 ID');
+SELECT pg_temp.weknora_comment_column('memory_extraction_sessions', 'failed_to_at', '失败段结束时间');
+SELECT pg_temp.weknora_comment_column('memory_extraction_sessions', 'failed_to_id', '失败段结束 ID');
+SELECT pg_temp.weknora_comment_column('memory_extraction_sessions', 'failed_at', '失败时间');
+SELECT pg_temp.weknora_comment_column('memory_extraction_sessions', 'updated_at', '更新时间');
 
-COMMENT ON COLUMN amp_agents.id IS '主键';
-COMMENT ON COLUMN amp_agents.slug IS '智能体标识';
-COMMENT ON COLUMN amp_agents.backend_id IS '后端 ID';
-COMMENT ON COLUMN amp_agents.name IS '智能体名称';
-COMMENT ON COLUMN amp_agents.description IS '智能体描述';
-COMMENT ON COLUMN amp_agents.icon IS '图标';
-COMMENT ON COLUMN amp_agents.pics IS '图片配置';
-COMMENT ON COLUMN amp_agents.config_json IS '运行配置';
-COMMENT ON COLUMN amp_agents.share_config IS '共享配置';
-COMMENT ON COLUMN amp_agents.is_default IS '是否默认';
-COMMENT ON COLUMN amp_agents.is_subagent IS '是否子智能体';
-COMMENT ON COLUMN amp_agents.created_by IS '创建人';
-COMMENT ON COLUMN amp_agents.updated_by IS '更新人';
-COMMENT ON COLUMN amp_agents.tenant_id IS '租户 ID';
-COMMENT ON COLUMN amp_agents.created_at IS '创建时间';
-COMMENT ON COLUMN amp_agents.updated_at IS '更新时间';
+SELECT pg_temp.weknora_comment_column('amp_agents', 'id', '主键');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'slug', '智能体标识');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'backend_id', '后端 ID');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'name', '智能体名称');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'description', '智能体描述');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'icon', '图标');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'pics', '图片配置');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'config_json', '运行配置');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'share_config', '共享配置');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'is_default', '是否默认');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'is_subagent', '是否子智能体');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'created_by', '创建人');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'updated_by', '更新人');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('amp_agents', 'updated_at', '更新时间');
 
-COMMENT ON COLUMN amp_subagent_threads.tenant_id IS '租户 ID';
-COMMENT ON COLUMN amp_agent_runs.tenant_id IS '租户 ID';
-COMMENT ON COLUMN amp_agent_run_requests.tenant_id IS '租户 ID';
+SELECT pg_temp.weknora_comment_column('amp_subagent_threads', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_runs', 'tenant_id', '租户 ID');
+SELECT pg_temp.weknora_comment_column('amp_agent_run_requests', 'tenant_id', '租户 ID');
 
-COMMENT ON COLUMN amp_audit_logs.id IS '主键';
-COMMENT ON COLUMN amp_audit_logs.user_id IS '用户 ID';
-COMMENT ON COLUMN amp_audit_logs.operation IS '操作名称';
-COMMENT ON COLUMN amp_audit_logs.details IS '操作详情';
-COMMENT ON COLUMN amp_audit_logs.ip_address IS 'IP 地址';
-COMMENT ON COLUMN amp_audit_logs."timestamp" IS '操作时间';
+SELECT pg_temp.weknora_comment_column('amp_audit_logs', 'id', '主键');
+SELECT pg_temp.weknora_comment_column('amp_audit_logs', 'user_id', '用户 ID');
+SELECT pg_temp.weknora_comment_column('amp_audit_logs', 'operation', '操作名称');
+SELECT pg_temp.weknora_comment_column('amp_audit_logs', 'details', '操作详情');
+SELECT pg_temp.weknora_comment_column('amp_audit_logs', 'ip_address', 'IP 地址');
+SELECT pg_temp.weknora_comment_column('amp_audit_logs', 'timestamp', '操作时间');
 
-COMMENT ON COLUMN amp_model_provider.id IS '主键';
-COMMENT ON COLUMN amp_model_provider.created_at IS '创建时间';
-COMMENT ON COLUMN amp_model_provider.updated_at IS '更新时间';
+SELECT pg_temp.weknora_comment_column('amp_model_provider', 'id', '主键');
+SELECT pg_temp.weknora_comment_column('amp_model_provider', 'created_at', '创建时间');
+SELECT pg_temp.weknora_comment_column('amp_model_provider', 'updated_at', '更新时间');
 -- 统一表注释为短名，最长 10 个字符并以“表”结尾。
 
-COMMENT ON TABLE agent_shares IS '智能体共享表';
-COMMENT ON TABLE amp_agent_run_requests IS '请求队列表';
-COMMENT ON TABLE amp_agent_runs IS '智能体运行表';
-COMMENT ON TABLE amp_agent_usage_daily IS '智能体日报表';
-COMMENT ON TABLE amp_agent_usage_events IS '智能体事件表';
-COMMENT ON TABLE amp_agents IS '运行智能体表';
-COMMENT ON TABLE amp_audit_logs IS '运行审计表';
-COMMENT ON TABLE amp_builtin_tools IS '内置工具表';
-COMMENT ON TABLE amp_messages IS '运行消息表';
-COMMENT ON TABLE amp_model_provider IS '模型厂商配置表';
-COMMENT ON TABLE amp_sessions IS '运行会话表';
-COMMENT ON TABLE amp_subagent_threads IS '子智能体表';
-COMMENT ON TABLE amp_token_usage_events IS 'Token事件表';
-COMMENT ON TABLE amp_tool_calls IS '工具调用表';
-COMMENT ON TABLE amp_tool_usage_events IS '工具事件表';
-COMMENT ON TABLE amp_web_search_provider_types IS '搜索源类型表';
-COMMENT ON TABLE audit_logs IS '平台审计表';
-COMMENT ON TABLE auth_tokens IS '认证令牌表';
-COMMENT ON TABLE browser_devices IS '浏览器设备表';
-COMMENT ON TABLE browser_pairings IS '浏览器配对表';
-COMMENT ON TABLE browser_task_interruptions IS '任务中断表';
-COMMENT ON TABLE chunk_revisions IS '分块修订表';
-COMMENT ON TABLE chunks IS '知识分块表';
-COMMENT ON TABLE custom_agents IS '平台智能体表';
-COMMENT ON TABLE data_sources IS '数据源表';
-COMMENT ON TABLE embed_channels IS '嵌入渠道表';
-COMMENT ON TABLE embeddings IS '向量嵌入表';
-COMMENT ON TABLE im_channel_sessions IS '渠道会话表';
-COMMENT ON TABLE im_channels IS 'IM渠道表';
-COMMENT ON TABLE kb_shares IS '知识库共享表';
-COMMENT ON TABLE knowledge_base_mindmaps IS '知识库脑图表';
-COMMENT ON TABLE knowledge_bases IS '知识库表';
-COMMENT ON TABLE knowledge_processing_spans IS '解析追踪表';
-COMMENT ON TABLE knowledge_tag_relations IS '标签关系表';
-COMMENT ON TABLE knowledge_tags IS '知识标签表';
-COMMENT ON TABLE knowledges IS '知识条目表';
-COMMENT ON TABLE mcp_metadata IS 'MCP元数据表';
-COMMENT ON TABLE mcp_oauth_clients IS 'OAuth客户端表';
-COMMENT ON TABLE mcp_oauth_tokens IS 'OAuth令牌表';
-COMMENT ON TABLE mcp_services IS 'MCP服务表';
-COMMENT ON TABLE mcp_tool_approvals IS '工具审批表';
-COMMENT ON TABLE memory_doc_affinity IS '文档偏好表';
-COMMENT ON TABLE memory_extraction_sessions IS '记忆抽取表';
-COMMENT ON TABLE memory_item_embeddings IS '记忆向量表';
-COMMENT ON TABLE memory_items IS '记忆条目表';
-COMMENT ON TABLE memory_subjects IS '记忆主体表';
-COMMENT ON TABLE memory_tombstones IS '记忆删除表';
-COMMENT ON TABLE memory_topic_stats IS '记忆主题表';
-COMMENT ON TABLE message_suggestion_events IS '追问事件表';
-COMMENT ON TABLE message_suggestion_sets IS '追问集合表';
-COMMENT ON TABLE messages IS '平台消息表';
-COMMENT ON TABLE models IS '模型配置表';
-COMMENT ON TABLE organization_join_requests IS '组织申请表';
-COMMENT ON TABLE organization_members_pre_plan3 IS '历史成员表';
-COMMENT ON TABLE organization_tenant_members IS '组织成员表';
-COMMENT ON TABLE organizations IS '组织表';
-COMMENT ON TABLE resource_access_grants IS '资源授权表';
-COMMENT ON TABLE resource_bindings IS '资源绑定表';
-COMMENT ON TABLE resources IS '资源表';
-COMMENT ON TABLE sessions IS '平台会话表';
-COMMENT ON TABLE storage_backends IS '存储后端表';
-COMMENT ON TABLE sync_logs IS '同步日志表';
-COMMENT ON TABLE system_settings IS '系统配置表';
-COMMENT ON TABLE task_dead_letters IS '死信队列表';
-COMMENT ON TABLE task_pending_ops IS '任务队列表';
-COMMENT ON TABLE temporary_documents IS '临时文档表';
-COMMENT ON TABLE tenant_api_keys IS '租户密钥表';
-COMMENT ON TABLE tenant_disabled_shared_agents IS '共享屏蔽表';
-COMMENT ON TABLE tenant_invitations IS '租户邀请表';
-COMMENT ON TABLE tenant_members IS '租户成员表';
-COMMENT ON TABLE tenant_sandbox_configs IS '沙箱配置表';
-COMMENT ON TABLE tenant_skill_catalog IS '技能目录表';
-COMMENT ON TABLE tenant_skill_snapshots IS '技能快照表';
-COMMENT ON TABLE tenant_skills IS '租户技能表';
-COMMENT ON TABLE tenant_user_env_vars IS '用户变量表';
-COMMENT ON TABLE tenants IS '租户表';
-COMMENT ON TABLE user_kb_pins IS '知识置顶表';
-COMMENT ON TABLE user_resource_favorites IS '资源收藏表';
-COMMENT ON TABLE users IS '用户表';
-COMMENT ON TABLE vector_stores IS '向量库表';
-COMMENT ON TABLE web_search_providers IS '搜索源配置表';
-COMMENT ON TABLE wiki_folders IS 'Wiki目录表';
-COMMENT ON TABLE wiki_page_issues IS '页面问题表';
-COMMENT ON TABLE wiki_page_revisions IS '页面版本表';
-COMMENT ON TABLE wiki_pages IS 'Wiki页面表';
+SELECT pg_temp.weknora_comment_table('agent_shares', '智能体共享表');
+SELECT pg_temp.weknora_comment_table('amp_agent_run_requests', '请求队列表');
+SELECT pg_temp.weknora_comment_table('amp_agent_runs', '智能体运行表');
+SELECT pg_temp.weknora_comment_table('amp_agent_usage_daily', '智能体日报表');
+SELECT pg_temp.weknora_comment_table('amp_agent_usage_events', '智能体事件表');
+SELECT pg_temp.weknora_comment_table('amp_agents', '运行智能体表');
+SELECT pg_temp.weknora_comment_table('amp_audit_logs', '运行审计表');
+SELECT pg_temp.weknora_comment_table('amp_builtin_tools', '内置工具表');
+SELECT pg_temp.weknora_comment_table('amp_messages', '运行消息表');
+SELECT pg_temp.weknora_comment_table('amp_model_provider', '模型厂商配置表');
+SELECT pg_temp.weknora_comment_table('amp_sessions', '运行会话表');
+SELECT pg_temp.weknora_comment_table('amp_subagent_threads', '子智能体表');
+SELECT pg_temp.weknora_comment_table('amp_token_usage_events', 'Token事件表');
+SELECT pg_temp.weknora_comment_table('amp_tool_calls', '工具调用表');
+SELECT pg_temp.weknora_comment_table('amp_tool_usage_events', '工具事件表');
+SELECT pg_temp.weknora_comment_table('amp_web_search_provider_types', '搜索源类型表');
+SELECT pg_temp.weknora_comment_table('audit_logs', '平台审计表');
+SELECT pg_temp.weknora_comment_table('auth_tokens', '认证令牌表');
+SELECT pg_temp.weknora_comment_table('browser_devices', '浏览器设备表');
+SELECT pg_temp.weknora_comment_table('browser_pairings', '浏览器配对表');
+SELECT pg_temp.weknora_comment_table('browser_task_interruptions', '任务中断表');
+SELECT pg_temp.weknora_comment_table('chunk_revisions', '分块修订表');
+SELECT pg_temp.weknora_comment_table('chunks', '知识分块表');
+SELECT pg_temp.weknora_comment_table('custom_agents', '平台智能体表');
+SELECT pg_temp.weknora_comment_table('data_sources', '数据源表');
+SELECT pg_temp.weknora_comment_table('embed_channels', '嵌入渠道表');
+SELECT pg_temp.weknora_comment_table('embeddings', '向量嵌入表');
+SELECT pg_temp.weknora_comment_table('im_channel_sessions', '渠道会话表');
+SELECT pg_temp.weknora_comment_table('im_channels', 'IM渠道表');
+SELECT pg_temp.weknora_comment_table('kb_shares', '知识库共享表');
+SELECT pg_temp.weknora_comment_table('knowledge_base_mindmaps', '知识库脑图表');
+SELECT pg_temp.weknora_comment_table('knowledge_bases', '知识库表');
+SELECT pg_temp.weknora_comment_table('knowledge_processing_spans', '解析追踪表');
+SELECT pg_temp.weknora_comment_table('knowledge_tag_relations', '标签关系表');
+SELECT pg_temp.weknora_comment_table('knowledge_tags', '知识标签表');
+SELECT pg_temp.weknora_comment_table('knowledges', '知识条目表');
+SELECT pg_temp.weknora_comment_table('mcp_metadata', 'MCP元数据表');
+SELECT pg_temp.weknora_comment_table('mcp_oauth_clients', 'OAuth客户端表');
+SELECT pg_temp.weknora_comment_table('mcp_oauth_tokens', 'OAuth令牌表');
+SELECT pg_temp.weknora_comment_table('mcp_services', 'MCP服务表');
+SELECT pg_temp.weknora_comment_table('mcp_tool_approvals', '工具审批表');
+SELECT pg_temp.weknora_comment_table('memory_doc_affinity', '文档偏好表');
+SELECT pg_temp.weknora_comment_table('memory_extraction_sessions', '记忆抽取表');
+SELECT pg_temp.weknora_comment_table('memory_item_embeddings', '记忆向量表');
+SELECT pg_temp.weknora_comment_table('memory_items', '记忆条目表');
+SELECT pg_temp.weknora_comment_table('memory_subjects', '记忆主体表');
+SELECT pg_temp.weknora_comment_table('memory_tombstones', '记忆删除表');
+SELECT pg_temp.weknora_comment_table('memory_topic_stats', '记忆主题表');
+SELECT pg_temp.weknora_comment_table('message_suggestion_events', '追问事件表');
+SELECT pg_temp.weknora_comment_table('message_suggestion_sets', '追问集合表');
+SELECT pg_temp.weknora_comment_table('messages', '平台消息表');
+SELECT pg_temp.weknora_comment_table('models', '模型配置表');
+SELECT pg_temp.weknora_comment_table('organization_join_requests', '组织申请表');
+SELECT pg_temp.weknora_comment_table('organization_members_pre_plan3', '历史成员表');
+SELECT pg_temp.weknora_comment_table('organization_tenant_members', '组织成员表');
+SELECT pg_temp.weknora_comment_table('organizations', '组织表');
+SELECT pg_temp.weknora_comment_table('resource_access_grants', '资源授权表');
+SELECT pg_temp.weknora_comment_table('resource_bindings', '资源绑定表');
+SELECT pg_temp.weknora_comment_table('resources', '资源表');
+SELECT pg_temp.weknora_comment_table('sessions', '平台会话表');
+SELECT pg_temp.weknora_comment_table('storage_backends', '存储后端表');
+SELECT pg_temp.weknora_comment_table('sync_logs', '同步日志表');
+SELECT pg_temp.weknora_comment_table('system_settings', '系统配置表');
+SELECT pg_temp.weknora_comment_table('task_dead_letters', '死信队列表');
+SELECT pg_temp.weknora_comment_table('task_pending_ops', '任务队列表');
+SELECT pg_temp.weknora_comment_table('temporary_documents', '临时文档表');
+SELECT pg_temp.weknora_comment_table('tenant_api_keys', '租户密钥表');
+SELECT pg_temp.weknora_comment_table('tenant_disabled_shared_agents', '共享屏蔽表');
+SELECT pg_temp.weknora_comment_table('tenant_invitations', '租户邀请表');
+SELECT pg_temp.weknora_comment_table('tenant_members', '租户成员表');
+SELECT pg_temp.weknora_comment_table('tenant_sandbox_configs', '沙箱配置表');
+SELECT pg_temp.weknora_comment_table('tenant_skill_catalog', '技能目录表');
+SELECT pg_temp.weknora_comment_table('tenant_skill_snapshots', '技能快照表');
+SELECT pg_temp.weknora_comment_table('tenant_skills', '租户技能表');
+SELECT pg_temp.weknora_comment_table('tenant_user_env_vars', '用户变量表');
+SELECT pg_temp.weknora_comment_table('tenants', '租户表');
+SELECT pg_temp.weknora_comment_table('user_kb_pins', '知识置顶表');
+SELECT pg_temp.weknora_comment_table('user_resource_favorites', '资源收藏表');
+SELECT pg_temp.weknora_comment_table('users', '用户表');
+SELECT pg_temp.weknora_comment_table('vector_stores', '向量库表');
+SELECT pg_temp.weknora_comment_table('web_search_providers', '搜索源配置表');
+SELECT pg_temp.weknora_comment_table('wiki_folders', 'Wiki目录表');
+SELECT pg_temp.weknora_comment_table('wiki_page_issues', '页面问题表');
+SELECT pg_temp.weknora_comment_table('wiki_page_revisions', '页面版本表');
+SELECT pg_temp.weknora_comment_table('wiki_pages', 'Wiki页面表');
 
 UPDATE amp_builtin_tools
 SET capability_key = 'work:' || tool_slug
@@ -1031,6 +1125,10 @@ WHERE source = 'builtin';
 UPDATE amp_builtin_tools
 SET source = 'work'
 WHERE source = 'builtin';
+
+UPDATE amp_builtin_tools
+SET source = 'work'
+WHERE source IS NULL OR source NOT IN ('chat', 'work');
 
 ALTER TABLE amp_builtin_tools
     DROP CONSTRAINT IF EXISTS ck_amp_builtin_tools_source;
@@ -1073,21 +1171,26 @@ BEGIN
 END
 $$;
 
+-- 历史来源值收成使用侧，避免检查约束把整段迁移回滚。
+UPDATE tenant_skill_catalog
+SET source_type = CASE WHEN source_type = 'builtin' THEN 'work' ELSE 'chat' END
+WHERE source_type IS NULL OR source_type NOT IN ('chat', 'work', 'common');
+
 ALTER TABLE tenant_skill_catalog
     DROP CONSTRAINT IF EXISTS ck_tenant_skill_catalog_source_type;
 ALTER TABLE tenant_skill_catalog
     ADD CONSTRAINT ck_tenant_skill_catalog_source_type
     CHECK (source_type IN ('chat', 'work', 'common'));
 
-COMMENT ON COLUMN tenant_skill_catalog.source_type IS '使用侧：chat 对话、work 工作、common 通用';
-COMMENT ON COLUMN tenant_skill_catalog.tool_dependencies IS '绑定的工具';
-COMMENT ON COLUMN tenant_skill_catalog.mcp_dependencies IS '绑定的 MCP';
-COMMENT ON COLUMN tenant_skill_catalog.skill_dependencies IS '绑定的其他技能';
-COMMENT ON COLUMN tenant_skill_catalog.share_config IS '共享范围';
-COMMENT ON COLUMN tenant_skill_catalog.enabled IS '是否启用';
-COMMENT ON COLUMN tenant_skill_catalog.created_by IS '创建人';
-COMMENT ON COLUMN tenant_skill_catalog.updated_by IS '最近更新人';
-COMMENT ON COLUMN tenant_skill_catalog.source_mtime IS '内置技能源目录最后修改时间';
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'source_type', '使用侧：chat 对话、work 工作、common 通用');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'tool_dependencies', '绑定的工具');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'mcp_dependencies', '绑定的 MCP');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'skill_dependencies', '绑定的其他技能');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'share_config', '共享范围');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'enabled', '是否启用');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'created_by', '创建人');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'updated_by', '最近更新人');
+SELECT pg_temp.weknora_comment_column('tenant_skill_catalog', 'source_mtime', '内置技能源目录最后修改时间');
 
 DROP TABLE IF EXISTS amp_skill_runtime CASCADE;
 

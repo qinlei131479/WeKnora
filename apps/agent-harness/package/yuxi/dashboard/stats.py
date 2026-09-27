@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from types import SimpleNamespace
 from typing import Any
 
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from yuxi.tenancy.context import current_tenant_id
-from yuxi.utils.datetime_utils import utc_now
+from yuxi.utils.datetime_utils import UTC, utc_now
+from yuxi.utils.logging_config import logger
 
 KB_TYPE_LABELS = {
     "document": "文档库",
@@ -334,3 +336,73 @@ async def fetch_weknora_agent_stats(db: AsyncSession) -> WeKnoraAgentStats:
         agent_conversation_counts=agent_conversation_counts,
         agent_names=agent_names,
     )
+
+
+_CALL_BUCKET_FORMAT = {
+    "14hours": "YYYY-MM-DD HH24:00",
+    "14weeks": "YYYY-IW",
+}
+
+
+async def fetch_weknora_agent_call_buckets(db: AsyncSession, *, time_range: str, start_time: datetime) -> list:
+    """平台对话按智能体分桶。消息时间是 timestamptz，换到上海时区后和遥测图对齐。"""
+    tenant_id = dashboard_tenant_id()
+    if tenant_id is None:
+        return []
+    start_at = start_time.astimezone(UTC) if start_time.tzinfo else start_time.replace(tzinfo=UTC)
+    pattern = _CALL_BUCKET_FORMAT.get(time_range, "YYYY-MM-DD")
+    try:
+        async with db.begin_nested():
+            rows = (
+                await db.execute(
+                    text(
+                        """
+                        SELECT to_char(timezone('Asia/Shanghai', m.created_at), :pattern) AS date,
+                               m.agent_id AS category,
+                               COUNT(DISTINCT m.session_id) AS count
+                        FROM messages m
+                        INNER JOIN sessions s ON s.id = m.session_id
+                        WHERE m.deleted_at IS NULL
+                          AND s.deleted_at IS NULL
+                          AND s.tenant_id = :tid
+                          AND m.agent_id IS NOT NULL
+                          AND m.agent_id <> ''
+                          AND m.created_at >= :start_at
+                        GROUP BY 1, 2
+                        """
+                    ),
+                    {"pattern": pattern, "tid": tenant_id, "start_at": start_at},
+                )
+            ).all()
+    except Exception:
+        logger.warning("平台智能体调用分桶读取失败，调用图只保留工作侧遥测")
+        return []
+    return [
+        SimpleNamespace(date=row.date, category=str(row.category), count=int(row.count or 0))
+        for row in rows
+        if row.date and row.category
+    ]
+
+
+async def fetch_weknora_agent_names(db: AsyncSession, agent_ids: list[str]) -> dict[str, str]:
+    """按平台智能体 ID 取展示名。表不存在或查询失败时返回空映射。"""
+    tenant_id = dashboard_tenant_id()
+    ids = [agent_id for agent_id in dict.fromkeys(agent_ids) if agent_id]
+    if tenant_id is None or not ids:
+        return {}
+    stmt = text(
+        """
+        SELECT id, COALESCE(NULLIF(name, ''), id) AS label
+        FROM custom_agents
+        WHERE deleted_at IS NULL
+          AND tenant_id = :tid
+          AND id IN :ids
+        """
+    ).bindparams(bindparam("ids", expanding=True))
+    try:
+        async with db.begin_nested():
+            rows = (await db.execute(stmt, {"tid": tenant_id, "ids": ids})).all()
+    except Exception:
+        logger.warning("平台智能体名称读取失败")
+        return {}
+    return {str(row.id): str(row.label) for row in rows}
