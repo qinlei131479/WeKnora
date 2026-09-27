@@ -6,6 +6,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.iptv.business.domain.Models;
@@ -21,7 +22,6 @@ import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
 import com.iptv.common.core.web.page.PageDTO;
 import com.iptv.common.core.web.page.TableDataInfo;
-import com.iptv.common.security.utils.SecurityUtils;
 import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,7 +67,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
         entity.setTenantId(TenantConstant.BUSINESS_BUILTIN_TENANT_ID);
         entity.setStatus("active");
         entity.setIsBuiltin(true);
-        entity.setParameters(JSONUtil.toJsonStr(dto.getParameters()));
+        entity.setParameters(JSON.toJSONString(dto.getParameters()));
 
         // 加密凭证字段
         if (entity.getParameters() != null) {
@@ -79,7 +79,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
                 if (StrUtil.isNotBlank(params.getAppSecret())) {
                     params.setAppSecret(CryptoUtils.encrypt(params.getAppSecret()));
                 }
-                entity.setParameters(JSONUtil.toJsonStr(params));
+                entity.setParameters(JSON.toJSONString(params));
             } catch (Exception e) {
                 log.error("Failed to serialize parameters", e);
                 throw new ServiceException("参数序列化失败");
@@ -128,7 +128,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
         ModelParametersDTO oldParams = null;
         try {
             if (StrUtil.isNotBlank(entity.getParameters())) {
-                oldParams = JSONUtil.toBean(entity.getParameters(), ModelParametersDTO.class);
+                oldParams = JSON.parseObject(entity.getParameters(), ModelParametersDTO.class);
                 // 解密（使用宽松模式）
                 if (StrUtil.isNotBlank(oldParams.getApiKey())) {
                     CryptoUtils.DecryptResult result = CryptoUtils.decryptLenient(oldParams.getApiKey());
@@ -180,7 +180,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
                 if (StrUtil.isNotBlank(newParams.getAppSecret())) {
                     newParams.setAppSecret(CryptoUtils.encrypt(newParams.getAppSecret()));
                 }
-                entity.setParameters(JSONUtil.toJsonStr(newParams));
+                entity.setParameters(JSON.toJSONString(newParams));
             } catch (Exception e) {
                 log.error("Failed to serialize parameters", e);
                 throw new ServiceException("参数序列化失败");
@@ -212,7 +212,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
         }
 
         try {
-            ModelParametersDTO params = JSONUtil.toBean(entity.getParameters(), ModelParametersDTO.class);
+            ModelParametersDTO params = JSON.parseObject(entity.getParameters(), ModelParametersDTO.class);
 
             // 更新凭证
             if (dto.getApiKey() != null) {
@@ -230,7 +230,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
                 }
             }
 
-            entity.setParameters(JSONUtil.toJsonStr(params));
+            entity.setParameters(JSON.toJSONString(params));
             this.baseMapper.updateById(entity);
 
             return buildCredentialsResponse(params);
@@ -248,7 +248,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
         }
 
         try {
-            ModelParametersDTO params = JSONUtil.toBean(entity.getParameters(), ModelParametersDTO.class);
+            ModelParametersDTO params = JSON.parseObject(entity.getParameters(), ModelParametersDTO.class);
             // 解密（使用宽松模式）
             if (StrUtil.isNotBlank(params.getApiKey())) {
                 CryptoUtils.DecryptResult result = CryptoUtils.decryptLenient(params.getApiKey());
@@ -283,7 +283,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
         }
 
         try {
-            ModelParametersDTO params = JSONUtil.toBean(entity.getParameters(), ModelParametersDTO.class);
+            ModelParametersDTO params = JSON.parseObject(entity.getParameters(), ModelParametersDTO.class);
 
             if (StrUtil.equals(field, "api_key")) {
                 params.setApiKey(null);
@@ -291,7 +291,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
                 params.setAppSecret(null);
             }
 
-            entity.setParameters(JSONUtil.toJsonStr(params));
+            entity.setParameters(JSON.toJSONString(params));
             this.baseMapper.updateById(entity);
         } catch (Exception e) {
             log.error("Failed to delete credential field", e);
@@ -315,7 +315,7 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
             // 解析参数并解密凭证
             dto.setModelName(entity.getName());
 
-            ModelParametersDTO params = JSONUtil.toBean(entity.getParameters(), ModelParametersDTO.class);
+            ModelParametersDTO params = JSON.parseObject(entity.getParameters(), ModelParametersDTO.class);
             String apiKey = null;
             String appSecret = null;
 
@@ -352,10 +352,10 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
                     response = debugKnowledgeQA(buildChatUrl(baseUrl), apiKey, dto, observations);
                     break;
                 case "Embedding":
-                    response = debugEmbedding(buildEmbeddingUrl(baseUrl,params.getProvider()), apiKey, dto, observations);
+                    response = debugEmbedding(buildEmbeddingUrl(baseUrl, params.getProvider()), apiKey, dto, observations);
                     break;
                 case "Rerank":
-                    response = debugRerank(buildRerankUrl(baseUrl,params.getProvider()), apiKey, dto, observations);
+                    response = debugRerank(buildRerankUrl(baseUrl, params.getProvider()), apiKey, dto, observations);
                     break;
                 case "VLLM":
                     response = debugVLLM(buildChatUrl(baseUrl), apiKey, dto, file, observations);
@@ -678,17 +678,15 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
         // 解析并脱敏参数
         if (StrUtil.isNotBlank(entity.getParameters())) {
             try {
-                ModelParametersDTO params = JSONUtil.toBean(entity.getParameters(), ModelParametersDTO.class);
+                ModelParametersDTO params = JSON.parseObject(entity.getParameters(), ModelParametersDTO.class);
                 ModelParametersVO paramsVO = convertToParametersVO(params, entity);
                 vo.setParameters(paramsVO);
 
                 // 添加凭证状态（使用 snake_case 与 Go 接口保持一致）
-                if (!Boolean.TRUE.equals(entity.getIsBuiltin())) {
-                    Map<String, CredentialFieldMetadataVO> credentials = new HashMap<>();
-                    credentials.put("api_key", new CredentialFieldMetadataVO(StrUtil.isNotBlank(params.getApiKey())));
-                    credentials.put("app_secret", new CredentialFieldMetadataVO(StrUtil.isNotBlank(params.getAppSecret())));
-                    vo.setCredentials(credentials);
-                }
+                Map<String, CredentialFieldMetadataVO> credentials = new HashMap<>();
+                credentials.put("api_key", new CredentialFieldMetadataVO(StrUtil.isNotBlank(params.getApiKey())));
+                credentials.put("app_secret", new CredentialFieldMetadataVO(StrUtil.isNotBlank(params.getAppSecret())));
+                vo.setCredentials(credentials);
             } catch (Exception e) {
                 log.error("Failed to deserialize parameters", e);
             }
@@ -703,20 +701,10 @@ public class ModelsServiceImpl extends ServiceImpl<ModelsMapper, Models> impleme
     private ModelParametersVO convertToParametersVO(ModelParametersDTO params, Models entity) {
         ModelParametersVO vo = new ModelParametersVO();
 
-        // 内置模型脱敏处理
-        boolean isBuiltin = Boolean.TRUE.equals(entity.getIsBuiltin());
-        boolean isAdmin = SecurityUtils.isAdmin();
-
-        if (!isBuiltin || isAdmin) {
-            vo.setBaseUrl(params.getBaseUrl());
-            vo.setExtraConfig(params.getExtraConfig());
-            vo.setCustomHeaders(params.getCustomHeaders());
-        }
-
-        if (!isBuiltin) {
-            vo.setAppId(params.getAppId());
-        }
-
+        vo.setBaseUrl(params.getBaseUrl());
+        vo.setExtraConfig(params.getExtraConfig());
+        vo.setCustomHeaders(params.getCustomHeaders());
+        vo.setAppId(params.getAppId());
         vo.setInterfaceType(params.getInterfaceType());
         vo.setParameterSize(params.getParameterSize());
         vo.setProvider(params.getProvider());

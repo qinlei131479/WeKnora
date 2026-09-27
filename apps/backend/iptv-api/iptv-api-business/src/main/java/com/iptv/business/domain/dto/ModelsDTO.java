@@ -1,13 +1,13 @@
 package com.iptv.business.domain.dto;
 
-import java.io.Serializable;
-
 import com.iptv.common.core.web.domain.dto.BaseDTO;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.io.Serializable;
 
 /**
  * <p>

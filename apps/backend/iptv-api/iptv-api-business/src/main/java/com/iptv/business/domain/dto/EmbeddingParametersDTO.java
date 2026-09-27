@@ -2,6 +2,8 @@ package com.iptv.business.domain.dto;
 
 import java.io.Serializable;
 
+import com.alibaba.fastjson2.annotation.JSONField;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -30,11 +32,13 @@ public class EmbeddingParametersDTO implements Serializable {
      * 截断提示词token数
      */
     @Schema(description = "截断提示词token数")
+    @JSONField(name = "truncate_prompt_tokens")
     private Integer truncatePromptTokens;
 
     /**
      * 是否支持维度覆盖
      */
     @Schema(description = "是否支持维度覆盖")
+    @JSONField(name = "supports_dimension_override")
     private Boolean supportsDimensionOverride;
 }
