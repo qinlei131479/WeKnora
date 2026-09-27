@@ -2056,7 +2056,10 @@ type CatalogSkillRow = SkillCatalogItem & {
 
 const catalogSkillRows = computed<CatalogSkillRow[]>(() => {
   const sandboxId = formData.value.config.sandbox_config_id || ''
-  return skillCatalog.value.map((item) => {
+  return skillCatalog.value.filter((item) => {
+    const source = item.source_type || 'chat'
+    return source === 'chat' || source === 'common'
+  }).map((item) => {
     const inst = sandboxId
       ? (item.installations || []).find((row) => row.sandbox_config_id === sandboxId)
       : undefined

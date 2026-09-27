@@ -17,6 +17,7 @@ import { AUDIT_ACTION_LOCALE_DEFAULTS, getAuditActionLocaleDefault } from './aud
 import { writeLocaleModule } from './localeSerialize.ts'
 
 import enUS from './locales/en-US.ts'
+import jaJP from './locales/ja-JP.ts'
 import koKR from './locales/ko-KR.ts'
 import ruRU from './locales/ru-RU.ts'
 import zhCN from './locales/zh-CN.ts'
@@ -26,6 +27,7 @@ export const LOCALE_BUNDLES = {
   'zh-CN': zhCN,
   'ko-KR': koKR,
   'ru-RU': ruRU,
+  'ja-JP': jaJP,
 } as const
 
 export type LocaleName = keyof typeof LOCALE_BUNDLES
@@ -128,8 +130,8 @@ function buildI18nLiteralPattern(): RegExp {
   const namespaces = Object.keys(enUS as Record<string, unknown>)
     .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
     .join('|')
-  // Only match object-literal values (e.g. labelKey: 'foo.bar'), not Vue bindings like :name="agent.name".
-  return new RegExp(`(?:[:,(]\\s*)['"]((?:${namespaces})\\.[^'"]+)['"]`, 'g')
+  // 对象字面量和三元分支里的 key。问号分支以前匹配不到，会把 t(cond ? 'a.b' : 'a.c') 的真分支裁掉。
+  return new RegExp(`(?:[:,?(]\\s*)['"]((?:${namespaces})\\.[^'"]+)['"]`, 'g')
 }
 
 export type I18nUsage = {
@@ -514,7 +516,7 @@ export function findAllLocaleMessageCompileErrors(
 
 type LocaleTree = Record<string, unknown>
 
-const LOCALE_ORDER: LocaleName[] = ['en-US', 'zh-CN', 'ko-KR', 'ru-RU']
+const LOCALE_ORDER: LocaleName[] = ['en-US', 'zh-CN', 'ko-KR', 'ja-JP', 'ru-RU']
 const LOCALES_DIR = join(dirname(fileURLToPath(import.meta.url)), 'locales')
 
 function getLocaleValueAtPathParts(current: unknown, parts: string[]): unknown {
@@ -705,7 +707,7 @@ export async function loadFullLocaleBundlesFromGit(
   try {
     const bundles = {} as Record<LocaleName, LocaleTree>
     for (const localeName of LOCALE_ORDER) {
-      const relativePath = `frontend/src/i18n/locales/${localeName}.ts`
+      const relativePath = `apps/frontend/src/i18n/locales/${localeName}.ts`
       const content = execSync(`git show ${ref}:${relativePath}`, {
         cwd: REPO_ROOT,
         encoding: 'utf8',

@@ -20,7 +20,7 @@
                 'is-dir': row.isDir,
               }"
               :title="row.path"
-              @click="row.isDir ? toggleDir(row.path) : selectFile(row.path)"
+              @click="row.isDir ? toggleDir(row) : selectFile(row.path)"
             >
               <span class="skill-files-panel__indent" :style="{ width: `${row.depth * 12}px` }" />
               <t-icon
@@ -39,7 +39,7 @@
       <div v-if="selectedPath" class="skill-files-panel__bar">
         <span class="skill-files-panel__path" :title="selectedPath">{{ selectedPath }}</span>
         <button
-          v-if="canToggleMarkdown"
+          v-if="showSourceToggle"
           type="button"
           class="skill-files-panel__link"
           @click="markdownMode = markdownMode === 'preview' ? 'source' : 'preview'"
@@ -47,13 +47,29 @@
           {{ markdownMode === 'preview' ? $t('settings.sandbox.skillFilesSource') : $t('settings.sandbox.skillFilesPreview') }}
         </button>
         <button
-          v-if="canCopy"
+          v-if="showCopy"
           type="button"
           class="skill-files-panel__link"
           @click="copyContent"
         >
           {{ $t('common.copy') }}
         </button>
+        <button
+          v-if="showEdit"
+          type="button"
+          class="skill-files-panel__link"
+          @click="startEdit"
+        >
+          {{ $t('common.edit') }}
+        </button>
+        <template v-if="editing">
+          <t-button size="small" theme="default" variant="outline" :disabled="saving" @click="cancelEdit">
+            {{ $t('common.cancel') }}
+          </t-button>
+          <t-button size="small" theme="primary" :loading="saving" @click="saveEdit">
+            {{ $t('common.save') }}
+          </t-button>
+        </template>
       </div>
 
       <div class="skill-files-panel__view">
@@ -62,6 +78,12 @@
         <p v-else-if="!selectedPath" class="skill-files-panel__hint">
           {{ $t('settings.sandbox.skillFilesSelectHint') }}
         </p>
+        <textarea
+          v-else-if="editing"
+          v-model="draft"
+          class="skill-files-panel__editor"
+          spellcheck="false"
+        />
         <template v-else>
           <p v-if="file?.truncated" class="skill-files-panel__warn">
             {{ $t('settings.sandbox.skillFilesTruncated') }}
@@ -116,6 +138,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { MessagePlugin } from 'tdesign-vue-next'
 import hljs from 'highlight.js'
 import 'katex/dist/katex.min.css'
 import { copyWithToast } from '@/utils/clipboard'
@@ -133,6 +156,7 @@ import {
   getCatalogSkillFile,
   listCatalogSkillFiles,
 } from '@/api/skill'
+import { getSkillFile, getSkillTree, updateSkillFile } from '@/api/chat-work/skill'
 import {
   getConfigSkillFile,
   listConfigSkillFiles,
@@ -165,6 +189,8 @@ const props = defineProps<{
   skillId?: string
   catalogId?: string
   drawerWidth: number
+  persist?: 'app-core' | 'harness'
+  fileActions?: 'default' | 'edit' | 'none'
 }>()
 
 const { t } = useI18n()
@@ -367,11 +393,11 @@ function buildTree(entries: ConfigSkillFileEntry[]): FileNode[] {
   return root.children || []
 }
 
-function collectDirs(list: FileNode[], out: Set<string>) {
+function collectDirs(list: FileNode[], out: Set<string>, depth = 0) {
   for (const node of list) {
     if (!node.isDir) continue
-    out.add(node.path)
-    if (node.children) collectDirs(node.children, out)
+    if (!harnessFiles.value || depth < 2) out.add(node.path)
+    if (node.children) collectDirs(node.children, out, depth + 1)
   }
 }
 
@@ -384,10 +410,10 @@ function flattenVisible(list: FileNode[], depth: number, expanded: Set<string>, 
   }
 }
 
-function toggleDir(path: string) {
+function toggleDir(row: VisibleRow) {
   const next = new Set(expandedDirs.value)
-  if (next.has(path)) next.delete(path)
-  else next.add(path)
+  if (next.has(row.path)) next.delete(row.path)
+  else next.add(row.path)
   expandedDirs.value = next
 }
 
@@ -396,10 +422,18 @@ const visibleRows = computed(() => {
   flattenVisible(nodes.value, 0, expandedDirs.value, out)
   return out
 })
+const editing = ref(false)
+const draft = ref('')
+const saving = ref(false)
 const canToggleMarkdown = computed(() =>
   Boolean(selectedPath.value && isMarkdown(selectedPath.value) && file.value?.encoding === 'utf-8'),
 )
 const canCopy = computed(() => Boolean(file.value?.content && file.value.encoding === 'utf-8'))
+const harnessFiles = computed(() => props.persist === 'harness')
+const textFile = computed(() => Boolean(selectedPath.value && file.value?.encoding === 'utf-8' && file.value.content != null))
+const showSourceToggle = computed(() => canToggleMarkdown.value && !harnessFiles.value && !editing.value)
+const showCopy = computed(() => canCopy.value && !harnessFiles.value && !editing.value)
+const showEdit = computed(() => props.fileActions === 'edit' && textFile.value && !editing.value)
 const showMarkdown = computed(() => canToggleMarkdown.value && markdownMode.value === 'preview')
 const imageSrc = computed(() => {
   const current = file.value
@@ -488,6 +522,32 @@ async function enhancePreview() {
   await enhanceMarkdownContainer(markdownEl.value)
 }
 
+function flattenHarnessTree(nodes: any[], acc: ConfigSkillFileEntry[] = []): ConfigSkillFileEntry[] {
+  for (const node of nodes || []) {
+    if (node?.is_dir) flattenHarnessTree(node.children || [], acc)
+    else if (node?.path) acc.push({ path: node.path, size: Number(node.size) || 0 })
+  }
+  return acc
+}
+
+async function listHarnessSkillFiles(slug: string) {
+  const res: any = await getSkillTree(slug)
+  return { data: flattenHarnessTree(res?.data || []) }
+}
+
+async function readHarnessSkillFile(slug: string, path: string) {
+  const res: any = await getSkillFile(slug, path)
+  const content = String(res?.data?.content ?? '')
+  return {
+    data: {
+      path: res?.data?.path || path,
+      size: content.length,
+      encoding: 'utf-8',
+      content,
+    },
+  }
+}
+
 async function selectFile(path: string) {
   if (!props.catalogId && (!props.configId || !props.skillId)) return
   selectedPath.value = path
@@ -498,10 +558,14 @@ async function selectFile(path: string) {
   highlightedHtml.value = ''
   frontmatterFields.value = []
   markdownMode.value = 'preview'
+  editing.value = false
+  draft.value = ''
   try {
-    const res = props.catalogId
-      ? await getCatalogSkillFile(props.catalogId, path)
-      : await getConfigSkillFile(props.configId || '', props.skillId || '', path)
+    const res = props.persist === 'harness' && props.catalogId
+      ? await readHarnessSkillFile(props.catalogId, path)
+      : props.catalogId
+        ? await getCatalogSkillFile(props.catalogId, path)
+        : await getConfigSkillFile(props.configId || '', props.skillId || '', path)
     const data = res?.data
     file.value = data || null
     if (!data) {
@@ -525,6 +589,34 @@ async function copyContent() {
   await copyWithToast(text, 'common.copied')
 }
 
+function startEdit() {
+  if (!textFile.value || !props.catalogId) return
+  draft.value = file.value?.content || ''
+  editing.value = true
+}
+
+function cancelEdit() {
+  editing.value = false
+  draft.value = ''
+}
+
+async function saveEdit() {
+  if (!props.catalogId || !selectedPath.value || saving.value) return
+  saving.value = true
+  try {
+    await updateSkillFile(props.catalogId, { path: selectedPath.value, content: draft.value })
+    if (file.value) file.value = { ...file.value, content: draft.value, size: draft.value.length }
+    highlightedHtml.value = highlightText(draft.value, selectedPath.value)
+    if (isMarkdown(selectedPath.value)) renderMarkdown(draft.value)
+    editing.value = false
+    MessagePlugin.success(t('ext.skills.detail.saved'))
+  } catch (e: any) {
+    MessagePlugin.error(e?.message || t('ext.skills.detail.saveFailed'))
+  } finally {
+    saving.value = false
+  }
+}
+
 async function loadFiles() {
   if (!props.catalogId && (!props.configId || !props.skillId)) return
   listLoading.value = true
@@ -534,9 +626,11 @@ async function loadFiles() {
   file.value = null
   fileError.value = ''
   try {
-    const res = props.catalogId
-      ? await listCatalogSkillFiles(props.catalogId)
-      : await listConfigSkillFiles(props.configId || '', props.skillId || '')
+    const res = props.persist === 'harness' && props.catalogId
+      ? await listHarnessSkillFiles(props.catalogId)
+      : props.catalogId
+        ? await listCatalogSkillFiles(props.catalogId)
+        : await listConfigSkillFiles(props.configId || '', props.skillId || '')
     const list = res?.data || []
     const tree = buildTree(list)
     nodes.value = tree
@@ -693,6 +787,21 @@ watch(
   white-space: nowrap;
   font-size: 12px;
   color: var(--td-text-color-secondary);
+}
+
+.skill-files-panel__editor {
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
+  padding: 16px 20px;
+  border: 0;
+  resize: none;
+  outline: none;
+  background: transparent;
+  color: var(--td-text-color-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .skill-files-panel__link {

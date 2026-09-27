@@ -122,19 +122,6 @@ class AgentRunRepository:
         )
         return result.scalar_one_or_none()
 
-    async def list_child_runs_for_user(self, created_by_run_id: str, uid: str) -> list[AgentRun]:
-        """列出由指定 run 创建的所有子 run。"""
-        result = await self.db.execute(
-            select(AgentRun)
-            .where(
-                AgentRun.created_by_run_id == created_by_run_id,
-                AgentRun.uid == str(uid),
-                *tenant_clauses(AgentRun.tenant_id),
-            )
-            .order_by(AgentRun.created_at.asc(), AgentRun.id.asc())
-        )
-        return list(result.scalars().all())
-
     async def list_active_child_runs_for_user(self, created_by_run_id: str, uid: str) -> list[AgentRun]:
         """列出由指定 run 创建且尚未结束的子 run，用于父 run 取消时级联处理。"""
         result = await self.db.execute(

@@ -11,7 +11,6 @@ from sqlalchemy.orm import declarative_base
 from yuxi.storage.postgres.models_business import AGENT_RUN_TERMINAL_STATUSES
 from yuxi.storage.postgres.models_business import Base as BusinessBase
 from yuxi.storage.postgres.models_knowledge import Base as KnowledgeBase
-from yuxi.storage.postgres.naming import prefix_sql
 from yuxi.utils import logger
 from yuxi.utils.singleton import SingletonMeta
 
@@ -111,14 +110,6 @@ class PostgresManager(metaclass=SingletonMeta):
             await conn.run_sync(BusinessBase.metadata.create_all)
         logger.info("PostgreSQL business tables created/checked")
 
-    async def drop_tables(self):
-        """删除所有表（慎用！）"""
-        self._check_initialized()
-        async with self.async_engine.begin() as conn:
-            await conn.run_sync(BusinessBase.metadata.drop_all)
-            await conn.run_sync(KnowledgeBase.metadata.drop_all)
-        logger.info("PostgreSQL tables dropped")
-
     async def ensure_knowledge_schema(self):
         """原生知识库 / 图谱 / 评测表已删除。"""
         self._check_initialized()
@@ -128,51 +119,9 @@ class PostgresManager(metaclass=SingletonMeta):
         """确保业务 schema 包含后续新增字段（运行时 schema 演进）。"""
         self._check_initialized()
         stmts = [
-            "ALTER TABLE IF EXISTS skills ADD COLUMN IF NOT EXISTS tool_dependencies JSONB DEFAULT '[]'::jsonb",
-            "ALTER TABLE IF EXISTS skills ADD COLUMN IF NOT EXISTS mcp_dependencies JSONB DEFAULT '[]'::jsonb",
-            "ALTER TABLE IF EXISTS skills ADD COLUMN IF NOT EXISTS skill_dependencies JSONB DEFAULT '[]'::jsonb",
-            "ALTER TABLE IF EXISTS skills ADD COLUMN IF NOT EXISTS version VARCHAR(64)",
-            "ALTER TABLE IF EXISTS skills ADD COLUMN IF NOT EXISTS source_type VARCHAR(32) NOT NULL DEFAULT 'upload'",
-            (
-                "ALTER TABLE IF EXISTS skills ADD COLUMN IF NOT EXISTS share_config JSONB NOT NULL "
-                'DEFAULT \'{"access_level": "user", "department_ids": [], "user_uids": []}\'::jsonb'
-            ),
-            "ALTER TABLE IF EXISTS skills ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb",
-            (
-                "UPDATE skills SET share_config = jsonb_build_object("
-                "'version', 2, 'read_scope', CASE WHEN share_config = '{}'::jsonb THEN jsonb_build_object("
-                "'access_level', 'user', 'department_ids', '[]'::jsonb, "
-                "'user_uids', jsonb_build_array(created_by)) ELSE share_config END, "
-                "'manage_scope', NULL) "
-                "WHERE share_config IS NOT NULL AND share_config->>'version' IS DISTINCT FROM '2'"
-            ),
-            "ALTER TABLE IF EXISTS skills ALTER COLUMN share_config DROP DEFAULT",
-            "ALTER TABLE IF EXISTS skills ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT TRUE",
-            "ALTER TABLE IF EXISTS skills ADD COLUMN IF NOT EXISTS content_hash VARCHAR(128)",
-            "ALTER TABLE IF EXISTS conversations ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE",
-            "ALTER TABLE IF EXISTS mcp_servers ADD COLUMN IF NOT EXISTS env JSONB",
+            "ALTER TABLE IF EXISTS amp_sessions ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE",
             """
-            CREATE TABLE IF NOT EXISTS agent_envs (
-                id SERIAL PRIMARY KEY,
-                uid VARCHAR NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
-                env JSONB NOT NULL DEFAULT '{}'::jsonb,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                updated_at TIMESTAMPTZ DEFAULT NOW(),
-                CONSTRAINT uq_agent_envs_uid UNIQUE (uid)
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS user_config (
-                id SERIAL PRIMARY KEY,
-                uid VARCHAR NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
-                enable_memory BOOLEAN NOT NULL DEFAULT FALSE,
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                updated_at TIMESTAMPTZ DEFAULT NOW(),
-                CONSTRAINT uq_user_config_uid UNIQUE (uid)
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS agents (
+            CREATE TABLE IF NOT EXISTS amp_agents (
                 id SERIAL PRIMARY KEY,
                 slug VARCHAR(80) NOT NULL UNIQUE,
                 backend_id VARCHAR(64) NOT NULL,
@@ -190,49 +139,33 @@ class PostgresManager(metaclass=SingletonMeta):
                 updated_at TIMESTAMPTZ DEFAULT NOW()
             )
             """,
-            "ALTER TABLE IF EXISTS agents ADD COLUMN IF NOT EXISTS backend_id VARCHAR(64)",
-            "ALTER TABLE IF EXISTS agents ADD COLUMN IF NOT EXISTS share_config JSONB NOT NULL DEFAULT '{}'::jsonb",
-            "ALTER TABLE IF EXISTS agents ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb",
+            "ALTER TABLE IF EXISTS amp_agents ADD COLUMN IF NOT EXISTS backend_id VARCHAR(64)",
+            "ALTER TABLE IF EXISTS amp_agents ADD COLUMN IF NOT EXISTS share_config JSONB NOT NULL DEFAULT '{}'::jsonb",
+            "ALTER TABLE IF EXISTS amp_agents ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb",
             (
-                "UPDATE agents SET share_config = jsonb_build_object("
+                "UPDATE amp_agents SET share_config = jsonb_build_object("
                 "'version', 2, 'read_scope', CASE WHEN share_config = '{}'::jsonb THEN "
                 '\'{"access_level": "global", "department_ids": [], "user_uids": []}\'::jsonb '
                 "ELSE share_config END, 'manage_scope', NULL) "
                 "WHERE share_config IS NOT NULL AND share_config->>'version' IS DISTINCT FROM '2'"
             ),
-            "ALTER TABLE IF EXISTS agents ALTER COLUMN share_config DROP DEFAULT",
-            "ALTER TABLE IF EXISTS agents ADD COLUMN IF NOT EXISTS is_subagent BOOLEAN NOT NULL DEFAULT FALSE",
-            "ALTER TABLE IF EXISTS user_config ADD COLUMN IF NOT EXISTS enable_memory BOOLEAN NOT NULL DEFAULT FALSE",
-            "CREATE UNIQUE INDEX IF NOT EXISTS ix_agents_slug ON agents(slug)",
-            "CREATE INDEX IF NOT EXISTS ix_agents_backend_id ON agents(backend_id)",
-            "CREATE INDEX IF NOT EXISTS ix_agents_is_subagent ON agents(is_subagent)",
-            "CREATE INDEX IF NOT EXISTS ix_agents_created_by ON agents(created_by)",
+            "ALTER TABLE IF EXISTS amp_agents ALTER COLUMN share_config DROP DEFAULT",
+            "ALTER TABLE IF EXISTS amp_agents ADD COLUMN IF NOT EXISTS is_subagent BOOLEAN NOT NULL DEFAULT FALSE",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_amp_agents_slug ON amp_agents(slug)",
+            "CREATE INDEX IF NOT EXISTS ix_amp_agents_backend_id ON amp_agents(backend_id)",
+            "CREATE INDEX IF NOT EXISTS ix_amp_agents_is_subagent ON amp_agents(is_subagent)",
+            "CREATE INDEX IF NOT EXISTS ix_amp_agents_created_by ON amp_agents(created_by)",
             """
-            CREATE UNIQUE INDEX IF NOT EXISTS uq_agents_default
-            ON agents(is_default)
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_agents_default
+            ON amp_agents(is_default)
             WHERE is_default IS TRUE
             """,
             """
-            CREATE TABLE IF NOT EXISTS config_options (
-                id SERIAL PRIMARY KEY,
-                key VARCHAR(100) NOT NULL UNIQUE,
-                name VARCHAR(100) NOT NULL,
-                description TEXT NOT NULL DEFAULT '',
-                params JSONB NOT NULL DEFAULT '{}'::jsonb,
-                value JSONB NOT NULL DEFAULT '{}'::jsonb,
-                created_by VARCHAR(100),
-                updated_by VARCHAR(100),
-                created_at TIMESTAMPTZ DEFAULT NOW(),
-                updated_at TIMESTAMPTZ DEFAULT NOW()
-            )
-            """,
-            "CREATE UNIQUE INDEX IF NOT EXISTS ix_config_options_key ON config_options(key)",
-            """
-            CREATE TABLE IF NOT EXISTS subagent_threads (
+            CREATE TABLE IF NOT EXISTS amp_subagent_threads (
                 id SERIAL PRIMARY KEY,
                 uid VARCHAR(64) NOT NULL,
-                parent_conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
-                child_conversation_id INTEGER NOT NULL UNIQUE REFERENCES conversations(id) ON DELETE CASCADE,
+                parent_conversation_id INTEGER NOT NULL REFERENCES amp_sessions(id) ON DELETE CASCADE,
+                child_conversation_id INTEGER NOT NULL UNIQUE REFERENCES amp_sessions(id) ON DELETE CASCADE,
                 child_thread_id VARCHAR(64) NOT NULL UNIQUE,
                 subagent_slug VARCHAR(64) NOT NULL,
                 created_by_run_id VARCHAR(64) NOT NULL,
@@ -240,39 +173,39 @@ class PostgresManager(metaclass=SingletonMeta):
                 updated_at TIMESTAMPTZ DEFAULT NOW()
             )
             """,
-            "ALTER TABLE IF EXISTS agent_runs ADD COLUMN IF NOT EXISTS agent_slug VARCHAR(64)",
-            "ALTER TABLE IF EXISTS agent_runs ADD COLUMN IF NOT EXISTS conversation_thread_id VARCHAR(64)",
-            "ALTER TABLE IF EXISTS agent_runs ADD COLUMN IF NOT EXISTS created_by_run_id VARCHAR(64)",
-            "ALTER TABLE IF EXISTS agent_runs ADD COLUMN IF NOT EXISTS subagent_thread_relation_id INTEGER",
-            "ALTER TABLE IF EXISTS agent_runs ADD COLUMN IF NOT EXISTS source VARCHAR(32) NOT NULL DEFAULT 'chat'",
-            "ALTER TABLE IF EXISTS agent_runs ADD COLUMN IF NOT EXISTS channel VARCHAR(32) NOT NULL DEFAULT 'web'",
-            "ALTER TABLE IF EXISTS agent_runs ADD COLUMN IF NOT EXISTS external_id VARCHAR(128)",
+            "ALTER TABLE IF EXISTS amp_agent_runs ADD COLUMN IF NOT EXISTS agent_slug VARCHAR(64)",
+            "ALTER TABLE IF EXISTS amp_agent_runs ADD COLUMN IF NOT EXISTS conversation_thread_id VARCHAR(64)",
+            "ALTER TABLE IF EXISTS amp_agent_runs ADD COLUMN IF NOT EXISTS created_by_run_id VARCHAR(64)",
+            "ALTER TABLE IF EXISTS amp_agent_runs ADD COLUMN IF NOT EXISTS subagent_thread_relation_id INTEGER",
+            "ALTER TABLE IF EXISTS amp_agent_runs ADD COLUMN IF NOT EXISTS source VARCHAR(32) NOT NULL DEFAULT 'chat'",
+            "ALTER TABLE IF EXISTS amp_agent_runs ADD COLUMN IF NOT EXISTS channel VARCHAR(32) NOT NULL DEFAULT 'web'",
+            "ALTER TABLE IF EXISTS amp_agent_runs ADD COLUMN IF NOT EXISTS external_id VARCHAR(128)",
             (
-                "ALTER TABLE IF EXISTS agent_runs ADD COLUMN IF NOT EXISTS "
+                "ALTER TABLE IF EXISTS amp_agent_runs ADD COLUMN IF NOT EXISTS "
                 "origin_metadata JSONB NOT NULL DEFAULT '{}'::jsonb"
             ),
             (
-                "ALTER TABLE IF EXISTS agent_run_requests ADD COLUMN IF NOT EXISTS "
+                "ALTER TABLE IF EXISTS amp_agent_run_requests ADD COLUMN IF NOT EXISTS "
                 "channel VARCHAR(32) NOT NULL DEFAULT 'web'"
             ),
-            "ALTER TABLE IF EXISTS agent_run_requests ADD COLUMN IF NOT EXISTS external_id VARCHAR(128)",
+            "ALTER TABLE IF EXISTS amp_agent_run_requests ADD COLUMN IF NOT EXISTS external_id VARCHAR(128)",
             (
-                "ALTER TABLE IF EXISTS agent_run_requests ADD COLUMN IF NOT EXISTS "
+                "ALTER TABLE IF EXISTS amp_agent_run_requests ADD COLUMN IF NOT EXISTS "
                 "origin_metadata JSONB NOT NULL DEFAULT '{}'::jsonb"
             ),
-            "ALTER TABLE IF EXISTS subagent_threads ADD COLUMN IF NOT EXISTS subagent_slug VARCHAR(64)",
-            "ALTER TABLE IF EXISTS subagent_threads ADD COLUMN IF NOT EXISTS created_by_run_id VARCHAR(64)",
+            "ALTER TABLE IF EXISTS amp_subagent_threads ADD COLUMN IF NOT EXISTS subagent_slug VARCHAR(64)",
+            "ALTER TABLE IF EXISTS amp_subagent_threads ADD COLUMN IF NOT EXISTS created_by_run_id VARCHAR(64)",
             """
             DO $$
             BEGIN
                 IF EXISTS (
                     SELECT 1
                     FROM information_schema.columns
-                    WHERE table_name = 'agent_runs'
+                    WHERE table_name = 'amp_agent_runs'
                       AND column_name = 'agent_id'
                 ) THEN
                     EXECUTE '
-                        UPDATE agent_runs
+                        UPDATE amp_agent_runs
                         SET agent_slug = agent_id
                         WHERE agent_slug IS NULL
                           AND agent_id IS NOT NULL
@@ -282,11 +215,11 @@ class PostgresManager(metaclass=SingletonMeta):
                 IF EXISTS (
                     SELECT 1
                     FROM information_schema.columns
-                    WHERE table_name = 'agent_runs'
+                    WHERE table_name = 'amp_agent_runs'
                       AND column_name = 'thread_id'
                 ) THEN
                     EXECUTE '
-                        UPDATE agent_runs
+                        UPDATE amp_agent_runs
                         SET conversation_thread_id = thread_id
                         WHERE conversation_thread_id IS NULL
                           AND thread_id IS NOT NULL
@@ -296,27 +229,27 @@ class PostgresManager(metaclass=SingletonMeta):
                 IF EXISTS (
                     SELECT 1
                     FROM information_schema.columns
-                    WHERE table_name = 'agent_runs'
+                    WHERE table_name = 'amp_agent_runs'
                       AND column_name = 'parent_agent_run_id'
                 ) OR EXISTS (
                     SELECT 1
                     FROM information_schema.columns
-                    WHERE table_name = 'agent_runs'
+                    WHERE table_name = 'amp_agent_runs'
                       AND column_name = 'parent_run_id'
                 ) THEN
                     IF EXISTS (
                         SELECT 1
                         FROM information_schema.columns
-                        WHERE table_name = 'agent_runs'
+                        WHERE table_name = 'amp_agent_runs'
                           AND column_name = 'parent_agent_run_id'
                     ) AND EXISTS (
                         SELECT 1
                         FROM information_schema.columns
-                        WHERE table_name = 'agent_runs'
+                        WHERE table_name = 'amp_agent_runs'
                           AND column_name = 'parent_run_id'
                     ) THEN
                         EXECUTE '
-                            UPDATE agent_runs
+                            UPDATE amp_agent_runs
                             SET created_by_run_id = COALESCE(parent_agent_run_id, parent_run_id)
                             WHERE created_by_run_id IS NULL
                               AND COALESCE(parent_agent_run_id, parent_run_id) IS NOT NULL
@@ -324,18 +257,18 @@ class PostgresManager(metaclass=SingletonMeta):
                     ELSIF EXISTS (
                         SELECT 1
                         FROM information_schema.columns
-                        WHERE table_name = 'agent_runs'
+                        WHERE table_name = 'amp_agent_runs'
                           AND column_name = 'parent_agent_run_id'
                     ) THEN
                         EXECUTE '
-                            UPDATE agent_runs
+                            UPDATE amp_agent_runs
                             SET created_by_run_id = parent_agent_run_id
                             WHERE created_by_run_id IS NULL
                               AND parent_agent_run_id IS NOT NULL
                         ';
                     ELSE
                         EXECUTE '
-                            UPDATE agent_runs
+                            UPDATE amp_agent_runs
                             SET created_by_run_id = parent_run_id
                             WHERE created_by_run_id IS NULL
                               AND parent_run_id IS NOT NULL
@@ -345,9 +278,9 @@ class PostgresManager(metaclass=SingletonMeta):
             END $$;
             """,
             """
-            UPDATE subagent_threads st
+            UPDATE amp_subagent_threads st
             SET subagent_slug = c.agent_id
-            FROM conversations c
+            FROM amp_sessions c
             WHERE st.subagent_slug IS NULL
               AND c.id = st.child_conversation_id
               AND c.agent_id IS NOT NULL
@@ -358,11 +291,11 @@ class PostgresManager(metaclass=SingletonMeta):
                 IF EXISTS (
                     SELECT 1
                     FROM information_schema.columns
-                    WHERE table_name = 'subagent_threads'
+                    WHERE table_name = 'amp_subagent_threads'
                       AND column_name = 'created_by_parent_run_id'
                 ) THEN
                     EXECUTE '
-                        UPDATE subagent_threads
+                        UPDATE amp_subagent_threads
                         SET created_by_run_id = created_by_parent_run_id::VARCHAR
                         WHERE created_by_run_id IS NULL
                           AND created_by_parent_run_id IS NOT NULL
@@ -371,13 +304,13 @@ class PostgresManager(metaclass=SingletonMeta):
             END $$;
             """,
             """
-            UPDATE subagent_threads st
+            UPDATE amp_subagent_threads st
             SET created_by_run_id = child_run.created_by_run_id
             FROM (
                 SELECT DISTINCT ON (subagent_thread_relation_id)
                     subagent_thread_relation_id,
                     created_by_run_id
-                FROM agent_runs
+                FROM amp_agent_runs
                 WHERE run_type = 'subagent'
                   AND subagent_thread_relation_id IS NOT NULL
                   AND created_by_run_id IS NOT NULL
@@ -389,58 +322,58 @@ class PostgresManager(metaclass=SingletonMeta):
             """
             DO $$
             BEGIN
-                IF NOT EXISTS (SELECT 1 FROM subagent_threads WHERE subagent_slug IS NULL) THEN
-                    ALTER TABLE subagent_threads ALTER COLUMN subagent_slug SET NOT NULL;
+                IF NOT EXISTS (SELECT 1 FROM amp_subagent_threads WHERE subagent_slug IS NULL) THEN
+                    ALTER TABLE amp_subagent_threads ALTER COLUMN subagent_slug SET NOT NULL;
                 END IF;
-                IF NOT EXISTS (SELECT 1 FROM subagent_threads WHERE created_by_run_id IS NULL) THEN
-                    ALTER TABLE subagent_threads ALTER COLUMN created_by_run_id SET NOT NULL;
+                IF NOT EXISTS (SELECT 1 FROM amp_subagent_threads WHERE created_by_run_id IS NULL) THEN
+                    ALTER TABLE amp_subagent_threads ALTER COLUMN created_by_run_id SET NOT NULL;
                 END IF;
             END $$;
             """,
-            "ALTER TABLE IF EXISTS agent_runs DROP COLUMN IF EXISTS agent_id",
-            "ALTER TABLE IF EXISTS agent_runs DROP COLUMN IF EXISTS thread_id",
-            "ALTER TABLE IF EXISTS agent_runs DROP COLUMN IF EXISTS parent_run_id",
-            "ALTER TABLE IF EXISTS agent_runs DROP COLUMN IF EXISTS parent_agent_run_id",
-            "ALTER TABLE IF EXISTS agent_runs DROP COLUMN IF EXISTS resumed_from_run_id",
-            "ALTER TABLE IF EXISTS agent_runs DROP COLUMN IF EXISTS invoked_by_run_id",
-            "ALTER TABLE IF EXISTS agent_runs DROP COLUMN IF EXISTS subagent_thread_id",
-            "ALTER TABLE IF EXISTS agent_runs DROP COLUMN IF EXISTS resume_request_id",
-            "ALTER TABLE IF EXISTS agent_runs DROP COLUMN IF EXISTS resume_idempotency_key",
-            "ALTER TABLE IF EXISTS agent_runs DROP COLUMN IF EXISTS checkpoint_thread_id",
-            "ALTER TABLE IF EXISTS agent_runs DROP COLUMN IF EXISTS execution_scope_id",
-            "ALTER TABLE IF EXISTS subagent_threads DROP COLUMN IF EXISTS subagent_agent_id",
-            "ALTER TABLE IF EXISTS subagent_threads DROP COLUMN IF EXISTS created_by_parent_run_id",
-            "ALTER TABLE IF EXISTS subagent_threads DROP COLUMN IF EXISTS created_by_tool_call_id",
-            "CREATE INDEX IF NOT EXISTS idx_agent_runs_uid_created ON agent_runs(uid, created_at DESC)",
+            "ALTER TABLE IF EXISTS amp_agent_runs DROP COLUMN IF EXISTS agent_id",
+            "ALTER TABLE IF EXISTS amp_agent_runs DROP COLUMN IF EXISTS thread_id",
+            "ALTER TABLE IF EXISTS amp_agent_runs DROP COLUMN IF EXISTS parent_run_id",
+            "ALTER TABLE IF EXISTS amp_agent_runs DROP COLUMN IF EXISTS parent_agent_run_id",
+            "ALTER TABLE IF EXISTS amp_agent_runs DROP COLUMN IF EXISTS resumed_from_run_id",
+            "ALTER TABLE IF EXISTS amp_agent_runs DROP COLUMN IF EXISTS invoked_by_run_id",
+            "ALTER TABLE IF EXISTS amp_agent_runs DROP COLUMN IF EXISTS subagent_thread_id",
+            "ALTER TABLE IF EXISTS amp_agent_runs DROP COLUMN IF EXISTS resume_request_id",
+            "ALTER TABLE IF EXISTS amp_agent_runs DROP COLUMN IF EXISTS resume_idempotency_key",
+            "ALTER TABLE IF EXISTS amp_agent_runs DROP COLUMN IF EXISTS checkpoint_thread_id",
+            "ALTER TABLE IF EXISTS amp_agent_runs DROP COLUMN IF EXISTS execution_scope_id",
+            "ALTER TABLE IF EXISTS amp_subagent_threads DROP COLUMN IF EXISTS subagent_agent_id",
+            "ALTER TABLE IF EXISTS amp_subagent_threads DROP COLUMN IF EXISTS created_by_parent_run_id",
+            "ALTER TABLE IF EXISTS amp_subagent_threads DROP COLUMN IF EXISTS created_by_tool_call_id",
+            "CREATE INDEX IF NOT EXISTS idx_amp_agent_runs_uid_created ON amp_agent_runs(uid, created_at DESC)",
             """
-            CREATE INDEX IF NOT EXISTS idx_agent_runs_conversation_thread_created
-            ON agent_runs(conversation_thread_id, created_at DESC)
+            CREATE INDEX IF NOT EXISTS idx_amp_agent_runs_conversation_thread_created
+            ON amp_agent_runs(conversation_thread_id, created_at DESC)
             """,
-            "CREATE INDEX IF NOT EXISTS idx_agent_runs_status_updated ON agent_runs(status, updated_at)",
+            "CREATE INDEX IF NOT EXISTS idx_amp_agent_runs_status_updated ON amp_agent_runs(status, updated_at)",
             """
-            CREATE INDEX IF NOT EXISTS ix_agent_runs_subagent_thread_relation_id
-            ON agent_runs(subagent_thread_relation_id)
+            CREATE INDEX IF NOT EXISTS ix_amp_agent_runs_subagent_thread_relation_id
+            ON amp_agent_runs(subagent_thread_relation_id)
             """,
-            "CREATE INDEX IF NOT EXISTS ix_subagent_threads_uid ON subagent_threads(uid)",
+            "CREATE INDEX IF NOT EXISTS ix_amp_subagent_threads_uid ON amp_subagent_threads(uid)",
             """
-            CREATE INDEX IF NOT EXISTS ix_subagent_threads_parent_conversation
-            ON subagent_threads(parent_conversation_id)
-            """,
-            """
-            CREATE INDEX IF NOT EXISTS ix_subagent_threads_subagent_slug
-            ON subagent_threads(subagent_slug)
+            CREATE INDEX IF NOT EXISTS ix_amp_subagent_threads_parent_conversation
+            ON amp_subagent_threads(parent_conversation_id)
             """,
             """
-            CREATE INDEX IF NOT EXISTS ix_subagent_threads_created_by_run_id
-            ON subagent_threads(created_by_run_id)
+            CREATE INDEX IF NOT EXISTS ix_amp_subagent_threads_subagent_slug
+            ON amp_subagent_threads(subagent_slug)
             """,
             """
-            CREATE INDEX IF NOT EXISTS idx_agent_runs_created_by_run_created
-            ON agent_runs(created_by_run_id, created_at DESC)
+            CREATE INDEX IF NOT EXISTS ix_amp_subagent_threads_created_by_run_id
+            ON amp_subagent_threads(created_by_run_id)
             """,
             """
-            CREATE INDEX IF NOT EXISTS idx_agent_runs_subagent_lookup
-            ON agent_runs(uid, conversation_thread_id, run_type, created_at DESC)
+            CREATE INDEX IF NOT EXISTS idx_amp_agent_runs_created_by_run_created
+            ON amp_agent_runs(created_by_run_id, created_at DESC)
+            """,
+            """
+            CREATE INDEX IF NOT EXISTS idx_amp_agent_runs_subagent_lookup
+            ON amp_agent_runs(uid, conversation_thread_id, run_type, created_at DESC)
             """,
             f"""
             WITH duplicated_active_runs AS (
@@ -450,13 +383,13 @@ class PostgresManager(metaclass=SingletonMeta):
                         PARTITION BY uid, agent_slug, conversation_thread_id
                         ORDER BY created_at DESC NULLS LAST, id DESC
                     ) AS active_rank
-                FROM agent_runs
+                FROM amp_agent_runs
                 WHERE status NOT IN ({AGENT_RUN_TERMINAL_STATUS_SQL})
                   AND uid IS NOT NULL
                   AND agent_slug IS NOT NULL
                   AND conversation_thread_id IS NOT NULL
             )
-            UPDATE agent_runs ar
+            UPDATE amp_agent_runs ar
             SET status = 'failed',
                 error_type = COALESCE(ar.error_type, 'active_run_migration_conflict'),
                 error_message = COALESCE(
@@ -470,13 +403,13 @@ class PostgresManager(metaclass=SingletonMeta):
               AND dup.active_rank > 1
             """,
             f"""
-            CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_runs_one_active_per_thread
-            ON agent_runs(uid, agent_slug, conversation_thread_id)
+            CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_agent_runs_one_active_per_thread
+            ON amp_agent_runs(uid, agent_slug, conversation_thread_id)
             WHERE status NOT IN ({AGENT_RUN_TERMINAL_STATUS_SQL})
             """,
-            "CREATE INDEX IF NOT EXISTS ix_conversations_is_pinned ON conversations(is_pinned)",
+            "CREATE INDEX IF NOT EXISTS ix_amp_sessions_is_pinned ON amp_sessions(is_pinned)",
             """
-            CREATE TABLE IF NOT EXISTS agent_run_requests (
+            CREATE TABLE IF NOT EXISTS amp_agent_run_requests (
                 id SERIAL PRIMARY KEY,
                 request_id VARCHAR(64) NOT NULL,
                 uid VARCHAR(64) NOT NULL,
@@ -485,8 +418,8 @@ class PostgresManager(metaclass=SingletonMeta):
                 source VARCHAR(32) NOT NULL DEFAULT 'chat',
                 queue_policy VARCHAR(16) NOT NULL DEFAULT 'enqueue',
                 status VARCHAR(32) NOT NULL DEFAULT 'queued',
-                input_message_id INTEGER NOT NULL REFERENCES messages(id),
-                dispatched_run_id VARCHAR(64) REFERENCES agent_runs(id),
+                input_message_id INTEGER NOT NULL REFERENCES amp_messages(id),
+                dispatched_run_id VARCHAR(64) REFERENCES amp_agent_runs(id),
                 input_payload JSONB NOT NULL DEFAULT '{}'::jsonb,
                 error_message TEXT,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -494,19 +427,21 @@ class PostgresManager(metaclass=SingletonMeta):
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
             )
             """,
-            "CREATE UNIQUE INDEX IF NOT EXISTS ix_agent_run_requests_request_id ON agent_run_requests(request_id)",
+            "CREATE UNIQUE INDEX IF NOT EXISTS ix_amp_agent_run_requests_request_id "
+            "ON amp_agent_run_requests(request_id)",
             """
-            CREATE INDEX IF NOT EXISTS ix_agent_run_requests_queue
-            ON agent_run_requests(uid, agent_slug, conversation_thread_id, status, created_at, id)
+            CREATE INDEX IF NOT EXISTS ix_amp_agent_run_requests_queue
+            ON amp_agent_run_requests(uid, agent_slug, conversation_thread_id, status, created_at, id)
             """,
-            "CREATE INDEX IF NOT EXISTS ix_agent_run_requests_dispatched_run_id ON agent_run_requests(dispatched_run_id)",  # noqa: E501
+            "CREATE INDEX IF NOT EXISTS ix_amp_agent_run_requests_dispatched_run_id "
+            "ON amp_agent_run_requests(dispatched_run_id)",
         ]
         from yuxi.tenancy.schema import tenant_scope_ddl_statements
 
         stmts.extend(tenant_scope_ddl_statements())
         async with self.async_engine.begin() as conn:
             for stmt in stmts:
-                await conn.execute(text(prefix_sql(stmt)))
+                await conn.execute(text(stmt))
             try:
                 from yuxi.tenancy.schema import backfill_tenant_scope
 
@@ -524,11 +459,6 @@ class PostgresManager(metaclass=SingletonMeta):
         if not self._initialized:
             return False
         return self.async_engine.dialect.name == "postgresql"
-
-    async def get_async_session(self) -> AsyncSession:
-        """获取异步数据库会话"""
-        self.initialize()  # 确保已初始化
-        return self.AsyncSession()
 
     @asynccontextmanager
     async def get_async_session_context(self):
@@ -554,18 +484,6 @@ class PostgresManager(metaclass=SingletonMeta):
 
         if self.langgraph_pool:
             await self.langgraph_pool.close()
-
-    async def async_check_first_run(self):
-        """检查是否首次运行（异步版本）- 检查用户表是否有数据"""
-        from sqlalchemy import func, select
-
-        self._check_initialized()
-        async with self.get_async_session_context() as session:
-            from yuxi.storage.postgres.models_business import User
-
-            result = await session.execute(select(func.count(User.id)))
-            count = result.scalar()
-            return count == 0
 
     async def commit(self):
         """提交当前会话"""

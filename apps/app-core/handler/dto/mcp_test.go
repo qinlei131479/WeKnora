@@ -71,6 +71,28 @@ func TestMCPServiceResponse_BuiltinStripsTenantConfig(t *testing.T) {
 	body, _ := json.Marshal(resp)
 	assert.False(t, strings.Contains(string(body), "should-not-leak-via-builtin"))
 	assert.False(t, strings.Contains(string(body), "X-Tenant-Secret"))
+	assert.Nil(t, resp.StdioConfig)
+}
+
+func TestMCPServiceResponse_BuiltinStdioExposesStoredLaunchCommand(t *testing.T) {
+	svc := &types.MCPService{
+		ID:            "another-builtin",
+		IsBuiltin:     true,
+		TransportType: types.MCPTransportStdio,
+		StdioConfig: &types.MCPStdioConfig{
+			Command: "npx",
+			Args:    []string{"-y", "@antv/mcp-server-chart"},
+		},
+		EnvVars: types.MCPEnvVars{"NPM_TOKEN": "secret-token"},
+	}
+	resp := NewMCPServiceResponse(viewerContext(), svc)
+	assert.Nil(t, resp.EnvVars)
+	if assert.NotNil(t, resp.StdioConfig) {
+		assert.Equal(t, "npx", resp.StdioConfig.Command)
+		assert.Equal(t, []string{"-y", "@antv/mcp-server-chart"}, resp.StdioConfig.Args)
+	}
+	body, _ := json.Marshal(resp)
+	assert.NotContains(t, string(body), "secret-token")
 }
 
 func TestMCPServiceResponse_ViewerStripsIntegrationDetail(t *testing.T) {

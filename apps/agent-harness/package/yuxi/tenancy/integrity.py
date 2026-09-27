@@ -8,11 +8,10 @@ from sqlalchemy import text
 
 from yuxi.tenancy.backfill import is_catalog_owner
 from yuxi.tenancy.schema import TENANT_SCOPE_TABLES, _BACKFILL_SOURCES
-from yuxi.storage.postgres.naming import ht
 
-# 按 uid 跨空间共享，tenant_id 只是最后写入空间的痕迹，NULL 不算回填缺口。
-USER_SCOPED_TABLES = frozenset({"agent_envs", "user_config"})
-CATALOG_TABLES = frozenset({"agents", "skills", "mcp_servers"})
+# 已无按 uid 免回填的退役表；保留分类入口便于未来扩展。
+USER_SCOPED_TABLES = frozenset()
+CATALOG_TABLES = frozenset({"amp_agents"})
 
 
 class TenantBackfillIncomplete(RuntimeError):
@@ -47,14 +46,11 @@ async def scan_null_tenant_rows(conn) -> dict[str, int]:
     source_by_table = {table: (uid_col, created_by_col) for table, _pk, uid_col, created_by_col in _BACKFILL_SOURCES}
     for table in TENANT_SCOPE_TABLES:
         uid_col, created_by_col = source_by_table.get(table, (None, None))
-        physical = ht(table)
+        physical = table
         select_uid = uid_col or "NULL"
         select_cb = created_by_col or "NULL"
         result = await conn.execute(
-            text(
-                f"SELECT {select_uid} AS uid, {select_cb} AS created_by "
-                f"FROM {physical} WHERE tenant_id IS NULL"
-            )
+            text(f"SELECT {select_uid} AS uid, {select_cb} AS created_by FROM {physical} WHERE tenant_id IS NULL")
         )
         for row in result.mappings():
             uid = None if row["uid"] is None else str(row["uid"])

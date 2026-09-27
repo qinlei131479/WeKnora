@@ -6,28 +6,19 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.utils.auth_middleware import get_db, get_required_user
 from yuxi.services.viewer_filesystem_service import (
-    create_viewer_directory,
     delete_viewer_file,
     download_viewer_file,
     list_viewer_filesystem_tree,
     read_viewer_file_content,
-    upload_viewer_files,
 )
 from yuxi.storage.postgres.models_business import User
 
 filesystem_router = APIRouter(prefix="/viewer/filesystem", tags=["viewer-filesystem"])
-
-
-class CreateViewerDirectoryRequest(BaseModel):
-    thread_id: str
-    parent_path: str
-    name: str
 
 
 @filesystem_router.get("/tree", response_model=dict)
@@ -70,38 +61,6 @@ async def delete_viewer_file_route(
     return await delete_viewer_file(
         thread_id=thread_id,
         path=path,
-        current_user=current_user,
-        db=db,
-    )
-
-
-@filesystem_router.post("/directory", response_model=dict)
-async def create_viewer_directory_route(
-    payload: CreateViewerDirectoryRequest,
-    current_user: User = Depends(get_required_user),
-    db: AsyncSession = Depends(get_db),
-):
-    return await create_viewer_directory(
-        thread_id=payload.thread_id,
-        parent_path=payload.parent_path,
-        name=payload.name,
-        current_user=current_user,
-        db=db,
-    )
-
-
-@filesystem_router.post("/upload", response_model=dict)
-async def upload_viewer_files_route(
-    thread_id: str = Form(..., description="线程 ID"),
-    parent_path: str = Form(..., description="父目录路径"),
-    files: list[UploadFile] = File(..., description="上传文件列表"),
-    current_user: User = Depends(get_required_user),
-    db: AsyncSession = Depends(get_db),
-):
-    return await upload_viewer_files(
-        thread_id=thread_id,
-        parent_path=parent_path,
-        files=files,
         current_user=current_user,
         db=db,
     )

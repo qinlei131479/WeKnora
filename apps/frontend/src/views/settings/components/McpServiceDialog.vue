@@ -1,9 +1,10 @@
 <template>
   <SettingDrawer
     :visible="dialogVisible"
-    :title="mode === 'add' ? t('mcpServiceDialog.addTitle') : t('mcpServiceDialog.editTitle')"
+    :title="drawerTitle"
     :class="`mcp-drawer mcp-drawer--${formData.transport_type}`"
     :confirm-loading="submitting"
+    :confirm-disabled="readonly"
     @update:visible="(v: boolean) => dialogVisible = v"
     @confirm="handleSubmit"
     @cancel="handleClose"
@@ -38,8 +39,8 @@
       <t-button
         variant="outline"
         :loading="testing"
-        :disabled="mode === 'add' || !props.service?.id"
-        :title="mode === 'add' ? t('mcpServiceDialog.testAfterSaveHint', '保存后可测试连接') : ''"
+        :disabled="testDisabled"
+        :title="testDisabled && persist !== 'harness' ? t('mcpServiceDialog.testAfterSaveHint', '保存后可测试连接') : ''"
         @click="handleTestConnection"
       >
         <template #icon>
@@ -59,11 +60,12 @@
     </template>
 
     <t-form ref="formRef" :data="formData" :rules="rules" label-align="top">
+      <fieldset class="mcp-readonly-fields" :class="{ 'is-locked': readonly }" :disabled="readonly">
       <!--
         从代码导入：粘贴标准 mcpServers JSON，纯前端解析后填回表单。
         不自动提交；用户检查后再点保存。
       -->
-      <section class="setting-drawer__section code-import">
+      <section v-if="!readonly" class="setting-drawer__section code-import">
         <button type="button" class="code-import__toggle" @click="codeImportOpen = !codeImportOpen">
           <t-icon :name="codeImportOpen ? 'chevron-down' : 'chevron-right'" />
           <span>{{ t('mcpServiceDialog.codeImport.toggle') }}</span>
@@ -129,6 +131,7 @@
               type="button"
               class="source-option"
               :class="{ 'is-active': formData.transport_type === 'sse' }"
+              :disabled="transportLocked"
               @click="formData.transport_type = 'sse'"
             >
               <t-icon name="cast" class="source-option__icon" />
@@ -138,21 +141,36 @@
               type="button"
               class="source-option"
               :class="{ 'is-active': formData.transport_type === 'http-streamable' }"
+              :disabled="transportLocked"
               @click="formData.transport_type = 'http-streamable'"
             >
               <t-icon name="link" class="source-option__icon" />
               <span class="source-option__label">HTTP Streamable</span>
             </button>
+            <button
+              v-if="formData.transport_type === 'stdio'"
+              type="button"
+              class="source-option is-active"
+              disabled
+            >
+              <t-icon name="code" class="source-option__icon" />
+              <span class="source-option__label">Stdio</span>
+            </button>
           </div>
         </div>
 
-        <div class="form-item">
+        <div v-if="formData.transport_type === 'stdio'" class="form-item">
+          <label class="form-label">{{ t('mcpServiceDialog.stdioLaunch') }}</label>
+          <div class="stdio-launch">{{ stdioLaunchText }}</div>
+        </div>
+
+        <div v-if="formData.transport_type !== 'stdio'" class="form-item">
           <label class="form-label required">{{ t('mcpServiceDialog.serviceUrl') }}</label>
           <t-input v-model="formData.url" :placeholder="t('mcpServiceDialog.serviceUrlPlaceholder')" />
         </div>
 
         <!-- 自定义请求头：附加到每次 MCP 请求的 HTTP header（与模型管理同款交互） -->
-        <div class="form-item">
+        <div v-if="formData.transport_type !== 'stdio'" class="form-item">
           <div class="custom-headers-header">
             <label class="form-label" style="margin-bottom: 0">
               {{ t('mcpServiceDialog.customHeaders.label') }}
@@ -344,8 +362,14 @@
         </div>
       </section>
 
+      </fieldset>
+
       <section v-if="props.service?.id" class="setting-drawer__section">
-        <McpMetadataPanel :service-id="props.service.id" />
+        <McpMetadataPanel
+          :service-id="props.service.id"
+          :persist="persist"
+          :readonly="readonly"
+        />
       </section>
 
       <!-- Section 5 — 测试结果（内联，避免在抽屉上再叠一个居中弹窗） -->
@@ -363,7 +387,12 @@
             <template #icon><t-icon name="close" /></template>
           </t-button>
         </div>
-        <McpTestResultBody :result="testResult" :service-id="props.service?.id" />
+        <McpTestResultBody
+          :result="testResult"
+          :service-id="props.service?.id"
+          :persist="persist"
+          :readonly="readonly"
+        />
       </section>
     </t-form>
   </SettingDrawer>
@@ -387,9 +416,23 @@ import {
   MCP_OAUTH_CALLBACK_PATH,
   type MCPService,
   type McpCredentialField,
+  type McpCredentialsResponse,
   type MCPTestResult,
+  type MCPOAuthStatus,
   type MCPOAuthTokenState,
 } from '@/api/mcp-service'
+import {
+  createMcpServer,
+  deleteMcpCredential,
+  getMcpOAuthAuthorizeURL,
+  getMcpOAuthStatus,
+  HARNESS_MCP_OAUTH_CALLBACK_PATH,
+  putMcpCredentials,
+  revokeMcpOAuthToken,
+  testMcpConnection,
+  testMcpServer,
+  updateMcpServer,
+} from '@/api/chat-work/mcp'
 import SettingDrawer from '@/components/settings/SettingDrawer.vue'
 import McpTestResultBody from './McpTestResultBody.vue'
 import McpMetadataPanel from './McpMetadataPanel.vue'
@@ -402,6 +445,10 @@ interface Props {
   visible: boolean
   service: MCPService | null
   mode: 'add' | 'edit'
+  // app-core：设置页走 Go；harness：工作台 MCP 页走 Python，最终仍写入 mcp_services
+  persist?: 'app-core' | 'harness'
+  // 内置服务只读：可看详情和工具，不能改表单、不能保存
+  readonly?: boolean
 }
 
 interface Emits {
@@ -412,7 +459,7 @@ interface Emits {
   (e: 'created', service: MCPService): void
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), { persist: 'app-core', readonly: false })
 const emit = defineEmits<Emits>()
 
 const formRef = ref<FormInstanceFunctions>()
@@ -430,7 +477,9 @@ const formData = ref({
   name: '',
   description: '',
   enabled: true,
-  transport_type: 'sse' as 'sse' | 'http-streamable',
+  transport_type: 'http-streamable' as 'sse' | 'http-streamable' | 'stdio',
+  command: '',
+  args: [] as string[],
   url: '',
   // Custom HTTP headers attached to every MCP request — edited as key/value
   // rows here, serialised to a Record<string,string> on submit (top-level
@@ -621,11 +670,41 @@ const oauthTokenState = ref<MCPOAuthTokenState>('reauth_required')
 const oauthChecking = ref(false)
 const oauthAuthorizing = ref(false)
 
+function unwrapOauth(response: unknown): Record<string, any> {
+  const data = unwrapHarnessPayload<Record<string, any> | null>(response)
+  return data && typeof data === 'object' ? data : {}
+}
+
+async function requestOAuthAuthorize(serviceId: string, body: { redirect_uri: string; frontend_redirect?: string }) {
+  if (props.persist !== 'harness') return getMCPOAuthAuthorizeURL(serviceId, body)
+  const data = unwrapOauth(await getMcpOAuthAuthorizeURL(serviceId, body))
+  return {
+    authorizationUrl: data.authorization_url ?? data.authorizationUrl ?? '',
+    authorizationAttempt: data.authorization_attempt ?? data.authorizationAttempt ?? '',
+  }
+}
+
+async function requestOAuthAuthorized(serviceId: string, authorizationAttempt?: string) {
+  if (props.persist !== 'harness') return getMCPOAuthStatus(serviceId, authorizationAttempt)
+  return Boolean(unwrapOauth(await getMcpOAuthStatus(serviceId, authorizationAttempt)).authorized)
+}
+
+async function requestOAuthLifecycle(serviceId: string): Promise<MCPOAuthStatus> {
+  if (props.persist !== 'harness') return getMCPOAuthAuthorizationStatus(serviceId)
+  const data = unwrapOauth(await getMcpOAuthStatus(serviceId))
+  return {
+    authorized: Boolean(data.authorized),
+    state: data.state ?? 'reauth_required',
+    refresh_available: Boolean(data.refresh_available),
+    expires_at: data.expires_at,
+  }
+}
+
 async function refreshOAuthStatus() {
   if (props.mode !== 'edit' || !props.service?.id || !isOAuth.value) return
   oauthChecking.value = true
   try {
-    const status = await getMCPOAuthAuthorizationStatus(props.service.id)
+    const status = await requestOAuthLifecycle(props.service.id)
     oauthAuthorized.value = status.authorized
     oauthTokenState.value = status.state
   } catch (e) {
@@ -642,12 +721,14 @@ async function startAuthorize(serviceId: string) {
   if (!serviceId) return
   oauthAuthorizing.value = true
   try {
-    const redirectUri = window.location.origin + MCP_OAUTH_CALLBACK_PATH
+    const redirectUri = window.location.origin + (
+      props.persist === 'harness' ? HARNESS_MCP_OAUTH_CALLBACK_PATH : MCP_OAUTH_CALLBACK_PATH
+    )
     // After the backend completes the exchange it bounces the popup here. The
     // app root is harmless; the popup is closed by the opener below once the
     // authorization status flips, so this page is only shown briefly.
     const frontendRedirect = window.location.origin + '/'
-    const authorization = await getMCPOAuthAuthorizeURL(serviceId, {
+    const authorization = await requestOAuthAuthorize(serviceId, {
       redirect_uri: redirectUri,
       frontend_redirect: frontendRedirect,
     })
@@ -661,7 +742,7 @@ async function startAuthorize(serviceId: string) {
     const timer = window.setInterval(async () => {
       const closed = !popup || popup.closed
       try {
-        oauthAuthorized.value = await getMCPOAuthStatus(serviceId, authorization.authorizationAttempt)
+        oauthAuthorized.value = await requestOAuthAuthorized(serviceId, authorization.authorizationAttempt)
         if (oauthAuthorized.value) oauthTokenState.value = 'authorized'
       } catch { /* keep polling */ }
       if (oauthAuthorized.value || closed) {
@@ -694,15 +775,9 @@ async function handleAuthorize() {
   try {
     const hasId = !!props.service?.id
     const data = buildPayload(!hasId)
-    if (hasId) {
-      await updateMCPService(props.service!.id, data)
-      serviceId = props.service!.id
-      emit('created', { ...(props.service as MCPService), ...data } as MCPService)
-    } else {
-      const created = await createMCPService(data)
-      serviceId = created.id
-      emit('created', created)
-    }
+    const saved = await persistMcpService(data, !hasId)
+    serviceId = saved.id
+    emit('created', hasId ? ({ ...(props.service as MCPService), ...data, id: saved.id } as MCPService) : saved)
   } catch (e) {
     MessagePlugin.error(t('mcpServiceDialog.toasts.updateFailed') as string)
     console.error('Failed to save before authorize:', e)
@@ -716,7 +791,8 @@ async function handleAuthorize() {
 async function handleRevokeOAuth() {
   if (!props.service?.id) return
   try {
-    await revokeMCPOAuthToken(props.service.id)
+    if (props.persist === 'harness') await revokeMcpOAuthToken(props.service.id)
+    else await revokeMCPOAuthToken(props.service.id)
     oauthAuthorized.value = false
     oauthTokenState.value = 'reauth_required'
     MessagePlugin.success(t('mcpServiceDialog.toasts.revoked', '已撤销授权') as string)
@@ -729,11 +805,29 @@ async function handleRevokeOAuth() {
 // Header icon name + transport label, mirrored from McpSettings list cards
 // so the list-card → drawer hand-off stays visually continuous.
 const transportIcon = computed(() => {
-  return formData.value.transport_type === 'http-streamable' ? 'link' : 'cast'
+  if (formData.value.transport_type === 'http-streamable') return 'link'
+  if (formData.value.transport_type === 'stdio') return 'code'
+  return 'cast'
 })
 
 const transportLabel = computed(() => {
-  return formData.value.transport_type === 'http-streamable' ? 'HTTP Streamable' : 'SSE'
+  if (formData.value.transport_type === 'http-streamable') return 'HTTP Streamable'
+  if (formData.value.transport_type === 'stdio') return 'Stdio'
+  return 'SSE'
+})
+
+const drawerTitle = computed(() => {
+  if (props.mode === 'add') return t('mcpServiceDialog.addTitle')
+  if (props.readonly) return t('mcpServiceDialog.viewTitle')
+  return t('mcpServiceDialog.editTitle')
+})
+
+const transportLocked = computed(() => props.readonly || formData.value.transport_type === 'stdio')
+
+const stdioLaunchText = computed(() => {
+  const command = formData.value.command || ''
+  const args = (formData.value.args || []).filter(Boolean)
+  return [command, ...args].filter(Boolean).join(' ')
 })
 
 // Field metadata for the credential subresource. Keep label keys local to
@@ -755,10 +849,18 @@ const credentialApi = computed<CredentialResourceApi<McpCredentialField>>(() => 
   const id = props.service?.id ?? ''
   return {
     save: async (patch) => {
+      if (props.persist === 'harness') {
+        const meta = unwrapHarnessPayload<McpCredentialsResponse>(await putMcpCredentials(id, patch))
+        return meta.fields
+      }
       const meta = await putMCPCredentials(id, patch)
       return meta.fields
     },
     remove: async (field) => {
+      if (props.persist === 'harness') {
+        await deleteMcpCredential(id, field)
+        return
+      }
       await deleteMCPCredentialField(id, field)
     },
   }
@@ -779,6 +881,9 @@ const rules: Record<string, FormRule[]> = {
   url: [
     {
       validator: (val: string) => {
+        if (formData.value.transport_type === 'stdio') {
+          return { result: true, message: '', type: 'success' as const }
+        }
         if (!val || val.trim() === '') {
           return { result: false, message: t('mcpServiceDialog.rules.urlRequired') as string, type: 'error' }
         }
@@ -796,6 +901,13 @@ const rules: Record<string, FormRule[]> = {
 const dialogVisible = computed({
   get: () => props.visible,
   set: (value) => emit('update:visible', value),
+})
+
+// 工作台填了服务地址就能测；stdio 没有地址，按已保存的服务测。设置页仍要先保存拿到 id
+const testDisabled = computed(() => {
+  if (formData.value.transport_type === 'stdio') return !props.service?.id
+  if (props.persist === 'harness') return !formData.value.url.trim()
+  return props.mode === 'add' || !props.service?.id
 })
 
 // ---- Test connection state (in-drawer) ----
@@ -825,16 +937,32 @@ watch(
   },
 )
 
+function currentHeaders(): Record<string, string> {
+  const headersMap: Record<string, string> = {}
+  for (const item of formData.value.headers) {
+    const key = (item.key ?? '').trim()
+    const value = (item.value ?? '').trim()
+    if (key && value) headersMap[key] = value
+  }
+  return headersMap
+}
+
 async function handleTestConnection() {
-  if (!props.service?.id) return
+  if (testDisabled.value) return
   testing.value = true
   MessagePlugin.info({
-    content: t('mcpSettings.toasts.testing', { name: props.service.name || '' }),
+    content: t('mcpSettings.toasts.testing', { name: formData.value.name || props.service?.name || '' }),
     duration: 0,
     closeBtn: false,
   })
   try {
-    const result = await testMCPService(props.service.id)
+    const result = props.persist === 'harness' && formData.value.transport_type !== 'stdio'
+      ? unwrapHarnessPayload<MCPTestResult>(await testMcpConnection({
+        transport_type: formData.value.transport_type,
+        url: formData.value.url.trim(),
+        headers: currentHeaders(),
+      }))
+      : await requestMcpTest(props.service!.id)
     MessagePlugin.closeAll()
     const safe: MCPTestResult = result ?? {
       success: false,
@@ -925,7 +1053,9 @@ const resetForm = () => {
     name: '',
     description: '',
     enabled: true,
-    transport_type: 'sse',
+    transport_type: 'http-streamable',
+    command: '',
+    args: [],
     url: '',
     headers: [],
     auth_config: { auth_type: '', api_key: '', api_key_header: '', token: '', scopes: [], auth_server_metadata_url: '' },
@@ -945,12 +1075,14 @@ watch(
     codeImportText.value = ''
     codeImportError.value = ''
     if (service) {
-      const transportType = service.transport_type === 'stdio' ? 'sse' : (service.transport_type || 'sse')
+      const transportType = service.transport_type || 'http-streamable'
       formData.value = {
         name: service.name || '',
         description: service.description || '',
         enabled: service.enabled ?? true,
-        transport_type: transportType as 'sse' | 'http-streamable',
+        transport_type: transportType,
+        command: service.stdio_config?.command || (service as MCPService & { command?: string }).command || '',
+        args: service.stdio_config?.args || (service as MCPService & { args?: string[] }).args || [],
         url: service.url || '',
         headers: service.headers
           ? Object.entries(service.headers).map(([key, value]) => ({ key, value: String(value) }))
@@ -1029,15 +1161,49 @@ function buildPayload(asCreate: boolean): Partial<MCPService> {
   return data
 }
 
+function unwrapHarnessPayload<T>(response: unknown): T {
+  if (response && typeof response === 'object' && 'data' in response && (response as { data?: T }).data) {
+    return (response as { data: T }).data
+  }
+  return response as T
+}
+
+async function persistMcpService(data: Partial<MCPService>, asCreate: boolean): Promise<MCPService> {
+  if (props.persist !== 'harness') {
+    if (asCreate) return createMCPService(data)
+    await updateMCPService(props.service!.id, data)
+    return { ...(props.service as MCPService), ...data }
+  }
+  const response = asCreate ? await createMcpServer(data) : await updateMcpServer(props.service!.id, data)
+  return unwrapHarnessPayload<MCPService>(response)
+}
+
+async function requestMcpTest(serviceId: string): Promise<MCPTestResult> {
+  if (props.persist !== 'harness') return testMCPService(serviceId)
+  return unwrapHarnessPayload<MCPTestResult>(await testMcpServer(serviceId))
+}
+
 const handleSubmit = async () => {
+  if (props.readonly) return
   const valid = await formRef.value?.validate()
   if (!valid) return
 
   submitting.value = true
   try {
     const data = buildPayload(props.mode === 'add')
+    // 工作台保存后直接关掉抽屉，避免停留在编辑态反复拉目录和审批
+    if (props.persist === 'harness') {
+      await persistMcpService(data, props.mode === 'add')
+      MessagePlugin.success(
+        props.mode === 'add'
+          ? (t('mcpServiceDialog.toasts.created') as string)
+          : (t('mcpServiceDialog.toasts.updated') as string),
+      )
+      emit('success')
+      return
+    }
     if (props.mode === 'add') {
-      const created = await createMCPService(data)
+      const created = await persistMcpService(data, true)
       MessagePlugin.success(t('mcpServiceDialog.toasts.created'))
       // Keep the drawer open and hand back the new service so the parent can
       // flip it into edit mode in place — OAuth authorization and "test
@@ -1045,7 +1211,7 @@ const handleSubmit = async () => {
       // the user do them immediately instead of save → reopen.
       emit('created', created)
     } else {
-      await updateMCPService(props.service!.id, data)
+      await persistMcpService(data, false)
       MessagePlugin.success(t('mcpServiceDialog.toasts.updated'))
       emit('success')
     }
@@ -1070,6 +1236,36 @@ const handleClose = () => {
 // ---- 抽屉内容 — 与 ModelEditorDialog 同款约定 ----
 .form-item {
   margin-bottom: 0;
+}
+
+.stdio-launch {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--td-bg-color-secondarycontainer, #f3f3f3);
+  color: var(--td-text-color-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 20px;
+  word-break: break-all;
+}
+
+.mcp-readonly-fields {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+
+  &.is-locked {
+    pointer-events: none;
+
+    .source-option {
+      color: var(--td-text-color-secondary);
+
+      &.is-active {
+        color: var(--td-brand-color);
+      }
+    }
+  }
 }
 
 // ---- 自定义请求头（与 ModelEditorDialog 同款 key/value 行） ----
@@ -1270,6 +1466,11 @@ const handleClose = () => {
     font-weight: 500;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   }
+
+  &:disabled {
+    opacity: 1;
+    cursor: not-allowed;
+  }
 }
 
 .source-option__icon {
@@ -1363,5 +1564,10 @@ const handleClose = () => {
 .mcp-drawer--http-streamable .setting-drawer__header-icon {
   background: rgba(0, 82, 217, 0.1);
   color: #0052D9;
+}
+
+.mcp-drawer--stdio .setting-drawer__header-icon {
+  background: rgba(87, 96, 106, 0.12);
+  color: #57606a;
 }
 </style>

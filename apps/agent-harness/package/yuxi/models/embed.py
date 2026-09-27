@@ -43,57 +43,9 @@ class BaseEmbeddingModel(ABC):
     def encode(self, message: list[str] | str) -> list[list[float]]:
         raise NotImplementedError("Subclasses must implement this method")
 
-    def encode_queries(self, queries: list[str] | str) -> list[list[float]]:
-        return self.encode(queries)
-
     @abstractmethod
     async def aencode(self, message: list[str] | str) -> list[list[float]]:
         raise NotImplementedError("Subclasses must implement this method")
-
-    async def aencode_queries(self, queries: list[str] | str) -> list[list[float]]:
-        return await self.aencode(queries)
-
-    def batch_encode(self, messages: list[str], batch_size: int | None = None) -> list[list[float]]:
-        batch_size = batch_size or self.batch_size
-        data = []
-        task_id = None
-        if len(messages) > batch_size:
-            task_id = hashstr(messages)
-            self.embed_state[task_id] = {"status": "in-progress", "total": len(messages), "progress": 0}
-
-        for i in range(0, len(messages), batch_size):
-            group_msg = messages[i : i + batch_size]
-            logger.info(f"Encoding [{i}/{len(messages)}] messages (bsz={batch_size})")
-            response = self.encode(group_msg)
-            data.extend(response)
-            if task_id:
-                self.embed_state[task_id]["progress"] = i + len(group_msg)
-
-        if task_id:
-            self.embed_state[task_id]["status"] = "completed"
-
-        return data
-
-    async def abatch_encode(self, messages: list[str], batch_size: int | None = None) -> list[list[float]]:
-        batch_size = batch_size or self.batch_size
-        data = []
-        task_id = None
-        if len(messages) > batch_size:
-            task_id = hashstr(messages)
-            self.embed_state[task_id] = {"status": "in-progress", "total": len(messages), "progress": 0}
-
-        for i in range(0, len(messages), batch_size):
-            group_msg = messages[i : i + batch_size]
-            logger.info(f"Async encoding [{i}/{len(messages)}] messages (bsz={batch_size})")
-            res = await self.aencode(group_msg)
-            data.extend(res)
-            if task_id:
-                self.embed_state[task_id]["progress"] = i + len(group_msg)
-
-        if task_id:
-            self.embed_state[task_id]["status"] = "completed"
-
-        return data
 
     async def test_connection(self) -> tuple[bool, str]:
         try:
@@ -268,15 +220,3 @@ def select_embedding_model(model_id: str):
     return embedder
 
 
-async def test_embedding_model_status_by_spec(spec: str) -> dict:
-    try:
-        model = select_embedding_model(spec)
-        success, message = await model.test_connection()
-        return {
-            "spec": spec,
-            "status": "available" if success else "unavailable",
-            "message": "连接正常" if success else message,
-        }
-    except Exception as e:
-        logger.warning(f"测试 Embedding 模型状态失败 {spec}: {e}")
-        return {"spec": spec, "status": "error", "message": str(e)}

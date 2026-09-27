@@ -274,20 +274,6 @@ def test_dump_config_hides_save_dir(tmp_path):
     assert "save_dir" not in dumped["_config_items"]
 
 
-def test_resolve_chat_model_spec_does_not_fallback_to_yuxi_default(tmp_path, monkeypatch):
-    from yuxi.agents import models
-
-    payload = {"default_model": "test-provider:resolved-chat"}
-    _patch_runtime_redis(monkeypatch, _FakeRedis(raw=json.dumps(payload)))
-    cfg = Config(save_dir=str(tmp_path))
-    cfg.default_model = "test-provider:old-chat"
-    cfg.refresh()
-    monkeypatch.setattr(models, "sys_config", cfg)
-
-    with pytest.raises(ValueError, match="model spec 不能为空"):
-        models.resolve_chat_model_spec(None)
-
-
 def test_default_save_dir_uses_env(monkeypatch: pytest.MonkeyPatch, tmp_path):
     monkeypatch.setenv("YUXI_SAVE_DIR", str(tmp_path))
     assert _default_save_dir() == str(tmp_path)

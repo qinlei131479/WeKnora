@@ -35,10 +35,6 @@ class AgentManager(metaclass=SingletonMeta):
     def get_agents(self):
         return list(self._instances.values())
 
-    async def reload_all(self):
-        for agent_id in self._classes.keys():
-            self.get_agent(agent_id, reload=True)
-
     async def get_agents_info(self, include_configurable_items: bool = True):
         agents = self.get_agents()
         return await asyncio.gather(

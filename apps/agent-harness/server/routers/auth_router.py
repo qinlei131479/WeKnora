@@ -1,18 +1,15 @@
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
-from server.utils.auth_middleware import get_db, get_required_user
-from yuxi.tenancy.context import get_tenant_principal
+from server.utils.auth_middleware import get_db
 from yuxi.services.operation_log_service import log_operation
 from yuxi.services.weknora_identity_service import (
     fetch_membership,
-    list_access_options,
     map_projected_role,
     resolve_login_tenant_id,
 )
@@ -43,28 +40,6 @@ class Token(BaseModel):
 class LoginBody(BaseModel):
     email: str = Field(min_length=1)
     password: str = Field(min_length=1)
-
-
-class UserResponse(BaseModel):
-    id: str
-    username: str
-    uid: str
-    email: str | None = None
-    phone_number: str | None = None
-    avatar: str | None = None
-    role: str
-    department_id: int | None = None
-    department_name: str | None = None
-    created_at: str | None = None
-    last_login: str | None = None
-
-
-class UserAccessOption(BaseModel):
-    uid: str
-    username: str
-    role: str
-    department_id: int | None = None
-    department_name: str | None = None
 
 
 def _user_token_payload(user: User, access_token: str, refresh_token: str | None = None) -> dict:
@@ -144,33 +119,6 @@ async def _login_with_email(db: AsyncSession, email: str, password: str) -> dict
     return _user_token_payload(user, access, refresh)
 
 
-@auth.post("/token", response_model=Token)
-async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: AsyncSession = Depends(get_db),
-):
-    return await _login_with_email(db, form_data.username, form_data.password)
-
-
 @auth.post("/login", response_model=Token)
 async def login_with_json(body: LoginBody, db: AsyncSession = Depends(get_db)):
     return await _login_with_email(db, str(body.email), body.password)
-
-
-@auth.get("/me", response_model=UserResponse)
-async def read_users_me(current_user: User = Depends(get_required_user)):
-    data = current_user.to_dict()
-    data["department_name"] = None
-    return data
-
-
-@auth.get("/users/access-options", response_model=list[UserAccessOption])
-async def read_user_access_options(
-    current_user: User = Depends(get_required_user),
-    db: AsyncSession = Depends(get_db),
-):
-    principal = get_tenant_principal()
-    tenant_id = principal.tenant_id if principal is not None else current_user.tenant_id
-    if not tenant_id:
-        return []
-    return await list_access_options(db, int(tenant_id))

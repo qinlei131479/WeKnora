@@ -9,7 +9,6 @@ import pytest
 import yuxi.services.agent_run_service as agent_run_service
 from yuxi.services.input_message_service import (
     build_chat_input_message,
-    build_chat_input_message_from_openai_content,
     restore_chat_input_message,
 )
 
@@ -25,24 +24,21 @@ def _sse_data(chunk: str) -> dict:
     raise AssertionError(f"SSE chunk has no data line: {chunk}")
 
 
-def test_openai_content_parts_build_and_restore_multimodal_message():
-    input_message = build_chat_input_message_from_openai_content(
-        [
+def test_restore_multimodal_message_keeps_image_content_parts():
+    raw_message = {
+        "role": "user",
+        "content": [
             {"type": "text", "text": "看图"},
             {"type": "image_url", "image_url": {"url": "https://example.test/image.png"}},
-        ]
-    )
-
-    assert input_message.content == "看图"
-    assert input_message.message_type == "multimodal_image"
-    assert input_message.image_content is None
-    raw_message = input_message.raw_message()
-    assert raw_message["content"][1]["image_url"]["url"] == "https://example.test/image.png"
-
+        ],
+    }
     restored = restore_chat_input_message(
-        content=input_message.content, image_content=None, metadata={"raw_message": raw_message}
+        content="看图", image_content=None, metadata={"raw_message": raw_message}
     )
+
     assert restored.message_type == "multimodal_image"
+    assert restored.image_content is None
+    assert restored.require_langchain_message().content == raw_message["content"]
     assert restored.require_langchain_message().content == raw_message["content"]
 
 
@@ -1328,17 +1324,22 @@ async def test_cancel_agent_run_view_cascades_children(monkeypatch: pytest.Monke
 
 
 def test_resolve_agent_run_model_spec_rejects_unknown_explicit_model(monkeypatch: pytest.MonkeyPatch):
-    monkeypatch.setattr(agent_run_service.model_cache, "get_model_info", lambda spec: None)
+    def fake_resolve_weknora_model(spec, model_type):
+        raise ValueError(f"找不到聊天模型 '{spec}'")
+
+    monkeypatch.setattr("yuxi.models.weknora_proxy.resolve_weknora_model", fake_resolve_weknora_model)
     with pytest.raises(agent_run_service.HTTPException) as exc:
         agent_run_service.resolve_agent_run_model_spec("nope", SimpleNamespace(config_json={}), _FakeBackend())
     assert exc.value.status_code == 422
 
 
 def test_resolve_agent_run_model_spec_rejects_non_chat_explicit_model(monkeypatch: pytest.MonkeyPatch):
+    def fake_resolve_weknora_model(spec, model_type):
+        raise ValueError(f"找不到聊天模型 '{spec}'")
+
     monkeypatch.setattr(
-        agent_run_service.model_cache,
-        "get_model_info",
-        lambda spec: SimpleNamespace(model_type="embedding"),
+        "yuxi.models.weknora_proxy.resolve_weknora_model",
+        fake_resolve_weknora_model,
     )
     with pytest.raises(agent_run_service.HTTPException) as exc:
         agent_run_service.resolve_agent_run_model_spec("embed-1", SimpleNamespace(config_json={}), _FakeBackend())
@@ -1348,11 +1349,12 @@ def test_resolve_agent_run_model_spec_rejects_non_chat_explicit_model(monkeypatc
 def test_resolve_agent_run_model_spec_strips_explicit_chat_model(monkeypatch: pytest.MonkeyPatch):
     seen = []
 
-    def fake_get_model_info(spec):
+    def fake_resolve_weknora_model(spec, model_type):
         seen.append(spec)
-        return SimpleNamespace(model_type="chat")
+        assert model_type == "chat"
+        return {"id": spec}
 
-    monkeypatch.setattr(agent_run_service.model_cache, "get_model_info", fake_get_model_info)
+    monkeypatch.setattr("yuxi.models.weknora_proxy.resolve_weknora_model", fake_resolve_weknora_model)
 
     assert (
         agent_run_service.resolve_agent_run_model_spec(
@@ -1483,9 +1485,8 @@ def _patch_agent_run_creation(
 @pytest.mark.asyncio
 async def test_create_chat_run_persists_validated_model_spec(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
-        agent_run_service.model_cache,
-        "get_model_info",
-        lambda spec: SimpleNamespace(model_type="chat"),
+        "yuxi.models.weknora_proxy.resolve_weknora_model",
+        lambda spec, model_type: {"id": spec, "type": "KnowledgeQA"},
     )
     db = _patch_agent_run_creation(monkeypatch)
 

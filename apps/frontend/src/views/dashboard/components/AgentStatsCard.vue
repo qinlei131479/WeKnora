@@ -32,8 +32,8 @@
         <template #agent_id="{ row }">
           <span class="agent-name" :title="resolveAgentName(row.agent_id)">{{ resolveAgentName(row.agent_id) }}</span>
         </template>
-        <template #satisfaction_rate="{ row }">
-          <span :style="{ color: satisfactionColor(row.satisfaction_rate) }">{{ row.satisfaction_rate }}%</span>
+        <template #score="{ row }">
+          <span>{{ Number(row.score || 0).toFixed(2) }}</span>
         </template>
       </t-table>
     </t-loading>
@@ -60,7 +60,7 @@ let conversationToolChart: echarts.ECharts | null = null
 const performerColumns = computed(() => [
   { colKey: 'rank', title: t('dashboard.agents.rank'), width: 80, align: 'center' },
   { colKey: 'agent_id', title: t('dashboard.agents.agent'), width: 160 },
-  { colKey: 'satisfaction_rate', title: t('dashboard.agents.satisfaction'), align: 'center' },
+  { colKey: 'score', title: t('dashboard.agents.score'), align: 'center' },
   { colKey: 'conversation_count', title: t('dashboard.agents.conversationCount'), align: 'center' },
 ])
 
@@ -77,11 +77,6 @@ const totalToolUsage = computed(() =>
 const topPerformers = computed(() => props.agentStats?.top_performing_agents || [])
 const agentNames = computed(() => props.agentStats?.agent_names || {})
 const resolveAgentName = (agentId: string) => agentNames.value[agentId] || agentId
-const satisfactionColor = (rate: number) => {
-  if (rate >= 80) return 'var(--color-success-500)'
-  if (rate >= 60) return 'var(--color-warning-500)'
-  return 'var(--color-error-500)'
-}
 
 const initConversationToolChart = () => {
   if (!conversationToolChartRef.value) return

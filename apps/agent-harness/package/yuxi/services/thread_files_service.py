@@ -141,45 +141,6 @@ def _list_files_recursive(thread_id: str, uid: str, actual_path: Path, virtual_p
     return {"path": virtual_path, "files": entries}
 
 
-async def read_thread_file_content_view(
-    *,
-    thread_id: str,
-    current_uid: str,
-    db,
-    path: str,
-    offset: int = 0,
-    limit: int = 2000,
-) -> dict:
-    conv_repo = ConversationRepository(db)
-    conversation = await require_user_conversation(conv_repo, thread_id, str(current_uid))
-    uid = str(conversation.uid)
-
-    try:
-        actual_path = resolve_virtual_path(thread_id, path, uid=uid)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    if not actual_path.exists():
-        raise HTTPException(status_code=404, detail="file not found")
-    if not actual_path.is_file():
-        raise HTTPException(status_code=400, detail="path must be a file")
-
-    text = await asyncio.to_thread(actual_path.read_text, encoding="utf-8", errors="replace")
-    lines = text.splitlines()
-    start = max(0, int(offset))
-    count = min(max(1, int(limit)), 5000)
-    selected = lines[start : start + count]
-
-    return {
-        "path": path,
-        "content": selected,
-        "offset": start,
-        "limit": count,
-        "total_lines": len(lines),
-        "artifact_url": f"/api/chat/thread/{thread_id}/artifacts/{path.lstrip('/')}",
-    }
-
-
 async def resolve_thread_artifact_view(
     *,
     thread_id: str,

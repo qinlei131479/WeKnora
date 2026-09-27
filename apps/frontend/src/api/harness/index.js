@@ -30,9 +30,7 @@ export {
 /**
  * API模块说明:
  *
- * 1. system_api.js: 系统管理API
- *    - 健康检查、配置管理、信息管理、OCR服务
- *    - 权限要求: 部分公开，部分需要管理员权限
+ * 1. system_api.js: 读取 WeKnora 模型列表
  *
  * 2. 知识库 API 已统一改用原生 WeKnora 接口（@/api/knowledge-base）
  *    - 不再保留 harness /harness-api/api/knowledge 接口

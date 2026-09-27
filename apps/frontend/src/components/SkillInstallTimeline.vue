@@ -58,6 +58,7 @@ import { fetchEventSource } from '@microsoft/fetch-event-source'
 import { useChatStreamHandler } from '@/composables/useChatStreamHandler'
 import { getMessageList } from '@/api/chat'
 import { configSkillTranscriptUrl, getConfigSkillGuidance, steerConfigSkill, reinstallConfigSkill, type SkillInstallGuidanceState } from '@/api/system'
+import { getHarnessConfigSkillGuidance, getHarnessConfigSkillMessages, harnessSkillTranscriptUrl, reinstallHarnessConfigSkill } from '@/api/chat-work/skill'
 import { getApiBaseUrl } from '@/utils/api-base'
 import { generateRandomString } from '@/utils/index'
 import { makeSteerClientId } from '@/utils/steerId'
@@ -65,7 +66,7 @@ import SandboxCommandProgress from './SandboxCommandProgress.vue'
 import AgentStreamDisplay from '@/views/chat/components/AgentStreamDisplay.vue'
 import i18n from '@/i18n'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   configId: string
   skillId: string
   // The durable rows behind the run, used when the event log has aged out.
@@ -77,7 +78,10 @@ const props = defineProps<{
   live?: boolean
   compact?: boolean
   canRetry?: boolean
-}>()
+  persist?: 'app-core' | 'harness'
+}>(), {
+  persist: 'app-core',
+})
 
 const emit = defineEmits<{ restarted: [] }>()
 const guidance = ref<SkillInstallGuidanceState>({ accepting: false, messages: [] })
@@ -91,7 +95,9 @@ let pendingSend: { messageId: string; content: string; id: string } | undefined
 
 async function refreshGuidance(epoch: number) {
   try {
-    const res = await getConfigSkillGuidance(props.configId, props.skillId)
+    const res: any = props.persist === 'harness'
+      ? await getHarnessConfigSkillGuidance(props.configId, props.skillId)
+      : await getConfigSkillGuidance(props.configId, props.skillId)
     if (epoch !== guidanceEpoch) return
     guidance.value = res.data
   } catch {
@@ -114,9 +120,13 @@ async function sendGuidance() {
       if (!pendingSend || pendingSend.messageId !== target.messageId || pendingSend.content !== content) {
         pendingSend = { messageId: target.messageId, content, id: makeSteerClientId() }
       }
-      await steerConfigSkill(target.configId, target.skillId, {
-        expected_message_id: target.messageId, steer_id: pendingSend.id, content,
-      })
+      if (props.persist === 'harness') {
+        await reinstallHarnessConfigSkill(target.configId, target.skillId)
+      } else {
+        await steerConfigSkill(target.configId, target.skillId, {
+          expected_message_id: target.messageId, steer_id: pendingSend.id, content,
+        })
+      }
       if (epoch !== guidanceEpoch) return
       // A failed refresh after a successful POST must not turn Retry into a duplicate send.
       if (!guidance.value.messages.some(item => item.id === pendingSend!.id)) {
@@ -124,7 +134,8 @@ async function sendGuidance() {
       }
       pendingSend = undefined
     } else {
-      await reinstallConfigSkill(target.configId, target.skillId, content)
+      if (props.persist === 'harness') await reinstallHarnessConfigSkill(target.configId, target.skillId)
+      else await reinstallConfigSkill(target.configId, target.skillId, content)
       if (epoch !== guidanceEpoch) return
       emit('restarted')
     }
@@ -144,7 +155,9 @@ watch(
     const epoch = ++guidanceEpoch
     clearTimeout(guidanceTimer)
     guidance.value = { accepting: false, messages: [] }
-    if (props.configId && props.skillId) void refreshGuidance(epoch)
+    if (props.configId && props.skillId && (props.live || props.persist !== 'harness')) {
+      void refreshGuidance(epoch)
+    }
   },
   { immediate: true },
 )
@@ -188,11 +201,13 @@ function applyPrompt(content: string) {
 }
 
 async function loadPersisted(run: number) {
-  const res: any = await getMessageList({
-    session_id: props.sessionId,
-    limit: 100,
-    created_at: '',
-  })
+  const res: any = props.persist === 'harness'
+    ? await getHarnessConfigSkillMessages(props.configId, props.skillId)
+    : await getMessageList({
+      session_id: props.sessionId,
+      limit: 100,
+      created_at: '',
+    })
   if (run !== openRun) return
   handleMsgList(res?.data || [])
 }
@@ -210,7 +225,9 @@ function stop() {
 // reports whether it ever produced anything: a 404 means the event log has
 // expired and the durable history is the only remaining source.
 async function follow(run: number): Promise<boolean> {
-  const url = `${getApiBaseUrl()}${configSkillTranscriptUrl(props.configId, props.skillId)}`
+  const url = props.persist === 'harness'
+    ? `${getApiBaseUrl()}${harnessSkillTranscriptUrl(props.configId, props.skillId)}`
+    : `${getApiBaseUrl()}${configSkillTranscriptUrl(props.configId, props.skillId)}`
   const token = localStorage.getItem('weknora_token')
   const tenantId = localStorage.getItem('weknora_selected_tenant_id')
   const ac = new AbortController()

@@ -1,4 +1,4 @@
-"""从 WeKnora 表解析 uid → tenant_id。不走 prefix_sql。"""
+"""从 WeKnora 表解析 uid → tenant_id。"""
 
 from __future__ import annotations
 
@@ -18,23 +18,6 @@ def looks_like_uuid(value: str | None) -> bool:
         return False
     return True
 
-
-async def resolve_uid_tenant_id(db: AsyncSession, uid: str | None) -> int | None:
-    """legacy JWT / API Key：uid 为 WeKnora UUID 时取 users.tenant_id。"""
-    raw = str(uid or "").strip()
-    if not looks_like_uuid(raw):
-        return None
-    result = await db.execute(
-        text(
-            "SELECT tenant_id FROM users "
-            "WHERE id = :uid AND deleted_at IS NULL AND tenant_id IS NOT NULL"
-        ),
-        {"uid": raw},
-    )
-    value = result.scalar_one_or_none()
-    if value is None:
-        return None
-    return int(value)
 
 
 class TenantHeaderError(Exception):

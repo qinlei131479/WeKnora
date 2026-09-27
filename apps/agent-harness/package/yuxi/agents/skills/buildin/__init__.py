@@ -13,6 +13,7 @@ class BuiltinSkillSpec:
     tool_dependencies: tuple[str, ...] = ()
     mcp_dependencies: tuple[str, ...] = ()
     skill_dependencies: tuple[str, ...] = ()
+    usage_source: str = "work"
 
 
 _SKILLS_ROOT = Path(__file__).resolve().parent
@@ -56,32 +57,36 @@ BUILTIN_SKILLS: list[BuiltinSkillSpec] = [
         source_dir=_SKILLS_ROOT / "mysql-reporter",
         version="2026.06.05",
         mcp_dependencies=("mcp-server-chart",),
+        usage_source="common",
     ),
     BuiltinSkillSpec(
         slug="quote",
         source_dir=_SKILLS_ROOT / "quote",
         version="2026.09.24",
-        tool_dependencies=("ask_user_question", "present_artifacts"),
-        skill_dependencies=("knowledge-base", "xlsx"),
+        usage_source="common",
     ),
     BuiltinSkillSpec(
         slug="pdf",
         source_dir=_SKILLS_ROOT / "pdf",
         version="2026.09.16",
+        usage_source="common",
     ),
     BuiltinSkillSpec(
         slug="docx",
         source_dir=_SKILLS_ROOT / "docx",
         version="2026.09.16",
+        usage_source="common",
     ),
     BuiltinSkillSpec(
         slug="pptx",
         source_dir=_SKILLS_ROOT / "pptx",
         version="2026.09.16",
+        usage_source="common",
     ),
     BuiltinSkillSpec(
         slug="xlsx",
         source_dir=_SKILLS_ROOT / "xlsx",
         version="2026.09.16",
+        usage_source="common",
     ),
 ]

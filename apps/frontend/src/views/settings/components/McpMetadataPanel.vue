@@ -68,7 +68,13 @@
         <p v-else-if="!busy && !snapshot" class="form-desc">{{ t('mcpMetadata.notSynced') }}</p>
         <template v-if="snapshot">
           <p class="form-desc">{{ t('mcpMetadata.policyHint') }}</p>
-          <McpToolsList :tools="snapshot.tools" :service-id="snapshot.stale ? undefined : serviceId" @busy="onPolicyBusy" />
+          <McpToolsList
+            :tools="snapshot.tools"
+            :service-id="snapshot.stale ? undefined : serviceId"
+            :persist="persist"
+            :readonly="readonly"
+            @busy="onPolicyBusy"
+          />
         </template>
       </div>
     </t-loading>
@@ -79,9 +85,15 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getMCPMetadata, refreshMCPMetadata, type MCPMetadata } from '@/api/mcp-service'
+import { getMcpMetadata, refreshMcpMetadata } from '@/api/chat-work/mcp'
 import McpToolsList from './McpToolsList.vue'
 
-const props = defineProps<{ serviceId: string; disabled?: boolean }>()
+const props = defineProps<{
+  serviceId: string
+  disabled?: boolean
+  persist?: 'app-core' | 'harness'
+  readonly?: boolean
+}>()
 const emit = defineEmits<{ (e: 'busy', value: boolean): void; (e: 'synced', value: boolean): void }>()
 const { t } = useI18n()
 const snapshot = ref<MCPMetadata | null>(null)
@@ -114,13 +126,31 @@ function formatTime(value: string) {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString()
 }
 
+function unwrapMetadata(response: unknown): MCPMetadata | null {
+  if (!response || typeof response !== 'object') return null
+  const data = (response as { data?: MCPMetadata | null }).data
+  return data ?? null
+}
+
+async function loadMetadata(id: string) {
+  if (props.persist !== 'harness') return getMCPMetadata(id)
+  return unwrapMetadata(await getMcpMetadata(id))
+}
+
+async function reloadMetadata(id: string) {
+  if (props.persist !== 'harness') return refreshMCPMetadata(id)
+  const saved = unwrapMetadata(await refreshMcpMetadata(id))
+  if (!saved) throw new Error(t('mcpMetadata.failed'))
+  return saved
+}
+
 async function refreshFrom(current: number) {
   if (refreshing.value || props.disabled || policyBusy.value) return
   refreshing.value = true
   error.value = ''
   emit('busy', true)
   try {
-    const saved = await refreshMCPMetadata(props.serviceId)
+    const saved = await reloadMetadata(props.serviceId)
     if (current === generation) setSnapshot(saved)
   } catch (e) {
     if (current === generation) error.value = errorText(e)
@@ -141,7 +171,7 @@ watch(() => props.serviceId, async id => {
   if (!id) return
   loading.value = true
   try {
-    const saved = await getMCPMetadata(id)
+    const saved = await loadMetadata(id)
     if (current !== generation) return
     if (!saved && !props.disabled) {
       loading.value = false

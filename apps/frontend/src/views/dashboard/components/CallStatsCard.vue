@@ -68,7 +68,13 @@ const dataTypeOptions = computed(() => [
 const isTokenView = computed(() => callDataType.value === 'tokens')
 
 const formatTokenValue = (value: number) => {
-  if (value === null || value === undefined || Number.isNaN(value)) return '0M'
+  if (value === null || value === undefined || Number.isNaN(value)) return '0'
+  const abs = Math.abs(value)
+  if (abs < 1000) return `${Math.round(value)}`
+  if (abs < 1_000_000) {
+    const kilo = value / 1000
+    return `${Math.abs(kilo) >= 10 ? kilo.toFixed(0) : kilo.toFixed(1)}K`
+  }
   const millionValue = value / 1_000_000
   const absMillion = Math.abs(millionValue)
   const decimalPlaces = absMillion >= 100 ? 0 : absMillion >= 10 ? 1 : 2
@@ -139,7 +145,12 @@ const renderCallStatsChart = () => {
     if (callTimeRange.value === '14weeks') return t('dashboard.calls.weekLabel', { week: date.split('-')[1] })
     return date.split('-').slice(1).join('-')
   })
-  const resolveCategoryLabel = (cat: string) => (cat === 'None' ? t('dashboard.calls.unknownModel') : agentNames[cat] || cat)
+  const resolveCategoryLabel = (cat: string) => {
+    if (cat === 'input' || cat === 'input_tokens') return t('dashboard.calls.input')
+    if (cat === 'output' || cat === 'output_tokens') return t('dashboard.calls.output')
+    if (cat === 'None' || cat === 'unknown' || cat === 'unknown_model') return t('dashboard.calls.unknownModel')
+    return agentNames[cat] || cat
+  }
   const series = categories.map((category: string, index: number) => ({
     name: resolveCategoryLabel(category),
     type: 'bar',
@@ -178,6 +189,14 @@ const renderCallStatsChart = () => {
         if (!visibleParams.length) return ''
         let total = 0
         let result = `${visibleParams[0].name}<br/>`
+        const bucket = data[visibleParams[0].dataIndex]
+        const modelStats = bucket?.models && typeof bucket.models === 'object' ? bucket.models : null
+        if (isTokenView.value && modelStats) {
+          Object.entries(modelStats as Record<string, { input?: number; output?: number }>).forEach(([modelName, item]) => {
+            result += `${truncateLegend(modelName)} ${t('dashboard.calls.input')}: ${formatValueForDisplay(Number(item?.input || 0))}<br/>`
+            result += `${truncateLegend(modelName)} ${t('dashboard.calls.output')}: ${formatValueForDisplay(Number(item?.output || 0))}<br/>`
+          })
+        }
         visibleParams.forEach((param) => {
           total += param.value
           const itemStyle = param.seriesName === hoveredSeriesName ? 'font-weight:700' : ''

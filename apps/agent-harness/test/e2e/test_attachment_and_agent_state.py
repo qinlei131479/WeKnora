@@ -35,14 +35,32 @@ async def _upload_attachment(
     file_path: Path,
 ) -> dict:
     with file_path.open("rb") as handle:
-        response = await client.post(
-            f"/api/chat/thread/{thread_id}/attachments",
+        tmp_response = await client.post(
+            "/api/chat/attachments/tmp",
             files={"file": (file_path.name, handle)},
             headers=headers,
         )
+    assert tmp_response.status_code == 200, tmp_response.text
+    tmp_payload = dict(tmp_response.json())
 
+    response = await client.post(
+        f"/api/chat/thread/{thread_id}/attachments/confirm",
+        json={
+            "attachments": [
+                {
+                    "file_name": tmp_payload["file_name"],
+                    "file_type": tmp_payload["file_type"],
+                    "bucket_name": tmp_payload["bucket_name"],
+                    "object_name": tmp_payload["object_name"],
+                }
+            ]
+        },
+        headers=headers,
+    )
     assert response.status_code == 200, response.text
-    return dict(response.json())
+    confirmed = response.json().get("attachments") or []
+    assert confirmed, response.text
+    return dict(confirmed[0])
 
 
 async def _list_attachments(client: httpx.AsyncClient, headers: dict[str, str], *, thread_id: str) -> list[dict]:

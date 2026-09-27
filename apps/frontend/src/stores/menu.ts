@@ -79,6 +79,10 @@ export const useMenuStore = defineStore('menuStore', () => {
       if (item.path === 'organizations' && !authStore.hasRole('admin')) {
         return false
       }
+      // 数据总览只对当前空间的所有者、管理员开放。系统管理员与可访问全部空间的账号同样可见。
+      if (item.path === 'dashboard' && !authStore.hasRole('admin') && !authStore.isSystemAdmin) {
+        return false
+      }
       return true
     })
   })

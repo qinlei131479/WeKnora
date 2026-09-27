@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import uuid
 
 import pytest
@@ -52,27 +51,3 @@ async def test_viewer_download_blocks_workspace_symlink_escape(test_client, stan
     )
 
     assert response.status_code == 403, response.text
-
-
-async def test_viewer_upload_blocks_workspace_symlink_escape(test_client, standard_user, tmp_path):
-    headers = standard_user["headers"]
-    uid = str(standard_user["user"]["uid"])
-    thread_id = await _create_thread_for_user(test_client, headers)
-
-    ensure_thread_dirs(thread_id, uid)
-    workspace_dir = sandbox_workspace_dir(thread_id, uid)
-    outside_dir = tmp_path / "outside-dir"
-    outside_dir.mkdir()
-    symlink_path = workspace_dir / "escape-dir"
-    symlink_path.symlink_to(outside_dir)
-    parent_path = "/home/gem/user-data/workspace/escape-dir"
-
-    response = await test_client.post(
-        "/api/viewer/filesystem/upload",
-        data={"thread_id": thread_id, "parent_path": parent_path},
-        files={"files": ("escape.txt", b"outside", "text/plain")},
-        headers=headers,
-    )
-
-    assert response.status_code == 403, response.text
-    assert not (outside_dir / "escape.txt").exists()

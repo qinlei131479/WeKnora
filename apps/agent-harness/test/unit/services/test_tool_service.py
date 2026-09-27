@@ -42,6 +42,8 @@ def test_get_tool_metadata_includes_config_guide(monkeypatch):
             "category": "buildin",
             "tags": ["demo"],
             "config_guide": "请先配置 DEMO_API_KEY",
+            "input_schema": {},
+            "version": None,
         }
     ]
 

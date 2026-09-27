@@ -56,14 +56,33 @@ async def test_thread_artifact_uses_image_signature_for_content_type(test_client
         image.save(buffer, format="PNG")
         image_bytes = buffer.getvalue()
 
-    upload_response = await test_client.post(
-        f"/api/chat/thread/{thread_id}/attachments",
+    tmp_response = await test_client.post(
+        "/api/chat/attachments/tmp",
         headers=admin_headers,
         files={"file": ("mislabeled.jpg", image_bytes, "image/jpeg")},
     )
+    assert tmp_response.status_code == 200, tmp_response.text
+    tmp_payload = tmp_response.json()
 
-    assert upload_response.status_code == 200, upload_response.text
-    attachment = upload_response.json()
+    confirm_response = await test_client.post(
+        f"/api/chat/thread/{thread_id}/attachments/confirm",
+        headers=admin_headers,
+        json={
+            "attachments": [
+                {
+                    "file_name": tmp_payload["file_name"],
+                    "file_type": tmp_payload["file_type"],
+                    "bucket_name": tmp_payload["bucket_name"],
+                    "object_name": tmp_payload["object_name"],
+                }
+            ]
+        },
+    )
+
+    assert confirm_response.status_code == 200, confirm_response.text
+    confirmed = confirm_response.json().get("attachments") or []
+    assert confirmed, confirm_response.text
+    attachment = confirmed[0]
 
     artifact_response = await test_client.get(attachment["original_artifact_url"], headers=admin_headers)
 
@@ -178,34 +197,6 @@ async def test_agent_detail_filters_configurable_items_by_role(
     assert "summary_prompt" in admin_items
     assert "summary_tool_result_token_limit" in admin_items
     assert "max_execution_steps" in admin_items
-
-
-async def test_setting_default_agent_requires_admin(test_client, admin_headers, standard_user):
-    agents_response = await test_client.get("/api/agent", headers=admin_headers)
-    assert agents_response.status_code == 200, agents_response.text
-    agents = agents_response.json().get("agents", [])
-
-    if not agents:
-        pytest.skip("No agents are registered in the system.")
-
-    candidate_agent_id = agents[0].get("agent_id") or agents[0].get("slug")
-    if not candidate_agent_id:
-        pytest.skip("Agent payload missing slug field.")
-
-    forbidden_response = await test_client.post(
-        f"/api/agent/{candidate_agent_id}/set_default",
-        headers=standard_user["headers"],
-    )
-    assert forbidden_response.status_code == 403
-
-    update_response = await test_client.post(
-        f"/api/agent/{candidate_agent_id}/set_default",
-        headers=admin_headers,
-    )
-    assert update_response.status_code == 200, update_response.text
-    agent = update_response.json()["agent"]
-    assert agent["agent_id"] == candidate_agent_id
-    assert agent["is_default"] is True
 
 
 async def test_save_thread_artifact_to_workspace_copies_output_file(test_client, standard_user):

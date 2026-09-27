@@ -437,10 +437,6 @@ class AgentRepository:
             return agent if agent.is_subagent else None
         raise ValueError(f"未知智能体入口类型: {kind}")
 
-    async def get_default(self) -> Agent | None:
-        result = await self.db.execute(select(Agent).where(Agent.is_default.is_(True)))
-        return result.scalar_one_or_none()
-
     async def set_default(self, *, agent: Agent, updated_by: str | None = None) -> Agent:
         if agent.is_subagent:
             raise ValueError("子智能体不能设为默认智能体")

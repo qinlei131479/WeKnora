@@ -1,5 +1,5 @@
 -- Migration: 000083_harness_tenant_scope
--- Description: P2 影子 tenant_id、回填映射表、slug 按空间唯一。可空，不改部门表。
+-- Description: P2 影子 tenant_id、slug 按空间唯一。可空，不改部门表。
 -- 本机 schema_migrations.version 可能已是 83（临时迁移删除后残留）。
 -- 该情况下 golang-migrate 不会再执行本文件，由 harness ensure_business_schema 幂等补齐。
 
@@ -35,18 +35,6 @@ CREATE INDEX IF NOT EXISTS ix_h_user_config_tenant_id ON h_user_config (tenant_i
 
 ALTER TABLE IF EXISTS h_knowledge_bases ADD COLUMN IF NOT EXISTS tenant_id BIGINT;
 CREATE INDEX IF NOT EXISTS ix_h_knowledge_bases_tenant_id ON h_knowledge_bases (tenant_id);
-
-CREATE TABLE IF NOT EXISTS h_tenant_backfill_map (
-	id SERIAL PRIMARY KEY,
-	table_name VARCHAR(64) NOT NULL,
-	row_pk VARCHAR(64) NOT NULL,
-	tenant_id BIGINT,
-	source VARCHAR(64) NOT NULL,
-	batch_id VARCHAR(64),
-	created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS ix_h_tenant_backfill_map_table_name ON h_tenant_backfill_map (table_name);
 
 CREATE INDEX IF NOT EXISTS ix_agent_run_requests_queue_tenant
 	ON h_agent_run_requests (tenant_id, uid, agent_slug, conversation_thread_id, status, created_at, id);

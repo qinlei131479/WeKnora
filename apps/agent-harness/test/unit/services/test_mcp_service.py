@@ -3,39 +3,11 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-import pytest_asyncio
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from yuxi.agents.mcp import service as mcp_service
-from yuxi.storage.postgres import manager as postgres_manager
-from yuxi.storage.postgres.models_business import MCPServer
+from yuxi.tenancy.context import TenantPrincipal, bind_tenant_principal
 
 
-class _AsyncSessionContext:
-    def __init__(self, db):
-        self.db = db
-
-    async def __aenter__(self):
-        return self.db
-
-    async def __aexit__(self, *_args):
-        return False
-
-
-@pytest_asyncio.fixture
-async def mcp_session():
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    async with engine.begin() as conn:
-        await conn.run_sync(MCPServer.__table__.create)
-
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-    async with session_factory() as session:
-        yield session
-
-    await engine.dispose()
-
-
-class _FakeClient:
+class _FakeMCPClient:
     def __init__(self, tools):
         self._tools = tools
 
@@ -43,133 +15,145 @@ class _FakeClient:
         return self._tools
 
 
-async def test_ensure_builtin_mcp_servers_removes_retired_system_server(monkeypatch, mcp_session):
-    retired_server = MCPServer(
-        slug="sequentialthinking",
-        name="sequentialthinking",
-        description="old builtin",
-        transport="streamable_http",
-        url="https://remote.mcpservers.org/sequentialthinking/mcp",
-        enabled=1,
-        created_by="system",
-        updated_by="system",
+class _MemoryMCPStore:
+    """测试里用内存表代替 mcp_services / mcp_tool_approvals。"""
+
+    def __init__(self, items=None):
+        self.items = list(items or [])
+        self.created_bodies: list[dict] = []
+        self.updated_bodies: list[dict] = []
+        self.deleted_ids: list[str] = []
+        self.approvals: list[dict] = []
+        self.tool_updates: list[tuple] = []
+
+    async def list_services(self, db):
+        del db
+        return [dict(item) for item in self.items]
+
+    async def create_service(self, db, body):
+        del db
+        from yuxi.utils.datetime_utils import utc_now_naive
+
+        self.created_bodies.append(dict(body))
+        item = {
+            "id": f"mcp-{len(self.items) + 1}",
+            "created_at": utc_now_naive(),
+            "updated_at": utc_now_naive(),
+            **body,
+        }
+        self.items.append(item)
+        return dict(item)
+
+    async def update_service(self, db, service_id, body):
+        del db
+        self.updated_bodies.append({"id": service_id, **body})
+        for index, item in enumerate(self.items):
+            if str(item.get("id")) != str(service_id):
+                continue
+            item.update(body)
+            self.items[index] = dict(item)
+            return dict(item)
+        raise AssertionError(f"MCP 不存在: {service_id}")
+
+    async def delete_service(self, db, service_id):
+        del db
+        self.deleted_ids.append(str(service_id))
+        self.items = [item for item in self.items if str(item.get("id")) != str(service_id)]
+
+    async def list_tool_approvals(self, db, service_id):
+        del db
+        return [dict(row) for row in self.approvals if row.get("service_id") == service_id]
+
+    async def set_tool_enabled(self, db, service_id, tool_name, enabled):
+        del db
+        self.tool_updates.append((service_id, tool_name, enabled))
+        self.approvals = [
+            row
+            for row in self.approvals
+            if not (row.get("service_id") == service_id and row.get("tool_name") == tool_name)
+        ]
+        self.approvals.append({"service_id": service_id, "tool_name": tool_name, "enabled": enabled})
+
+    async def get_oauth_token(self, db, service_id, user_id):
+        del db, service_id, user_id
+        return None
+
+
+@pytest.fixture
+def mcp_session():
+    return None
+
+
+@pytest.fixture(autouse=True)
+def tenant_scope():
+    bind_tenant_principal(TenantPrincipal(uid="admin", tenant_id=10000, role="admin"))
+    yield
+    bind_tenant_principal(None)
+
+
+@pytest.fixture(autouse=True)
+def memory_mcp(monkeypatch: pytest.MonkeyPatch) -> _MemoryMCPStore:
+    store = _MemoryMCPStore()
+    monkeypatch.setattr(mcp_service.mcp_services, "list_services", store.list_services)
+    monkeypatch.setattr(mcp_service.mcp_services, "create_service", store.create_service)
+    monkeypatch.setattr(mcp_service.mcp_services, "update_service", store.update_service)
+    monkeypatch.setattr(mcp_service.mcp_services, "delete_service", store.delete_service)
+    monkeypatch.setattr(mcp_service.mcp_services, "list_tool_approvals", store.list_tool_approvals)
+    monkeypatch.setattr(mcp_service.mcp_services, "set_tool_enabled", store.set_tool_enabled)
+    monkeypatch.setattr(mcp_service.mcp_services, "get_oauth_token", store.get_oauth_token)
+    return store
+
+
+@pytest.fixture
+def appcore(memory_mcp: _MemoryMCPStore) -> _MemoryMCPStore:
+    return memory_mcp
+
+
+async def test_get_mcp_server_uses_service_id_and_builtin_fallback(mcp_session, appcore):
+    appcore.items.append(
+        {
+            "id": "remote-a",
+            "name": "空间 A",
+            "description": "A",
+            "enabled": True,
+            "transport_type": "sse",
+            "url": "https://example.com/a",
+            "headers": {},
+        }
     )
-    mcp_session.add(retired_server)
-    await mcp_session.commit()
 
-    monkeypatch.setattr(
-        postgres_manager.pg_manager,
-        "get_async_session_context",
-        lambda: _AsyncSessionContext(mcp_session),
-    )
+    records = await mcp_service.get_all_mcp_servers(mcp_session)
+    own = await mcp_service.get_mcp_server(mcp_session, "remote-a")
+    builtin = await mcp_service.get_mcp_server(mcp_session, "mcp-server-chart")
 
-    await mcp_service.ensure_builtin_mcp_servers_in_db()
-
-    retired = await mcp_session.scalar(select(MCPServer).where(MCPServer.slug == "sequentialthinking"))
-    chart = await mcp_session.scalar(select(MCPServer).where(MCPServer.slug == "mcp-server-chart"))
-    assert retired is None
-    assert chart is not None
+    assert "remote-a" in {record.slug for record in records}
+    assert "mcp-server-chart" in {record.slug for record in records}
+    assert own is not None and own.runtime is None
+    assert own.slug == "remote-a"
+    assert builtin is not None and mcp_service.is_builtin_mcp_server(builtin)
 
 
-async def test_ensure_builtin_mcp_servers_preserves_user_server_with_retired_slug(monkeypatch, mcp_session):
-    user_server = MCPServer(
-        slug="sequentialthinking",
-        name="用户自定义 MCP",
-        description="user managed",
-        transport="streamable_http",
-        url="https://example.com/mcp",
-        enabled=1,
-        created_by="admin",
-        updated_by="admin",
-    )
-    mcp_session.add(user_server)
-    await mcp_session.commit()
-
-    monkeypatch.setattr(
-        postgres_manager.pg_manager,
-        "get_async_session_context",
-        lambda: _AsyncSessionContext(mcp_session),
-    )
-
-    await mcp_service.ensure_builtin_mcp_servers_in_db()
-
-    server = await mcp_session.scalar(select(MCPServer).where(MCPServer.slug == "sequentialthinking"))
-    assert server is not None
-    assert server.created_by == "admin"
-
-
-async def test_ensure_builtin_mcp_servers_disables_legacy_user_stdio(monkeypatch, mcp_session):
-    legacy_server = MCPServer(
-        slug="legacy-stdio",
-        name="历史 stdio",
-        transport="stdio",
-        command="python3",
-        enabled=1,
-        created_by="system",
-        updated_by="system",
-    )
-    mcp_session.add(legacy_server)
-    await mcp_session.commit()
-
-    monkeypatch.setattr(
-        postgres_manager.pg_manager,
-        "get_async_session_context",
-        lambda: _AsyncSessionContext(mcp_session),
-    )
-
-    await mcp_service.ensure_builtin_mcp_servers_in_db()
-
-    await mcp_session.refresh(legacy_server)
-    assert legacy_server.enabled == 0
-
-
-async def test_runtime_configs_exclude_user_created_stdio_servers(mcp_session):
-    mcp_session.add_all(
+async def test_runtime_configs_exclude_user_created_stdio_servers(mcp_session, appcore):
+    appcore.items.extend(
         [
-            MCPServer(
-                slug="mcp-server-chart",
-                name="内置 stdio",
-                transport="stdio",
-                command="tampered-command",
-                args=["--unsafe"],
-                enabled=1,
-                created_by="system",
-                updated_by="system",
-            ),
-            MCPServer(
-                slug="user-stdio",
-                name="用户 stdio",
-                transport="stdio",
-                command="python3",
-                args=["-c", "print('unsafe')"],
-                enabled=1,
-                created_by="admin",
-                updated_by="admin",
-            ),
-            MCPServer(
-                slug="forged-system-stdio",
-                name="伪造系统 stdio",
-                transport="stdio",
-                command="python3",
-                args=["-c", "print('unsafe')"],
-                enabled=1,
-                created_by="system",
-                updated_by="system",
-            ),
-            MCPServer(
-                slug="remote-http",
-                name="远程 HTTP",
-                transport="streamable_http",
-                url="https://example.com/mcp",
-                command="python3",
-                args=["-c", "print('stale')"],
-                enabled=1,
-                created_by="admin",
-                updated_by="admin",
-            ),
+            {
+                "id": "user-stdio",
+                "name": "用户 stdio",
+                "enabled": True,
+                "transport_type": "stdio",
+                "stdio_config": {"command": "python3", "args": ["-c", "print('unsafe')"]},
+            },
+            {
+                "id": "remote-http",
+                "name": "远程 HTTP",
+                "enabled": True,
+                "transport_type": "http-streamable",
+                "url": "https://example.com/mcp",
+                "stdio_config": {"command": "python3", "args": ["stale"]},
+                "advanced_config": {"timeout": 30},
+            },
         ]
     )
-    await mcp_session.commit()
 
     configs = await mcp_service._load_enabled_mcp_server_configs(db=mcp_session)
     slugs = await mcp_service.get_enabled_mcp_server_slugs(db=mcp_session)
@@ -177,50 +161,50 @@ async def test_runtime_configs_exclude_user_created_stdio_servers(mcp_session):
     assert set(configs) == {"mcp-server-chart", "remote-http"}
     assert set(slugs) == {"mcp-server-chart", "remote-http"}
     assert configs["mcp-server-chart"]["command"] == "npx"
-    assert configs["mcp-server-chart"]["args"] == ["-y", "@antv/mcp-server-chart"]
+    assert configs["remote-http"]["transport"] == "streamable_http"
+    assert configs["remote-http"]["timeout"] == 30
     assert "command" not in configs["remote-http"]
     assert "args" not in configs["remote-http"]
 
 
-async def test_create_mcp_server_rejects_user_created_stdio(mcp_session):
+async def test_create_mcp_server_rejects_stdio(appcore):
     with pytest.raises(ValueError, match="stdio"):
         await mcp_service.create_mcp_server(
-            mcp_session,
-            slug="unsafe-mcp",
+            None,
             name="Unsafe MCP",
             transport="stdio",
-            created_by="admin",
         )
 
-    server = await mcp_session.scalar(select(MCPServer).where(MCPServer.slug == "unsafe-mcp"))
-    assert server is None
+    assert appcore.items == []
 
 
-async def test_create_mcp_server_rejects_builtin_slug(mcp_session):
-    with pytest.raises(ValueError, match="slug"):
-        await mcp_service.create_mcp_server(
-            mcp_session,
-            slug="mcp-server-chart",
-            name="伪造内置 MCP",
-            transport="streamable_http",
-            url="https://example.com/mcp",
-            created_by="admin",
-        )
-
-
-async def test_update_builtin_mcp_server_rejects_connection_changes(mcp_session):
-    server = MCPServer(
-        slug="mcp-server-chart",
-        name="内置 stdio",
-        transport="stdio",
-        command="trusted-command",
-        enabled=1,
-        created_by="system",
-        updated_by="system",
+async def test_create_mcp_server_writes_remote_service(mcp_session, appcore):
+    record = await mcp_service.create_mcp_server(
+        mcp_session,
+        name="Remote MCP",
+        transport="streamable_http",
+        url="https://example.com/mcp",
+        description="remote",
+        headers={"Authorization": "Bearer secret"},
+        timeout=45,
     )
-    mcp_session.add(server)
-    await mcp_session.commit()
 
+    assert appcore.created_bodies == [
+        {
+            "name": "Remote MCP",
+            "description": "remote",
+            "enabled": True,
+            "transport_type": "http-streamable",
+            "url": "https://example.com/mcp",
+            "headers": {"Authorization": "Bearer secret"},
+            "advanced_config": {"timeout": 45},
+        }
+    ]
+    assert record.slug == "mcp-1"
+    assert record.runtime is None
+
+
+async def test_update_mcp_server_rejects_builtin_connection_and_allows_disable(mcp_session, appcore):
     with pytest.raises(PermissionError, match="系统内置"):
         await mcp_service.update_mcp_server(
             mcp_session,
@@ -230,23 +214,28 @@ async def test_update_builtin_mcp_server_rejects_connection_changes(mcp_session)
             updated_by="admin",
         )
 
-    await mcp_session.refresh(server)
-    assert server.transport == "stdio"
-    assert server.command == "trusted-command"
-
-
-async def test_update_legacy_stdio_requires_remote_url(mcp_session):
-    legacy_server = MCPServer(
-        slug="legacy-stdio",
-        name="历史 stdio",
-        transport="stdio",
-        command="python3",
-        enabled=0,
-        created_by="admin",
-        updated_by="admin",
+    appcore.items.append(
+        {
+            "id": "mcp-server-chart",
+            "name": "Mcp Server Chart",
+            "enabled": True,
+            "is_builtin": True,
+            "transport_type": "stdio",
+        }
     )
-    mcp_session.add(legacy_server)
-    await mcp_session.commit()
+    enabled, record = await mcp_service.set_server_enabled(mcp_session, "mcp-server-chart", enabled=False)
+    assert enabled is False
+    assert record.enabled is False
+
+    appcore.items.append(
+        {
+            "id": "legacy-stdio",
+            "name": "历史 stdio",
+            "enabled": False,
+            "transport_type": "stdio",
+            "stdio_config": {"command": "python3", "args": []},
+        }
+    )
 
     with pytest.raises(ValueError, match="url 必填"):
         await mcp_service.update_mcp_server(
@@ -256,9 +245,60 @@ async def test_update_legacy_stdio_requires_remote_url(mcp_session):
             updated_by="admin",
         )
 
-    await mcp_session.refresh(legacy_server)
-    assert legacy_server.transport == "stdio"
-    assert legacy_server.command == "python3"
+    assert appcore.updated_bodies == [{"id": "mcp-server-chart", "enabled": False}]
+
+
+async def test_update_mcp_server_syncs_remote_and_runtime(mcp_session, appcore):
+    appcore.items.append(
+        {
+            "id": "remote-a",
+            "name": "Old",
+            "enabled": True,
+            "transport_type": "sse",
+            "url": "https://old.example.com",
+            "headers": {},
+        }
+    )
+    record = await mcp_service.update_mcp_server(
+        mcp_session,
+        slug="remote-a",
+        name="New",
+        description="updated",
+        transport="streamable_http",
+        url="https://new.example.com",
+        headers={"X-Test": "1"},
+        timeout=20,
+        sse_read_timeout=60,
+        tags=["updated"],
+        icon="U",
+        updated_by="release-bot",
+    )
+
+    assert appcore.updated_bodies == [
+        {
+            "id": "remote-a",
+            "name": "New",
+            "description": "updated",
+            "transport_type": "http-streamable",
+            "url": "https://new.example.com",
+            "headers": {"X-Test": "1"},
+            "advanced_config": {"timeout": 20},
+        }
+    ]
+    assert record.to_dict()["url"] == "https://new.example.com"
+    assert record.runtime is None
+
+
+async def test_toggle_tool_writes_tool_approval(mcp_session, appcore):
+    tool_enabled, _tool_record = await mcp_service.toggle_tool_enabled(
+        mcp_session,
+        "mcp-server-chart",
+        "generate_chart",
+        updated_by="admin",
+    )
+
+    assert tool_enabled is False
+    assert appcore.tool_updates == [("mcp-server-chart", "generate_chart", False)]
 
 
 async def test_get_enabled_mcp_tools_loads_latest_config_from_db(monkeypatch):
@@ -313,7 +353,7 @@ async def test_get_mcp_tools_rebuilds_cache_when_config_hash_changes(monkeypatch
         config = server_configs["demo"]
         build_calls.append(config["command"])
         tool = SimpleNamespace(name=f"tool_for_{config['command']}", metadata={})
-        return _FakeClient([tool])
+        return _FakeMCPClient([tool])
 
     monkeypatch.setattr(mcp_service, "get_enabled_mcp_server_config", fake_get_enabled_mcp_server_config)
     monkeypatch.setattr(mcp_service, "get_mcp_client", fake_get_mcp_client)
@@ -366,72 +406,20 @@ async def test_get_mcp_tools_sets_handle_tool_error(monkeypatch):
     config = {"transport": "stdio", "command": "demo-tool", "disabled_tools": []}
 
     async def fake_get_enabled_mcp_server_config(server_name: str, db=None):
-        del db
+        del db, server_name
         return config
 
     async def fake_get_mcp_client(server_configs):
+        del server_configs
         tool = SimpleNamespace(name="demo_tool", metadata={})
-        return _FakeClient([tool])
+        return _FakeMCPClient([tool])
 
     monkeypatch.setattr(mcp_service, "get_enabled_mcp_server_config", fake_get_enabled_mcp_server_config)
     monkeypatch.setattr(mcp_service, "get_mcp_client", fake_get_mcp_client)
 
     tools = await mcp_service.get_mcp_tools("demo")
+
     assert len(tools) == 1
     assert tools[0].handle_tool_error is True
 
     mcp_service.clear_mcp_cache()
-
-
-async def test_get_mcp_server_filters_to_token_tenant(mcp_session, monkeypatch: pytest.MonkeyPatch):
-    from yuxi.tenancy.context import TenantPrincipal, bind_tenant_principal
-
-    mcp_session.add_all(
-        [
-            MCPServer(
-                slug="builtin-chart",
-                name="内置",
-                transport="streamable_http",
-                url="https://example.com/builtin",
-                enabled=1,
-                created_by="system",
-                updated_by="system",
-                tenant_id=None,
-            ),
-            MCPServer(
-                slug="tenant-a",
-                name="空间 A",
-                transport="streamable_http",
-                url="https://example.com/a",
-                enabled=1,
-                created_by="user-a",
-                updated_by="user-a",
-                tenant_id=10000,
-            ),
-            MCPServer(
-                slug="tenant-b",
-                name="空间 B",
-                transport="streamable_http",
-                url="https://example.com/b",
-                enabled=1,
-                created_by="user-b",
-                updated_by="user-b",
-                tenant_id=20000,
-            ),
-        ]
-    )
-    await mcp_session.commit()
-
-    bind_tenant_principal(TenantPrincipal(uid="user-a", tenant_id=10000, role="user"))
-    try:
-        visible = await mcp_service.get_all_mcp_servers(mcp_session)
-        own = await mcp_service.get_mcp_server(mcp_session, "tenant-a")
-        other = await mcp_service.get_mcp_server(mcp_session, "tenant-b")
-        builtin = await mcp_service.get_mcp_server(mcp_session, "builtin-chart")
-    finally:
-        bind_tenant_principal(None)
-
-    assert {server.slug for server in visible} == {"builtin-chart", "tenant-a"}
-    assert own is not None and own.slug == "tenant-a"
-    assert other is None
-    assert builtin is not None and builtin.slug == "builtin-chart"

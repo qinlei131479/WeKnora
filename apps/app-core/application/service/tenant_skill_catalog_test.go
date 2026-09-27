@@ -44,6 +44,27 @@ func TestListCatalogGroupsInstallsByDefinition(t *testing.T) {
 	require.Len(t, list[0].Installations, 2)
 }
 
+func TestResolveCatalogFindsBuiltinBySlug(t *testing.T) {
+	repo := catalogTestRepo(t, "file:catalog-builtin?mode=memory&cache=shared")
+	ctx := context.Background()
+	require.NoError(t, repo.CreateCatalog(ctx, &types.TenantSkillCatalogEntity{
+		ID: "xlsx", TenantID: 0, Name: "xlsx",
+		BundleRef: "minio://weknora/0/tenant-skills/catalog/xlsx.zip",
+	}))
+
+	svc := NewTenantSkillService(repo, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+	cat, err := svc.resolveCatalog(ctx, 7, "xlsx")
+	require.NoError(t, err)
+	require.NotNil(t, cat)
+	require.Equal(t, uint64(0), cat.TenantID)
+	require.Equal(t, "xlsx", cat.ID)
+
+	list, err := svc.ListCatalog(ctx, 7)
+	require.NoError(t, err)
+	require.Len(t, list, 1)
+	require.Equal(t, "xlsx", list[0].ID)
+}
+
 func TestResolveCatalogFindsLegacySkillID(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open("file:catalog-legacy?mode=memory&cache=shared"), &gorm.Config{})
 	require.NoError(t, err)

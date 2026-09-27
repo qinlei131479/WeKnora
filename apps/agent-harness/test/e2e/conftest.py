@@ -15,10 +15,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from test.live_api_cleanup import (  # noqa: E402
-    cleanup_e2e_chat_resources,
-    cleanup_pytest_knowledge_resources,
-)
+from test.live_api_cleanup import cleanup_e2e_chat_resources  # noqa: E402
 
 load_dotenv(PROJECT_ROOT / ".env", override=False)
 load_dotenv(PROJECT_ROOT / "test/.env.test", override=False)
@@ -60,8 +57,8 @@ def cleanup_e2e_test_resources(e2e_base_url: str):
             follow_redirects=True,
         ) as client:
             response = await client.post(
-                "/api/auth/token",
-                data={"username": CLEANUP_USERNAME, "password": CLEANUP_PASSWORD},
+                "/api/auth/login",
+                json={"email": CLEANUP_USERNAME, "password": CLEANUP_PASSWORD},
             )
             if response.status_code != 200:
                 raise RuntimeError(f"E2E cleanup login failed (status={response.status_code}): {response.text}")
@@ -70,19 +67,16 @@ def cleanup_e2e_test_resources(e2e_base_url: str):
             if not access_token:
                 raise RuntimeError("E2E cleanup login succeeded but no access token was returned")
 
-            headers = {"Authorization": f"Bearer {access_token}"}
-            current_user = await client.get("/api/auth/me", headers=headers)
-            if current_user.status_code != 200:
-                raise RuntimeError(f"E2E cleanup failed to read current user: {current_user.text}")
-            if current_user.json().get("role") not in {"admin", "superadmin"}:
+            login_payload = response.json()
+            if login_payload.get("role") not in {"admin", "superadmin"}:
                 raise RuntimeError("E2E cleanup credentials must belong to an admin or superadmin")
 
-            cleanup_uid = str(current_user.json().get("uid") or "")
+            cleanup_uid = str(login_payload.get("uid") or "")
             if not cleanup_uid:
-                raise RuntimeError("E2E cleanup current user payload is missing uid")
+                raise RuntimeError("E2E cleanup login payload is missing uid")
 
+            headers = {"Authorization": f"Bearer {access_token}"}
             await cleanup_e2e_chat_resources(client, headers, owner_uid=cleanup_uid)
-            await cleanup_pytest_knowledge_resources(client, headers)
 
     anyio.run(run_cleanup)
     yield
@@ -98,7 +92,7 @@ async def e2e_client(e2e_base_url: str) -> AsyncGenerator[httpx.AsyncClient, Non
 @pytest_asyncio.fixture(scope="function")
 async def e2e_headers(e2e_client: httpx.AsyncClient) -> dict[str, str]:
     username, password = _require_e2e_credentials()
-    response = await e2e_client.post("/api/auth/token", data={"username": username, "password": password})
+    response = await e2e_client.post("/api/auth/login", json={"email": username, "password": password})
     if response.status_code != 200:
         pytest.fail(f"E2E login failed (status={response.status_code}): {response.text}")
 
@@ -109,13 +103,22 @@ async def e2e_headers(e2e_client: httpx.AsyncClient) -> dict[str, str]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def e2e_agent_context(e2e_client: httpx.AsyncClient, e2e_headers: dict[str, str]) -> dict[str, str]:
-    me_response = await e2e_client.get("/api/auth/me", headers=e2e_headers)
-    if me_response.status_code != 200:
-        pytest.fail(
-            f"Failed to fetch current user for E2E tests (status={me_response.status_code}): {me_response.text}"
-        )
-    uid = me_response.json().get("uid")
+async def e2e_identity(e2e_client: httpx.AsyncClient) -> dict[str, object]:
+    username, password = _require_e2e_credentials()
+    response = await e2e_client.post("/api/auth/login", json={"email": username, "password": password})
+    if response.status_code != 200:
+        pytest.fail(f"E2E login failed (status={response.status_code}): {response.text}")
+
+    payload = response.json()
+    access_token = payload.get("access_token")
+    if not access_token:
+        pytest.fail("E2E login succeeded but no access token was returned.")
+    return {"headers": {"Authorization": f"Bearer {access_token}"}, **payload}
+
+
+@pytest_asyncio.fixture(scope="function")
+async def e2e_agent_context(e2e_identity: dict[str, object]) -> dict[str, str]:
+    uid = e2e_identity.get("uid")
     if not uid:
         pytest.fail("Current user payload missing uid field for E2E tests.")
 

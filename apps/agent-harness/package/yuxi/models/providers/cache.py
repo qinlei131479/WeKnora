@@ -126,15 +126,6 @@ class ModelCache:
             return list(cache.values())
         return [info for info in cache.values() if info.model_type == model_type]
 
-    def get_specs_grouped_by_provider(self, model_type: str = "chat") -> dict[str, list[ModelInfo]]:
-        cache = self._load_cache()
-        grouped: dict[str, list[ModelInfo]] = {}
-        for info in cache.values():
-            if info.model_type != model_type:
-                continue
-            grouped.setdefault(info.provider_id, []).append(info)
-        return grouped
-
     def rebuild(self, providers: list[Any]) -> None:
         from yuxi.models.providers.service import resolve_api_key
 
@@ -190,15 +181,3 @@ class ModelCache:
 model_cache = ModelCache()
 
 
-def resolve_model_spec(spec: str) -> ModelInfo:
-    """根据 spec 返回 ModelInfo。"""
-    if not spec:
-        raise ValueError("model spec 不能为空")
-
-    info = model_cache.get_model_info(spec)
-    if info:
-        return info
-
-    all_specs = model_cache.get_all_specs()
-    available = [item.spec for item in all_specs[:10]]
-    raise ValueError(f"未找到模型: '{spec}'。可用模型 ({len(all_specs)}): {available}")

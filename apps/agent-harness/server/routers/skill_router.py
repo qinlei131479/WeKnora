@@ -4,54 +4,51 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+import json
+
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.utils.auth_middleware import get_admin_user, get_db, get_required_user
 from yuxi.agents.skills.service import (
-    confirm_personal_skill_install_draft,
     confirm_skill_install_draft,
     create_skill_node,
     delete_skill,
-    delete_skill_node,
-    delete_skills_batch,
-    delete_personal_skill,
-    discard_skill_install_draft,
     export_skill_zip,
     get_allowed_skill_access_levels,
     get_manageable_skill_or_raise,
     get_management_readable_skill_or_raise,
     get_skill_dependency_options,
     get_skill_tree,
-    init_builtin_skills,
+    list_config_skills,
+    list_skill_install_messages,
+    load_skill_transcript_frames,
+    patch_config_skill,
+    remove_config_skill,
+    retry_config_skill,
+    stop_config_skill,
     is_builtin_skill,
     list_accessible_skills,
+    list_skill_sandbox_board,
     list_skill_cards_for_user,
-    list_skills,
     list_visible_skills_for_management,
     prepare_remote_skill_install,
     prepare_skill_upload,
-    read_personal_skill_file,
     read_skill_file,
     update_skill_dependencies,
     update_skill_enabled,
     update_skill_file,
-    update_skill_share_config,
     user_can_manage_skill,
 )
 from yuxi.permissions import resolve_skill_permission
-from yuxi.agents.skills.remote_install import list_remote_skills, search_remote_skills
+from yuxi.agents.skills.remote_install import list_remote_skills
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils.logging_config import logger
 
 skills = APIRouter(prefix="/system/skills", tags=["skills"])
 user_skills = APIRouter(prefix="/skills", tags=["skills"])
-
-
-class ShareConfigPayload(BaseModel):
-    share_config: dict | None = Field(None, description="共享权限配置")
 
 
 class SkillEnabledUpdateRequest(BaseModel):
@@ -81,14 +78,12 @@ class RemoteSkillSourceRequest(BaseModel):
 
 class RemoteSkillPrepareRequest(RemoteSkillSourceRequest):
     skills: list[str] = Field(..., description="需要安装的 skill 名称列表")
+    usage_source: str = Field("chat", description="使用侧：chat、work、common")
 
 
-class RemoteSkillSearchRequest(BaseModel):
-    query: str = Field(..., description="搜索关键字")
-
-
-class SkillBatchDeleteRequest(BaseModel):
-    slugs: list[str] = Field(..., max_length=50, description="需要批量删除的 skill slug 列表，最多支持 50 个")
+class SkillSandboxPatchRequest(BaseModel):
+    enabled: bool | None = None
+    envs: dict[str, str] | None = None
 
 
 class _DraftConfirmRequestBase(BaseModel):
@@ -97,10 +92,6 @@ class _DraftConfirmRequestBase(BaseModel):
 
 class SkillDraftConfirmRequest(_DraftConfirmRequestBase):
     share_config: dict | None = Field(None, description="共享权限配置")
-
-
-class PersonalSkillDraftConfirmRequest(_DraftConfirmRequestBase):
-    pass
 
 
 def _raise_from_value_error(e: ValueError) -> None:
@@ -158,6 +149,177 @@ async def list_skill_cards_route(
         raise HTTPException(status_code=500, detail="获取 Skill 列表失败")
 
 
+@user_skills.get("/sandbox-board")
+async def skill_sandbox_board_route(
+    _current_user: User = Depends(get_required_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return {"success": True, "data": await list_skill_sandbox_board(db)}
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to list skill sandbox board: {e}")
+        raise HTTPException(status_code=500, detail="获取沙箱安装状态失败")
+
+
+@user_skills.get("/sandbox-configs/{sandbox_config_id}/skills")
+async def list_sandbox_config_skills_route(
+    sandbox_config_id: str,
+    _current_user: User = Depends(get_required_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return {"success": True, "data": await list_config_skills(db, sandbox_config_id)}
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to list sandbox skills: {e}")
+        raise HTTPException(status_code=500, detail="获取沙箱技能失败")
+
+
+@user_skills.patch("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}")
+async def patch_sandbox_config_skill_route(
+    sandbox_config_id: str,
+    skill_id: str,
+    payload: SkillSandboxPatchRequest,
+    _current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        data = await patch_config_skill(
+            db,
+            sandbox_config_id=sandbox_config_id,
+            skill_id=skill_id,
+            enabled=payload.enabled,
+            envs=payload.envs,
+        )
+        return {"success": True, "data": data}
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to update sandbox skill: {e}")
+        raise HTTPException(status_code=500, detail="更新沙箱技能失败")
+
+
+@user_skills.post("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}/stop")
+async def stop_sandbox_config_skill_route(
+    sandbox_config_id: str,
+    skill_id: str,
+    _current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return {
+            "success": True,
+            "data": await stop_config_skill(db, sandbox_config_id=sandbox_config_id, skill_id=skill_id),
+        }
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to stop sandbox skill: {e}")
+        raise HTTPException(status_code=500, detail="停止安装失败")
+
+
+@user_skills.post("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}/reinstall")
+async def retry_sandbox_config_skill_route(
+    sandbox_config_id: str,
+    skill_id: str,
+    _current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        await retry_config_skill(db, sandbox_config_id=sandbox_config_id, skill_id=skill_id)
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to retry sandbox skill: {e}")
+        raise HTTPException(status_code=500, detail="重试安装失败")
+
+
+@user_skills.delete("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}")
+async def remove_sandbox_config_skill_route(
+    sandbox_config_id: str,
+    skill_id: str,
+    _current_user: User = Depends(get_admin_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        await remove_config_skill(db, sandbox_config_id=sandbox_config_id, skill_id=skill_id)
+        return {"success": True, "data": {"skill_id": skill_id}}
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to remove sandbox skill: {e}")
+        raise HTTPException(status_code=500, detail="卸载沙箱技能失败")
+
+
+@user_skills.get("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}/messages")
+async def sandbox_skill_messages_route(
+    sandbox_config_id: str,
+    skill_id: str,
+    _current_user: User = Depends(get_required_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return {
+            "success": True,
+            "data": await list_skill_install_messages(
+                db, sandbox_config_id=sandbox_config_id, skill_id=skill_id
+            ),
+        }
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to read sandbox skill messages: {e}")
+        raise HTTPException(status_code=500, detail="读取安装过程失败")
+
+
+@user_skills.get("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}/transcript")
+async def sandbox_skill_transcript_route(
+    sandbox_config_id: str,
+    skill_id: str,
+    _current_user: User = Depends(get_required_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        frames = await load_skill_transcript_frames(
+            db, sandbox_config_id=sandbox_config_id, skill_id=skill_id
+        )
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to read sandbox skill transcript: {e}")
+        raise HTTPException(status_code=500, detail="读取安装过程失败")
+
+    async def body():
+        for frame in frames:
+            yield f"event: message\ndata: {json.dumps(frame, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        body(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@user_skills.get("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}/guidance")
+async def sandbox_skill_guidance_route(
+    sandbox_config_id: str,
+    skill_id: str,
+    _current_user: User = Depends(get_required_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        await list_config_skills(db, sandbox_config_id)
+        return {"success": True, "data": {"accepting": False, "messages": []}}
+    except ValueError as e:
+        _raise_from_value_error(e)
+    except Exception as e:
+        logger.error(f"Failed to read sandbox skill guidance: {e}")
+        raise HTTPException(status_code=500, detail="读取安装引导失败")
+
+
 @user_skills.get("/accessible")
 async def list_accessible_skills_route(
     current_user: User = Depends(get_required_user),
@@ -174,6 +336,7 @@ async def list_accessible_skills_route(
 @user_skills.post("/import/prepare")
 async def prepare_skill_upload_route(
     file: UploadFile = File(...),
+    usage_source: str = Form("chat"),
     current_user: User = Depends(get_required_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -183,6 +346,7 @@ async def prepare_skill_upload_route(
             filename=file.filename or "",
             file_bytes=await file.read(),
             operator=current_user,
+            usage_source=usage_source,
         )
         return {"success": True, "data": data}
     except ValueError as e:
@@ -203,19 +367,6 @@ async def list_remote_skills_route(payload: RemoteSkillSourceRequest, _current_u
         raise HTTPException(status_code=500, detail="获取远程 skills 列表失败")
 
 
-@user_skills.post("/remote/search")
-async def search_remote_skills_route(
-    payload: RemoteSkillSearchRequest, _current_user: User = Depends(get_required_user)
-):
-    try:
-        return {"success": True, "data": await search_remote_skills(payload.query)}
-    except ValueError as e:
-        _raise_from_value_error(e)
-    except Exception as e:
-        logger.error(f"Failed to search remote skills with query '{payload.query}': {e}")
-        raise HTTPException(status_code=500, detail="搜索远程 skills 失败")
-
-
 @user_skills.post("/remote/prepare")
 async def prepare_remote_skills_route(
     payload: RemoteSkillPrepareRequest,
@@ -228,6 +379,7 @@ async def prepare_remote_skills_route(
             source=payload.source,
             skills=payload.skills,
             operator=current_user,
+            usage_source=payload.usage_source,
         )
         return {"success": True, "data": data}
     except ValueError as e:
@@ -260,77 +412,6 @@ async def confirm_skill_install_draft_route(
         raise HTTPException(status_code=500, detail="确认安装 Skill 失败")
 
 
-@user_skills.post("/personal/install-drafts/{draft_id}/confirm")
-async def confirm_personal_skill_install_draft_route(
-    draft_id: str,
-    payload: PersonalSkillDraftConfirmRequest,
-    current_user: User = Depends(get_required_user),
-):
-    try:
-        results = await confirm_personal_skill_install_draft(
-            draft_id=draft_id,
-            slugs=payload.slugs,
-            operator=current_user,
-        )
-        return {"success": True, "data": results, "summary": _summarize_results(results)}
-    except ValueError as e:
-        _raise_from_value_error(e)
-    except Exception as e:
-        logger.error(f"Failed to confirm personal Skill draft '{draft_id}': {e}")
-        raise HTTPException(status_code=500, detail="确认安装个人 Skill 失败")
-
-
-@user_skills.get("/personal/{slug}/file")
-async def read_personal_skill_file_route(
-    slug: str,
-    path: str = Query(..., description="相对 Skill 根目录的文件路径"),
-    current_user: User = Depends(get_required_user),
-):
-    try:
-        return {
-            "success": True,
-            "data": await read_personal_skill_file(str(current_user.uid), slug, path),
-        }
-    except ValueError as e:
-        _raise_from_value_error(e)
-    except Exception as e:
-        logger.error(f"Failed to read personal Skill file '{slug}/{path}': {e}")
-        raise HTTPException(status_code=500, detail="读取个人 Skill 文件失败")
-
-
-@user_skills.delete("/personal/{slug}")
-async def delete_personal_skill_route(
-    slug: str,
-    current_user: User = Depends(get_required_user),
-):
-    try:
-        snapshot = await delete_personal_skill(str(current_user.uid), slug)
-        return {
-            "success": True,
-            "personal_cache": {
-                "scanned_at": snapshot.scanned_at,
-                "from_cache": snapshot.from_cache,
-            },
-        }
-    except ValueError as e:
-        _raise_from_value_error(e)
-    except Exception as e:
-        logger.error(f"Failed to delete personal Skill '{slug}': {e}")
-        raise HTTPException(status_code=500, detail="删除个人 Skill 失败")
-
-
-@user_skills.delete("/install-drafts/{draft_id}")
-async def discard_skill_install_draft_route(draft_id: str, current_user: User = Depends(get_required_user)):
-    try:
-        await discard_skill_install_draft(draft_id=draft_id, operator=current_user)
-        return {"success": True}
-    except ValueError as e:
-        _raise_from_value_error(e)
-    except Exception as e:
-        logger.error(f"Failed to discard skill install draft '{draft_id}': {e}")
-        raise HTTPException(status_code=500, detail="取消安装 Skill 失败")
-
-
 @skills.get("")
 async def list_skills_route(
     current_user: User = Depends(get_required_user),
@@ -356,60 +437,13 @@ async def get_skill_dependency_options_route(
 ):
     try:
         if slug:
-            await get_manageable_skill_or_raise(db, current_user, slug)
+            await get_management_readable_skill_or_raise(db, current_user, slug)
         return {"success": True, "data": await get_skill_dependency_options(db, current_user, slug)}
     except ValueError as e:
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to get skill dependency options: {e}")
         raise HTTPException(status_code=500, detail="获取 skill 依赖选项失败")
-
-
-@skills.get("/builtin")
-async def list_builtin_skills_route(
-    _current_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
-):
-    try:
-        items = [item for item in await list_skills(db) if item.source_type == "builtin"]
-        return {"success": True, "data": [item.to_dict() for item in items]}
-    except ValueError as e:
-        _raise_from_value_error(e)
-    except Exception as e:
-        logger.error(f"Failed to list builtin skills: {e}")
-        raise HTTPException(status_code=500, detail="获取内置 skill 列表失败")
-
-
-@skills.post("/builtin/sync")
-async def sync_builtin_skills_route(
-    current_user: User = Depends(get_admin_user),
-    db: AsyncSession = Depends(get_db),
-):
-    try:
-        items = await init_builtin_skills(db, created_by=current_user.uid)
-        return {"success": True, "data": [item.to_dict() for item in items]}
-    except ValueError as e:
-        _raise_from_value_error(e)
-    except Exception as e:
-        logger.error(f"Failed to sync builtin skills: {e}")
-        raise HTTPException(status_code=500, detail="同步内置 skill 失败")
-
-
-@skills.put("/{slug}/share-config")
-async def update_skill_share_config_route(
-    slug: str,
-    payload: ShareConfigPayload,
-    current_user: User = Depends(get_required_user),
-    db: AsyncSession = Depends(get_db),
-):
-    try:
-        item = await update_skill_share_config(db, slug=slug, share_config=payload.share_config, operator=current_user)
-        return {"success": True, "data": _serialize_skill_for_user(item, current_user)}
-    except ValueError as e:
-        _raise_from_value_error(e)
-    except Exception as e:
-        logger.error(f"Failed to update skill share config '{slug}': {e}")
-        raise HTTPException(status_code=500, detail="更新 Skill 共享范围失败")
 
 
 @skills.put("/{slug}/enabled")
@@ -535,24 +569,6 @@ async def update_skill_dependencies_route(
         raise HTTPException(status_code=500, detail="更新 skill 依赖失败")
 
 
-@skills.delete("/{slug}/file")
-async def delete_skill_file_route(
-    slug: str,
-    path: str = Query(..., description="相对 skill 根目录路径"),
-    current_user: User = Depends(get_required_user),
-    db: AsyncSession = Depends(get_db),
-):
-    try:
-        await get_manageable_skill_or_raise(db, current_user, slug)
-        await delete_skill_node(db, slug=slug, relative_path=path)
-        return {"success": True}
-    except ValueError as e:
-        _raise_from_value_error(e)
-    except Exception as e:
-        logger.error(f"Failed to delete skill file '{slug}/{path}': {e}")
-        raise HTTPException(status_code=500, detail="删除技能文件失败")
-
-
 @skills.get("/{slug}/export")
 async def export_skill_route(
     slug: str,
@@ -587,23 +603,3 @@ async def delete_skill_route(
     except Exception as e:
         logger.error(f"Failed to delete skill '{slug}': {e}")
         raise HTTPException(status_code=500, detail="删除技能失败")
-
-
-# 当前前端已移除批量管理入口，不再调用该接口。
-# 这里保留接口以兼容已有外部调用方，并供后续管理工具复用。
-@skills.post("/delete-batch")
-async def delete_skills_batch_route(
-    payload: SkillBatchDeleteRequest,
-    current_user: User = Depends(get_required_user),
-    db: AsyncSession = Depends(get_db),
-):
-    try:
-        for slug in payload.slugs:
-            await get_manageable_skill_or_raise(db, current_user, slug)
-        results = await delete_skills_batch(db, slugs=payload.slugs)
-        return {"success": True, "data": results, "summary": _summarize_results(results)}
-    except ValueError as e:
-        _raise_from_value_error(e)
-    except Exception as e:
-        logger.error(f"Failed to delete skills batch: {e}")
-        raise HTTPException(status_code=500, detail="批量删除技能失败")

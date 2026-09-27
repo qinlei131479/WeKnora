@@ -32,6 +32,7 @@ class TokenUsagePayload(TypedDict, total=False):
     llm_tool_message_count: int
     llm_tool_message_tokens: int
     llm_input_tokens: int
+    llm_output_tokens: int
     system_tokens: int
     tools_tokens: int
     tool_count: int
@@ -126,6 +127,7 @@ class TokenUsageMiddleware(AgentMiddleware[TokenUsageState]):
         system_tokens = self._count_tokens(system_messages)
         tools_tokens = self._count_tokens([], tools=tools) if tools else 0
         llm_input_tokens = self._count_tokens([*system_messages, *llm_messages], tools=tools)
+        llm_output_tokens = self._count_tokens(response_messages)
 
         context_window = _model_context_window(request.model)
         context_usage_ratio = None
@@ -141,7 +143,7 @@ class TokenUsageMiddleware(AgentMiddleware[TokenUsageState]):
         ]
         summary_trigger_tokens = _summary_trigger_tokens(getattr(request.runtime, "context", None))
 
-        return {
+        snapshot: TokenUsagePayload = {
             "state_message_count": len(next_state_messages),
             "state_message_count_before_call": len(state_messages),
             "state_messages_tokens": state_messages_tokens,
@@ -153,6 +155,7 @@ class TokenUsageMiddleware(AgentMiddleware[TokenUsageState]):
             "llm_tool_message_count": len(llm_tool_messages),
             "llm_tool_message_tokens": self._count_tokens(llm_tool_messages),
             "llm_input_tokens": llm_input_tokens,
+            "llm_output_tokens": llm_output_tokens,
             "system_tokens": system_tokens,
             "tools_tokens": tools_tokens,
             "tool_count": len(tools),
@@ -167,6 +170,10 @@ class TokenUsageMiddleware(AgentMiddleware[TokenUsageState]):
             "estimate": True,
             "measured_at": datetime.now(UTC).isoformat(),
         }
+        for message in response_messages:
+            if isinstance(message, AIMessage):
+                message.additional_kwargs["token_usage"] = dict(snapshot)
+        return snapshot
 
     def wrap_model_call(
         self,

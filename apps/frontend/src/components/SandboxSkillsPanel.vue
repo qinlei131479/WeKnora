@@ -250,6 +250,7 @@
             <SkillInstallTimeline
               :key="`${managedSkill.id}-${managedSkill.install_session_id || ''}-${transcriptEpoch}`"
               compact
+              :persist="persist"
               :config-id="record?.id || ''"
               :skill-id="managedSkill.id"
               :session-id="managedSkill.install_session_id || ''"
@@ -492,6 +493,7 @@
                             <SkillInstallTimeline
                               :key="`${skill.id}-${skill.install_session_id || ''}-${transcriptEpoch}`"
                               compact
+                              :persist="persist"
                               :config-id="record?.id || ''"
                               :skill-id="skill.id"
                               :session-id="skill.install_session_id || ''"
@@ -610,6 +612,13 @@ import { useI18n } from 'vue-i18n'
 import { fetchEventSource } from '@microsoft/fetch-event-source'
 import ModelSelector from '@/components/ModelSelector.vue'
 import SkillInstallTimeline from '@/components/SkillInstallTimeline.vue'
+import {
+  deleteHarnessConfigSkill,
+  listHarnessConfigSkills,
+  patchHarnessConfigSkill,
+  reinstallHarnessConfigSkill,
+  stopHarnessConfigSkill,
+} from '@/api/chat-work/skill'
 import { SETTING_DRAWER_HEADER_ACTIONS_ID } from '@/components/settings/SettingDrawer.vue'
 import { SKILL_ICON } from '@/types/mention'
 import {
@@ -656,10 +665,12 @@ const props = withDefaults(defineProps<{
   mode?: 'install' | 'list'
   hideAdd?: boolean
   focusSkillId?: string
+  persist?: 'app-core' | 'harness'
 }>(), {
   mode: 'list',
   hideAdd: false,
   focusSkillId: '',
+  persist: 'app-core',
 })
 
 const emit = defineEmits<{
@@ -669,6 +680,10 @@ const emit = defineEmits<{
   install: []
   installed: [skillId: string]
 }>()
+
+function usesHarness(): boolean {
+  return props.persist === 'harness'
+}
 
 const { t } = useI18n()
 const headerActionsTarget = inject(SETTING_DRAWER_HEADER_ACTIONS_ID, '')
@@ -992,7 +1007,9 @@ async function submitEnvs(
     skill.id,
   )
   try {
-    const res = await patchConfigSkill(configId, skill.id, { envs })
+    const res = usesHarness()
+      ? await patchHarnessConfigSkill(configId, skill.id, { envs })
+      : await patchConfigSkill(configId, skill.id, { envs })
     if (!isCurrent()) return
     const updated = res?.data
     if (updated) {
@@ -1130,7 +1147,7 @@ function followBusySkills() {
 }
 
 function followProgress(skillId: string) {
-  if (!props.record || abortBySkill.has(skillId)) return
+  if (usesHarness() || !props.record || abortBySkill.has(skillId)) return
   const configId = props.record.id
   const controller = new AbortController()
   abortBySkill.set(skillId, controller)
@@ -1175,6 +1192,7 @@ function followProgress(skillId: string) {
 
 async function refreshImage() {
   if (!props.record) return
+  if (usesHarness()) return
   try {
     const res = await getSandboxConfigById(props.record.id)
     if (res?.data) emit('updated', res.data)
@@ -1206,11 +1224,13 @@ async function loadSkills(silent = false) {
   const previous = skillsSignature(skills.value)
   const wasBusy = skills.value.some(isBusy)
   try {
-    const res = await listConfigSkills(props.record.id)
+    const res = usesHarness()
+      ? await listHarnessConfigSkills(props.record.id)
+      : await listConfigSkills(props.record.id)
     skills.value = overlayUninstallStatus(res?.data || [])
     followBusySkills()
     ensurePoll()
-    if (skillsSignature(skills.value) !== previous) {
+    if (previous && skillsSignature(skills.value) !== previous) {
       emit('skillsChanged')
     }
     if (props.focusSkillId) revealSkill(props.focusSkillId)
@@ -1377,7 +1397,9 @@ async function toggleEnabled(skill: ConfigSkill, enabled: boolean) {
   if (!props.record) return
   togglingId.value = skill.id
   try {
-    const res = await patchConfigSkill(props.record.id, skill.id, { enabled })
+    const res = usesHarness()
+      ? await patchHarnessConfigSkill(props.record.id, skill.id, { enabled })
+      : await patchConfigSkill(props.record.id, skill.id, { enabled })
     const updated = res?.data
     skills.value = skills.value.map((item) => (item.id === skill.id ? (updated || { ...item, enabled }) : item))
     MessagePlugin.success(
@@ -1398,7 +1420,8 @@ async function retrySkill(skill: ConfigSkill) {
   retryingId.value = skill.id
   forgetProgress(skill.id)
   try {
-    await reinstallConfigSkill(props.record.id, skill.id)
+    if (usesHarness()) await reinstallHarnessConfigSkill(props.record.id, skill.id)
+    else await reinstallConfigSkill(props.record.id, skill.id)
     MessagePlugin.success(t('settings.sandbox.skillRetryAccepted'))
     await loadSkills()
     followProgress(skill.id)
@@ -1414,7 +1437,9 @@ async function stopSkill(skill: ConfigSkill) {
   stoppingId.value = skill.id
   forgetProgress(skill.id)
   try {
-    const res = await stopConfigSkill(props.record.id, skill.id)
+    const res = usesHarness()
+      ? await stopHarnessConfigSkill(props.record.id, skill.id)
+      : await stopConfigSkill(props.record.id, skill.id)
     const updated = res?.data
     if (updated) {
       skills.value = skills.value.map((item) => (item.id === skill.id ? { ...item, ...updated } : item))
@@ -1436,6 +1461,13 @@ async function removeSkill(skill: ConfigSkill) {
   uninstallDone.value = false
   forgetProgress(skill.id)
   try {
+    if (usesHarness()) {
+      await deleteHarnessConfigSkill(props.record.id, skill.id)
+      uninstallDone.value = true
+      MessagePlugin.success(t('settings.sandbox.skillRemoveDone', { name: skill.name }))
+      emit('skillsChanged')
+      return
+    }
     await deleteConfigSkill(props.record.id, skill.id)
     MessagePlugin.success(t('settings.sandbox.skillDeleteAccepted'))
     skills.value = skills.value.map((item) => (

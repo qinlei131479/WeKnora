@@ -36,6 +36,7 @@
                     <t-switch
                       :value="tool.require_approval"
                       :loading="approvalLoading[tool.name]"
+                      :disabled="readonly"
                       size="small"
                       @change="(v: boolean) => onRequireApprovalChange(tool.name, v)"
                     />
@@ -98,8 +99,9 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { MCPTestResult, MCPTool } from '@/api/mcp-service'
+import type { MCPTestResult, MCPTool, MCPToolApprovalRow } from '@/api/mcp-service'
 import { getMCPToolApprovals, setMCPToolApproval } from '@/api/mcp-service'
+import { getMcpToolApprovals, setMcpToolPolicy } from '@/api/chat-work/mcp'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useI18n } from 'vue-i18n'
 
@@ -107,6 +109,8 @@ interface Props {
   result: MCPTestResult | null
   /** When set, loads/saves per-tool approval flags */
   serviceId?: string
+  persist?: 'app-core' | 'harness'
+  readonly?: boolean
   /** When true, (re)loads approval flags. Lets the dialog gate the fetch on
    *  visibility; defaults to true for always-rendered inline usage. */
   active?: boolean
@@ -130,7 +134,9 @@ const mergeApprovals = async () => {
     return
   }
   try {
-    const rows = await getMCPToolApprovals(props.serviceId)
+    const rows = props.persist === 'harness'
+      ? (((await getMcpToolApprovals(props.serviceId)) as { data?: MCPToolApprovalRow[] })?.data || [])
+      : await getMCPToolApprovals(props.serviceId)
     const map = new Map(rows.map((r) => [r.tool_name, r.require_approval]))
     displayTools.value = tools.map((tool) => ({
       ...tool,
@@ -152,10 +158,14 @@ watch(
 )
 
 const onRequireApprovalChange = async (toolName: string, value: boolean) => {
-  if (!props.serviceId) return
+  if (props.readonly || !props.serviceId) return
   approvalLoading.value = { ...approvalLoading.value, [toolName]: true }
   try {
-    await setMCPToolApproval(props.serviceId, toolName, value)
+    if (props.persist === 'harness') {
+      await setMcpToolPolicy(props.serviceId, toolName, { require_approval: value })
+    } else {
+      await setMCPToolApproval(props.serviceId, toolName, value)
+    }
     displayTools.value = displayTools.value.map((x) =>
       x.name === toolName ? { ...x, require_approval: value } : x
     )
