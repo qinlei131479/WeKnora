@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { t } from '@/i18n';
-import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 import { API } from '@/api';
 import { toProviderModelType } from '@/api/model/models';
-import type { ModelCredentialField, ModelProviderVO, ModelTestRequestDTO, ModelTestResultVO, ModelsDTO, ModelsVO } from '@/types/api/model/model';
 import { MODEL_TYPE_OPTIONS, MODEL_SOURCE_OPTIONS, THINKING_CONTROL_OPTIONS } from '../constants';
+import type { ModelProviderVO, ModelTestRequestDTO, ModelTestResultVO, ModelsDTO, ModelsVO } from '@/types/api';
+import KjscRtlDrawer from '@/components/KjscUi/KjscRtlDrawer.vue';
 
 const { proxy } = getCurrentInstance() as any;
 
@@ -79,6 +79,22 @@ const rules = computed(() => ({
   name: [{ required: true, message: t('page.models.form.namePlaceholder', '请输入模型名称'), trigger: 'blur' }],
   type: [{ required: true, message: t('page.models.form.typePlaceholder', '请选择模型类型'), trigger: 'change' }],
   source: [{ required: true, message: t('page.models.form.sourcePlaceholder', '请选择模型来源'), trigger: 'change' }],
+  dimension:
+    form.type === 'Embedding' && form.supportsDimensionOverride
+      ? [
+          {
+            required: true,
+            validator: (_rule: unknown, value: unknown) => value !== undefined && value !== null && value !== '',
+            message: t('page.models.form.dimensionRequired', '请填写自定义输出维度'),
+            trigger: ['blur', 'change']
+          },
+          {
+            validator: (_rule: unknown, value: unknown) => typeof value === 'number' && Number.isFinite(value) && value > 0,
+            message: t('page.models.form.dimensionInvalid', '自定义输出维度填写不正确'),
+            trigger: ['blur', 'change']
+          }
+        ]
+      : [],
   baseUrl: [
     {
       required: form.source !== 'local',
@@ -87,6 +103,17 @@ const rules = computed(() => ({
     }
   ]
 }));
+
+const handleDimensionOverrideChange = () => {
+  if (!form.supportsDimensionOverride) form.dimension = undefined;
+  nextTick(() => {
+    if (form.supportsDimensionOverride) {
+      saveFormRef.value?.validateField('dimension').catch(() => {});
+    } else {
+      saveFormRef.value?.clearValidate('dimension');
+    }
+  });
+};
 
 /** 键值对编辑器 -> 提交用的 map，空行丢弃 */
 const rowsToRecord = (rows: KeyValueRow[]) => {
@@ -401,67 +428,6 @@ const handleTest = () => {
     });
 };
 
-/** 编辑模式下单独更新凭证（更新接口不处理凭证） */
-const handleUpdateSecret = (field: ModelCredentialField) => {
-  const value = field === 'api_key' ? form.apiKey : form.appSecret;
-  if (!form.id || !value) {
-    proxy?.$modal?.msgWarning(t('page.models.tips.credentialRequired', '请先输入新的密钥'));
-    return;
-  }
-
-  credentialBusy.value = true;
-  API.Models.updateCredentials({
-    modelId: form.id,
-    apiKey: field === 'api_key' ? value : undefined,
-    appSecret: field === 'app_secret' ? value : undefined
-  })
-    .then(() => {
-      if (field === 'api_key') {
-        apiKeyConfigured.value = true;
-        form.apiKey = '';
-      } else {
-        appSecretConfigured.value = true;
-        form.appSecret = '';
-      }
-      testResult.value = null;
-      proxy?.$modal?.msgSuccess(t('page.models.form.credentialUpdated', '密钥更新成功'));
-      emit('success');
-    })
-    .catch((error) => {
-      console.error('[Models] update credential failed:', error);
-    })
-    .finally(() => {
-      credentialBusy.value = false;
-    });
-};
-
-const handleRemoveSecret = (field: ModelCredentialField) => {
-  if (!form.id) return;
-
-  proxy?.$modal
-    ?.confirm(t('page.models.form.credentialRemoveConfirm', '清除后该模型将无法调用，确认清除密钥吗？'))
-    .then(() => {
-      credentialBusy.value = true;
-      return API.Models.deleteCredentialField(form.id!, field);
-    })
-    .then(() => {
-      if (field === 'api_key') {
-        apiKeyConfigured.value = false;
-      } else {
-        appSecretConfigured.value = false;
-      }
-      testResult.value = null;
-      proxy?.$modal?.msgSuccess(t('page.models.form.credentialRemoved', '密钥已清除'));
-      emit('success');
-    })
-    .catch(() => {
-      // 用户取消或请求失败，request 拦截器已提示，这里无需重复报错
-    })
-    .finally(() => {
-      credentialBusy.value = false;
-    });
-};
-
 const addKeyValueRow = (rows: KeyValueRow[]) => rows.push({ key: '', value: '' });
 const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(index, 1);
 </script>
@@ -577,7 +543,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
           v-model="form.dimension"
           controls-position="right"
           align="left"
-          disabled
+          :disabled="!form.supportsDimensionOverride"
           :placeholder="$t('page.models.form.dimensionPlaceholder', '例如：1536')"
         />
       </el-form-item>
@@ -587,7 +553,7 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
         :label="$t('page.models.form.supportsDimensionOverride', '自定义输出维度')"
         prop="supportsDimensionOverride"
       >
-        <el-switch v-model="form.supportsDimensionOverride" />
+        <el-switch v-model="form.supportsDimensionOverride" @change="handleDimensionOverrideChange" />
         <span class="form-desc form-desc--inline">
           {{ $t('page.models.form.supportsDimensionOverrideDesc', '仅在确认该模型支持 dimensions 参数时开启；默认只使用检测到的实际维度。') }}
         </span>
@@ -632,164 +598,6 @@ const removeKeyValueRow = (rows: KeyValueRow[], index: number) => rows.splice(in
           :placeholder="$t('page.models.form.maxConcurrencyPlaceholder', '0 表示使用全局默认')"
         />
       </el-form-item>
-
-      <!-- ################################################## -->
-      <!-- ################################################## -->
-      <!-- ################################################## -->
-      <!-- <el-divider /><el-divider /><el-divider />
-      <h4 class="section-title">{{ $t('page.models.form.section.basic', '基本信息') }}</h4>
-
-      <el-alert
-        v-if="isBuiltin"
-        class="builtin-alert"
-        type="info"
-        show-icon
-        :closable="false"
-        :title="$t('page.models.form.builtinHint', '内置模型可修改配置与凭证')"
-      />
-
-      <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.description', '描述')" prop="description">
-        <el-input
-          v-model="form.description"
-          type="textarea"
-          :rows="2"
-          :placeholder="$t('page.models.form.descriptionPlaceholder', '请输入描述（可选）')"
-          maxlength="500"
-        />
-      </el-form-item>
-
-      <h4 v-if="form.source !== 'local'" class="section-title">{{ $t('page.models.form.section.provider', '接入配置') }}</h4>
-
-      <el-form-item v-else-if="form.source !== 'local'" :label="$t('page.models.form.apiKey', 'API Key')">
-        <div class="credential-box">
-          <div class="credential-status">
-            <el-tag :type="apiKeyConfigured ? 'success' : 'info'">
-              {{
-                apiKeyConfigured ? $t('page.models.table.credentialConfigured', '已配置') : $t('page.models.table.credentialUnconfigured', '未配置')
-              }}
-            </el-tag>
-            <span class="form-desc form-desc--inline">
-              {{ $t('page.models.form.credentialHidden', '出于安全考虑不显示已保存的密钥') }}
-            </span>
-          </div>
-
-          <el-input
-            v-model="form.apiKey"
-            class="credential-input"
-            type="password"
-            show-password
-            autocomplete="new-password"
-            :placeholder="$t('page.models.form.apiKeyReplacePlaceholder', '输入新的 API Key，点击「更新密钥」或直接保存均可生效')"
-          />
-
-          <div class="credential-actions">
-            <el-button size="small" type="primary" :loading="credentialBusy" @click="handleUpdateSecret('api_key')">
-              {{ $t('page.models.form.credentialUpdate', '更新密钥') }}
-            </el-button>
-            <el-button
-              size="small"
-              type="danger"
-              plain
-              :disabled="!apiKeyConfigured"
-              :loading="credentialBusy"
-              @click="handleRemoveSecret('api_key')"
-            >
-              {{ $t('page.models.form.credentialRemove', '清除密钥') }}
-            </el-button>
-          </div>
-        </div>
-      </el-form-item>
-
-      <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.appId', 'App ID')" prop="appId">
-        <el-input v-model="form.appId" :placeholder="$t('page.models.form.appIdPlaceholder', '部分厂商（如 WeKnoraCloud）需要填写')" />
-      </el-form-item>
-
-      <el-form-item v-if="form.source !== 'local' && props.mode !== 'edit'" :label="$t('page.models.form.appSecret', 'App Secret')" prop="appSecret">
-        <el-input
-          v-model="form.appSecret"
-          type="password"
-          show-password
-          autocomplete="new-password"
-          :placeholder="$t('page.models.form.appSecretPlaceholder', '需要第二段密钥时填写（可选）')"
-        />
-      </el-form-item>
-
-      <el-form-item v-else-if="form.source !== 'local'" :label="$t('page.models.form.appSecret', 'App Secret')">
-        <div class="credential-box">
-          <div class="credential-status">
-            <el-tag :type="appSecretConfigured ? 'success' : 'info'">
-              {{
-                appSecretConfigured
-                  ? $t('page.models.table.credentialConfigured', '已配置')
-                  : $t('page.models.table.credentialUnconfigured', '未配置')
-              }}
-            </el-tag>
-          </div>
-
-          <el-input
-            v-model="form.appSecret"
-            class="credential-input"
-            type="password"
-            show-password
-            autocomplete="new-password"
-            :placeholder="$t('page.models.form.appSecretReplacePlaceholder', '输入新的 App Secret')"
-          />
-
-          <div class="credential-actions">
-            <el-button size="small" type="primary" :loading="credentialBusy" @click="handleUpdateSecret('app_secret')">
-              {{ $t('page.models.form.credentialUpdate', '更新密钥') }}
-            </el-button>
-            <el-button
-              size="small"
-              type="danger"
-              plain
-              :disabled="!appSecretConfigured"
-              :loading="credentialBusy"
-              @click="handleRemoveSecret('app_secret')"
-            >
-              {{ $t('page.models.form.credentialRemove', '清除密钥') }}
-            </el-button>
-          </div>
-        </div>
-      </el-form-item>
-
-      <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.interfaceType', '接口类型')" prop="interfaceType">
-        <el-input v-model="form.interfaceType" :placeholder="$t('page.models.form.interfaceTypePlaceholder', '例如 openai（可选）')" />
-      </el-form-item>
-
-      <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.parameterSize', '参数规模')" prop="parameterSize">
-        <el-input v-model="form.parameterSize" :placeholder="$t('page.models.form.parameterSizePlaceholder', '例如 7B / 13B（可选）')" />
-      </el-form-item>
-
-      <template v-if="form.type === 'Embedding'">
-        <h4 class="section-title">{{ $t('page.models.form.section.embedding', '嵌入参数') }}</h4>
-
-        <el-form-item :label="$t('page.models.form.dimension', '向量维度')" prop="dimension">
-          <el-input-number v-model="form.dimension" :min="0" :max="8192" controls-position="right" />
-          <span class="form-desc">
-            {{ $t('page.models.form.dimensionDesc', '测试连接成功后会自动回填厂商返回的真实维度') }}
-          </span>
-        </el-form-item>
-
-        <el-form-item :label="$t('page.models.form.truncatePromptTokens', '截断提示词 token 数')" prop="truncatePromptTokens">
-          <el-input-number v-model="form.truncatePromptTokens" :min="0" :max="32768" controls-position="right" />
-        </el-form-item>
-      </template>
-
-      <el-form-item v-if="form.source !== 'local'" :label="$t('page.models.form.extraConfig', '额外配置')">
-        <div class="kv-editor">
-          <div v-for="(row, index) in form.extraConfig" :key="`extra-${index}`" class="kv-row">
-            <el-input v-model="row.key" :placeholder="$t('page.models.form.kvKeyPlaceholder', '字段名')" />
-            <el-input v-model="row.value" :placeholder="$t('page.models.form.kvValuePlaceholder', '字段值')" />
-            <el-button link type="danger" @click="removeKeyValueRow(form.extraConfig, index)">
-              {{ $t('page.normal.delete', '删除') }}
-            </el-button>
-          </div>
-          <el-button link type="primary" @click="addKeyValueRow(form.extraConfig)">
-            {{ $t('page.models.form.kvAdd', '添加一行') }}
-          </el-button>
-        </div>
-      </el-form-item> -->
 
       <div v-if="testResult" class="test-result" :class="testResult.available ? 'is-success' : 'is-error'">
         <span class="test-result__title">

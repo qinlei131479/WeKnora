@@ -70,9 +70,6 @@ export interface ModelCredentialFieldMetadata {
   configured?: boolean;
 }
 
-/** 凭证字段名，后端用 snake_case */
-export type ModelCredentialField = 'api_key' | 'app_secret';
-
 export interface ModelBase {
   /** 唯一 ID */
   id?: string;

@@ -1,7 +1,6 @@
 import type { AjaxResult, PageDomain, TableDataInfo } from '@/types';
 import type {
   CredentialsResponseVO,
-  ModelCredentialField,
   ModelCredentialsDTO,
   ModelDebugDTO,
   ModelDebugVO,
@@ -36,8 +35,7 @@ const PROVIDER_TYPE_MAP: Record<ModelType, ProviderModelType> = {
   ASR: 'asr'
 };
 
-export const toProviderModelType = (type?: string): ProviderModelType | undefined =>
-  type ? PROVIDER_TYPE_MAP[type as ModelType] : undefined;
+export const toProviderModelType = (type?: string): ProviderModelType | undefined => (type ? PROVIDER_TYPE_MAP[type as ModelType] : undefined);
 
 // 1. 厂商列表。modelType 传 chat / embedding 等短名，不传则返回全部
 const providers = (modelType?: string): Promise<AjaxResult<ModelProviderVO[]>> =>
@@ -48,20 +46,16 @@ const list = (dto: ModelsPageDTO, page: PageDomain): Promise<TableDataInfo<Model
   request({ url: `${PATH}/list`, method: 'GET', params: { ...dto, ...page } });
 
 // 3. 单条详情
-const single = (id: string): Promise<AjaxResult<ModelsVO>> =>
-  request({ url: `${PATH}/single`, method: 'GET', params: { id } });
+const single = (id: string): Promise<AjaxResult<ModelsVO>> => request({ url: `${PATH}/single`, method: 'GET', params: { id } });
 
 // 4. 新增。parameters 里可以带 apiKey / appSecret，后端会加密落库
-const insert = (data: ModelsDTO): Promise<AjaxResult<ModelsVO>> =>
-  request({ url: `${PATH}/insert/single`, method: 'POST', data });
+const insert = (data: ModelsDTO): Promise<AjaxResult<ModelsVO>> => request({ url: `${PATH}/insert/single`, method: 'POST', data });
 
 // 5. 更新。后端会忽略 parameters 里的凭证字段，凭证要走 credentials 接口
-const update = (data: ModelsDTO): Promise<AjaxResult<ModelsVO>> =>
-  request({ url: `${PATH}/update/single`, method: 'POST', data });
+const update = (data: ModelsDTO): Promise<AjaxResult<ModelsVO>> => request({ url: `${PATH}/update/single`, method: 'POST', data });
 
 // 6. 删除。后端是 GET
-const _delete = (id: string): Promise<AjaxResult<void>> =>
-  request({ url: `${PATH}/delete/single`, method: 'GET', params: { id } });
+const _delete = (id: string): Promise<AjaxResult<void>> => request({ url: `${PATH}/delete/single`, method: 'GET', params: { id } });
 
 // 7. 更新/查询凭证。主键字段是 modelId
 const updateCredentials = (data: ModelCredentialsDTO): Promise<AjaxResult<CredentialsResponseVO>> =>
@@ -70,10 +64,6 @@ const updateCredentials = (data: ModelCredentialsDTO): Promise<AjaxResult<Creden
 // 8. 查询凭证状态
 const getCredentials = (id: string): Promise<AjaxResult<CredentialsResponseVO>> =>
   request({ url: `${PATH}/credentials/single`, method: 'GET', params: { id } });
-
-// 9. 删除单个凭证字段，field 用 snake_case
-const deleteCredentialField = (id: string, field: ModelCredentialField): Promise<AjaxResult<void>> =>
-  request({ url: `${PATH}/credentials/delete`, method: 'GET', params: { id, field } });
 
 /**
  * 10. 调试模型。后端是 @ModelAttribute，要摊开成 form / multipart，不能发 JSON。
@@ -158,7 +148,6 @@ export const Models = {
   delete: _delete,
   updateCredentials,
   getCredentials,
-  deleteCredentialField,
   debug,
   testChat,
   testEmbedding,
