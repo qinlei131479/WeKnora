@@ -11,18 +11,26 @@
       </div>
       <t-divider />
       <h4>{{ $t('dashboard.knowledge.fileTypes') }}</h4>
-      <div ref="fileTypeChartRef" class="chart donut">
-        <div v-if="fileTypeData.length" class="carousel-info">
-          <div
-            v-for="(item, index) in fileTypeData"
-            :key="item.name"
-            class="carousel-item"
-            :class="{ active: currentCarouselIndex === index }"
-          >
-            <div class="carousel-label">{{ item.name }}</div>
-            <div class="carousel-value">{{ item.value }}</div>
-            <div class="carousel-percent">{{ ((item.value / totalFiles) * 100).toFixed(1) }}%</div>
+      <div class="donut-section">
+        <div ref="fileTypeChartRef" class="chart donut">
+          <div v-if="fileTypeData.length" class="carousel-info">
+            <div
+              v-for="(item, index) in fileTypeData"
+              :key="item.name"
+              class="carousel-item"
+              :class="{ active: currentCarouselIndex === index }"
+            >
+              <div class="carousel-label">{{ item.name }}</div>
+              <div class="carousel-value">{{ item.value }}</div>
+              <div class="carousel-percent">{{ ((item.value / totalFiles) * 100).toFixed(1) }}%</div>
+            </div>
           </div>
+        </div>
+        <div v-if="fileTypeData.length" class="file-type-legend">
+          <span v-for="(item, index) in fileTypeData" :key="item.name" class="legend-item">
+            <span class="legend-marker" :style="{ backgroundColor: getColorByIndex(index) }" />
+            <span class="legend-text">{{ item.name }}</span>
+          </span>
         </div>
       </div>
     </t-loading>
@@ -34,7 +42,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import * as echarts from 'echarts'
 import { useTheme } from '@/composables/useTheme'
-import { getColorPalette, getCSSVariable } from '../chart'
+import { getColorByIndex, getCSSVariable } from '../chart'
 
 const props = defineProps<{
   knowledgeStats?: Record<string, any>
@@ -113,15 +121,6 @@ const initFileTypeChart = () => {
       textStyle: { color: getCSSVariable('--gray-600') },
       formatter: '{a} <br/>{b}: {c} ({d}%)',
     },
-    legend: {
-      orient: 'horizontal',
-      bottom: '5%',
-      left: 'center',
-      itemGap: 16,
-      itemWidth: 10,
-      itemHeight: 10,
-      textStyle: { fontSize: 11, color: getCSSVariable('--gray-600') },
-    },
     series: [{
       name: t('dashboard.knowledge.fileTypes'),
       type: 'pie',
@@ -143,7 +142,9 @@ const initFileTypeChart = () => {
         },
       },
       data: entries.length ? entries : [{ name: t('dashboard.knowledge.noData'), value: 1 }],
-      color: entries.length ? getColorPalette() : [getCSSVariable('--main-500')],
+      color: entries.length
+        ? entries.map((_, index) => getColorByIndex(index))
+        : [getCSSVariable('--main-500')],
     }],
   })
 }
@@ -178,6 +179,41 @@ onUnmounted(cleanup)
   line-height: var(--td-line-height-headline-medium);
 }
 .donut { position: relative; }
+.donut-section {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+.file-type-legend {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 16px;
+  margin-top: 6px;
+  min-width: 0;
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--gray-600);
+}
+.legend-marker {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.legend-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .carousel-info {
   position: absolute;
   top: 42%;

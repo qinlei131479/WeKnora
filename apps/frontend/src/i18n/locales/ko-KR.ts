@@ -6162,6 +6162,17 @@ export default {
     processConfig: {
       title: '이번 파싱 설정',
       kbDefault: '지식 베이스 기본 설정 사용',
+      chunking: '청킹',
+      chunkSize: '크기 {n}',
+      parentChildOn: '부모-자식 청킹 켜짐',
+      parentChildOff: '부모-자식 청킹 꺼짐',
+      parser: '파싱 엔진',
+      multimodal: '멀티모달',
+      asr: '음성 인식',
+      question: '질문 생성',
+      questionOn: '켜짐, {n}개',
+      on: '켜짐',
+      off: '꺼짐',
       graph: '지식 그래프'
     }
   },
