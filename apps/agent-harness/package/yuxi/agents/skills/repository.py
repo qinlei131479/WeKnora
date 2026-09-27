@@ -447,16 +447,19 @@ class SkillRepository:
         skills = list(skill_dependencies or [])
         if usage == "common" and (tools or skills):
             raise ValueError("通用技能不能绑定工具或其他技能")
-        if await self.exists_slug(slug):
-            raise ValueError(f"Skill slug '{slug}' 已被占用")
         if builtin:
             tenant_id = 0
             skill_id = slug
+            occupied = any(item.slug == slug and item.tenant_id == 0 for item in await self._records())
+            if occupied:
+                raise ValueError(f"Skill slug '{slug}' 已被占用")
         else:
             tenant_id = _scope_tenant_id()
             if tenant_id is None:
                 raise ValueError("写入技能需要当前空间 tenant_id")
             skill_id = str(uuid.uuid4())
+            if await self.exists_slug(slug):
+                raise ValueError(f"Skill slug '{slug}' 已被占用")
         if bundle_bytes is None:
             bundle_bytes = build_skill_bundle_for_dir(slug, dir_path or catalog_dir_path(tenant_id, slug))
         now = utc_now_naive()

@@ -1864,6 +1864,8 @@ async def test_init_builtin_skills_rejects_non_builtin_conflict(tmp_path: Path, 
         ],
     )
 
+    created: list[dict] = []
+
     class FakeRepo:
         def __init__(self, _db):
             pass
@@ -1884,10 +1886,17 @@ async def test_init_builtin_skills_rejects_non_builtin_conflict(tmp_path: Path, 
         async def get_by_slug_unscoped(self, slug: str):
             return await self.get_by_slug(slug)
 
+        async def create(self, **kwargs) -> SkillRecord:
+            created.append(kwargs)
+            return _skill_record(**kwargs, tenant_id=0)
+
     monkeypatch.setattr(svc, "SkillRepository", FakeRepo)
 
-    with pytest.raises(ValueError, match="非内置 skill 冲突"):
-        await svc.init_builtin_skills(None)
+    items = await svc.init_builtin_skills(None)
+
+    assert len(items) == 1
+    assert created[0]["builtin"] is True
+    assert created[0]["slug"] == "reporter"
 
 
 @pytest.mark.asyncio

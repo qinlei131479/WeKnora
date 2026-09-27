@@ -2423,15 +2423,19 @@ async def init_builtin_skills(db: AsyncSession, *, created_by: str = "system") -
 
     specs = list_builtin_skill_specs()
     runtime_specs = _build_builtin_runtime_specs(specs, operator_uid=created_by)
-    # 先补齐 Go 端已注册的 catalog 扩展，再处理内置技能，避免存量同名记录阻断全部同步。
-    await repo.reconcile_runtime_records(runtime_specs, operator_uid=created_by or "system")
-
+    # 多租户且没有请求上下文时，补齐已有目录会失败。不能因此跳过内置技能写入。
     try:
-        for spec in specs:
-            slug = spec["slug"]
+        await repo.reconcile_runtime_records(runtime_specs, operator_uid=created_by or "system")
+    except ValueError as exc:
+        logger.warning(f"启动时未能按单一租户补齐已有技能目录，继续写入内置技能: {exc}")
+
+    for spec in specs:
+        slug = spec["slug"]
+        try:
             existing = await repo.get_by_slug_unscoped(slug)
             if existing and not is_builtin_skill(existing):
-                raise ValueError(f"内置 skill '{slug}' 与已存在的非内置 skill 冲突")
+                logger.warning(f"内置 skill '{slug}' 与租户技能同名，仍写入内置记录")
+                existing = None
 
             target_dir = get_skills_root_dir() / slug
             _replace_skill_target(target_dir, Path(spec["source_dir"]))
@@ -2481,10 +2485,9 @@ async def init_builtin_skills(db: AsyncSession, *, created_by: str = "system") -
                     source_mtime=spec.get("source_mtime"),
                 )
             )
-    except AppCoreAuthError as exc:
-        logger.warning(
-            f"已补齐本地 Skill runtime，但内置技能 catalog 同步需要用户 JWT 或 WEKNORA_APPCORE_API_KEY：{exc}"
-        )
-        return synced_items
+        except AppCoreAuthError as exc:
+            logger.warning(f"内置 skill '{slug}' 同步需要用户 JWT 或 WEKNORA_APPCORE_API_KEY：{exc}")
+        except Exception as exc:
+            logger.error(f"同步内置 skill '{slug}' 失败: {exc}")
 
     return synced_items
