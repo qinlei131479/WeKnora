@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.utils.auth_middleware import get_admin_user, get_db, get_required_user
+from yuxi.config.errors import ApiError
 from yuxi.agents.skills.service import (
     confirm_skill_install_draft,
     create_skill_node,
@@ -94,10 +95,12 @@ class SkillDraftConfirmRequest(_DraftConfirmRequestBase):
     share_config: dict | None = Field(None, description="共享权限配置")
 
 
-def _raise_from_value_error(e: ValueError) -> None:
-    message = str(e)
-    status_code = 404 if "不存在" in message or "无权" in message else 400
-    raise HTTPException(status_code=status_code, detail=message)
+def _raise_from_value_error(exc: Exception) -> None:
+    """技能失败只把错误码交给界面，不回传异常原文。"""
+    if isinstance(exc, ApiError):
+        raise HTTPException(status_code=exc.status, detail=exc.payload()) from exc
+    logger.warning(f"技能请求未映射为错误码: {exc}")
+    raise HTTPException(status_code=400, detail={"error_code": "skill_failed", "params": {}}) from exc
 
 
 def _cleanup_export_file(path: str) -> None:
@@ -119,34 +122,25 @@ def _serialize_skill_for_user(item, user: User) -> dict:
     data = item.to_dict()
     data["can_manage"] = user_can_manage_skill(user, item)
     data["effective_permission"] = resolve_skill_permission(user, item).value
-    data["is_builtin"] = is_builtin_skill(item)
+    data["builtin"] = is_builtin_skill(item)
     return data
 
 
 @user_skills.get("")
 async def list_skill_cards_route(
-    refresh_personal: bool = Query(False, description="是否强制重新扫描个人 Skill"),
     current_user: User = Depends(get_required_user),
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        items, snapshot = await list_skill_cards_for_user(
-            db,
-            current_user,
-            refresh_personal=refresh_personal,
-        )
+        items = await list_skill_cards_for_user(db, current_user)
         return {
             "success": True,
             "data": [_serialize_skill_for_user(item, current_user) for item in items],
-            "personal_cache": {
-                "scanned_at": snapshot.scanned_at,
-                "from_cache": snapshot.from_cache,
-            },
             "allowed_access_levels": get_allowed_skill_access_levels(current_user),
         }
     except Exception as e:
         logger.error(f"Failed to list Skill cards: {e}")
-        raise HTTPException(status_code=500, detail="获取 Skill 列表失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @user_skills.get("/sandbox-board")
@@ -160,7 +154,7 @@ async def skill_sandbox_board_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to list skill sandbox board: {e}")
-        raise HTTPException(status_code=500, detail="获取沙箱安装状态失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @user_skills.get("/sandbox-configs/{sandbox_config_id}/skills")
@@ -175,7 +169,7 @@ async def list_sandbox_config_skills_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to list sandbox skills: {e}")
-        raise HTTPException(status_code=500, detail="获取沙箱技能失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @user_skills.patch("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}")
@@ -199,7 +193,7 @@ async def patch_sandbox_config_skill_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to update sandbox skill: {e}")
-        raise HTTPException(status_code=500, detail="更新沙箱技能失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @user_skills.post("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}/stop")
@@ -218,7 +212,7 @@ async def stop_sandbox_config_skill_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to stop sandbox skill: {e}")
-        raise HTTPException(status_code=500, detail="停止安装失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @user_skills.post("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}/reinstall")
@@ -234,7 +228,7 @@ async def retry_sandbox_config_skill_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to retry sandbox skill: {e}")
-        raise HTTPException(status_code=500, detail="重试安装失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @user_skills.delete("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}")
@@ -251,7 +245,7 @@ async def remove_sandbox_config_skill_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to remove sandbox skill: {e}")
-        raise HTTPException(status_code=500, detail="卸载沙箱技能失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @user_skills.get("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}/messages")
@@ -272,7 +266,7 @@ async def sandbox_skill_messages_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to read sandbox skill messages: {e}")
-        raise HTTPException(status_code=500, detail="读取安装过程失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @user_skills.get("/sandbox-configs/{sandbox_config_id}/skills/{skill_id}/transcript")
@@ -290,7 +284,7 @@ async def sandbox_skill_transcript_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to read sandbox skill transcript: {e}")
-        raise HTTPException(status_code=500, detail="读取安装过程失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
     async def body():
         for frame in frames:
@@ -317,7 +311,7 @@ async def sandbox_skill_guidance_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to read sandbox skill guidance: {e}")
-        raise HTTPException(status_code=500, detail="读取安装引导失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @user_skills.get("/accessible")
@@ -330,7 +324,7 @@ async def list_accessible_skills_route(
         return {"success": True, "data": [_serialize_skill_for_user(item, current_user) for item in items]}
     except Exception as e:
         logger.error(f"Failed to list accessible skills: {e}")
-        raise HTTPException(status_code=500, detail="获取可访问 Skills 失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @user_skills.post("/import/prepare")
@@ -353,7 +347,7 @@ async def prepare_skill_upload_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to prepare skill upload: {e}")
-        raise HTTPException(status_code=500, detail="解析上传 Skill 失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @user_skills.post("/remote/list")
@@ -364,7 +358,7 @@ async def list_remote_skills_route(payload: RemoteSkillSourceRequest, _current_u
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to list remote skills from '{payload.source}': {e}")
-        raise HTTPException(status_code=500, detail="获取远程 skills 列表失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @user_skills.post("/remote/prepare")
@@ -386,7 +380,7 @@ async def prepare_remote_skills_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to prepare remote skills from '{payload.source}': {e}")
-        raise HTTPException(status_code=500, detail="解析远程 Skills 失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @user_skills.post("/install-drafts/{draft_id}/confirm")
@@ -409,7 +403,7 @@ async def confirm_skill_install_draft_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to confirm skill install draft '{draft_id}': {e}")
-        raise HTTPException(status_code=500, detail="确认安装 Skill 失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @skills.get("")
@@ -426,7 +420,7 @@ async def list_skills_route(
         }
     except Exception as e:
         logger.error(f"Failed to list manageable skills: {e}")
-        raise HTTPException(status_code=500, detail="获取技能列表失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @skills.get("/dependency-options")
@@ -443,7 +437,7 @@ async def get_skill_dependency_options_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to get skill dependency options: {e}")
-        raise HTTPException(status_code=500, detail="获取 skill 依赖选项失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @skills.put("/{slug}/enabled")
@@ -460,7 +454,7 @@ async def update_skill_enabled_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to update skill enabled '{slug}': {e}")
-        raise HTTPException(status_code=500, detail="更新 Skill 启用状态失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @skills.get("/{slug}/tree")
@@ -476,7 +470,7 @@ async def get_skill_tree_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to get skill tree '{slug}': {e}")
-        raise HTTPException(status_code=500, detail="获取技能目录树失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @skills.get("/{slug}/file")
@@ -493,7 +487,7 @@ async def get_skill_file_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to read skill file '{slug}/{path}': {e}")
-        raise HTTPException(status_code=500, detail="读取技能文件失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @skills.post("/{slug}/file")
@@ -518,7 +512,7 @@ async def create_skill_file_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to create skill node '{slug}/{payload.path}': {e}")
-        raise HTTPException(status_code=500, detail="创建技能文件失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @skills.put("/{slug}/file")
@@ -542,7 +536,7 @@ async def update_skill_file_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to update skill file '{slug}/{payload.path}': {e}")
-        raise HTTPException(status_code=500, detail="更新技能文件失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @skills.put("/{slug}/dependencies")
@@ -566,7 +560,7 @@ async def update_skill_dependencies_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to update skill dependencies '{slug}': {e}")
-        raise HTTPException(status_code=500, detail="更新 skill 依赖失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @skills.get("/{slug}/export")
@@ -585,7 +579,7 @@ async def export_skill_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to export skill '{slug}': {e}")
-        raise HTTPException(status_code=500, detail="导出技能失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})
 
 
 @skills.delete("/{slug}")
@@ -602,4 +596,4 @@ async def delete_skill_route(
         _raise_from_value_error(e)
     except Exception as e:
         logger.error(f"Failed to delete skill '{slug}': {e}")
-        raise HTTPException(status_code=500, detail="删除技能失败")
+        raise HTTPException(status_code=500, detail={"error_code": "skill_failed", "params": {}})

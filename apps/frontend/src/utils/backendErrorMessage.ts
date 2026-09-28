@@ -1,4 +1,4 @@
-/** 后端原文错误按当前界面语言显示。文案在 i18n/locales_backend，键为 error.kb.*。 */
+/** 后端错误按当前界面语言显示。文案在 i18n/locales_backend。知识库原文走 error.kb.*，错误码走 error.<领域>.<错误码>。 */
 export const BACKEND_ERROR_I18N_KEYS: Record<string, string> = {
   'No permission to operate on this knowledge base': 'error.kb.noPermissionOperate',
   'No permission to operate': 'error.kb.noPermissionOperate',
@@ -101,6 +101,21 @@ const PARSE_STATUS_I18N: Record<string, string> = {
 }
 
 type Translate = (key: string, params?: Record<string, string>) => string
+
+/** 接口错误码换成当前语言。键为 error.<领域>.<错误码>，领域取错误码第一段。找不到时返回空。 */
+export function localizeApiErrorCode(
+  code: string | undefined,
+  params: Record<string, string> | undefined,
+  translate: Translate,
+  exists: (key: string) => boolean,
+): string | undefined {
+  if (!code) return undefined
+  const domain = code.split('_')[0]
+  if (!domain) return undefined
+  const key = `error.${domain}.${code}`
+  if (!exists(key)) return undefined
+  return translate(key, params || {})
+}
 
 type PatternRule = {
   test: RegExp

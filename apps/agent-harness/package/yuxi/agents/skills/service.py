@@ -13,8 +13,7 @@ import time
 import uuid
 import zipfile
 from collections.abc import AsyncIterator, Callable
-from contextlib import asynccontextmanager
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -25,17 +24,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from yuxi import config as sys_config
 from yuxi.agents.mcp.service import get_enabled_mcp_server_slugs
+from yuxi.config.errors import ApiError, failure_result
 from yuxi.agents.skills.repository import (
     SkillRecord,
     SkillRepository,
     SkillSandboxRepository,
     _scope_tenant_id,
     build_skill_bundle_for_dir,
+    is_builtin_tenant,
 )
-from yuxi.appcore.client import AppCoreAuthError
 from yuxi.permissions import ResourcePermission, normalize_permission_config, resolve_skill_permission
 from yuxi.storage.postgres.models_business import User
-from yuxi.storage.redis import get_async_redis_client
 from yuxi.storage.redis.manager import RedisConfig, create_async_redis_client
 from yuxi.utils.datetime_utils import utc_now_naive
 from yuxi.utils.logging_config import logger
@@ -100,7 +99,6 @@ _SKILL_COPY_IGNORE = shutil.ignore_patterns(
 )
 
 BUILTIN_SKILL_OPERATOR = "builtin-system"
-SKILL_SOURCE_TYPES = {"builtin", "upload", "remote"}
 ADMIN_ROLES = {"admin", "superadmin"}
 DEFAULT_SKILL_SHARE_CONFIG = {"access_level": "user", "department_ids": [], "user_uids": []}
 BUILTIN_SKILL_SHARE_CONFIG = {"access_level": "global", "department_ids": [], "user_uids": []}
@@ -110,13 +108,6 @@ BUILTIN_SKILL_PERMISSION_CONFIG = {
     "manage_scope": None,
 }
 SKILL_DRAFT_TTL_SECONDS = 60 * 60
-PERSONAL_SKILL_CACHE_TTL_SECONDS = 5 * 60
-PERSONAL_SKILL_CACHE_PREFIX = "yuxi:skills:personal:v1:"
-PERSONAL_SKILL_SCAN_LOCK_PREFIX = "yuxi:skills:personal:scan-lock:v1:"
-PERSONAL_SKILL_SCAN_LOCK_TIMEOUT_SECONDS = 30
-PERSONAL_SKILL_SCAN_LOCK_WAIT_SECONDS = 10
-PERSONAL_SKILL_SOURCE_TYPE = "personal"
-WORKSPACE_SKILLS_RELATIVE_DIR = Path("agents") / "skills"
 _THREAD_SKILLS_LOCK = threading.Lock()
 _THREAD_SKILLS_LOCKS: dict[str, threading.Lock] = {}
 
@@ -131,6 +122,7 @@ class ResolvedSkill:
     description: str
     source_type: str
     source_scope: str
+    builtin: bool
     source_dir: Path
     enabled: bool
     created_by: str | None
@@ -138,8 +130,6 @@ class ResolvedSkill:
     tool_dependencies: list[str]
     mcp_dependencies: list[str]
     skill_dependencies: list[str]
-    overrides_shared: bool = False
-    shadowed_by_personal: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         """返回可安全提供给前端的 Skill 元数据。"""
@@ -150,26 +140,16 @@ class ResolvedSkill:
             "description": self.description,
             "source_type": self.source_type,
             "source_scope": self.source_scope,
+            "builtin": self.builtin,
             "enabled": self.enabled,
             "created_by": self.created_by,
             "tool_dependencies": self.tool_dependencies,
             "mcp_dependencies": self.mcp_dependencies,
             "skill_dependencies": self.skill_dependencies,
-            "overrides_shared": self.overrides_shared,
-            "shadowed_by_personal": self.shadowed_by_personal,
         }
         if self.share_config is not None:
             data["share_config"] = self.share_config
         return data
-
-
-@dataclass(frozen=True, slots=True)
-class PersonalSkillSnapshot:
-    """承载一次个人 Skill 元数据快照。"""
-
-    items: list[ResolvedSkill]
-    scanned_at: str
-    from_cache: bool
 
 
 def _get_thread_skills_lock(thread_id: str) -> threading.Lock:
@@ -203,9 +183,28 @@ def is_valid_skill_slug(slug: str) -> bool:
     return bool(SKILL_SLUG_PATTERN.match(slug.strip()))
 
 
+def skill_batch_failure(slug: str, exc: Exception, *, name: str = "") -> dict[str, object]:
+    """单条技能批量失败。slug 标明是哪一条技能，展示名放进错误参数。"""
+    payload = failure_result(
+        exc,
+        error_code="skill_duplicate",
+        fallback_code="skill_failed",
+        duplicate_params={"name": name or slug},
+        duplicate_markers=("uq_tenant_skill_catalog",),
+    )
+    return {"slug": slug, "success": False, **payload}
+
+
 def is_builtin_skill(item: SkillRecord | dict) -> bool:
-    tenant_id = item.get("tenant_id") if isinstance(item, dict) else getattr(item, "tenant_id", None)
-    return tenant_id == 0
+    """内置只认 tenant_id 为 0。没有租户字段时使用已经算好的 builtin。"""
+    if isinstance(item, dict):
+        if "tenant_id" in item:
+            return is_builtin_tenant(item.get("tenant_id"))
+        return bool(item.get("builtin"))
+    tenant_id = getattr(item, "tenant_id", None)
+    if tenant_id is not None:
+        return is_builtin_tenant(tenant_id)
+    return bool(getattr(item, "builtin", False))
 
 
 def get_allowed_skill_access_levels(user: User) -> list[str]:
@@ -229,12 +228,14 @@ def normalize_skill_share_config(
         "department_ids": [],
         "user_uids": [],
     }
-    return normalize_permission_config(
-        share_config or {"version": 2, "read_scope": default_scope, "manage_scope": None},
-        allowed_access_levels=allowed_access_levels,
-        unauthorized_access_level_message="当前用户无权使用该 Skill 共享范围",
-        strict=True,
-    )
+    try:
+        return normalize_permission_config(
+            share_config or {"version": 2, "read_scope": default_scope, "manage_scope": None},
+            allowed_access_levels=allowed_access_levels,
+            strict=True,
+        )
+    except ValueError as exc:
+        raise ApiError("skill_share_forbidden") from exc
 
 
 def user_can_access_skill(user: User, skill: SkillRecord, *, require_enabled: bool = True) -> bool:
@@ -297,7 +298,7 @@ def _scope_contains(container: dict, target: dict) -> bool:
 
 def _ensure_non_builtin(item: SkillRecord) -> None:
     if is_builtin_skill(item):
-        raise ValueError("内置 skill 不允许执行该操作")
+        raise ApiError("skill_builtin_readonly")
 
 
 async def list_skill_sandbox_board(db: AsyncSession) -> dict[str, Any]:
@@ -330,16 +331,16 @@ async def install_skill_to_sandboxes(db: AsyncSession, *, slug: str, sandbox_con
     repo = SkillRepository(db)
     tenant_id = _scope_tenant_id() or item.tenant_id
     if tenant_id is None:
-        raise ValueError("安装技能需要当前空间")
+        raise ApiError("skill_tenant_required")
     catalog = await repo._require_row(item)
     board = SkillSandboxRepository(db)
     known = {row.id for row in await board.list_sandboxes(int(tenant_id))}
     targets = [config_id for config_id in sandbox_config_ids if config_id]
     if not targets:
-        raise ValueError("请选择沙箱")
+        raise ApiError("skill_sandbox_required")
     missing = [config_id for config_id in targets if config_id not in known]
     if missing:
-        raise ValueError("沙箱不存在")
+        raise ApiError("skill_sandbox_missing", status=404)
     installed_ids: list[str] = []
     for config_id in targets:
         row = await board.install_catalog(tenant_id=int(tenant_id), sandbox_config_id=config_id, catalog=catalog)
@@ -352,7 +353,7 @@ async def uninstall_skill_from_sandbox(db: AsyncSession, *, slug: str, sandbox_c
     item = await get_skill_or_raise(db, slug)
     tenant_id = _scope_tenant_id() or item.tenant_id
     if tenant_id is None:
-        raise ValueError("卸载技能需要当前空间")
+        raise ApiError("skill_tenant_required")
     await SkillSandboxRepository(db).uninstall(
         tenant_id=int(tenant_id),
         sandbox_config_id=sandbox_config_id,
@@ -363,7 +364,7 @@ async def uninstall_skill_from_sandbox(db: AsyncSession, *, slug: str, sandbox_c
 def _sandbox_tenant_id() -> int:
     tenant_id = _scope_tenant_id()
     if tenant_id is None:
-        raise ValueError("需要当前空间")
+        raise ApiError("skill_tenant_required")
     return int(tenant_id)
 
 
@@ -410,7 +411,7 @@ def _config_skill_payload(row: Any) -> dict[str, Any]:
 def _apply_env_clears(raw: Any, updates: dict[str, str]) -> Any:
     """只接受清空。写入新值需要设置页的加密流程，这里不落明文。"""
     if any(str(value) for value in updates.values()):
-        raise ValueError("环境变量请在设置页修改")
+        raise ApiError("skill_env_readonly")
     if not isinstance(raw, list):
         return raw
     names = {name for name, value in updates.items() if value == ""}
@@ -511,7 +512,7 @@ async def stop_config_skill(db: AsyncSession, *, sandbox_config_id: str, skill_i
         skill_id=skill_id,
     )
     if row.status != "installing":
-        raise ValueError("当前状态不能停止")
+        raise ApiError("skill_cannot_stop")
     row.status = "failed"
     row.error = "已停止"
     row.installing_since = None
@@ -526,7 +527,7 @@ async def retry_config_skill(db: AsyncSession, *, sandbox_config_id: str, skill_
         sandbox_config_id=sandbox_config_id,
         skill_id=skill_id,
     )
-    raise ValueError("镜像重建请在设置页操作")
+    raise ApiError("skill_rebuild_elsewhere")
 
 
 async def remove_config_skill(db: AsyncSession, *, sandbox_config_id: str, skill_id: str) -> None:
@@ -555,7 +556,7 @@ async def load_skill_transcript_frames(
     session_id = row.install_session_id or ""
     message_id = row.install_message_id or ""
     if not session_id or not message_id:
-        raise ValueError("安装过程不存在")
+        raise ApiError("skill_install_record_missing", status=404)
     prefix = os.environ.get("STREAM_EVENTS_PREFIX", "stream:events")
     key = f"{prefix}:{session_id}:{message_id}"
     client = None
@@ -567,7 +568,7 @@ async def load_skill_transcript_frames(
         events = await client.lrange(key, 0, -1)
     except Exception:
         logger.warning("读取技能安装过程失败")
-        raise ValueError("安装过程不存在")
+        raise ApiError("skill_install_record_missing", status=404)
     finally:
         if client is not None:
             await client.aclose()
@@ -593,7 +594,7 @@ async def load_skill_transcript_frames(
         if evt.get("type") == "complete":
             break
     if not frames:
-        raise ValueError("安装过程不存在")
+        raise ApiError("skill_install_record_missing", status=404)
     return frames
 
 
@@ -629,19 +630,19 @@ def _cleanup_expired_skill_drafts() -> None:
 
 def _load_skill_draft(draft_id: str) -> tuple[Path, dict]:
     if not re.fullmatch(r"[0-9a-fA-F-]{32,36}", str(draft_id or "")):
-        raise ValueError("无效的安装草稿")
+        raise ApiError("skill_draft_invalid")
     draft_dir = (get_skill_drafts_root_dir() / draft_id).resolve()
     try:
         draft_dir.relative_to(get_skill_drafts_root_dir().resolve())
     except ValueError:
-        raise ValueError("无效的安装草稿") from None
+        raise ApiError("skill_draft_invalid") from None
     metadata_path = draft_dir / "metadata.json"
     if not metadata_path.exists():
-        raise ValueError("安装草稿不存在或已过期")
+        raise ApiError("skill_draft_invalid", status=404)
     data = json.loads(metadata_path.read_text(encoding="utf-8"))
     if data.get("expires_at", 0) < time.time():
         shutil.rmtree(draft_dir, ignore_errors=True)
-        raise ValueError("安装草稿已过期")
+        raise ApiError("skill_draft_invalid", status=404)
     return draft_dir, data
 
 
@@ -651,18 +652,18 @@ def _load_and_select_draft_items(
     """加载安装草稿，校验权限与来源类型，并按需筛选选中的条目。"""
     draft_dir, data = _load_skill_draft(draft_id)
     if data.get("created_by") != operator.uid and operator.role not in ADMIN_ROLES:
-        raise ValueError("无权确认该安装草稿")
+        raise ApiError("skill_draft_forbidden", status=403)
     if data.get("source_type") not in {"upload", "remote"}:
-        raise ValueError("无效的安装草稿来源")
+        raise ApiError("skill_draft_invalid")
 
     draft_items = data.get("items") or []
     if slugs is not None:
         selected_slugs = set(slugs)
         if not selected_slugs:
-            raise ValueError("至少选择一个 Skill")
+            raise ApiError("skill_draft_empty")
         available_slugs = {str(item.get("slug") or "").strip() for item in draft_items}
         if selected_slugs - available_slugs:
-            raise ValueError("确认安装包含草稿外的 Skill")
+            raise ApiError("skill_draft_unknown")
         draft_items = [item for item in draft_items if str(item.get("slug") or "").strip() in selected_slugs]
 
     return draft_dir, data, draft_items
@@ -671,9 +672,9 @@ def _load_and_select_draft_items(
 def get_thread_skills_root_dir(thread_id: str) -> Path:
     safe_thread_id = str(thread_id or "").strip()
     if not safe_thread_id:
-        raise ValueError("thread_id is required")
+        raise ApiError("skill_invalid_input")
     if not re.fullmatch(r"[A-Za-z0-9_-]+", safe_thread_id):
-        raise ValueError("thread_id contains invalid characters")
+        raise ApiError("skill_invalid_input")
 
     root = Path(sys_config.save_dir) / "threads" / safe_thread_id / "skills"
     root.mkdir(parents=True, exist_ok=True)
@@ -875,45 +876,16 @@ async def list_accessible_skills(
     user: User,
     *,
     require_enabled: bool = True,
-    refresh_personal: bool = False,
 ) -> list[ResolvedSkill]:
-    """返回当前用户最终生效的共享与个人 Skill。"""
-    shared_items, personal_snapshot = await asyncio.gather(
-        _list_accessible_shared_skills(db, user, require_enabled=require_enabled),
-        list_personal_skills(str(user.uid), refresh=refresh_personal),
-    )
-    personal_by_slug = {item.slug: item for item in personal_snapshot.items}
-
-    effective: dict[str, ResolvedSkill] = {}
-    for item in shared_items:
-        effective[item.slug] = _resolved_shared_skill(
-            item,
-            shadowed_by_personal=item.slug in personal_by_slug,
-        )
-    for slug, item in personal_by_slug.items():
-        effective[slug] = replace(item, overrides_shared=slug in effective)
-    return list(effective.values())
+    """返回当前用户可用的目录技能。"""
+    shared_items = await _list_accessible_shared_skills(db, user, require_enabled=require_enabled)
+    return [_resolved_shared_skill(item) for item in shared_items]
 
 
-async def list_skill_cards_for_user(
-    db: AsyncSession,
-    user: User,
-    *,
-    refresh_personal: bool = False,
-) -> tuple[list[ResolvedSkill], PersonalSkillSnapshot]:
-    """返回管理页所需的共享与个人 Skill 卡片。"""
-    shared_items, personal_snapshot = await asyncio.gather(
-        list_visible_skills_for_management(db, user),
-        list_personal_skills(str(user.uid), refresh=refresh_personal),
-    )
-    personal_slugs = {item.slug for item in personal_snapshot.items}
-    shared_slugs = {item.slug for item in shared_items}
-
-    personal_cards = [replace(item, overrides_shared=item.slug in shared_slugs) for item in personal_snapshot.items]
-    shared_cards = [
-        _resolved_shared_skill(item, shadowed_by_personal=item.slug in personal_slugs) for item in shared_items
-    ]
-    return [*personal_cards, *shared_cards], personal_snapshot
+async def list_skill_cards_for_user(db: AsyncSession, user: User) -> list[ResolvedSkill]:
+    """返回管理页的目录技能卡片。"""
+    shared_items = await list_visible_skills_for_management(db, user)
+    return [_resolved_shared_skill(item) for item in shared_items]
 
 
 
@@ -1115,34 +1087,34 @@ async def _validate_dependencies(
     mcps = normalize_string_list(mcp_dependencies)
     skills = normalize_string_list(skill_dependencies)
     if parent.source_type == "common" and (tools or skills):
-        raise ValueError("通用技能不能绑定工具或其他技能")
+        raise ApiError("skill_common_no_deps")
 
     # 验证所有工具（不仅仅是 buildin）
     tool_sources = await _tool_source_map()
     invalid_tools = [name for name in tools if name not in tool_sources]
     if invalid_tools:
-        raise ValueError(f"存在无效工具依赖: {', '.join(invalid_tools)}")
+        raise ApiError("skill_dependency_invalid", names=", ".join(invalid_tools))
     mismatched_tools = [
         name for name in tools if not _tool_matches_skill(parent.source_type, tool_sources.get(name, "work"))
     ]
     if mismatched_tools:
-        raise ValueError(f"存在使用范围不匹配的工具依赖: {', '.join(mismatched_tools)}")
+        raise ApiError("skill_dependency_invalid", names=", ".join(mismatched_tools))
 
     available_mcps = set(await get_enabled_mcp_server_slugs(db=None))
     invalid_mcps = [name for name in mcps if name not in available_mcps]
     if invalid_mcps:
-        raise ValueError(f"存在无效 MCP 依赖: {', '.join(invalid_mcps)}")
+        raise ApiError("skill_dependency_invalid", names=", ".join(invalid_mcps))
 
     invalid_skills = [name for name in skills if name not in available_skills]
     if invalid_skills:
-        raise ValueError(f"存在无效 skill 依赖: {', '.join(invalid_skills)}")
+        raise ApiError("skill_dependency_invalid", names=", ".join(invalid_skills))
 
     if parent.slug in skills:
-        raise ValueError("skill_dependencies 不允许包含自身")
+        raise ApiError("skill_dependency_self")
 
     forbidden_skills = [name for name in skills if not can_skill_depend_on(parent, available_skills[name])]
     if forbidden_skills:
-        raise ValueError(f"存在权限范围不匹配的 skill 依赖: {', '.join(forbidden_skills)}")
+        raise ApiError("skill_dependency_invalid", names=", ".join(forbidden_skills))
 
     return tools, mcps, skills
 
@@ -1160,7 +1132,7 @@ async def update_skill_dependencies(
     _ensure_non_builtin(item)
     installed = await _live_sandbox_names(db, item)
     if installed:
-        raise ValueError(f"技能已安装到沙箱，不能调整依赖：{', '.join(installed)}")
+        raise ApiError("skill_installed_locked", names=", ".join(installed))
     repo = SkillRepository(db)
     skill_items = await _list_accessible_shared_skills(db, operator)
     available_skills = {skill.slug: skill for skill in skill_items}
@@ -1184,30 +1156,30 @@ async def update_skill_dependencies(
 def _validate_skill_slug_value(slug: str, *, field_name: str) -> str:
     slug = slug.strip()
     if not slug:
-        raise ValueError(f"SKILL.md frontmatter 缺少 {field_name}")
+        raise ApiError("skill_invalid_input", field=field_name)
     if len(slug) > 128:
-        raise ValueError(f"SKILL.md frontmatter.{field_name} 长度不能超过 128")
+        raise ApiError("skill_invalid_input", field=field_name)
     if not SKILL_NAME_PATTERN.match(slug):
-        raise ValueError(f"SKILL.md frontmatter.{field_name} 必须是小写字母/数字/短横线，且不能连续短横线")
+        raise ApiError("skill_invalid_slug", field=field_name)
     return slug
 
 
 def _validate_skill_display_name(name: str) -> str:
     name = name.strip()
     if not name:
-        raise ValueError("SKILL.md frontmatter 缺少 name")
+        raise ApiError("skill_invalid_input", field="name")
     if len(name) > 128:
-        raise ValueError("SKILL.md frontmatter.name 长度不能超过 128")
+        raise ApiError("skill_invalid_input", field="name")
     return name
 
 
 def _split_frontmatter(content: str) -> tuple[str, str]:
     if not content.startswith("---"):
-        raise ValueError("SKILL.md 缺少有效 frontmatter（--- ... ---）")
+        raise ApiError("skill_invalid_input")
 
     lines = content.splitlines(keepends=True)
     if not lines or lines[0].strip() != "---":
-        raise ValueError("SKILL.md 缺少有效 frontmatter（--- ... ---）")
+        raise ApiError("skill_invalid_input")
 
     frontmatter_lines: list[str] = []
     body_start = 0
@@ -1217,7 +1189,7 @@ def _split_frontmatter(content: str) -> tuple[str, str]:
             break
         frontmatter_lines.append(line)
     else:
-        raise ValueError("SKILL.md 缺少有效 frontmatter（--- ... ---）")
+        raise ApiError("skill_invalid_input")
 
     frontmatter_raw = "".join(frontmatter_lines)
     body = "".join(lines[body_start:])
@@ -1229,10 +1201,10 @@ def _parse_skill_markdown(content: str) -> tuple[str, str, str, dict[str, Any]]:
     try:
         data = yaml.safe_load(frontmatter_raw)
     except yaml.YAMLError as e:
-        raise ValueError(f"SKILL.md frontmatter YAML 解析失败: {e}") from e
+        raise ApiError("skill_invalid_input") from e
 
     if not isinstance(data, dict):
-        raise ValueError("SKILL.md frontmatter 必须是对象")
+        raise ApiError("skill_invalid_input")
 
     name = _validate_skill_display_name(str(data.get("name", "")))
     raw_slug = str(data.get("slug", "")).strip()
@@ -1243,7 +1215,7 @@ def _parse_skill_markdown(content: str) -> tuple[str, str, str, dict[str, Any]]:
     )
     description = str(data.get("description", "")).strip()
     if not description:
-        raise ValueError("SKILL.md frontmatter 缺少 description")
+        raise ApiError("skill_missing_description")
 
     return slug, name, description, data
 
@@ -1254,16 +1226,16 @@ def _builtin_skill_markdown(content: str, slug: str) -> tuple[str, str, dict[str
     try:
         data = yaml.safe_load(frontmatter_raw)
     except yaml.YAMLError as exc:
-        raise ValueError(f"SKILL.md frontmatter YAML 解析失败: {exc}") from exc
+        raise ApiError("skill_invalid_input") from exc
     if not isinstance(data, dict):
-        raise ValueError("SKILL.md frontmatter 必须是对象")
+        raise ApiError("skill_invalid_input")
     raw_slug = str(data.get("slug") or "").strip()
     if raw_slug and _validate_skill_slug_value(raw_slug, field_name="slug") != slug:
-        raise ValueError(f"内置 skill frontmatter.slug 必须等于 slug: {slug}")
+        raise ApiError("skill_slug_mismatch", name=slug)
     name = _validate_skill_display_name(str(data.get("name") or slug))
     description = str(data.get("description") or "").strip()
     if not description:
-        raise ValueError("SKILL.md frontmatter 缺少 description")
+        raise ApiError("skill_missing_description")
     return name, description, data
 
 
@@ -1271,7 +1243,7 @@ def _rewrite_frontmatter_slug(content: str, new_slug: str) -> str:
     frontmatter_raw, body = _split_frontmatter(content)
     data = yaml.safe_load(frontmatter_raw)
     if not isinstance(data, dict):
-        raise ValueError("SKILL.md frontmatter 必须是对象")
+        raise ApiError("skill_invalid_input")
     if data.get("slug"):
         data["slug"] = new_slug
     else:
@@ -1284,27 +1256,24 @@ def _validate_zip_paths(zip_file: zipfile.ZipFile) -> None:
     for name in zip_file.namelist():
         pure = PurePosixPath(name)
         if pure.is_absolute():
-            raise ValueError(f"ZIP 包含不安全绝对路径: {name}")
+            raise ApiError("skill_path_invalid")
         if ".." in pure.parts:
-            raise ValueError(f"ZIP 包含路径穿越片段: {name}")
+            raise ApiError("skill_path_invalid")
 
 
-async def _generate_available_slug(repo: SkillRepository, base_slug: str) -> str:
-    if not await repo.exists_slug(base_slug) and not _tenant_skill_absdir(base_slug).exists():
-        return base_slug
-
-    idx = 2
-    while True:
-        candidate = f"{base_slug}-v{idx}"
-        if not await repo.exists_slug(candidate) and not _tenant_skill_absdir(candidate).exists():
-            return candidate
-        idx += 1
+async def _skill_identity_conflict(repo: SkillRepository, *, slug: str, name: str) -> str | None:
+    """名称或标识已在目录中时返回冲突值，否则返回空。"""
+    if await repo.exists_slug(slug) or _tenant_skill_absdir(slug).exists():
+        return slug
+    if name and name != slug and await repo.exists_slug(name):
+        return name
+    return None
 
 
 def _parse_skill_dir_metadata(source_skill_dir: Path) -> dict[str, Any]:
     skill_md_path = source_skill_dir / "SKILL.md"
     if not skill_md_path.exists() or not skill_md_path.is_file():
-        raise ValueError("技能目录缺少根级 SKILL.md")
+        raise ApiError("skill_missing_skill_md")
 
     content = skill_md_path.read_text(encoding="utf-8")
     parsed_slug, parsed_name, parsed_desc, meta = _parse_skill_markdown(content)
@@ -1318,90 +1287,17 @@ def _parse_skill_dir_metadata(source_skill_dir: Path) -> dict[str, Any]:
     }
 
 
-def get_personal_skills_root_dir(uid: str) -> Path:
-    """返回认证用户的个人 Skill 根目录。"""
-    from yuxi.agents.backends.sandbox.paths import global_user_data_dir
-
-    root = global_user_data_dir(uid) / "workspace" / WORKSPACE_SKILLS_RELATIVE_DIR
-    root.mkdir(parents=True, exist_ok=True)
-    return root.resolve()
-
-
-async def list_personal_skills(uid: str, *, refresh: bool = False) -> PersonalSkillSnapshot:
-    """读取个人 Skill Redis 快照，必要时重新扫描工作区。"""
-    redis = await get_async_redis_client()
-    root = get_personal_skills_root_dir(uid)
-
-    if not refresh:
-        cached = await _read_personal_skill_cache(redis, uid, root)
-        if cached is not None:
-            return cached
-
-    async with _personal_skill_scan_lock(redis, uid):
-        if not refresh:
-            cached = await _read_personal_skill_cache(redis, uid, root)
-            if cached is not None:
-                return cached
-        return await _scan_and_cache_personal_skills(redis, uid)
-
-
-async def install_personal_skill_dir(
-    uid: str,
-    source_dir: Path | str,
-    *,
-    refresh_cache: bool = True,
-) -> ResolvedSkill:
-    """将一个 Skill 原子安装到当前用户个人工作区。"""
-    redis = await get_async_redis_client()
-    async with _personal_skill_scan_lock(redis, uid):
-        item = await asyncio.to_thread(_install_personal_skill_dir_sync, uid, Path(source_dir))
-        if refresh_cache:
-            try:
-                await _scan_and_cache_personal_skills(redis, uid)
-            except Exception as exc:
-                logger.exception(f"个人 Skill 已安装但缓存刷新失败: uid={uid}, slug={item.slug}")
-                raise RuntimeError("个人 Skill 已安装，但列表缓存刷新失败，请手动刷新") from exc
-        return item
-
-
-async def read_personal_skill_file(uid: str, slug: str, relative_path: str) -> dict[str, Any]:
-    """读取个人 Skill 中的文本文件。"""
-    skill_dir = _resolve_personal_skill_dir(uid, slug)
-    if not skill_dir.is_dir():
-        raise ValueError("个人 Skill 不存在")
-    target, normalized_path = _resolve_relative_path(skill_dir, relative_path)
-    if not target.is_file():
-        raise ValueError("文件不存在")
-    if not _is_text_path(target):
-        raise ValueError("仅支持读取文本文件")
-    return {"path": normalized_path, "content": target.read_text(encoding="utf-8")}
-
-
-async def delete_personal_skill(uid: str, slug: str) -> PersonalSkillSnapshot:
-    """删除当前用户个人 Skill，并立即刷新缓存。"""
-    redis = await get_async_redis_client()
-    async with _personal_skill_scan_lock(redis, uid):
-        skill_dir = _resolve_personal_skill_dir(uid, slug)
-        if not skill_dir.is_dir():
-            raise ValueError("个人 Skill 不存在")
-        await asyncio.to_thread(shutil.rmtree, skill_dir)
-        try:
-            return await _scan_and_cache_personal_skills(redis, uid)
-        except Exception as exc:
-            logger.exception(f"个人 Skill 已删除但缓存刷新失败: uid={uid}, slug={slug}")
-            raise RuntimeError("个人 Skill 已删除，但列表缓存刷新失败，请手动刷新") from exc
-
-
-def _resolved_shared_skill(item: SkillRecord, *, shadowed_by_personal: bool = False) -> ResolvedSkill:
+def _resolved_shared_skill(item: SkillRecord) -> ResolvedSkill:
     """将数据库 Skill 适配为统一的有效 Skill 描述。"""
-    source_scope = "builtin" if is_builtin_skill(item) else "shared"
+    builtin = is_builtin_skill(item)
     return ResolvedSkill(
         id=item.id,
         slug=item.slug,
         name=item.name,
         description=item.description,
         source_type=item.source_type,
-        source_scope=source_scope,
+        source_scope="builtin" if builtin else "shared",
+        builtin=builtin,
         source_dir=_resolve_skill_dir(item),
         enabled=bool(item.enabled),
         created_by=item.created_by,
@@ -1411,156 +1307,7 @@ def _resolved_shared_skill(item: SkillRecord, *, shadowed_by_personal: bool = Fa
         tool_dependencies=normalize_string_list(item.tool_dependencies),
         mcp_dependencies=normalize_string_list(item.mcp_dependencies),
         skill_dependencies=normalize_string_list(item.skill_dependencies),
-        shadowed_by_personal=shadowed_by_personal,
     )
-
-
-def _resolved_personal_skill(uid: str, root: Path, metadata: dict[str, Any]) -> ResolvedSkill:
-    """将个人目录元数据适配为不含共享语义的有效 Skill 描述。"""
-    slug = str(metadata["slug"])
-    if not is_valid_skill_slug(slug):
-        raise ValueError("个人 Skill 缓存包含非法 slug")
-    source_dir = ensure_within_root((root / slug).resolve(), root, error_message="个人 Skill 路径越界")
-
-    return ResolvedSkill(
-        id=f"personal:{slug}",
-        slug=slug,
-        name=str(metadata["name"]),
-        description=str(metadata["description"]),
-        source_type=PERSONAL_SKILL_SOURCE_TYPE,
-        source_scope=PERSONAL_SKILL_SOURCE_TYPE,
-        source_dir=source_dir,
-        enabled=True,
-        created_by=uid,
-        share_config=None,
-        tool_dependencies=[],
-        mcp_dependencies=[],
-        skill_dependencies=[],
-    )
-
-
-@asynccontextmanager
-async def _personal_skill_scan_lock(redis: Any, uid: str) -> AsyncIterator[None]:
-    """串行化同一用户的个人 Skill 扫描与文件变更。"""
-    lock = redis.lock(
-        _personal_skill_scan_lock_key(uid),
-        timeout=PERSONAL_SKILL_SCAN_LOCK_TIMEOUT_SECONDS,
-        blocking_timeout=PERSONAL_SKILL_SCAN_LOCK_WAIT_SECONDS,
-    )
-    async with lock:
-        yield
-
-
-async def _read_personal_skill_cache(
-    redis: Any,
-    uid: str,
-    root: Path,
-) -> PersonalSkillSnapshot | None:
-    """读取并校验一个用户的个人 Skill 缓存。"""
-    cache_key = _personal_skill_cache_key(uid)
-    cached = await redis.get(cache_key)
-    if not cached:
-        return None
-
-    try:
-        payload = json.loads(cached)
-        if payload.get("schema_version") != 1:
-            raise ValueError("个人 Skill 缓存版本不匹配")
-        items = [_resolved_personal_skill(uid, root, item) for item in payload["items"]]
-        return PersonalSkillSnapshot(
-            items=items,
-            scanned_at=str(payload["scanned_at"]),
-            from_cache=True,
-        )
-    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
-        logger.warning(f"个人 Skill 缓存无效，将重新扫描: uid={uid}, error={exc}")
-        await redis.delete(cache_key)
-        return None
-
-
-async def _scan_and_cache_personal_skills(
-    redis: Any,
-    uid: str,
-) -> PersonalSkillSnapshot:
-    """扫描个人 Skill 并写入五分钟 Redis 快照。"""
-    items = await asyncio.to_thread(_scan_personal_skills, uid)
-    scanned_at = datetime.now(UTC).isoformat()
-    payload = {
-        "schema_version": 1,
-        "scanned_at": scanned_at,
-        "items": [{"slug": item.slug, "name": item.name, "description": item.description} for item in items],
-    }
-    await redis.set(
-        _personal_skill_cache_key(uid),
-        json.dumps(payload, ensure_ascii=False),
-        ex=PERSONAL_SKILL_CACHE_TTL_SECONDS,
-    )
-    return PersonalSkillSnapshot(items=items, scanned_at=scanned_at, from_cache=False)
-
-
-def _scan_personal_skills(uid: str) -> list[ResolvedSkill]:
-    """扫描并校验当前用户个人 Skill 的直接子目录。"""
-    root = get_personal_skills_root_dir(uid)
-    items: list[ResolvedSkill] = []
-    for entry in sorted(root.iterdir(), key=lambda path: path.name):
-        if entry.is_symlink() or not entry.is_dir() or not is_valid_skill_slug(entry.name):
-            logger.warning(f"跳过非法个人 Skill 目录: uid={uid}, name={entry.name}")
-            continue
-        if _dir_contains_symlink(entry):
-            logger.warning(f"跳过包含符号链接的个人 Skill: uid={uid}, slug={entry.name}")
-            continue
-
-        try:
-            metadata = _parse_skill_dir_metadata(entry)
-            if metadata["slug"] != entry.name:
-                raise ValueError("目录名必须与 SKILL.md slug 一致")
-            items.append(_resolved_personal_skill(uid, root, metadata))
-        except Exception as exc:
-            logger.warning(f"跳过无法解析的个人 Skill: uid={uid}, slug={entry.name}, error={exc}")
-    return items
-
-
-def _install_personal_skill_dir_sync(uid: str, source_dir: Path) -> ResolvedSkill:
-    """在持有用户级锁时将一个 Skill 原子复制到个人目录。"""
-    root = get_personal_skills_root_dir(uid)
-    source_dir = source_dir.resolve()
-    if source_dir.is_symlink() or _dir_contains_symlink(source_dir):
-        raise ValueError("个人 Skill 不允许包含符号链接")
-
-    metadata = _parse_skill_dir_metadata(source_dir)
-    slug = metadata["slug"]
-    target_dir = root / slug
-    if target_dir.exists() or target_dir.is_symlink():
-        raise ValueError(f"个人工作区已存在同名 Skill: {slug}")
-
-    def _validate_slug_unchanged(copied_dir: Path) -> None:
-        copied_metadata = _parse_skill_dir_metadata(copied_dir)
-        if copied_metadata["slug"] != slug:
-            raise ValueError("个人 Skill slug 在复制过程中发生变化")
-
-    _replace_skill_target(target_dir, source_dir, validate=_validate_slug_unchanged)
-    return _resolved_personal_skill(uid, root, metadata)
-
-
-def _resolve_personal_skill_dir(uid: str, slug: str) -> Path:
-    """安全解析当前用户的个人 Skill 目录。"""
-    if not is_valid_skill_slug(slug):
-        raise ValueError("无效 skill slug")
-    root = get_personal_skills_root_dir(uid)
-    target = ensure_within_root((root / slug).resolve(), root, error_message="个人 Skill 路径越界")
-    if target.is_symlink():
-        raise ValueError("个人 Skill 路径非法")
-    return target
-
-
-def _personal_skill_cache_key(uid: str) -> str:
-    """返回当前用户的个人 Skill 缓存 key。"""
-    return f"{PERSONAL_SKILL_CACHE_PREFIX}{uid}"
-
-
-def _personal_skill_scan_lock_key(uid: str) -> str:
-    """返回当前用户的个人 Skill 扫描锁 key。"""
-    return f"{PERSONAL_SKILL_SCAN_LOCK_PREFIX}{uid}"
 
 
 async def _stage_skill_draft_item(
@@ -1573,22 +1320,25 @@ async def _stage_skill_draft_item(
     item_dir = draft_items_dir / item_id
     shutil.copytree(source_skill_dir, item_dir, symlinks=False, ignore=_SKILL_COPY_IGNORE)
     parsed = _parse_skill_dir_metadata(item_dir)
-    final_slug = await _generate_available_slug(repo, parsed["slug"])
-    return {
+    conflict = await _skill_identity_conflict(repo, slug=parsed["slug"], name=parsed["name"])
+    duplicated = conflict is not None
+    staged = {
         "draft_item_id": item_id,
         "source_dir": f"items/{item_id}",
-        "slug": final_slug,
+        "slug": parsed["slug"],
         "name": parsed["name"],
         "original_name": parsed["slug"],
         "description": parsed["description"],
         "tool_dependencies": parsed["tool_dependencies"],
         "mcp_dependencies": parsed["mcp_dependencies"],
         "skill_dependencies": parsed["skill_dependencies"],
-        "warnings": [f"原始 slug {parsed['slug']} 已存在，将安装为 {final_slug}"]
-        if final_slug != parsed["slug"]
-        else [],
-        "success": True,
+        "warnings": [],
+        "success": not duplicated,
     }
+    if duplicated:
+        staged["error_code"] = "skill_duplicate"
+        staged["params"] = {"name": conflict or parsed["name"] or parsed["slug"]}
+    return staged
 
 
 def _build_default_share_payload(operator: User) -> dict[str, Any]:
@@ -1613,14 +1363,13 @@ async def _import_skill_dir_impl(
     skills_root = get_skills_root_dir()
     parsed = _parse_skill_dir_metadata(source_skill_dir)
     repo = SkillRepository(db)
-    final_slug = await _generate_available_slug(repo, parsed["slug"])
+    conflict = await _skill_identity_conflict(repo, slug=parsed["slug"], name=parsed["name"])
+    if conflict:
+        raise ApiError("skill_duplicate", name=conflict)
+    final_slug = parsed["slug"]
     with tempfile.TemporaryDirectory(prefix=".skill-import-", dir=str(skills_root.parent)) as temp_root:
         stage_dir = Path(temp_root) / "stage"
         shutil.copytree(source_skill_dir, stage_dir, ignore=_SKILL_COPY_IGNORE)
-
-        if final_slug != parsed["slug"]:
-            content = (stage_dir / "SKILL.md").read_text(encoding="utf-8")
-            (stage_dir / "SKILL.md").write_text(_rewrite_frontmatter_slug(content, final_slug), encoding="utf-8")
 
         temp_target = skills_root / f".{final_slug}.tmp-{uuid.uuid4().hex[:8]}"
         if temp_target.exists():
@@ -1631,7 +1380,7 @@ async def _import_skill_dir_impl(
         final_dir.parent.mkdir(parents=True, exist_ok=True)
         if final_dir.exists():
             await asyncio.to_thread(shutil.rmtree, temp_target, ignore_errors=True)
-            raise ValueError(f"技能目录冲突，请重试: {final_slug}")
+            raise ApiError("skill_duplicate", name=final_slug)
         temp_target.rename(final_dir)
 
         try:
@@ -1692,7 +1441,7 @@ def _extract_skill_bundle(skill_dir: Path, payload: bytes) -> None:
     with zipfile.ZipFile(io.BytesIO(payload)) as archive:
         skill_files = [name for name in archive.namelist() if name.endswith("SKILL.md") and ".." not in PurePosixPath(name).parts]
         if not skill_files:
-            raise ValueError("技能包缺少 SKILL.md")
+            raise ApiError("skill_missing_skill_md")
         prefix = min(skill_files, key=len)[: -len("SKILL.md")]
         for info in archive.infolist():
             name = info.filename
@@ -1717,7 +1466,7 @@ async def _ensure_skill_dir(db: AsyncSession, item: SkillRecord) -> Path:
     if payload:
         await asyncio.to_thread(_extract_skill_bundle, skill_dir, payload)
     if not (skill_dir / "SKILL.md").is_file():
-        raise ValueError(f"技能目录不存在: {item.dir_path}")
+        raise ApiError("skill_dir_missing")
     return skill_dir
 
 
@@ -1732,10 +1481,10 @@ def _resolve_relative_path(skill_dir: Path, relative_path: str, *, allow_root: b
     rel = (relative_path or "").strip().replace("\\", "/")
     rel = rel.lstrip("/")
     if not rel and not allow_root:
-        raise ValueError("path 不能为空")
+        raise ApiError("skill_path_invalid")
     pure = PurePosixPath(rel) if rel else PurePosixPath(".")
     if ".." in pure.parts:
-        raise ValueError("非法路径：不允许上级路径引用")
+        raise ApiError("skill_path_invalid")
 
     target = ensure_within_root((skill_dir / pure).resolve(), skill_dir, error_message="非法路径：越界访问被拒绝")
 
@@ -1809,7 +1558,7 @@ async def prepare_skill_upload(
     is_zip_upload = normalized_filename.endswith(".zip")
     is_skill_md_upload = normalized_filename.endswith("skill.md")
     if not is_zip_upload and not is_skill_md_upload:
-        raise ValueError("仅支持上传 .zip 或 SKILL.md 文件")
+        raise ApiError("skill_upload_type")
 
     repo = SkillRepository(db)
     draft_dir = get_skill_drafts_root_dir() / str(uuid.uuid4())
@@ -1829,7 +1578,7 @@ async def prepare_skill_upload(
                     zf.extractall(extract_dir)
                 skill_md_files = list(extract_dir.rglob("SKILL.md"))
                 if len(skill_md_files) != 1:
-                    raise ValueError("ZIP 必须且只能包含一个技能（检测到一个 SKILL.md）")
+                    raise ApiError("skill_zip_not_single")
                 source_skill_dir = skill_md_files[0].parent
             else:
                 source_skill_dir = extract_dir
@@ -1878,8 +1627,12 @@ async def prepare_remote_skill_install(
         for result in preparation.results:
             slug = result.get("slug", "")
             if not result.get("success"):
-                item = {"slug": slug, "success": False, "error": result.get("error", "安装失败")}
-                items.append(item)
+                items.append({
+                    "slug": slug,
+                    "success": False,
+                    "error_code": result.get("error_code") or "skill_failed",
+                    "params": result.get("params") or {"name": slug},
+                })
                 continue
 
             try:
@@ -1889,7 +1642,7 @@ async def prepare_remote_skill_install(
                     draft_items_dir=items_dir,
                 )
             except Exception as e:
-                item = {"slug": slug, "success": False, "error": str(e)}
+                item = skill_batch_failure(slug, e, name=slug)
                 items.append(item)
                 continue
 
@@ -1941,16 +1694,21 @@ async def confirm_skill_install_draft(
     for draft_item in draft_items:
         slug = str(draft_item.get("slug") or "").strip()
         if not draft_item.get("success", True):
-            result = {"slug": slug, "success": False, "error": draft_item.get("error", "安装失败")}
+            result = {
+                "slug": slug,
+                "success": False,
+                "error_code": draft_item.get("error_code") or "skill_failed",
+                "params": draft_item.get("params") or {"name": slug},
+            }
             results.append(result)
             continue
 
         if not is_valid_skill_slug(slug):
-            result = {"slug": slug, "success": False, "error": "无效 skill slug"}
+            result = {"slug": slug, "success": False, "error_code": "skill_invalid_slug", "params": {"name": slug}}
             results.append(result)
             continue
         if await repo.exists_slug(slug) or _tenant_skill_absdir(slug).exists():
-            result = {"slug": slug, "success": False, "error": "Skill slug 已被占用，请重新解析安装"}
+            result = {"slug": slug, "success": False, "error_code": "skill_duplicate", "params": {"name": slug}}
             results.append(result)
             continue
 
@@ -1958,12 +1716,14 @@ async def confirm_skill_install_draft(
         try:
             source_dir.relative_to(draft_dir.resolve())
         except ValueError:
-            result = {"slug": slug, "success": False, "error": "安装草稿路径非法"}
+            result = {"slug": slug, "success": False, "error_code": "skill_path_invalid", "params": {}}
             results.append(result)
             continue
 
+        label = slug
         try:
             parsed = _parse_skill_dir_metadata(source_dir)
+            label = parsed["name"] or slug
             with tempfile.TemporaryDirectory(prefix=".skill-confirm-", dir=str(skills_root.parent)) as temp_root:
                 stage_dir = Path(temp_root) / "stage"
                 shutil.copytree(source_dir, stage_dir, ignore=_SKILL_COPY_IGNORE)
@@ -1977,7 +1737,7 @@ async def confirm_skill_install_draft(
                 final_dir.parent.mkdir(parents=True, exist_ok=True)
                 if final_dir.exists():
                     shutil.rmtree(temp_target, ignore_errors=True)
-                    result = {"slug": slug, "success": False, "error": "Skill slug 已被占用，请重新解析安装"}
+                    result = {"slug": slug, "success": False, "error_code": "skill_duplicate", "params": {"name": slug}}
                     results.append(result)
                     continue
                 temp_target.rename(final_dir)
@@ -2006,7 +1766,7 @@ async def confirm_skill_install_draft(
         except Exception as e:
             if hasattr(db, "rollback"):
                 await db.rollback()
-            result = {"slug": slug, "success": False, "error": str(e)}
+            result = skill_batch_failure(slug, e, name=label)
             results.append(result)
 
     if any(item.get("success") for item in results):
@@ -2014,79 +1774,10 @@ async def confirm_skill_install_draft(
     return results
 
 
-async def confirm_personal_skill_install_draft(
-    *,
-    draft_id: str,
-    slugs: list[str] | None,
-    operator: User,
-) -> list[dict[str, Any]]:
-    """确认草稿并将选中 Skill 安装到当前用户个人工作区。"""
-    draft_dir, _data, draft_items = _load_and_select_draft_items(draft_id, slugs, operator)
-
-    results: list[dict[str, Any]] = []
-    for draft_item in draft_items:
-        requested_slug = str(draft_item.get("slug") or "").strip()
-        personal_slug = str(draft_item.get("original_name") or requested_slug).strip()
-        if not draft_item.get("success", True):
-            results.append(
-                {
-                    "slug": personal_slug,
-                    "requested_slug": requested_slug,
-                    "success": False,
-                    "error": draft_item.get("error", "安装失败"),
-                }
-            )
-            continue
-        if not is_valid_skill_slug(personal_slug):
-            results.append(
-                {
-                    "slug": personal_slug,
-                    "requested_slug": requested_slug,
-                    "success": False,
-                    "error": "无效 skill slug",
-                }
-            )
-            continue
-
-        source_dir = (draft_dir / str(draft_item.get("source_dir", ""))).resolve()
-        try:
-            source_dir.relative_to(draft_dir.resolve())
-            parsed = _parse_skill_dir_metadata(source_dir)
-            if parsed["slug"] != personal_slug:
-                raise ValueError("安装草稿中的个人 Skill slug 不一致")
-            item = await install_personal_skill_dir(
-                str(operator.uid),
-                source_dir,
-                refresh_cache=False,
-            )
-            results.append(
-                {
-                    "slug": item.slug,
-                    "requested_slug": requested_slug,
-                    "success": True,
-                    "skill": item.to_dict(),
-                }
-            )
-        except Exception as exc:
-            results.append(
-                {
-                    "slug": personal_slug,
-                    "requested_slug": requested_slug,
-                    "success": False,
-                    "error": str(exc),
-                }
-            )
-
-    if any(item.get("success") for item in results):
-        await list_personal_skills(str(operator.uid), refresh=True)
-        shutil.rmtree(draft_dir, ignore_errors=True)
-    return results
-
-
 async def discard_skill_install_draft(*, draft_id: str, operator: User) -> None:
     draft_dir, data = _load_skill_draft(draft_id)
     if data.get("created_by") != operator.uid and operator.role not in ADMIN_ROLES:
-        raise ValueError("无权删除该安装草稿")
+        raise ApiError("skill_draft_forbidden", status=403)
     shutil.rmtree(draft_dir, ignore_errors=True)
 
 
@@ -2101,9 +1792,9 @@ async def import_skill_dir(
     source_skill_dir = Path(source_dir).resolve()
     tmp_root = Path(tempfile.gettempdir()).resolve()
     if not source_skill_dir.is_relative_to(tmp_root):
-        raise ValueError("技能目录路径不合法")
+        raise ApiError("skill_path_invalid")
     if not source_skill_dir.exists() or not source_skill_dir.is_dir():
-        raise ValueError("技能目录不存在")
+        raise ApiError("skill_dir_missing", status=404)
     return await _import_skill_dir_impl(
         db,
         source_skill_dir=source_skill_dir,
@@ -2120,12 +1811,12 @@ async def import_skill_dir(
 async def get_skill_or_raise(db: AsyncSession, slug: str) -> SkillRecord:
     slug = slug.strip() if isinstance(slug, str) else ""
     if not is_valid_skill_slug(slug):
-        raise ValueError("无效 skill slug")
+        raise ApiError("skill_invalid_slug")
 
     repo = SkillRepository(db)
     item = await repo.get_by_slug(slug)
     if not item:
-        raise ValueError(f"技能 '{slug}' 不存在")
+        raise ApiError("skill_not_found", name=slug, status=404)
     return item
 
 
@@ -2133,7 +1824,7 @@ async def get_skill_or_raise(db: AsyncSession, slug: str) -> SkillRecord:
 async def get_management_readable_skill_or_raise(db: AsyncSession, user: User, slug: str) -> SkillRecord:
     item = await get_skill_or_raise(db, slug)
     if not user_can_manage_skill(user, item) and not user_can_access_skill(user, item):
-        raise ValueError(f"技能 '{slug}' 不存在或无权访问")
+        raise ApiError("skill_forbidden", name=slug, status=403)
     return item
 
 
@@ -2141,11 +1832,11 @@ async def get_manageable_skill_or_raise(db: AsyncSession, user: User, slug: str)
     item = await get_skill_or_raise(db, slug)
     if is_builtin_skill(item):
         if not user_can_manage_skill(user, item):
-            raise ValueError(f"技能 '{slug}' 不存在或无权管理")
+            raise ApiError("skill_forbidden", name=slug, status=403)
         return item
     # 租户共享技能按可见即可维护，不再要求创建者才有管理范围。
     if not user_can_manage_skill(user, item) and not user_can_access_skill(user, item, require_enabled=False):
-        raise ValueError(f"技能 '{slug}' 不存在或无权管理")
+        raise ApiError("skill_forbidden", name=slug, status=403)
     return item
 
 
@@ -2161,13 +1852,13 @@ async def read_skill_file(db: AsyncSession, slug: str, relative_path: str) -> di
     skill_dir = await _ensure_skill_dir(db, item)
     target, rel = _resolve_relative_path(skill_dir, relative_path)
     if not target.exists() or not target.is_file():
-        raise ValueError(f"文件不存在: {relative_path}")
+        raise ApiError("skill_file_missing", path=relative_path, status=404)
     if not _is_text_path(target):
-        raise ValueError("仅支持读取文本文件")
+        raise ApiError("skill_file_not_text")
     try:
         content = target.read_text(encoding="utf-8")
     except UnicodeDecodeError as e:
-        raise ValueError(f"文件编码不支持（仅支持 UTF-8）: {e}") from e
+        raise ApiError("skill_file_encoding") from e
 
     return {"path": rel, "content": content}
 
@@ -2183,18 +1874,18 @@ async def create_skill_node(
 ) -> None:
     item = await get_skill_or_raise(db, slug)
     if is_builtin_skill(item):
-        raise ValueError("内置 skill 不允许直接修改文件")
+        raise ApiError("skill_builtin_readonly")
     skill_dir = _resolve_skill_dir(item)
     target, _ = _resolve_relative_path(skill_dir, relative_path)
     if target.exists():
-        raise ValueError("目标已存在")
+        raise ApiError("skill_file_exists")
 
     if is_dir:
         target.mkdir(parents=True, exist_ok=False)
         return
 
     if not _is_text_path(target):
-        raise ValueError("仅支持创建文本文件")
+        raise ApiError("skill_file_not_text")
 
     target.parent.mkdir(parents=True, exist_ok=True)
 
@@ -2214,13 +1905,13 @@ async def update_skill_file(
 ) -> None:
     item = await get_skill_or_raise(db, slug)
     if is_builtin_skill(item):
-        raise ValueError("内置 skill 不允许直接修改文件")
+        raise ApiError("skill_builtin_readonly")
     skill_dir = _resolve_skill_dir(item)
     target, _ = _resolve_relative_path(skill_dir, relative_path)
     if not target.exists() or not target.is_file():
-        raise ValueError("文件不存在")
+        raise ApiError("skill_file_missing", status=404)
     if not _is_text_path(target):
-        raise ValueError("仅支持编辑文本文件")
+        raise ApiError("skill_file_not_text")
 
     target.write_text(content, encoding="utf-8")
     await _sync_skill_bundle(db, item, skill_dir, target, updated_by)
@@ -2237,21 +1928,21 @@ async def _sync_skill_bundle(
     if target.name == "SKILL.md" and target.parent == skill_dir:
         parsed_slug, _parsed_name, _parsed_desc, _ = _parse_skill_markdown(target.read_text(encoding="utf-8"))
         if parsed_slug != item.slug:
-            raise ValueError("SKILL.md frontmatter.slug 必须与 skill slug 一致")
+            raise ApiError("skill_slug_mismatch")
     await SkillRepository(db).sync_bundle(item, updated_by=updated_by)
 
 
 async def delete_skill_node(db: AsyncSession, *, slug: str, relative_path: str) -> None:
     item = await get_skill_or_raise(db, slug)
     if is_builtin_skill(item):
-        raise ValueError("内置 skill 不允许直接修改文件")
+        raise ApiError("skill_builtin_readonly")
     skill_dir = _resolve_skill_dir(item)
     target, rel = _resolve_relative_path(skill_dir, relative_path, allow_root=False)
     if not target.exists():
-        raise ValueError("目标不存在")
+        raise ApiError("skill_file_missing", status=404)
 
     if rel == "SKILL.md":
-        raise ValueError("不允许删除根目录 SKILL.md")
+        raise ApiError("skill_delete_root")
 
     if target.is_dir():
         await asyncio.to_thread(shutil.rmtree, target)
@@ -2282,14 +1973,14 @@ async def delete_skill(db: AsyncSession, *, slug: str) -> None:
     repo = SkillRepository(db)
     item = await repo.get_by_slug(slug, for_update=True)
     if not item:
-        raise ValueError(f"技能 '{slug}' 不存在")
+        raise ApiError("skill_not_found", name=slug, status=404)
     _ensure_non_builtin(item)
     dependents = await _dependent_skill_names(repo, item)
     if dependents:
-        raise ValueError(f"技能仍被依赖，请先解绑：{', '.join(dependents)}")
+        raise ApiError("skill_still_depended", names=", ".join(dependents))
     installed = await _live_sandbox_names(db, item)
     if installed:
-        raise ValueError(f"技能已安装到沙箱，不能删除：{', '.join(installed)}")
+        raise ApiError("skill_installed_locked", names=", ".join(installed))
 
     skill_dir = _resolve_skill_dir(item)
     trash_dir: Path | None = None
@@ -2316,7 +2007,7 @@ async def delete_skills_batch(db: AsyncSession, *, slugs: list[str]) -> list[dic
     兼容和后续管理工具复用。
     """
     if len(slugs) > 50:
-        raise ValueError("批量删除的技能数量不能超过 50 个")
+        raise ApiError("skill_batch_limit")
     results = []
     for slug in slugs:
         try:
@@ -2325,7 +2016,7 @@ async def delete_skills_batch(db: AsyncSession, *, slugs: list[str]) -> list[dic
         except Exception as e:
             if hasattr(db, "rollback"):
                 await db.rollback()
-            results.append({"slug": slug, "success": False, "error": str(e)})
+            results.append(skill_batch_failure(slug, e, name=slug))
     return results
 
 
@@ -2369,14 +2060,14 @@ def list_builtin_skill_specs() -> list[dict[str, Any]]:
             configured_skills = []
 
         if not is_valid_skill_slug(slug):
-            raise ValueError(f"内置 skill slug 非法: {slug}")
+            raise ApiError("skill_invalid_slug", name=slug)
         if not source_dir.exists() or not source_dir.is_dir():
             logger.warning(f"跳过不存在的内置 skill 目录: {source_dir}")
             continue
 
         skill_md = source_dir / "SKILL.md"
         if not skill_md.exists():
-            raise ValueError(f"内置 skill 缺少 SKILL.md: {source_dir}")
+            raise ApiError("skill_missing_skill_md")
 
         content = skill_md.read_text(encoding="utf-8")
         parsed_name, parsed_desc, meta = _builtin_skill_markdown(content, slug)
@@ -2495,8 +2186,6 @@ async def init_builtin_skills(db: AsyncSession, *, created_by: str = "system") -
                     source_mtime=spec.get("source_mtime"),
                 )
             )
-        except AppCoreAuthError as exc:
-            logger.warning(f"内置 skill '{slug}' 同步需要用户 JWT 或 WEKNORA_APPCORE_API_KEY：{exc}")
         except Exception as exc:
             logger.error(f"同步内置 skill '{slug}' 失败: {exc}")
 

@@ -24,6 +24,7 @@ from server.routers import router
 from server.utils.lifespan import lifespan
 from server.utils.common_utils import setup_logging
 from server.utils.access_log_middleware import AccessLogMiddleware
+from yuxi.config.errors import ApiError
 
 # 设置日志配置
 setup_logging()
@@ -73,6 +74,14 @@ def _build_cors_options(origins: list[str] | None = None) -> dict[str, object]:
 
 
 app = FastAPI(lifespan=lifespan)
+
+
+@app.exception_handler(ApiError)
+async def handle_api_error(_request: Request, exc: ApiError) -> JSONResponse:
+    """未在路由里接住的接口失败，也按错误码返回。"""
+    return JSONResponse(status_code=exc.status, content={"detail": exc.payload()})
+
+
 # 所有业务接口统一挂载到 /api，具体分组在 server.routers 中集中注册。
 app.include_router(router, prefix="/api")
 

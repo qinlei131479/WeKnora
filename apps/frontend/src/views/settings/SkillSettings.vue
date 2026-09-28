@@ -340,6 +340,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { AddIcon, DeleteIcon, FolderIcon } from 'tdesign-icons-vue-next'
 import { useI18n } from 'vue-i18n'
+import { localizeApiErrorCode } from '@/utils/backendErrorMessage'
 import SandboxSkillsPanel from '@/components/SandboxSkillsPanel.vue'
 import SkillFilesDrawer from '@/components/SkillFilesDrawer.vue'
 import SandboxBackendBadge from '@/components/settings/SandboxBackendBadge.vue'
@@ -385,7 +386,7 @@ const emit = defineEmits<{
   changed: []
 }>()
 
-const { t } = useI18n()
+const { t, te } = useI18n()
 const uiStore = useUIStore()
 const confirmDelete = useConfirmDelete()
 
@@ -1030,8 +1031,28 @@ function acceptPendingFile(file: File) {
   pendingFile.value = file
 }
 
+function skillErrorText(code?: string, params?: Record<string, string>): string {
+  return localizeApiErrorCode(code, params, t, te) || t('error.skill.skill_failed')
+}
+
+function skillFailure(
+  item: { error_code?: string; params?: Record<string, string>; name?: string; slug?: string } | undefined,
+  fromFile: boolean,
+): Error & { errorCode?: string; errorParams?: Record<string, string> } {
+  const error = new Error(
+    fromFile ? t('settings.sandbox.skillUploadFailed') : t('settings.sandbox.skillSourceFailed'),
+  ) as Error & { errorCode?: string; errorParams?: Record<string, string> }
+  error.errorCode = item?.error_code || 'skill_failed'
+  error.errorParams = item?.params || { name: item?.name || item?.slug || '' }
+  return error
+}
+
 function skillRegisterErrorMessage(err: any, fromFile: boolean): string {
-  const raw = String(err?.message || '')
+  const detail = err?.response?.data?.detail || err?.detail
+  const code = err?.errorCode || (detail && typeof detail === 'object' ? detail.error_code : '')
+  const params = err?.errorParams || (detail && typeof detail === 'object' ? detail.params : undefined)
+  if (code) return skillErrorText(code, params)
+  const raw = String(typeof detail === 'string' ? detail : err?.message || '')
   if (/cannot exceed \d+\s*MB/i.test(raw)) {
     return t('settings.sandbox.skillBundleTooLarge', { size: maxSkillBundleMB })
   }
@@ -1065,7 +1086,7 @@ function harnessCatalogFromSkill(skill: { slug?: string; name?: string; version?
 async function registerHarnessThenAdvance() {
   const source = sourceInput.value.trim()
   const usage = addUsageSource.value
-  let draft: { draft_id?: string; items?: Array<{ slug?: string; success?: boolean }> } | null = null
+  let draft: { draft_id?: string; items?: Array<{ slug?: string; name?: string; success?: boolean; error_code?: string; params?: Record<string, string> }> } | null = null
   if (pendingFile.value) {
     uploading.value = true
     uploadPercent.value = 0
@@ -1079,13 +1100,25 @@ async function registerHarnessThenAdvance() {
     const prepared = await skillApi.prepareRemoteSkills({ source, skills: names, usage_source: usage })
     draft = prepared?.data || null
   }
-  const slugs = (draft?.items || []).filter((item) => item.success !== false && item.slug).map((item) => item.slug as string)
-  if (!draft?.draft_id || slugs.length === 0) throw new Error(t('settings.sandbox.skillUploadFailed'))
+  const items = draft?.items || []
+  const failed = items.filter((item) => item.success === false)
+  const slugs = items.filter((item) => item.success !== false && item.slug).map((item) => item.slug as string)
+  if (!draft?.draft_id || slugs.length === 0) {
+    throw skillFailure(failed[0], Boolean(pendingFile.value))
+  }
+  if (failed.length > 0) {
+    MessagePlugin.error(skillRegisterErrorMessage(skillFailure(failed[0], Boolean(pendingFile.value)), Boolean(pendingFile.value)))
+  }
   const confirmed = await skillApi.confirmSkillInstallDraft(draft.draft_id, slugs)
-  const results = (confirmed?.data || []) as Array<{ success?: boolean; slug?: string; error?: string; skill?: { slug?: string; name?: string; version?: string; description?: string } }>
+  const results = (confirmed?.data || []) as Array<{ success?: boolean; slug?: string; name?: string; error_code?: string; params?: Record<string, string>; skill?: { slug?: string; name?: string; version?: string; description?: string } }>
   const installed = results.filter((item) => item.success && (item.skill?.slug || item.slug))
   if (installed.length === 0) {
-    throw new Error(results.find((item) => item.error)?.error || t('settings.sandbox.skillUploadFailed'))
+    const failedResult = results.find((item) => item.success === false) || failed[0]
+    throw skillFailure(failedResult, Boolean(pendingFile.value))
+  }
+  const failedResults = results.filter((item) => item.success === false)
+  if (failedResults.length > 0) {
+    MessagePlugin.error(skillRegisterErrorMessage(skillFailure(failedResults[0], Boolean(pendingFile.value)), Boolean(pendingFile.value)))
   }
   harnessSlugs.value = installed.map((item) => item.skill?.slug || item.slug || '')
   const first = installed[0].skill || { slug: installed[0].slug }
@@ -1108,7 +1141,7 @@ async function registerThenAdvance() {
     try {
       await registerHarnessThenAdvance()
     } catch (e: any) {
-      MessagePlugin.error(e?.response?.data?.detail || e?.message || skillRegisterErrorMessage(e, Boolean(pendingFile.value)))
+      MessagePlugin.error(skillRegisterErrorMessage(e, Boolean(pendingFile.value)))
     } finally {
       uploading.value = false
       addingFromSource.value = false

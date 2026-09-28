@@ -10,8 +10,9 @@ from pathlib import Path
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from yuxi.agents.skills.service import import_skill_dir, is_valid_skill_slug
+from yuxi.config.errors import ApiError
 from yuxi.agents.skills.repository import SkillRecord
+from yuxi.agents.skills.service import import_skill_dir, is_valid_skill_slug, skill_batch_failure
 
 ANSI_ESCAPE_RE = re.compile(r"\x1B\[[0-?]*[ -/]*[@-~]")
 CONTROL_SEQUENCE_RE = re.compile(r"\x1B\][^\x07]*(?:\x07|\x1B\\)|\x1B[\(\)][A-Za-z0-9]")
@@ -31,16 +32,16 @@ class RemoteSkillsBatchPreparation:
 def _normalize_source(source: str) -> str:
     value = str(source or "").strip()
     if not value:
-        raise ValueError("source 不能为空")
+        raise ApiError("skill_invalid_input")
     if any(ch in value for ch in ("\n", "\r", "\x00")):
-        raise ValueError("source 包含非法字符")
+        raise ApiError("skill_invalid_input")
     return value
 
 
 def _normalize_skill_name(skill: str) -> str:
     value = str(skill or "").strip()
     if not is_valid_skill_slug(value):
-        raise ValueError("skill 名称不合法")
+        raise ApiError("skill_invalid_slug")
     return value
 
 
@@ -118,15 +119,13 @@ async def _run_skills_cli(
     except TimeoutError:
         process.kill()
         await process.communicate()
-        raise ValueError("skills CLI 执行超时") from None
+        raise ApiError("skill_failed") from None
 
     output = (stdout or b"").decode("utf-8", errors="replace")
     error_output = (stderr or b"").decode("utf-8", errors="replace")
     combined = "\n".join(part for part in [output.strip(), error_output.strip()] if part)
     if process.returncode != 0:
-        cleaned_lines = _clean_cli_output(combined)
-        error_msg = "\n".join(line for line in cleaned_lines if line)[:500]
-        raise ValueError(error_msg or "skills CLI 执行失败")
+        raise ApiError("skill_failed")
     return combined
 
 
@@ -154,7 +153,7 @@ async def list_remote_skills(source: str) -> list[dict[str, str]]:
 
     skills = _parse_available_skills(output)
     if not skills:
-        raise ValueError("未发现可安装的 skills")
+        raise ApiError("skill_not_found")
     return skills
 
 
@@ -179,7 +178,7 @@ async def install_remote_skill(
         )
         available_names = {item["name"] for item in available_skills}
         if normalized_skill not in available_names:
-            raise ValueError(f"远程仓库中不存在 skill: {normalized_skill}")
+            raise ApiError("skill_not_found", name=normalized_skill, status=404)
 
         await _run_skills_cli(
             [
@@ -201,7 +200,7 @@ async def install_remote_skill(
         skills_dir = Path(temp_home).resolve() / ".agents" / "skills"
         installed_dir = _find_skill_dir(skills_dir, normalized_skill)
         if installed_dir is None:
-            raise ValueError("skills CLI 未生成预期的技能目录")
+            raise ApiError("skill_failed")
 
         return await import_skill_dir(
             db,
@@ -248,7 +247,7 @@ async def install_remote_skills_batch(
             except Exception as e:
                 if hasattr(db, "rollback"):
                     await db.rollback()
-                results[index] = {"slug": result["slug"], "success": False, "error": str(e)}
+                results[index] = skill_batch_failure(str(result.get("slug") or ""), e)
 
         return results
     finally:
@@ -263,7 +262,7 @@ async def prepare_remote_skills_batch(
     """批量从远程仓库拉取 skill 目录，但不写数据库。"""
     normalized_source = _normalize_source(source)
     if not skills:
-        raise ValueError("skills 列表不能为空")
+        raise ApiError("skill_draft_empty")
 
     # 预分配结果数组（按请求顺序），校验非法名并记录失败
     results: list[dict] = [{"slug": "", "success": False, "error": "unset"} for _ in range(len(skills))]
@@ -274,7 +273,7 @@ async def prepare_remote_skills_batch(
             normalized_skills.append(_normalize_skill_name(skill))
             valid_indices.append(i)
         except ValueError as e:
-            results[i] = {"slug": skill, "success": False, "error": str(e)}
+            results[i] = skill_batch_failure(str(skill or ""), e)
 
     if not normalized_skills:
         return RemoteSkillsBatchPreparation(temp_home=None, results=results)
@@ -285,7 +284,6 @@ async def prepare_remote_skills_batch(
         for name in normalized_skills:
             skill_args.extend(["--skill", name])
 
-        cli_failed = False
         try:
             await _run_skills_cli(
                 [
@@ -304,14 +302,14 @@ async def prepare_remote_skills_batch(
             )
         except ValueError:
             # CLI 对不匹配的 skill 会退出码非零，但已安装的目录仍在
-            cli_failed = True
+            pass
 
         skills_dir = Path(temp_home).resolve() / ".agents" / "skills"
         for original_index, name in zip(valid_indices, normalized_skills):
             installed_dir = _find_skill_dir(skills_dir, name)
             if installed_dir is None:
-                error_msg = "CLI 安装失败" if cli_failed else "skills CLI 未生成预期的技能目录"
-                results[original_index] = {"slug": name, "success": False, "error": error_msg}
+                code = "skill_failed"
+                results[original_index] = {"slug": name, "success": False, "error_code": code, "params": {"name": name}}
             else:
                 results[original_index] = {"slug": name, "success": True, "source_dir": installed_dir}
 
@@ -362,7 +360,7 @@ async def search_remote_skills(query: str) -> list[dict[str, str]]:
     if not query_val:
         return []
     if any(ch in query_val for ch in ("\n", "\r", "\x00")):
-        raise ValueError("搜索关键字包含非法字符")
+        raise ApiError("skill_invalid_input")
 
     temp_home, env, workdir = _create_isolated_workdir()
     try:

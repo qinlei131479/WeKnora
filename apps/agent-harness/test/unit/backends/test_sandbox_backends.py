@@ -310,7 +310,6 @@ def test_skills_middleware_extracts_slug_for_new_paths() -> None:
     middleware = SkillsMiddleware()
     assert middleware.skills_sources_for_prompt == [
         "/home/gem/skills/",
-        "/home/gem/user-data/workspace/agents/skills/",
     ]
     assert middleware._extract_skill_slug_from_skill_md_path("/home/gem/skills/demo-skill/SKILL.md") == "demo-skill"
 

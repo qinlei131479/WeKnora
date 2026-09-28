@@ -1,4 +1,4 @@
-"""调 WeKnora /api/v1 知识库接口。凭证用当前请求/Worker 绑定的用户 JWT。"""
+"""调用 WeKnora HTTP 接口。凭证用当前请求或 Worker 绑定的用户 JWT。"""
 
 from __future__ import annotations
 

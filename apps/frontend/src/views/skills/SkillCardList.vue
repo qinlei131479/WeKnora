@@ -227,12 +227,11 @@ const installedSkillCards = computed(() =>
 const filteredInstalledSkills = computed(() => installedSkillCards.value.filter(matchesSearch))
 const pageSkills = computed(() =>
   filteredInstalledSkills.value.filter((skill) => {
-    if (skill.sourceScope === 'personal') return false
     if (!selectedScope.value) return true
     return (skill.source_type || skill.sourceType) === selectedScope.value
   })
 )
-const isBuiltinSkill = (skill) => skill.sourceScope === 'builtin' || skill.is_builtin === true
+const isBuiltinSkill = (skill) => skill.builtin === true || skill.sourceScope === 'builtin'
 const sandboxInstallLocked = (skill) =>
   isBuiltinSkill(skill) && (skill.source_type || skill.sourceType) === 'work'
 const builtinIdentity = computed(() => {
@@ -274,20 +273,10 @@ const toggleSkillSection = (key) => {
   collapsedSkillSections.value = next
 }
 
-const skillCardTags = (skill) => {
-  if (skill.sourceScope === 'personal') {
-    return [
-      { name: t('ext.skills.sourcePersonal'), color: 'gray' },
-      ...(skill.overrides_shared ? [{ name: t('ext.skills.tagOverrideShared'), color: 'orange' }] : [])
-    ]
-  }
-  return [
-    ...(skill.shadowed_by_personal ? [{ name: t('ext.skills.tagShadowed'), color: 'orange' }] : [])
-  ]
-}
+const skillCardTags = () => []
 
 const skillFileKey = (skill) => {
-  if (skill?.sourceScope === 'builtin' || skill?.is_builtin) return skill.slug
+  if (skill?.sourceScope === 'builtin' || skill?.builtin) return skill.slug
   return skill?.id || skill?.slug
 }
 
@@ -306,7 +295,7 @@ const openSkillFiles = (skill) => {
 }
 
 const canDeleteSkill = (skill) => {
-  if (!skill || skill.sourceScope === 'builtin' || skill.is_builtin || skill.sourceScope === 'personal') return false
+  if (!skill || isBuiltinSkill(skill)) return false
   return installView(skill).installs.length === 0
 }
 
@@ -385,6 +374,8 @@ const catalogItemFor = (skill) => ({
   id: skillFileKey(skill),
   name: skill.name,
   description: skill.description || '',
+  source_type: skill.source_type || skill.sourceType || '',
+  builtin: isBuiltinSkill(skill),
   created_at: skill.created_at || '',
   updated_at: skill.updated_at || '',
   installations: liveInstallsFor(skill).map((inst) => ({
@@ -421,11 +412,11 @@ const onInstallChip = (skill, view) => {
   openSkillInstall(skill)
 }
 
-const fetchSkills = async ({ refreshPersonal = false, silent = false } = {}) => {
+const fetchSkills = async ({ silent = false } = {}) => {
   if (!silent) loading.value = true
   try {
     const [skillResult, boardResult] = await Promise.all([
-      skillApi.listSkillCards({ refreshPersonal }),
+      skillApi.listSkillCards(),
       skillApi.listSkillSandboxBoard().catch(() => ({ data: { sandboxes: [], installations: [] } }))
     ])
     skills.value = skillResult?.data || []

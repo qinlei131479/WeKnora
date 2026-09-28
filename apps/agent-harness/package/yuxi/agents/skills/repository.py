@@ -11,8 +11,10 @@ from pathlib import Path
 from typing import Any
 
 from sqlalchemy import or_, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from yuxi.config.errors import ApiError
 from yuxi.storage.postgres.models_business import (
     SkillRuntime,
     TenantSandboxConfig,
@@ -46,6 +48,11 @@ _USAGE_SOURCES = {"chat", "work", "common"}
 _LIVE_INSTALL_STATUSES = {"installing", "ready", "removing"}
 
 
+def is_builtin_tenant(tenant_id: int | None) -> bool:
+    """内置技能只认目录行 tenant_id 为 0，空值不算内置。"""
+    return tenant_id is not None and int(tenant_id) == 0
+
+
 def usage_source(source_type: str | None, *, builtin: bool = False) -> str:
     """把历史来源值收成使用侧。内置固定为工作。"""
     value = str(source_type or "").strip()
@@ -57,7 +64,7 @@ def usage_source(source_type: str | None, *, builtin: bool = False) -> str:
 
 
 def catalog_dir_path(tenant_id: int | None, slug: str) -> str:
-    if int(tenant_id or 0) == 0:
+    if is_builtin_tenant(tenant_id):
         return f"skills/{slug}"
     return f"skills/t{int(tenant_id)}/{slug}"
 
@@ -102,7 +109,7 @@ class SkillRecord:
 
     @property
     def source_type(self) -> str:
-        return usage_source(getattr(self.runtime, "source_type", None), builtin=self.tenant_id == 0)
+        return usage_source(getattr(self.runtime, "source_type", None), builtin=is_builtin_tenant(self.tenant_id))
 
     @property
     def tool_dependencies(self) -> list[str]:
@@ -206,7 +213,7 @@ def build_skill_bundle_for_dir(slug: str, source_dir: str | Path) -> bytes:
     dir_path = Path(source_dir)
     root = dir_path if dir_path.is_absolute() else (Path(sys_config.save_dir) / dir_path).resolve()
     if not root.is_dir():
-        raise ValueError(f"技能目录不存在: {dir_path}")
+        raise ApiError("skill_dir_missing")
 
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
@@ -216,7 +223,7 @@ def build_skill_bundle_for_dir(slug: str, source_dir: str | Path) -> bytes:
             if path.is_file() and not path.is_symlink():
                 archive.write(path, _archive_name(path, root, slug))
     if not any(name.endswith("/SKILL.md") for name in zipfile.ZipFile(buffer).namelist()):
-        raise ValueError(f"技能目录缺少根级 SKILL.md: {dir_path}")
+        raise ApiError("skill_missing_skill_md")
     return buffer.getvalue()
 
 
@@ -225,14 +232,19 @@ def build_skill_bundle(item: SkillRecord) -> bytes:
 
 
 def _runtime_from_row(row: TenantSkillCatalog) -> SkillRuntime:
-    slug = str(row.id if int(row.tenant_id or 0) == 0 and row.id else row.name or "")
-    share = row.share_config if isinstance(row.share_config, dict) and row.share_config else _CATALOG_FALLBACK_SHARE_CONFIG.copy()
+    builtin = is_builtin_tenant(row.tenant_id)
+    slug = str(row.id if builtin and row.id else row.name or "")
+    share = (
+        row.share_config
+        if isinstance(row.share_config, dict) and row.share_config
+        else _CATALOG_FALLBACK_SHARE_CONFIG.copy()
+    )
     return SkillRuntime(
         id=row.id,
         app_core_skill_id=row.id,
-        tenant_id=int(row.tenant_id or 0),
+        tenant_id=None if row.tenant_id is None else int(row.tenant_id),
         slug=slug,
-        source_type=usage_source(row.source_type, builtin=int(row.tenant_id or 0) == 0),
+        source_type=usage_source(row.source_type, builtin=builtin),
         tool_dependencies=list(row.tool_dependencies or []),
         mcp_dependencies=list(row.mcp_dependencies or []),
         skill_dependencies=list(row.skill_dependencies or []),
@@ -360,7 +372,7 @@ class SkillRepository:
                 continue
             spec = runtime_specs.get(str(raw.get("name") or ""), {})
             if not row.source_type or row.source_type not in _USAGE_SOURCES:
-                row.source_type = usage_source(spec.get("source_type"), builtin=int(row.tenant_id or 0) == 0)
+                row.source_type = usage_source(spec.get("source_type"), builtin=is_builtin_tenant(row.tenant_id))
                 changed = True
             if not isinstance(row.share_config, dict) or not row.share_config:
                 row.share_config = spec.get("share_config") or _CATALOG_FALLBACK_SHARE_CONFIG.copy()
@@ -406,12 +418,12 @@ class SkillRepository:
         if row is None:
             row = await self._row_by_slug(item.slug)
         if row is None:
-            raise ValueError(f"技能 '{item.slug}' 不在目录中")
+            raise ApiError("skill_not_found", name=item.slug)
         return row
 
     async def _write_bundle(self, row: TenantSkillCatalog, bundle: bytes, *, updated_by: str | None) -> SkillRecord:
         row.bundle_sha256 = hashlib.sha256(bundle).hexdigest()
-        ref = _store_catalog_zip(int(row.tenant_id or 0), row.id, bundle)
+        ref = _store_catalog_zip(int(row.tenant_id), row.id, bundle)
         if ref:
             row.bundle_ref = ref
         if updated_by is not None:
@@ -446,27 +458,30 @@ class SkillRepository:
         tools = list(tool_dependencies or [])
         skills = list(skill_dependencies or [])
         if usage == "common" and (tools or skills):
-            raise ValueError("通用技能不能绑定工具或其他技能")
+            raise ApiError("skill_common_no_deps")
+        display_name = name or slug
         if builtin:
             tenant_id = 0
             skill_id = slug
             occupied = any(item.slug == slug and item.tenant_id == 0 for item in await self._records())
-            if occupied:
-                raise ValueError(f"Skill slug '{slug}' 已被占用")
+            if occupied or await self.exists_slug(display_name):
+                raise ApiError("skill_duplicate", name=display_name)
         else:
             tenant_id = _scope_tenant_id()
             if tenant_id is None:
-                raise ValueError("写入技能需要当前空间 tenant_id")
+                raise ApiError("skill_tenant_required")
             skill_id = str(uuid.uuid4())
-            if await self.exists_slug(slug):
-                raise ValueError(f"Skill slug '{slug}' 已被占用")
+            name_taken = await self.exists_slug(display_name)
+            slug_taken = slug != display_name and await self.exists_slug(slug)
+            if name_taken or slug_taken:
+                raise ApiError("skill_duplicate", name=display_name if name_taken else slug)
         if bundle_bytes is None:
             bundle_bytes = build_skill_bundle_for_dir(slug, dir_path or catalog_dir_path(tenant_id, slug))
         now = utc_now_naive()
         row = TenantSkillCatalog(
             id=skill_id,
             tenant_id=int(tenant_id),
-            name=name or slug,
+            name=display_name,
             version=version,
             description=description,
             bundle_sha256=hashlib.sha256(bundle_bytes).hexdigest(),
@@ -484,7 +499,11 @@ class SkillRepository:
             updated_at=now,
         )
         self.db.add(row)
-        await self.db.commit()
+        try:
+            await self.db.commit()
+        except IntegrityError as exc:
+            await self.db.rollback()
+            raise ApiError("skill_duplicate", name=display_name) from exc
         await self.db.refresh(row)
         return _record_from_row(row)
 
@@ -552,7 +571,7 @@ class SkillRepository:
 
     async def delete(self, item: SkillRecord) -> None:
         if item.tenant_id == 0:
-            raise ValueError("内置技能不能删除")
+            raise ApiError("skill_builtin_readonly")
         row = await self._require_row(item)
         row.deleted_at = utc_now_naive()
         await self.db.commit()
@@ -636,7 +655,7 @@ class SkillSandboxRepository:
         )
         row = result.scalars().first()
         if row is None:
-            raise ValueError("沙箱安装记录不存在")
+            raise ApiError("skill_install_record_missing", status=404)
         now = utc_now_naive()
         row.status = "removed"
         row.deleted_at = now
@@ -666,7 +685,7 @@ class SkillSandboxRepository:
         )
         row = result.scalars().first()
         if row is None:
-            raise ValueError("沙箱安装记录不存在")
+            raise ApiError("skill_install_record_missing", status=404)
         return row
 
     async def save_install(self, row: TenantSkillInstall) -> TenantSkillInstall:

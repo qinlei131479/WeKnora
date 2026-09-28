@@ -12,10 +12,7 @@ export const TENANT_GLOBAL_SHARE_CONFIG = {
 
 export const listSkills = () => apiGet(BASE_URL)
 
-export const listSkillCards = ({ refreshPersonal = false } = {}) => {
-  const query = refreshPersonal ? '?refresh_personal=true' : ''
-  return apiGet(`${USER_BASE_URL}${query}`)
-}
+export const listSkillCards = () => apiGet(USER_BASE_URL)
 
 export const listAccessibleSkills = () => apiGet(`${USER_BASE_URL}/accessible`)
 

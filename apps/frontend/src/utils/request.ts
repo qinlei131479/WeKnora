@@ -3,7 +3,7 @@ import axios from "axios";
 import { generateRandomString, MAX_FILE_SIZE_MB } from "./index";
 import i18n from '@/i18n'
 import { getApiBaseUrl } from './api-base';
-import { localizeBackendErrorMessage } from './backendErrorMessage';
+import { localizeApiErrorCode, localizeBackendErrorMessage } from './backendErrorMessage';
 
 const t = (key: string, params: Record<string, string> = {}) => i18n.global.t(key, params)
 
@@ -39,7 +39,21 @@ function localizeErrorEnvelope<T>(data: T): T {
   return next as T
 }
 
+function skillDetailMessage(data: unknown): string | undefined {
+  if (!data || typeof data !== 'object') return undefined
+  const detail = (data as { detail?: unknown }).detail
+  if (!detail || typeof detail !== 'object' || Array.isArray(detail)) return undefined
+  const record = detail as { error_code?: unknown; params?: unknown }
+  if (typeof record.error_code !== 'string') return undefined
+  const params = record.params && typeof record.params === 'object' && !Array.isArray(record.params)
+    ? record.params as Record<string, string>
+    : {}
+  return localizeApiErrorCode(record.error_code, params, t, (key) => i18n.global.te(key))
+}
+
 function localizedRejectMessage(data: unknown): string | undefined {
+  const fromSkill = skillDetailMessage(data)
+  if (fromSkill) return fromSkill
   if (typeof data === 'string') return localizeApiErrorMessage(data)
   if (!data || typeof data !== 'object') return undefined
   const record = data as Record<string, unknown>

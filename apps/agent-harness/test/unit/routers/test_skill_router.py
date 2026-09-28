@@ -140,26 +140,23 @@ def test_list_accessible_skills_route(monkeypatch):
     assert payload["data"][0]["can_manage"] is True
 
 
-def test_list_skill_cards_route_forces_personal_refresh(monkeypatch):
+def test_list_skill_cards_route_returns_cards(monkeypatch):
     captured = {}
 
-    async def fake_list_skill_cards(_db, user, *, refresh_personal):
+    async def fake_list_skill_cards(_db, user):
         captured["uid"] = user.uid
-        captured["refresh_personal"] = refresh_personal
-        item = _skill(source_type="personal", created_by="user")
-        return [item], SimpleNamespace(scanned_at="2026-07-30T00:00:00Z", from_cache=False)
+        return [_skill(created_by="user")]
 
     monkeypatch.setattr("server.routers.skill_router.list_skill_cards_for_user", fake_list_skill_cards)
 
     client = TestClient(_build_app(role="user"))
-    resp = client.get("/api/skills?refresh_personal=true")
+    resp = client.get("/api/skills")
 
     assert resp.status_code == 200, resp.text
-    assert resp.json()["personal_cache"] == {
-        "scanned_at": "2026-07-30T00:00:00Z",
-        "from_cache": False,
-    }
-    assert captured == {"uid": "user", "refresh_personal": True}
+    body = resp.json()
+    assert "personal_cache" not in body
+    assert body["data"][0]["slug"] == "demo"
+    assert captured == {"uid": "user"}
 
 
 def test_prepare_skill_upload_route(monkeypatch):

@@ -51,7 +51,11 @@
 
 - 前端任何涉及用户可见文案的改动，必须同步改齐全部 locale，禁止只改中文或只改一份语言：`zh-CN` / `en-US` / `ko-KR` / `ja-JP` / `ru-RU`。
 - 新增、修改、删除 i18n key 时，上述 locale 文件必须同批处理，key 路径保持一致。
+- `apps/frontend/src/i18n/locales` 与 `apps/frontend/src/i18n/locales_backend` 里，五种语言文件的键路径、键顺序和行结构必须一致，行数也要一致。以 `zh-CN` 的键结构为准，其它语言只替换文案。缺的键当场补译文，重复键删掉，禁止只改一种语言后再等提醒。
 - 文案统一走 i18n key，不硬编码。
+- 界面自己的文案放 `apps/frontend/src/i18n/locales`。后端接口返回、要给用户看的错误文案放 `apps/frontend/src/i18n/locales_backend`，五种语言同批补齐。由 `apps/frontend/src/i18n/index.ts` 里的 `attachBackendMessages` 并进 `error.<领域>.*`，不要写进页面语言包。
+- 用户能看见的接口失败统一返回 `{ error_code, params }`。Python 用 `yuxi.config.errors.ApiError`，未在路由里接住时由全局异常处理按同一形态返回。`error_code` 对应 `locales_backend` 的 `error.<领域>.<错误码>`，领域是错误码第一段，例如 `skill_duplicate` 对应 `error.skill.skill_duplicate`。动态内容放 `params`，占位符与文案里的 `{name}` 一致。后端不写界面句子。
+- 知识库等历史接口仍用英文或中文原文，由 `error.kb.*` 对照。新接口按错误码增加，不再新增原文对照。
 
 ## 产品边界
 

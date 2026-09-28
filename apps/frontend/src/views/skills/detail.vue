@@ -380,7 +380,8 @@ const dependencySearch = reactive({ tools: '', mcps: '', skills: '' })
 const isInstalledSkill = computed(() => !!currentSkill.value?.dir_path)
 
 const isBuiltinInstalledSkill = computed(() => {
-  return !!(isInstalledSkill.value && currentSkill.value?.source_type === 'builtin')
+  const skill = currentSkill.value
+  return !!(isInstalledSkill.value && (skill?.builtin === true || skill?.source_scope === 'builtin'))
 })
 const canManageCurrentSkill = computed(() => currentSkill.value?.can_manage !== false)
 const isReadOnlySkill = computed(() => isInstalledSkill.value && !canManageCurrentSkill.value)
@@ -392,9 +393,10 @@ const canEditSkillDependencies = computed(
 )
 
 const sourceTypeLabel = (sourceType) => {
-  if (sourceType === 'builtin') return t('ext.skills.detail.sourceBuiltin')
-  if (sourceType === 'remote') return t('ext.skills.detail.sourceRemote')
-  return t('ext.skills.detail.sourceUpload')
+  if (sourceType === 'work') return t('ext.tools.sourceWork')
+  if (sourceType === 'common') return t('ext.skills.sourceCommon')
+  if (sourceType === 'chat') return t('ext.tools.sourceChat')
+  return ''
 }
 
 const currentSkillStatusLabel = computed(() => {
