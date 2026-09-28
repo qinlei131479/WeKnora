@@ -6,6 +6,10 @@ export interface SkillCatalogPageDTO {
   keyword?: string;
   /** 租户 ID（为空查询全部租户） */
   tenantId?: number;
+  /** 使用侧：chat 对话、work 工作、common 通用 */
+  sourceType?: 'chat' | 'work' | 'common';
+  /** 是否启用 */
+  enabled?: boolean;
 }
 
 /** 远程拉取技能参数 */
@@ -28,7 +32,7 @@ export interface SkillCatalogFileSaveDTO {
 export interface SkillCatalogVO {
   /** 主键 ID（UUID） */
   id?: string;
-  /** 租户 ID */
+  /** 所属租户 ID */
   tenantId?: number;
   /** 技能名称 */
   name?: string;
@@ -42,6 +46,24 @@ export interface SkillCatalogVO {
   bundleRef?: string;
   /** 技能压缩包的 SHA256 摘要 */
   bundleSha256?: string;
+  /** 使用侧：chat 对话、work 工作、common 通用 */
+  sourceType?: string;
+  /** 绑定的工具（JSON 数组，文档未限定元素结构） */
+  toolDependencies?: unknown[];
+  /** 绑定的 MCP（JSON 数组，文档未限定元素结构） */
+  mcpDependencies?: unknown[];
+  /** 绑定的其他技能（JSON 数组，文档未限定元素结构） */
+  skillDependencies?: unknown[];
+  /** 共享范围（JSON 对象） */
+  shareConfig?: Record<string, unknown>;
+  /** 是否启用 */
+  enabled?: boolean;
+  /** 创建人 */
+  createdBy?: string;
+  /** 最近更新人 */
+  updatedBy?: string;
+  /** 内置技能源目录最后修改时间 */
+  sourceMtime?: string;
   /** 创建时间 */
   createdAt?: string;
   /** 最后更新时间 */

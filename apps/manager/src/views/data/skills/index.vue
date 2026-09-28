@@ -3,8 +3,8 @@ import { API } from '@/api';
 import { t } from '@/i18n';
 import type { PageDomain, SkillCatalogPageDTO, SkillCatalogVO, TenantsVO } from '@/types';
 import modal from '@/plugins/modal';
-import FileViewDrawer from './components/FileViewDrawer.vue';
 import AddDrawer from './components/AddDrawer.vue';
+import FileViewDrawer from './components/FileViewDrawer.vue';
 
 const fileViewRef = ref<InstanceType<typeof FileViewDrawer>>();
 const addRef = ref<InstanceType<typeof AddDrawer>>();
@@ -24,7 +24,9 @@ const getList = () => {
   state.loading = true;
   const dto: SkillCatalogPageDTO = {
     keyword: state.dto.keyword?.trim() || undefined,
-    tenantId: state.dto.tenantId
+    tenantId: state.dto.tenantId,
+    sourceType: state.dto.sourceType,
+    enabled: state.dto.enabled
   };
   return API.Skills.list(dto, { ...state.page })
     .then((res) => {
@@ -111,7 +113,29 @@ onMounted(() => {
             filterable
             :placeholder="$t('page.data.skills.search.tenant', '选择租户')"
           >
+            <el-option :value="0" :label="$t('page.data.skills.builtin', '[内置]')">
+              <span class="tenant-builtin-option">{{ $t('page.data.skills.builtin', '[内置]') }}</span>
+            </el-option>
             <el-option v-for="tenant in state.tenants" :key="tenant.id" :value="tenant.id!" :label="tenant.name" />
+          </el-select>
+          <el-select
+            v-model="state.dto.sourceType"
+            class="search-bar__select"
+            clearable
+            :placeholder="$t('page.data.skills.search.sourceType', '选择范围')"
+          >
+            <el-option value="chat" :label="$t('page.data.skills.sourceType.chat', '对话')" />
+            <el-option value="work" :label="$t('page.data.skills.sourceType.work', '工作')" />
+            <el-option value="common" :label="$t('page.data.skills.sourceType.common', '通用')" />
+          </el-select>
+          <el-select
+            v-model="state.dto.enabled"
+            class="search-bar__select"
+            clearable
+            :placeholder="$t('page.data.skills.search.enabled', '选择状态')"
+          >
+            <el-option :value="true" :label="$t('page.data.skills.status.enabled', '启用')" />
+            <el-option :value="false" :label="$t('page.data.skills.status.disabled', '禁用')" />
           </el-select>
           <el-button @click="resetQuery">{{ $t('page.normal.reset', '重置') }}</el-button>
           <el-button type="primary" @click="handleQuery">{{ $t('page.normal.search', '搜索') }}</el-button>
@@ -120,35 +144,49 @@ onMounted(() => {
 
       <el-table v-loading="state.loading" :data="state.rows" height="100%" show-overflow-tooltip>
         <template #empty><kjsc-empty /></template>
-        <el-table-column prop="name" :label="$t('page.data.skills.field.name', '技能名称')" :min-width="$dim('page.data.skills.table.name', 220)" />
+        <el-table-column prop="name" :label="$t('page.data.skills.field.name', '技能名称')" :min-width="$dim('page.data.skills.table.name', 200)" />
         <el-table-column
           prop="description"
           :label="$t('page.data.skills.field.description', '技能描述')"
-          :min-width="$dim('page.data.skills.table.description', 360)"
+          :min-width="$dim('page.data.skills.table.description', 320)"
         />
         <el-table-column
           prop="version"
           :label="$t('page.data.skills.field.version', '版本')"
           :min-width="$dim('page.data.skills.table.version', 100)"
         />
-        <el-table-column :label="$t('page.data.skills.field.tenant', '租户')" :min-width="$dim('page.data.skills.table.tenant', 180)">
-          <template #default="{ row }">{{ row.tenant?.name ?? '' }}</template>
+        <el-table-column :label="$t('page.data.skills.field.tenant', '租户')" :min-width="$dim('page.data.skills.table.tenant', 160)">
+          <template #default="{ row }">
+            <span v-if="row.tenant === null" class="tenant-builtin">{{ $t('page.data.skills.builtin', '[内置]') }}</span>
+            <span v-else>{{ row.tenant?.name ?? '' }}</span>
+          </template>
         </el-table-column>
         <el-table-column
-          prop="createdAt"
-          :label="$t('page.data.skills.field.createdAt', '创建时间')"
-          :min-width="$dim('page.data.skills.table.createdAt', 180)"
+          prop="sourceType"
+          :label="$t('page.data.skills.field.sourceType', '范围')"
+          :min-width="$dim('page.data.skills.table.sourceType', 100)"
           align="center"
-        />
+        >
+          <template #default="{ row }">
+            <el-tag v-if="row.sourceType === 'chat'" type="primary">{{ $t('page.data.skills.sourceType.chat', '对话') }}</el-tag>
+            <el-tag v-else-if="row.sourceType === 'work'" type="success">{{ $t('page.data.skills.sourceType.work', '工作') }}</el-tag>
+            <el-tag v-else-if="row.sourceType === 'common'" type="warning">{{ $t('page.data.skills.sourceType.common', '通用') }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column
-          prop="updatedAt"
-          :label="$t('page.data.skills.field.updatedAt', '更新时间')"
-          :min-width="$dim('page.data.skills.table.updatedAt', 180)"
+          prop="enabled"
+          :label="$t('page.data.skills.field.enabled', '状态')"
+          :min-width="$dim('page.data.skills.table.enabled', 100)"
           align="center"
-        />
+        >
+          <template #default="{ row }">
+            <el-tag v-if="row.enabled === true" type="primary">{{ $t('page.data.skills.status.enabled', '启用') }}</el-tag>
+            <el-tag v-else-if="row.enabled === false" type="info">{{ $t('page.data.skills.status.disabled', '禁用') }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column
           :label="$t('page.normal.operation', '操作')"
-          :width="$dim('page.data.skills.table.operation', 180)"
+          :width="$dim('page.data.skills.table.operation', 140)"
           align="left"
           fixed="right"
         >
@@ -156,15 +194,9 @@ onMounted(() => {
             <el-button link type="primary" :disabled="!row.id" @click="fileViewRef?.handleOpen(row)" v-hasPermi="['business:skills:query']">{{
               $t('page.data.skills.files.title', '查看文件')
             }}</el-button>
-            <el-button
-              link
-              type="danger"
-              :disabled="!row.id || !!state.deletingId"
-              :loading="state.deletingId === row.id"
-              @click.stop="handleDelete(row)"
-              v-hasPermi="['business:skills:remove']"
-              >{{ $t('page.normal.delete', '删除') }}</el-button
-            >
+            <el-button link type="danger" @click.stop="handleDelete(row)" v-hasPermi="['business:skills:remove']">{{
+              $t('page.normal.delete', '删除')
+            }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -188,5 +220,14 @@ onMounted(() => {
 <style lang="scss" scoped>
 .search-bar__select {
   width: 180px;
+}
+
+.tenant-builtin-option {
+  color: var(--el-text-color-placeholder);
+}
+
+.tenant-builtin {
+  color: var(--el-text-color-placeholder);
+  font-style: italic;
 }
 </style>

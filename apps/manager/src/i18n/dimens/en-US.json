@@ -32,12 +32,12 @@
         "table.updatedAt": 180
       },
       "skills": {
-        "table.createdAt": 180,
-        "table.description": 360,
-        "table.name": 220,
-        "table.operation": 200,
-        "table.tenant": 180,
-        "table.updatedAt": 180,
+        "table.description": 320,
+        "table.enabled": 100,
+        "table.name": 200,
+        "table.operation": 160,
+        "table.sourceType": 100,
+        "table.tenant": 160,
         "table.version": 100
       },
       "storage": {
