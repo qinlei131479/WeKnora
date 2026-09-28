@@ -9,6 +9,8 @@ import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -26,6 +28,7 @@ import com.iptv.business.pgmapper.StorageBackendsMapper;
 import com.iptv.business.pgmapper.TenantsMapper;
 import com.iptv.business.service.SkillCatalogService;
 import com.iptv.business.service.StorageBackendFileServiceFactory;
+import com.iptv.common.core.constant.TenantConstant;
 import com.iptv.common.core.exception.ServiceException;
 import com.iptv.common.core.utils.PageUtils;
 import com.iptv.common.core.web.page.PageDTO;
@@ -76,7 +79,7 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
      * bundle_ref 直连存储格式 minio://{bucket}/{tenantId}/tenant-skills/catalog/{name}.zip，
      * 存储-{}-后端取同租户（tenant_id=0）的 StorageBackends，不注册 resources 记录
      */
-    private static final long BUILTIN_TENANT_ID = 0L;
+    private static final long BUILTIN_TENANT_ID = TenantConstant.BUSINESS_BUILTIN_TENANT_ID;
 
     /**
      * 资源引用前缀（对齐 Go types.ResourceScheme）
@@ -328,11 +331,27 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
     @Transactional(rollbackFor = Exception.class)
     public void delete(@Nonnull String id) {
         SkillCatalog entity = getRequiredCatalog(id);
-        // 存在安装引用时拒绝删除（与 Go DeleteCatalog 行为一致）
+
+        if(!ObjectUtil.equal(entity.getTenantId(), BUILTIN_TENANT_ID)){
+            throw new ServiceException("非内置技能书不能删除");
+        }
+
+        // 存在安装引用时拒绝删除
         long refs = skillCatalogMapper.countInstallRefs(entity.getId());
         if (refs > 0) {
             throw new ServiceException("请先从所有沙箱卸载该技能后再删除");
         }
+        // 被其他技能依赖时拒绝删除
+        long dependencies = skillCatalogMapper.countDependencies(entity.getName());
+        if (dependencies > 0) {
+            throw new ServiceException("该技能已被其他技能依赖，不能删除");
+        }
+        // 智能体引用时拒绝删除
+        long agentRefs = skillCatalogMapper.countAgentRefs(entity.getName());
+        if (agentRefs > 0) {
+            throw new ServiceException("该技能已被智能体引用，不能删除");
+        }
+
         skillCatalogMapper.deleteById(id);
         // 尽力清理 bundle 对象与资源记录（失败仅告警）
         purgeBundleRef(entity.getBundleRef());
@@ -1598,6 +1617,14 @@ public class SkillCatalogServiceImpl implements SkillCatalogService {
         vo.setInstructions(entity.getInstructions());
         vo.setBundleRef(entity.getBundleRef());
         vo.setBundleSha256(entity.getBundleSha256());
+        vo.setSourceType(entity.getSourceType());
+        vo.setToolDependencies(JSONArray.parse(entity.getToolDependencies()));
+        vo.setMcpDependencies(JSONArray.parse(entity.getMcpDependencies()));
+        vo.setShareConfig(JSON.parseObject(entity.getShareConfig()));
+        vo.setEnabled(entity.getEnabled());
+        vo.setCreatedBy(entity.getCreatedBy());
+        vo.setUpdatedBy(entity.getUpdatedBy());
+        vo.setSourceMtime(entity.getSourceMtime());
         vo.setCreatedAt(entity.getCreatedAt());
         vo.setUpdatedAt(entity.getUpdatedAt());
         if (ObjectUtil.isNotEmpty(entity.getTenantId())) {

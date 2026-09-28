@@ -3,22 +3,37 @@
 <mapper namespace="com.iptv.business.pgmapper.SkillCatalogMapper">
 
     <resultMap type="com.iptv.business.domain.SkillCatalog" id="SkillCatalogResult">
-        <id     property="id"           column="id"/>
-        <result property="tenantId"     column="tenant_id"/>
-        <result property="name"         column="name"/>
-        <result property="version"      column="version"/>
-        <result property="description"  column="description"/>
-        <result property="instructions" column="instructions"/>
-        <result property="bundleRef"    column="bundle_ref"/>
-        <result property="bundleSha256" column="bundle_sha256"/>
-        <result property="createdAt"    column="created_at"/>
-        <result property="updatedAt"    column="updated_at"/>
-        <result property="deletedAt"    column="deleted_at"/>
+        <id     property="id"                column="id"/>
+        <result property="tenantId"          column="tenant_id"/>
+        <result property="name"              column="name"/>
+        <result property="version"           column="version"/>
+        <result property="description"       column="description"/>
+        <result property="instructions"      column="instructions"/>
+        <result property="bundleRef"         column="bundle_ref"/>
+        <result property="bundleSha256"      column="bundle_sha256"/>
+        <result property="sourceType"        column="source_type"/>
+        <result property="toolDependencies"  column="tool_dependencies"
+                typeHandler="com.iptv.common.core.typehandler.JsonbTypeHandler"/>
+        <result property="mcpDependencies"   column="mcp_dependencies"
+                typeHandler="com.iptv.common.core.typehandler.JsonbTypeHandler"/>
+        <result property="skillDependencies" column="skill_dependencies"
+                typeHandler="com.iptv.common.core.typehandler.JsonbTypeHandler"/>
+        <result property="shareConfig"       column="share_config"
+                typeHandler="com.iptv.common.core.typehandler.JsonbTypeHandler"/>
+        <result property="enabled"           column="enabled"/>
+        <result property="createdBy"         column="created_by"/>
+        <result property="updatedBy"         column="updated_by"/>
+        <result property="sourceMtime"       column="source_mtime"/>
+        <result property="createdAt"         column="created_at"/>
+        <result property="updatedAt"         column="updated_at"/>
+        <result property="deletedAt"         column="deleted_at"/>
     </resultMap>
 
     <sql id="Base_Column_List">
         id, tenant_id, name, version, description, instructions,
-        bundle_ref, bundle_sha256, created_at, updated_at, deleted_at
+        bundle_ref, bundle_sha256, source_type, tool_dependencies,
+        mcp_dependencies, skill_dependencies, share_config, enabled,
+        created_by, updated_by, source_mtime, created_at, updated_at, deleted_at
     </sql>
 
     <select id="queryPage" resultMap="SkillCatalogResult">
@@ -36,6 +51,12 @@
             <if test="param.tenantId != null">
                 AND tenant_id = #{param.tenantId}
             </if>
+            <if test="param.sourceType != null and param.sourceType != ''">
+                AND source_type = #{param.sourceType}
+            </if>
+            <if test="param.enabled != null">
+                AND enabled = #{param.enabled}
+            </if>
         </where>
         ORDER BY created_at DESC
     </select>
@@ -45,6 +66,27 @@
         FROM tenant_skills
         WHERE catalog_id = #{catalogId}
           AND deleted_at IS NULL
+    </select>
+
+    <select id="countDependencies" resultType="long">
+        SELECT COUNT(*) cnt
+        FROM tenant_skill_catalog
+        WHERE
+        EXISTS
+            (
+                SELECT 1
+                FROM jsonb_array_elements_text (skill_dependencies) e
+                WHERE e LIKE CONCAT('%', #{skillName}, '%')
+            )
+        AND deleted_at IS NULL
+    </select>
+
+    <select id="countAgentRefs" resultType="long">
+        SELECT
+        COUNT(*) cnt
+        FROM
+        amp_agents
+        WHERE jsonb_exists(config_json::jsonb -> 'context' -> 'skills', #{skillName})
     </select>
 
 </mapper>

@@ -1,5 +1,7 @@
 package com.iptv.business.domain.vo;
 
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import com.iptv.business.domain.Tenants;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -46,6 +48,33 @@ public class SkillCatalogVO implements java.io.Serializable {
 
     @Schema(description = "bundle zip 的 SHA256 摘要")
     private String bundleSha256;
+
+    @Schema(description = "使用侧：chat 对话、work 工作、common 通用")
+    private String sourceType;
+
+    @Schema(description = "绑定的工具（JSON 数组）")
+    private JSONArray toolDependencies;
+
+    @Schema(description = "绑定的 MCP（JSON 数组）")
+    private JSONArray mcpDependencies;
+
+    @Schema(description = "绑定的其他技能（JSON 数组）")
+    private JSONArray skillDependencies;
+
+    @Schema(description = "共享范围（JSON 对象）")
+    private JSONObject shareConfig;
+
+    @Schema(description = "是否启用")
+    private Boolean enabled;
+
+    @Schema(description = "创建人")
+    private String createdBy;
+
+    @Schema(description = "最近更新人")
+    private String updatedBy;
+
+    @Schema(description = "内置技能源目录最后修改时间")
+    private Date sourceMtime;
 
     @Schema(description = "创建时间")
     private Date createdAt;

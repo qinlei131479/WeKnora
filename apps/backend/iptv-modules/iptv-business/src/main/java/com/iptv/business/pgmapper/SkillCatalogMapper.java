@@ -34,4 +34,8 @@ public interface SkillCatalogMapper extends BaseMapper<SkillCatalog> {
      * @return 安装引用数
      */
     long countInstallRefs(@Param("catalogId") String catalogId);
+
+    long countDependencies(@Param("skillName") String skillName);
+
+    long countAgentRefs(@Param("skillName") String skillName);
 }

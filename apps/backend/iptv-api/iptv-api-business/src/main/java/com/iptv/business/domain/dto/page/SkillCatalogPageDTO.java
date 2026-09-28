@@ -26,4 +26,10 @@ public class SkillCatalogPageDTO implements Serializable {
 
     @Schema(description = "租户 ID（为空查询全部租户）")
     private Integer tenantId;
+
+    @Schema(description = "使用侧：chat 对话、work 工作、common 通用")
+    private String sourceType;
+
+    @Schema(description = "是否启用")
+    private Boolean enabled;
 }
