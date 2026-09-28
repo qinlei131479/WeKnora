@@ -181,6 +181,7 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
         Users entity = new Users();
         entity.setId(UUID.fastUUID().toString());
         entity.setUsername(dto.getUsername());
+        entity.setAccount(dto.getAccount());
         entity.setEmail(dto.getEmail());
         entity.setPasswordHash(hashedPassword);
         entity.setTenantId(defaultTenantsList.get(0).getId());
@@ -274,9 +275,19 @@ public class UsersServiceImpl extends ServiceImpl<UsersMapper, Users> implements
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(@Nonnull String id) {
         Users entity = this.baseMapper.selectById(id);
-        if (BeanUtil.isNotEmpty(entity)) {
-            this.baseMapper.deleteById(id);
+        if (BeanUtil.isEmpty(entity)) {
+            throw new ServiceException("用户不存在");
         }
+        long count = tenantMembersMapper.selectCount(new LambdaQueryWrapper<TenantMembers>()
+                .eq(TenantMembers::getUserId, entity.getId())
+                .eq(TenantMembers::getRole, TenantMemberRoleEnum.OWNER.getCode())
+                .eq(TenantMembers::getStatus, BusinessStatusEnum.ACTIVE.getCode()));
+        if (count > 0) {
+            throw new ServiceException("用户为租户所有者，不能删除");
+        }
+        this.baseMapper.deleteById(id);
+        tenantMembersMapper.delete(new LambdaQueryWrapper<TenantMembers>()
+                .eq(TenantMembers::getUserId, entity.getId()));
     }
 
     @Override
