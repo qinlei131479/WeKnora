@@ -119,7 +119,7 @@ export async function switchWorkspaceAndReload(params: {
     refresh_token: authStore.refreshToken || undefined,
   })
   if (!result.success || !result.token) {
-    MessagePlugin.error(result.message || '切换空间失败')
+    MessagePlugin.error(result.message || '切换租户失败')
     return false
   }
 

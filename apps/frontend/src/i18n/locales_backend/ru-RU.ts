@@ -110,7 +110,7 @@ export default {
       skill_cannot_stop: 'В текущем состоянии установку нельзя остановить',
       skill_env_readonly: 'Переменные среды меняются на странице настроек',
       skill_rebuild_elsewhere: 'Образ пересобирается на странице настроек',
-      skill_tenant_required: 'Текущее пространство недействительно',
+      skill_tenant_required: 'Текущий тенант недействителен',
       skill_dir_missing: 'Каталог навыка не найден',
       skill_share_forbidden: 'Этот диапазон общего доступа недоступен',
       skill_slug_mismatch: 'Идентификатор навыка не совпадает с содержимым',

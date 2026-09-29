@@ -110,7 +110,7 @@ export default {
       skill_cannot_stop: '当前状态不能停止',
       skill_env_readonly: '环境变量请在设置页修改',
       skill_rebuild_elsewhere: '镜像重建请在设置页操作',
-      skill_tenant_required: '当前空间无效',
+      skill_tenant_required: '当前租户无效',
       skill_dir_missing: '技能目录不存在',
       skill_share_forbidden: '无权使用该共享范围',
       skill_slug_mismatch: '技能标识与内容不一致',

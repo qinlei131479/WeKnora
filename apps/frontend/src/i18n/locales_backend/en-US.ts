@@ -110,7 +110,7 @@ export default {
       skill_cannot_stop: 'This install cannot be stopped in its current state',
       skill_env_readonly: 'Change environment variables on the settings page',
       skill_rebuild_elsewhere: 'Rebuild the image on the settings page',
-      skill_tenant_required: 'The current workspace is invalid',
+      skill_tenant_required: 'The current tenant is invalid',
       skill_dir_missing: 'Skill directory not found',
       skill_share_forbidden: 'You cannot use this sharing scope',
       skill_slug_mismatch: 'The skill identifier does not match its content',

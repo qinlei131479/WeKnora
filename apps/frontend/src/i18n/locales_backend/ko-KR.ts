@@ -110,7 +110,7 @@ export default {
       skill_cannot_stop: '현재 상태에서는 중지할 수 없습니다',
       skill_env_readonly: '환경 변수는 설정 페이지에서 변경하세요',
       skill_rebuild_elsewhere: '이미지 재빌드는 설정 페이지에서 진행하세요',
-      skill_tenant_required: '현재 작업 공간이 유효하지 않습니다',
+      skill_tenant_required: '현재 테넌트가 유효하지 않습니다',
       skill_dir_missing: '스킬 디렉터리를 찾을 수 없습니다',
       skill_share_forbidden: '이 공유 범위를 사용할 수 없습니다',
       skill_slug_mismatch: '스킬 식별자가 내용과 일치하지 않습니다',

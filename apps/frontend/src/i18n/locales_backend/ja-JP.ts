@@ -110,7 +110,7 @@ export default {
       skill_cannot_stop: '現在の状態では停止できません',
       skill_env_readonly: '環境変数は設定ページで変更してください',
       skill_rebuild_elsewhere: 'イメージの再構築は設定ページで操作してください',
-      skill_tenant_required: '現在のワークスペースが無効です',
+      skill_tenant_required: '現在のテナントが無効です',
       skill_dir_missing: 'スキルディレクトリが見つかりません',
       skill_share_forbidden: 'この共有範囲は使用できません',
       skill_slug_mismatch: 'スキル識別子が内容と一致しません',
