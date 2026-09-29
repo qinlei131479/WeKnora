@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { useData } from 'vitepress'
 
 const MIN = 0.3
 const MAX = 8
+const { isDark } = useData()
 
 const open = ref(false)
 const scale = ref(1)
@@ -161,7 +163,7 @@ onUnmounted(() => {
 <template>
   <Teleport to="body">
     <Transition name="zoom-fade">
-      <div v-if="open" class="zoom" @wheel="onWheel" @mousedown.self="close">
+      <div v-if="open" class="zoom" :class="{ 'is-dark': isDark }" @wheel="onWheel" @mousedown.self="close">
         <div
           ref="stage"
           class="zoom-stage"
@@ -224,6 +226,21 @@ onUnmounted(() => {
   -webkit-user-drag: none;
   border-radius: 8px;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+/* 图的字色跟当前外观走：浅色是黑字，深色是浅字。放大层遮罩始终是深的，
+   透明区域会透出底色。底板要与正文里的图一致，两种模式分开铺。
+   不要加 padding，否则会裁掉超出视口的节点。 */
+.zoom-stage :deep(svg) {
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.55), transparent 55%),
+    linear-gradient(180deg, #ececf1 0%, #e3e3e8 100%);
+}
+
+.zoom.is-dark .zoom-stage :deep(svg) {
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.04), transparent 55%),
+    linear-gradient(180deg, #2c2c2e 0%, #1d1d1f 100%);
 }
 
 .zoom-bar {

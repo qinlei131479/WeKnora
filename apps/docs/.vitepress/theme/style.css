@@ -611,6 +611,9 @@ body {
   margin: 0;
   font-size: 13.5px;
   border-collapse: collapse;
+  /* VitePress 默认给 table 写了 overflow-x: auto。表格又是 display:table 时，
+     浏览器会把首行高度算成整表滚动高度，出现大片空白。滚动只留在外层。 */
+  overflow: visible;
 }
 
 .vp-doc .wk-table::-webkit-scrollbar {
@@ -643,6 +646,12 @@ body {
   padding: 12px 14px 12px 0;
   vertical-align: top;
   line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.vp-doc td :not(pre) > code {
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .vp-doc tr {
