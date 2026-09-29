@@ -2,7 +2,7 @@
 
 创建知识库，导入与管理文档，并查询处理进度、复制或移动内容。
 
-权限速记：读路由为 Viewer+ 且需对 KB 有 read 权限（自有/组织共享/共享 Agent 可见）；写路由为“KB 创建者 OR Admin+”且需 write 权限。API key：读需 `retrieve`，内容写需 `ingest`，KB 生命周期需 `manage_kbs`（均可被 full-access 覆盖），并受 KB 白名单约束。
+权限速记：读路由为 Viewer+ 且需对 KB 有 read 权限；写路由为“KB 创建者 OR Admin+”且需 write 权限。API key：读需 `retrieve`，内容写需 `ingest`，KB 生命周期需 `manage_kbs`（均可被 full-access 覆盖），并受 KB 白名单约束。
 
 分块、标签与分块预览接口（`/chunks`、`/knowledge-bases/:id/tags`、`/chunker/preview`）在[分块与标签](./02-api-chunks.md)。
 
@@ -440,7 +440,7 @@ curl -X POST $BASE/api/v1/knowledge/k-1/cancel-parse -H "Authorization: Bearer $
 
 ### GET /api/v1/knowledge/:id/download
 
-用途：下载原始源文件（比预览更严格：Contributor+ 且 KB write；组织共享 Viewer 不可下载源文件）。API key `retrieve`/full。
+用途：下载原始源文件（比预览更严格：Contributor+ 且 KB write）。API key `retrieve`/full。
 
 响应：200 二进制流（`application/octet-stream`）。
 

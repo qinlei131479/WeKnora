@@ -28,7 +28,7 @@
 ::: tip 租户与平台权限
 租户 Owner 管理所在租户的成员、模型和知识库。全局系统设置、平台任务队列及跨租户审计需要系统管理员身份，两类权限独立授予。
 
-首次设置系统管理员时，先注册账号，再为 app 服务配置 `WEKNORA_BOOTSTRAP_SYSTEM_ADMIN_EMAIL=<该账号邮箱>` 并重启。该流程仅在部署尚无系统管理员时生效。完整步骤与限制见[平台管理与系统管理员](../03-features/20-platform-admin.md)。
+首次设置系统管理员时，先注册账号，再在 `.env.kjsc.example` 对应的系统管理员自举项中填写该账号邮箱并重启 app 服务。该流程仅在部署尚无系统管理员时生效。完整步骤与限制见[平台管理与系统管理员](../03-features/20-platform-admin.md)。
 :::
 
 ## 创建知识库并配置模型 {#_3-创建知识库并配置模型}
@@ -39,7 +39,7 @@
 2. 在弹出的初始化向导里选模型：
    - **对话模型（LLM）**：生成回答；
    - **向量模型（Embedding）**：将文档转换为向量；更换后需要重建索引；
-   - 重排 Rerank、图片理解 VLM、语音转写 ASR、知识图谱抽取和问题生成可按资料类型与使用需求配置；
+   - 重排 Rerank、图片理解 VLM、语音转写 ASR 和问题生成可按资料类型与使用需求配置；
 3. 用向导里的「测试」按钮确认模型连接正常，再保存。
 
 <Screenshot
@@ -113,7 +113,6 @@ curl -s -X POST $BASE/initialization/initialize/$KB_ID -H "$AUTH" -H "Content-Ty
   "rerank":    {"enabled":false},
   "multimodal":{"enabled":false},
   "documentSplitting":{"chunkSize":512,"chunkOverlap":50,"separators":["\n\n","\n","。"]},
-  "nodeExtract":{"enabled":false},
   "questionGeneration":{"enabled":false}}'
 
 # 5) 上传文档（multipart，字段名 file）
@@ -164,11 +163,10 @@ curl -s $BASE/knowledge-bases -H "X-API-Key: <创建时返回的 key>"
 
 | 步骤 | 端点 | 说明 |
 | --- | --- | --- |
-| 读取当前配置 | `GET /api/v1/initialization/config/:kbId` | 返回 llm / embedding / rerank / multimodal / documentSplitting / nodeExtract / questionGeneration 各段及 `hasFiles`（已有文件时限制修改 embedding） |
+| 读取当前配置 | `GET /api/v1/initialization/config/:kbId` | 返回 llm / embedding / rerank / multimodal / documentSplitting / questionGeneration 各段及 `hasFiles`（已有文件时限制修改 embedding） |
 | 检测 Ollama | `GET /api/v1/initialization/ollama/status`、`GET /api/v1/initialization/ollama/models` | 检查 Ollama 可用性与已装模型 |
 | 下载 Ollama 模型 | `POST /api/v1/initialization/ollama/models/download` → `GET /api/v1/initialization/ollama/download/progress/:taskId` | 异步下载并轮询进度 |
 | 测试远程模型 | `POST /api/v1/initialization/remote/check`、`/initialization/embedding/test`、`/initialization/rerank/check`、`/initialization/asr/check`、`/initialization/multimodal/test` | 保存前连通性验证 |
-| 知识图谱试抽取 | `POST /api/v1/initialization/extract/text-relation`（配 `fabri-text` / `fabri-tag` 生成示例） | 预览实体/关系抽取效果 |
 | 保存配置 | `POST /api/v1/initialization/initialize/:kbId`（首次）/ `PUT /api/v1/initialization/config/:kbId`（更新） | 落库：创建/更新 Model 记录并写入 KnowledgeBase 配置 |
 
 `source` 取 `local`（Ollama）或远程厂商标识（`openai`、`deepseek`、`aliyun`、`zhipu`、`siliconflow` 等）。`chunkSize` 合法范围 100–10000。
@@ -205,7 +203,7 @@ sequenceDiagram
 
 | 现象 | 检查点 |
 | --- | --- |
-| 上传后一直 `processing` | `docker logs agent-middle-docreader`；大文件受 `MAX_FILE_SIZE_MB`（默认 50）与 `WEKNORA_DOCUMENT_PROCESS_TIMEOUT`（默认 2h）约束 |
+| 上传后一直 `processing` | `docker logs agent-middle-docreader`；大文件受 `MAX_FILE_SIZE_MB`（默认 50）与部署侧文档处理超时配置（默认 2h）约束 |
 | 初始化时 Ollama 检测失败 | 容器内默认地址 `http://host.docker.internal:11434`（`OLLAMA_BASE_URL`）；Linux 需确认 `extra_hosts: host.docker.internal:host-gateway` 生效 |
 | 问答无引用 / 召回为空 | 确认知识解析 `completed`；调低 `vector_threshold`；检查 embedding 模型与建库时一致 |
 | 注册页签消失 | 查 `GET /auth/config` 的 `registration_mode`。值可能来自「设置 → 系统」里的数据库设置，不只是 `DISABLE_REGISTRATION`；邀请链接与 OIDC 首次登录是另外两条通路，不受它影响 |

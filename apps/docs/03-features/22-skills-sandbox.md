@@ -1,111 +1,110 @@
-# 技能目录与沙箱
+# 技能与工作沙箱
 
-技能由 `SKILL.md` 说明、脚本、模板和资料组成，沙箱提供脚本执行环境。将技能添加到租户目录并安装到沙箱后，在智能体中选择对应沙箱和技能，即可用于智能推理对话。
+平台提供两类技能相关能力：**Runtime 技能**由 `apps/agent-harness` 管理，包含工作模式可调用的说明、脚本、工具依赖和 MCP 依赖；**平台沙箱配置**由 `apps/app-core` 管理，提供工作区策略和外部沙箱供应商配置。两类能力分别管理，服务不同的执行链路。
 
-## 配置并使用技能 {#从配置到第一次执行}
+## Runtime 技能
 
-1. 租户 Admin/Owner 在「设置 → 沙箱配置」创建配置，选择 Docker、CubeSandbox 或 E2B，填写连接信息。
-2. 按向导连接集群、选择模板；需要验证完整链路时运行「完整验证」。完整验证会实际创建沙箱、执行探针并清理。
-3. 在「设置 → 技能管理」添加 ZIP 或来源链接，再选择要安装的沙箱。目录收录成功只表示安装包已保存；安装状态就绪后才能执行。
-4. 打开智能体编辑器的「技能与沙箱」，选择沙箱，设置技能范围为全部、指定技能或禁用。技能执行用于智能推理模式。
-5. 进入对话提问，或用 `@技能` 提示智能体优先使用该技能。需要文件时上传附件，生成的交付文件在对话的文件面板预览、下载。
+Runtime 技能源码位于 `apps/agent-harness/server/routers/skill_router.py`，内置技能目录为 `apps/agent-harness/package/yuxi/agents/skills/buildin/`。当前内置技能包括：
 
-`@技能` 不会取消智能体对其他已授权技能的访问。未选沙箱、租户关闭脚本或所需后端能力不可用时，执行工具不会注册；提示词无法绕过这些条件。
-
-<Screenshot
-  src="/screenshots/skill-catalog.png"
-  caption="租户技能目录：查看技能与各沙箱安装状态" />
-
-## 管理安装与更新 {#目录、安装和更新}
-
-租户目录保存一份技能包；每个沙箱配置各有安装记录和包含技能的镜像快照。同一技能可以装到多个沙箱，安装进度和失败原因分别记录。
-
-| 操作 | 结果 |
+| 技能 | 用途 |
 | --- | --- |
-| 添加到目录 | 保存包、名称、版本和说明，不执行安装 |
-| 安装 | 在所选沙箱构建运行环境、安装依赖并校验可加载性，成功后发布新快照 |
-| 重试 | 复用已保存的包再次安装；相同包已正常就绪时可跳过 |
-| 停止安装 | 中止进行中的安装，状态变为 failed，之后可重试或卸载 |
-| 停用 | 保留安装记录，只让智能体不再选用该技能 |
-| 从沙箱卸载 | 更新该沙箱的技能镜像，保留目录中的安装包，便于其他沙箱继续安装 |
-| 删除目录条目 | 要求已无沙箱安装引用；不会隐式卸载全部沙箱 |
+| `deep-research` | 多步资料检索与研究报告 |
+| `docx` | Word 文档生成与处理 |
+| `html-preview` | HTML 内容预览 |
+| `image-gen` | 图片生成 |
+| `knowledge-base` | 企业知识库检索与引用 |
+| `mysql-reporter` | MySQL 查询与报告生成 |
+| `pdf` | PDF 文档处理 |
+| `pptx` | PPT 生成与处理 |
+| `quote` | 引用整理 |
+| `xlsx` | Excel 表格生成与处理 |
 
-安装页面显示百分比、阶段和日志，详细运行过程可在安装记录中查看。关闭进度抽屉或断开进度流不会停止安装。没有实时进度时可刷新技能状态；详细事件日志过期不代表技能安装包已丢失。
+内置技能通过租户 `tenant_id=0` 识别，所有租户共用定义；启用状态和使用权限仍按管理配置过滤。当前产品包含平台统一维护的技能目录，不包含个人技能上传入口。
 
-`skill_rollout` 控制镜像更新：默认 `next_turn` 在已有会话的下一轮重建沙箱；`new_session` 仅让之后创建沙箱的会话使用新镜像。沙箱重建会丢失旧实例临时运行状态，需交付的文件应写入 `/workspace/output` 并由系统收集。
+### 管理接口
 
-### 支持的来源
+Runtime 管理面挂在 `/api/system/skills`：
 
-| 输入 | 说明 |
+| 操作 | 方法与路径 |
 | --- | --- |
-| ZIP 文件 | 导出技能目录后上传 |
-| `@owner/slug`、`@owner/slug@1.2.0` | ClawHub 指定作者/版本 |
-| `slug`、`slug@1.2.0` | ClawHub slug |
-| ClawHub、SkillHub、自托管 SkillHub 页面 | 通过对应来源解析 |
-| GitHub/GitLab 仓库或目录 URL | 获取对应技能包 |
-| `https://skills.sh/owner/repo/slug`、ClawHub 的 skills.sh 页面 | 经安装解析器解析到仓库的具体版本和目录 |
-| 直接 ZIP 或 SKILL.md URL | 下载包或入口文件 |
+| 可管理技能列表 | `GET /api/system/skills` |
+| 依赖选项 | `GET /api/system/skills/dependency-options` |
+| 启停技能 | `PUT /api/system/skills/:slug/enabled` |
+| 文件树 | `GET /api/system/skills/:slug/tree` |
+| 读取文件 | `GET /api/system/skills/:slug/file` |
+| 创建文件或目录 | `POST /api/system/skills/:slug/file` |
+| 更新文件 | `PUT /api/system/skills/:slug/file` |
+| 更新依赖 | `PUT /api/system/skills/:slug/dependencies` |
+| 导出压缩包 | `GET /api/system/skills/:slug/export` |
+| 删除技能 | `DELETE /api/system/skills/:slug` |
 
-来源必须可匿名读取，下载不会附带用户的私有仓库凭据。私有技能可先导出 ZIP。`owner/slug` 有歧义，应改用 `@owner/slug` 或完整 URL。
+读取类操作要求用户对技能有管理可读权限；启停、文件写入、依赖修改、导出和删除要求可管理权限。内置技能的删除与破坏性修改由服务层限制，不能通过接口把基础能力移除。
 
-技能包上限独立于普通文档：`MAX_SKILL_BUNDLE_SIZE_MB` 默认 256 MiB，未设置时至少为 `MAX_FILE_SIZE_MB`，最高 512 MiB。GitHub 下载按整个仓库压缩包计算，不只计算技能子目录。调整后重启 app 和 frontend，使应用与 Nginx 上限一致。
+依赖分三类：
 
-## 选择沙箱后端
+- `tool_dependencies`：依赖的内置工具；
+- `mcp_dependencies`：依赖的 Runtime MCP 服务；
+- `skill_dependencies`：依赖的其他 Runtime 技能。
 
-| 后端 | 需要填写 | 运行方式 |
+依赖声明用于执行前的能力检查和失败提示。未声明的运行时能力不应依赖偶然可用；发现缺失依赖时应先补配置，再让智能体继续执行。
+
+### 用户侧接口
+
+普通用户侧挂在 `/api/skills`：
+
+| 操作 | 方法与路径 | 说明 |
 | --- | --- | --- |
-| Docker | 镜像；可选 daemon 地址、TLS 证书目录、CPU/内存/PID 限制、网络模式、runtime、空闲 TTL | 一个会话一个长驻容器 |
-| CubeSandbox | 控制面地址、数据面代理、沙箱域名、模板；按集群配置 API Key | 会话级远端沙箱 |
-| E2B | API Key、模板；自托管时补 API 地址、沙箱域名和数据面代理 | E2B Cloud 或 E2B 兼容控制面 |
+| 技能卡片 | `GET /api/skills` | 返回用户可见技能与访问级别 |
+| 沙箱看板 | `GET /api/skills/sandbox-board` | 查看技能安装与运行状态概览 |
+| 配置技能列表 | `GET /api/skills/sandbox-configs/:sandbox_config_id/skills` | 查看平台沙箱配置内技能 |
+| 安装消息 | `GET /api/skills/sandbox-configs/:sandbox_config_id/skills/:skill_id/messages` | 读取安装过程信息 |
+| 执行记录 | `GET /api/skills/sandbox-configs/:sandbox_config_id/skills/:skill_id/transcript` | 读取技能安装或执行片段 |
+| 安装草稿确认 | `POST /api/skills/install-drafts/:draft_id/confirm` | 确认批量安装结果 |
 
-`local` 宿主机进程后端已移除。当前配置的完整字段见[沙箱与技能 API](../04-api/02-api-sandbox-skills.md)。
+对沙箱配置内技能的启停、重装、停止和删除属于管理操作，要求 Runtime Admin。上传与远端安装先进入准备或草稿阶段，再由管理员确认，避免把未审查内容直接写入运行环境。
 
-Docker 后端默认关闭。系统管理员在「系统设置 → 网络安全」启用，或用 `WEKNORA_SANDBOX_DOCKER_ENABLED=true` 作为未落库时的回退。本机连接还需要把实际 Docker socket 挂给 app；这授予 app 控制宿主机 Docker 的能力。远端 TCP daemon 要配置 TLS 证书目录，其中包括 `ca.pem`、`cert.pem`、`key.pem`。Docker 网络仅接受 `bridge` 或 `none`，可选 `runsc` 等已安装 OCI runtime。
+## 平台沙箱配置
 
-自托管 E2B/Cube 的 `proxy_url` 指向数据面网关：平台连接网关但保留沙箱 Host，用于没有泛域名 DNS 的集群。`allow_private_endpoints` 允许连接私网/回环的集群地址，仍不放行 link-local/云元数据地址；它与沙箱里脚本能否出网是不同配置。
+平台侧提供 `/api/v1/sandbox-configs`，定义平台执行可用的外部沙箱和工作区策略。它保存供应商凭据、网络策略、工作区限制和关联技能，不属于 Runtime 技能定义本身。
 
-脚本默认以沙箱内的 `root` 账号执行，模板中的 `user` 账号需显式选择。执行隔离由容器或远端沙箱提供，`/workspace` 只约定工作目录，不限制 root 命令的文件访问权限。
+主要能力：
 
-### 网络策略
+- 查询与创建沙箱配置；
+- 设置租户或工作区策略；
+- 查询供应商模板与库存；
+- 管理配置内技能安装、重装、停止和删除；
+- 查看安装事件、执行片段和安装指引。
 
-Cube/E2B 的 `config.network` 同时用于对话沙箱、技能安装和完整验证：
+沙箱配置包含外部服务凭据，读列表虽然对 Viewer 开放，但写入、测试、库存查询和技能镜像内容管理均要求 Admin 及以上权限。凭据字段应通过专用接口维护，不进入普通详情响应。
 
-- 默认允许出站；`deny_egress_by_default=true` 改为默认拒绝，再通过 `allow_out` 放行 IP、CIDR 或域名。
-- `deny_out` 接受 IPv4/CIDR；域名允许规则需配合默认拒绝。
-- Cube 的 `cube_rules` 可按 Host/SNI、方法和路径设置规则、调整顺序、配置审计及 HTTPS 头注入；E2B 的 `e2b_host_rules` 配置已放行域名的请求头注入。
-- 注入的凭据加密保存，响应脱敏。入站始终需要凭据，旧字段 `allow_public_inbound` 不会开放匿名入站。
-- Docker 使用 `docker.network_mode` 控制出网，不能照搬 Cube/E2B 的细粒度规则。默认拒绝出网后，安装依赖需要的源站也必须显式放行。
+### 权限边界
 
-已有实例不会因为修改策略自动获得新配置，应在新建/重建沙箱后验证。修改后端身份或删除配置前，系统会查询运行中/暂停的实例和关联智能体；存在占用时拒绝操作，设置页会展示占用信息。
+| 能力 | 模块 | API |
+| --- | --- | --- |
+| Runtime 技能定义与文件 | `apps/agent-harness` | `/api/system/skills` |
+| Runtime 用户技能卡片 | `apps/agent-harness` | `/api/skills` |
+| 平台技能目录 | `apps/app-core` | `/api/v1/skills/catalog` |
+| 平台可用技能 | `apps/app-core` | `/api/v1/skills` |
+| 平台沙箱配置 | `apps/app-core` | `/api/v1/sandbox-configs` |
 
-## 环境变量与凭据
+平台技能目录主要用于平台侧安装与治理；工作模式智能体实际调用的是 Runtime 技能。排查时先确认调用发生在哪个前端入口，再查对应模块的 API 和日志。
 
-个人变量入口在个人资料的环境变量设置；租户级技能变量在技能管理中配置。列表只显示变量声明、是否设置和来源，不回显秘密值。
+## 安全要求
 
-| 层级 | 作用 |
-| --- | --- |
-| 租户沙箱 `config.env_vars` | 注入该配置创建的沙箱，供其脚本使用 |
-| 租户技能变量 | 管理员为技能已声明的变量填默认值 |
-| 个人沙箱变量 | 本人在该沙箱配置执行命令时使用 |
-| 个人技能变量 | 本人在该技能执行时使用 |
-
-技能变量解析中，**个人技能值 > 个人沙箱值 > 租户技能值**；未设置的名称才回退。租户沙箱环境是运行环境的一部分，不应在其中放脚本不应读取的秘密。删除个人覆盖后重新使用下层值；关闭技能不会删除个人凭据。
-
-个人技能变量只能使用技能已声明的名称，其中可包含技能所需的 `WEKNORA_*` 凭据。个人沙箱变量不接受 `WEKNORA_*`、`PATH` 等保留名。系统从执行命令中识别的变量只补充未设置的个人值，不覆盖已有个人或租户配置。字段和示例见[个人变量 API](../04-api/02-api-sandbox-skills.md#个人环境变量)。
-
-## 生成和下载文件 {#文件和交付}
-
-`read_file(path="skill://<name>/SKILL.md")` 读取说明；技能附带脚本通过 `shell_exec(skill_name=..., command=...)` 执行。命令中的 `$WEKNORA_SKILL_DIR` 指向技能实际安装目录；`skill://` 是读取地址，不能直接当作 shell 路径。
-
-附件暂存到 `/workspace/input`，工作脚本放在 `/workspace`，可下载产物放在 `/workspace/output`。用 `write_sandbox_file` 新建/续写，用 `edit_sandbox_file` 局部替换，用 `read_file` 分页读取。文件工具边界、输出预算和重建行为见[Agent 引擎](07-agent.md)，交付入口见[会话与对话体验](18-chat-experience.md)。
-
-<Screenshot
-  src="/screenshots/skill-sandbox-chat.png"
-  caption="沙箱生成 Word 文件后，在对话中预览并下载" />
+1. 技能文件具有执行潜力，修改后必须走测试和最小化验证；
+2. 技能依赖的 MCP 必须显式声明，不能在运行时探测并调用未授权服务；
+3. 外部沙箱凭据只保存在平台沙箱配置中，不写入技能文件；
+4. 涉及文件生成、数据库查询、外部请求或支出的技能应配置人工审批；
+5. 导出包可能包含业务规则，按敏感资料管理；
+6. 删除技能前先检查智能体依赖和调用历史，确认没有生产任务仍依赖该技能。
 
 ## 实现参考
 
-- `internal/handler/sandbox_config.go`、`sandbox_skill.go`、`skill_catalog.go`、`me_env_var.go`
-- `internal/application/service/tenant_skill_install.go`、`user_env_resolver.go`
-- `internal/types/tenant.go`、`sandbox_network_policy.go`
-- `internal/sandbox/remote_client.go`、`docker_remote_client.go`、`gateway_transport.go`
+- Runtime 技能路由：`apps/agent-harness/server/routers/skill_router.py`
+- Runtime 内置技能：`apps/agent-harness/package/yuxi/agents/skills/buildin/`
+- 平台技能与沙箱路由：`apps/app-core/router/routes_infra.go`
+- 平台技能目录处理：`apps/app-core/handler/skill_catalog.go`
+- 平台可用技能处理：`apps/app-core/handler/skill_handler.go`
+- 平台沙箱技能处理：`apps/app-core/handler/sandbox_skill.go`
+- 平台沙箱处理：`apps/app-core/handler/sandbox_config.go`
+- 前端技能与工作模式入口：`apps/frontend/src/views`

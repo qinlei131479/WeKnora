@@ -17,11 +17,12 @@ const sections: { dir: string; label: string }[] = [
 ]
 
 /**
- * 业务默认未开放的文档（与 apps/frontend weknoraFeatures 对齐）。
+ * 业务默认未开放的文档（与前端功能开关对齐）。
  * 文件保留便于日后放开；从构建与侧栏排除即可。
  */
 const HIDDEN_DOC_FILES = new Set([
   '03-features/10-datasource.md',
+  '03-features/09-knowledge-graph.md',
   '04-api/02-api-org.md',
   '05-clients/02-cli.md',
   '05-clients/03-go-sdk.md',
@@ -169,7 +170,7 @@ export default withMermaid(
         { text: '开发', link: '/06-development/01-dev-guide', activeMatch: '/06-development/' },
       ],
 
-      weknoraVersion: repoVersionLabel,
+      platformVersion: repoVersionLabel,
 
       sidebar,
 

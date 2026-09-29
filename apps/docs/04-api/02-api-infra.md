@@ -4,6 +4,14 @@
 
 统一约定：读 Viewer+，写/连接测试 Admin+（凭证探测外部系统）。API key capability：向量库 `manage_vector_stores`、存储后端 `manage_storage_backends`、Web 搜索 `manage_web_search`（均可 full-access）。
 
+当前前端交付范围：
+
+- 向量引擎：Elasticsearch、PostgreSQL、Milvus、Qdrant、Weaviate。
+- 存储后端：local、MinIO、OSS、COS。
+- 搜索提供商：DuckDuckGo、百度、Tavily、Bing。
+
+接口 schema 可能包含内部扩展类型；当前产品部署不提供对应配置入口。
+
 ## 向量存储（/api/v1/vector-stores）
 
 ### GET /api/v1/vector-stores/types
@@ -296,186 +304,6 @@ curl -X DELETE $BASE/api/v1/web-search-providers/wsp-1/credentials/api_key -H "A
 curl -X POST $BASE/api/v1/web-search-providers/wsp-1/test -H "Authorization: Bearer $TOKEN"
 ```
 
-<!-- 业务文档默认隐藏：数据源 API
-## 数据源（/api/v1/datasource）
-
-外部内容连接器（Feishu/Notion/语雀等），同步任务会写入 KB。Handler: `internal/handler/datasource.go`。本组多数响应为原始对象/数组（无 `success` 包装）。
-
-当前已注册类型为 feishu、lark、gitlab、ima、notion、yuque、rss。GitLab/IMA 的 credentials、资源选择与同步限制见[数据源导入](../03-features/10-datasource.md)。sync_deletions 开启后会真实删除该数据源归属下的已删除知识；source_created_at/source_updated_at 保存在知识 metadata 中。
-
-### GET /api/v1/datasource/types
-
-用途：可用连接器目录。权限：Viewer+。
-
-响应：200 `[{type,name,description,icon,priority,auth_type,capabilities}]`
-
-```bash
-curl $BASE/api/v1/datasource/types -H "Authorization: Bearer $TOKEN"
-```
-
-### POST /api/v1/datasource/validate-credentials
-
-用途：校验原始凭证（“测试连接”按钮，不落库）。权限：Admin+。
-
-| 字段 | 类型 | 必填 | 说明 |
-| —- | —- | —- | —- |
-| `type` | string | 是（`binding:"required"`） | 连接器类型 |
-| `credentials` | map | 是（`binding:"required"`） | 凭证 |
-
-响应：200 `{"status":"connected"}`；失败 400 `{"error":"..."}`
-
-```bash
-curl -X POST $BASE/api/v1/datasource/validate-credentials -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' -d '{"type":"notion","credentials":{"token":"secret"}}'
-```
-
-### POST /api/v1/datasource
-
-用途：创建数据源。权限：Admin+。请求体（`types.DataSource`）：
-
-| 字段 | 类型 | 必填 | 说明 |
-| —- | —- | —- | —- |
-| `knowledge_base_id` | string | 是 | 目标 KB（须归属本租户） |
-| `name` | string | 是 | 名称 |
-| `type` | string | 是 | 连接器类型 |
-| `config` | object | 是 | 凭证（加密存储）+资源选择+设置 |
-| `sync_schedule` | string | 否 | cron 表达式 |
-| `sync_mode` | string | 否 | `incremental`（默认）/`full` |
-| `conflict_strategy` | string | 否 | `overwrite`（默认）/`skip` |
-| `sync_deletions` | bool | 否 | 默认 true |
-| `sync_log_retention_days` | int | 否 | 默认 30 |
-
-响应：201 `DataSourceResponse`（凭证剥离，见 `internal/handler/dto/datasource.go`）。
-
-```bash
-curl -X POST $BASE/api/v1/datasource -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"knowledge_base_id":"kb-1","name":"notion 同步","type":"notion","config":{}}'
-```
-
-### GET /api/v1/datasource
-
-用途：数据源列表。权限：Viewer+。查询参数：`kb_id`（必填）。
-
-响应：200 `[DataSourceResponse]`
-
-```bash
-curl "$BASE/api/v1/datasource?kb_id=kb-1" -H "Authorization: Bearer $TOKEN"
-```
-
-### GET /api/v1/datasource/:id
-
-用途：详情。权限：Viewer+。响应：200 `DataSourceResponse`；404 `{"error":"data source not found"}`
-
-```bash
-curl $BASE/api/v1/datasource/ds-1 -H "Authorization: Bearer $TOKEN"
-```
-
-### PUT /api/v1/datasource/:id
-
-用途：更新（`id/tenant_id/knowledge_base_id` 锁定为原值）。权限：Admin+。请求体同创建。
-
-响应：200 `DataSourceResponse`
-
-```bash
-curl -X PUT $BASE/api/v1/datasource/ds-1 -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' -d '{"name":"notion 同步 v2","type":"notion","knowledge_base_id":"kb-1","config":{}}'
-```
-
-### DELETE /api/v1/datasource/:id
-
-用途：删除。权限：Admin+。响应：204。
-
-```bash
-curl -X DELETE $BASE/api/v1/datasource/ds-1 -H "Authorization: Bearer $TOKEN"
-```
-
-### PUT /api/v1/datasource/:id/credentials
-
-用途：整体替换凭证（数据源凭证为“单一逻辑字段 `credentials`”的原子 map）。权限：Admin+。请求体：`{"credentials":{...}}`（非空 map 必填）。Handler: `internal/handler/datasource_credentials.go`
-
-响应：200 `{"success":true,"data":{"fields":{"credentials":{"configured":bool}}}}`
-
-```bash
-curl -X PUT $BASE/api/v1/datasource/ds-1/credentials -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' -d '{"credentials":{"token":"secret"}}'
-```
-
-### DELETE /api/v1/datasource/:id/credentials/:field
-
-用途：清空凭证（`field` 必须为 `credentials`）。权限：Admin+。响应：204。
-
-```bash
-curl -X DELETE $BASE/api/v1/datasource/ds-1/credentials/credentials -H "Authorization: Bearer $TOKEN"
-```
-
-### POST /api/v1/datasource/:id/validate
-
-用途：校验已保存数据源连接。权限：Admin+。响应：200 `{"status":"connected"}`
-
-```bash
-curl -X POST $BASE/api/v1/datasource/ds-1/validate -H "Authorization: Bearer $TOKEN"
-```
-
-### GET /api/v1/datasource/:id/resources
-
-用途：浏览外部资源树（懒加载）。权限：Admin+。查询参数：`parent_id`（可选，空=顶层）。
-
-响应：200 `[{external_id,name,type,description,url,modified_at,parent_id,has_children,metadata}]`
-
-```bash
-curl "$BASE/api/v1/datasource/ds-1/resources?parent_id=" -H "Authorization: Bearer $TOKEN"
-```
-
-### POST /api/v1/datasource/:id/resource-ancestors
-
-用途：解析资源祖先链（选择器展开）。权限：Admin+。请求体：`{"resource_ids":["..."]}`（必填）。
-
-响应：200 `{"ancestors":[...]}`
-
-```bash
-curl -X POST $BASE/api/v1/datasource/ds-1/resource-ancestors -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' -d '{"resource_ids":["page-1"]}'
-```
-
-### POST /api/v1/datasource/:id/sync
-
-用途：手动触发同步。权限：Admin+。响应：200 `SyncLog`（`id,status,started_at,items_total,items_created,items_updated,items_deleted,items_failed,...`）
-
-```bash
-curl -X POST $BASE/api/v1/datasource/ds-1/sync -H "Authorization: Bearer $TOKEN"
-```
-
-### POST /api/v1/datasource/:id/pause 与 POST /api/v1/datasource/:id/resume
-
-用途：暂停 / 恢复定时同步。权限：Admin+。
-
-响应：200 `{"status":"paused"}` / `{"status":"active"}`
-
-```bash
-curl -X POST $BASE/api/v1/datasource/ds-1/pause -H "Authorization: Bearer $TOKEN"
-```
-
-### GET /api/v1/datasource/:id/logs
-
-用途：同步日志列表。权限：Viewer+。查询参数：`limit`（默认 10，上限 100）、`offset`（默认 0）。
-
-响应：200 `[SyncLog]`
-
-```bash
-curl "$BASE/api/v1/datasource/ds-1/logs?limit=10" -H "Authorization: Bearer $TOKEN"
-```
-
-### GET /api/v1/datasource/logs/:log_id
-
-用途：单条同步日志。权限：Viewer+。响应：200 `SyncLog`；404 `{"error":"sync log not found"}`
-
-```bash
-curl $BASE/api/v1/datasource/logs/log-1 -H "Authorization: Bearer $TOKEN"
-```
-
--->
-
 ## 实现参考
 
-路由注册：`internal/router/router.go` 的 `RegisterVectorStoreRoutes`、`RegisterStorageBackendRoutes`、`RegisterWebSearchRoutes`、`RegisterWebSearchProviderRoutes`、`RegisterDataSourceRoutes`。Handler：`internal/handler/vectorstore.go`、`internal/handler/storagebackend.go`、`internal/handler/web_search.go`、`internal/handler/web_search_provider.go`、`internal/handler/web_search_provider_credentials.go`、`internal/handler/datasource.go`、`internal/handler/datasource_credentials.go`。
+企业入口在 `apps/app-core/router` 注册向量存储、存储后端与 Web 搜索路由；对应 handler 位于 `apps/app-core/handler`。新增接口时先确认当前前端是否提供入口，再同步本页字段、权限与错误形态。

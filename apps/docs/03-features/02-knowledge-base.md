@@ -1,8 +1,8 @@
 # 知识库与知识管理
 
-知识库用于组织相关资料，并统一配置分块、向量模型、检索索引、Wiki 和知识图谱。文件、网页、手写 Markdown 和 FAQ 等内容作为知识条目管理，入库后按配置解析和建立索引。
+知识库用于组织相关资料，并统一配置分块、向量模型、检索索引和 Wiki。文件、网页、手写 Markdown 和 FAQ 等内容作为知识条目管理，入库后按配置解析和建立索引。
 
-不同知识库可以使用独立的处理配置。提问时可限定检索范围，成员访问与组织共享也按知识库授权。
+不同知识库可以使用独立的处理配置。提问时可限定检索范围，成员访问按知识库权限校验。
 
 <Screenshot
   src="/screenshots/kb-document-list.png"
@@ -25,7 +25,7 @@
 <Screenshot
   src="/screenshots/kb-settings.png"
   caption="知识库设置：分块参数与索引策略开关"
-  hint="展示分块大小/重叠/父子分块设置，以及向量、关键词、Wiki、图谱四个索引开关。" />
+  hint="展示分块大小/重叠/父子分块设置，以及向量、关键词、Wiki 三个索引开关。" />
 
 ## 创建知识库并导入资料
 
@@ -106,7 +106,6 @@ graph TB
     KB --> VLM["VLMConfig (视觉模型)"]
     KB --> ASR["ASRConfig (语音识别)"]
     KB --> IMG["ImageProcessingConfig"]
-    KB --> EXT["ExtractConfig (知识图谱)"]
     KB --> FAQ["FAQConfig (仅 faq 类型)"]
     KB --> QG["QuestionGenerationConfig (问题生成)"]
     KB --> WIKI["WikiConfig (wiki_enabled 打开时)"]
@@ -114,11 +113,9 @@ graph TB
     KB --> VS["VectorStoreID (创建后不可改)"]
     CC --> PCR["ParserEngineRules (按文件类型选解析引擎)"]
     CC --> PC["父子分块 (parent_chunk_size / child_chunk_size)"]
-    EXT --> GN["GraphNode / GraphRelation"]
     IS --> V["vector (默认 true)"]
     IS --> KW["keyword / BM25 (默认 true)"]
     IS --> WK["wiki (默认 false)"]
-    IS --> GR["graph (默认 false)"]
 ```
 
 #### ChunkingConfig（分块配置） {#_1-3-chunkingconfig-分块配置}
@@ -144,7 +141,6 @@ graph TB
 | `vector_enabled` | true | 语义向量检索 |
 | `keyword_enabled` | true | 关键词（BM25）检索 |
 | `wiki_enabled` | false | Wiki 页面生成 |
-| `graph_enabled` | false | 知识图谱提取 |
 
 #### 多模态与富化配置 {#_1-5-多模态与富化配置}
 
@@ -165,8 +161,6 @@ graph TB
 
 **QuestionGenerationConfig（问题生成）**：`enabled`；`question_count` 每分块生成问题数（默认 3，上限 10）；`custom_instructions` 目标受众 / 风格说明。
 
-**ExtractConfig（知识图谱）**：`enabled`、`text`、`tags`、`nodes []*GraphNode{name, chunks, attributes}`、`relations []*GraphRelation{node1, node2, type}`、`custom_instructions`（领域提取指导）。
-
 **FAQConfig（仅 FAQ 库）**：`index_mode`（`question_only` / `question_answer`，默认后者）、`question_index_mode`（`combined` / `separate`，默认 combined），详见 FAQ 篇。
 
 **WikiConfig（打开 `indexing_strategy.wiki_enabled` 的知识库）**——注意它不是 `type = "wiki"` 专属：普通文档库打开 Wiki 索引后，`UpdateKnowledgeBase` 会自动给它建一份空的 `WikiConfig` 承载这些可调项：
@@ -183,13 +177,13 @@ graph TB
 
 #### 存储配置 {#_1-6-存储配置}
 
-- **StorageProviderConfig**（新）：`provider ∈ {local, minio, cos, tos, s3, oss, ks3, obs}`；
+- **StorageProviderConfig**（新）：当前交付范围使用 `local`、`minio`、`cos`、`oss` 四类 provider；
 - **StorageBackendID**：绑定具体存储后端实例；
 - **StorageConfig**（遗留 `cos_config` 列）：`secret_id / secret_key / region / bucket_name / app_id / path_prefix / provider / endpoint / use_ssl / force_path_style`。
 
 #### KB 计算字段 {#_1-7-kb-计算字段}
 
-列表 / 详情响应附带：`knowledge_count`、`chunk_count`、`is_processing`（FAQ 库）、`processing_count`（文档库处理中知识数）、`share_count`（共享到的组织数）、`creator_name`、`is_pinned` / `pinned_at`（当前用户置顶状态）。
+列表 / 详情响应附带：`knowledge_count`、`chunk_count`、`is_processing`（FAQ 库）、`processing_count`（文档库处理中知识数）、`creator_name`、`is_pinned` / `pinned_at`（当前用户置顶状态）。
 
 另有一个存储字段 `is_temporary`：标记**临时（ephemeral）知识库**，正常的知识库列表里不展示。它由系统内部使用，典型场景是联网搜索把抓回来的网页缓存成可检索内容。手工建库不会产生临时库。
 
@@ -202,9 +196,9 @@ graph TB
 | enabled | false | 开启自动标签 |
 | model_id | 空 | 为空使用知识库 summary_model_id |
 | max_tags | 3 | 每篇最多自动关联的数量，上限 10 |
-| skip_if_tagged | true | 已有标签时跳过，包括人工或数据源添加的标签；false 则增量追加 |
+| skip_if_tagged | true | 已有标签时跳过；false 则增量追加 |
 
-配置仅对之后新解析或重新解析的文档生效，不自动回填历史文档。模型失败不阻塞文档完成，异步任务按队列策略重试。候选标签取知识库排序前 500 个；自动关联不删除人工标签。数据源按来源名称添加标签是另一条机制。
+配置仅对之后新解析或重新解析的文档生效，不自动回填历史文档。模型失败不阻塞文档完成，异步任务按队列策略重试。候选标签取知识库排序前 500 个；自动关联不删除人工标签。
 
 ### 知识（Knowledge）管理 {#_3-知识-knowledge-管理}
 
@@ -216,7 +210,7 @@ graph TB
 
 实现中，`Knowledge.CustomMetadataText()` 按键排序生成 `键: 值` 文本，供摘要生成和文档级模型上下文使用。字段由迁移 `000078` 引入。
 
-摄入渠道常量：`web`、`api`、`browser_extension`、`wechat`、`wecom`、`feishu`、`dingtalk`、`slack`、`im`、`notion`、`yuque`、`rss`。
+当前交付的摄入渠道：`web`、`api`、`wechat`、`wecom`、`feishu`、`dingtalk`、`im`。
 
 解析状态机：
 
@@ -420,7 +414,7 @@ nil & nil               → true   (同为 env-store)
 
 ### KB 路由与权限 {#_2-kb-路由与权限}
 
-（门禁语义见《租户、用户与认证授权》篇；`KBAccessRead/Write` 会解析组织共享路径。）
+（门禁语义见《租户、用户与认证授权》篇；当前产品范围按知识库属主和租户角色校验访问权限。）
 
 | 方法 | 路径 | Handler | 门禁 |
 | --- | --- | --- | --- |
@@ -439,11 +433,11 @@ nil & nil               → true   (同为 env-store)
 
 **创建流程**（`internal/handler/knowledgebase.go`）：Contributor 校验 → 租户存储配额检查 → `EmbeddingModelID` 校验 → `VectorStoreID` 绑定校验 → 创建 → 返回 KB + `vector_store_display`。
 
-**删除级联**：删除 KB 下全部 Knowledge → Chunk → 向量索引 → 关键词索引 → Wiki 页面 → 标签 → 存储文件 → 软删除 KB 本身。共享侧的 editor 无法删除源 KB（删除要求 owner 租户 + Admin 侧权限）。
+**删除级联**：删除 KB 下全部 Knowledge → Chunk → 向量索引 → 关键词索引 → Wiki 页面 → 标签 → 存储文件 → 软删除 KB 本身。
 
 ### 混合检索（Hybrid Search） {#_8-混合检索-hybrid-search}
 
-`POST /knowledge-bases/:id/hybrid-search`（`internal/handler/knowledgebase.go` + `internal/application/service/knowledgebase_search*.go`）按 KB 的 `IndexingStrategy` 组合召回：向量（vector_enabled）+ 关键词 BM25（keyword_enabled），经 rank fusion 融合与重排（rerank），可叠加知识图谱增强（graph_enabled）；多 KB 场景由 `knowledgebase_search_fanout.go` 并发扇出、`knowledgebase_search_fusion.go` 融合；共享 KB 检索路径见 `knowledgebase_search_shared.go`。FAQ 库检索有专门的命中策略（负例过滤 / 迭代召回），见 FAQ 篇。
+`POST /knowledge-bases/:id/hybrid-search`（`internal/handler/knowledgebase.go` + `internal/application/service/knowledgebase_search*.go`）按 KB 的 `IndexingStrategy` 组合召回：向量（vector_enabled）+ 关键词 BM25（keyword_enabled），经 rank fusion 融合与重排（rerank）；多 KB 场景由 `knowledgebase_search_fanout.go` 并发扇出、`knowledgebase_search_fusion.go` 融合。FAQ 库检索有专门的命中策略（负例过滤 / 迭代召回），见 FAQ 篇。
 
 ### 知识处理管线 {#_5-知识处理管线}
 
@@ -455,24 +449,23 @@ nil & nil               → true   (同为 env-store)
   → Worker: DocReader 解析 → 分块 (ChunkingConfig)
       → 向量嵌入        (indexing_strategy.vector_enabled)
       → 关键词索引       (keyword_enabled)
-      → 图谱提取        (graph_enabled + ExtractConfig)
       → Wiki 生成       (wiki_enabled + WikiConfig)
       → 问题生成        (QuestionGenerationConfig.enabled)
   → parse_status=finalizing, pending_subtasks_count=N
   → 每个富化子任务完成后原子递减；归零 → parse_status=completed
 ```
 
-**配置合并优先级**（`EffectiveProcessConfig`）：`Knowledge.ProcessOverrides`（单次上传覆盖，存于知识 metadata 的 `KnowledgeProcessOverrides`，可覆盖 parser 规则 / 分块 / VLM / ASR / 问题生成 / 图谱开关等）> KB 配置 > 租户默认。
+**配置合并优先级**（`EffectiveProcessConfig`）：`Knowledge.ProcessOverrides`（单次上传覆盖，存于知识 metadata 的 `KnowledgeProcessOverrides`，可覆盖 parser 规则 / 分块 / VLM / ASR / 问题生成等）> KB 配置 > 租户默认。
 
-Chunk 类型（`internal/types/chunk.go`）：`text`、`parent_text`、`image_ocr`、`image_caption`、`summary`、`entity`、`relationship`、`faq`、`web_search`、`table_summary`、`table_column`、`wiki_page`；chunk 支持 `is_enabled` 开关与 `flags` 位标志（bit0 = 可推荐）。
+Chunk 类型（`internal/types/chunk.go`）：`text`、`parent_text`、`image_ocr`、`image_caption`、`summary`、`faq`、`web_search`、`table_summary`、`table_column`、`wiki_page`；chunk 支持 `is_enabled` 开关与 `flags` 位标志（bit0 = 可推荐）。
 
 ### 知识库活动流（KB Activity） {#_6-知识库活动流-kb-activity}
 
-知识库设置的「活动」页签记录配置修改、文档上传与删除、分块编辑、共享变更和 Wiki 更新，包含操作人、时间与结果。
+知识库设置的「活动」页签记录配置修改、文档上传与删除、分块编辑和 Wiki 更新，包含操作人、时间与结果。
 
 `internal/application/service/kb_activity.go` 复用审计日志体系（`AuditLog`，scope 为 knowledge_base），通过 `recordKBActivity(ctx, audit, tenantID, kbID, action, targetType, targetID, outcome, details)` 记录：
 
-- **活动动作**（`internal/types/audit_log.go`）：`kb.created` / `kb.updated` / `kb.deleted` / `kb.duplicated` / `kb.clone_started` / `kb.clone_completed` / `kb.clone_failed`、`kb.share_added` / `kb.share_permission_changed` / `kb.share_removed`，以及知识 / chunk 级的增删改动作；
+- **活动动作**（`internal/types/audit_log.go`）：`kb.created` / `kb.updated` / `kb.deleted` / `kb.duplicated` / `kb.clone_started` / `kb.clone_completed` / `kb.clone_failed`，以及知识 / chunk 级的增删改动作；
 - **触发源**：context 中的 `kbActivityTaskMetadata{TaskID, Trigger}`（`user` 用户操作 / `system` 后台任务）自动并入 details；根据 outcome 自动补 `processing_status`（accepted→pending、success→completed、partial→partial、failed/denied→failed、canceled→canceled）；
 - **批量操作样本标题**：`kbActivityAppendSampleTitles` 为批量操作附带最多 5 个去重标题（第一个作为 `title`，其余进 `titles` 数组），保证活动流可读且有界；
 - **抑制机制**：`withKBActivitySuppressed(ctx)` 可让内部级联操作不产生重复活动记录。

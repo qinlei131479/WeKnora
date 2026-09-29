@@ -1,194 +1,141 @@
-# 平台文档（部署用）
+# 智能体中台2.0 文档维护说明
 
-> 本目录是产品文档站的**部署副本**，自仓库根目录 `website-docs/` 同步正文而来。
-> - **对外构建 / Jenkins**：只使用本目录（镜像 `kjsc/agent-middle-docs`，访问 `http://<host>:9900/docs/`）。
-> - **跟踪开源上游**：继续保留并更新根目录 `website-docs/`；需要时再人工同步有用章节到本目录。
-> - 开发时请直接改正文与 `.vitepress` 配置，勿再维护单独覆盖目录。
+`apps/docs` 是企业产品文档站，面向产品使用、部署、配置、API 与二次开发。它不是上游开源文档的镜像：文档主线以 `apps/frontend`、`apps/app-core`、`apps/agent-harness`、KJSC 部署入口和 `migrations/version_kjsc` 的现状为准。
 
----
+## 产品定位
 
-# 平台文档
+智能体中台2.0 面向企业内的知识问答、工作模式执行、技能工具与智能体管理。产品能力以当前前端路由、菜单和已交付入口为准；较深的实现文档继续保留，供研发定位问题与二次开发。
 
-该平台是企业级知识库与 RAG（Retrieval-Augmented Generation）系统：Go 单体后端 + Vue 3 前端 + Python 文档解析微服务（docreader），支持多租户、多知识库、混合检索、Agent 智能体、知识图谱、Wiki 生成、MCP 集成、多平台 IM 接入与网页嵌入等能力。
+### 模块边界
 
-本目录是平台的内部文档，按「入门 → 架构 → 功能 → API → 客户端 → 开发」六个部分组织。
+| 模块 | 位置 | 职责边界 |
+| --- | --- | --- |
+| 企业前端 | `apps/frontend` | 平台对话、工作模式、知识库、智能体、技能、工具、MCP、工作区、数据总览与设置入口 |
+| 企业服务入口 | `apps/app-core` | 企业 REST API、知识库与检索问答、模型、平台 Agent、平台 MCP、租户身份与权限 |
+| Runtime | `apps/agent-harness` | 工作模式对话、Runtime 智能体、Runtime 技能与工具、Runtime MCP、工作区、文件系统与沙箱执行 |
 
-## 文档站点
+必须保持以下边界：
 
-本目录同时是一个 VitePress 站点，Markdown 即页面，新增文件会自动进入侧边栏（标题取正文一级标题，目录顺序按文件名数字前缀）。
+1. 平台对话与工作模式对话是两套会话体系，不合并。
+2. 平台 Agent 与 Runtime 智能体是两套对象，不合并。
+3. 平台 MCP 与 Runtime MCP 是两套数据，不合并。
+4. 知识库统一使用企业知识库体系；Runtime 只做适配和调用，不另建知识库管理面。
+5. 术语默认使用「租户」，不把租户能力表述为「空间」。
+
+## 文档站构建
 
 ```bash
+cd apps/docs
 npm install
-npm run dev      # 本地预览
-npm run build    # 产物输出到 .vitepress/dist
-npm run preview  # 预览构建产物
+npm run dev
+npm run build
+npm run check
 ```
 
-主题位于 `.vitepress/theme/`：`style.css` 是排版与配色的单一来源，`Landing.vue` 是首页。
+构建产物位于 `.vitepress/dist`。主题与排版入口在 `.vitepress/theme/`；侧边栏由 `.vitepress/config.mts` 按目录和 Markdown 一级标题自动生成。
+
+## 隐藏文档机制
+
+隐藏清单由 `.vitepress/config.mts` 的 `HIDDEN_DOC_FILES` 定义，并通过同一文件的 `srcExclude: ['README.md', ...[...HIDDEN_DOC_FILES]]` 从 VitePress 构建中排除。隐藏页源文件保留，不删除；它们不进入构建产物、侧边栏和本地搜索索引。
+
+当前隐藏清单共 12 项，文件位置如下：
+
+```text
+03-features/10-datasource.md
+03-features/09-knowledge-graph.md
+04-api/02-api-org.md
+05-clients/02-cli.md
+05-clients/03-go-sdk.md
+05-clients/04-miniprogram.md
+05-clients/05-desktop.md
+05-clients/06-chrome-extension.md
+05-clients/07-claw-skill.md
+03-features/23-memory.md
+04-api/02-api-memory.md
+05-clients/08-deepseek-harness.md
+```
+
+`README.md` 本身也由 `srcExclude` 排除，只用于维护文档体系，不作为站点页面发布。
+
+| 隐藏原因 | 文件位置 |
+| --- | --- |
+| 知识图谱入口不在当前前端交付范围 | `03-features/09-knowledge-graph.md` |
+| 数据源导入入口不在当前前端交付范围 | `03-features/10-datasource.md` |
+| 组织能力与当前前端交付范围不一致 | `04-api/02-api-org.md` |
+| 长期记忆与当前前端交付范围不一致 | `03-features/23-memory.md` |
+| 长期记忆 API 与当前前端交付范围不一致 | `04-api/02-api-memory.md` |
+| CLI 不随企业前端交付 | `05-clients/02-cli.md` |
+| Go SDK 不随企业前端交付 | `05-clients/03-go-sdk.md` |
+| 小程序不随企业前端交付 | `05-clients/04-miniprogram.md` |
+| 桌面端不随企业前端交付 | `05-clients/05-desktop.md` |
+| 浏览器扩展入口不在当前前端交付范围 | `05-clients/06-chrome-extension.md` |
+| 外部技能入口不在当前前端交付范围 | `05-clients/07-claw-skill.md` |
+| 独立插件客户端不作为企业能力交付 | `05-clients/08-deepseek-harness.md` |
+
+维护要求：
+
+- 新增或移除隐藏页时，`HIDDEN_DOC_FILES`、`srcExclude` 生成规则和本清单必须同批更新。
+- 可见 Markdown 不得链接隐藏页；README 中的目录也不得列出隐藏页。
+- 隐藏页不作为产品能力宣传，不提供操作入口，也不得被新文档引用。
+- 前端入口或可见范围变化时，先审查上表，再审查侧边栏、正文、链接和搜索索引。
+
+## 目录说明
+
+| 目录 | 定位 |
+| --- | --- |
+| `01-getting-started` | 产品定位、部署、快速上手与企业配置 |
+| `02-architecture` | 企业模块架构、服务设计、文档处理、检索问答与异步任务 |
+| `03-features` | 用户可见功能与管理能力；与当前前端交付范围保持一致 |
+| `04-api` | 企业路由驱动的 API 参考；不以上游文档为准 |
+| `05-clients` | 当前仅保留 Web 前端；未交付客户端页隐藏 |
+| `06-development` | 开发指南、数据库迁移和扩展点；保留较深研发内容 |
 
 ## 写作约定
 
-- 首段直接说明功能、适用范围和操作结果。使用简洁、客观的表述，减少章节预告、反问、口语化比喻和设计辩解。
-- 快速开始按准备、操作、预期结果组织；功能指南以用户任务为主线，配置影响与限制紧跟相关操作；客户端文档先说明连接和使用方式。
-- API 参考先说明用途、认证和权限，再列请求、响应与错误；架构文档解释组件职责、数据流和设计约束；开发指南保留修改入口、实现步骤与验证方法。
-- 每段围绕一个结论展开。连续段落用于解释行为与原因，列表用于操作步骤，表格用于参数、权限和选项比较。避免用字段清单代替功能说明。
-- 接口、字段和默认值保持准确。功能页中的源码索引放在文末「实现参考」，详细实现与日常操作分节编排；迁移历史集中到开发文档或实现参考。
-- 标题使用明确的主题或动作，避免手工章节编号。修改已有标题时保留原锚点，或同步修正文内链接；不要用「见第几节」代替链接。
-- 涉及界面操作时使用 `<Screenshot>` 组件；只在有助于理解操作时增加截图。
+- 首段说明功能、适用范围和结果；操作步骤、参数、权限和限制紧跟相关场景。
+- 源码路径写企业侧路径，优先指向 `apps/`、`docker-compose-kjsc.yml`、`docker-compose-mac.yml`、`scripts/kjsc/`、`.env.kjsc.example` 和 `migrations/version_kjsc/`。
+- API 以 `apps/app-core/router` 与 `apps/agent-harness/server/routers` 实际注册为准；数据库结构以 `migrations/version_kjsc` 为准。
+- 未开放、已隐藏或仅上游存在的能力，不写入可见产品文档；确需保留研发说明时先加入隐藏清单。
+- 涉及界面操作的页面优先使用 `<Screenshot>` 组件，截图放在 `public/screenshots/`。
+- 用户可见文案与接口错误仍遵循前端五语言和后端错误码规范；本文档站只描述这些规范，不代替实现检查。
 
-## 截图
+## 内容分层与检查
 
-截图用全局组件 `<Screenshot>` 引用，图片放在 `public/screenshots/` 下：
-
-```md
-<Screenshot
-  src="/screenshots/kb-document-list.png"
-  caption="知识库文档列表：解析状态、标签与批量操作"
-  hint="展示文档列表页，包含解析状态列、标签列、顶部筛选栏与勾选后出现的批量操作栏。" />
-```
-
-图片文件不存在时，组件会渲染成一个带说明的虚线占位框，标出期望的文件路径与该图应当展示的内容；把同名图片放进 `public/screenshots/` 即可自动生效，**不需要改 Markdown**。
-
-当前待补充的截图共 2 张：
-
-| 文件名（放在 `public/screenshots/` 下） | 出现位置 | 应当展示 |
+| 文档层 | 写作范围 | 隐藏能力处理 |
 | --- | --- | --- |
-| `kb-folder-tree.png` | 知识库 | 文档列表的文件夹树 |
-| `kg-graph.png` | 知识图谱 | 实体关系图 |
+| `01-getting-started`、`03-features`、`04-api`、`05-clients` | 当前可交付的产品入口、接口、权限和限制 | 不写成产品能力，不提供启用步骤，不链接隐藏页 |
+| `02-architecture`、`06-development` | 内部实现、扩展点、数据流和排障资料 | 可以解释底层能力，但必须标明内部实现，不得表现为已开放入口 |
 
-仓库 `docs/images/` 下已有一批现成的产品截图（`qa.png`、`knowledgebases.png`、`wiki-browser.png`、`wiki-graph.png`、`settings.png`、`agent-qa.png`、`graph1-3.png`、`langfuse.png`、`rbac-*.png` 等），补图时可以先看看能否直接复用。
+### 当前交付边界
 
-## 阅读路径建议
-
-- **初次使用**：01 快速开始 四篇按顺序读完即可完成部署与首次问答。
-- **评估选型 / 了解原理**：02 架构 五篇给出系统全貌与两条核心流水线（文档入库、检索问答）。
-- **使用某项具体功能**：直接查 03 功能模块 对应章节。
-- **对接 API / 写集成**：04 API 参考 + 05 客户端。
-- **二次开发 / 贡献代码**：06 开发指南，尤其是扩展点指南。
-
-## 目录
-
-### 快速开始 {#_01-快速开始}
-
-| 文档 | 内容 |
+| 范围 | 当前交付 |
 | --- | --- |
-| [产品介绍](01-getting-started/01-introduction.md) | 该平台是什么、核心概念（租户/知识库/知识/分块/会话/Agent 等）、功能总览与系统组件图 |
-| [快速上手](01-getting-started/03-quickstart.md) | 注册 → 初始化向导 → 配置模型 → 建库 → 上传 → 问答的完整路径，含可直接执行的 curl 链路 |
-| [配置详解](01-getting-started/04-configuration.md) | config.yaml 全字段、约 150 个环境变量、prompt 模板、内置模型与内置 Agent 配置 |
-| [安装部署](01-getting-started/02-installation.md) | docker-compose（含 12 个可选 profile）、开发模式与 Helm |
+| 产品入口 | 平台对话、工作模式、知识库、平台与 Runtime 智能体、Runtime 技能与工具、Runtime MCP、工作区、数据总览、租户与系统设置 |
+| 界面语言 | 中文、英文 |
+| IM | 企业微信、飞书、钉钉 |
+| 向量引擎 | Elasticsearch、PostgreSQL、Milvus、Qdrant、Weaviate |
+| 存储后端 | local、MinIO、OSS、COS |
+| 搜索提供商 | DuckDuckGo、百度、Tavily、Bing |
+| 远程模型厂商 | 阿里云、DeepSeek、腾讯混元、OpenAI、Anthropic、Gemini、MIMO、Moonshot、智谱、千帆、MiniMax、火山引擎、硅基流动、自定义 OpenAI 兼容服务 |
+| 不交付入口 | 组织与共享管理、数据源导入、知识图谱、长期记忆、浏览器扩展、外部技能、云解析引擎及未交付客户端 |
 
-### 架构 {#_02-架构}
+每次同步后至少检查：
 
-| 文档 | 内容 |
-| --- | --- |
-| [总体架构](02-architecture/01-overview.md) | 组件构成、技术栈、进程间通信、顶层目录导览 |
-| [Go 后端设计](02-architecture/02-backend-design.md) | 四层架构、uber/dig 依赖注入、启动与优雅退出、路由与中间件、领域模型 ER 图 |
-| [文档入库流程](02-architecture/03-document-pipeline.md) | 上传/URL/手动创建 → 存储 → 解析 → 分块 → 向量化 → 索引 → 后处理的全链路与状态机 |
-| [检索问答流程](02-architecture/04-rag-pipeline.md) | chat_pipeline 插件流水线、跨库检索与融合、重排、流式输出（SSE）与引用生成 |
-| [异步任务系统](02-architecture/05-async-tasks.md) | asynq 队列拓扑、6 个 worker pool、死信与任务巡检、事件总线 |
+1. 前端路由、菜单和设置分区是否与当前交付范围一致。
+2. 企业 API 和 Runtime API 是否存在已隐藏但仍被产品文档宣传的接口。
+3. 向量库、存储、模型、搜索、IM、解析引擎和语言选项是否超出当前允许范围。
+4. 隐藏页是否仅保留在 `HIDDEN_DOC_FILES` 中，是否被可见正文或侧边栏引用。
+5. 构建产物是否不包含隐藏页、隐藏页链接和未交付客户端入口。
 
-### 功能模块 {#_03-功能模块}
+## 官方代码与文档同步规则
 
-| 文档 | 内容 |
-| --- | --- |
-| [租户、用户与认证授权](03-features/01-tenant-auth.md) | 多租户模型、JWT / API Key / OIDC、RBAC 角色矩阵 |
-| [知识库与知识管理](03-features/02-knowledge-base.md) | 知识库类型与全部可配置项、树形文件夹、多标签、自动标签与批量打标、分块编辑与版本历史、自定义元数据、预览安全、复制与移动、活动流、配额 |
-| [文档解析服务 docreader](03-features/03-document-parsing.md) | gRPC 接口、三引擎注册表、解析器矩阵（含 HTML / MHTML / Excel 表头模式）、并发模型、部署与扩容 |
-| [分块机制](03-features/04-chunking.md) | 自适应分块架构（heading/heuristic/recursive）、父子分块、语义边界重叠、ContextHeader、调试端点 |
-| [检索引擎与向量存储](03-features/05-retrieval-engines.md) | 各检索引擎（向量/BM25/全文/混合）能力对比、驱动选择、维度管理、打分归一化 |
-| [模型管理](03-features/06-models.md) | 5 类模型、26 个厂商 Provider、内置模型机制、Ollama 本地模型、限流与用量 |
-| [Agent 引擎](03-features/07-agent.md) | ReAct 循环、内置与动态工具、上下文与记忆管理、技能系统与沙箱、自定义 Agent、建议问题 |
-| [MCP 集成](03-features/08-mcp.md) | MCP 客户端管理、OAuth 2.0 + PKCE 全流程、工具启停与审批、平台 MCP Server（`tencent-weknora-mcp`，31 个工具） |
-| [知识图谱](03-features/09-knowledge-graph.md) | 两级开关、LLM 实体关系抽取、Neo4j 存储、图谱增强检索 |
-| [网络搜索与网页抓取](03-features/11-web-search.md) | 13 个搜索引擎、SSRF 防护、web_fetch 双实现、SearXNG 自托管 |
-| [IM 集成](03-features/12-im-integration.md) | 10 个 IM 平台适配、消息处理流水线、内置命令、流式渲染、多实例协同 |
-| [网页嵌入 Embed Channel](03-features/13-embed-channel.md) | 嵌入渠道配置、匿名会话与 token 交换、安全模式、webhook、接入示例 |
-| [Wiki 能力](03-features/14-wiki.md) | 基于知识库的 LLM Wiki 站点生成、四阶段管道、slug 机制、人工编辑与版本回滚、issue 闭环、变更并入知识库活动流 |
-| [评估能力](03-features/15-evaluation.md) | 评估任务、Parquet 数据集格式、12 项检索/生成指标 |
-| [可观测性与审计](03-features/16-observability.md) | 日志体系、Langfuse 追踪、审计日志与保留策略、限流、健康检查 |
-| [FAQ 能力](03-features/17-faq.md) | FAQ 条目模型、批量导入与去重、检索命中策略、克隆同步 |
-| [会话与对话体验](03-features/18-chat-experience.md) | 进度条、问题大纲与引用面板、生成文件、导出对话、会话内临时附件、渠道会话可见性、跨会话历史搜索 |
-| [存储后端](03-features/19-storage-backends.md) | 多实例注册、租户默认与按库绑定、连通性测试、legacy 别名迁移 |
-| [平台管理与系统管理员](03-features/20-platform-admin.md) | 平台级身份与租户 Owner 的边界、首个管理员引导、创建用户、控制台四分区、运行时系统设置 |
-| [图片与文件的对外访问](03-features/21-file-access.md) | 四种 URL 形式、各渠道怎么取、IM/API 图片不显示的排查表 |
-| [技能目录与沙箱](03-features/22-skills-sandbox.md) | 目录/安装、Docker/Cube/E2B、网络策略、个人变量、生成文件 |
-
-### API 参考 {#_04-api-参考}
-
-按资源分组列出端点、权限、参数、响应与 curl 示例。
-
-| 文档 | 内容 |
-| --- | --- |
-| [API 总览](04-api/01-api-overview.md) | Base URL、三种认证方式、通用响应包与错误码、分页规范、SSE 协议、限流 |
-| [认证与用户](04-api/02-api-auth.md) | /auth 注册登录、token 刷新、邀请 |
-| [租户与成员](04-api/02-api-tenant.md) | 租户、成员、邀请、API Key、审计 |
-| [知识库与知识](04-api/02-api-knowledge.md) | 知识库、知识、文件夹 |
-| [分块与标签](04-api/02-api-chunks.md) | 分块读写与版本、生成问题、标签、分块预览 |
-| [FAQ 与 Wiki](04-api/02-api-faq-wiki.md) | FAQ 管理与导入、Wiki 读写 |
-| [会话与聊天](04-api/02-api-chat.md) | 会话、消息、知识问答与 Agent 对话（SSE） |
-| [模型与初始化](04-api/02-api-model-system.md) | 模型、初始化向导、评估 |
-| [系统与平台管理](04-api/02-api-system.md) | 系统信息、全局设置、运行时队列、平台 API Key、系统审计 |
-| [基础设施](04-api/02-api-infra.md) | 向量存储、存储后端、Web 搜索 |
-| [Agent 与 MCP](04-api/02-api-agent-mcp.md) | Agent、MCP 服务、OAuth、技能、收藏 |
-| [IM、Embed 与文件](04-api/02-api-channels.md) | IM 回调与渠道、微信扫码、Embed、文件服务 |
-| [沙箱、技能与个人变量](04-api/02-api-sandbox-skills.md) | 配置、模板、库存、安装与进度、目录、个人变量 |
-
-### 客户端 {#_05-客户端}
-
-| 文档 | 内容 |
-| --- | --- |
-| [Web 前端](05-clients/01-frontend.md) | Vue 3 + TDesign 技术栈、页面路由、状态管理、i18n、部署 |
-
-### 开发指南 {#_06-开发指南}
-
-| 文档 | 内容 |
-| --- | --- |
-| [开发指南](06-development/01-dev-guide.md) | 环境要求、Makefile 全目标、开发模式、四条测试线、CI 与代码规范、调试技巧 |
-| [数据库与迁移](06-development/02-database-schema.md) | 40+ 张表结构与 ER 图、golang-migrate 双路径（versioned / sqlite）、新增迁移步骤、故障排查 |
-| [扩展点指南](06-development/03-extension-points.md) | 9 大扩展点：解析器/分块策略/检索引擎/模型 Provider/搜索引擎/数据源连接器/IM 适配器/Agent 工具/存储后端 |
-
-## 系统组件速览
-
-```mermaid
-flowchart LR
-    subgraph Clients["客户端"]
-        FE["Web 前端 Vue 3"]
-        CLI["CLI weknora"]
-        SDK["Go SDK"]
-        MINI["微信小程序"]
-        EMBED["网页嵌入挂件"]
-        IM["IM 平台 x10"]
-    end
-    subgraph Core["核心服务"]
-        APP["app 主服务 Go/Gin :8080"]
-        DR["docreader 解析服务 Python gRPC :50051"]
-    end
-    subgraph Infra["基础设施"]
-        PG[("PostgreSQL / ParadeDB")]
-        RD[("Redis + asynq")]
-        VS[("向量/检索引擎 可选多种")]
-        OBJ[("对象存储 local/minio/cos/oss/s3 等")]
-        NEO[("Neo4j 知识图谱 可选")]
-    end
-    LLM["LLM / Embedding / Rerank / VLM 多厂商"]
-    FE --> APP
-    CLI --> APP
-    SDK --> APP
-    MINI --> APP
-    EMBED --> APP
-    IM --> APP
-    APP --> DR
-    APP --> PG
-    APP --> RD
-    APP --> VS
-    APP --> OBJ
-    APP --> NEO
-    APP --> LLM
-```
-
-## 文档约定
-
-- 文中源码路径均相对仓库根目录，如 `internal/agent/engine.go`。
-- API 路径默认带 `/api/v1` 前缀；认证方式见 [API 总览](04-api/01-api-overview.md)。
-- 配置示例中的密钥均为占位符，生产环境务必替换（尤其 `JWT_SECRET`、`SYSTEM_AES_KEY`、数据库口令）。
-- 文档基于仓库根目录 `VERSION` 文件对应版本源码整理（VitePress 构建时自动读取），随代码变更同步维护。
+1. 官方代码或文档同步后，先做差异审计，再改文档。审计范围包括前端路由与菜单、前端功能开关、`apps/app-core/router`、`apps/agent-harness/server/routers`、`migrations/version_kjsc`、KJSC 配置、部署入口和现有文档。
+2. 企业未启用或当前前端未交付的能力不得作为产品能力写入可见文档；能力放开时必须确认代码入口、权限、配置、迁移与文档同批可用。
+3. 前端入口或可见范围变化时，同批审查 `HIDDEN_DOC_FILES`、本 README 的隐藏清单、sidebar、可见正文、文内链接和搜索索引。
+4. 配置说明以 `config/config_kjsc.yaml`、`config/builtin_agents_kjsc.yaml`、`config/prompt_templates_kjsc/`、`.env.kjsc.example`、`docker-compose-kjsc.yml` 和 `scripts/kjsc/` 为准。
+5. `config_kjsc.yaml` 支持 `${VAR:-default}` 展开；同步官方配置后必须回归验证该能力。
+6. 官方新增配置先补 KJSC 变体，不改官方 `config/`、`internal/`、`cmd/server/`；同步后逐项检查 KJSC 变体的加载顺序、挂载和默认值。
+7. API 契约以企业路由为准，数据库结构以企业迁移为准；上游文档只能作为线索，不能作为契约依据。
+8. 功能代码、迁移、配置、前端文案和文档应在同一变更批次内闭环；跨模块能力先写清边界，再描述操作。
+9. 平台与 Runtime 的会话、智能体、MCP、技能和工作区边界发生变化时，先更新架构与功能页，再更新 API 页。
+10. 每次同步后运行 `npm run build`、`npm run check`，并按“内容分层与检查”逐项审计可见 Markdown 和构建产物。

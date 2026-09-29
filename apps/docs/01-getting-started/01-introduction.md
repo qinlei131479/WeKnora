@@ -1,154 +1,104 @@
 # 产品介绍
 
-该平台是知识库问答系统，支持导入 PDF、Word、网页等资料。用户可以围绕这些资料提问，并通过回答中的引用查看原文。
+智能体中台2.0 面向企业知识服务与任务执行。管理员将文件和业务资料归入知识库，成员既可以用平台对话获得带引用的回答，也可以进入工作模式，让 Runtime 智能体围绕材料完成任务、生成文件并交付结果。
 
-系统采用检索增强生成（RAG）：先解析文档并建立索引，再根据问题检索相关片段，由大模型生成回答。
-
-系统由 Go 后端、Vue 3 前端和 Python 文档解析服务 docreader 组成，支持 Docker Compose 与 Helm。
+平台将知识问答、智能体编排、技能工具和企业级租户管理放在同一个前端入口中。平台服务负责知识库、模型、权限与检索问答，Runtime 负责工作线程、文件工作区和工具执行。
 
 <Screenshot
   src="/screenshots/introduction-overview.png"
-  caption="平台主界面：左侧知识库与会话，右侧问答区"
-  hint="展示登录后的主界面全貌：侧边栏（知识库、智能体、设置入口）与一轮带引用的问答。" />
+  caption="平台主界面：左侧导航与知识库、会话，右侧问答区"
+  hint="展示登录后的主界面全貌：知识库、智能体、工作模式与设置入口，以及一轮带引用的问答。" />
 
-## 适用场景 {#weknora-解决什么问题}
+## 核心价值
 
-| 需求 | 功能 |
+| 价值 | 产品表现 |
 | --- | --- |
-| 文档格式繁杂，PDF/扫描件/表格难以结构化 | 文档处理流程支持 PDF 版式分析、扫描件 OCR、Office 转换、网页抓取与图片描述，可选 OpenDataLoader/Docling 混合解析 |
-| 单一向量检索召回不稳 | 向量 + 关键词（BM25）混合检索，RRF 融合，Rerank 重排，可选知识图谱（GraphRAG）与 Wiki 导航 |
-| 模型绑定单一厂商 | 模型抽象层：Ollama 本地模型与 OpenAI 兼容远程接口均可，LLM / Embedding / Rerank / VLM / ASR 分类管理（见 `internal/types/model.go`） |
-| 数据安全与私有化 | 全栈可私有部署；敏感凭证（API Key 等）以 AES-256 落盘加密（`SYSTEM_AES_KEY`）；多租户隔离 + RBAC 角色鉴权 |
-| 多步骤任务与工具调用 | 内置 Agent（ReAct 多步推理）、MCP 工具接入、Agent Skills 沙箱执行、Web 搜索（SearXNG 等）、数据分析（对 CSV/Excel 执行 SQL） |
-| 团队协作 | 租户 + 成员角色 + 邀请机制 |
+| 知识可追溯 | 回答基于企业知识库生成，并返回引用、来源文档和原文片段，便于核对与复核 |
+| 问答与执行衔接 | 平台对话解决“查资料、问问题”，工作模式解决“让智能体完成多步骤任务” |
+| 能力可组合 | 平台智能体、Runtime 智能体、技能、工具和 MCP 分别配置，再按业务场景组合使用 |
+| 多租户治理 | 租户隔离知识、模型、会话和执行资源；成员按 Owner、Admin、Contributor、Viewer 分权 |
+| 企业部署可控 | 模型、存储、检索引擎和 Runtime 沙箱可按企业环境接入，关键凭据由服务端管理 |
+
+## 产品能力
+
+| 能力 | 用户获得什么 | 典型场景 |
+| --- | --- | --- |
+| 平台对话 | 基于知识库的多轮问答，支持附件、流式回答和引用溯源 | 制度查询、产品资料问答、售后知识检索 |
+| 工作模式 | 由 Runtime 智能体执行任务，展示过程并生成可交付文件 | 文档整理、数据汇总、方案生成、报价处理 |
+| 知识库 | 统一管理文件、网页、Markdown、FAQ 和 Wiki 内容 | 企业知识沉淀、项目资料库、标准问答库 |
+| 智能体 | 配置模型、知识范围、技能和工具，形成面向业务的执行助手 | 知识问答助手、资料分析助手、文件处理助手 |
+| 技能与工具 | 提供 Office、文件处理、搜索等可调用能力 | 生成 PPT、处理表格、读取和整理文件 |
+| MCP | 接入外部系统工具，供平台或 Runtime 智能体调用 | 连接业务系统、数据服务和自定义工具 |
+| 工作区 | 保存工作模式使用的上传文件和生成结果 | 多步骤任务中的材料引用与交付物管理 |
+| 数据总览 | 汇总平台对话、工作模式、知识库和用户使用情况 | 运营分析、使用趋势和资源观察 |
+| 管理设置 | 管理租户、成员、模型、存储、检索和平台配置 | 企业初始化、权限治理与环境维护 |
+
+## 两条使用路径
+
+### 平台对话
+
+用户先选择知识库、平台智能体和模型，再围绕业务资料提问。系统检索相关知识片段，由模型生成回答，并把引用和来源一并返回。适合需要快速获得可信答案、核对原文和持续追问的场景。
+
+### 工作模式
+
+用户创建工作线程并选择 Runtime 智能体。智能体可以读取工作区文件、调用技能和 MCP 工具、展示执行过程，并把结果保存为可下载文件。适合需要多步骤处理、材料整合或文档交付的场景。
+
+两条路径共享登录、租户和权限体系，但服务不同的工作目标：平台对话偏知识查询，工作模式偏任务执行。
 
 ## 核心概念
 
-知识库组织资料，租户管理成员与资源权限，智能体决定回答所用的模型和工具。以下术语与界面选项对应，完整类型定义位于 `internal/types/`。
-
-### 租户与身份
-
 | 概念 | 说明 |
 | --- | --- |
-| 租户 Tenant | 管理知识库、模型、智能体、会话和存储配额。详见[租户与权限](../03-features/01-tenant-auth.md) |
-| 用户 User | 登录账号，一个用户可以加入多个租户 |
-| 成员 TenantMember | 用户在某个租户中的成员关系，包含角色和状态 |
-| 角色 TenantRole | Owner、Admin、Contributor、Viewer 四级，决定用户可执行的租户操作 |
-| API Key（TenantAPIKey） | 程序访问凭证，可授予指定能力并限定知识库范围。租户与平台 Key 的权限分别管理 |
+| 租户 | 企业资源和成员的管理单元，知识库、模型、智能体、会话和配额均归属于租户 |
+| 用户与成员 | 用户是登录身份；成员是用户在租户内的角色关系，不同角色拥有不同管理范围 |
+| 知识库 | 资料的业务容器，决定内容从哪里来、如何解析、如何检索以及谁可以访问 |
+| 知识与分块 | 知识是一份入库资料，分块是检索、引用和预览时使用的基本单位 |
+| 平台会话 | 保存平台对话中的消息、引用、模型选择和知识范围 |
+| 平台智能体 | 面向知识问答配置模型、知识库、提示词和交互方式 |
+| 工作线程 | 保存工作模式中的任务消息、工具过程、生成文件和执行状态 |
+| Runtime 智能体 | 面向任务执行编排模型、技能、工具、知识库和工作区 |
+| 工作区 | 保存工作模式使用和生成的文件，任务执行时可以直接引用 |
+| 技能与工具 | 技能封装完整任务能力，工具提供可被智能体调用的原子操作 |
+| MCP | 连接外部系统的标准协议，为智能体提供额外工具和数据能力 |
 
-### 知识域
+## 角色路径
 
-| 概念 | 说明 |
+| 角色 | 主要工作 | 关注结果 |
+| --- | --- | --- |
+| 平台管理员 | 部署、初始化、模型与存储配置、租户和系统管理 | 服务稳定、权限清晰、资源可控 |
+| 知识运营 | 建设知识库、导入资料、维护解析和 FAQ / Wiki 内容 | 资料完整、检索准确、引用可信 |
+| 业务用户 | 使用平台对话查询资料，或进入工作模式完成任务 | 快速获得答案和可交付结果 |
+| 开发者与集成方 | 通过企业 API、Runtime API、MCP 和配置扩展能力 | 接入稳定、边界清楚、便于维护 |
+
+## 系统组成
+
+| 组件 | 职责 |
 | --- | --- |
-| 知识库 KnowledgeBase | 组织相关资料，并配置模型、分块和索引策略。支持文档、FAQ 和 Wiki 类型 |
-| 知识 Knowledge | 知识库中的一份文件、网页或手写内容，入库后可查看解析状态 |
-| 分块 Chunk | 文档解析后的检索单元，可包含文本、图片识别结果、表格或其他索引内容 |
-| FAQ | 维护标准问、相似问、反例问和答案的问答条目，详见[FAQ 能力](../03-features/17-faq.md) |
-| Wiki 页面 WikiPage | 从文档生成的主题页面，带来源引用和页面链接，支持编辑与版本管理 |
-| 知识图谱 Entity / Relationship | 文档中的实体与关系，保存在 Neo4j，用于补充关联内容检索 |
-| 检索配置 RetrievalConfig | 控制候选数量、匹配阈值、融合权重和重排结果，详见[检索引擎](../03-features/05-retrieval-engines.md) |
-
-### 对话与智能体
-
-| 概念 | 说明 |
-| --- | --- |
-| 会话 Session | 保存多轮问答及所选智能体、模型、知识范围和工具配置 |
-| 消息 Message | 一次提问或回答，可关联图片、附件、引用和工具执行结果 |
-| 模型 Model | 提供对话、向量化、重排、视觉或语音能力的模型连接，详见[模型管理](../03-features/06-models.md) |
-| Agent（自定义智能体） CustomAgent | 按任务配置模型、资料范围和工具，支持快速问答与智能推理 |
-| 内置 Agent | 预配置的快速问答、智能推理、数据分析和 Wiki 智能体，详见[Agent 引擎](../03-features/07-agent.md) |
-| 技能与沙箱 | 租户技能目录保存包，按沙箱配置安装，再绑定智能体使用；支持 Docker/Cube/E2B、个人变量与生成文件，见[技能与沙箱](../03-features/22-skills-sandbox.md) |
-| MCP 服务 MCPService | 为智能体接入外部工具，支持 SSE 和 Streamable HTTP；认证可选 API Key、Bearer 或 OAuth 2.0 |
-
-### 概念关系图
-
-```mermaid
-flowchart TB
-    subgraph identity["身份与租户"]
-        U["User (用户)"]
-        T["Tenant (租户)"]
-        TM["TenantMember (角色: owner/admin/contributor/viewer)"]
-        AK["TenantAPIKey (X-API-Key)"]
-    end
-    subgraph knowledge["知识域"]
-        KB["KnowledgeBase (document/faq/wiki)"]
-        K["Knowledge (文档/网页/手写条目)"]
-        C["Chunk (text/faq/image/table/entity...)"]
-        W["WikiPage"]
-        G["Entity / Relationship (知识图谱)"]
-    end
-    subgraph chat["对话与智能体"]
-        S["Session (会话)"]
-        MSG["Message (消息)"]
-        AG["CustomAgent (quick-answer / smart-reasoning)"]
-        M["Model (LLM/Embedding/Rerank/VLM/ASR)"]
-        MCP["MCPService (外部工具)"]
-    end
-    U -- "成员关系" --> TM --> T
-    T --> AK
-    T --> KB
-    T --> M
-    T --> AG
-    KB --> K --> C
-    KB --> W
-    C --> G
-    T --> S --> MSG
-    AG -- "检索" --> KB
-    AG -- "调用" --> M
-    AG -- "工具" --> MCP
-```
-
-## 功能清单
-
-- **文档接入**：文件上传（PDF/Word/PPT/Excel/Markdown/HTML/图片/音频等）、URL 抓取、手写 Markdown、整目录上传、飞书 / Lark / Notion / 语雀 / RSS 定时同步。
-- **文档理解**：版式分析、扫描件 OCR、表格抽取、图片多模态描述（VLM）、音频转写（ASR）、按文件类型选择解析引擎（`ParserEngineRules`，可接 MinerU / OpenDataLoader）。
-- **索引管道**：可配置分块（含父子分块与自适应策略）、向量索引、关键词全文索引、FAQ 索引、Wiki 生成、知识图谱抽取、预生成问题（question generation）。
-- **检索**：向量 + BM25 混合检索、RRF 融合、Rerank 重排、查询改写与扩展、意图识别（greeting/chitchat/web_search 等，见 `config/prompt_templates/intent_prompts.yaml`）。
-- **问答与 Agent**：流式 SSE 问答、多轮上下文压缩、引用溯源；ReAct Agent（工具：`knowledge_search`、`grep_chunks`、`wiki_search`、`data_analysis` 等）、MCP 外部工具、Agent Skills（Docker、Cube 或 E2B 沙箱执行脚本）、Web 搜索。
-- **多租户与安全**：RBAC 角色鉴权（默认开启，`WEKNORA_TENANT_ENABLE_RBAC`）、审计日志（默认保留 90 天）、邀请制注册（`auth.registration_mode=invite_only`，也可用旧变量 `DISABLE_REGISTRATION=true`）、OIDC 单点登录、SSRF 防护、敏感字段 AES-256 加密。
-- **可观测性**：Langfuse 全链路追踪（LLM/Embedding/Rerank/VLM/ASR 调用与 token 统计）、健康检查、Swagger API 文档（`GIN_MODE=debug` 时）。
-- **生态**：REST API（`/api/v1`）+ API Key、独立 MCP Server（把该平台作为工具暴露给其他 Agent）、CLI（`cli/`）、微信小程序（`miniprogram/`）、浏览器插件渠道。
-
-## 系统组件一览
-
-| 组件 | 技术栈 | 源码位置 | 默认端口 | 职责 |
-| --- | --- | --- | --- | --- |
-| app（后端） | Go / Gin | `cmd/server`、`internal/` | 8080 | REST API、检索问答、Agent 引擎、异步任务（Asynq） |
-| frontend（前端） | Vue 3 + Nginx | `frontend/` | 80 | Web 控制台，Nginx 反代 `/api` 到 app |
-| docreader | Python / gRPC | `docreader/` | 50051（仅容器网络内） | 文件转 Markdown、网页抓取、图片提取 |
-| postgres | ParadeDB（PostgreSQL 17 + BM25/向量扩展） | 镜像 `paradedb/paradedb` | 5432 | 主数据库 + 默认混合检索引擎（`RETRIEVE_DRIVER=postgres`） |
-| redis | Redis 7 | — | 6379 | 流管理（SSE 恢复）、Asynq 任务队列 |
-| sandbox | Python 3.11 + Node 20 | `docker/Dockerfile.sandbox` | — | Agent Skills 的会话沙箱容器镜像 |
-| 可选：qdrant / milvus / weaviate / doris | — | `docker-compose.yml` profiles | 6334 / 19530 / 9035 / 9030 | 替代或叠加的向量检索引擎（`RETRIEVE_DRIVER`） |
-| 可选：opensearch | — | 仅 `docker-compose.dev.yml` | 9200 | 开发环境用；生产需自备集群 |
-| 可选：elasticsearch / tencent_vectordb | — | 不随 compose 提供 | — | 代码支持，但需自行部署后用 `RETRIEVE_DRIVER` 接入 |
-| 可选：neo4j | Neo4j | profile `neo4j` | 7474 / 7687 | 知识图谱存储（GraphRAG） |
-| 可选：minio | MinIO | profile `minio` | 9000 / 9001 | S3 兼容对象存储（`STORAGE_TYPE=minio`） |
-| 可选：searxng | SearXNG | profile `searxng` | 8888 | 自建 Web 搜索引擎 |
-| 可选：langfuse 栈 | Langfuse 3 + ClickHouse + MinIO | profile `langfuse` | 3000 | LLM 可观测性 |
-| 可选：mcp | Python | `mcp-server/`，profile `full` | 8082 | 将该平台 API 封装为 MCP Server |
-| 可选：odl-hybrid | Docling | profile `odl-hybrid` | 5002 | OpenDataLoader PDF 混合解析后端 |
+| 企业前端 | 提供平台对话、工作模式、知识库、智能体、技能、工具、MCP、工作区和设置界面 |
+| 企业服务入口 | 提供租户、权限、知识库、模型、检索问答、平台智能体和平台 MCP 服务 |
+| Runtime | 提供工作模式线程、Runtime 智能体、技能、工具、工作区和沙箱执行 |
+| 文档解析服务 | 将 PDF、Office、网页、图片等资料转换为可检索内容 |
+| PostgreSQL / Redis | 保存业务数据、检索数据、会话状态和异步任务 |
+| 对象存储 | 保存原始文件、解析图片和任务生成文件 |
+| 模型服务 | 提供对话、向量、重排、视觉和语音能力 |
 
 ```mermaid
 flowchart LR
-    Browser["浏览器 / SDK / CLI"] --> FE["frontend (Nginx :80)"]
-    FE -- "/api 反向代理" --> APP["app 后端 (Go :8080)"]
-    Browser -. "直连 API + X-API-Key" .-> APP
-    APP -- "gRPC :50051" --> DR["docreader (Python 文档解析)"]
-    APP --> PG[("ParadeDB / PostgreSQL :5432 元数据 + 混合检索")]
-    APP --> RD[("Redis :6379 流管理 + Asynq 队列")]
-    APP -. "docker run 按需" .-> SB["sandbox (Skills 沙箱)"]
-    APP -. "可选" .-> VDB[("Qdrant / Milvus / ES / OpenSearch / Doris ...")]
-    APP -. "可选" .-> NEO[("Neo4j 知识图谱")]
-    APP -. "可选" .-> OSS[("MinIO / COS / S3 / OSS / OBS / TOS 对象存储")]
-    APP -. "可选" .-> SX["SearXNG Web 搜索 :8888"]
-    APP -. "可选" .-> LF["Langfuse 可观测 :3000"]
-    APP --> LLM["Ollama 本地模型 / OpenAI 兼容远程模型"]
-    MCPS["mcp-server :8082"] -- "REST" --> APP
+    U["业务用户"] --> FE["企业前端"]
+    FE --> APP["企业服务入口"]
+    FE --> RT["Runtime"]
+    APP --> DR["文档解析服务"]
+    APP --> PG[("PostgreSQL / 检索引擎")]
+    APP --> RD[("Redis / 异步任务")]
+    APP --> OBJ[("对象存储")]
+    RT --> APP
+    RT --> SB["技能沙箱与工作区"]
+    APP --> LLM["模型服务"]
+    RT --> LLM
 ```
 
 ## 下一步
 
-- [快速上手](./03-quickstart.md)：创建知识库、上传文档并完成首次问答。
-- [配置详解](./04-configuration.md)：查询部署参数与配置优先级。
-- [安装部署](./02-installation.md)：选择部署方式并启动服务。
+- [快速上手](./03-quickstart.md)：完成首次登录、建库、上传和问答。
+- [安装部署](./02-installation.md)：使用 KJSC Compose 入口启动企业服务。
+- [配置详解](./04-configuration.md)：了解企业配置优先级和环境变量展开规则。

@@ -52,7 +52,7 @@ const (
 
 | 类型 | 前端标识 | 客户端包 | 接口 | 用途 |
 |------|---------|---------|------|------|
-| `KnowledgeQA` | `chat` | `internal/models/chat` | `Chat` / `ChatStream`（支持 Tools、Thinking、多模态消息） | 知识问答、Agent 推理、摘要 / 问题生成 / 图谱抽取等一切 LLM 调用 |
+| `KnowledgeQA` | `chat` | `internal/models/chat` | `Chat` / `ChatStream`（支持 Tools、Thinking、多模态消息） | 知识问答、Agent 推理、摘要与问题生成等 LLM 调用 |
 | `Embedding` | `embedding` | `internal/models/embedding` | `Embed` / `BatchEmbed`（含 `GetDimensions`） | 文本向量化，供向量检索索引与查询 |
 | `Rerank` | `rerank` | `internal/models/rerank` | `Rerank(query, documents)` 返回 `RankResult` | 检索结果精排 |
 | `VLLM` | `vllm` | `internal/models/vlm` | `Predict(imgBytes, prompt)` | 视觉语言模型（VLM），文档图片理解 / 多模态解析 |
@@ -93,8 +93,6 @@ const (
 | `POST /models` / `GET /models` / `GET /models/:id` / `PUT /models/:id` / `DELETE /models/:id` | 模型 CRUD |
 | `PUT /models/:id/credentials`、`DELETE /models/:id/credentials/:field` | 凭证子资源；`PUT /models/:id` 请求体中的 `api_key` 会被强制忽略并告警 |
 | `POST /models/:id/debug` | 模型调试（见下文） |
-| `GET /models/weknoracloud/status` | 平台云服务 凭证状态 |
-
 ### 模型健康检查 / 连通性测试
 
 两套机制，均在服务端持有凭证、不回传明文密钥：
@@ -187,6 +185,8 @@ type Provider interface {
 #### 支持的厂商清单
 
 `AllProviders()`（`provider/provider.go`）返回的完整列表（共 27 个，每个厂商在自己的文件里 `init()` 注册）。表格最后一行的 Ollama 不在其中，它走 `source=local` 这条独立路径，列在这里只为方便对照：
+
+> 当前前端新增远程模型时可选的厂商为：阿里云、DeepSeek、腾讯混元、OpenAI、Anthropic、Gemini、MIMO、Moonshot、智谱、千帆、MiniMax、火山引擎、硅基流动和自定义 OpenAI 兼容服务。下表其余实现属于内部扩展，当前不提供产品入口。
 
 | Provider 标识 | 名称 | 说明 |
 |---------------|------|------|
@@ -281,7 +281,7 @@ return wrapChatConcurrency(c, config.MaxConcurrency, err)
 
 - **Redis 后端**（`NewRedisLimiter`）：自愈式分布式信号量。每个持有的槽位是 ZSET 成员（唯一 token），score 为租约到期时间；`acquireScript` Lua 脚本原子地清理过期租约、计数、在限额内准入。租约 TTL 30s，持有方每 TTL/3 心跳续租（同时续 ZSET key 自身的 TTL），进程崩溃后租约自然过期回收。**任何后端错误都 fail-open**——限流器故障绝不能阻断模型流量。
 - **Local 后端**（`NewLocalLimiter`）：未配置 Redis 时的进程内计数信号量。
-- **仅后台任务被限流**：`GateNamedN`（`governor.go`）只在 `types.IsBackgroundTask(ctx)` 为真（asynq worker：摘要、问题生成、图谱抽取、多模态增强等）时排队；交互式用户请求永不被闸门阻塞。
+- **仅后台任务被限流**：`GateNamedN`（`governor.go`）只在 `types.IsBackgroundTask(ctx)` 为真（asynq worker：摘要、问题生成、多模态增强等）时排队；交互式用户请求永不被闸门阻塞。
 - 限额优先取模型自身 `parameters.max_concurrency`，为 0 时回落进程级默认 `model.max_concurrency`（可经系统设置在运行时通过 `SetGlobalLimit` 热更新）。
 - 运行时观测：`GET /system/admin/runtime/queues`（`internal/handler/system.go`）返回 `limiter.RuntimeStats()` 的每模型 `active / waiting / limit`（Redis 后端 active 为集群级，waiting 为进程本地）。
 

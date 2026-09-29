@@ -387,7 +387,7 @@ curl "$BASE/api/v1/sessions/session-1/messages/message-1/artifacts/0/download" \
 
 ### 回答中的图片和文件引用
 
-`GET /api/v1/sessions/:id/messages/:message_id/files?file_path=...` 是消息级鉴权代理。file_path 传该消息引用的资源句柄或受支持的存储引用，客户端应 URL 编码。后端校验消息访问权、资源与消息的绑定及知识库/共享 Agent 的当前访问权；任意文件路径不能凭会话 ID 访问。授权撤销后旧消息引用也会被拒绝。适用于共享 Agent、组织共享库回答图片与消息产物，详见[文件访问](../03-features/21-file-access.md)。
+`GET /api/v1/sessions/:id/messages/:message_id/files?file_path=...` 是消息级鉴权代理。file_path 传该消息引用的资源句柄或受支持的存储引用，客户端应 URL 编码。后端校验消息访问权、资源与消息的绑定及知识库或 Agent 的当前访问权；任意文件路径不能凭会话 ID 访问。授权撤销后旧消息引用也会被拒绝。适用于回答图片与消息产物，详见[文件访问](../03-features/21-file-access.md)。
 
 ### 每轮用量
 

@@ -1,13 +1,12 @@
 # 租户、用户与认证授权
 
-租户是平台的资源与权限边界，知识库、模型、智能体、会话和存储配额均归属租户。一个用户可以加入多个租户，并在各租户拥有不同角色。组织用于连接多个租户，共享知识库和智能体。后端使用 Tenant 表示租户。
+租户是平台的资源与权限边界，知识库、模型、智能体、会话和存储配额均归属租户。一个用户可以加入多个租户，并在各租户拥有不同角色。后端使用 Tenant 表示租户。
 
-成员邀请、资源共享和 API 接入的入口如下。管理整个部署需要独立的平台权限。
+成员邀请和 API 接入的入口如下。管理整个部署需要独立的平台权限。
 
 | 操作 | 入口与要求 |
 | --- | --- |
 | 邀请团队成员 | 租户设置 → 成员 → 邀请，并给对方一个角色（Owner / Admin / Contributor / Viewer） |
-| 把知识库共享给另一个团队 | 建组织 → 把两个租户都加进去 → 在知识库上「共享到组织」 |
 | 接入 API | 租户设置 → API Key，按需勾选能力（检索 / 问答 / 入库 / 管理），必要时限定可访问的知识库 |
 | 管理整个部署（全局设置、任务队列、跨租户审计） | 需要**系统管理员**身份，与租户 Owner 独立授予，见[平台管理与系统管理员](20-platform-admin.md) |
 | 删除整个租户 | 租户设置里由 **Owner** 触发（`DELETE /tenants/:id`）；会一并删除该租户的知识库、Agent、会话与成员关系，不可撤销 |
@@ -17,7 +16,7 @@
   caption="租户成员管理：成员角色与邀请入口"
   hint="展示成员列表、角色下拉与「邀请成员」按钮，最好含一条 pending 邀请。" />
 
-Viewer 可浏览和提问，Contributor 可创建知识库与上传文档，Admin 管理成员和租户设置，Owner 还可删除或转让租户。资源修改同时受所有权或共享权限约束，角色矩阵见参考部分。
+Viewer 可浏览和提问，Contributor 可创建知识库与上传文档，Admin 管理成员和租户设置，Owner 还可删除或转让租户。资源修改同时受所有权和租户角色约束，角色矩阵见参考部分。
 
 用户可通过密码或 OIDC 单点登录；程序通过 API Key 访问。登录用户的权限由租户角色和资源归属决定，API Key 则按授予的能力与知识库范围校验。
 
@@ -46,24 +45,14 @@ graph TB
         T1["Tenant A (个人租户)"]
         T2["Tenant B (团队租户)"]
     end
-    subgraph org["协作层"]
-        O["Organization (组织 / 共享空间)"]
-        KBS["KnowledgeBaseShare (KB 共享记录)"]
-        AGS["AgentShare (Agent 共享记录)"]
-    end
     U -- "TenantMember (owner)" --> T1
     U -- "TenantMember (contributor)" --> T2
-    T1 -- "OrganizationTenantMember (admin/editor/viewer)" --> O
-    T2 -- "OrganizationTenantMember" --> O
-    O --- KBS
-    O --- AGS
     K["TenantAPIKey (机器主体, capabilities + KB allow-list)"] --> T2
 ```
 
 关键点：
 
 - 一个 User 可以通过 `tenant_members` 表同时属于多个 Tenant，每个成员关系有独立角色。
-- 组织成员关系是**租户级**的（`OrganizationTenantMember` 以 `tenant_id` 为单位），共享也是"某个租户把 KB 共享给某个组织"。
 - API Key 是与 JWT 用户完全独立的机器主体，不复用租户角色阶梯。
 
 ## 认证与授权参考
@@ -103,7 +92,7 @@ func (c *AuthConfig) IsInviteOnly() bool {
 - `POST /auth/register`：`{username(2-50), email, password}`；按 `DefaultTenantMode` 决定是否自动创建个人租户（`TenantProvisioningCreatePersonal` / `TenantProvisioningTenantless`）。
 - `POST /auth/login`：`{email, password}`，返回 `LoginResponse{user, active_tenant, memberships[], token, refresh_token}`；激活租户按 `Preferences.LastActiveTenantID` 恢复。
 - 注册、邀请注册、修改密码及管理员设置新密码均执行统一密码策略：默认 8–32 位，至少字母和数字。`GET /auth/config` 返回当前的 complex_password_enabled；开启后还要求大小写字母和特殊字符。
-- 系统管理员可用 `auth.complex_password_enabled` 调整，未落库时回退 `WEKNORA_AUTH_COMPLEX_PASSWORD_ENABLED`。改变策略只约束之后创建或修改的密码，不强迫已有账号立即改密。
+- 系统管理员可用 `auth.complex_password_enabled` 调整，未落库时回退部署环境中的复杂密码策略配置（见 `.env.kjsc.example`）。改变策略只约束之后创建或修改的密码，不强迫已有账号立即改密。
 - 在个人资料中自助改密需提供旧密码，新密码不能相同；成功后撤销该用户全部会话，需重新登录。接口错误与参数见[认证 API](../04-api/02-api-auth.md)。
 
 #### 邀请注册（register-by-invite） {#_2-3-邀请注册-register-by-invite}
@@ -159,83 +148,13 @@ Handler：`internal/handler/tenant_member.go`、`tenant_invitation.go`。`/tenan
 
 链接持续有效直到过期或撤销，配合 [邀请注册（register-by-invite）](#_2-3-邀请注册-register-by-invite) 的 `register-by-invite` 打通 invite-only 模式下的开户闭环。
 
-<!-- 业务文档默认隐藏：共享空间 / 组织
-### 组织与共享空间 {#_8-组织与共享空间}
-
-#### 组织生命周期 {#_8-1-组织生命周期}
-
-`internal/application/service/organization.go`：
-
-- 创建组织时生成唯一 `InviteCode`，有效期 `invite_code_validity_days ∈ {0(永久), 1, 7, 30}`，默认 7 天（`ValidInviteCodeValidityDays` 白名单，非法值报 `ErrInvalidValidityDays`）；
-- `GetOrganizationByInviteCode` 按邀请码入组（区分 `ErrInviteCodeNotFound` / `ErrInviteCodeExpired`）；`RequireApproval=true` 时产生待审批的 join request；
-- `Searchable=true` 的组织可被 `SearchSearchableOrganizations` 发现；
-- 邀请码与待审批数仅对"组织 admin 或 owner 租户"可见（`internal/handler/organization.go` 中 `isAdmin || isOwner` 判定）。
-
-#### 邀请搜索：按租户而非按用户 {#_8-2-邀请搜索-按空间-租户-而非按用户}
-
-组织邀请以租户为目标。`GET /organizations/:id/search-tenants` 按租户名称匹配，仅组织 admin 可调用。一个用户可能属于多个租户，搜索结果因此返回租户候选项：
-
-```go
-// SearchTenantsForInvite：
-// 1. 校验调用者租户是组织 admin
-// 2. 排除已在组织内的租户 (existingTenantIDs)
-// 3. tenantService.SearchTenants 按名称搜索（pageSize = limit*2，limit 上限 50）
-// 4. 插入序去重，丢弃解析不到名称的 defunct 租户，截断到 limit
-```
-
-旧端点 `GET /organizations/:id/search-users` 保留为兼容 shim，直接委托给 `SearchTenantsForInvite`（响应已是新的 tenant-candidate 形状，标记 `@Deprecated`）。
-
-`POST /organizations/:id/invite`（仅组织 admin）直接添加成员：优先走 `tenant_id`（可选 `representative_user_id`，若代表用户不属于目标租户则告警并丢弃该字段，不硬失败）；兼容旧 SDK 的 `user_id` 路径（反查该用户租户）。
-
-#### KB 共享模型与权限计算 {#_8-3-kb-共享模型与权限计算}
-
-`internal/types/organization.go` + `internal/application/service/kbshare.go`：
-
-```go
-type KnowledgeBaseShare struct {
-    ID              string
-    KnowledgeBaseID string
-    OrganizationID  string
-    SharedByUserID  string
-    SourceTenantID  uint64        // 共享来源租户
-    Permission      OrgMemberRole // 共享授予的最高权限（viewer/editor/admin）
-}
-// AgentShare 结构同形，面向 Agent。
-```
-
-**共享的前置条件**（`ShareKnowledgeBase`）：调用者租户必须**拥有**该 KB（`kb.TenantID == tenantID`），且在目标组织中角色为 **editor+**。重复共享转为更新权限。
-
-**管理共享的三条豁免路径**（`callerCanManageShare`，用于改权限 / 撤销共享）：
-
-1. 调用者就是原共享人（同 user id）；
-2. 调用者租户是来源租户且调用者是租户 Admin+（所有权是租户级的，原共享人离开后租户 Admin 仍可管理）；
-3. 调用者租户是目标组织的 admin（org admin 可在原共享人离开后修复共享）。
-
-**有效权限 = 多层交集（取最小）**：
-
-```go
-// 最终权限 = Min(共享记录的 Permission, 调用者租户在组织中的 OrgMemberRole)
-// 再叠加租户角色封顶：
-func applyTenantRoleCap(p types.OrgMemberRole, callerTenantRole types.TenantRole) types.OrgMemberRole {
-    // 租户内只是 Viewer 的用户，即使共享侧给到 editor+，也被压到 viewer
-    if callerTenantRole == types.TenantRoleViewer && p.HasPermission(types.OrgRoleEditor) {
-        return types.OrgRoleViewer
-    }
-    return p
-}
-```
-
-共享相关操作会写入 KB 活动流：`kb.share_added` / `kb.share_permission_changed` / `kb.share_removed`。
-
--->
-
 ### RBAC：角色、所有权与守卫矩阵 {#_6-rbac-角色、所有权与守卫矩阵}
 
 授权由三套正交机制组成，全部汇聚在 `internal/router/rbac.go` 的 `rbacGuards` 中：
 
 1. **角色守卫**（role-only）：`Viewer()` / `Contributor()` / `Admin()` / `Owner()` / `SystemAdmin()`，问"调用者在本租户的角色是什么"。
 2. **所有权守卫**（ownership-or-role）：`OwnedKBOrAdmin()` 等，问"调用者是否是**这个资源**的创建者，或至少 Admin+"。
-3. **KB 访问守卫**（KB-access）：`KBAccessRead()` / `KBAccessWrite()`，问"调用者的租户能否触达这个 KB"（自有 / 组织共享 / 经共享 Agent 可见）。
+3. **KB 访问守卫**（KB-access）：`KBAccessRead()` / `KBAccessWrite()`，校验调用者能否触达当前租户内的知识库。
 
 #### 角色能力矩阵 {#_6-1-角色能力矩阵}
 
@@ -243,7 +162,7 @@ func applyTenantRoleCap(p types.OrgMemberRole, callerTenantRole types.TenantRole
 | --- | --- | --- | --- | --- |
 | 删除租户 / 转移所有权 / 管理 API Key | ✓ | ✗ | ✗ | ✗ |
 | 添加 / 移除成员、改角色、发邀请 | ✓ | ✗（handler 限 Owner） | ✗ | ✗ |
-| 配置租户基础设施（模型 / 向量库 / IM / MCP / Web 搜索 / 存储后端 / 数据源） | ✓ | ✓ | ✗ | ✗ |
+| 配置租户基础设施（模型 / 向量库 / IM / MCP / Web 搜索 / 存储后端） | ✓ | ✓ | ✗ | ✗ |
 | 清空知识库内容（`DELETE /knowledge-bases/:id/knowledge`） | ✓ | ✓ | ✗ | ✗ |
 | 修改 / 删除**他人**创建的 KB / Agent / 知识 / chunk / Wiki / 标签 | ✓ | ✓ | ✗ | ✗ |
 | 创建 KB / Agent；复制 Agent 给自己 | ✓ | ✓ | ✓ | ✗ |
@@ -264,8 +183,8 @@ func applyTenantRoleCap(p types.OrgMemberRole, callerTenantRole types.TenantRole
 
 `rbac.go` 明文规定了新增路由的守卫选择方法：
 
-- **Q1：资源有 creator 吗？** 有（KB、Agent、知识文档、Chunk、WikiPage、FAQ 条目、KB 标签）→ 变更路由用 `OwnedXxxOrAdmin`；没有（Model、VectorStore、IM 渠道、WebSearchProvider、DataSource、MCPService 等租户级基础设施）→ 用 `Admin()`；创建入口（资源尚不存在）→ `Contributor()`。
-- **Q2：副作用私有还是公开？** 私有（如 `POST /agents/:id/copy` 只给自己复制）→ `Contributor()` 足够；公开（共享 KB 到组织、禁用全租户 Agent、转移所有权）→ `OwnedXxxOrAdmin` 或 `Admin`。
+- **Q1：资源有 creator 吗？** 有（KB、Agent、知识文档、Chunk、WikiPage、FAQ 条目、KB 标签）→ 变更路由用 `OwnedXxxOrAdmin`；没有（Model、VectorStore、IM 渠道、WebSearchProvider、MCPService 等租户级基础设施）→ 用 `Admin()`；创建入口（资源尚不存在）→ `Contributor()`。
+- **Q2：副作用私有还是公开？** 私有（如 `POST /agents/:id/copy` 只给自己复制）→ `Contributor()` 足够；公开（禁用全租户 Agent、转移租户所有权）→ `OwnedXxxOrAdmin` 或 `Admin`。
 
 #### 所有权守卫清单 {#_6-3-所有权守卫清单}
 
@@ -278,7 +197,7 @@ func applyTenantRoleCap(p types.OrgMemberRole, callerTenantRole types.TenantRole
 | `OwnedChunkKBOrAdmin` / `...FromChunkID` | `:knowledge_id` 或 chunk `:id` → KB.CreatorID | chunk 变更 |
 | `OwnedWikiKBOrAdmin` | `:kb_id` → KB.CreatorID | Wiki 页面 CRUD |
 
-子资源必须继承父 KB 的门禁（注释明确点名曾修复过 FAQ/Tag、agent share、KB share 接错轴的 bug）。
+子资源必须继承父 KB 的门禁，避免 FAQ、标签等路由绕过知识库权限校验。
 
 #### 中间件语义（`internal/middleware/rbac.go`） {#_6-4-中间件语义-internal-middleware-rbac-go}
 
@@ -291,21 +210,13 @@ func applyTenantRoleCap(p types.OrgMemberRole, callerTenantRole types.TenantRole
 5. ownership 守卫执行 creator 查询：资源不存在 → 放行让 handler 返回 404；查询失败 → 503；creator == 当前用户 → 放行；
 6. 否则 403 + 审计日志（`AuditActionAccessDenied = "rbac.access_denied"`）。
 
-强制执行开关 `TenantConfig.EnableRBAC`：`nil` 或 `true` = 强制（当前默认），`false` = 只记日志不拒绝（发布过渡用）；可用环境变量 `WEKNORA_TENANT_ENABLE_RBAC` 覆盖。
+强制执行开关 `TenantConfig.EnableRBAC`：`nil` 或 `true` = 强制（当前默认），`false` = 只记日志不拒绝（发布过渡用）；可用 `tenant.enable_rbac` 或对应部署环境配置覆盖。
 
 `RequireSystemAdmin`：JWT 用户须 `IsSystemAdmin=true`；API Key 须为 platform key（tenant key 一律 403）。
 
-#### KB 访问守卫（跨租户共享通道） {#_6-5-kb-访问守卫-跨租户共享通道}
+#### KB 访问守卫（租户范围） {#_6-5-kb-访问守卫-租户范围}
 
-`middleware/kb_access.go`（由 `rbac.go` 的 `KBAccess*` 系列包装）统一了三条访问路径：
-
-```text
-1. 自有 KB                    → 等效 Admin 级完全访问
-2. 组织共享 KB (Plan 3)       → 受共享权限封顶
-3. 经共享 Agent 可见          → 仅只读（只在 KBAccessRead 层激活）
-```
-
-守卫成功后把 `(KB, 有效租户 ID, 权限)` 存入 context 并**改写请求的租户 ID 为有效租户**，下游 handler 无需感知 KB 是自有还是共享。变体 `KBAccessReadFromKnowledgeIDParam` / `...FromChunkIDParam` 支持从 knowledge / chunk ID 反查 KB。读路由最低 `OrgRoleViewer`，写路由最低 `OrgRoleEditor`。
+`middleware/kb_access.go`（由 `rbac.go` 的 `KBAccess*` 系列包装）校验当前调用者是否可访问目标知识库，并把解析后的租户上下文传给下游 handler。变体 `KBAccessReadFromKnowledgeIDParam` / `...FromChunkIDParam` 支持从 knowledge / chunk ID 反查 KB。读路由按 Viewer+ 校验，写路由按资源所有者或 Admin+ 校验。
 
 ### API Key 体系 {#_4-api-key-体系}
 
@@ -324,14 +235,12 @@ func applyTenantRoleCap(p types.OrgMemberRole, callerTenantRole types.TenantRole
 | `message_history` | 搜索与查看租户级聊天历史（`POST /messages/search` 等，独立于 chat） |
 | `manage_models` | 管理模型定义与凭证 |
 | `manage_mcp_services` | 管理 MCP 服务与凭证 |
-| `manage_datasources` | 管理数据源连接器与同步任务 |
 | `manage_channels` | 管理 Embed / IM 渠道集成 |
 | `manage_vector_stores` | 管理向量库与解析器 |
 | `manage_storage_backends` | 管理对象存储后端 |
 | `manage_web_search` | 管理 Web 搜索配置 |
 | `run_evaluations` | 运行与查看评估任务 |
 | `manage_members` | 管理租户成员与邀请 |
-| `manage_spaces` | 管理组织 / 共享空间成员关系 |
 | `manage_tenant_settings` | 读写租户整合设置 |
 | `system_tenants_read` / `system_tenants_manage` | 平台级：租户管理（仅 platform key） |
 | `system_settings_read` / `system_settings_manage` | 平台级：系统设置 |
@@ -564,7 +473,7 @@ type UserPreferences struct {
 
 两个特殊标志：
 
-- `CanAccessAllTenants`：跨租户超级用户。**必须两个开关同时为真**才生效——用户行上的 `CanAccessAllTenants`，以及部署级的 `tenant.enable_cross_tenant_access` / `WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS`（`middleware/access.go` 的 `IsCrossTenantSuperuser()` 先查配置再查用户；配置关掉时登录响应里这个字段也会被抹成 false）。生效后可绕过租户角色检查，访问 `/tenants/all`、`/tenants/search` 等跨租户端点。注意 `POST /tenants`（新建租户）**不属于**跨租户端点，任何已登录用户都能调（受自助创建策略与配额限制）。
+- `CanAccessAllTenants`：跨租户超级用户。**必须两个开关同时为真**才生效——用户行上的 `CanAccessAllTenants`，以及部署级的 `tenant.enable_cross_tenant_access` 与对应环境配置（见 `.env.kjsc.example`；`middleware/access.go` 的 `IsCrossTenantSuperuser()` 先查配置再查用户；配置关掉时登录响应里这个字段也会被抹成 false）。生效后可绕过租户角色检查，访问 `/tenants/all`、`/tenants/search` 等跨租户端点。注意 `POST /tenants`（新建租户）**不属于**跨租户端点，任何已登录用户都能调（受自助创建策略与配额限制）。
 - `IsSystemAdmin`：平台级管理员（system admin），独立于任何租户角色，用于 `/system/admin/*` 控制面。它管的是整个部署而不是某个租户，怎么产生第一个、能做什么见[平台管理与系统管理员](20-platform-admin.md)。
 
 #### TenantMember 与租户角色 {#_1-3-tenantmember-与租户角色}
@@ -627,38 +536,6 @@ type TenantAPIKey struct {
 - **落库加密**：配置了 `SYSTEM_AES_KEY` 时，`BeforeSave` 钩子将 `api_key` 列以 AES-GCM 加密存储，`AfterFind` 自动解密；查表始终走不可逆的 `KeyHash`。
 - **校验流程**：请求携带 `X-API-Key` → 计算哈希 → 按 `KeyHash` 查表 → 检查 `RevokedAt` / `ExpiresAt` → 将 `TenantAPIKeyScope{KeyID, ScopeType, FullAccess, KnowledgeBaseIDs, Capabilities}` 注入 context，后续用 `types.TenantAPIKeyScopeFromContext` 读取。
 
-#### Organization（组织 / 共享空间） {#_1-5-organization-组织-共享空间}
-
-`internal/types/organization.go`：
-
-```go
-type Organization struct {
-    ID                     string
-    Name / Description / Avatar string
-    OwnerID                string  // 创建者用户
-    OwnerTenantID          uint64  // 拥有组织的租户
-    InviteCode             string  `gorm:"uniqueIndex"` // 组织邀请码
-    InviteCodeExpiresAt    *time.Time
-    InviteCodeValidityDays int     // 允许 0(永久)/1/7/30，默认 7
-    RequireApproval        bool    // 加入需审批
-    Searchable             bool    // 是否可被搜索发现
-    MemberLimit            int     // 默认 50
-}
-
-type OrganizationTenantMember struct { // 成员单位是"租户"
-    OrganizationID       string
-    TenantID             uint64
-    Role                 OrgMemberRole // admin / editor / viewer，默认 viewer
-    RepresentativeUserID string        // 代表用户（信息性字段）
-}
-
-const (
-    OrgRoleAdmin  OrgMemberRole = "admin"  // 完全控制组织与共享资源
-    OrgRoleEditor OrgMemberRole = "editor" // 可编辑共享 KB 内容，不能改组织设置
-    OrgRoleViewer OrgMemberRole = "viewer" // 只读
-)
-```
-
 ## 实现参考
 
 以下路径均相对仓库根目录：
@@ -670,13 +547,10 @@ const (
 | 租户成员与角色 | `internal/types/tenant_member.go` |
 | 租户邀请 | `internal/types/tenant_invitation.go` |
 | API Key 模型与能力 | `internal/types/tenant_api_key.go` |
-| 组织 / 共享模型 | `internal/types/organization.go` |
 | 注册 / 登录 Handler | `internal/handler/auth.go` |
 | 邀请注册 Handler | `internal/handler/auth_register_by_invite.go` |
 | 成员 / 邀请 / 邀请链接 Handler | `internal/handler/tenant_member.go`、`tenant_invitation.go`、`tenant_invite_link.go` |
-| 组织 Handler | `internal/handler/organization.go` |
 | JWT / OIDC / 用户服务 | `internal/application/service/user.go` |
-| 组织 / KB 共享服务 | `internal/application/service/organization.go`、`kbshare.go` |
 | RBAC 中间件 | `internal/middleware/rbac.go` |
 | RBAC 路由守卫矩阵 | `internal/router/rbac.go` |
 | 认证配置 | `internal/config/config.go`（`AuthConfig` / `OIDCAuthConfig` / `TenantConfig`） |

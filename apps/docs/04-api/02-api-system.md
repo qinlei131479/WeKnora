@@ -20,7 +20,7 @@ curl "$BASE/api/v1/system/capabilities" -H "Authorization: Bearer $TOKEN"
 
 用途：系统版本与引擎信息。权限：Viewer+。
 
-响应：200 `{"code":0,"msg":"success","data":{version,edition,commit_id,build_time,go_version,keyword_index_engine,vector_store_engine,graph_database_engine,minio_enabled,db_version,started_at,uptime_seconds}}`
+响应：200 `{"code":0,"msg":"success","data":{version,edition,commit_id,build_time,go_version,keyword_index_engine,vector_store_engine,minio_enabled,db_version,started_at,uptime_seconds}}`
 
 ```bash
 curl $BASE/api/v1/system/info -H "Authorization: Bearer $TOKEN"

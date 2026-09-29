@@ -78,13 +78,12 @@ type IndexingStrategy struct {
     VectorEnabled  bool // 向量索引
     KeywordEnabled bool // BM25 关键词索引
     WikiEnabled    bool // Wiki 生成
-    GraphEnabled   bool // 图谱抽取
 }
 ```
 
 - `NeedsChunks()`（任一开启）为假时不需要分块；
 - `NeedsEmbedding()`（vector || keyword）为假时分块只写 DB、跳过 `BatchIndex`（`processChunks` 中 `skipStage(StageEmbedding)`）；
-- Wiki / Graph 都以文本 chunk 为输入在后处理阶段消费。
+- Wiki 以文本 chunk 为输入在后处理阶段消费。
 
 ### 自适应策略：三个 Tier 与回退链 {#_2-自适应策略-三个-tier-与回退链}
 

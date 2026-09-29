@@ -146,7 +146,7 @@ migration `000061_wiki_page_hierarchy.up.sql` 引入独立的 `wiki_folders` 表
 | GET | `/lint` / `/issues` | 质量检查结果 / 问题列表 |
 | GET | `/revisions/*slug` | 版本历史列表；带 `?version=N` 取该版本全文 |
 
-`KBAccessRead` 覆盖：KB 所有者、组织共享、以及通过共享 Agent 获得的访问。
+`KBAccessRead` 覆盖：KB 所有者及具备当前 KB 访问权限的租户成员。
 
 #### 写接口（OwnedWikiKBOrAdmin + KBAccessWrite）
 

@@ -19,7 +19,7 @@
 
 租户 Admin 可在「设置 → 存储」注册和管理实例：
 
-1. 新建后端，选 provider（`local` / `minio` / `cos` / `oss` / `s3` / `tos` / `obs` 等，与[文档入库流程](../02-architecture/03-document-pipeline.md)里的存储 provider 一致），填连接参数；
+1. 新建后端，选 provider（`local` / `minio` / `cos` / `oss`），填连接参数；
 2. **测试连接**：测试会实际读写存储，验证端点、存储桶和凭据；
 3. 将实例设为租户默认。新建知识库未指定实例时使用该默认值；
 4. 需要单独指定时，在知识库编辑弹窗的「存储」页签选择实例。

@@ -98,7 +98,7 @@ curl -X DELETE $BASE/api/v1/tenants/1 -H "Authorization: Bearer $TOKEN"
 
 ## 租户 KV 配置
 
-`:key` 为配置键而非租户 ID（租户取自认证上下文），可选值：`web-search-config`、`prompt-templates`、`parser-engine-config`、`storage-engine-config`、`chat-history-config`、`retrieval-config`、`memory-config`。
+`:key` 为配置键而非租户 ID（租户取自认证上下文），可选值：`web-search-config`、`prompt-templates`、`parser-engine-config`、`storage-engine-config`、`chat-history-config`、`retrieval-config`。
 
 ### GET /api/v1/tenants/kv/:key
 

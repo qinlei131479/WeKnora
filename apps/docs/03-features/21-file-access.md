@@ -40,9 +40,9 @@ flowchart TD
 
 ### Web 控制台
 
-Web 前端将 `resource://` 和 `provider://` 引用转换为鉴权代理地址。普通资源使用 `/files`，请求携带 Bearer token 与 `X-Tenant-ID`；跨租户共享知识库使用 `/api/v1/knowledge-bases/:id/files`，按知识库访问权读取来源租户的文件，无需额外配置。
+Web 前端将 `resource://` 和 `provider://` 引用转换为鉴权代理地址。普通资源使用 `/files`，请求携带 Bearer token 与 `X-Tenant-ID`；知识库资源使用 `/api/v1/knowledge-bases/:id/files`，按知识库访问权读取。
 
-共享 Agent 或组织共享知识库回答中的图片，优先走 `/api/v1/sessions/:id/messages/:message_id/files?file_path=...`。服务端验证调用者能读到该消息、请求资源确实被消息引用，并重新校验资源所属知识库或共享 Agent 的授权。共享被撤销后，历史消息不继续授予资源访问。普通知识库浏览仍可用 KB 级代理，两者使用各自的上下文。
+知识库或 Agent 回答中的图片，优先走 `/api/v1/sessions/:id/messages/:message_id/files?file_path=...`。服务端验证调用者能读到该消息、请求资源确实被消息引用，并重新校验资源所属知识库或 Agent 的授权。授权撤销后，历史消息不继续授予资源访问。普通知识库浏览仍可用 KB 级代理，两者使用各自的上下文。
 
 ### IM 机器人 {#im-机器人-最常出问题的一条}
 
@@ -79,7 +79,7 @@ API 默认返回 `resource://`，客户端通过鉴权代理获取文件。需�
 | 加了 `resource_urls=public` 仍返回 `resource://` | 部署不具备外链能力（如 `local` 存储且未配 `APP_EXTERNAL_URL`） | 补外链条件，或改用 `/files` 代理 |
 | 加了 `resource_urls=public` 返回 403 | 用的是限定知识库的 API Key | 改用 `handle` 模式，或使用已获授权的 full-access Key |
 | 嵌入挂件里图片不显示，但网页端正常 | 挂件走的是渠道代理，与主站凭证不同 | 确认挂件页面带着有效 Embed token；`resource_urls=public` 对嵌入渠道无效 |
-| 共享回答里的图片 403/404 | 消息上下文缺失、资源未绑定或共享已撤销 | 使用消息级代理并检查当前共享权限；不要拼属主租户的 /files 地址 |
+| 回答里的图片 403/404 | 消息上下文缺失、资源未绑定或授权已撤销 | 使用消息级代理并检查当前资源权限 |
 | 外链过一段时间失效 | 外链是限时的（grant 2 小时 / MinIO 预签名 24 小时） | 不要缓存外链本身，需要时重新取；同一文件在有效期内会复用同一链接 |
 | 网页端图片 404，日志显示租户不匹配 | 跨租户共享库的图存在属主租户下 | 该场景应走 `/api/v1/knowledge-bases/:id/files`，确认前端拿到的是 KB 维度的代理地址 |
 

@@ -85,7 +85,7 @@ curl -X PUT $BASE/api/v1/models/m-1 -H "Authorization: Bearer $TOKEN" \
 
 响应：200 `{"success":true,"message":"Model deleted"}`
 
-仍被当前租户的知识库、智能体或长期记忆引用时，响应为 HTTP 400；兼容 message 保留，同时 `error.code=2300`，`error.details` 给出具体对象和引用位置：
+仍被当前租户的知识库或智能体引用时，响应为 HTTP 400；兼容 message 保留，同时 `error.code=2300`，`error.details` 给出具体对象和引用位置：
 
 ```json
 {
@@ -99,7 +99,6 @@ curl -X PUT $BASE/api/v1/models/m-1 -H "Authorization: Bearer $TOKEN" \
         {"id": "kb-2", "name": "Engineering", "bindings": ["vlm_model"]}
       ],
       "agents": [],
-      "long_term_memory": {"bindings": []},
       "knowledge_base_total": 2,
       "agent_total": 0
     }
@@ -107,7 +106,7 @@ curl -X PUT $BASE/api/v1/models/m-1 -H "Authorization: Bearer $TOKEN" \
 }
 ```
 
-知识库绑定值：`embedding_model`、`summary_model`、`image_processing_model`、`vlm_model`、`asr_model`、`wiki_synthesis_model`；智能体绑定值：`chat_model`、`rerank_model`、`vlm_model`、`asr_model`、`query_understand_model`、`follow_up_model`；长期记忆绑定值：`embedding_model`、`extract_model`。详情包含对象 `id`、`name`、合并后的 `bindings`，以及 `knowledge_base_total` / `agent_total`。列表最多各 50 条，删除守卫以总数为准。
+知识库绑定值：`embedding_model`、`summary_model`、`image_processing_model`、`vlm_model`、`asr_model`、`wiki_synthesis_model`；智能体绑定值：`chat_model`、`rerank_model`、`vlm_model`、`asr_model`、`query_understand_model`、`follow_up_model`。详情包含对象 `id`、`name`、合并后的 `bindings`，以及 `knowledge_base_total` / `agent_total`。列表最多各 50 条，删除守卫以总数为准。
 
 ```bash
 curl -X DELETE $BASE/api/v1/models/m-1 -H "Authorization: Bearer $TOKEN"
@@ -139,34 +138,6 @@ curl -X PUT $BASE/api/v1/models/m-1/credentials -H "Authorization: Bearer $TOKEN
 curl -X DELETE $BASE/api/v1/models/m-1/credentials/api_key -H "Authorization: Bearer $TOKEN"
 ```
 
-<!-- 业务文档默认隐藏：云服务接口
-## 平台云服务
-
-Handler: `internal/handler/weknoracloud.go`。API key：`manage_models`/full。
-
-### POST /api/v1/weknoracloud/credentials
-
-用途：保存 平台云服务 SaaS 凭证。权限：Admin+。请求体：`{"app_id":"...","app_secret":"..."}`（均 `binding:"required"`）。
-
-响应：200 `{"success":true,"message":"凭证保存成功"}`
-
-```bash
-curl -X POST $BASE/api/v1/weknoracloud/credentials -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' -d '{"app_id":"app","app_secret":"secret"}'
-```
-
-### GET /api/v1/models/weknoracloud/status
-
-用途：平台云服务 就绪状态探测。权限：Viewer+。
-
-响应：200 服务状态对象。
-
-```bash
-curl $BASE/api/v1/models/weknoracloud/status -H "Authorization: Bearer $TOKEN"
-```
-
--->
-
 ## 初始化（/api/v1/initialization）
 
 Handler: `internal/handler/initialization.go`。KB 配置类：API key `manage_kbs`（写）/`retrieve`（读）；模型检测类：`manage_models`（均可 full-access）。
@@ -175,7 +146,7 @@ Handler: `internal/handler/initialization.go`。KB 配置类：API key `manage_k
 
 用途：读取 KB 当前模型/解析配置。权限：Viewer+，KB read。
 
-响应：200 `{"success":true,"data":{"hasFiles",llm,embedding,rerank,multimodal,documentSplitting,nodeExtract,questionGeneration}}`
+响应：200 `{"success":true,"data":{"hasFiles",llm,embedding,rerank,multimodal,documentSplitting,questionGeneration}}`
 
 ```bash
 curl $BASE/api/v1/initialization/config/kb-1 -H "Authorization: Bearer $TOKEN"
@@ -197,7 +168,6 @@ curl $BASE/api/v1/initialization/config/kb-1 -H "Authorization: Bearer $TOKEN"
 | `multimodal.enabled` + `multimodal.vlm.*` + `multimodal.storageType` + `multimodal.cos.*|minio.*` | — | 否 | 多模态与图床 |
 | `documentSplitting.chunkSize` / `separators` | int / []string | 是 | 分块配置 |
 | `documentSplitting.chunkOverlap` | int | 否 | 重叠 |
-| `nodeExtract.*` | — | 否 | 图谱抽取（enabled/text/tags/nodes/relations） |
 | `questionGeneration.*` | — | 否 | 问题生成（enabled/questionCount） |
 
 响应：200 `{"success":true,"message":"知识库配置更新成功","data":{"models":[Model],"knowledge_base":{KnowledgeBase}}}`
@@ -210,7 +180,7 @@ curl -X POST $BASE/api/v1/initialization/initialize/kb-1 -H "Authorization: Bear
 
 ### PUT /api/v1/initialization/config/:kbId
 
-用途：更新 KB 模型/分块配置（`KBModelConfigRequest`：`llmModelId` 必填，`embeddingModelId`、`vlm_config`、`asr_config`、`documentSplitting.*`、`multimodal.enabled`、`storageProvider`、`storageBackendId`、`nodeExtract.*`、`questionGeneration.*` 可选）。权限：KB 创建者 OR Admin+，KB write。
+用途：更新 KB 模型/分块配置（`KBModelConfigRequest`：`llmModelId` 必填，`embeddingModelId`、`vlm_config`、`asr_config`、`documentSplitting.*`、`multimodal.enabled`、`storageProvider`、`storageBackendId`、`questionGeneration.*` 可选）。权限：KB 创建者 OR Admin+，KB write。
 
 响应：200 `{"success":true,"message":"配置更新成功"}`
 
@@ -318,38 +288,6 @@ curl -X POST $BASE/api/v1/initialization/multimodal/test -H "Authorization: Bear
   -F 'image=@demo.png' -F 'vlm_model=qwen-vl' -F 'vlm_base_url=http://x' -F 'storage_type=minio'
 ```
 
-### POST /api/v1/initialization/extract/text-relation
-
-用途：文本图谱抽取测试。权限：Admin+。请求体：`text`（必填，≤5000 字符）、`tags`（必填，至少一个）、`model_id`（必填）。
-
-响应：200 `{"success":true,"data":{"nodes":[GraphNode],"relations":[GraphRelation]}}`
-
-```bash
-curl -X POST $BASE/api/v1/initialization/extract/text-relation -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' -d '{"text":"小明在腾讯工作","tags":["人物","公司"],"model_id":"m-1"}'
-```
-
-### POST /api/v1/initialization/extract/fabri-tag
-
-用途：生成示例标签。权限：Admin+。无请求体。
-
-响应：200 `{"success":true,"data":{"tags":[...]}}`
-
-```bash
-curl -X POST $BASE/api/v1/initialization/extract/fabri-tag -H "Authorization: Bearer $TOKEN"
-```
-
-### POST /api/v1/initialization/extract/fabri-text
-
-用途：按标签生成示例文本。权限：Admin+。请求体：`{"tags":[...],"model_id":"m-1"}`（model_id 必填）。
-
-响应：200 `{"success":true,"data":{"text":"..."}}`
-
-```bash
-curl -X POST $BASE/api/v1/initialization/extract/fabri-text -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' -d '{"model_id":"m-1","tags":["人物"]}'
-```
-
 ## 评估（/api/v1/evaluation）
 
 Handler: `internal/handler/evaluation.go`。API key：`run_evaluations`/full。
@@ -384,4 +322,4 @@ curl "$BASE/api/v1/evaluation?task_id=task-1" -H "Authorization: Bearer $TOKEN"
 
 ## 实现参考
 
-路由注册：`internal/router/router.go` 的 `RegisterModelRoutes`、`RegisterInitializationRoutes`、`RegisterEvaluationRoutes`、`RegisterWeKnoraCloudRoutes`。Handler：`internal/handler/model.go`、`internal/handler/model_credentials.go`、`internal/handler/initialization.go`、`internal/handler/evaluation.go`、`internal/handler/weknoracloud.go`。
+企业入口在 `apps/app-core/router` 注册模型、初始化与评估路由；对应 handler 位于 `apps/app-core/handler`。模型连接凭证只通过 credentials 子资源维护，主更新接口不得接收明文密钥。

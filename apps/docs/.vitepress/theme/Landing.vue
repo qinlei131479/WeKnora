@@ -4,40 +4,39 @@ import { withBase } from 'vitepress'
 import Illus from './Illus.vue'
 
 const { theme } = useData()
-const versionLabel = theme.value.weknoraVersion ?? 'unknown'
+const versionLabel = theme.value.platformVersion ?? 'unknown'
 
 const stats = [
-  { value: '25', unit: '种', label: '文件格式：文档、网页、扫描件、图片、音频' },
-  { value: '14', unit: '家+', label: '模型厂商，也可全部换成本地推理' },
-  { value: '5', unit: '个', label: '使用入口：Web、IM、嵌入、API、MCP' },
-  { value: '4', unit: '路', label: '索引同时生效：向量、关键词、Wiki、图谱' },
+  { value: '2', unit: '套', label: '会话体系：平台对话与工作模式' },
+  { value: '2', unit: '套', label: '智能体对象：平台智能体与 Runtime 智能体' },
+  { value: '2', unit: '套', label: 'MCP 数据：平台 MCP 与 Runtime MCP' },
+  { value: '1', unit: '套', label: '企业知识库：统一管理与检索引用' },
 ]
 
 const schema = [
   {
     step: '01',
-    name: '接入',
-    hint: '资料从哪里来',
-    // 业务默认未开放数据源同步（Notion / 语雀 / RSS）；飞书此处指 IM 渠道入库
-    items: ['文件上传', 'URL 抓取', '飞书 IM', '企微 IM', '钉钉 IM'],
+    name: '知识',
+    hint: '企业资料统一入库',
+    items: ['文件上传', 'URL 抓取', '解析分块', '向量索引', '关键词索引'],
   },
   {
     step: '02',
-    name: '理解',
-    hint: '转成结构化文本',
-    items: ['版式分析', '扫描件 OCR', '表格抽取', '图片描述', '音频转写'],
+    name: '对话',
+    hint: '面向成员的问答入口',
+    items: ['平台对话', '知识检索', '引用溯源', '附件理解', '多模型管理'],
   },
   {
     step: '03',
-    name: '索引',
-    hint: '四路可同时开启',
-    items: ['自适应分块', '向量', '关键词', 'Wiki', '知识图谱'],
+    name: '执行',
+    hint: '面向任务的智能体运行',
+    items: ['工作模式', 'Runtime 智能体', '技能', '工具', 'MCP'],
   },
   {
     step: '04',
-    name: '应用',
-    hint: '对外提供的能力',
-    items: ['知识问答', 'Agent 推理', 'Wiki 站点', '数据分析', 'FAQ'],
+    name: '治理',
+    hint: '租户与运行状态',
+    items: ['租户成员', '角色权限', '工作区', '数据总览', '审计追踪'],
   },
 ]
 
@@ -45,7 +44,7 @@ const chain = [
   {
     step: '01',
     icon: 'read',
-    title: '读懂文档',
+    title: '建好知识库',
     desc: '扫描件走 OCR、插图交给视觉模型描述、音频由语音模型转写、Excel 合并单元格自动补齐。独立的 docreader 服务把 PDF、Office、网页、图片与音频还原成带版式的文本，而不是只抽出一段纯文字。',
     href: '/03-features/03-document-parsing',
   },
@@ -53,101 +52,75 @@ const chain = [
     step: '02',
     icon: 'chunk',
     title: '切好知识',
-    desc: '按文档特征在标题、启发式、递归三档策略间自动选择切法，父子分块让检索命中小块、送进模型的却是完整上下文。同一份文档可同时写入向量、关键词、Wiki 与知识图谱四路索引。',
+    desc: '按文档特征在标题、启发式、递归三档策略间自动选择切法，父子分块让检索命中小块、送进模型的却是完整上下文。知识库统一由企业侧管理，Runtime 只负责调用，不另建管理面。',
     href: '/02-architecture/03-document-pipeline',
   },
   {
     step: '03',
     icon: 'retrieve',
-    title: '找准证据',
-    desc: '先做意图识别与查询改写，向量与 BM25 并行召回后用 RRF 融合，再由重排模型定序；开启知识图谱时补一批实体关系证据，覆盖「A 和 B 什么关系」这类问题。',
+    title: '支撑平台对话',
+    desc: '平台对话先做意图识别与查询改写，向量与 BM25 并行召回后用 RRF 融合，再由重排模型定序。回答流式返回，逐段标注出处，可点开原文核对。',
     href: '/03-features/05-retrieval-engines',
   },
   {
     step: '04',
     icon: 'answer',
-    title: '给出可核对的回答',
-    desc: '常规问题单轮检索直接生成；复杂任务交给 ReAct Agent 自行决定检索几轮、调哪些工具、要不要跑数据分析。回答流式返回，逐段标注出处，可点开原文核对。',
+    title: '运行工作模式',
+    desc: '工作模式由 Runtime 智能体执行任务，可组合技能、内置工具、远程 MCP 和工作区文件。平台智能体与 Runtime 智能体分属两套对象与接口，边界清晰，便于分别治理。',
     href: '/03-features/07-agent',
   },
 ]
 
 const surfaces = [
-  { icon: 'console', name: 'Web 控制台', desc: '知识库管理、对话、Wiki 浏览与系统配置的完整界面。' },
-  // { icon: 'extension', name: 'Chrome 插件', desc: '网页侧边栏问答，支持正文剪藏与 Markdown 速记入库。' },
+  { icon: 'console', name: 'Web 控制台', desc: '平台对话、工作模式、知识库、智能体、技能、工具、MCP 与工作区入口。' },
   { icon: 'embed', name: '网页嵌入挂件', desc: '一段 script 即可在自有站点提供悬浮问答，访客无需登录。' },
-  // { icon: 'desktop', name: '桌面客户端', desc: '单机运行的桌面应用，自带后端与本地存储；尚未正式发布，需自行构建。' },
   { icon: 'bot', name: 'IM 机器人', desc: '企业微信、飞书、钉钉官方适配器。' },
-  // { icon: 'mobile', name: '微信小程序', desc: '移动端入口，支持网页收藏入库与提问。' },
-  // { icon: 'cli', name: '命令行 weknora', desc: '文档管理、检索与带引用的流式问答，默认 JSON 输出，便于脚本化。' },
-  { icon: 'api', name: 'REST API', desc: '完整 /api/v1 接口；API Key 支持按能力与知识库范围授权。' },
-  { icon: 'mcp', name: 'MCP Server', desc: '将该平台暴露为 MCP 工具，供 Claude、Cursor 等客户端检索。' },
+  { icon: 'api', name: 'REST API', desc: '平台 /api/v1 与 Runtime /api 两类接口；API Key 支持按能力与知识库范围授权。' },
+  { icon: 'mcp', name: 'MCP 接入', desc: '平台 MCP 与 Runtime MCP 分别接入外部工具，并支持授权与审批治理。' },
 ]
 
 const features = [
   {
+    icon: 'channels',
+    title: '双会话体系',
+    desc: '平台对话面向知识检索与即时问答，工作模式面向文件、工具和技能组合执行。两者独立管理会话、消息与运行状态，不共用一套对话对象。',
+    href: '/03-features/18-chat-experience',
+    tag: '产品边界',
+  },
+  {
     icon: 'wiki',
-    title: 'Wiki 模式',
-    desc: '由模型从文档中抽取实体与概念，生成互相链接且标注出处的页面，并自动组织为目录树与关系图谱。适用于资料分散、缺少整体索引的场景。',
-    href: '/03-features/14-wiki',
-    tag: '知识组织',
+    title: '统一企业知识库',
+    desc: '知识库、文档解析、分块、索引和权限统一由企业服务入口管理。Runtime 技能只通过适配层检索和引用企业知识，不复制另一套知识管理面。',
+    href: '/03-features/02-knowledge-base',
+    tag: '知识底座',
+  },
+  {
+    icon: 'govern',
+    title: '双智能体体系',
+    desc: '平台智能体服务于平台对话、嵌入和渠道，Runtime 智能体服务于工作模式执行。对象模型、API 与管理入口分离，避免配置被误同步。',
+    href: '/03-features/07-agent',
+    tag: '智能体',
+  },
+  {
+    icon: 'mcp',
+    title: '双 MCP 数据',
+    desc: '平台 MCP 与 Runtime MCP 分别注册、授权、测试和审批。跨体系迁移必须重建配置与授权，不做自动同步。',
+    href: '/03-features/08-mcp',
+    tag: '工具生态',
   },
   {
     icon: 'version',
-    title: '分块级编辑与版本管理',
-    desc: '解析结果可在分块粒度直接修正，保存后即时重建索引，每次修改保留历史版本并支持回滚。Wiki 页面同样具备版本历史，并区分管道、Agent 与人工三类编辑来源。',
-    href: '/03-features/02-knowledge-base',
-    tag: '可维护性',
+    title: '技能与工具',
+    desc: 'Runtime 技能由说明、脚本、内置工具、MCP 依赖和技能依赖组成；平台侧提供沙箱配置与安装治理，两类边界不混用。',
+    href: '/03-features/22-skills-sandbox',
+    tag: '执行能力',
   },
-  {
-    icon: 'channels',
-    title: '多渠道统一接入',
-    desc: '同一个 Agent 可同时发布到企业微信、飞书、钉钉与自有站点的嵌入挂件，会话、权限与知识范围沿用同一套配置。',
-    href: '/03-features/12-im-integration',
-    tag: '接入',
-  },
-  // {
-  //   icon: 'mcp',
-  //   title: 'MCP 双向集成',
-  //   desc: '作为客户端接入外部 MCP 服务，支持 OAuth 授权与工具级人工审批；同时可作为 MCP Server 对外提供检索能力。',
-  //   href: '/03-features/08-mcp',
-  //   tag: '工具生态',
-  // },
-  {
-    icon: 'govern',
-    title: '多租户隔离与审计',
-    desc: '租户级数据隔离与四级角色矩阵，API Key 可按能力与知识库范围收窄。操作行为写入审计日志，后台任务提供队列面板，问答链路支持 Langfuse 追踪。',
-    href: '/03-features/20-platform-admin',
-    tag: '企业部署',
-  },
-  {
-    icon: 'pluggable',
-    title: '可插拔架构',
-    desc: '解析引擎、分块策略、检索引擎、模型厂商、搜索引擎与存储后端均以注册表接入，可按配置替换；知识库支持分别绑定不同的向量库与存储实例。',
-    href: '/06-development/03-extension-points',
-    tag: '架构',
-  },
-  {
-    icon: 'graph',
-    title: '知识图谱增强检索',
-    desc: '入库时由模型抽取实体与关系存入图数据库，提问时顺着关系补充召回，用于回答「A 与 B 之间是什么关系」这类向量检索不擅长的问题。适合人物、组织、合同条款等关系密集的资料。',
-    href: '/03-features/09-knowledge-graph',
-    tag: '检索',
-  },
-  // 业务默认未开放：数据源持续同步（飞书云文档 / Notion / 语雀 / RSS）
-  // {
-  //   icon: 'sync',
-  //   title: '数据源持续同步',
-  //   desc: '飞书、Notion、语雀与 RSS 绑定一次凭据后按计划自动同步：首次全量，之后按修改时间增量拉取，源端删除的文档同步下架，避免知识库随时间过期。',
-  //   href: '/03-features/10-datasource',
-  //   tag: '数据接入',
-  // },
   {
     icon: 'faq',
-    title: 'FAQ 精确问答',
-    desc: '退货政策、报销流程这类答案固定的问题可直接维护成问答对，按「标准问 + 相似问 + 反例问」匹配问题而非文档片段。可与文档库被同一 Agent 检索，形成先查标准答案再翻文档的顺序。',
-    href: '/03-features/17-faq',
-    tag: '答案质量',
+    title: '工作区与数据总览',
+    desc: '工作模式提供受控工作区和文件访问边界，管理端可查看用量、队列与运行数据。技能执行、文件产物和平台资源分开排查。',
+    href: '/03-features/20-platform-admin',
+    tag: '运行治理',
   },
 ]
 
@@ -189,10 +162,8 @@ const map = [
       { text: '分块机制', link: '/03-features/04-chunking' },
       { text: '检索引擎与向量存储', link: '/03-features/05-retrieval-engines' },
       { text: '模型管理', link: '/03-features/06-models' },
-      { text: 'Agent 引擎', link: '/03-features/07-agent' },
+      { text: '智能体体系', link: '/03-features/07-agent' },
       { text: 'MCP 集成', link: '/03-features/08-mcp' },
-      { text: '知识图谱', link: '/03-features/09-knowledge-graph' },
-      // { text: '数据源导入', link: '/03-features/10-datasource' },
       { text: '网络搜索与网页抓取', link: '/03-features/11-web-search' },
       { text: 'IM 集成', link: '/03-features/12-im-integration' },
       { text: '网页嵌入 Embed', link: '/03-features/13-embed-channel' },
@@ -236,19 +207,13 @@ const map = [
     brief: 'Web 控制台等当前开放入口。',
     items: [
       { text: 'Web 前端', link: '/05-clients/01-frontend' },
-      // { text: '命令行工具 CLI', link: '/05-clients/02-cli' },
-      // { text: 'Go SDK', link: '/05-clients/03-go-sdk' },
-      // { text: '微信小程序', link: '/05-clients/04-miniprogram' },
-      // { text: '桌面客户端', link: '/05-clients/05-desktop' },
-      // { text: 'Chrome 插件', link: '/05-clients/06-chrome-extension' },
-      // { text: 'Claw Skill', link: '/05-clients/07-claw-skill' },
     ],
   },
   {
     index: '06',
     icon: 'dev',
     title: '开发指南',
-    brief: '本地开发环境、数据库迁移，以及九类可插拔扩展点。',
+    brief: '企业模块本地开发、数据库迁移与扩展点。',
     items: [
       { text: '开发指南', link: '/06-development/01-dev-guide' },
       { text: '数据库与迁移', link: '/06-development/02-database-schema' },
@@ -278,10 +243,10 @@ const deployments = [
         <div class="hero-copy">
           <p class="eyebrow">智能体中台2.0 · {{ versionLabel }} · 内部文档</p>
           <h1 class="display">
-           知识库问答系统
+           企业智能体与知识库中台
           </h1>
-          <p class="lede">智能体中台2.0 将 PDF、Word、网页等资料汇入知识库，提供检索增强的问答能力，回答标注可追溯的出处。除基础问答外，还提供 <strong>Wiki 自动成书</strong>、<strong>ReAct Agent 与 MCP 双向集成</strong>、<strong>知识图谱增强检索</strong>，以及面向团队的<strong>多租户隔离、四级 RBAC、作用域 API Key 与审计日志</strong>。支持完整私有部署，模型可全部替换为本地推理。</p>
-          <p class="lede lede-sub">本文档覆盖部署与配置、功能说明、接口参考，以及开发扩展点。</p>
+          <p class="lede">智能体中台2.0 将企业知识库、平台对话、工作模式、智能体、技能、工具与 MCP 组合成一套可私有部署的运行体系。资料统一入库和检索，任务在工作区中执行，平台与 Runtime 的对象、接口和数据边界清晰。</p>
+          <p class="lede lede-sub">本文档覆盖产品能力、部署配置、接口参考、企业模块开发与扩展点。</p>
           <div class="actions">
             <a class="btn btn-solid" :href="withBase('/01-getting-started/01-introduction')">开始阅读</a>
             <a class="btn btn-ghost" :href="withBase('/02-architecture/01-overview')">系统架构</a>
@@ -340,8 +305,8 @@ const deployments = [
       <div class="shell">
         <Illus name="flow" class="panorama-illus" />
         <p class="panorama-note">
-          资料从文件、网页、音频与图片进来，统一解析后并行写入向量、关键词、Wiki 与知识图谱四路索引；
-          同一套知识库与 Agent 再展开成 Web、IM、嵌入、API 与 MCP 等入口，换入口不用换一套系统。
+          资料从文件与网页进入企业知识库，解析和分块后写入检索索引；
+          平台对话负责带出处的问答，工作模式通过 Runtime 智能体组合技能、工具、MCP 与工作区文件执行任务。
         </p>
       </div>
     </section>
@@ -361,8 +326,8 @@ const deployments = [
       <div class="shell">
         <header class="chapter-head">
           <span class="marker">处理流程</span>
-          <h2 class="chapter-title">从一份 PDF，到一句带出处的回答</h2>
-          <p class="chapter-sub">问答效果不好，问题往往不在模型，而在这条链路上：扫描件没读出文字、表格被切碎、召回的段落答非所问。下面四个环节各自对应一类失分点，且实现均可按需替换。</p>
+          <h2 class="chapter-title">从企业资料，到可治理的智能体执行</h2>
+          <p class="chapter-sub">问答效果取决于解析、分块和召回，任务执行效果取决于技能、工具、凭据与工作区边界。下面四个环节分别对应平台的核心路径。</p>
         </header>
 
         <ol class="chain">
@@ -385,8 +350,8 @@ const deployments = [
       <div class="shell">
         <header class="chapter-head">
           <span class="marker">核心能力</span>
-          <h2 class="chapter-title">超出基础检索问答的部分</h2>
-          <p class="chapter-sub">以下能力为平台的主要投入方向，可作为技术底座。</p>
+          <h2 class="chapter-title">产品能力边界</h2>
+          <p class="chapter-sub">先区分平台与 Runtime，再配置具体能力，避免把两套对象误当成同一套体系。</p>
         </header>
 
         <div class="features">
@@ -408,7 +373,7 @@ const deployments = [
         <header class="chapter-head">
           <span class="marker">接入方式</span>
           <h2 class="chapter-title">客户端与集成入口</h2>
-          <p class="chapter-sub">同一套知识库与 Agent 配置，可从浏览器、IM、自有站点、终端与外部智能体访问，无需为各入口重复搭建。</p>
+          <p class="chapter-sub">同一套企业知识库和租户身份体系，可从浏览器、IM、自有站点与 API 访问，不需要为每个入口重复搭建。</p>
         </header>
 
         <div class="surfaces">
