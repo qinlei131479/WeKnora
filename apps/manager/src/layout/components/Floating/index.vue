@@ -76,7 +76,7 @@ watch(floatingMaxTop, clampFloatingTop);
 
   img {
     cursor: pointer;
-    height: 180px;
+    height: 60px;
   }
 }
 
