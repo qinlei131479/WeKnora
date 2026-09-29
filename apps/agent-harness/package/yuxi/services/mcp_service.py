@@ -208,7 +208,7 @@ def _row_to_dict(row: Any) -> dict[str, Any]:
 def _require_tenant() -> int:
     tenant = stamp_tenant_id()
     if tenant is None:
-        raise TenantScopeError("写入需要当前空间 tenant_id")
+        raise TenantScopeError("写入需要当前租户 tenant_id")
     return int(tenant)
 
 
@@ -269,7 +269,7 @@ async def create_service(db: AsyncSession | None, body: dict[str, Any]) -> dict[
     if advanced is None:
         advanced = {"timeout": 30, "retry_count": 3, "retry_delay": 1}
     if await mcp_service_repository.name_exists(db, tenant, name):
-        raise MCPConflictError("同一空间内已存在同名 MCP 服务")
+        raise MCPConflictError("同一租户内已存在同名 MCP 服务")
     created = await mcp_service_repository.create(
         db,
         {

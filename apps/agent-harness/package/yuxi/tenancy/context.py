@@ -39,5 +39,5 @@ def stamp_tenant_id() -> int | None:
     """写入新行用的 tenant_id。超管也盖当前 token 空间，不写空。"""
     principal = get_tenant_principal()
     if principal is None or principal.tenant_id is None:
-        raise TenantScopeError("写入需要当前空间 tenant_id")
+        raise TenantScopeError("写入需要当前租户 tenant_id")
     return int(principal.tenant_id)

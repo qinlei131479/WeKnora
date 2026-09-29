@@ -119,7 +119,7 @@ async def load_user_from_claims(db: AsyncSession, claims: dict[str, Any]) -> Use
     membership = await fetch_membership(db, weknora_id, tenant_id)
     if not user.is_system_admin and not user.can_access_all_tenants:
         if membership is None or str(membership.get("status") or "") != "active":
-            raise WeKnoraIdentityError("当前空间没有有效成员资格")
+            raise WeKnoraIdentityError("当前租户没有有效成员资格")
 
     user.role = map_projected_role(
         is_system_admin=bool(user.is_system_admin),

@@ -151,7 +151,7 @@ async def start_authorization(
         raise ValueError("发起 OAuth 需要登录用户")
     tenant = current_tenant_id()
     if tenant is None:
-        raise ValueError("发起 OAuth 需要当前空间")
+        raise ValueError("发起 OAuth 需要当前租户")
     service_url = str(raw.get("url") or "").strip()
     if not service_url:
         raise ValueError("OAuth MCP 缺少服务地址")
@@ -228,7 +228,7 @@ def attempt_completed(attempt_id: str, user_id: str, service_id: str) -> bool:
         return False
     tenant = current_tenant_id()
     if tenant is None or attempt.tenant_id != int(tenant):
-        raise ValueError("授权尝试与当前空间不匹配")
+        raise ValueError("授权尝试与当前租户不匹配")
     if attempt.user_id != user_id or attempt.service_id != service_id:
         raise ValueError("授权尝试与当前用户或服务不匹配")
     return attempt.completed

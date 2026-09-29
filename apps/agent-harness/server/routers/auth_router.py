@@ -104,7 +104,7 @@ async def _login_with_email(db: AsyncSession, email: str, password: str) -> dict
 
     tenant_id = await resolve_login_tenant_id(db, user)
     if tenant_id <= 0:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="当前账号没有可用空间")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="当前账号没有可用租户")
 
     membership = await fetch_membership(db, str(user.id), tenant_id)
     user.role = map_projected_role(
