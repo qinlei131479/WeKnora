@@ -61,14 +61,14 @@ func withKBWriteTenantInfo(
 		return ctx, nil
 	}
 	if tenants == nil {
-		return ctx, apperrors.NewServiceUnavailableError("无法获取知识库所属空间")
+		return ctx, apperrors.NewServiceUnavailableError("无法获取知识库所属租户")
 	}
 	tenant, err := tenants.GetTenantByID(ctx, kb.TenantID)
 	if err != nil {
 		return ctx, err
 	}
 	if tenant == nil || tenant.ID != kb.TenantID {
-		return ctx, apperrors.NewNotFoundError("知识库所属空间不存在")
+		return ctx, apperrors.NewNotFoundError("知识库所属租户不存在")
 	}
 	return context.WithValue(ctx, types.TenantInfoContextKey, tenant), nil
 }

@@ -150,8 +150,8 @@ var registry = map[string]settingSpec{
 		Default:  "create_personal",
 		Enum:     []string{"create_personal", "tenantless"},
 		Category: "auth",
-		Description: "公开注册成功后的默认空间策略。create_personal = 自动创建个人空间并设为 Owner；" +
-			"tenantless = 仅创建用户，等待接受邀请或主动创建空间。修改后只影响新注册用户。",
+		Description: "公开注册成功后的默认租户策略。create_personal = 自动创建个人租户并设为 Owner；" +
+			"tenantless = 仅创建用户，等待接受邀请或主动创建租户。修改后只影响新注册用户。",
 	},
 	"auth.complex_password_enabled": {
 		Type:     "bool",
@@ -173,7 +173,7 @@ var registry = map[string]settingSpec{
 		EnvName:  "WEKNORA_TENANT_MAX_OWNED_PER_USER",
 		Default:  int64(10),
 		Category: "tenant",
-		Description: "每个非超管用户通过自助创建可拥有的最大空间数。每次创建空间时实时读取，" +
+		Description: "每个非超管用户通过自助创建可拥有的最大租户数。每次创建租户时实时读取，" +
 			"修改后立即生效。0 表示使用内置默认值 10；负数表示完全关闭限制（不建议在公开部署使用）。",
 	},
 	"tenant.self_service_creation_enabled": {
@@ -181,8 +181,8 @@ var registry = map[string]settingSpec{
 		EnvName:  "WEKNORA_TENANT_SELF_SERVICE_CREATION_ENABLED",
 		Default:  true,
 		Category: "tenant",
-		Description: "是否允许非超管用户主动创建空间。关闭后，普通用户只能通过邀请加入已有空间；" +
-			"跨空间超管仍可创建。修改后立即生效。",
+		Description: "是否允许非超管用户主动创建租户。关闭后，普通用户只能通过邀请加入已有租户；" +
+			"跨租户超管仍可创建。修改后立即生效。",
 	},
 	// tenant.default_storage_quota_gb is the default storage quota (in GB)
 	// applied to a newly-created tenant when the caller doesn't specify
@@ -196,8 +196,8 @@ var registry = map[string]settingSpec{
 		EnvName:  "WEKNORA_TENANT_DEFAULT_STORAGE_QUOTA_GB",
 		Default:  int64(10),
 		Category: "tenant",
-		Description: "新建空间时默认分配的存储配额（GB），包含向量、原文、文本、索引等。" +
-			"仅在创建时读取，修改后只对之后新建的空间生效，不会回写已存在的空间。" +
+		Description: "新建租户时默认分配的存储配额（GB），包含向量、原文、文本、索引等。" +
+			"仅在创建时读取，修改后只对之后新建的租户生效，不会回写已存在的租户。" +
 			"0 或负数表示使用内置默认值 10GB。",
 	},
 	// tenant.auto_create_api_key restores the legacy behaviour where creating
@@ -213,9 +213,9 @@ var registry = map[string]settingSpec{
 		EnvName:  "WEKNORA_TENANT_AUTO_CREATE_API_KEY",
 		Default:  false,
 		Category: "tenant",
-		Description: "创建空间时是否自动生成一个全量权限（full_access）的 API Key，并在创建接口的响应中返回其明文 token。" +
-			"用于兼容旧版本「创建空间即下发默认 API Key」的行为（属于破坏性变更的回退开关）。" +
-			"每次创建空间时实时读取，修改后立即生效。默认 false（不自动创建，需通过 API Key 管理显式创建）。",
+		Description: "创建租户时是否自动生成一个全量权限（full_access）的 API Key，并在创建接口的响应中返回其明文 token。" +
+			"用于兼容旧版本「创建租户即下发默认 API Key」的行为（属于破坏性变更的回退开关）。" +
+			"每次创建租户时实时读取，修改后立即生效。默认 false（不自动创建，需通过 API Key 管理显式创建）。",
 	},
 	// tenant.auto_accept_invitation: invite = auto-join switch (default false).
 	"tenant.auto_accept_invitation": {
@@ -223,7 +223,7 @@ var registry = map[string]settingSpec{
 		EnvName:  "WEKNORA_TENANT_AUTO_ACCEPT_INVITATION",
 		Default:  false,
 		Category: "tenant",
-		Description: "全局开关：开启后，空间管理员通过邮箱邀请已注册用户加入空间时，" +
+		Description: "全局开关：开启后，租户管理员通过邮箱邀请已注册用户加入租户时，" +
 			"被邀请人将被立即自动加入（直接写入成员关系），无需在收件箱手动接受，也不再生成待接受的邀请记录。" +
 			"关闭时保持原有「发出邀请 → 被邀请人收件箱确认」流程。每次邀请时实时读取，修改后立即生效。默认 false。",
 	},

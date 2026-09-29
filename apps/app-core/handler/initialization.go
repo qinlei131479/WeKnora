@@ -1785,7 +1785,7 @@ func (h *InitializationHandler) CheckRemoteModel(c *gin.Context) {
 	appID, appSecret, ok := h.resolveTenantWeKnoraCloudCreds(ctx)
 	if !ok {
 		logger.Error(ctx, "Tenant info not found")
-		c.Error(errors.NewBadRequestError("空间信息未找到"))
+		c.Error(errors.NewBadRequestError("租户信息未找到"))
 		return
 	}
 
@@ -1859,7 +1859,7 @@ func (h *InitializationHandler) TestEmbeddingModel(c *gin.Context) {
 	appID, appSecret, ok := h.resolveTenantWeKnoraCloudCreds(ctx)
 	if !ok {
 		logger.Error(ctx, "Tenant info not found")
-		c.Error(errors.NewBadRequestError("空间信息未找到"))
+		c.Error(errors.NewBadRequestError("租户信息未找到"))
 		return
 	}
 
@@ -2011,7 +2011,7 @@ func (h *InitializationHandler) CheckRerankModel(c *gin.Context) {
 	appID, appSecret, ok := h.resolveTenantWeKnoraCloudCreds(ctx)
 	if !ok {
 		logger.Error(ctx, "Tenant info not found")
-		c.Error(errors.NewBadRequestError("空间信息未找到"))
+		c.Error(errors.NewBadRequestError("租户信息未找到"))
 		return
 	}
 
