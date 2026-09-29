@@ -59,7 +59,7 @@ curl -X PUT "$BASE/api/v1/knowledge-bases/kb-1" \
 | 查询参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | `agent_id` | string | 否 | 过滤某共享 Agent 可见的 KB |
-| `agent_source_tenant_id` | uint64 | 否 | 同名 Agent 被多个空间共享时，指定来源空间；取值会与共享关系校验，非法值直接 400 |
+| `agent_source_tenant_id` | uint64 | 否 | 同名 Agent 被多个租户共享时，指定来源租户；取值会与共享关系校验，非法值直接 400 |
 | `creator` | string | 否 | `mine` / `others` |
 
 响应：200 `{"success":true,"data":[KnowledgeBase],"total","page","page_size"}`
@@ -97,7 +97,7 @@ curl -X PUT $BASE/api/v1/knowledge-bases/kb-1 -H "Authorization: Bearer $TOKEN" 
 
 ### DELETE /api/v1/knowledge-bases/:id
 
-用途：删除知识库（锁定为属主空间 + Admin；共享 editor 不可删）。权限：创建者 OR Admin+，KB write；API key `manage_kbs`/full。
+用途：删除知识库（锁定为属主租户 + Admin；共享 editor 不可删）。权限：创建者 OR Admin+，KB write；API key `manage_kbs`/full。
 
 响应：200 `{"success":true,"message":"Knowledge base deleted successfully"}`
 
@@ -171,7 +171,7 @@ curl -X POST $BASE/api/v1/knowledge-bases/kb-1/duplicate -H "Authorization: Bear
 
 ### GET /api/v1/knowledge-bases/copy/progress/:task_id
 
-用途：查询拷贝进度（任务按空间隔离）。权限：Viewer+；API key `retrieve`/`manage_kbs`/full。
+用途：查询拷贝进度（任务按租户隔离）。权限：Viewer+；API key `retrieve`/`manage_kbs`/full。
 
 响应：200 `{"success":true,"data":{status,progress,message,...}}`
 
@@ -191,7 +191,7 @@ curl $BASE/api/v1/knowledge-bases/kb-1/move-targets -H "Authorization: Bearer $T
 
 ### GET /api/v1/knowledge-bases/:id/files
 
-用途：KB 范围文件代理（渲染共享 KB 内容中的图片；上下文 tenant 已被重写为 KB 属主）。权限：Viewer+，KB read；KB 受限 key 拒绝，全空间 `retrieve`/full key 放行。注册于 `serveKBScopedFiles`（`internal/router/router.go`）。
+用途：KB 范围文件代理（渲染共享 KB 内容中的图片；上下文 tenant 已被重写为 KB 属主）。权限：Viewer+，KB read；KB 受限 key 拒绝，全租户 `retrieve`/full key 放行。注册于 `serveKBScopedFiles`（`internal/router/router.go`）。
 
 | 查询参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
@@ -334,7 +334,7 @@ curl -X DELETE $BASE/api/v1/knowledge-bases/kb-1/knowledge -H "Authorization: Be
 | `ids` | []string | 是 | 知识 ID（可重复传参或逗号分隔） |
 | `kb_id` | string | 否 | 限定 KB |
 | `agent_id` | string | 否 | 共享 Agent 范围 |
-| `agent_source_tenant_id` | uint64 | 否 | 共享 Agent 的来源空间选择器，与共享关系校验 |
+| `agent_source_tenant_id` | uint64 | 否 | 共享 Agent 的来源租户选择器，与共享关系校验 |
 
 响应：200 `{"success":true,"data":[Knowledge]}`
 
@@ -480,7 +480,7 @@ curl -X PUT $BASE/api/v1/knowledge/image/k-1/c-1 -H "Authorization: Bearer $TOKE
 | `page` / `page_size` | int | 否 | 分页 |
 | `recent` | bool | 否 | 最近文件模式 |
 | `agent_id` | string | 否 | 共享 Agent 范围 |
-| `agent_source_tenant_id` | uint64 | 否 | 共享 Agent 的来源空间选择器，与共享关系校验 |
+| `agent_source_tenant_id` | uint64 | 否 | 共享 Agent 的来源租户选择器，与共享关系校验 |
 
 响应：200 `{"success":true,"data":[Knowledge]}`
 

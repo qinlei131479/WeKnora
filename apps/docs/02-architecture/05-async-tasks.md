@@ -4,7 +4,7 @@
 
 ## 总体架构：双执行模式 {#_1-总体架构-双执行模式}
 
-智能体中台2.0 有两种任务执行模式，通过部署形态选择：
+平台有两种任务执行模式，通过部署形态选择：
 
 - **asynq 模式（标准部署）**：任务经 `asynq.Client` 序列化为 JSON payload 写入 Redis 队列，由多个独立的 `asynq.Server`（worker pool）消费。`internal/router/task.go` 中 `RunAsynqServer()` 构建统一的 `asynq.ServeMux` 并在 6 个 pool 上运行。
 - **未配置 Redis 时**：`internal/router/sync_task.go` 的 `SyncTaskExecutor` 实现同一个 `interfaces.TaskEnqueuer` 接口，`Enqueue` 直接把任务派发到 goroutine 执行，支持 `ProcessIn`（延迟）与 `MaxRetry` 选项；重试为线性退避（`attempt * 5s`，上限 30s）。
@@ -72,7 +72,7 @@ opt := &asynq.RedisClientOpt{
 
 自动标签与摘要共享 summary 队列，属于可选富化任务；仅在文档知识库开启 auto_tag_config 时入队，失败不影响已完成的解析。记忆抽取使用独立 memory 队列，由 enrichment pool 消费，并以权重 1 参与 shared pool 弹性借用，worker pool 总数仍为 6。
 
-记忆任务按个人主体去重、延迟聚合；memory_subjects 的 extract_cursor、pending_sessions 与调度时间用于续接，避免每次发问立即启动一次模型提取。空间关闭记忆或 write_mode 非 auto 时不跑后台蒸馏。单进程模式的同步执行器也注册自动标签和记忆任务，遵循同样的业务开关。
+记忆任务按个人主体去重、延迟聚合；memory_subjects 的 extract_cursor、pending_sessions 与调度时间用于续接，避免每次发问立即启动一次模型提取。租户关闭记忆或 write_mode 非 auto 时不跑后台蒸馏。单进程模式的同步执行器也注册自动标签和记忆任务，遵循同样的业务开关。
 
 ## Worker Pool 拓扑与治理策略 {#_4-worker-pool-拓扑与治理策略}
 

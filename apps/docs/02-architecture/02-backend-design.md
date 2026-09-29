@@ -38,7 +38,7 @@ graph TD
 
 ## 依赖注入：internal/container（uber/dig） {#_2-依赖注入-internal-container-uber-dig}
 
-智能体中台2.0 使用 **`go.uber.org/dig` v1.19.0**（构造函数注入容器，非代码生成的 wire）。入口是 `internal/container/container.go` 的 `BuildContainer`：
+平台使用 **`go.uber.org/dig` v1.19.0**（构造函数注入容器，非代码生成的 wire）。入口是 `internal/container/container.go` 的 `BuildContainer`：
 
 ```go
 // cmd/server/main.go
@@ -213,7 +213,7 @@ kb.PUT("/:id", g.OwnedKBOrAdmin(), handler.UpdateKnowledgeBase)
 erDiagram
     TENANT ||--o{ USER : "主租户 (users.tenant_id)"
     TENANT ||--o{ TENANT_MEMBER : "成员"
-    USER ||--o{ TENANT_MEMBER : "加入多个空间"
+    USER ||--o{ TENANT_MEMBER : "加入多个租户"
     TENANT ||--o{ TENANT_API_KEY : "API Key (tenant_id 为空则平台级)"
     TENANT ||--o{ KNOWLEDGE_BASE : "拥有"
     TENANT ||--o{ MODEL : "模型配置"

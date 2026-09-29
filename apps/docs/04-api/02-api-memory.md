@@ -1,12 +1,12 @@
 # API 参考：长期记忆
 
-管理当前调用者的长期记忆、主题和文档偏好，以及空间级记忆配置。路径使用 `/api/v1` 前缀。
+管理当前调用者的长期记忆、主题和文档偏好，以及租户级记忆配置。路径使用 `/api/v1` 前缀。
 
 个人接口均要求 Viewer+，API Key 必须 full-access。作用域从凭证中确定，不接受任意 `subject_id`。示例中的 `$BASE` 为服务地址，`$TOKEN` 为当前用户的 Bearer token。
 
-## 空间配置与请求开关
+## 租户配置与请求开关
 
-空间配置使用 `GET/PUT /tenants/kv/memory-config`，不使用租户名称/描述的更新接口。读取需 Viewer+，写入需 Admin+，API Key 需 manage_tenant_settings 或 full-access。响应为 `{success,data:MemoryConfig}`，PUT 直接传配置对象；个人 `PUT /memory/settings` 不能替代空间开关。
+租户配置使用 `GET/PUT /tenants/kv/memory-config`，不使用租户名称/描述的更新接口。读取需 Viewer+，写入需 Admin+，API Key 需 manage_tenant_settings 或 full-access。响应为 `{success,data:MemoryConfig}`，PUT 直接传配置对象；个人 `PUT /memory/settings` 不能替代租户开关。
 
 ```bash
 curl -X PUT "$BASE/api/v1/tenants/kv/memory-config" \
@@ -16,7 +16,7 @@ curl -X PUT "$BASE/api/v1/tenants/kv/memory-config" \
 
 `memory_config` 字段：`enabled`、`write_mode`（explicit_only/auto）、`extract_model_id`、`max_items`、`extract_delay_seconds`、`extract_min_interval_seconds`、`extract_instructions`、`interest_threshold`、`embedding_model_id`、`vector_recall`、`retrieval_conditioning`。语义见[长期记忆](../03-features/23-memory.md)。更新时提交需要保留的完整配置对象。
 
-`CustomAgentConfig.memory_enabled` 省略继承空间，false 禁止本智能体使用记忆；IM/Embed 使用绑定智能体的配置，当前渠道结构没有独立的 memory_enabled 字段。
+`CustomAgentConfig.memory_enabled` 省略继承租户，false 禁止本智能体使用记忆；IM/Embed 使用绑定智能体的配置，当前渠道结构没有独立的 memory_enabled 字段。
 
 ## 个人设置
 
@@ -25,7 +25,7 @@ curl -X PUT "$BASE/api/v1/tenants/kv/memory-config" \
 | GET | `/memory/settings` | `{success,data:{workspace_enabled,user_enabled,effective,write_mode,item_count,max_items}}` |
 | PUT | `/memory/settings` | `{"enabled":true}`，enabled 必填；返回更新后的 settings |
 
-`effective` 表示空间与个人开关的合并结果；一次聊天还受智能体开关约束。
+`effective` 表示租户与个人开关的合并结果；一次聊天还受智能体开关约束。
 
 ```bash
 curl -X PUT "$BASE/api/v1/memory/settings" \

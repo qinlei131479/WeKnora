@@ -1,6 +1,6 @@
-# 智能体中台2.0 CLI（weknora 命令行工具）
+# 平台 CLI（weknora 命令行工具）
 
-智能体中台2.0 CLI（命令名 `weknora`）用于管理知识库与文档、执行检索和流式问答。交互使用可选择可读输出，脚本和 AI Agent 可使用 JSON 响应、类型化错误、`--dry-run` 预演及 `weknora schema` 契约查询；`weknora mcp serve` 提供 MCP 服务。
+平台 CLI（命令名 `weknora`）用于管理知识库与文档、执行检索和流式问答。交互使用可选择可读输出，脚本和 AI Agent 可使用 JSON 响应、类型化错误、`--dry-run` 预演及 `weknora schema` 契约查询；`weknora mcp serve` 提供 MCP 服务。
 
 源码位于 `cli/`，是独立的 Go module（`github.com/Tencent/WeKnora/cli`），源码构建需要 Go 1.26+。命令入口为 `cli/cmd/root.go`。
 
@@ -31,7 +31,7 @@ flowchart TB
         O["output + format<br/>JSON envelope / NDJSON / jq"]
     end
 
-    SRV["智能体中台2.0 Server<br/>(REST API + SSE)"]
+    SRV["平台 Server<br/>(REST API + SSE)"]
 
     R --> groups
     groups --> F
@@ -52,7 +52,7 @@ flowchart TB
 
 ```bash
 git clone https://github.com/Tencent/WeKnora.git
-cd 智能体中台2.0/cli
+cd cli
 go build -o weknora .
 sudo mv weknora /usr/local/bin/   # 或放到任意 $PATH 目录
 ```
@@ -74,7 +74,7 @@ sudo mv weknora /usr/local/bin/   # 或放到任意 $PATH 目录
 
 ### Homebrew（服务端 单进程，非 CLI）
 
-仓库 `Formula/` 目录下目前只有一个 formula：`Formula/weknora-lite.rb`，它安装的是 **智能体中台2.0 服务端的单二进制 单进程**（`weknora-lite`），而不是本文档的 `weknora` CLI。该 formula：
+仓库 `Formula/` 目录下目前只有一个 formula：`Formula/weknora-lite.rb`，它安装的是 **平台服务端的单二进制 单进程**（`weknora-lite`），而不是本文档的 `weknora` CLI。该 formula：
 
 - 按 macOS/Linux × arm64/amd64 四个平台从 GitHub Releases 下载 `单进程程序_v<version>_<os>_<arch>.tar.gz`；
 - 生成 `weknora-lite` 启动脚本：首次运行自动生成 `~/.config/weknora/环境变量文件` 配置、数据存到 `~/.local/share/weknora/`；

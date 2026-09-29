@@ -181,7 +181,7 @@ curl -X PUT $BASE/api/v1/knowledge-bases/kb-1/faq/import/last-result/display \
 
 ### GET /api/v1/faq/import/progress/:task_id
 
-用途：查询 FAQ 导入/dry-run 进度（任务按空间隔离）。权限：Viewer+；API key `retrieve`/`ingest`/full。
+用途：查询 FAQ 导入/dry-run 进度（任务按租户隔离）。权限：Viewer+；API key `retrieve`/`ingest`/full。
 
 响应：200 `{"success":true,"data":{status,progress,failed_entries,...}}`
 

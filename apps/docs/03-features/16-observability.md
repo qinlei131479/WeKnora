@@ -28,7 +28,7 @@
 | --- | --- |
 | 某次请求全链路发生了什么 | 用响应头 `X-Request-ID` grep 应用日志；开启 `LLM_DEBUG_LOG` 后看 `llm_debug/<request_id>.log` |
 | 一次聊天/解析的 LLM 调用树与 token 消耗 | Langfuse UI（trace 名 `POST /api/v1/agent-chat` 或 `asynq.document:process`） |
-| 谁在什么时候改了什么 | 空间审计 `/tenants/:id/audit-log`；KB 活动 `/knowledge-bases/:id/activity`；平台审计 `/system/admin/audit-log` |
+| 谁在什么时候改了什么 | 租户审计 `/tenants/:id/audit-log`；KB 活动 `/knowledge-bases/:id/activity`；平台审计 `/system/admin/audit-log` |
 | 为什么某文档一直失败 | `task_dead_letters` 表（scope=knowledge/knowledge_base）+ 运行时面板 archived 任务的 `last_error` |
 | 服务是否存活 | `GET /health`（200 `{"status":"ok"}`） |
 | 配置是否按预期加载 | 启动日志 `[startup-env]` 横幅（`internal/runtime/startup.go`，敏感值只显示长度） |
@@ -155,7 +155,7 @@ Prompt 组装将稳定说明放在前部，动态会话内容放在后部；支�
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | `id` | uint64 自增 | 主键 + 分页游标（`WHERE id < after_id ORDER BY id DESC`） |
-| `tenant_id` | uint64 | 空间；`0` = 系统级（system-scope）事件 |
+| `tenant_id` | uint64 | 租户；`0` = 系统级（system-scope）事件 |
 | `actor_user_id` / `actor_role` | varchar | 操作者与其当时角色（系统触发时为空） |
 | `action` | varchar(64) | 点分命名 `<area>.<event>`（见 4.2） |
 | `scope_type` / `scope_id` | varchar | 资源作用域（如 `knowledge_base` + kbID，驱动 KB 活动页） |
@@ -189,8 +189,8 @@ Prompt 组装将稳定说明放在前部，动态会话内容放在后部；支�
 
 | 路由 | 权限 | 说明 |
 | --- | --- | --- |
-| `GET /api/v1/tenants/:id/audit-log` | PathTenantMatch + Admin | 空间审计流；只返回 `scope_type=''` 的空间级行（`UnscopedOnly`） |
-| `GET /api/v1/knowledge-bases/:id/activity` | KB 创建者或空间 Admin，且必须是 owner 空间（组织共享消费方不可读） | `scope_type=knowledge_base` + `scope_id=kbID` 的 KB 活动投影 |
+| `GET /api/v1/tenants/:id/audit-log` | PathTenantMatch + Admin | 租户审计流；只返回 `scope_type=''` 的租户级行（`UnscopedOnly`） |
+| `GET /api/v1/knowledge-bases/:id/activity` | KB 创建者或租户 Admin，且必须是 owner 租户（组织共享消费方不可读） | `scope_type=knowledge_base` + `scope_id=kbID` 的 KB 活动投影 |
 | `GET /api/v1/system/admin/audit-log` | SystemAdmin（+ 平台 API Key `system.audit_read`） | `tenant_id=0` 的平台级事件（settings / promote / queue 操作等） |
 
 统一查询参数：`after_id`（游标，返回 id 更小的行）、`limit`（1–100，默认 50，硬上限 `auditLogListLimitMax=100`）、`action` / `outcome` / `actor` 精确过滤。响应含 `next_cursor`（页内最小 id，0 表示到底）。

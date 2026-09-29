@@ -335,7 +335,7 @@ curl -X POST $BASE/api/v1/datasource/validate-credentials -H "Authorization: Bea
 
 | 字段 | 类型 | 必填 | 说明 |
 | —- | —- | —- | —- |
-| `knowledge_base_id` | string | 是 | 目标 KB（须归属本空间） |
+| `knowledge_base_id` | string | 是 | 目标 KB（须归属本租户） |
 | `name` | string | 是 | 名称 |
 | `type` | string | 是 | 连接器类型 |
 | `config` | object | 是 | 凭证（加密存储）+资源选择+设置 |

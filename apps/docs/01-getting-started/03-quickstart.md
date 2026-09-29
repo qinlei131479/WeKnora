@@ -12,7 +12,7 @@
 
 ## 注册并登录 {#_2-注册并登录}
 
-首次访问进入登录页。部署允许公开注册（`self_serve`）时，页面显示注册页签；系统没有默认账号。默认配置下，注册会创建个人工作空间，并将新用户设为该空间的 Owner。
+首次访问进入登录页。部署允许公开注册（`self_serve`）时，页面显示注册页签；系统没有默认账号。默认配置下，注册会创建个人租户，并将新用户设为该租户的 Owner。
 
 <Screenshot
   src="/screenshots/quickstart-register.png"
@@ -23,10 +23,10 @@
 
 - 用户名 2–50 个字符；密码为 8–32 位，至少包含字母和数字。启用复杂密码策略后，还须同时包含大小写字母和特殊字符，界面与 API 使用同一策略；
 - 团队部署可关闭公开注册，之后通过邀请链接添加成员。可设置 `DISABLE_REGISTRATION=true`（启动时把注册模式强制为 `invite_only`），或由系统管理员在「设置 → 系统」将 `auth.registration_mode` 改成 `invite_only`（立即生效，不用重启）；
-- 如果部署把默认空间策略设成了 `tenantless`（`auth.default_tenant_mode`），注册后**不会**自动建空间，而是被引导到 `/onboarding/workspace`，需要先自建或接受邀请加入一个空间才能继续；
+- 如果部署把默认租户策略设成了 `tenantless`（`auth.default_tenant_mode`），注册后**不会**自动建租户，而是被引导到 `/onboarding/workspace`，需要先自建或接受邀请加入一个租户才能继续；
 
-::: tip 空间与平台权限
-空间 Owner 管理所在空间的成员、模型和知识库。全局系统设置、平台任务队列及跨空间审计需要系统管理员身份，两类权限独立授予。
+::: tip 租户与平台权限
+租户 Owner 管理所在租户的成员、模型和知识库。全局系统设置、平台任务队列及跨租户审计需要系统管理员身份，两类权限独立授予。
 
 首次设置系统管理员时，先注册账号，再为 app 服务配置 `WEKNORA_BOOTSTRAP_SYSTEM_ADMIN_EMAIL=<该账号邮箱>` 并重启。该流程仅在部署尚无系统管理员时生效。完整步骤与限制见[平台管理与系统管理员](../03-features/20-platform-admin.md)。
 :::
@@ -145,8 +145,8 @@ curl -s -X POST $BASE/knowledge-search -H "$AUTH" -H "Content-Type: application/
 | 方式 | 请求头 | 适用 |
 | --- | --- | --- |
 | JWT | `Authorization: Bearer <token>` | 浏览器 / 交互式调用，登录接口签发 |
-| API Key | `X-API-Key: <key>` | 服务端集成；在「空间设置」或 `POST /api/v1/tenants/:id/api-keys` 创建，支持细粒度能力（`retrieve`/`chat`/`ingest`/`manage_kbs` 等） |
-| 指定空间 | `X-Tenant-ID: <id>` | 多空间用户切换当前工作空间 |
+| API Key | `X-API-Key: <key>` | 服务端集成；在「租户设置」或 `POST /api/v1/tenants/:id/api-keys` 创建，支持细粒度能力（`retrieve`/`chat`/`ingest`/`manage_kbs` 等） |
+| 指定租户 | `X-Tenant-ID: <id>` | 多租户用户切换当前租户 |
 
 服务端集成建议用 API Key 而不是 JWT：
 
@@ -205,7 +205,7 @@ sequenceDiagram
 
 | 现象 | 检查点 |
 | --- | --- |
-| 上传后一直 `processing` | `docker logs 智能体中台2.0-docreader`；大文件受 `MAX_FILE_SIZE_MB`（默认 50）与 `WEKNORA_DOCUMENT_PROCESS_TIMEOUT`（默认 2h）约束 |
+| 上传后一直 `processing` | `docker logs agent-middle-docreader`；大文件受 `MAX_FILE_SIZE_MB`（默认 50）与 `WEKNORA_DOCUMENT_PROCESS_TIMEOUT`（默认 2h）约束 |
 | 初始化时 Ollama 检测失败 | 容器内默认地址 `http://host.docker.internal:11434`（`OLLAMA_BASE_URL`）；Linux 需确认 `extra_hosts: host.docker.internal:host-gateway` 生效 |
 | 问答无引用 / 召回为空 | 确认知识解析 `completed`；调低 `vector_threshold`；检查 embedding 模型与建库时一致 |
 | 注册页签消失 | 查 `GET /auth/config` 的 `registration_mode`。值可能来自「设置 → 系统」里的数据库设置，不只是 `DISABLE_REGISTRATION`；邀请链接与 OIDC 首次登录是另外两条通路，不受它影响 |

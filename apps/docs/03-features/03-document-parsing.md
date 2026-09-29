@@ -1,6 +1,6 @@
 # 文档解析服务 docreader
 
-文档解析将上传的文件转换为可检索的文本，并提取原始图片引用。智能体中台2.0 支持多种格式，可按文件类型选择解析引擎；扫描件、图片和音频还需要相应的视觉或语音模型。
+文档解析将上传的文件转换为可检索的文本，并提取原始图片引用。平台支持多种格式，可按文件类型选择解析引擎；扫描件、图片和音频还需要相应的视觉或语音模型。
 
 支持的格式：
 
@@ -400,7 +400,7 @@ Python 依赖（`pyproject.toml` + `uv.lock` 锁定）：`grpcio`、`pypdfium2`�
 
 ### anydoc 引擎（Go 进程内解析，不经 docreader） {#_8-anydoc-引擎-go-进程内解析-不经-docreader}
 
-`anydoc` 是一个 Go 侧的可选解析引擎：它把 [anydoc](https://github.com/firecrawl/anydoc)（Rust 编写的文档转换库）通过 cgo 链接进 智能体中台2.0 主进程，直接把 office 文档转成 Markdown。与本文其余部分描述的 docreader 不同，它**不经过 Python 服务、不跨进程、也不调用外部二进制**——适合不想部署 docreader 的轻量部署，或对解析延迟敏感的场景。
+`anydoc` 是一个 Go 侧的可选解析引擎：它把 [anydoc](https://github.com/firecrawl/anydoc)（Rust 编写的文档转换库）通过 cgo 链接进 平台主进程，直接把 office 文档转成 Markdown。与本文其余部分描述的 docreader 不同，它**不经过 Python 服务、不跨进程、也不调用外部二进制**——适合不想部署 docreader 的轻量部署，或对解析延迟敏感的场景。
 
 支持的文件类型：`doc`、`docx`、`docm`、`odt`、`rtf`、`ppt`、`pptx`、`pptm`、`odp`、`xls`、`xlsx`、`xlsm`、`ods`、`epub`、`csv`、`pdf`。
 

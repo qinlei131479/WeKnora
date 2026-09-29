@@ -1,6 +1,6 @@
 # 产品介绍
 
-智能体中台2.0 是知识库问答系统，支持导入 PDF、Word、网页等资料。用户可以围绕这些资料提问，并通过回答中的引用查看原文。
+该平台是知识库问答系统，支持导入 PDF、Word、网页等资料。用户可以围绕这些资料提问，并通过回答中的引用查看原文。
 
 系统采用检索增强生成（RAG）：先解析文档并建立索引，再根据问题检索相关片段，由大模型生成回答。
 
@@ -8,7 +8,7 @@
 
 <Screenshot
   src="/screenshots/introduction-overview.png"
-  caption="智能体中台2.0 主界面：左侧知识库与会话，右侧问答区"
+  caption="平台主界面：左侧知识库与会话，右侧问答区"
   hint="展示登录后的主界面全貌：侧边栏（知识库、智能体、设置入口）与一轮带引用的问答。" />
 
 ## 适用场景 {#weknora-解决什么问题}
@@ -20,21 +20,21 @@
 | 模型绑定单一厂商 | 模型抽象层：Ollama 本地模型与 OpenAI 兼容远程接口均可，LLM / Embedding / Rerank / VLM / ASR 分类管理（见 `internal/types/model.go`） |
 | 数据安全与私有化 | 全栈可私有部署；敏感凭证（API Key 等）以 AES-256 落盘加密（`SYSTEM_AES_KEY`）；多租户隔离 + RBAC 角色鉴权 |
 | 多步骤任务与工具调用 | 内置 Agent（ReAct 多步推理）、MCP 工具接入、Agent Skills 沙箱执行、Web 搜索（SearXNG 等）、数据分析（对 CSV/Excel 执行 SQL） |
-| 团队协作 | 租户（工作空间）+ 成员角色 + 邀请机制 |
+| 团队协作 | 租户 + 成员角色 + 邀请机制 |
 
 ## 核心概念
 
-知识库组织资料，工作空间管理成员与资源权限，智能体决定回答所用的模型和工具。以下术语与界面选项对应，完整类型定义位于 `internal/types/`。
+知识库组织资料，租户管理成员与资源权限，智能体决定回答所用的模型和工具。以下术语与界面选项对应，完整类型定义位于 `internal/types/`。
 
 ### 租户与身份
 
 | 概念 | 说明 |
 | --- | --- |
-| 租户 Tenant | 工作空间，管理知识库、模型、智能体、会话和存储配额。详见[空间与权限](../03-features/01-tenant-auth.md) |
-| 用户 User | 登录账号，一个用户可以加入多个工作空间 |
-| 成员 TenantMember | 用户在某个空间中的成员关系，包含角色和状态 |
-| 角色 TenantRole | Owner、Admin、Contributor、Viewer 四级，决定用户可执行的空间操作 |
-| API Key（TenantAPIKey） | 程序访问凭证，可授予指定能力并限定知识库范围。空间与平台 Key 的权限分别管理 |
+| 租户 Tenant | 管理知识库、模型、智能体、会话和存储配额。详见[租户与权限](../03-features/01-tenant-auth.md) |
+| 用户 User | 登录账号，一个用户可以加入多个租户 |
+| 成员 TenantMember | 用户在某个租户中的成员关系，包含角色和状态 |
+| 角色 TenantRole | Owner、Admin、Contributor、Viewer 四级，决定用户可执行的租户操作 |
+| API Key（TenantAPIKey） | 程序访问凭证，可授予指定能力并限定知识库范围。租户与平台 Key 的权限分别管理 |
 
 ### 知识域
 
@@ -57,7 +57,7 @@
 | 模型 Model | 提供对话、向量化、重排、视觉或语音能力的模型连接，详见[模型管理](../03-features/06-models.md) |
 | Agent（自定义智能体） CustomAgent | 按任务配置模型、资料范围和工具，支持快速问答与智能推理 |
 | 内置 Agent | 预配置的快速问答、智能推理、数据分析和 Wiki 智能体，详见[Agent 引擎](../03-features/07-agent.md) |
-| 技能与沙箱 | 空间技能目录保存包，按沙箱配置安装，再绑定智能体使用；支持 Docker/Cube/E2B、个人变量与生成文件，见[技能与沙箱](../03-features/22-skills-sandbox.md) |
+| 技能与沙箱 | 租户技能目录保存包，按沙箱配置安装，再绑定智能体使用；支持 Docker/Cube/E2B、个人变量与生成文件，见[技能与沙箱](../03-features/22-skills-sandbox.md) |
 | MCP 服务 MCPService | 为智能体接入外部工具，支持 SSE 和 Streamable HTTP；认证可选 API Key、Bearer 或 OAuth 2.0 |
 
 ### 概念关系图
@@ -66,7 +66,7 @@
 flowchart TB
     subgraph identity["身份与租户"]
         U["User (用户)"]
-        T["Tenant (租户 / 工作空间)"]
+        T["Tenant (租户)"]
         TM["TenantMember (角色: owner/admin/contributor/viewer)"]
         AK["TenantAPIKey (X-API-Key)"]
     end
@@ -107,7 +107,7 @@ flowchart TB
 - **问答与 Agent**：流式 SSE 问答、多轮上下文压缩、引用溯源；ReAct Agent（工具：`knowledge_search`、`grep_chunks`、`wiki_search`、`data_analysis` 等）、MCP 外部工具、Agent Skills（Docker、Cube 或 E2B 沙箱执行脚本）、Web 搜索。
 - **多租户与安全**：RBAC 角色鉴权（默认开启，`WEKNORA_TENANT_ENABLE_RBAC`）、审计日志（默认保留 90 天）、邀请制注册（`auth.registration_mode=invite_only`，也可用旧变量 `DISABLE_REGISTRATION=true`）、OIDC 单点登录、SSRF 防护、敏感字段 AES-256 加密。
 - **可观测性**：Langfuse 全链路追踪（LLM/Embedding/Rerank/VLM/ASR 调用与 token 统计）、健康检查、Swagger API 文档（`GIN_MODE=debug` 时）。
-- **生态**：REST API（`/api/v1`）+ API Key、独立 MCP Server（把 智能体中台2.0 作为工具暴露给其他 Agent）、CLI（`cli/`）、微信小程序（`miniprogram/`）、浏览器插件渠道。
+- **生态**：REST API（`/api/v1`）+ API Key、独立 MCP Server（把该平台作为工具暴露给其他 Agent）、CLI（`cli/`）、微信小程序（`miniprogram/`）、浏览器插件渠道。
 
 ## 系统组件一览
 
@@ -126,7 +126,7 @@ flowchart TB
 | 可选：minio | MinIO | profile `minio` | 9000 / 9001 | S3 兼容对象存储（`STORAGE_TYPE=minio`） |
 | 可选：searxng | SearXNG | profile `searxng` | 8888 | 自建 Web 搜索引擎 |
 | 可选：langfuse 栈 | Langfuse 3 + ClickHouse + MinIO | profile `langfuse` | 3000 | LLM 可观测性 |
-| 可选：mcp | Python | `mcp-server/`，profile `full` | 8082 | 将 智能体中台2.0 API 封装为 MCP Server |
+| 可选：mcp | Python | `mcp-server/`，profile `full` | 8082 | 将该平台 API 封装为 MCP Server |
 | 可选：odl-hybrid | Docling | profile `odl-hybrid` | 5002 | OpenDataLoader PDF 混合解析后端 |
 
 ```mermaid
@@ -149,6 +149,6 @@ flowchart LR
 
 ## 下一步
 
-- [安装部署](./02-installation.md)：选择部署方式并启动服务。
 - [快速上手](./03-quickstart.md)：创建知识库、上传文档并完成首次问答。
 - [配置详解](./04-configuration.md)：查询部署参数与配置优先级。
+- [安装部署](./02-installation.md)：选择部署方式并启动服务。

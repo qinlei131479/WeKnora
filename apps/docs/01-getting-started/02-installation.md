@@ -1,6 +1,6 @@
 # 安装部署
 
-智能体中台2.0 支持 Docker Compose、Kubernetes Helm。服务器部署可选择 Compose 或 Helm；参与开发时使用独立的开发编排。各方式的依赖、启动命令和数据目录如下。
+平台支持 Docker Compose、Kubernetes Helm。服务器部署可选择 Compose 或 Helm；参与开发时使用独立的开发编排。各方式的依赖、启动命令和数据目录如下。
 
 ## 部署形态总览
 
@@ -91,7 +91,7 @@ docker compose up -d
 | `weaviate` | `weaviate` | 9035（HTTP）/ 50052（gRPC） | 向量库 |
 | `doris` | `doris-fe` + `doris-be` | 8030（FE HTTP）/ 9030（FE MySQL）/ 8040（BE） | Apache Doris 4.1 检索引擎（需 >= 3.0，HNSW ANN） |
 | `dex`（含 `full`） | `dex` | 5556 | OIDC 测试用 IdP（配置在 `misc/dex-config.yaml`） |
-| `langfuse`（含 `full`） | `langfuse-db-init`、`langfuse-clickhouse`、`langfuse-minio`、`langfuse-worker`、`langfuse-web` | 3000（UI）/ 9100/9101（专用 MinIO） | 自建 Langfuse 可观测栈，复用 智能体中台2.0 的 postgres（新建 `langfuse` 库）与 redis（DB 1） |
+| `langfuse`（含 `full`） | `langfuse-db-init`、`langfuse-clickhouse`、`langfuse-minio`、`langfuse-worker`、`langfuse-web` | 3000（UI）/ 9100/9101（专用 MinIO） | 自建 Langfuse 可观测栈，复用平台的 postgres（新建 `langfuse` 库）与 redis（DB 1） |
 | `odl-hybrid` | `odl-hybrid` | expose 5002 | OpenDataLoader/Docling PDF 混合解析后端（仅本地构建，配 `DOCREADER_ODL_HYBRID` 使用） |
 | `full` | `sandbox`、`mcp` 及上述带 full 标记的服务 | mcp: `${MCP_PORT:-8082}:8000` | `sandbox` 仅用于 build/pull 镜像（`command: ["true"]`，非常驻）。Docker 沙箱默认关闭，需设 `WEKNORA_SANDBOX_DOCKER_ENABLED=true` 并挂载 `docker.sock`（等同宿主机 root）；Cube/E2B 不依赖本机 daemon。`mcp` 为 MCP Server |
 

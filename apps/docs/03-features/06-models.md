@@ -81,7 +81,7 @@ const (
 | `supports_vision` | bool | false | Chat 模型是否接受图片多模态输入 |
 | `context_window` | int | 0（回落到 200000） | 对话/VLM 上下文窗口（token）。智能体压缩历史按此上限工作；留空使用默认 200K。应填写服务实际支持的窗口大小，过高会导致压缩无法及时触发 |
 | `max_concurrency` | int | 0（回落到全局 `model.max_concurrency`） | 该模型后台任务并发上限（仅 chat/vlm/embedding 生效） |
-| `app_id` / `app_secret` | string | 空 | 智能体中台2.0Cloud 专用凭证，`app_secret` AES 加密存储 |
+| `app_id` / `app_secret` | string | 空 | 平台云服务 专用凭证，`app_secret` AES 加密存储 |
 
 模型级字段还包括 `name`（运行期实际调用的模型名）、`display_name`、`type`、`source`、`is_default`（同一 `(tenant_id, type)` 桶内唯一默认）、`is_builtin`、`managed_by`、`status`（`active` / `downloading` / `download_failed`）。
 
@@ -93,7 +93,7 @@ const (
 | `POST /models` / `GET /models` / `GET /models/:id` / `PUT /models/:id` / `DELETE /models/:id` | 模型 CRUD |
 | `PUT /models/:id/credentials`、`DELETE /models/:id/credentials/:field` | 凭证子资源；`PUT /models/:id` 请求体中的 `api_key` 会被强制忽略并告警 |
 | `POST /models/:id/debug` | 模型调试（见下文） |
-| `GET /models/weknoracloud/status` | 智能体中台2.0Cloud 凭证状态 |
+| `GET /models/weknoracloud/status` | 平台云服务 凭证状态 |
 
 ### 模型健康检查 / 连通性测试
 

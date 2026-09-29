@@ -4,7 +4,7 @@
 
 ## 技术栈与环境要求 {#_1-技术栈与环境要求}
 
-智能体中台2.0 由三个可独立开发的进程组成：
+平台由三个可独立开发的进程组成：
 
 | 组件 | 目录 | 语言 / 运行时 | 版本要求（来源） |
 | --- | --- | --- | --- |
@@ -201,7 +201,7 @@ make lint            # go vet
 跨切面的契约/集成测试集中在 `cli/acceptance/`（见 `cli/acceptance/doc.go`）：
 
 - `cli/acceptance/contract/` — envelope JSON 输出形状 golden 测试 + error.code 注册表一致性；
-- `cli/acceptance/e2e/` — 对真实 智能体中台2.0 server 的黑盒测试（testscript 风格），需要环境变量指向测试服务器；CI 侧由 `.github/workflows/cli-e2e.yml` 承载，**按需触发**（`workflow_dispatch` 手动，或给 PR 打 `acceptance-e2e` 标签），使用 secrets `WEKNORA_E2E_HOST` / `WEKNORA_E2E_TOKEN`。
+- `cli/acceptance/e2e/` — 对真实平台 server 的黑盒测试（testscript 风格），需要环境变量指向测试服务器；CI 侧由 `.github/workflows/cli-e2e.yml` 承载，**按需触发**（`workflow_dispatch` 手动，或给 PR 打 `acceptance-e2e` 标签），使用 secrets `WEKNORA_E2E_HOST` / `WEKNORA_E2E_TOKEN`。
 
 -->
 

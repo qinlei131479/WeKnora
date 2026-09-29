@@ -1,6 +1,6 @@
 # 配置详解
 
-智能体中台2.0 的配置由四层组成，**优先级从低到高**：
+平台的配置由四层组成，**优先级从低到高**：
 
 | 层 | 位置 | 用途 |
 | --- | --- | --- |
@@ -9,7 +9,7 @@
 | 环境变量 | `.env` / 容器 environment | 部署级覆盖，改完需重启 |
 | 运行时系统设置 | 数据库 `system_settings` 表，界面在「设置 → 系统」 | 支持的设置可在线修改，优先于环境变量，多数立即生效 |
 
-注册模式、空间策略与配额、SSRF 白名单、任务并发及模型并发上限支持运行时配置。在控制台修改后，数据库中的值优先于环境变量；重置设置项（`DELETE /api/v1/system/admin/settings/:key`）才会恢复使用环境变量或内置默认值。排查环境变量未生效时，应先检查该项是否已有运行时配置。完整设置见[平台管理与系统管理员](../03-features/20-platform-admin.md)。
+注册模式、租户策略与配额、SSRF 白名单、任务并发及模型并发上限支持运行时配置。在控制台修改后，数据库中的值优先于环境变量；重置设置项（`DELETE /api/v1/system/admin/settings/:key`）才会恢复使用环境变量或内置默认值。排查环境变量未生效时，应先检查该项是否已有运行时配置。完整设置见[平台管理与系统管理员](../03-features/20-platform-admin.md)。
 
 主配置结构定义在 `internal/config/config.go`。各项配置与环境变量的含义、默认值及生效条件如下。
 
@@ -106,10 +106,10 @@ flowchart LR
 
 | 名称 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- |
-| `enable_cross_tenant_access` | bool | false | 允许具备 `CanAccessAllTenants` 的用户跨空间访问（内网可开） |
-| `enable_rbac` | *bool | true | 空间角色强制鉴权；显式 `false` 进入仅记录不拦截的灰度模式（env `WEKNORA_TENANT_ENABLE_RBAC`） |
-| `max_owned_per_user` | int | 0（走 handler 默认） | 单个非超管可自建空间数上限；<0 关闭限制（env `WEKNORA_TENANT_MAX_OWNED_PER_USER`） |
-| `self_service_creation_enabled` | *bool | true | 普通用户能否自建空间（env `WEKNORA_TENANT_SELF_SERVICE_CREATION_ENABLED`） |
+| `enable_cross_tenant_access` | bool | false | 允许具备 `CanAccessAllTenants` 的用户跨租户访问（内网可开） |
+| `enable_rbac` | *bool | true | 租户角色强制鉴权；显式 `false` 进入仅记录不拦截的灰度模式（env `WEKNORA_TENANT_ENABLE_RBAC`） |
+| `max_owned_per_user` | int | 0（走 handler 默认） | 单个非超管可自建租户数上限；<0 关闭限制（env `WEKNORA_TENANT_MAX_OWNED_PER_USER`） |
+| `self_service_creation_enabled` | *bool | true | 普通用户能否自建租户（env `WEKNORA_TENANT_SELF_SERVICE_CREATION_ENABLED`） |
 | `default_session_name` / `default_session_title` / `default_session_description` | string | 空 | 新会话默认文案 |
 
 ### 结构体支持但默认文件未写出的段
@@ -155,7 +155,7 @@ flowchart LR
 `APP_EXTERNAL_URL` 影响 IM 渠道能否渲染知识库图片。IM 平台需要拿到公网 http(s) URL，二选一：
 
 1. 存储后端本身公网可达（对象存储用公网 endpoint，或把 `MINIO_ENDPOINT` 设成公网 host），此时 `resource://` 回退到后端预签名 URL，不需要本变量；
-2. 设置 `APP_EXTERNAL_URL`，`resource://` 图片被改写成 `<APP_EXTERNAL_URL>/r/<token>` 走 智能体中台2.0 自身（需要 nginx 代理 `/r/`，官方前端镜像已内置该 location）。
+2. 设置 `APP_EXTERNAL_URL`，`resource://` 图片被改写成 `<APP_EXTERNAL_URL>/r/<token>` 走平台自身（需要 nginx 代理 `/r/`，官方前端镜像已内置该 location）。
 
 默认的 MinIO 内网部署与 `local` 后端都只能走第二种。IM 渠道已启用但本变量为空时，服务启动会打印一次 WARN；改写结果若不是 http(s) URL 会保留原引用并记录可操作的告警，而不是发出 IM 端无法访问的链接。
 
@@ -220,13 +220,13 @@ AWS S3 的 `S3_ACCESS_KEY` / `S3_SECRET_KEY` 可以**同时留空**，此时走 
 | `JWT_SECRET` | 空 | JWT 签名密钥（必填） |
 | `SYSTEM_AES_KEY` | 空 | 敏感字段落盘加密的 AES-256 主密钥，**必须 32 字节**；丢失则已加密数据（租户 API Key、模型 key、向量库凭证等）不可恢复。v0.4.0 起取代 `TENANT_AES_KEY`/`CRYPTO_MASTER_KEY`/`CRYPTO_SALT` |
 | `DISABLE_REGISTRATION` | false | true 时强制 `registration_mode=invite_only` |
-| `WEKNORA_AUTH_DEFAULT_TENANT_MODE` | create_personal | 注册后建空间策略（`create_personal` / `tenantless`） |
-| `WEKNORA_TENANT_ENABLE_RBAC` | （默认 true） | 空间角色强制鉴权开关 |
-| `WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS` | false | 跨空间访问 |
-| `WEKNORA_TENANT_SELF_SERVICE_CREATION_ENABLED` | true | 普通用户自建空间 |
-| `WEKNORA_TENANT_MAX_OWNED_PER_USER` | 空 | 自建空间上限 |
-| `WEKNORA_TENANT_AUTO_CREATE_API_KEY` | false | 建空间时自动下发 full_access API Key（兼容旧行为） |
-| `WEKNORA_TENANT_DEFAULT_STORAGE_QUOTA_GB` | 10 | 新空间默认存储配额 |
+| `WEKNORA_AUTH_DEFAULT_TENANT_MODE` | create_personal | 注册后建租户策略（`create_personal` / `tenantless`） |
+| `WEKNORA_TENANT_ENABLE_RBAC` | （默认 true） | 租户角色强制鉴权开关 |
+| `WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS` | false | 跨租户访问 |
+| `WEKNORA_TENANT_SELF_SERVICE_CREATION_ENABLED` | true | 普通用户自建租户 |
+| `WEKNORA_TENANT_MAX_OWNED_PER_USER` | 空 | 自建租户上限 |
+| `WEKNORA_TENANT_AUTO_CREATE_API_KEY` | false | 建租户时自动下发 full_access API Key（兼容旧行为） |
+| `WEKNORA_TENANT_DEFAULT_STORAGE_QUOTA_GB` | 10 | 新租户默认存储配额 |
 | `WEKNORA_AUTH_COMPLEX_PASSWORD_ENABLED` | false | 复杂密码策略：大小写字母、数字、特殊字符；系统设置 auth.complex_password_enabled 优先 |
 | `WEKNORA_TENANT_AUTO_ACCEPT_INVITATION` | false | 邮箱邀请已有账号直接加入；系统设置 tenant.auto_accept_invitation 优先 |
 | `OIDC_AUTH_JWKS_URI` | 空 | id_token 验签公钥集；可经 discovery 补全，与 issuer/audience/有效期共同校验 |
@@ -254,7 +254,7 @@ AWS S3 的 `S3_ACCESS_KEY` / `S3_SECRET_KEY` 可以**同时留空**，此时走 
 
 | 名称 | 默认值 | 说明 |
 | --- | --- | --- |
-| Sandbox 配置 | 设置页按空间维护 | 后端、凭据、模板、超时和私网访问策略按空间保存 |
+| Sandbox 配置 | 设置页按租户维护 | 后端、凭据、模板、超时和私网访问策略按租户保存 |
 | `WEKNORA_SANDBOX_DOCKER_ENABLED` | false | Docker 沙箱后端回退开关。系统管理员也可在「设置 → 系统设置」打开（DB 优先，立即生效）。默认关闭，因为本机 `docker.sock` 等同宿主机 root |
 | `WEKNORA_AGENT_LLM_TIMEOUT` | 120s | Agent 单次 LLM 调用超时（Go duration 或纯数字秒） |
 | `WEKNORA_AGENT_TOOL_APPROVAL_TIMEOUT` / `_FAIL_OPEN` | 600s / fail-close | MCP 工具人工审批等待与失败策略 |
@@ -262,7 +262,7 @@ AWS S3 的 `S3_ACCESS_KEY` / `S3_SECRET_KEY` 可以**同时留空**，此时走 
 | `WEKNORA_HOUSEKEEPING_ENABLED` | 启用 | 回收卡在 processing 的脏数据 |
 | `WEKNORA_DOCUMENT_PROCESS_TIMEOUT` / `WEKNORA_DOCREADER_CALL_TIMEOUT` | 2h / 30m | 文档处理任务与单次 RPC 超时 |
 
-沙箱后端、网络策略、脚本开关与个人环境变量使用空间配置/API 管理，见[技能与沙箱](../03-features/22-skills-sandbox.md)。长期记忆与自动标签均默认关闭，分别使用租户 memory_config 和知识库 auto_tag_config，不用全局环境变量替代各空间配置。
+沙箱后端、网络策略、脚本开关与个人环境变量使用租户配置/API 管理，见[技能与沙箱](../03-features/22-skills-sandbox.md)。长期记忆与自动标签均默认关闭，分别使用租户 memory_config 和知识库 auto_tag_config，不用全局环境变量替代各租户配置。
 
 ### 可观测性（Langfuse）
 
@@ -277,18 +277,18 @@ AWS S3 的 `S3_ACCESS_KEY` / `S3_SECRET_KEY` 可以**同时留空**，此时走 
 | 名称 | 默认值 | 说明 |
 | --- | --- | --- |
 | `SEARXNG_PORT` | 8888 | 宿主机端口 |
-| `SEARXNG_BIND` | 127.0.0.1 | **默认只监听本机**。智能体中台2.0 打包的配置关掉了 SearXNG 自身的限流（否则后端会被节流），所以不应直接暴露到 LAN；确实要开放请显式改成 `0.0.0.0` 并自行加固 |
+| `SEARXNG_BIND` | 127.0.0.1 | **默认只监听本机**。平台打包的配置关掉了 SearXNG 自身的限流（否则后端会被节流），所以不应直接暴露到 LAN；确实要开放请显式改成 `0.0.0.0` 并自行加固 |
 | `SEARXNG_SECRET` | 空 | 入口脚本用它替换 `settings.yml` 里的 `secret_key`，对外开放时必须设 |
 
 自建 SearXNG 时记得把 `127.0.0.1` 加进 `SSRF_WHITELIST`，否则后端的 SSRF 防护会拦掉本机地址。用法见[网络搜索与网页抓取](../03-features/11-web-search.md)。
 
-**MCP Server**（把 智能体中台2.0 暴露给 Claude Desktop 等 MCP 客户端，`--profile full`）：
+**MCP Server**（把该平台暴露给 Claude Desktop 等 MCP 客户端，`--profile full`）：
 
 | 名称 | 默认值 | 说明 |
 | --- | --- | --- |
-| `WEKNORA_API_KEY` | 空 | mcp-server 反过来调 智能体中台2.0 REST 用的 Key，在「设置 → API Keys」生成 |
+| `WEKNORA_API_KEY` | 空 | mcp-server 反过来调平台 REST 用的 Key，在「设置 → API Keys」生成 |
 | `MCP_SERVER_AUTH_TOKEN` | 空 | **HTTP/SSE 传输必填**，缺失时进程直接拒绝启动；客户端以 `Authorization: Bearer` 携带 |
-| `WEKNORA_CHAT_TIMEOUT` | 300 | 调 智能体中台2.0 REST 的读超时（秒） |
+| `WEKNORA_CHAT_TIMEOUT` | 300 | 调平台 REST 的读超时（秒） |
 | `WEKNORA_VERIFY_SSL` | true | 是否校验后端 TLS 证书，自签证书可设 false |
 | `MCP_ALLOWED_UPLOAD_DIRS` | 空 | 允许上传的目录白名单（逗号分隔），留空即禁用文件上传工具 |
 

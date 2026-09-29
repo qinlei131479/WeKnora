@@ -1,4 +1,4 @@
-# 智能体中台文档（部署用）
+# 平台文档（部署用）
 
 > 本目录是产品文档站的**部署副本**，自仓库根目录 `website-docs/` 同步正文而来。
 > - **对外构建 / Jenkins**：只使用本目录（镜像 `kjsc/agent-middle-docs`，访问 `http://<host>:9900/docs/`）。
@@ -7,11 +7,11 @@
 
 ---
 
-# 智能体中台2.0 文档
+# 平台文档
 
-智能体中台2.0 是企业级知识库与 RAG（Retrieval-Augmented Generation）系统：Go 单体后端 + Vue 3 前端 + Python 文档解析微服务（docreader），支持多租户、多知识库、混合检索、Agent 智能体、知识图谱、Wiki 生成、MCP 集成、多平台 IM 接入与网页嵌入等能力。
+该平台是企业级知识库与 RAG（Retrieval-Augmented Generation）系统：Go 单体后端 + Vue 3 前端 + Python 文档解析微服务（docreader），支持多租户、多知识库、混合检索、Agent 智能体、知识图谱、Wiki 生成、MCP 集成、多平台 IM 接入与网页嵌入等能力。
 
-本目录是智能体中台2.0 的内部文档，按「入门 → 架构 → 功能 → API → 客户端 → 开发」六个部分组织。
+本目录是平台的内部文档，按「入门 → 架构 → 功能 → API → 客户端 → 开发」六个部分组织。
 
 ## 文档站点
 
@@ -72,10 +72,10 @@ npm run preview  # 预览构建产物
 
 | 文档 | 内容 |
 | --- | --- |
-| [产品介绍](01-getting-started/01-introduction.md) | 智能体中台2.0 是什么、核心概念（租户/知识库/知识/分块/会话/Agent 等）、功能总览与系统组件图 |
-| [安装部署](01-getting-started/02-installation.md) | docker-compose（含 12 个可选 profile）、开发模式与 Helm |
+| [产品介绍](01-getting-started/01-introduction.md) | 该平台是什么、核心概念（租户/知识库/知识/分块/会话/Agent 等）、功能总览与系统组件图 |
 | [快速上手](01-getting-started/03-quickstart.md) | 注册 → 初始化向导 → 配置模型 → 建库 → 上传 → 问答的完整路径，含可直接执行的 curl 链路 |
 | [配置详解](01-getting-started/04-configuration.md) | config.yaml 全字段、约 150 个环境变量、prompt 模板、内置模型与内置 Agent 配置 |
+| [安装部署](01-getting-started/02-installation.md) | docker-compose（含 12 个可选 profile）、开发模式与 Helm |
 
 ### 架构 {#_02-架构}
 
@@ -98,7 +98,7 @@ npm run preview  # 预览构建产物
 | [检索引擎与向量存储](03-features/05-retrieval-engines.md) | 各检索引擎（向量/BM25/全文/混合）能力对比、驱动选择、维度管理、打分归一化 |
 | [模型管理](03-features/06-models.md) | 5 类模型、26 个厂商 Provider、内置模型机制、Ollama 本地模型、限流与用量 |
 | [Agent 引擎](03-features/07-agent.md) | ReAct 循环、内置与动态工具、上下文与记忆管理、技能系统与沙箱、自定义 Agent、建议问题 |
-| [MCP 集成](03-features/08-mcp.md) | MCP 客户端管理、OAuth 2.0 + PKCE 全流程、工具启停与审批、智能体中台2.0 MCP Server（`tencent-weknora-mcp`，31 个工具） |
+| [MCP 集成](03-features/08-mcp.md) | MCP 客户端管理、OAuth 2.0 + PKCE 全流程、工具启停与审批、平台 MCP Server（`tencent-weknora-mcp`，31 个工具） |
 | [知识图谱](03-features/09-knowledge-graph.md) | 两级开关、LLM 实体关系抽取、Neo4j 存储、图谱增强检索 |
 | [网络搜索与网页抓取](03-features/11-web-search.md) | 13 个搜索引擎、SSRF 防护、web_fetch 双实现、SearXNG 自托管 |
 | [IM 集成](03-features/12-im-integration.md) | 10 个 IM 平台适配、消息处理流水线、内置命令、流式渲染、多实例协同 |
@@ -108,8 +108,8 @@ npm run preview  # 预览构建产物
 | [可观测性与审计](03-features/16-observability.md) | 日志体系、Langfuse 追踪、审计日志与保留策略、限流、健康检查 |
 | [FAQ 能力](03-features/17-faq.md) | FAQ 条目模型、批量导入与去重、检索命中策略、克隆同步 |
 | [会话与对话体验](03-features/18-chat-experience.md) | 进度条、问题大纲与引用面板、生成文件、导出对话、会话内临时附件、渠道会话可见性、跨会话历史搜索 |
-| [存储后端](03-features/19-storage-backends.md) | 多实例注册、空间默认与按库绑定、连通性测试、legacy 别名迁移 |
-| [平台管理与系统管理员](03-features/20-platform-admin.md) | 平台级身份与空间 Owner 的边界、首个管理员引导、创建用户、控制台四分区、运行时系统设置 |
+| [存储后端](03-features/19-storage-backends.md) | 多实例注册、租户默认与按库绑定、连通性测试、legacy 别名迁移 |
+| [平台管理与系统管理员](03-features/20-platform-admin.md) | 平台级身份与租户 Owner 的边界、首个管理员引导、创建用户、控制台四分区、运行时系统设置 |
 | [图片与文件的对外访问](03-features/21-file-access.md) | 四种 URL 形式、各渠道怎么取、IM/API 图片不显示的排查表 |
 | [技能目录与沙箱](03-features/22-skills-sandbox.md) | 目录/安装、Docker/Cube/E2B、网络策略、个人变量、生成文件 |
 

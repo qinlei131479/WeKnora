@@ -36,7 +36,7 @@
 
 智能体可以使用全部、指定或禁用的知识库及技能范围。对话中的提及用于选择本轮资料或提示优先技能，不能绕过已有授权。联网搜索同时受智能体配置和本轮请求开关约束。
 
-通过组织共享智能体后，接收方在授权范围内使用来源空间的模型与资料。共享智能体为只读，接收方不能修改其配置。
+通过组织共享智能体后，接收方在授权范围内使用来源租户的模型与资料。共享智能体为只读，接收方不能修改其配置。
 
 ## 处理工具审批与授权
 
@@ -86,8 +86,8 @@ smart-reasoning 下还可选**类型预设**（`Config.AgentType`，定义在 `c
 | Agent | `llm_call_timeout` | 单次 LLM 调用秒数，0 用全局默认（120s） |
 | Agent | `allowed_tools` | 工具白名单；空回退 DefaultAllowedTools |
 | MCP | `mcp_selection_mode`（all/selected/none）、`mcp_services`、`mcp_auth_wait_timeout` | OAuth 等待秒数 <=0 用 Gate 默认 |
-| 技能 | `skills_selection_mode`（all/selected/none）、`selected_skills`、`sandbox_config_id` | 选择空间沙箱及其已安装技能，见[技能目录与沙箱](22-skills-sandbox.md) |
-| 记忆 | `memory_enabled` | nil 继承空间，false 禁用本智能体的记忆读写 |
+| 技能 | `skills_selection_mode`（all/selected/none）、`selected_skills`、`sandbox_config_id` | 选择租户沙箱及其已安装技能，见[技能目录与沙箱](22-skills-sandbox.md) |
+| 记忆 | `memory_enabled` | nil 继承租户，false 禁用本智能体的记忆读写 |
 | 知识库 | `kb_selection_mode`（all/selected/none）、`knowledge_bases`、`retrieve_kb_only_when_mentioned`、`retain_retrieval_history` | retain=true 时历史 KB 检索结果不脱敏 |
 | 多模态 | `image_upload_enabled`、`vlm_model_id`、`audio_upload_enabled`、`asr_model_id`、`image_storage_provider` | VLM 也用于 MCP 工具返回图片的描述 |
 | 文件 | `supported_file_types`、`chat_parser_engine_rules`、`attachment_image_understanding`、`attachment_ocr_max_pages`、`attachment_parse_wait_timeout_sec` | 数据分析型 Agent 常限定 csv/xlsx |
@@ -518,7 +518,7 @@ var ToolCapabilityRequirements = map[string]ToolRequirement{
 
 ### 技能（Skills）系统 {#_5-技能-skills-系统}
 
-使用步骤、安装来源、沙箱连接、网络策略和环境变量见[技能目录与沙箱](22-skills-sandbox.md)。技能依赖智能体选择的空间沙箱配置，生产对话不加载宿主机 `skills/preloaded`。
+使用步骤、安装来源、沙箱连接、网络策略和环境变量见[技能目录与沙箱](22-skills-sandbox.md)。技能依赖智能体选择的租户沙箱配置，生产对话不加载宿主机 `skills/preloaded`。
 
 #### 渐进加载和作用域 {#_5-1-渐进加载和作用域}
 
@@ -526,11 +526,11 @@ var ToolCapabilityRequirements = map[string]ToolRequirement{
 
 `skills_selection_mode` 为 all/selected/none；selected 由 selected_skills 指定。运行时仅暴露所选沙箱中已安装且可用的技能。`@技能` 只把已授权的提及记录为本轮优先项，不收窄原白名单，也不会授权一个原本不可用的技能。
 
-统一入口为 `read_file` 和 `shell_exec(skill_name=..., command=...)`；旧 `read_skill`、`execute_skill_script` 不再注册。技能文件 URI 不是 shell 路径；执行包内脚本使用读取结果给出的目录或 `$WEKNORA_SKILL_DIR`。未选择空间沙箱配置时，脚本执行不可用。
+统一入口为 `read_file` 和 `shell_exec(skill_name=..., command=...)`；旧 `read_skill`、`execute_skill_script` 不再注册。技能文件 URI 不是 shell 路径；执行包内脚本使用读取结果给出的目录或 `$WEKNORA_SKILL_DIR`。未选择租户沙箱配置时，脚本执行不可用。
 
 #### 会话环境与文件 {#_5-2-会话环境与文件}
 
-Docker、Cube、E2B 都提供会话级沙箱。附件暂存、shell 执行和产物收集复用同一实例；沙箱身份绑定到会话，不能通过工具参数切换其他空间的运行环境。默认执行账号为沙箱内 root，隔离边界是沙箱本身。Docker 默认关闭，启用条件见[技能目录与沙箱](22-skills-sandbox.md#选择沙箱后端)。
+Docker、Cube、E2B 都提供会话级沙箱。附件暂存、shell 执行和产物收集复用同一实例；沙箱身份绑定到会话，不能通过工具参数切换其他租户的运行环境。默认执行账号为沙箱内 root，隔离边界是沙箱本身。Docker 默认关闭，启用条件见[技能目录与沙箱](22-skills-sandbox.md#选择沙箱后端)。
 
 | 路径 | 用途 |
 | --- | --- |

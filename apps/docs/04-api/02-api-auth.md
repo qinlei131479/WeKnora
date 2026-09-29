@@ -15,7 +15,7 @@
 | `username` | string | 是（`binding:"required"`） | 用户名 |
 | `email` | string | 是（`binding:"required"`） | 邮箱 |
 | `password` | string | 是（`binding:"required"`） | 密码 |
-| `tenant_provisioning` | string | 否 | 空间开通策略 |
+| `tenant_provisioning` | string | 否 | 租户开通策略 |
 
 响应：201 `{"success":true,"message":"...","user":{User}}`
 
@@ -26,7 +26,7 @@ curl -X POST $BASE/api/v1/auth/register -H 'Content-Type: application/json' \
 
 ### POST /api/v1/auth/register-by-invite
 
-用途：通过邀请/分享链接 token 注册并加入空间。免认证，IP 限流 30 次/分钟。Handler: `internal/handler/auth_register_by_invite.go`
+用途：通过邀请/分享链接 token 注册并加入租户。免认证，IP 限流 30 次/分钟。Handler: `internal/handler/auth_register_by_invite.go`
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
@@ -44,7 +44,7 @@ curl -X POST $BASE/api/v1/auth/register-by-invite -H 'Content-Type: application/
 
 ### POST /api/v1/auth/invitations/lookup
 
-用途：匿名查询邀请 token 对应的空间信息（注册前预览）。免认证，IP 限流。Handler: `internal/handler/auth_register_by_invite.go`
+用途：匿名查询邀请 token 对应的租户信息（注册前预览）。免认证，IP 限流。Handler: `internal/handler/auth_register_by_invite.go`
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
@@ -73,7 +73,7 @@ curl -X POST $BASE/api/v1/auth/login -H 'Content-Type: application/json' -d '{"e
 
 ### POST /api/v1/auth/auto-setup
 
-用途：一键初始化（自动建号建空间）。免认证，无请求体。Handler: `internal/handler/auth.go`
+用途：一键初始化（自动建号建租户）。免认证，无请求体。Handler: `internal/handler/auth.go`
 
 响应：200，同 Login。
 
@@ -93,16 +93,16 @@ curl $BASE/api/v1/auth/config
 
 ### POST /api/v1/auth/switch-tenant
 
-用途：切换当前活跃空间并换发 token。需登录（无空间也可调用）。Handler: `internal/handler/auth.go`
+用途：切换当前活跃租户并换发 token。需登录（无租户也可调用）。Handler: `internal/handler/auth.go`
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `tenant_id` | uint64 | 是（`binding:"required"`） | 目标空间 ID |
+| `tenant_id` | uint64 | 是（`binding:"required"`） | 目标租户 ID |
 | `refresh_token` | string | 否 | 用于换发新 token |
 
 响应：200，同 Login。
 
-换签成功会把目标空间写入账号级「最近活跃租户」偏好，下次登录（密码/OIDC/换设备）与 refresh 都回到该空间。refresh JWT 不含 `tenant_id`，因此偏好写入失败则整次换签失败、不会发出新 token。API 客户端无需再补发 `PUT /auth/me/preferences`。Web UI 切空间不走本接口。一次换签会改变该用户所有设备的下次落点。
+换签成功会把目标租户写入账号级「最近活跃租户」偏好，下次登录（密码/OIDC/换设备）与 refresh 都回到该租户。refresh JWT 不含 `tenant_id`，因此偏好写入失败则整次换签失败、不会发出新 token。API 客户端无需再补发 `PUT /auth/me/preferences`。Web UI 切租户不走本接口。一次换签会改变该用户所有设备的下次落点。
 
 ```bash
 curl -X POST $BASE/api/v1/auth/switch-tenant -H "Authorization: Bearer $TOKEN" \
@@ -169,7 +169,7 @@ curl -X POST $BASE/api/v1/auth/refresh -H 'Content-Type: application/json' -d '{
 
 ### GET /api/v1/auth/validate
 
-用途：校验当前 token 是否有效。需登录（无空间可调用）。Handler: `internal/handler/auth.go`
+用途：校验当前 token 是否有效。需登录（无租户可调用）。Handler: `internal/handler/auth.go`
 
 响应：200 `{"success":true,"message":"Token is valid","user":{UserInfo}}`
 
@@ -189,7 +189,7 @@ curl -X POST $BASE/api/v1/auth/logout -H "Authorization: Bearer $TOKEN"
 
 ### GET /api/v1/auth/me
 
-用途：查询当前调用者身份（用户/空间/成员关系/能力）。需登录；API key 亦可（策略 `apiKeyAny()`，任何有效 key）。Handler: `internal/handler/auth.go`
+用途：查询当前调用者身份（用户/租户/成员关系/能力）。需登录；API key 亦可（策略 `apiKeyAny()`，任何有效 key）。Handler: `internal/handler/auth.go`
 
 响应：200 `{"success":true,"data":{"user":{UserInfo},"tenant":{TenantResponse},"memberships":[...],"tenant_required":bool,"capabilities":{"can_create_tenant":bool,"auto_accept_invitation":bool}}}`
 
@@ -199,7 +199,7 @@ curl $BASE/api/v1/auth/me -H "X-API-Key: $API_KEY"
 
 ### PUT /api/v1/auth/me/preferences
 
-用途：更新个人偏好（最近活跃空间）。需登录。Handler: `internal/handler/auth.go`
+用途：更新个人偏好（最近活跃租户）。需登录。Handler: `internal/handler/auth.go`
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
@@ -234,7 +234,7 @@ curl -X POST $BASE/api/v1/auth/change-password -H "Authorization: Bearer $TOKEN"
 
 ### POST /api/v1/me/invitations/accept-by-token
 
-需登录，仅操作当前用户，无空间的新用户也可调用。请求 `{"token":"<invite-token>"}`；有效共享邀请使当前用户加入对应空间。无效、过期、撤销的链接返回 410；空 token 返回 400。成功响应为 `{success:true,data:{membership:{tenant_id,role,status,joined_at},tenant_name}}`，前端据此切换空间。
+需登录，仅操作当前用户，无租户的新用户也可调用。请求 `{"token":"<invite-token>"}`；有效共享邀请使当前用户加入对应租户。无效、过期、撤销的链接返回 410；空 token 返回 400。成功响应为 `{success:true,data:{membership:{tenant_id,role,status,joined_at},tenant_name}}`，前端据此切换租户。
 
 ```bash
 curl -X POST "$BASE/api/v1/me/invitations/accept-by-token" \
@@ -244,7 +244,7 @@ curl -X POST "$BASE/api/v1/me/invitations/accept-by-token" \
 
 ## 我的邀请（/api/v1/me/invitations）
 
-服务层保证“仅被邀请人可接受/拒绝”；无角色下限（无空间的新用户也可用）。Handler: `internal/handler/tenant_invitation.go`
+服务层保证“仅被邀请人可接受/拒绝”；无角色下限（无租户的新用户也可用）。Handler: `internal/handler/tenant_invitation.go`
 
 ### GET /api/v1/me/invitations
 

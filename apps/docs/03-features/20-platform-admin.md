@@ -1,17 +1,17 @@
 # 平台管理与系统管理员
 
-系统管理员负责整个 智能体中台2.0 部署的全局设置、任务队列、平台 API Key 和跨空间审计。空间 Owner 负责单个工作空间，两类身份分别授予。空间角色说明见[租户、用户与认证授权](01-tenant-auth.md)。
+系统管理员负责整个平台部署的全局设置、任务队列、平台 API Key 和跨租户审计。租户 Owner 负责单个租户，两类身份分别授予。租户角色说明见[租户、用户与认证授权](01-tenant-auth.md)。
 
 两类身份的管理范围如下：
 
-| | 空间 Owner | 系统管理员 |
+| | 租户 Owner | 系统管理员 |
 | --- | --- | --- |
-| 作用范围 | 单个工作空间 | 整个部署 |
-| 授予方式 | 创建空间时获得，或由原 Owner 转让 | 由现有系统管理员授予，首个管理员通过环境变量引导 |
-| 管理内容 | 空间成员、模型、知识库、集成、空间审计 | 全局系统设置、任务队列、平台 API Key、跨空间审计、重置用户密码 |
-| 是否自动叠加 | — | **不会**：在某空间是 Owner 不代表是系统管理员，反之亦然 |
+| 作用范围 | 单个租户 | 整个部署 |
+| 授予方式 | 创建租户时获得，或由原 Owner 转让 | 由现有系统管理员授予，首个管理员通过环境变量引导 |
+| 管理内容 | 租户成员、模型、知识库、集成、租户审计 | 全局系统设置、任务队列、平台 API Key、跨租户审计、重置用户密码 |
+| 是否自动叠加 | — | **不会**：在某租户是 Owner 不代表是系统管理员，反之亦然 |
 
-跨空间数据访问由 `CanAccessAllTenants` 单独控制。系统管理员身份不会自动授予其他空间的知识库内容访问权。
+跨租户数据访问由 `CanAccessAllTenants` 单独控制。系统管理员身份不会自动授予其他租户的知识库内容访问权。
 
 <Screenshot
   src="/screenshots/settings-system-admin.png"
@@ -36,19 +36,19 @@
 
 | 分区 | 作用 | 接口 |
 | --- | --- | --- |
-| 系统设置 | 全局运行时开关（注册模式、空间策略、并发、SSRF 白名单等），按设置项的生效规则应用，见下方设置表 | `GET/PUT/DELETE /system/admin/settings[/:key]` |
+| 系统设置 | 全局运行时开关（注册模式、租户策略、并发、SSRF 白名单等），按设置项的生效规则应用，见下方设置表 | `GET/PUT/DELETE /system/admin/settings[/:key]` |
 | 任务队列 | 查看 asynq 各队列实时积压、逐个任务的重试/归档/删除、批量清空归档任务；未启用队列时返回 `available=false` | `/system/admin/runtime/queues*` |
 | 平台 API Key | 面向控制面自动化的 platform 作用域 Key，能力包括 `system_tenants_read/manage`、`system_settings_read/manage`、`system_runtime_read/manage`、`system_audit_read` | `/system/admin/api-keys` |
-| 系统审计日志 | `tenant_id = 0` 的平台级事件（改设置、提升/撤销管理员、队列操作等）。空间级审计接口按 tenant 过滤，看不到这些行 | `GET /system/admin/audit-log` |
+| 系统审计日志 | `tenant_id = 0` 的平台级事件（改设置、提升/撤销管理员、队列操作等）。租户级审计接口按 tenant 过滤，看不到这些行 | `GET /system/admin/audit-log` |
 
 系统管理员还可执行以下操作：
 
 - **重置用户密码**（`POST /system/admin/users/reset-password`）：替换目标用户的本地密码并吊销其全部会话。**不能给自己重置**——自助改密码仍要求提供旧密码；
-- **批量套用默认存储配额**（`POST /system/admin/tenants/apply-default-storage-quota`）：把当前的默认配额写到所有已存在的空间上。该操作更新已有空间的配额数据。
+- **批量套用默认存储配额**（`POST /system/admin/tenants/apply-default-storage-quota`）：把当前的默认配额写到所有已存在的租户上。该操作更新已有租户的配额数据。
 
 ### 创建用户
 
-系统管理员可在系统设置中创建本地账号，填写用户名、邮箱，并选择自动生成密码或指定符合策略的密码。空间分配遵循 `auth.default_tenant_mode`：`create_personal` 创建个人空间，`tenantless` 等待用户加入空间。
+系统管理员可在系统设置中创建本地账号，填写用户名、邮箱，并选择自动生成密码或指定符合策略的密码。租户分配遵循 `auth.default_tenant_mode`：`create_personal` 创建个人租户，`tenantless` 等待用户加入租户。
 
 自动生成的密码仅在本次创建结果显示，应当场复制完整账号信息；关闭结果后不能再次查询明文。重复身份返回已有用户，不改密码；邮箱和用户名分别指向不同用户时拒绝创建。接口见[系统 API](../04-api/02-api-system.md)。
 
@@ -63,9 +63,9 @@
 | `auth.registration_mode` | `self_serve` / `invite_only` | `self_serve` | 立即 |
 | `auth.default_tenant_mode` | `create_personal` / `tenantless` | `create_personal` | 只影响之后注册的新用户 |
 | `tenant.self_service_creation_enabled` | bool | `true` | 立即 |
-| `tenant.max_owned_per_user` | int | `10`（0 = 用内置默认，负数 = 关闭限额） | 每次建空间时读取 |
-| `tenant.default_storage_quota_gb` | int | `10` | **仅新建空间时读取**，不回写已有空间 |
-| `tenant.auto_create_api_key` | bool | `false` | 每次建空间时读取 |
+| `tenant.max_owned_per_user` | int | `10`（0 = 用内置默认，负数 = 关闭限额） | 每次建租户时读取 |
+| `tenant.default_storage_quota_gb` | int | `10` | **仅新建租户时读取**，不回写已有租户 |
+| `tenant.auto_create_api_key` | bool | `false` | 每次建租户时读取 |
 | `ssrf.whitelist` | 字符串列表 | 空 | 立即（`SSRF_WHITELIST_EXTRA` 仍只由部署方维护，不在此覆盖） |
 | `asynq.core/postprocess/enrichment/maintenance/shared/wiki_concurrency` | int | 见[异步任务系统](../02-architecture/05-async-tasks.md) | 各 worker pool 重新装配 |
 | `model.max_concurrency` | int | `32` | 立即 |
@@ -78,7 +78,7 @@
 | `tenant.auto_accept_invitation` | false | 邮箱邀请已注册用户时直接写入成员关系 |
 | `sandbox.docker_enabled` | false | 开放 Docker 沙箱配置和实例创建 |
 
-`tenant.auto_create_api_key` 默认关闭。依赖旧版注册响应的集成可启用此兼容开关，使新空间自动创建 full-access Key 并返回明文。
+`tenant.auto_create_api_key` 默认关闭。依赖旧版注册响应的集成可启用此兼容开关，使新租户自动创建 full-access Key 并返回明文。
 
 ::: tip 重置运行时设置
 控制台保存设置后，修改对应环境变量不会覆盖数据库值。排查配置未生效时，先检查运行时设置；重置（`DELETE /system/admin/settings/:key`）会删除数据库覆盖值，恢复使用环境变量或内置默认值。
@@ -86,7 +86,7 @@
 
 ## 相关文档 {#相关}
 
-- 空间内的四级角色与 API Key：[租户、用户与认证授权](01-tenant-auth.md)
+- 租户内的四级角色与 API Key：[租户、用户与认证授权](01-tenant-auth.md)
 - 队列拓扑与 worker pool：[异步任务系统](../02-architecture/05-async-tasks.md)
 - 审计日志与追踪：[可观测性与审计](16-observability.md)
 - 接口清单：[系统与平台管理 API](../04-api/02-api-system.md)

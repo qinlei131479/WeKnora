@@ -1,32 +1,32 @@
-# API 参考：租户（空间）与成员
+# API 参考：租户与成员
 
-管理工作空间、成员、邀请、API Key 和审计日志。操作作用于当前活跃空间，跨空间访问按接口权限校验。
+管理租户、成员、邀请、API Key 和审计日志。操作作用于当前活跃租户，跨租户访问按接口权限校验。
 
-所有 `/tenants/:id/*` 路由在组级挂载 `PathTenantMatch()`（`internal/middleware/access.go`）：URL 中的 `:id` 必须等于当前活跃空间（跨空间超管例外），防止越权操作他人空间。
+所有 `/tenants/:id/*` 路由在组级挂载 `PathTenantMatch()`（`internal/middleware/access.go`）：URL 中的 `:id` 必须等于当前活跃租户（跨租户超管例外），防止越权操作他人租户。
 
-## 空间生命周期
+## 租户生命周期
 
 ### POST /api/v1/tenants
 
-用途：创建空间（自助开新工作区；调用者自动成为 Owner）。权限：任何已登录用户（可无空间）；API key 仅平台 key 且具 `system_tenants_manage`。Handler: `internal/handler/tenant.go`
+用途：自助创建租户，调用者自动成为 Owner。权限：任何已登录用户（可无租户）；API key 仅平台 key 且具 `system_tenants_manage`。Handler: `internal/handler/tenant.go`
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `name` | string | 是（`binding:"required,min=1,max=128"`） | 空间名称 |
+| `name` | string | 是（`binding:"required,min=1,max=128"`） | 租户名称 |
 | `description` | string | 否（`binding:"max=512"`） | 描述 |
 
-跨空间超管可提交完整 `types.Tenant`（含 `storage_quota`、`status` 等）。
+跨租户超管可提交完整 `types.Tenant`（含 `storage_quota`、`status` 等）。
 
 响应：201 `{"success":true,"data":{Tenant}}`（配置允许时可能携带 `api_key`）。自助创建被禁用返回 403（code 2005），超配额返回 429。
 
 ```bash
 curl -X POST $BASE/api/v1/tenants -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' -d '{"name":"我的空间"}'
+  -H 'Content-Type: application/json' -d '{"name":"我的租户"}'
 ```
 
 ### GET /api/v1/tenants
 
-用途：列出我可访问的空间。权限：已登录；API key 需 `manage_tenant_settings` 或 full-access。Handler: `internal/handler/tenant.go`
+用途：列出我可访问的租户。权限：已登录；API key 需 `manage_tenant_settings` 或 full-access。Handler: `internal/handler/tenant.go`
 
 响应：200 `{"success":true,"data":{"items":[TenantResponse]}}`
 
@@ -36,7 +36,7 @@ curl $BASE/api/v1/tenants -H "Authorization: Bearer $TOKEN"
 
 ### GET /api/v1/tenants/all
 
-用途：列出全部空间（跨空间超管）。权限：`CrossTenant()`（`CanAccessAllTenants` 且集群开启 `EnableCrossTenantAccess`）；平台 key 需 `system_tenants_read|manage`。Handler: `internal/handler/tenant.go`
+用途：列出全部租户（跨租户超管）。权限：`CrossTenant()`（`CanAccessAllTenants` 且集群开启 `EnableCrossTenantAccess`）；平台 key 需 `system_tenants_read|manage`。Handler: `internal/handler/tenant.go`
 
 响应：200 `{"success":true,"data":{"items":[TenantResponse]}}`
 
@@ -46,12 +46,12 @@ curl $BASE/api/v1/tenants/all -H "Authorization: Bearer $TOKEN"
 
 ### GET /api/v1/tenants/search
 
-用途：按关键字搜索空间（跨空间超管）。权限：同上。Handler: `internal/handler/tenant.go`
+用途：按关键字搜索租户（跨租户超管）。权限：同上。Handler: `internal/handler/tenant.go`
 
 | 查询参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | `keyword` | string | 否 | 关键字 |
-| `tenant_id` | string | 否 | 精确空间 ID |
+| `tenant_id` | string | 否 | 精确租户 ID |
 | `page` / `page_size` | int | 否 | 分页（默认 1/20，上限 100） |
 
 响应：200 `{"success":true,"data":{"items":[...],"total","page","page_size"}}`
@@ -62,7 +62,7 @@ curl "$BASE/api/v1/tenants/search?keyword=demo&page=1" -H "Authorization: Bearer
 
 ### GET /api/v1/tenants/:id
 
-用途：空间详情。权限：Viewer+；平台 key 需 `system_tenants_read|manage`。Handler: `internal/handler/tenant.go`
+用途：租户详情。权限：Viewer+；平台 key 需 `system_tenants_read|manage`。Handler: `internal/handler/tenant.go`
 
 响应：200 `{"success":true,"data":{TenantResponse}}`
 
@@ -72,7 +72,7 @@ curl $BASE/api/v1/tenants/1 -H "Authorization: Bearer $TOKEN"
 
 ### PUT /api/v1/tenants/:id
 
-用途：更新空间配置。权限：Owner；平台 key 需 `system_tenants_manage`。Handler: `internal/handler/tenant.go`
+用途：更新租户配置。权限：Owner；平台 key 需 `system_tenants_manage`。Handler: `internal/handler/tenant.go`
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
@@ -88,7 +88,7 @@ curl -X PUT $BASE/api/v1/tenants/1 -H "Authorization: Bearer $TOKEN" \
 
 ### DELETE /api/v1/tenants/:id
 
-用途：删除空间。权限：Owner；平台 key 需 `system_tenants_manage`。Handler: `internal/handler/tenant.go`
+用途：删除租户。权限：Owner；平台 key 需 `system_tenants_manage`。Handler: `internal/handler/tenant.go`
 
 响应：200 `{"success":true,"message":"Workspace deleted successfully"}`
 
@@ -96,13 +96,13 @@ curl -X PUT $BASE/api/v1/tenants/1 -H "Authorization: Bearer $TOKEN" \
 curl -X DELETE $BASE/api/v1/tenants/1 -H "Authorization: Bearer $TOKEN"
 ```
 
-## 空间 KV 配置
+## 租户 KV 配置
 
-`:key` 为配置键而非空间 ID（空间取自认证上下文），可选值：`web-search-config`、`prompt-templates`、`parser-engine-config`、`storage-engine-config`、`chat-history-config`、`retrieval-config`、`memory-config`。
+`:key` 为配置键而非租户 ID（租户取自认证上下文），可选值：`web-search-config`、`prompt-templates`、`parser-engine-config`、`storage-engine-config`、`chat-history-config`、`retrieval-config`、`memory-config`。
 
 ### GET /api/v1/tenants/kv/:key
 
-用途：读取空间级 KV 配置。权限：Viewer+；API key 需 `manage_tenant_settings` 或 full-access。Handler: `internal/handler/tenant.go`
+用途：读取租户级 KV 配置。权限：Viewer+；API key 需 `manage_tenant_settings` 或 full-access。Handler: `internal/handler/tenant.go`
 
 响应：200 `{"success":true,"data":{...对应配置对象...}}`
 
@@ -112,7 +112,7 @@ curl $BASE/api/v1/tenants/kv/retrieval-config -H "Authorization: Bearer $TOKEN"
 
 ### PUT /api/v1/tenants/kv/:key
 
-用途：更新空间级 KV 配置。权限：Admin+；API key 需 `manage_tenant_settings` 或 full-access。请求体：与 `:key` 对应的配置 JSON 对象。Handler: `internal/handler/tenant.go`
+用途：更新租户级 KV 配置。权限：Admin+；API key 需 `manage_tenant_settings` 或 full-access。请求体：与 `:key` 对应的配置 JSON 对象。Handler: `internal/handler/tenant.go`
 
 响应：200 `{"success":true,"message":"Configuration updated"}`
 
@@ -125,7 +125,7 @@ curl -X PUT $BASE/api/v1/tenants/kv/web-search-config -H "Authorization: Bearer 
 
 ### GET /api/v1/tenants/:id/api-keys
 
-用途：列出空间 API key（掩码显示）。权限：Owner，仅 JWT（API key 默认拒绝）。Handler: `internal/handler/tenant.go`
+用途：列出租户 API key（掩码显示）。权限：Owner，仅 JWT（API key 默认拒绝）。Handler: `internal/handler/tenant.go`
 
 响应：200 `{"success":true,"data":[{id,scope_type,name,api_key(掩码),full_access,knowledge_base_ids,capabilities,last_used_at,expires_at,created_at}]}`
 
@@ -135,12 +135,12 @@ curl $BASE/api/v1/tenants/1/api-keys -H "Authorization: Bearer $TOKEN"
 
 ### POST /api/v1/tenants/:id/api-keys
 
-用途：创建空间 API key（明文仅返回一次）。权限：Owner，仅 JWT。Handler: `internal/handler/tenant.go`
+用途：创建租户 API key（明文仅返回一次）。权限：Owner，仅 JWT。Handler: `internal/handler/tenant.go`
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | `name` | string | 是 | key 名称 |
-| `full_access` | bool | 否 | 空间全权 key（默认 false） |
+| `full_access` | bool | 否 | 租户全权 key（默认 false） |
 | `knowledge_base_ids` | []string | 否 | KB 白名单（scoped key） |
 | `capabilities` | []string | 否 | capability 列表（见总览） |
 | `expires_at_unix` | *int64 | 否 | 过期时间戳 |
@@ -276,7 +276,7 @@ curl -X DELETE $BASE/api/v1/tenants/1/members/u-123 -H "Authorization: Bearer $T
 
 ### POST /api/v1/tenants/:id/leave
 
-用途：退出空间（任何成员可自行退出；服务层拒绝导致空间无 Owner 的退出）。权限：Viewer+，仅 JWT。
+用途：退出租户（任何成员可自行退出；服务层拒绝导致租户无 Owner 的退出）。权限：Viewer+，仅 JWT。
 
 响应：200 `{"success":true}`
 
@@ -284,13 +284,13 @@ curl -X DELETE $BASE/api/v1/tenants/1/members/u-123 -H "Authorization: Bearer $T
 curl -X POST $BASE/api/v1/tenants/1/leave -H "Authorization: Bearer $TOKEN"
 ```
 
-## 空间邀请（/tenants/:id/invitations 与 invite-links）
+## 租户邀请（/tenants/:id/invitations 与 invite-links）
 
 Handler: `internal/handler/tenant_invitation.go`、`internal/handler/tenant_invite_link.go`。API key 需 `manage_members` 或 full-access。
 
 ### GET /api/v1/tenants/:id/invitations
 
-用途：空间邀请列表。权限：Viewer+。
+用途：租户邀请列表。权限：Viewer+。
 
 | 查询参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
@@ -352,7 +352,7 @@ Handler: `internal/handler/audit_log.go`。游标分页。
 
 ### GET /api/v1/tenants/:id/audit-log
 
-用途：空间审计日志（含被拒绝操作记录）。权限：Admin+，仅 JWT。
+用途：租户审计日志（含被拒绝操作记录）。权限：Admin+，仅 JWT。
 
 | 查询参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |

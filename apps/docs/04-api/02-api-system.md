@@ -1,6 +1,6 @@
 # API 参考：系统与平台管理
 
-提供部署级系统信息和平台管理接口，包括全局设置、任务队列、平台 API Key、跨空间审计和用户密码重置。功能说明见[平台管理与系统管理员](../03-features/20-platform-admin.md)。
+提供部署级系统信息和平台管理接口，包括全局设置、任务队列、平台 API Key、跨租户审计和用户密码重置。功能说明见[平台管理与系统管理员](../03-features/20-platform-admin.md)。
 
 `/system/admin/*` 全组挂 `SystemAdmin()` 守卫；平台 API Key 按能力细分（`system_settings_read/manage`、`system_runtime_read/manage`、`system_tenants_read/manage`、`system_audit_read`）。
 
@@ -126,7 +126,7 @@ curl $BASE/api/v1/system/admin/list -H "Authorization: Bearer $TOKEN"
 | 400 | 参数或密码策略不满足 |
 | 409 | 邮箱与用户名对应不同身份 |
 
-这是原始响应对象，没有 success/data 包装，也没有 idempotent 字段。用 HTTP 状态区分新增与已有账号。空间分配遵循 auth.default_tenant_mode。
+这是原始响应对象，没有 success/data 包装，也没有 idempotent 字段。用 HTTP 状态区分新增与已有账号。租户分配遵循 auth.default_tenant_mode。
 
 ```bash
 curl -i -X POST "$BASE/api/v1/system/admin/users/create" \
@@ -250,7 +250,7 @@ curl -X DELETE $BASE/api/v1/system/admin/runtime/queues/default/archived -H "Aut
 
 ### POST /api/v1/system/admin/tenants/apply-default-storage-quota
 
-用途：把当前默认存储配额批量写到全部空间（平台 key 需 `system_tenants_manage`）。无请求体。
+用途：把当前默认存储配额批量写到全部租户（平台 key 需 `system_tenants_manage`）。无请求体。
 
 响应：200 `{"affected":N,"quota_bytes":N,"quota_gb":N}`
 
@@ -260,7 +260,7 @@ curl -X POST $BASE/api/v1/system/admin/tenants/apply-default-storage-quota -H "A
 
 ### GET /api/v1/system/admin/audit-log
 
-用途：平台级审计日志（tenant_id=0 行；平台 key 需 `system_audit_read`）。查询参数同空间审计（`after_id/limit/action/outcome/actor`）。Handler: `internal/handler/audit_log.go`
+用途：平台级审计日志（tenant_id=0 行；平台 key 需 `system_audit_read`）。查询参数同租户审计（`after_id/limit/action/outcome/actor`）。Handler: `internal/handler/audit_log.go`
 
 响应：200 `{"success":true,"data":[AuditLog],"next_cursor":N}`
 

@@ -1,39 +1,39 @@
 # 租户、用户与认证授权
 
-工作空间是 智能体中台2.0 的资源与权限边界，知识库、模型、智能体、会话和存储配额均归属空间。一个用户可以加入多个空间，并在各空间拥有不同角色。组织用于连接多个空间，共享知识库和智能体。后端使用 Tenant 表示工作空间。
+租户是平台的资源与权限边界，知识库、模型、智能体、会话和存储配额均归属租户。一个用户可以加入多个租户，并在各租户拥有不同角色。组织用于连接多个租户，共享知识库和智能体。后端使用 Tenant 表示租户。
 
 成员邀请、资源共享和 API 接入的入口如下。管理整个部署需要独立的平台权限。
 
 | 操作 | 入口与要求 |
 | --- | --- |
-| 邀请团队成员 | 空间设置 → 成员 → 邀请，并给对方一个角色（Owner / Admin / Contributor / Viewer） |
-| 把知识库共享给另一个团队 | 建组织 → 把两个空间都加进去 → 在知识库上「共享到组织」 |
-| 接入 API | 空间设置 → API Key，按需勾选能力（检索 / 问答 / 入库 / 管理），必要时限定可访问的知识库 |
-| 管理整个部署（全局设置、任务队列、跨空间审计） | 需要**系统管理员**身份，与空间 Owner 独立授予，见[平台管理与系统管理员](20-platform-admin.md) |
-| 删除整个空间 | 空间设置里由 **Owner** 触发（`DELETE /tenants/:id`）；会一并删除该空间的知识库、Agent、会话与成员关系，不可撤销 |
+| 邀请团队成员 | 租户设置 → 成员 → 邀请，并给对方一个角色（Owner / Admin / Contributor / Viewer） |
+| 把知识库共享给另一个团队 | 建组织 → 把两个租户都加进去 → 在知识库上「共享到组织」 |
+| 接入 API | 租户设置 → API Key，按需勾选能力（检索 / 问答 / 入库 / 管理），必要时限定可访问的知识库 |
+| 管理整个部署（全局设置、任务队列、跨租户审计） | 需要**系统管理员**身份，与租户 Owner 独立授予，见[平台管理与系统管理员](20-platform-admin.md) |
+| 删除整个租户 | 租户设置里由 **Owner** 触发（`DELETE /tenants/:id`）；会一并删除该租户的知识库、Agent、会话与成员关系，不可撤销 |
 
 <Screenshot
   src="/screenshots/settings-members.png"
-  caption="空间成员管理：成员角色与邀请入口"
+  caption="租户成员管理：成员角色与邀请入口"
   hint="展示成员列表、角色下拉与「邀请成员」按钮，最好含一条 pending 邀请。" />
 
-Viewer 可浏览和提问，Contributor 可创建知识库与上传文档，Admin 管理成员和空间设置，Owner 还可删除或转让空间。资源修改同时受所有权或共享权限约束，角色矩阵见参考部分。
+Viewer 可浏览和提问，Contributor 可创建知识库与上传文档，Admin 管理成员和租户设置，Owner 还可删除或转让租户。资源修改同时受所有权或共享权限约束，角色矩阵见参考部分。
 
-用户可通过密码或 OIDC 单点登录；程序通过 API Key 访问。登录用户的权限由空间角色和资源归属决定，API Key 则按授予的能力与知识库范围校验。
+用户可通过密码或 OIDC 单点登录；程序通过 API Key 访问。登录用户的权限由租户角色和资源归属决定，API Key 则按授予的能力与知识库范围校验。
 
 ## 邀请成员与分配角色
 
-在空间设置的「成员」中邀请用户，并按其工作范围分配角色。受邀用户接受后加入当前空间；公开注册关闭时，可通过有效邀请完成注册。已有用户也可接受邀请加入新空间，无需创建第二个账号。
+在租户设置的「成员」中邀请用户，并按其工作范围分配角色。受邀用户接受后加入当前租户；公开注册关闭时，可通过有效邀请完成注册。已有用户也可接受邀请加入新租户，无需创建第二个账号。
 
-空间成员角色决定该用户在当前空间内能执行的操作。
+租户成员角色决定该用户在当前租户内能执行的操作。
 
 ## 为程序配置 API Key
 
-在空间设置中创建 API Key，按任务选择检索、问答、入库或管理能力；需要限定资料范围时，再指定可访问的知识库。程序通过 `X-API-Key` 请求头携带凭据，具体能力与资源限制见参考部分。
+在租户设置中创建 API Key，按任务选择检索、问答、入库或管理能力；需要限定资料范围时，再指定可访问的知识库。程序通过 `X-API-Key` 请求头携带凭据，具体能力与资源限制见参考部分。
 
-## 管理空间与平台权限
+## 管理租户与平台权限
 
-删除空间由 Owner 执行，会删除该空间的知识库、智能体、会话和成员关系。全局设置、平台任务队列及跨空间审计由系统管理员管理，详见[平台管理与系统管理员](20-platform-admin.md)。
+删除租户由 Owner 执行，会删除该租户的知识库、智能体、会话和成员关系。全局设置、平台任务队列及跨租户审计由系统管理员管理，详见[平台管理与系统管理员](20-platform-admin.md)。
 
 ## 概念总览
 
@@ -43,8 +43,8 @@ graph TB
         U["User (登录主体, email 唯一)"]
     end
     subgraph tenants["租户层 (资源隔离边界)"]
-        T1["Tenant A (个人空间)"]
-        T2["Tenant B (团队空间)"]
+        T1["Tenant A (个人租户)"]
+        T2["Tenant B (团队租户)"]
     end
     subgraph org["协作层"]
         O["Organization (组织 / 共享空间)"]
@@ -126,7 +126,7 @@ type registerByInviteRequest struct {
 
 #### 已注册用户通过邀请链接加入
 
-invite_only 部署中，邀请页面引导用户先登录，再向 `POST /me/invitations/accept-by-token` 提交 token 加入空间；不需要为已注册邮箱再创建账号。没有默认空间的用户首次加入后，以该空间作为默认空间。`register-by-invite` 仍是凭有效邀请创建新账号的 API。
+invite_only 部署中，邀请页面引导用户先登录，再向 `POST /me/invitations/accept-by-token` 提交 token 加入租户；不需要为已注册邮箱再创建账号。没有默认租户的用户首次加入后，以该租户作为默认租户。`register-by-invite` 仍是凭有效邀请创建新账号的 API。
 
 邮箱邀请已注册用户还受 `tenant.auto_accept_invitation` 控制：默认 false，创建 pending 邀请并等收件箱确认；true 时直接加入，返回 active 成员并处理已有 pending 邀请。前端从 `GET /auth/me` 的 `capabilities.auto_accept_invitation` 感知该开关。它不把任意共享链接变成免登录入口。
 
@@ -171,9 +171,9 @@ Handler：`internal/handler/tenant_member.go`、`tenant_invitation.go`。`/tenan
 - `Searchable=true` 的组织可被 `SearchSearchableOrganizations` 发现；
 - 邀请码与待审批数仅对"组织 admin 或 owner 租户"可见（`internal/handler/organization.go` 中 `isAdmin || isOwner` 判定）。
 
-#### 邀请搜索：按空间（租户）而非按用户 {#_8-2-邀请搜索-按空间-租户-而非按用户}
+#### 邀请搜索：按租户而非按用户 {#_8-2-邀请搜索-按空间-租户-而非按用户}
 
-组织邀请以工作空间为目标。`GET /organizations/:id/search-tenants` 按空间名称匹配，仅组织 admin 可调用。一个用户可能属于多个空间，搜索结果因此返回空间候选项：
+组织邀请以租户为目标。`GET /organizations/:id/search-tenants` 按租户名称匹配，仅组织 admin 可调用。一个用户可能属于多个租户，搜索结果因此返回租户候选项：
 
 ```go
 // SearchTenantsForInvite：
@@ -425,7 +425,7 @@ r.GET("/auth/oidc/callback", handler.OIDCRedirectCallback)    // 授权码回调
 ```mermaid
 sequenceDiagram
     participant B as "浏览器 (SPA)"
-    participant W as "智能体中台2.0 后端"
+    participant W as "平台后端"
     participant IdP as "OIDC Provider"
     B->>W: GET /auth/oidc/url?redirect_uri=...
     W->>W: 生成 nonce(24B), 签名 state={nonce, redirect_uri}
@@ -505,11 +505,11 @@ refreshClaims := jwt.MapClaims{
 3. 查 `auth_tokens` 表检查 `IsRevoked`（登出 = 撤销记录）；
 4. 从 claims 提取 `user_id` 加载用户、`tenant_id` 作为激活租户。
 
-**租户切换即换发 token**：`SwitchTenant` 校验目标租户的 active 成员资格（跨租户超级用户除外）后，先把目标空间写入「最近活跃租户」偏好（`Preferences.LastActiveTenantID`），再签发携带新 `tenant_id` claim 的 token 对，并尽力撤销旧 refresh token。refresh JWT 不含 `tenant_id`，下次登录与 refresh 都按该偏好落点；偏好写入失败则整次换签失败。切回 home 时写入 home ID（与 SPA 发送 `0` 清偏好在当前落点语义上等价）。该偏好是账号级的，一次换签会改变所有设备的下次落点。
+**租户切换即换发 token**：`SwitchTenant` 校验目标租户的 active 成员资格（跨租户超级用户除外）后，先把目标租户写入「最近活跃租户」偏好（`Preferences.LastActiveTenantID`），再签发携带新 `tenant_id` claim 的 token 对，并尽力撤销旧 refresh token。refresh JWT 不含 `tenant_id`，下次登录与 refresh 都按该偏好落点；偏好写入失败则整次换签失败。切回 home 时写入 home ID（与 SPA 发送 `0` 清偏好在当前落点语义上等价）。该偏好是账号级的，一次换签会改变所有设备的下次落点。
 
 ### 数据模型 {#_1-数据模型}
 
-#### Tenant（租户 / 工作空间） {#_1-1-tenant-租户-工作空间}
+#### Tenant（租户） {#_1-1-tenant-租户-工作空间}
 
 `internal/types/tenant.go`：
 
@@ -564,8 +564,8 @@ type UserPreferences struct {
 
 两个特殊标志：
 
-- `CanAccessAllTenants`：跨空间超级用户。**必须两个开关同时为真**才生效——用户行上的 `CanAccessAllTenants`，以及部署级的 `tenant.enable_cross_tenant_access` / `WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS`（`middleware/access.go` 的 `IsCrossTenantSuperuser()` 先查配置再查用户；配置关掉时登录响应里这个字段也会被抹成 false）。生效后可绕过空间角色检查，访问 `/tenants/all`、`/tenants/search` 等跨空间端点。注意 `POST /tenants`（新建空间）**不属于**跨空间端点，任何已登录用户都能调（受自助创建策略与配额限制）。
-- `IsSystemAdmin`：平台级管理员（system admin），独立于任何租户角色，用于 `/system/admin/*` 控制面。它管的是整个部署而不是某个空间，怎么产生第一个、能做什么见[平台管理与系统管理员](20-platform-admin.md)。
+- `CanAccessAllTenants`：跨租户超级用户。**必须两个开关同时为真**才生效——用户行上的 `CanAccessAllTenants`，以及部署级的 `tenant.enable_cross_tenant_access` / `WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS`（`middleware/access.go` 的 `IsCrossTenantSuperuser()` 先查配置再查用户；配置关掉时登录响应里这个字段也会被抹成 false）。生效后可绕过租户角色检查，访问 `/tenants/all`、`/tenants/search` 等跨租户端点。注意 `POST /tenants`（新建租户）**不属于**跨租户端点，任何已登录用户都能调（受自助创建策略与配额限制）。
+- `IsSystemAdmin`：平台级管理员（system admin），独立于任何租户角色，用于 `/system/admin/*` 控制面。它管的是整个部署而不是某个租户，怎么产生第一个、能做什么见[平台管理与系统管理员](20-platform-admin.md)。
 
 #### TenantMember 与租户角色 {#_1-3-tenantmember-与租户角色}
 
@@ -603,7 +603,7 @@ type TenantMember struct {
 }
 ```
 
-登录响应里返回 `Membership{TenantID, TenantName, Role}` 投影列表，前端据此渲染工作空间切换器。
+登录响应里返回 `Membership{TenantID, TenantName, Role}` 投影列表，前端据此渲染租户切换器。
 
 #### TenantAPIKey（API Key） {#_1-4-tenantapikey-api-key}
 

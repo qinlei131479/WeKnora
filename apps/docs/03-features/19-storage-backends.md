@@ -1,6 +1,6 @@
 # 存储后端（Storage Backends）
 
-存储后端保存原始文件、解析图片和导出产物。一个空间可以注册多个实例，指定默认实例，并为知识库单独选择存储位置。
+存储后端保存原始文件、解析图片和导出产物。一个租户可以注册多个实例，指定默认实例，并为知识库单独选择存储位置。
 
 > 当前业务控制台默认可选存储：**local、MinIO、OSS、COS**。
 
@@ -17,11 +17,11 @@
 
 ## 注册和选择存储后端 {#怎么配}
 
-空间 Admin 可在「设置 → 存储」注册和管理实例：
+租户 Admin 可在「设置 → 存储」注册和管理实例：
 
 1. 新建后端，选 provider（`local` / `minio` / `cos` / `oss` / `s3` / `tos` / `obs` 等，与[文档入库流程](../02-architecture/03-document-pipeline.md)里的存储 provider 一致），填连接参数；
 2. **测试连接**：测试会实际读写存储，验证端点、存储桶和凭据；
-3. 将实例设为空间默认。新建知识库未指定实例时使用该默认值；
+3. 将实例设为租户默认。新建知识库未指定实例时使用该默认值；
 4. 需要单独指定时，在知识库编辑弹窗的「存储」页签选择实例。
 
 知识库为空时可修改存储后端；已有文件时，界面会禁用选择并提示迁移。文件路径依赖入库时的后端，直接更换会影响原文件访问。需要更换时，应新建知识库并迁移内容。
@@ -47,7 +47,7 @@
 | PUT / DELETE | `/storage-backends/:id` | Admin+ |
 | POST | `/storage-backends/test` | Admin+，用未保存的参数试连 |
 | POST | `/storage-backends/:id/test` | Admin+，测已保存的实例 |
-| PUT | `/storage-backends/:id/default` | Admin+，设为空间默认 |
+| PUT | `/storage-backends/:id/default` | Admin+，设为租户默认 |
 
 API Key 需要 `manage_storage_backends` 能力或 full-access。
 
@@ -57,11 +57,11 @@ API Key 需要 `manage_storage_backends` 能力或 full-access。
 
 | 字段 | 说明 |
 | --- | --- |
-| `name` | 空间内唯一（软删除下的部分唯一索引） |
+| `name` | 租户内唯一（软删除下的部分唯一索引） |
 | `provider` | 存储类型 |
 | `config` | JSONB，含加密后的密钥 |
 | `source` | `user`（界面注册）/ 其它（系统生成） |
 | `status` | `active` / 停用 |
 | `legacy_alias` | 见下 |
 
-`legacy_alias` 用于兼容环境变量配置的历史存储。升级时创建别名记录，使已有文件路径继续可解析，无需搬迁数据。同一空间、同一 provider 只允许一条别名记录，手动注册的实例独立保存。
+`legacy_alias` 用于兼容环境变量配置的历史存储。升级时创建别名记录，使已有文件路径继续可解析，无需搬迁数据。同一租户、同一 provider 只允许一条别名记录，手动注册的实例独立保存。

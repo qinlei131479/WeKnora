@@ -53,7 +53,7 @@ curl $BASE/api/v1/agents/agent-1/im-channels -H "Authorization: Bearer $TOKEN"
 
 ### GET /api/v1/im-channels
 
-用途：全空间 IM 渠道总览（不含凭证）。权限：Viewer+。
+用途：全租户 IM 渠道总览（不含凭证）。权限：Viewer+。
 
 响应：200 `{"data":[IMChannel]}`
 
@@ -94,7 +94,7 @@ curl -X POST $BASE/api/v1/im-channels/ch-1/toggle -H "Authorization: Bearer $TOK
 
 ### POST /api/v1/wechat/qrcode
 
-用途：生成 WeChat 登录二维码（绑定个人微信到空间）。权限：Admin+。无请求体。Handler: `internal/handler/wechat_qrcode.go`
+用途：生成 WeChat 登录二维码（绑定个人微信到租户）。权限：Admin+。无请求体。Handler: `internal/handler/wechat_qrcode.go`
 
 响应：200 `{"data":{"qrcode_url","qrcode"}}`
 
@@ -156,7 +156,7 @@ curl $BASE/api/v1/agents/agent-1/embed-channels -H "Authorization: Bearer $TOKEN
 
 ### GET /api/v1/embed-channels
 
-用途：全空间嵌入渠道列表（不含 publish token）。权限：Viewer+。
+用途：全租户嵌入渠道列表（不含 publish token）。权限：Viewer+。
 
 响应：200 `{"success":true,"data":[embedChannelResponse]}`
 
@@ -380,7 +380,7 @@ curl -X POST $BASE/api/v1/embed/ec-1/sessions/s-1/tool-approvals/p-1 \
 
 ### GET /api/v1/embed/:channel_id/files
 
-用途：访客侧图片代理（机器人回复内嵌图片；EmbedAuth 注入渠道空间，handler 强制同空间路径）。查询参数：`file_path`（必填）。
+用途：访客侧图片代理（机器人回复内嵌图片；EmbedAuth 注入渠道租户，handler 强制同租户路径）。查询参数：`file_path`（必填）。
 
 响应：200 文件流。
 
@@ -395,11 +395,11 @@ curl "$BASE/api/v1/embed/ec-1/files?file_path=local://1/exports/chart.png" \
 
 ### GET /files
 
-用途：认证后的统一文件代理（本地/MinIO/COS/TOS 等）。权限：任意已认证空间成员；API key 需非 KB 受限（full-access 或全空间 retrieve，`middleware.AllowFileServeAPIKey()`）；路径强制同空间（`ValidateStoragePathTenant`）。
+用途：认证后的统一文件代理（本地/MinIO/COS/TOS 等）。权限：任意已认证租户成员；API key 需非 KB 受限（full-access 或全租户 retrieve，`middleware.AllowFileServeAPIKey()`）；路径强制同租户（`ValidateStoragePathTenant`）。
 
 | 查询参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `file_path` | string | 是 | `provider://...` 路径（禁止 `..`；跨空间 403） |
+| `file_path` | string | 是 | `provider://...` 路径（禁止 `..`；跨租户 403） |
 
 响应：200 文件流（`X-Content-Type-Options: nosniff`；非白名单类型强制 `Content-Disposition: attachment`）。
 
@@ -414,7 +414,7 @@ curl "$BASE/files?file_path=local://1/docs/a.png" -H "Authorization: Bearer $TOK
 | 查询参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
 | `file_path` | string | 是 | 存储路径 |
-| `tenant_id` | uint64 | 是 | 空间 ID |
+| `tenant_id` | uint64 | 是 | 租户 ID |
 | `expires` | string | 是 | Unix 过期时间 |
 | `sig` | string | 是 | HMAC 签名 |
 

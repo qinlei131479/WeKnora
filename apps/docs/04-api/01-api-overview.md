@@ -1,6 +1,6 @@
 # API 总览
 
-智能体中台2.0 HTTP API 使用 `/api/v1` 前缀，支持 JWT、API Key 和 Embed token 认证。调用各资源接口前，需按客户端类型选择凭证，并遵循统一的响应、错误处理、分页和流式事件约定。
+平台 HTTP API 使用 `/api/v1` 前缀，支持 JWT、API Key 和 Embed token 认证。调用各资源接口前，需按客户端类型选择凭证，并遵循统一的响应、错误处理、分页和流式事件约定。
 
 ## Base URL 与版本前缀
 
@@ -24,8 +24,8 @@ Authorization: Bearer <access_token>
 ```
 
 - 通过 `POST /api/v1/auth/login`（或 register / auto-setup / OIDC）获得 `token` 与 `refresh_token`；`POST /api/v1/auth/refresh` 换发新 token。
-- 可选请求头 `X-Tenant-ID: <tenant_id>`：在 JWT 指向的空间之外切换目标空间（须为该空间活跃成员，或具备 `CanAccessAllTenants` 跨空间超管属性）。畸形或 `0` 值直接返回 400。
-- 若 JWT 未解析出任何空间且接口非“无空间可用”白名单（如 `/auth/me`、`/me/invitations` 等），返回 409 `{"code":"TENANT_REQUIRED"}`。
+- 可选请求头 `X-Tenant-ID: <tenant_id>`：在 JWT 指向的租户之外切换目标租户（须为该租户活跃成员，或具备 `CanAccessAllTenants` 跨租户超管属性）。畸形或 `0` 值直接返回 400。
+- 若 JWT 未解析出任何租户且接口非“无租户可用”白名单（如 `/auth/me`、`/me/invitations` 等），返回 409 `{"code":"TENANT_REQUIRED"}`。
 
 ### API Key（机器主体） {#_2-api-key-机器主体}
 
@@ -33,14 +33,14 @@ Authorization: Bearer <access_token>
 X-API-Key: <api_key>
 ```
 
-- 空间级（workspace）key：在 `POST /api/v1/tenants/:id/api-keys` 创建，绑定到单一空间；携带 `X-Tenant-ID` 指向其它空间会得到 403。
-- 平台级（platform）key：在 `POST /api/v1/system/admin/api-keys` 创建，必须携带 `X-Tenant-ID` 选择目标空间（`/system/admin/*`、`/tenants/all|search`、`POST /tenants` 除外），否则返回 409 `TENANT_REQUIRED`。
+- 租户级（workspace）key：在 `POST /api/v1/tenants/:id/api-keys` 创建，绑定到单一租户；携带 `X-Tenant-ID` 指向其它租户会得到 403。
+- 平台级（platform）key：在 `POST /api/v1/system/admin/api-keys` 创建，必须携带 `X-Tenant-ID` 选择目标租户（`/system/admin/*`、`/tenants/all|search`、`POST /tenants` 除外），否则返回 409 `TENANT_REQUIRED`。
 - 授权模型（`internal/middleware/api_key_gate.go`，默认拒绝）：每个 `/api/v1` 路由必须显式声明 API key 策略，未声明的路由对任何 key 一律 403。
-  - `full_access` key：空间内全权（等效 Owner 的机器形态）。
+  - `full_access` key：租户内全权（等效 Owner 的机器形态）。
   - 受限（scoped）key：按 capability 放行，并受 `knowledge_base_ids` 白名单约束。Capability 常量见 `internal/types/tenant_api_key.go`：`retrieve`、`ingest`、`chat`、`read_agents`、`manage_kbs`、`manage_agents`、`message_history`、`manage_models`、`manage_mcp_services`、`manage_datasources`、`manage_channels`、`manage_vector_stores`、`manage_storage_backends`、`manage_web_search`、`run_evaluations`、`manage_members`、`manage_spaces`、`manage_tenant_settings`；平台能力：`system_tenants_read/manage`、`system_settings_read/manage`、`system_runtime_read/manage`、`system_audit_read`。
-- 外部用户主体（可选，按空间 `api-principal-config` 配置）：
+- 外部用户主体（可选，按租户 `api-principal-config` 配置）：
   - `direct` 模式：`X-External-User-ID: <外部用户ID>`（≤128 字符）。
-  - `signed_token` 模式：`X-External-User-Token: <HS256 JWT>`，要求 `aud=weknora`、`exp`（生存期 ≤24h）、`tenant_id` claim 与目标空间一致、`sub` 为外部用户 ID。
+  - `signed_token` 模式：`X-External-User-Token: <HS256 JWT>`，要求 `aud=weknora`、`exp`（生存期 ≤24h）、`tenant_id` claim 与目标租户一致、`sub` 为外部用户 ID。
 
 ### Embed publish token（匿名嵌入端） {#_3-embed-publish-token-匿名嵌入端}
 
@@ -62,10 +62,10 @@ flowchart TD
     B -- "否" --> C{"Authorization: Bearer <JWT>?"}
     C -- "有效" --> D{"X-Tenant-ID 请求头?"}
     D -- "无" --> E["使用 JWT 内 tenant_id"]
-    D -- "有" --> F{"IsTenantAccessible?<br/>(成员/跨空间超管)"}
+    D -- "有" --> F{"IsTenantAccessible?<br/>(成员/跨租户超管)"}
     F -- "否" --> G["403 Forbidden"]
     F -- "是" --> E
-    E --> R{"resolveTenantRole<br/>(成员表 → 超管 → 孤儿空间自愈 → EnableRBAC 兜底)"}
+    E --> R{"resolveTenantRole<br/>(成员表 → 超管 → 孤儿租户自愈 → EnableRBAC 兜底)"}
     R -- "无角色且 RBAC 强制" --> G
     R -- "得到角色" --> P["注入 tenant/user/role 上下文"]
     C -- "无/无效" --> K{"X-API-Key?"}
@@ -73,10 +73,10 @@ flowchart TD
     K -- "有" --> L{"key 类型"}
     L -- "platform key" --> M{"X-Tenant-ID?"}
     M -- "缺失且非平台白名单路由" --> V["409 TENANT_REQUIRED"]
-    M -- "有" --> P2["注入平台机器主体 + 目标空间"]
-    L -- "workspace key" --> N{"X-Tenant-ID 与 key 空间一致?"}
+    M -- "有" --> P2["注入平台机器主体 + 目标租户"]
+    L -- "workspace key" --> N{"X-Tenant-ID 与 key 所属租户一致?"}
     N -- "不一致" --> G
-    N -- "一致/未携带" --> P3["注入空间机器主体<br/>(可选外部用户主体 Header)"]
+    N -- "一致/未携带" --> P3["注入租户机器主体<br/>(可选外部用户主体 Header)"]
     P --> Q["RBAC 角色守卫 (rbac.go)"]
     P2 --> S["APIKeyGate: 路由策略<br/>(full_access / capability / KB 白名单, 默认拒绝)"]
     P3 --> S
@@ -90,15 +90,15 @@ flowchart TD
 
 | 角色 | 说明 |
 | --- | --- |
-| `owner` | 空间所有者：空间生命周期、API key、成员管理 |
-| `admin` | 空间管理员：模型/基础设施/渠道等空间级配置 |
+| `owner` | 租户所有者：租户生命周期、API key、成员管理 |
+| `admin` | 租户管理员：模型/基础设施/渠道等租户级配置 |
 | `contributor` | 贡献者：可创建 KB/Agent，可修改**自己创建**的资源 |
 | `viewer` | 只读成员：读取与会话使用 |
-| SystemAdmin | 平台级管理员（`User.IsSystemAdmin`），独立于空间角色，守卫 `/system/admin/*`，始终强制 |
+| SystemAdmin | 平台级管理员（`User.IsSystemAdmin`），独立于租户角色，守卫 `/system/admin/*`，始终强制 |
 
 - 文档中“Viewer+ / Contributor+ / Admin+ / Owner”表示最低角色要求；“创建者 OR Admin+”对应 `RequireOwnershipOrRole`（Contributor 只能改自己创建的 KB/Agent/内容）。
 - `cfg.Tenant.EnableRBAC=false` 时角色守卫只记录日志不拦截（rollout fail-open）；SystemAdmin 守卫不受此开关影响。
-- KB 级访问守卫 `KBAccessRead/Write`（`internal/middleware/kb_access.go`）：解析“自有 / 组织共享 / 经共享 Agent 可见”三类访问，并把请求上下文的 tenant 重写为 KB 属主空间。
+- KB 级访问守卫 `KBAccessRead/Write`（`internal/middleware/kb_access.go`）：解析“自有 / 组织共享 / 经共享 Agent 可见”三类访问，并把请求上下文的 tenant 重写为 KB 属主租户。
 - API key 主体会短路 JWT 角色守卫，其真实权限完全由 APIKeyGate（capability + KB 白名单）决定。
 - 被拒绝的请求会写入审计日志（`middleware.AuditServiceProvider`，1 分钟滑动窗口去重）。
 
@@ -133,7 +133,7 @@ flowchart TD
 | 1008 | ErrServiceUnavailable 暂不可用 | 503 |
 | 1009 | ErrTimeout 超时 | — |
 | 1010 | ErrValidation 参数校验失败 | 400 |
-| 2000-2005 | 空间类：不存在/已存在/停用/名称必填/状态非法/自助创建被禁用 | 404/409/403/… |
+| 2000-2005 | 租户类：不存在/已存在/停用/名称必填/状态非法/自助创建被禁用 | 404/409/403/… |
 | 2100-2103 | Agent 类：缺思考模型/缺允许工具/迭代次数非法(1-20)/温度非法(0-2) | 400 |
 | 2200-2201 | VectorStore 绑定非法 / 当前不可用 | 400 |
 
@@ -193,7 +193,7 @@ X-Accel-Buffering: no
 使用前需要知道的几件事：
 
 - **需要具备外链能力**：直链来自存储后端预签名，或 `APP_EXTERNAL_URL` + `/r/<token>`。两者都没有时（如 local 存储且未设 `APP_EXTERNAL_URL`），该引用保持 `resource://` 原样，客户端仍可回退到 `/files`；
-- **直链是限时匿名可读的**（智能体中台2.0 签发的 grant 2 小时，MinIO 预签名 24 小时），任何拿到链接的人在过期前都能读取，不要写进日志或转发给不该看的人；
+- **直链是限时匿名可读的**（平台签发的 grant 2 小时，MinIO 预签名 24 小时），任何拿到链接的人在过期前都能读取，不要写进日志或转发给不该看的人；
 - **嵌入渠道不支持**：`/api/v1/embed/...` 下的接口强制 `handle`，访客图片继续走渠道维度的鉴权代理；
 - **限定知识库的 API Key 用 `public` 会返回 403**：这类 Key 本身就被禁止访问 `/files` 代理，能拿到匿名直链等于绕过同一道限制；
 - **同一文件的直链在有效期内复用**，重复请求不会反复签发凭证，客户端与 CDN 缓存因此能命中。
@@ -208,14 +208,14 @@ X-Accel-Buffering: no
 | Embed 公开路由 | 每 (channel, IP) `rate_limit_per_minute`（默认 30）/分钟；channel 级 `rate_limit_per_minute*20`（下限 120）/分钟；channel 级 `rate_limit_per_day`（默认 10000）/天；超限 429 | `internal/middleware/embed_auth.go` |
 | 反代信任 | 仅信任 `WEKNORA_TRUSTED_PROXIES`（默认回环+内网段）的 `X-Forwarded-For`，防止伪造 IP 绕过限流 | `router.go` `trustedProxies()` |
 
-其余业务接口无全局限流；自助创建空间等配额类拒绝同样使用 429（code 1006）。
+其余业务接口无全局限流；自助创建租户等配额类拒绝同样使用 429（code 1006）。
 
 ## API 分组导航
 
 | 分组 | 文档 | 主要前缀 |
 | --- | --- | --- |
 | 认证与用户 | [02-api-auth.md](./02-api-auth.md) | `/auth`、`/me/invitations` |
-| 租户（空间）与成员 | [02-api-tenant.md](./02-api-tenant.md) | `/tenants` |
+| 租户与成员 | [02-api-tenant.md](./02-api-tenant.md) | `/tenants` |
 | 知识库与知识 | [02-api-knowledge.md](./02-api-knowledge.md) | `/knowledge-bases`、`/knowledge`、知识库文件夹 |
 | 分块与标签 | [02-api-chunks.md](./02-api-chunks.md) | `/chunks`、`/knowledge-bases/:id/tags`、`/chunker/preview` |
 | FAQ 与 Wiki | [02-api-faq-wiki.md](./02-api-faq-wiki.md) | `/knowledge-bases/:id/faq`、`/faq`、`/knowledgebase/:kb_id/wiki` |

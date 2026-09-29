@@ -1,6 +1,6 @@
 # Web 前端（frontend/）
 
-智能体中台2.0 的 Web 前端是一个基于 **Vue 3 + TypeScript + Vite** 的单页应用（SPA），承载知识库管理、Agent 对话、系统设置等交互界面。主要服务：
+平台的 Web 前端是一个基于 **Vue 3 + TypeScript + Vite** 的单页应用（SPA），承载知识库管理、Agent 对话、系统设置等交互界面。主要服务：
 
 1. **标准 Web 部署**：Vite 构建产物由 nginx 容器托管，`/api` 反向代理到后端；
 2. **网页嵌入（Embed）**：独立的轻量入口 `frontend/embed.html` + `frontend/src/embed-main.ts`，供第三方网站以 iframe / 浮窗方式嵌入智能体对话；
@@ -59,7 +59,7 @@ flowchart TB
         I18N["多语言 (src/i18n)<br/>zh-CN / en-US / ru-RU / ko-KR / ja-JP"]
     end
 
-    BACKEND["智能体中台2.0 后端 API<br/>(/api, /files)"]
+    BACKEND["平台后端 API<br/>(/api, /files)"]
 
     MAIN --> ROUTER --> VIEWS
     EMBED --> VIEWS
@@ -103,7 +103,7 @@ flowchart TB
 | `/` | — | 重定向 | 重定向到 `/platform/knowledge-bases` |
 | `/login` | `login` | `src/views/auth/Login.vue` | 登录页（含 OIDC、语言切换、动画背景） |
 | `/register` | `registerByInvite` | `src/views/auth/Login.vue` | 邀请注册落地页——复用 Login 组件，挂载时检测 `?token=xxx` 切换到邀请注册模式 |
-| `/onboarding/workspace` | `workspaceOnboarding` | `src/views/auth/WorkspaceOnboarding.vue` | 无租户用户的工作空间引导页（创建或等待被邀请），需要登录但不要求已有租户 |
+| `/onboarding/workspace` | `workspaceOnboarding` | `src/views/auth/WorkspaceOnboarding.vue` | 无租户用户的租户引导页（创建或等待被邀请），需要登录但不要求已有租户 |
 | `/knowledgeBase` | `home` | `src/views/knowledge/KnowledgeBase.vue` | 知识库详情（历史遗留顶层路径） |
 | `/platform` | `Platform` | `src/views/platform/index.vue` | 平台主布局（左侧菜单 + 路由出口 + 全局设置模态 + 拖拽上传遮罩），默认重定向到知识库列表 |
 | `/platform/dev/markdown` | `markdownTest` | `src/views/dev/MarkdownTestPage.vue` | 仅开发模式（`import.meta.env.DEV`）注册的 Markdown 渲染视觉回归测试页 |
@@ -112,7 +112,7 @@ flowchart TB
 
 | 路径 | 名称 | 组件 | 功能 |
 | --- | --- | --- | --- |
-| `/platform/knowledge-bases` | `knowledgeBaseList` | `src/views/knowledge/KnowledgeBaseList.vue` | 知识库列表：空间侧栏（全部/我的/收藏/最近）、卡片列表、创建入口 |
+| `/platform/knowledge-bases` | `knowledgeBaseList` | `src/views/knowledge/KnowledgeBaseList.vue` | 知识库列表：租户侧栏（全部/我的/收藏/最近）、卡片列表、创建入口 |
 | `/platform/knowledge-bases/:kbId` | `knowledgeBaseDetail` | `src/views/knowledge/KnowledgeBase.vue` | 知识库详情：文档列表、上传、解析状态、会话入口、Wiki 等 |
 | `/platform/agents` | `agentList` | `src/views/agent/AgentList.vue` | 智能体（Agent）列表与管理，编辑走 `AgentEditorModal.vue` |
 | `/platform/creatChat` | `globalCreatChat` | `src/views/creatChat/creatChat.vue` | 新建对话页：推荐问题、选择知识库/Agent/模型后发起会话 |
@@ -136,7 +136,7 @@ flowchart TB
 | 分组 | 分区（`section` 值） |
 | --- | --- |
 | 账户 | `general`（个人偏好）、`userprofile` |
-| 空间 | `tenant`（空间信息）、`members`（成员）、`chathistory` |
+| 租户 | `tenant`（租户信息）、`members`（成员）、`chathistory` |
 | 模型与运行 | `models`、`ollama`、`weknoracloud` |
 | 发布与集成 | `integration-im`、`integration-embed`、`integration-api`、`integration-chrome`、`integration-claw` |
 | 数据与扩展 | `vectorstore`、`parser`、`storage`、`websearch`、`mcp` |
@@ -145,8 +145,8 @@ flowchart TB
 
 可见性由两套规则决定，且**前端只做收敛展示，后端路由守卫才是权威**：
 
-- **空间角色门槛**：`frontend/src/config/settingsAccess.ts` 的 `SETTINGS_SECTION_MIN_ROLE` 给每个分区规定最低角色。`general` / `models` / `system` / `userprofile` / `tenant` / `members` 是 `viewer` 起（只读可见），其余（`ollama`、`weknoracloud`、`websearch`、`chathistory`、`vectorstore`、`parser`、`storage`、`mcp`）要求 `admin`。另有 `SETTINGS_MANAGEMENT_SHORTCUT_MIN_ROLE`：头像菜单里那些标着「管理」的快捷入口门槛更高（成员管理要 `owner`，模型管理要 `admin`），避免把只读页面伪装成管理入口。
-- **系统管理员白名单**：`SYSTEM_ADMIN_SETTINGS_SECTIONS`（`system-global`、`runtime-queues`、`platform-api-keys`、`system-audit-log`）只对系统管理员显示，与空间角色无关，详见[租户、用户与认证授权](../03-features/01-tenant-auth.md)的「系统管理员与平台控制台」。
+- **租户角色门槛**：`frontend/src/config/settingsAccess.ts` 的 `SETTINGS_SECTION_MIN_ROLE` 给每个分区规定最低角色。`general` / `models` / `system` / `userprofile` / `tenant` / `members` 是 `viewer` 起（只读可见），其余（`ollama`、`weknoracloud`、`websearch`、`chathistory`、`vectorstore`、`parser`、`storage`、`mcp`）要求 `admin`。另有 `SETTINGS_MANAGEMENT_SHORTCUT_MIN_ROLE`：头像菜单里那些标着「管理」的快捷入口门槛更高（成员管理要 `owner`，模型管理要 `admin`），避免把只读页面伪装成管理入口。
+- **系统管理员白名单**：`SYSTEM_ADMIN_SETTINGS_SECTIONS`（`system-global`、`runtime-queues`、`platform-api-keys`、`system-audit-log`）只对系统管理员显示，与租户角色无关，详见[租户、用户与认证授权](../03-features/01-tenant-auth.md)的「系统管理员与平台控制台」。
 
 ### 知识库编辑弹窗的分区
 
@@ -183,12 +183,12 @@ flowchart TB
 
 | 文件 | Store ID / 类型 | 职责 |
 | --- | --- | --- |
-| `stores/auth.ts` | `useAuthStore` | 认证核心：user / token / refreshToken / tenant / memberships / 角色判断（`hasRole`、`isSystemAdmin`）；登出时级联清理其他 store 的空间级缓存并按用户重载偏好（主题/字体） |
-| `stores/chatResources.ts` | `useChatResourcesStore` | 空间级资源缓存（TTL 60s）：知识库、Agent、模型、Web 搜索 provider 列表，供聊天/新建对话选择器复用 |
+| `stores/auth.ts` | `useAuthStore` | 认证核心：user / token / refreshToken / tenant / memberships / 角色判断（`hasRole`、`isSystemAdmin`）；登出时级联清理其他 store 的租户级缓存并按用户重载偏好（主题/字体） |
+| `stores/chatResources.ts` | `useChatResourcesStore` | 租户级资源缓存（TTL 60s）：知识库、Agent、模型、Web 搜索 provider 列表，供聊天/新建对话选择器复用 |
 | `stores/editorResources.ts` | `useEditorResourcesStore` | 编辑器/设置相关资源缓存（TTL 60s）：存储引擎配置与状态、Prompt 模板、解析引擎、系统信息、MCP 服务、Skill、Agent 类型预设、检索配置 |
 | `stores/commandPalette.ts` | `useCommandPaletteStore` | 全局命令面板（⌘K / Ctrl+K）开关与查询；最近搜索按 (user, tenant) 作用域存储避免跨账号泄漏 |
 | `stores/settings.ts` | 设置 store | 会话与 Agent 配置：选中的知识库/文件/标签/MCP/Skill/工具、模型配置、Ollama 配置、Web 搜索开关等 |
-| `stores/settingsStorage.ts` | 纯函数模块 | 设置持久化（`智能体中台2.0_settings` key）的读取、克隆与内建 Agent 模式修复（配套 `settingsStorage.test.mjs`） |
+| `stores/settingsStorage.ts` | 纯函数模块 | 设置持久化（`weknora_settings` key）的读取、克隆与内建 Agent 模式修复（配套 `settingsStorage.test.mjs`） |
 | `stores/menu.ts` | `useMenuStore` | 左侧导航菜单结构（新建对话、知识库、Agent 等条目）与 i18n 标题 |
 | `stores/knowledge.ts` | `knowledgeStore` | 知识卡片列表与总数（轻量） |
 | `stores/ui.ts` | `useUIStore` | 全局 UI 状态：设置模态、知识库编辑模态、手工文档编辑器、侧栏折叠等开关与参数 |
@@ -200,7 +200,7 @@ flowchart TB
 ### 请求基座
 
 - **axios 实例**：`frontend/src/utils/request.ts` 创建统一实例（`baseURL` 来自 `frontend/src/utils/api-base.ts` 的 `getApiBaseUrl()`，尊重 Vite `BASE_URL` 以支持子路径反代部署；超时 30s）。
-- **请求拦截器**：自动附加 `Authorization: Bearer <weknora_token>`（Embed 渠道的 `Embed ` token 不被覆盖）、`Accept-Language`（当前 i18n 语言）、`X-Request-ID`（随机串）、`X-Tenant-ID`（跨空间访问，始终携带激活空间 id 以避免切空间后 header 丢失）。
+- **请求拦截器**：自动附加 `Authorization: Bearer <weknora_token>`（Embed 渠道的 `Embed ` token 不被覆盖）、`Accept-Language`（当前 i18n 语言）、`X-Request-ID`（随机串）、`X-Tenant-ID`（跨租户访问，始终携带激活租户 id 以避免切租户后 header 丢失）。
 - **响应拦截器**：2xx 解包返回 `data`；401 触发单飞（single-flight）refresh token 刷新，失败队列重放；公开端点（`/auth/login`、`/auth/auto-setup`、`/auth/invitations/lookup`、`/api/v1/embed/` 等 `PUBLIC_AUTH_PATHS`）的 401 直接抛给页面而不跳登录；Embed 页面永不重定向到 `/login`。
 - **SSE 流式**：`frontend/src/api/chat/streame.ts` 基于 `@microsoft/fetch-event-source` 封装 `useStream()`，支持流式输出、加载态、错误态与请求调试元数据；上层由 `frontend/src/composables/useChatStreamHandler.ts` 组织为聊天消息流。
 
@@ -209,7 +209,7 @@ flowchart TB
 | 模块 | 职责 |
 | --- | --- |
 | `api/auth/` | 登录、注册、OIDC、`getCurrentUser` 会话恢复 |
-| `api/tenant/`（`index` / `members` / `invitations` / `audit-log`） | 租户（工作空间）信息、成员管理、邀请、审计日志 |
+| `api/tenant/`（`index` / `members` / `invitations` / `audit-log`） | 租户信息、成员管理、邀请、审计日志 |
 | `api/knowledge-base/` | 知识库 CRUD 与文件/知识条目管理 |
 | `api/chat/`（`index` / `streame` / `temporary-attachments`) | 会话 CRUD、标题生成、SSE 流式问答、临时附件 |
 | `api/chat-history.ts` | 聊天历史记录 |

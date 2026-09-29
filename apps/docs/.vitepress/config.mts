@@ -49,7 +49,12 @@ function itemsOf(dir: string): DefaultTheme.SidebarItem[] {
   return readdirSync(resolve(root, dir))
     .filter((f) => f.endsWith('.md'))
     .filter((f) => !HIDDEN_DOC_FILES.has(`${dir}/${f}`))
-    .sort()
+    .sort((a, b) => {
+      // 安装部署留在快速开始末尾，文件名编号不改，避免已有链接失效
+      const weight = (file: string) =>
+        dir === '01-getting-started' && file.startsWith('02-installation') ? 1 : 0
+      return weight(a) - weight(b) || a.localeCompare(b)
+    })
     .map((f) => ({
       text: itemText(dir, f),
       link: `/${dir}/${f.replace(/\.md$/, '')}`,
@@ -112,7 +117,7 @@ export default withMermaid(
   defineConfig({
     title: '智能体中台2.0',
     titleTemplate: ':title · 智能体中台2.0 文档',
-    description: '智能体中台2.0 文档：部署、配置、功能说明、API 参考与开发指南',
+    description: '部署、配置、功能说明、API 参考与开发指南',
     lang: 'zh-CN',
     base: '/docs/',
     cleanUrls: true,
@@ -211,7 +216,7 @@ export default withMermaid(
       },
 
       footer: {
-        message: `基于智能体中台 ${repoVersionLabel} 整理`,
+        message: `基于 ${repoVersionLabel} 整理`,
         copyright: '内部文档',
       },
     },

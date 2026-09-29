@@ -81,7 +81,7 @@ const surfaces = [
   // { icon: 'mobile', name: '微信小程序', desc: '移动端入口，支持网页收藏入库与提问。' },
   // { icon: 'cli', name: '命令行 weknora', desc: '文档管理、检索与带引用的流式问答，默认 JSON 输出，便于脚本化。' },
   { icon: 'api', name: 'REST API', desc: '完整 /api/v1 接口；API Key 支持按能力与知识库范围授权。' },
-  { icon: 'mcp', name: 'MCP Server', desc: '将智能体中台2.0 暴露为 MCP 工具，供 Claude、Cursor 等客户端检索。' },
+  { icon: 'mcp', name: 'MCP Server', desc: '将该平台暴露为 MCP 工具，供 Claude、Cursor 等客户端检索。' },
 ]
 
 const features = [
@@ -115,8 +115,8 @@ const features = [
   // },
   {
     icon: 'govern',
-    title: '多空间隔离与审计',
-    desc: '工作空间级数据隔离与四级角色矩阵，API Key 可按能力与知识库范围收窄。操作行为写入审计日志，后台任务提供队列面板，问答链路支持 Langfuse 追踪。',
+    title: '多租户隔离与审计',
+    desc: '租户级数据隔离与四级角色矩阵，API Key 可按能力与知识库范围收窄。操作行为写入审计日志，后台任务提供队列面板，问答链路支持 Langfuse 追踪。',
     href: '/03-features/20-platform-admin',
     tag: '企业部署',
   },
@@ -159,9 +159,9 @@ const map = [
     brief: '按顺序读完四篇，可完成部署并跑通首次问答。',
     items: [
       { text: '产品介绍', link: '/01-getting-started/01-introduction' },
-      { text: '安装部署', link: '/01-getting-started/02-installation' },
       { text: '快速上手', link: '/01-getting-started/03-quickstart' },
       { text: '配置详解', link: '/01-getting-started/04-configuration' },
+      { text: '安装部署', link: '/01-getting-started/02-installation' },
     ],
   },
   {
@@ -280,7 +280,7 @@ const deployments = [
           <h1 class="display">
            知识库问答系统
           </h1>
-          <p class="lede">智能体中台2.0 将 PDF、Word、网页等资料汇入知识库，提供检索增强的问答能力，回答标注可追溯的出处。除基础问答外，还提供 <strong>Wiki 自动成书</strong>、<strong>ReAct Agent 与 MCP 双向集成</strong>、<strong>知识图谱增强检索</strong>，以及面向团队的<strong>多空间隔离、四级 RBAC、作用域 API Key 与审计日志</strong>。支持完整私有部署，模型可全部替换为本地推理。</p>
+          <p class="lede">智能体中台2.0 将 PDF、Word、网页等资料汇入知识库，提供检索增强的问答能力，回答标注可追溯的出处。除基础问答外，还提供 <strong>Wiki 自动成书</strong>、<strong>ReAct Agent 与 MCP 双向集成</strong>、<strong>知识图谱增强检索</strong>，以及面向团队的<strong>多租户隔离、四级 RBAC、作用域 API Key 与审计日志</strong>。支持完整私有部署，模型可全部替换为本地推理。</p>
           <p class="lede lede-sub">本文档覆盖部署与配置、功能说明、接口参考，以及开发扩展点。</p>
           <div class="actions">
             <a class="btn btn-solid" :href="withBase('/01-getting-started/01-introduction')">开始阅读</a>
@@ -386,7 +386,7 @@ const deployments = [
         <header class="chapter-head">
           <span class="marker">核心能力</span>
           <h2 class="chapter-title">超出基础检索问答的部分</h2>
-          <p class="chapter-sub">以下能力为智能体中台2.0 的主要投入方向，可作为技术底座。</p>
+          <p class="chapter-sub">以下能力为平台的主要投入方向，可作为技术底座。</p>
         </header>
 
         <div class="features">

@@ -12,7 +12,7 @@
 | `/skills` 可用技能 | Viewer+，JWT | 只读，查询参数 sandbox_config_id |
 | `/me/env-vars*` | 已登录的当前调用者 | 仅修改自己，服务端推导身份；无额外管理员门槛，使用 Bearer JWT |
 
-跨空间 ID 不授予访问权。个人变量接口不能替代空间技能管理接口。
+跨租户 ID 不授予访问权。个人变量接口不能替代租户技能管理接口。
 
 ## 沙箱配置
 
@@ -181,4 +181,4 @@ curl -X DELETE "$BASE/api/v1/me/env-vars/skill" \
   -d '{"skill_id":"skill-1","name":"API_TOKEN"}'
 ```
 
-覆盖顺序为个人技能值 > 个人沙箱值 > 空间技能值。写入个人值不会更改管理员配置。实现参考：`internal/router/routes_infra.go`、`routes_agent.go`、`routes_auth_tenant.go`，以及 `internal/handler/sandbox_config.go`、`sandbox_skill.go`、`skill_catalog.go`、`me_env_var.go`。
+覆盖顺序为个人技能值 > 个人沙箱值 > 租户技能值。写入个人值不会更改管理员配置。实现参考：`internal/router/routes_infra.go`、`routes_agent.go`、`routes_auth_tenant.go`，以及 `internal/handler/sandbox_config.go`、`sandbox_skill.go`、`skill_catalog.go`、`me_env_var.go`。

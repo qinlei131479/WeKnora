@@ -332,7 +332,7 @@ kb, err := apiClient.GetKnowledgeBase(ctx, kbID)
 | `client/env_var.go` | ListMyEnvVars；SetMySkillEnvVar / DeleteMySkillEnvVar；SetMySandboxEnvVar / DeleteMySandboxEnvVar |
 | `client/tenant.go` | UpdateTenantAPIKey，修改已有 Key 的完整授权配置而不轮换 token |
 
-空间技能变量由管理员设置，个人变量只用于调用者自己；列表不返回明文。记忆和技能方法的权限仍由后端接口校验，SDK 不绕过这些约束。
+租户技能变量由管理员设置，个人变量只用于调用者自己；列表不返回明文。记忆和技能方法的权限仍由后端接口校验，SDK 不绕过这些约束。
 
 ```go
 items, total, err := c.ListMemoryItems(ctx, "active", 50, 0)
@@ -381,7 +381,7 @@ func (c *Client) AgentQAStreamWithRequest(ctx context.Context,
 
 ```go
 as := apiClient.NewAgentSession(session.ID)
-err := as.Ask(ctx, "介绍一下 智能体中台2.0", func(ev *client.AgentStreamResponse) error {
+err := as.Ask(ctx, "介绍一下该平台", func(ev *client.AgentStreamResponse) error {
     if ev.ResponseType == client.AgentResponseTypeAnswer {
         fmt.Print(ev.Content)
     }

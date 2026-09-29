@@ -1,6 +1,6 @@
 # 网页嵌入（Embed Channel）
 
-嵌入渠道用于在官网或帮助中心提供知识库问答挂件。创建渠道并绑定智能体后，将生成的脚本加入网页，访客无需 智能体中台2.0 账号即可对话。
+嵌入渠道用于在官网或帮助中心提供知识库问答挂件。创建渠道并绑定智能体后，将生成的脚本加入网页，访客无需平台账号即可对话。
 
 在「设置 → 网页嵌入」新建渠道，绑定智能体并设置允许嵌入的域名，然后复制接入代码。公开使用前应配置域名白名单和限流，限制访问来源与请求量。
 
@@ -15,7 +15,7 @@
 
 ## 前端挂件接入
 
-挂件 SDK 是一个无依赖的 loader 脚本 `frontend/public/weknora-widget.js`（部署后从 智能体中台2.0 服务根路径提供），负责渲染悬浮按钮 + iframe 面板，iframe 指向嵌入页 SPA `/embed/{channel_id}`（入口 `frontend/src/embed-main.ts`）。
+挂件 SDK 是一个无依赖的 loader 脚本 `frontend/public/weknora-widget.js`（部署后从平台服务根路径提供），负责渲染悬浮按钮 + iframe 面板，iframe 指向嵌入页 SPA `/embed/{channel_id}`（入口 `frontend/src/embed-main.ts`）。
 
 ### 方式一：静态 Token 模式（token 对访客可见） {#方式一-静态-token-模式-最简单-token-暴露在页面}
 
@@ -54,7 +54,7 @@ publish token 只保存在业务后端，页面通过 `data-token-endpoint` 指�
 ```html
 <script src="https://your-weknora.example.com/weknora-widget.js"></script>
 <script>
-  智能体中台2.0.init({
+  WeKnora.init({
     channel: '渠道UUID',
     tokenEndpoint: 'https://your-backend.example.com/weknora/embed-token', // 或 token: 'em_...'
     position: 'bottom-right',
@@ -62,11 +62,11 @@ publish token 只保存在业务后端，页面通过 `data-token-endpoint` 指�
     title: 'AI Assistant',
     baseUrl: 'https://your-weknora.example.com',
   });
-  智能体中台2.0.setContext({ userId: 'u_123', page: location.pathname }); // 上下文随每次提问注入
-  智能体中台2.0.setLocale('en-US');
-  智能体中台2.0.openWithQuery('如何重置密码？');   // 打开面板并自动发送提问
-  智能体中台2.0.on('ready', () => console.log('widget ready'));
-  // 其他：智能体中台2.0.open() / close() / toggle() / destroy() / off(event, fn)
+  WeKnora.setContext({ userId: 'u_123', page: location.pathname }); // 上下文随每次提问注入
+  WeKnora.setLocale('en-US');
+  WeKnora.openWithQuery('如何重置密码？');   // 打开面板并自动发送提问
+  WeKnora.on('ready', () => console.log('widget ready'));
+  // 其他：WeKnora.open() / close() / toggle() / destroy() / off(event, fn)
 </script>
 ```
 
@@ -139,8 +139,8 @@ publish token 只保存在业务后端，页面通过 `data-token-endpoint` 指�
 
 安全与投递语义：
 
-- 配置了 `webhook_secret` 时附带签名头 `X-智能体中台2.0-Signature: sha256=<hex(HMAC-SHA256(secret, raw_body))>`；
-- URL 必须 HTTPS，出站请求走 SSRF 安全客户端（每次重定向重新校验，最多 5 跳），超时 5 秒，User-Agent 为 `智能体中台2.0-Embed-Webhook/1.0`；
+- 配置了 `webhook_secret` 时附带签名头 `X-WeKnora-Signature: sha256=<hex(HMAC-SHA256(secret, raw_body))>`；
+- URL 必须 HTTPS，出站请求走 SSRF 安全客户端（每次重定向重新校验，最多 5 跳），超时 5 秒，User-Agent 为 `WeKnora-Embed-Webhook/1.0`；
 - 异步 best-effort 投递，失败仅记录日志、**不重试**；
 - 前端也可通过 `POST /api/v1/embed/:channel_id/sessions/:session_id/events` 显式转发事件。
 
@@ -254,7 +254,7 @@ sequenceDiagram
     participant Host as "宿主页面 (weknora-widget.js)"
     participant Backend as "业务后端 (安全模式可选)"
     participant Iframe as "嵌入页 SPA (/embed/:channel_id)"
-    participant API as "智能体中台2.0 API (/api/v1/embed/:channel_id)"
+    participant API as "平台 API (/api/v1/embed/:channel_id)"
     participant Webhook as "站长 Webhook"
 
     Visitor->>Host: 加载页面, script 标签自动初始化
@@ -276,7 +276,7 @@ sequenceDiagram
     Note over Iframe: session id + sig 存入 localStorage
     Visitor->>Iframe: 输入问题
     Iframe->>API: POST /agent-chat/:session_id (X-Embed-Session: sig)
-    API-->>Webhook: 异步 POST message_sent (X-智能体中台2.0-Signature)
+    API-->>Webhook: 异步 POST message_sent (X-WeKnora-Signature)
     API-->>Iframe: SSE 流式回复
     API-->>Webhook: 异步 POST message_received
     Iframe-->>Host: postMessage "message_received"

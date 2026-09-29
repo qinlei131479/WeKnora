@@ -12,13 +12,13 @@
 | --- | --- | --- | --- |
 | **内部引用** | `resource://<handle>` | 服务端解析的稳定句柄，不能直接作为 URL 访问 | — |
 | **鉴权代理** | `/files`、`/api/v1/knowledge-bases/:id/files`、`/api/v1/embed/:channel_id/files`、消息级 `/api/v1/sessions/:id/messages/:message_id/files` | 带对应凭证的客户端（登录态 / KB 访问权 / Embed token） | 随凭证 |
-| **能力短链** | `/r/<token>` | 任何拿到链接的人（**匿名可读**） | 智能体中台2.0 签发的 grant，2 小时 |
+| **能力短链** | `/r/<token>` | 任何拿到链接的人（**匿名可读**） | 平台签发的 grant，2 小时 |
 | **存储预签名** | 存储后端直接给的 http(s) 链接 | 任何拿到链接的人（**匿名可读**） | 由存储决定，MinIO 默认 24 小时 |
 
 能力短链和存储预签名链接在有效期内允许持有者匿名读取文件。分享或记录这些链接时，应按文件本身的访问范围处理。
 
 ::: tip 默认访问方式
-系统默认返回内部引用，由带凭证的客户端通过鉴权代理读取。外链需要公网可达的存储端点，或配置 `APP_EXTERNAL_URL` 后由 智能体中台2.0 签发访问链接。默认 MinIO 地址 `minio:9000` 仅在容器网络内可达。
+系统默认返回内部引用，由带凭证的客户端通过鉴权代理读取。外链需要公网可达的存储端点，或配置 `APP_EXTERNAL_URL` 后由平台签发访问链接。默认 MinIO 地址 `minio:9000` 仅在容器网络内可达。
 :::
 
 ## 按渠道访问文件 {#_2-各渠道分别怎么取}
@@ -40,13 +40,13 @@ flowchart TD
 
 ### Web 控制台
 
-Web 前端将 `resource://` 和 `provider://` 引用转换为鉴权代理地址。普通资源使用 `/files`，请求携带 Bearer token 与 `X-Tenant-ID`；跨空间共享知识库使用 `/api/v1/knowledge-bases/:id/files`，按知识库访问权读取来源空间的文件，无需额外配置。
+Web 前端将 `resource://` 和 `provider://` 引用转换为鉴权代理地址。普通资源使用 `/files`，请求携带 Bearer token 与 `X-Tenant-ID`；跨租户共享知识库使用 `/api/v1/knowledge-bases/:id/files`，按知识库访问权读取来源租户的文件，无需额外配置。
 
 共享 Agent 或组织共享知识库回答中的图片，优先走 `/api/v1/sessions/:id/messages/:message_id/files?file_path=...`。服务端验证调用者能读到该消息、请求资源确实被消息引用，并重新校验资源所属知识库或共享 Agent 的授权。共享被撤销后，历史消息不继续授予资源访问。普通知识库浏览仍可用 KB 级代理，两者使用各自的上下文。
 
 ### IM 机器人 {#im-机器人-最常出问题的一条}
 
-IM 平台无法携带 智能体中台2.0 凭证，需要可公开访问的 HTTP(S) URL。发送消息前，系统根据存储与部署配置生成外链：
+IM 渠道无法携带本平台凭证，需要可公开访问的 HTTP(S) URL。发送消息前，系统根据存储与部署配置生成外链：
 
 1. **存储后端本身公网可达**——对象存储用公网 endpoint，或把 `MINIO_ENDPOINT` 设成公网 host。此时回退到存储预签名 URL，不需要额外配置；
 2. **配置 `APP_EXTERNAL_URL`**——引用被改写成 `<APP_EXTERNAL_URL>/r/<token>`，请求经 nginx 的 `location ^~ /r/` 反代回 app。官方前端镜像已内置该 location，自建反代必须补上，否则请求落进 SPA fallback 返回空白页。
@@ -55,7 +55,7 @@ IM 平台无法携带 智能体中台2.0 凭证，需要可公开访问的 HTTP(
 
 ### 嵌入挂件
 
-嵌入挂件使用渠道文件代理 `/api/v1/embed/:channel_id/files`。Embed token 确定渠道所属空间，服务端检查资源路径归属。嵌入渠道始终返回内部引用，`RESOURCE_URL_MODE=public` 和 `?resource_urls=public` 均不改变此行为，以确保读取经过渠道鉴权。
+嵌入挂件使用渠道文件代理 `/api/v1/embed/:channel_id/files`。Embed token 确定渠道所属租户，服务端检查资源路径归属。嵌入渠道始终返回内部引用，`RESOURCE_URL_MODE=public` 和 `?resource_urls=public` 均不改变此行为，以确保读取经过渠道鉴权。
 
 ### REST API 与 SDK
 

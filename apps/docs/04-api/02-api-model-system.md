@@ -85,7 +85,7 @@ curl -X PUT $BASE/api/v1/models/m-1 -H "Authorization: Bearer $TOKEN" \
 
 响应：200 `{"success":true,"message":"Model deleted"}`
 
-仍被当前空间的知识库、智能体或长期记忆引用时，响应为 HTTP 400；兼容 message 保留，同时 `error.code=2300`，`error.details` 给出具体对象和引用位置：
+仍被当前租户的知识库、智能体或长期记忆引用时，响应为 HTTP 400；兼容 message 保留，同时 `error.code=2300`，`error.details` 给出具体对象和引用位置：
 
 ```json
 {
@@ -140,13 +140,13 @@ curl -X DELETE $BASE/api/v1/models/m-1/credentials/api_key -H "Authorization: Be
 ```
 
 <!-- 业务文档默认隐藏：云服务接口
-## 智能体中台2.0Cloud
+## 平台云服务
 
 Handler: `internal/handler/weknoracloud.go`。API key：`manage_models`/full。
 
 ### POST /api/v1/weknoracloud/credentials
 
-用途：保存 智能体中台2.0Cloud SaaS 凭证。权限：Admin+。请求体：`{"app_id":"...","app_secret":"..."}`（均 `binding:"required"`）。
+用途：保存 平台云服务 SaaS 凭证。权限：Admin+。请求体：`{"app_id":"...","app_secret":"..."}`（均 `binding:"required"`）。
 
 响应：200 `{"success":true,"message":"凭证保存成功"}`
 
@@ -157,7 +157,7 @@ curl -X POST $BASE/api/v1/weknoracloud/credentials -H "Authorization: Bearer $TO
 
 ### GET /api/v1/models/weknoracloud/status
 
-用途：智能体中台2.0Cloud 就绪状态探测。权限：Viewer+。
+用途：平台云服务 就绪状态探测。权限：Viewer+。
 
 响应：200 服务状态对象。
 
