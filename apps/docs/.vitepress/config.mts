@@ -8,7 +8,6 @@ import { repoVersionLabel } from './version'
 const root = resolve(import.meta.dirname, '..')
 
 const sections: { dir: string; label: string }[] = [
-  { dir: '00-product', label: '产品手册' },
   { dir: '01-getting-started', label: '快速开始' },
   { dir: '02-architecture', label: '架构' },
   { dir: '03-features', label: '功能模块' },
@@ -57,57 +56,11 @@ function itemsOf(dir: string): DefaultTheme.SidebarItem[] {
     }))
 }
 
-const productSidebar: DefaultTheme.SidebarItem[] = [
-  {
-    text: '产品手册',
-    collapsed: false,
-    items: itemsOf('00-product'),
-  },
-]
-
-const techSidebar: DefaultTheme.SidebarItem[] = sections
-  .filter((s) => s.dir !== '00-product')
-  .map((s) => ({
-    text: s.label,
-    collapsed: false,
-    items: itemsOf(s.dir),
-  }))
-
-/** 两套互不混入的侧栏：进产品只看产品，进研发只看 01–06 */
-const sidebar: DefaultTheme.Sidebar = {
-  '/00-product/': productSidebar,
-  '/01-getting-started/': techSidebar,
-  '/02-architecture/': techSidebar,
-  '/03-features/': techSidebar,
-  '/04-api/': techSidebar,
-  '/05-clients/': techSidebar,
-  '/06-development/': techSidebar,
-}
-
-const landingNav: DefaultTheme.NavItem[] = [
-  { text: '产品手册', link: '/00-product/01-overview', activeMatch: '/00-product/' },
-  { text: '研发手册', link: '/01-getting-started/01-introduction', activeMatch: '/01-getting-started/|/02-architecture/|/03-features/|/04-api/|/05-clients/|/06-development/' },
-]
-
-const productNav: DefaultTheme.NavItem[] = [
-  { text: '产品概述', link: '/00-product/01-overview' },
-  { text: '功能说明', link: '/00-product/02-capability-map' },
-  { text: '应用场景', link: '/00-product/03-scenarios' },
-  { text: '操作指南', link: '/00-product/04-user-guide' },
-  { text: '角色与权限', link: '/00-product/05-roles-delivery' },
-  { text: '常见问题', link: '/00-product/06-faq' },
-  { text: '研发手册', link: '/01-getting-started/01-introduction' },
-]
-
-const techNav: DefaultTheme.NavItem[] = [
-  { text: '产品手册', link: '/00-product/01-overview' },
-  { text: '快速开始', link: '/01-getting-started/01-introduction', activeMatch: '/01-getting-started/' },
-  { text: '架构', link: '/02-architecture/01-overview', activeMatch: '/02-architecture/' },
-  { text: '功能', link: '/03-features/01-tenant-auth', activeMatch: '/03-features/' },
-  { text: 'API', link: '/04-api/01-api-overview', activeMatch: '/04-api/' },
-  { text: '客户端', link: '/05-clients/01-frontend', activeMatch: '/05-clients/' },
-  { text: '开发', link: '/06-development/01-dev-guide', activeMatch: '/06-development/' },
-]
+const sidebar: DefaultTheme.SidebarItem[] = sections.map((s) => ({
+  text: s.label,
+  collapsed: false,
+  items: itemsOf(s.dir),
+}))
 
 const tokenize = (text: string): string[] => {
   const tokens: string[] = []
@@ -159,7 +112,7 @@ export default withMermaid(
   defineConfig({
     title: '智能体中台2.0',
     titleTemplate: ':title · 智能体中台2.0 文档',
-    description: '智能体中台2.0 文档：产品手册与研发手册',
+    description: '智能体中台2.0 文档：部署、配置、功能说明、API 参考与开发指南',
     lang: 'zh-CN',
     base: '/docs/',
     cleanUrls: true,
@@ -202,10 +155,14 @@ export default withMermaid(
       logo: { src: '/logo@1x.png', alt: '智能体中台2.0' },
       siteTitle: '智能体中台2.0',
 
-      nav: landingNav,
-      landingNav,
-      productNav,
-      techNav,
+      nav: [
+        { text: '快速开始', link: '/01-getting-started/01-introduction', activeMatch: '/01-getting-started/' },
+        { text: '架构', link: '/02-architecture/01-overview', activeMatch: '/02-architecture/' },
+        { text: '功能', link: '/03-features/01-tenant-auth', activeMatch: '/03-features/' },
+        { text: 'API', link: '/04-api/01-api-overview', activeMatch: '/04-api/' },
+        { text: '客户端', link: '/05-clients/01-frontend', activeMatch: '/05-clients/' },
+        { text: '开发', link: '/06-development/01-dev-guide', activeMatch: '/06-development/' },
+      ],
 
       weknoraVersion: repoVersionLabel,
 
