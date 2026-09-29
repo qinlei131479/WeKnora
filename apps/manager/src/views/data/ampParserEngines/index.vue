@@ -88,7 +88,7 @@ onMounted(getList);
 <template>
   <section>
     <page-name>
-      <el-button type="primary" icon="Plus" v-hasPermi="['business:ampParserEngines:add']" @click="handleAdd">
+      <el-button v-if="false" type="primary" icon="Plus" v-hasPermi="['business:ampParserEngines:add']" @click="handleAdd">
         {{ $t('page.normal.add', '新增') }}
       </el-button>
     </page-name>
