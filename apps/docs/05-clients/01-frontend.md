@@ -4,11 +4,10 @@
 
 1. **标准 Web 部署**：Vite 构建产物由 nginx 容器托管，`/api` 反向代理到后端；
 2. **网页嵌入（Embed）**：独立的轻量入口 `frontend/embed.html` + `frontend/src/embed-main.ts`，供第三方网站以 iframe / 浮窗方式嵌入智能体对话；
-<!-- 3. **桌面端（Wails）**：… -->
 
 ## 技术栈总览
 
-依据 `frontend/package.json`（版本 0.7.2）：
+依据 `frontend/package.json`（版本 0.8.0）：
 
 | 类别 | 选型 | 版本 | 说明 |
 | --- | --- | --- | --- |
@@ -18,7 +17,7 @@
 | UI 组件库 | TDesign (tdesign-vue-next) | ^1.19.2 | 配合 `tdesign-icons-vue-next` 0.4.4（版本被 overrides 锁定） |
 | 状态管理 | Pinia | ^3.0.4 | 全部 store 位于 `frontend/src/stores/` |
 | 路由 | Vue Router | ^4.5.0 | `createWebHistory`，见 `frontend/src/router/index.ts` |
-| 多语言 | vue-i18n | ^11.4.2 | zh-CN / en-US / ru-RU / ko-KR |
+| 多语言 | vue-i18n | ^11.4.2 | zh-CN / en-US / ru-RU / ko-KR / ja-JP |
 | HTTP | axios | ^1.16.0 | 统一实例封装于 `frontend/src/utils/request.ts` |
 | SSE 流式 | @microsoft/fetch-event-source | ^2.0.1 | 聊天流式回复，见 `frontend/src/api/chat/streame.ts` |
 | Markdown 渲染 | marked / marked-katex-extension / katex / highlight.js / mermaid | — | 聊天答案富文本渲染（公式、代码高亮、图表） |
@@ -49,7 +48,7 @@ flowchart TB
     end
 
     subgraph state["状态与逻辑层"]
-        STORES["Pinia stores (src/stores)<br/>auth / settings / organization ..."]
+        STORES["Pinia stores (src/stores)<br/>auth / settings ..."]
         COMPOSABLES["composables (src/composables)<br/>useTheme / useFont / useChatStreamHandler ..."]
         HOOKS["hooks (src/hooks)"]
         UTILS["utils (src/utils)<br/>request.ts / markdown 渲染 / 安全消毒"]
@@ -57,8 +56,7 @@ flowchart TB
 
     subgraph io["数据访问层"]
         API["API 封装 (src/api)<br/>axios 实例 + SSE 流式"]
-        I18N["多语言 (src/i18n)<br/>zh-CN / en-US / ru-RU / ko-KR"]
-        WAILS["桌面绑定 (src/wailsjs)<br/>Wails 自动生成"]
+        I18N["多语言 (src/i18n)<br/>zh-CN / en-US / ru-RU / ko-KR / ja-JP"]
     end
 
     BACKEND["智能体中台2.0 后端 API<br/>(/api, /files)"]
@@ -73,7 +71,6 @@ flowchart TB
     VIEWS --> API
     API --> BACKEND
     VIEWS --> I18N
-    COMPOSABLES --> WAILS
 ```
 
 ### 目录速览
@@ -91,7 +88,6 @@ flowchart TB
 | `frontend/src/utils/` | 工具集：axios 实例、markdown 渲染管线、DOMPurify 消毒、Agent 工具展示等 |
 | `frontend/src/i18n/` | vue-i18n 配置与语言包 |
 | `frontend/src/assets/theme/` | 主题 CSS 变量（light / dark） |
-| `frontend/src/wailsjs/` | Wails 桌面端自动生成绑定（勿手改） |
 | `frontend/src/directives/`、`frontend/src/types/`、`frontend/src/config/` | 自定义指令、类型定义、配置 |
 | `frontend/public/` | 静态资源：`weknora-widget.js`（第三方站点嵌入加载器）、`config.js`（运行时配置占位，容器启动时覆盖）、离线 TDesign 图标 |
 | `frontend/packages/` | 本地依赖 tarball（`xlsx-0.20.2.tgz`） |
@@ -111,13 +107,12 @@ flowchart TB
 | `/knowledgeBase` | `home` | `src/views/knowledge/KnowledgeBase.vue` | 知识库详情（历史遗留顶层路径） |
 | `/platform` | `Platform` | `src/views/platform/index.vue` | 平台主布局（左侧菜单 + 路由出口 + 全局设置模态 + 拖拽上传遮罩），默认重定向到知识库列表 |
 | `/platform/dev/markdown` | `markdownTest` | `src/views/dev/MarkdownTestPage.vue` | 仅开发模式（`import.meta.env.DEV`）注册的 Markdown 渲染视觉回归测试页 |
-<!-- | `/join` | `joinOrganization` | 重定向 | 加入组织邀请链接，把 `?code=` 转成 `invite_code` 参数并跳到 `/platform/organizations` | -->
 
 ### `/platform` 子路由
 
 | 路径 | 名称 | 组件 | 功能 |
 | --- | --- | --- | --- |
-| `/platform/knowledge-bases` | `knowledgeBaseList` | `src/views/knowledge/KnowledgeBaseList.vue` | 知识库列表：空间侧栏（全部/我的/按组织/收藏/最近）、卡片列表、创建入口 |
+| `/platform/knowledge-bases` | `knowledgeBaseList` | `src/views/knowledge/KnowledgeBaseList.vue` | 知识库列表：空间侧栏（全部/我的/收藏/最近）、卡片列表、创建入口 |
 | `/platform/knowledge-bases/:kbId` | `knowledgeBaseDetail` | `src/views/knowledge/KnowledgeBase.vue` | 知识库详情：文档列表、上传、解析状态、会话入口、Wiki 等 |
 | `/platform/agents` | `agentList` | `src/views/agent/AgentList.vue` | 智能体（Agent）列表与管理，编辑走 `AgentEditorModal.vue` |
 | `/platform/creatChat` | `globalCreatChat` | `src/views/creatChat/creatChat.vue` | 新建对话页：推荐问题、选择知识库/Agent/模型后发起会话 |
@@ -126,10 +121,9 @@ flowchart TB
 | `/platform/settings` | `settings` | `src/views/settings/Settings.vue` | 设置中心（全屏模态形态），分区见下方「设置中心的分区与可见性」 |
 | `/platform/tenant` | — | 重定向 | 兼容旧路径 → `/platform/settings` |
 | `/platform/knowledge-search` | — | 重定向 | 旧全局搜索路径 → 知识库列表并通过 `?cmdk=` 打开全局命令面板（⌘K） |
-| `/platform/integrations` | — | 重定向 | → `/platform/settings?section=integrations`（API / Chrome 扩展 / Claw Skill 集成，视图在 `src/views/integrations/`） |
+| `/platform/integrations` | — | 重定向 | → `/platform/settings?section=integration-im`（旧 `?tab=` 会归一成 `integration-<tab>`；视图在 `src/views/integrations/`） |
 | `/platform/system`、`/platform/system/settings`、`/platform/system/admins` | `systemSettings` / `systemAdmins` | 重定向 | 系统管理旧路径 → `/platform/settings?section=system-global`，要求 `requiresSystemAdmin`（视图在 `src/views/system/`：`SystemSettings.vue`、`SystemAuditLog.vue`、`PlatformAPIKeys.vue` 等） |
 | `/platform/system/queues` | `systemQueues` | 重定向 | → `/platform/settings?section=runtime-queues`（运行时任务队列 `src/views/system/RuntimeQueues.vue`） |
-<!-- | `/platform/organizations` | `organizationList` | `src/views/organization/OrganizationList.vue` | 组织列表：创建/加入组织、成员与共享资源管理（配合 `OrganizationSettingsModal.vue`） | -->
 
 ### 独立入口：嵌入页
 
@@ -144,7 +138,7 @@ flowchart TB
 | 账户 | `general`（个人偏好）、`userprofile` |
 | 空间 | `tenant`（空间信息）、`members`（成员）、`chathistory` |
 | 模型与运行 | `models`、`ollama`、`weknoracloud` |
-| 发布与集成 | IM 集成、网页嵌入、API |
+| 发布与集成 | `integration-im`、`integration-embed`、`integration-api`、`integration-chrome`、`integration-claw` |
 | 数据与扩展 | `vectorstore`、`parser`、`storage`、`websearch`、`mcp` |
 | 系统管理 | `system-global`、`runtime-queues`、`platform-api-keys`、`system-audit-log` |
 | 平台 | `system`（版本信息） |
@@ -164,7 +158,7 @@ flowchart TB
 | 处理 | `parser`、`multimodal`、`asr`、`chunking` | 解析引擎与首行表头、图片理解、语音转写、分块参数 |
 | 数据 | `vectorStore`、`storage`、`faq` | `faq` 仅 FAQ 类型库；`vectorStore` 绑定后不可改 |
 | 集成 | `datasource` | **仅编辑模式**，飞书 / Notion / 语雀 / RSS 同步配在这里，不在全局设置里 |
-| 管理 | `graph`、`advanced`、`share`、`activity` | 知识图谱、高级项、共享到组织、活动流；后两个仅编辑模式 |
+| 管理 | `graph`、`advanced`、`activity` | 知识图谱、高级项、活动流 |
 
 ### 全局命令面板（⌘K / Ctrl+K）
 
@@ -179,11 +173,9 @@ flowchart TB
 `router.beforeEach` 中实现了一条完整的鉴权链（`frontend/src/router/index.ts`）：
 
 1. **OIDC 回调放行**：URL hash 含 `oidc_result=` / `oidc_error=` 时直接放行，交由 `App.vue` 消费；
-<!-- 2. **Lite / 桌面端深链恢复**：… -->
-3. **会话恢复**：未登录时先用 `localStorage` 中的 `weknora_token` 调 `getCurrentUser()` 恢复会话（同时刷新 memberships，避免角色变更滞后）；
-<!-- 4. **Lite 自动登录**：… -->
-5. **租户门槛**：已登录但无有效租户 → 跳 `/onboarding/workspace`；
-6. **SystemAdmin 门槛**：`requiresSystemAdmin` 路由对非系统管理员跳回知识库列表（仅 UI 层拦截，服务端另有强校验）。
+2. **会话恢复**：未登录时先用 `localStorage` 中的 `weknora_token` 调 `getCurrentUser()` 恢复会话（同时刷新 memberships，避免角色变更滞后）；
+3. **租户门槛**：已登录但无有效租户 → 跳 `/onboarding/workspace`；
+4. **SystemAdmin 门槛**：`requiresSystemAdmin` 路由对非系统管理员跳回知识库列表（仅 UI 层拦截，服务端另有强校验）。
 
 ## 状态管理（Pinia）
 
@@ -191,7 +183,7 @@ flowchart TB
 
 | 文件 | Store ID / 类型 | 职责 |
 | --- | --- | --- |
-| `stores/auth.ts` | `useAuthStore` | 认证核心：user / token / refreshToken / tenant / memberships / 角色判断（`hasRole`、`isSystemAdmin`）、Lite 模式标记；登出时级联清理其他 store 的空间级缓存并按用户重载偏好（主题/字体） |
+| `stores/auth.ts` | `useAuthStore` | 认证核心：user / token / refreshToken / tenant / memberships / 角色判断（`hasRole`、`isSystemAdmin`）；登出时级联清理其他 store 的空间级缓存并按用户重载偏好（主题/字体） |
 | `stores/chatResources.ts` | `useChatResourcesStore` | 空间级资源缓存（TTL 60s）：知识库、Agent、模型、Web 搜索 provider 列表，供聊天/新建对话选择器复用 |
 | `stores/editorResources.ts` | `useEditorResourcesStore` | 编辑器/设置相关资源缓存（TTL 60s）：存储引擎配置与状态、Prompt 模板、解析引擎、系统信息、MCP 服务、Skill、Agent 类型预设、检索配置 |
 | `stores/commandPalette.ts` | `useCommandPaletteStore` | 全局命令面板（⌘K / Ctrl+K）开关与查询；最近搜索按 (user, tenant) 作用域存储避免跨账号泄漏 |
@@ -202,8 +194,6 @@ flowchart TB
 | `stores/ui.ts` | `useUIStore` | 全局 UI 状态：设置模态、知识库编辑模态、手工文档编辑器、侧栏折叠等开关与参数 |
 | `stores/uploadConfirm.ts` | 上传确认 store | 上传/URL 导入/手工录入/重新解析前的处理参数确认对话框状态 |
 | `stores/versionedRequest.ts` | 纯函数模块 | `createVersionedRequestCoordinator`：带版本号的缓存请求协调器，防止旧响应覆盖新写入（配套 `versionedRequest.test.ts`） |
-<!-- | `stores/organization.ts` | `useOrganizationStore` | … | -->
-<!-- | `stores/organizationState.ts` | 纯函数模块 | … | -->
 
 ## API 封装（frontend/src/api/）
 
@@ -218,7 +208,7 @@ flowchart TB
 
 | 模块 | 职责 |
 | --- | --- |
-| `api/auth/` | 登录、注册、OIDC、`autoSetup`（Lite 免登录）、`getCurrentUser` 会话恢复 |
+| `api/auth/` | 登录、注册、OIDC、`getCurrentUser` 会话恢复 |
 | `api/tenant/`（`index` / `members` / `invitations` / `audit-log`） | 租户（工作空间）信息、成员管理、邀请、审计日志 |
 | `api/knowledge-base/` | 知识库 CRUD 与文件/知识条目管理 |
 | `api/chat/`（`index` / `streame` / `temporary-attachments`) | 会话 CRUD、标题生成、SSE 流式问答、临时附件 |
@@ -227,6 +217,7 @@ flowchart TB
 | `api/model/` | 模型配置管理 |
 | `api/retrieval.ts` | 租户检索配置 |
 | `api/vector-store.ts` / `api/storage-backend.ts` / `api/chunker/` | 向量库、存储后端、分块器配置 |
+| `api/datasource/` | 数据源接入 |
 | `api/embed/` | 网页嵌入渠道管理（创建渠道、限流等） |
 | `api/initialization/` | 系统初始化流程 |
 | `api/system/` | 系统信息、存储引擎状态、Prompt 模板、解析引擎等系统级接口 |
@@ -235,8 +226,6 @@ flowchart TB
 | `api/wiki/` | 知识库 Wiki 生成相关接口 |
 | `api/message-suggestion.ts` | 推荐问题 |
 | `api/user-favorites.ts` | 用户收藏（知识库/Agent 收藏列表） |
-<!-- | `api/organization/` | 组织 CRUD、成员、共享知识库/Agent、加入申请 | -->
-<!-- | `api/datasource/` | 数据源接入 | -->
 
 ## 对话时间线的等待态
 
@@ -255,8 +244,9 @@ RAG 流水线的可视化进度（`views/chat/components/RagPipelineProgress.vue
   - `en-US`（英语）
   - `ru-RU`（俄语）
   - `ko-KR`（韩语）
+  - `ja-JP`（日语）
 - 语言选择持久化在 `localStorage` 的 `locale` key；axios 拦截器会把当前语言写入 `Accept-Language` 请求头，使后端返回本地化内容。
-- 因部分翻译刻意内嵌 `<strong>` 标记（经 DOMPurify 消毒后 v-html 渲染），配置了 `warnHtmlMessage: false` 关闭 vue-i18n 的 HTML 告警。
+- 部分翻译内嵌 `<strong>` 标记（经 DOMPurify 消毒后 v-html 渲染），配置了 `warnHtmlMessage: false` 关闭 vue-i18n 的 HTML 告警。
 - **Embed 独立 i18n**：访客侧嵌入页使用单独的 `frontend/src/i18n/embed.ts`（由 `embed-main.ts` 加载），管理端「网页嵌入」文案仍在主语言包中；`frontend/src/i18n/locales/embed/index.ts` 统一 re-export 语言归一化助手（支持从 URL 参数同步 embed 语言）。
 - **审计与裁剪工具**：语言包体量大、容易积累无人引用的死键或漏翻的新键，因此配套了三个脚本（`frontend/package.json`）：
 
@@ -274,8 +264,6 @@ RAG 流水线的可视化进度（`views/chat/components/RagPipelineProgress.vue
 - **CSS 变量**：`frontend/src/assets/theme/theme.css` 以 TDesign token 体系（`--td-brand-color-*`、`--td-bg-color-*`、`--td-text-color-*`、字体/圆角/阴影等）分别定义 `:root[theme-mode="light"]` 与 `:root[theme-mode="dark"]` 两套变量，品牌色为绿色系；组件样式一律引用变量实现一键换肤。
 - **偏好持久化**：主题与字体偏好通过 `frontend/src/composables/preferenceStorage.ts` 按用户 id 命名空间存入 `localStorage`，登录/登出/切换账号时由 `reloadThemeFromStorage()` / `reloadFontFromStorage()` 重载（在 `stores/auth.ts` 中触发）。
 - **字体**：`frontend/src/composables/useFont.ts` 管理界面字体选择，`main.ts` 启动时 `initTheme()` + `initFont()`。
-- **桌面端同步**：`useTheme.ts` 中的 `syncWailsNativeChrome()` 调用 Wails runtime 的 `WindowSetDarkTheme / WindowSetLightTheme / WindowSetBackgroundColour`，让原生窗口底色与网页主题一致，减轻刷新白闪。
-
 ## 构建与部署
 
 ### 开发与构建（vite.config.ts）
@@ -293,14 +281,15 @@ RAG 流水线的可视化进度（`views/chat/components/RagPipelineProgress.vue
 
 `frontend/Dockerfile`：
 
-- 基础镜像固定为 digest 锁定的 `nginx:1.30.3-alpine`（注释明确禁止改回浮动 tag——更新的 Alpine 3.24+ 在 CentOS 7 旧内核上无法启动，曾导致 v0.7.0 故障）；
-- 静态产物需先在宿主机构建（`./scripts/build_frontend_dist.sh`），镜像只 `COPY dist`；
+- 两阶段构建：digest 锁定的 `node:24-bookworm-slim` 以 `$BUILDPLATFORM` 执行 `npm ci` + `npm run build`（`VITE_IS_DOCKER=true`，`VITE_FRONTEND_COMMIT` 可经 build-arg 注入且须放在 `npm ci` 之后以免打断依赖层缓存；可选 `NPM_REGISTRY` / `NODE_MAX_OLD_SPACE_SIZE`），再拷贝到运行层；
+- 运行层基础镜像固定为 digest 锁定的 `nginx:1.30.3-alpine`（注释明确禁止改回浮动 tag——更新的 Alpine 3.24+ 在 CentOS 7 旧内核上无法启动，曾导致 v0.7.0 故障）；
+- 无需在宿主机预构建 `dist/`；
 - `nginx.conf` 作为模板放入 `/etc/nginx/templates/default.conf.template`，暴露 80 端口，入口为 `docker-entrypoint.sh`。
 
 `frontend/docker-entrypoint.sh`（运行时配置注入）：
 
-1. 生成 `/usr/share/nginx/html/config.js`，把 `MAX_FILE_SIZE_MB`（默认 50）写入 `window.__RUNTIME_CONFIG__` 供前端运行时读取；
-2. 用 `envsubst` 渲染 nginx 模板，可配置环境变量：`MAX_FILE_SIZE_MB`、`APP_HOST`（默认 `app`）、`APP_PORT`（默认 `8080`）、`APP_SCHEME`（默认 `http`，远程 HTTPS 后端可设 `https`）；
+1. 生成 `/usr/share/nginx/html/config.js`，把 `MAX_FILE_SIZE_MB`（默认 50）与 `DEFAULT_LOCALE`（可选，默认空）写入 `window.__RUNTIME_CONFIG__` 供前端运行时读取；entrypoint 仅允许 `zh-CN|en-US|ru-RU|ko-KR|ja-JP`，非法值会被丢弃；
+2. 用 `envsubst` 渲染 nginx 模板，可配置环境变量：`MAX_FILE_SIZE_MB`、`DEFAULT_LOCALE`、`APP_HOST`（默认 `app`）、`APP_PORT`（默认 `8080`）、`APP_SCHEME`（默认 `http`，远程 HTTPS 后端可设 `https`）；
 3. 前台启动 nginx。
 
 `frontend/nginx.conf` 关键行为：
@@ -311,13 +300,8 @@ RAG 流水线的可视化进度（`views/chat/components/RagPipelineProgress.vue
 - **嵌入页**：`/embed/*` fallback 到 `embed.html`（独立 location，不继承主站的 `X-Frame-Options: SAMEORIGIN`，因此可被第三方 iframe 加载）；`/weknora-widget.js` 是给第三方站点的静态加载器；文件头部另附可选的独立 embed 子域 server 块示例；
 - 启用 gzip（注释记录了实测收益：低带宽下首屏从 25s 降到 3-5s）及一组安全响应头（`X-Frame-Options`、`X-Content-Type-Options`、`Referrer-Policy` 等，在各 location 内重复声明以规避 nginx `add_header` 不继承的问题）。
 
-<!-- 业务文档默认隐藏：桌面端关联
-## 桌面端（Wails）关联
+## 设置导航与部署能力
 
-`frontend/src/wailsjs/` 是 Wails 框架自动生成的绑定代码（文件头标注 "automatically generated. DO NOT EDIT"）：
+设置入口按任务分组。技能目录、沙箱配置与个人变量提供各自的管理界面。导航应复用 `frontend/src/config/integrations.ts` 等现有注册信息，新增入口需同时检查侧栏分组。
 
-- `wailsjs/go/main/App.d.ts` / `App.js`：Go 侧 `App` 结构体方法的 JS 绑定，包括 `CheckForUpdates` / `AutoCheckForUpdates`（桌面更新检查）、`GetAPIBaseURL` / `GetAPILanBaseURL`、桌面内置 HTTP 服务的端口与对外监听设置（`GetDesktopHTTPPortSetting`、`SetDesktopHTTPBindPublicSetting` 等）；
-- `wailsjs/runtime/`：Wails runtime API（窗口控制等），前端在浏览器环境下调用会被 try/catch 安静降级（如 `useTheme.ts`）。
-
-桌面应用的窗口内容就是这份前端代码，Lite 模式（`autoSetup` 免登录 + 深链恢复）与 `--wails-draggable` 标记的可拖拽标题区都是为桌面形态准备的适配。
--->
+`GET /api/v1/system/capabilities` 返回 edition 及能力 supported/reason。前端据实际部署能力隐藏或禁用入口，例如 Docker 沙箱默认受平台开关控制；前端可见性只改善操作体验，后端路由继续执行角色与能力检查。接口见[系统 API](../04-api/02-api-system.md)。

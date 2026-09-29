@@ -1,14 +1,12 @@
 # 总体架构
 
-> 本组属于 **研发手册**（快速开始 → 架构 → 功能 → API → 客户端 → 开发）。产品使用见 [产品手册](/00-product/01-overview)。
+智能体中台2.0 由 Web 前端、Go 主服务和 Python 文档解析服务组成，使用数据库保存业务数据，通过 Redis 调度异步任务。向量存储、对象存储、知识图谱和模型服务可按部署需求配置。
 
-本章从部署视角与代码视角两个维度介绍 智能体中台2.0 的整体架构：系统由哪些进程/容器组成、各组件之间如何通信、使用了哪些技术栈，以及代码仓库的顶层目录布局。
-
-## 1. 系统组成
+## 系统组成 {#_1-系统组成}
 
 智能体中台2.0 采用"主服务 + 前端 + 文档解析微服务"的三进程核心架构，外加 PostgreSQL 与 Redis 两个基础设施依赖；其余组件（向量库、知识图谱、联网搜索等）均为可选，通过 Docker Compose profile 按需启用。
 
-### 1.1 核心服务（默认启动）
+### 核心服务（默认启动） {#_1-1-核心服务-默认启动}
 
 | 服务 | 镜像 / 构建 | 端口 | 职责 |
 | --- | --- | --- | --- |
@@ -17,11 +15,11 @@
 | `docreader` | `wechatopenai/weknora-docreader`（`docker/Dockerfile.docreader`，Python） | `50051`（仅 compose 网络内 expose，不映射宿主机） | 文档解析微服务：gRPC 服务端，PDF/DOCX/Excel/EPUB/网页等 25+ 格式解析与页面渲染。健康检查 `grpc_health_probe` |
 | `postgres` | `paradedb/paradedb:v0.22.2-pg17` | `5432`（网络内） | 主数据库。ParadeDB 发行版自带 BM25 全文检索与 pgvector 向量能力，因此**默认部署无需独立向量库**（`RETRIEVE_DRIVER=postgres`） |
 | `redis` | `redis:7.0-alpine`（`appendonly` + `requirepass`） | `6379`（网络内） | Asynq 任务队列、SSE 流管理（跨实例）、system_settings 发布订阅、限流与分布式模型并发闸门 |
-| `sandbox` | `wechatopenai/weknora-sandbox`（`docker/Dockerfile.sandbox`） | — | 非常驻服务，仅用于 build/pull 镜像；`app` 执行 Agent Skills 时按需 `docker run` 该镜像（`WEKNORA_SANDBOX_MODE=docker`），用毕即释 |
+| `sandbox` | `wechatopenai/weknora-sandbox`（`docker/Dockerfile.sandbox`） | — | 智能体中台2.0 标准运行镜像；可直接用于空间 Docker 后端，接入 CubeSandbox/E2B 时则通过模板 API 自动注册并用于 Agent Skills |
 
 `app` 与 `docreader` 之间还通过共享卷 `docreader-tmp`（挂载于 `/tmp/docreader`）传递解析产物图片；`app` 的本地文件存储卷为 `data-files`（`/data/files`）。
 
-### 1.2 可选组件（Compose profile）
+### 可选组件（Compose profile） {#_1-2-可选组件-compose-profile}
 
 | 服务 | profile | 用途 |
 | --- | --- | --- |
@@ -32,19 +30,15 @@
 | `doris-fe` + `doris-be` | `doris` | Apache Doris 4.1 检索引擎（FE MySQL 9030 / FE HTTP 8030 Stream Load / BE 8040） |
 | `odl-hybrid` | `odl-hybrid` | OpenDataLoader PDF 混合解析后端（docreader 通过 HTTP `:5002` 调用） |
 | `dex` | `dex` / `full` | OIDC 测试用 IdP（配合 `OIDC_AUTH_ENABLE`） |
-| `langfuse-*`（web/worker/clickhouse/minio/db-init） | `langfuse` | 自建 LLM 可观测栈，复用智能体中台2.0 的 postgres（新建 `langfuse` 库）与 redis（DB 1） |
+| `langfuse-*`（web/worker/clickhouse/minio/db-init） | `langfuse` | 自建 LLM 可观测栈，复用 智能体中台2.0 的 postgres（新建 `langfuse` 库）与 redis（DB 1） |
 
 此外，Go 后端还可直连未在 compose 内的外部引擎：Elasticsearch v7/v8、OpenSearch、腾讯云 VectorDB、火山 VikingDB，以及 8 种对象存储（local/MinIO/COS/TOS/S3/OSS/KS3/OBS）。
 
-### 1.3 部署形态
+### 部署形态 {#_1-3-部署形态}
 
-除标准 Docker Compose 部署外，仓库还支持：
+除标准 Docker Compose 部署外，仓库还支持 Kubernetes（`helm/` Chart）与裸机（`deploy/` systemd 单元）。
 
-- **Lite 模式**：`DB_DRIVER=sqlite`（内置 sqlite-vec 向量扩展）+ 不配置 `REDIS_ADDR`（Asynq 退化为进程内 `SyncTaskExecutor`），单二进制运行，前端静态资源内嵌（`handler.Edition == "lite"` 时由 Go 进程直接托管）；
-- **桌面版**：`cmd/desktop` 基于 Wails v2 打包为桌面应用；
-- **Kubernetes**：`helm/` Chart；**裸机**：`deploy/` systemd 单元；**macOS**：`Formula/` Homebrew 配方。
-
-## 2. 技术栈清单
+## 技术栈清单 {#_2-技术栈清单}
 
 | 层 | 技术 | 版本/说明 |
 | --- | --- | --- |
@@ -72,28 +66,26 @@
 | 文档解析服务 | Python + grpcio | `docreader/main.py`；解析器位于 `docreader/parser/`（pdf/docx/excel/epub/web/image/markitdown/opendataloader 等） |
 | 桌面端 | Wails v2 | `cmd/desktop` |
 
-## 3. 进程间通信方式
+## 进程间通信方式 {#_3-进程间通信方式}
 
 | 链路 | 协议 | 说明 |
 | --- | --- | --- |
 | 浏览器 → `frontend`(NGINX) → `app` | HTTP/HTTPS（REST + SSE） | NGINX 反代 `/api`；聊天走 SSE 流式响应 |
 | `app` → `docreader` | **gRPC**（默认 `docreader:50051`，`DOCREADER_TRANSPORT=grpc`，支持 TLS/mTLS 与 `GRPC_AUTH_TOKEN`） | proto 定义在 `docreader/proto/`；大文件走流式 `ReadStream` |
 | `app` → `postgres` | PostgreSQL wire（GORM/pgx） | 业务数据 + BM25 + pgvector |
-| `app` ↔ `redis` | RESP（支持 TLS） | ① Asynq 任务队列（文档解析/富化/Wiki 等 19 类任务）；② SSE 流断线续传的 Stream Manager（`STREAM_MANAGER_TYPE`）；③ `system_settings` 变更 Pub/Sub；④ Embed 渠道限流；⑤ 分布式 per-model 并发信号量 |
+| `app` ↔ `redis` | RESP（支持 TLS） | ① Asynq 任务队列（文档解析/富化/Wiki/记忆等任务）；② SSE 流断线续传的 Stream Manager（`STREAM_MANAGER_TYPE`）；③ `system_settings` 变更 Pub/Sub；④ Embed 渠道限流；⑤ 分布式 per-model 并发信号量 |
 | `app` → `neo4j` | Bolt（`bolt://neo4j:7687`） | GraphRAG 实体/关系存取 |
 | `app` → `searxng` / Web 搜索 provider | HTTP | SSRF 白名单校验（`SSRF_WHITELIST_EXTRA` 默认放行 compose 内 `searxng,qdrant,milvus,weaviate,doris-fe,doris-be`） |
 | `app` → 向量库/对象存储/LLM 提供商 | 各自 SDK（HTTP/gRPC/MySQL 协议） | Doris 走 MySQL 协议 + Stream Load HTTP |
-| `app` → `sandbox` | 本地 `docker run` | Skills 代码执行隔离 |
+| `app` → 沙箱后端 | Docker Engine API / Cube/E2B 控制面与数据面 | 会话执行、技能安装与文件产物；按空间沙箱配置选择 |
 | `app` ↔ IM 平台 | HTTP webhook / 长连接 SDK | 微信、企业微信、飞书、钉钉、Slack、Telegram、QQ、Mattermost、云之家（`internal/im/`） |
 
-## 4. 总体架构图
+## 总体架构图 {#_4-总体架构图}
 
 ```mermaid
 graph LR
     subgraph Clients["客户端"]
         Browser["浏览器 (Vue3 SPA)"]
-        Mini["微信小程序 (miniprogram/)"]
-        %% CLI["CLI / Go SDK (cli/, client/)"]
         MCPC["MCP 客户端 (mcp-server/)"]
         IM["IM 平台 (微信/飞书/钉钉/Slack...)"]
     end
@@ -104,7 +96,7 @@ graph LR
         DR["docreader: Python gRPC (:50051)<br/>PDF / DOCX / Excel / Web 解析"]
         PG[("postgres: ParadeDB pg17<br/>业务数据 + BM25 + pgvector")]
         RD[("redis 7<br/>Asynq 队列 / 流管理 / PubSub / 限流")]
-        SBX["sandbox 容器 (按需 docker run)"]
+        SBX["Docker 会话沙箱 (默认关闭)"]
         subgraph Optional["可选 profile"]
             SX["searxng (联网搜索)"]
             NEO[("neo4j (知识图谱)")]
@@ -114,18 +106,18 @@ graph LR
         end
     end
 
+    REMOTE["Cube / E2B 会话沙箱"]
     EXT["外部服务: LLM API / Elasticsearch / OpenSearch / COS / S3 / OSS ..."]
 
     Browser -->|"HTTP / SSE"| FE
-    Mini -->|"HTTP"| APP
-    CLI -->|"HTTP"| APP
     MCPC -->|"HTTP (X-API-Key)"| APP
     IM -->|"webhook / SDK 长连接"| APP
     FE -->|"反向代理 /api"| APP
     APP -->|"gRPC ReadStream"| DR
     APP -->|"GORM (SQL)"| PG
     APP -->|"RESP"| RD
-    APP -->|"docker run"| SBX
+    APP -->|"Docker Engine API"| SBX
+    APP -->|"控制面 / 数据面"| REMOTE
     APP -->|"HTTP"| SX
     APP -->|"Bolt"| NEO
     APP -->|"SDK"| VDB
@@ -135,7 +127,7 @@ graph LR
     DR -.->|"共享卷 docreader-tmp"| APP
 ```
 
-## 5. 典型请求链路：文档上传与解析入库
+## 典型请求链路：文档上传与解析入库 {#_5-典型请求链路-文档上传与解析入库}
 
 下图展示一篇文档从上传到可被检索的完整链路，覆盖了绝大多数组件间交互（同步 API、Asynq 异步任务、gRPC 解析、Embedding 与向量写入、富化子任务）：
 
@@ -175,31 +167,27 @@ sequenceDiagram
 
 对话链路（`POST /api/v1/knowledge-chat/:session_id` 或 agent-chat）则为同步 SSE：Handler → `SessionService` → `chat_pipeline` 插件流水线（query 理解 → 并行检索 → rerank → 合并 → Prompt 组装 → LLM 流式补全）→ 通过 Stream Manager（Redis/内存）将 token 流推回客户端，详见后端设计篇。
 
-## 6. 代码仓库顶层目录导览
+## 代码仓库顶层目录导览 {#_6-代码仓库顶层目录导览}
 
 | 目录 | 职责 |
 | --- | --- |
-| `cmd/` | 可执行入口。`cmd/server`：主服务（main/bootstrap/listen + 平台信号处理）；`cmd/desktop`：Wails 桌面版；`cmd/download`：模型/资源下载辅助工具 |
+| `cmd/` | 可执行入口。`cmd/server`：主服务（main/bootstrap/listen + 平台信号处理）；`cmd/download`：模型/资源下载辅助工具 |
 | `internal/` | Go 后端全部业务代码（分层结构见后端设计篇）：`handler`、`application/service`、`application/repository`、`container`（DI）、`router`、`middleware`、`types`、`agent`、`im`、`mcp`、`stream`、`sandbox` 等 |
-| `frontend/` | Vue3 + Vite + TDesign 的 Web 前端，构建产物由 NGINX 或 Lite 模式内嵌托管 |
+| `frontend/` | Vue3 + Vite + TDesign 的 Web 前端，构建产物由 NGINX 托管 |
 | `docreader/` | Python gRPC 文档解析微服务：`main.py` 服务端入口、`parser/` 25+ 解析器、`splitter/` 分割器、`proto/` 协议定义、独立 `Dockerfile.docreader` 构建 |
 | `mcp-server/` | Python 实现的 MCP Server（`weknora_mcp_server.py`），把智能体中台2.0 API 暴露为 MCP 工具给 Claude 等 MCP 客户端 |
-| `migrations/` | golang-migrate 数据库迁移：`versioned/`（Postgres 主线 `NNNNNN_*.up/down.sql`）、`sqlite/`（Lite 模式）、`paradedb/`、`mysql/` |
+| `migrations/` | golang-migrate 数据库迁移：`versioned/`（Postgres 主线 `NNNNNN_*.up/down.sql`）、`sqlite/`、`paradedb/`、`mysql/` |
 | `config/` | 运行配置：`config.yaml` 主配置、`builtin_agents.yaml` 内置 Agent、`agent_type_presets.yaml` Agent 预设、`builtin_models.yaml.example` 声明式内置模型、`prompt_templates/` 提示词模板 |
 | `docker/` | 各镜像 Dockerfile（app/docreader/sandbox/odl-hybrid）与 searxng 配置 |
 | `deploy/` | 裸机部署资源（systemd 服务单元等） |
 | `helm/` | Kubernetes Helm Chart（Chart.yaml / values.yaml / templates/） |
-| `skills/` | Agent Skills 技能包目录，`skills/preloaded/` 随镜像预装，可通过挂载 + `WEKNORA_SKILLS_DIR` 免重建扩展 |
+| `examples/` | API 使用示例代码；`examples/skills/` 为 Agent Skill 包示例 |
 | `dataset/` | 评估用 QA 数据集及生成脚本 |
-| `examples/` | API 使用示例代码 |
-| `scripts/` | 构建/启动/迁移辅助脚本（如 `start_all.sh`、`build_frontend_dist.sh`） |
+| `scripts/` | 构建/启动/迁移辅助脚本（如 `start_all.sh`；UI 镜像由 `frontend/Dockerfile` 多阶段构建） |
 | `tests/`、`testdata/` | 集成测试与测试数据 |
-| `Formula/` | Homebrew 安装配方（macOS） |
 | `misc/` | 杂项（如 `dex-config.yaml` OIDC 测试配置） |
 | `packages/` | 预留的本地包目录 |
 | `docs/` | 早期文档，部分内容已过时 |
-
-<!-- 业务默认未开放，不列入上表：cli/、client/、miniprogram/ -->
 
 > 说明：Go 模块路径为 `github.com/Tencent/WeKnora`；根目录还包含 `docker-compose.yml`（生产编排）与 `docker-compose.dev.yml`（开发编排）、`Makefile`、`VERSION` 等。
 

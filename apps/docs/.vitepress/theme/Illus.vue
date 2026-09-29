@@ -384,7 +384,7 @@ const s = {
     <path v-bind="s" opacity="0.55" d="M12 6.4v3.2M9.9 13.4l-2.6 1.9M14.1 13.4l2.6 1.9" />
   </svg>
 
-  <!-- Lite：单机一台 -->
+  <!-- 单机一台 -->
   <svg v-else-if="name === 'lite'" class="illus" viewBox="0 0 24 24" aria-hidden="true">
     <rect v-bind="s" x="4" y="4" width="16" height="11" rx="1.8" />
     <path v-bind="s" opacity="0.5" d="M2.5 18.5h19" />

@@ -194,6 +194,7 @@ const map = [
       { text: '存储后端', link: '/03-features/19-storage-backends' },
       { text: '平台管理与系统管理员', link: '/03-features/20-platform-admin' },
       { text: '图片与文件的对外访问', link: '/03-features/21-file-access' },
+      { text: '技能目录与沙箱', link: '/03-features/22-skills-sandbox' },
     ],
   },
   {
@@ -273,10 +274,10 @@ const map = [
 const deployments = [
   { icon: 'compose', name: 'Docker Compose', desc: '标准部署，12 个可选 profile 组合基础设施', note: '' },
   { icon: 'helm', name: 'Helm', desc: 'Kubernetes 集群编排，适用于生产多副本', note: '' },
-  // Lite / 桌面端：业务文档默认不展示
+  // 单机形态：业务文档默认不展示
   // {
   //   icon: 'lite',
-  //   name: 'Lite（单二进制 / 桌面应用）',
+  //   name: '单二进制 / 桌面应用',
   //   desc: 'SQLite + 进程内队列，无需 Docker 与外部数据库；提供命令行与图形界面两种形式',
   //   note: '桌面应用尚未正式发布，需自行构建',
   // },
@@ -1256,7 +1257,7 @@ open http://localhost
 
 .deploy-list li {
   display: grid;
-  /* 名称列要装下图标 + 「Lite（单二进制 / 桌面应用）」，比原来放宽一档 */
+  /* 名称列要装下图标和部署名称，比原来放宽一档 */
   grid-template-columns: 178px 1fr;
   gap: 16px;
   padding: 15px 0;

@@ -30,6 +30,9 @@ const HIDDEN_DOC_FILES = new Set([
   '05-clients/05-desktop.md',
   '05-clients/06-chrome-extension.md',
   '05-clients/07-claw-skill.md',
+  '03-features/23-memory.md',
+  '04-api/02-api-memory.md',
+  '05-clients/08-deepseek-harness.md',
 ])
 
 /** 侧边栏条目文字：取正文一级标题，去掉冗余前后缀 */
