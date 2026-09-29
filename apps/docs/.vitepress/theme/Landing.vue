@@ -915,7 +915,7 @@ open http://localhost
 /* ------------------------------ 章节通用 ------------------------------ */
 
 .chapter {
-  padding: clamp(72px, 9vw, 124px) 0;
+  padding: clamp(36px, 4.5vw, 64px) 0;
 }
 
 .chapter-alt {
@@ -926,7 +926,7 @@ open http://localhost
 
 .chapter-head {
   max-width: 780px;
-  margin-bottom: 68px;
+  margin-bottom: 28px;
 }
 
 .chapter-title {
