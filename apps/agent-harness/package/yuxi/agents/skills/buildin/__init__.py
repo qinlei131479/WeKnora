@@ -62,9 +62,19 @@ BUILTIN_SKILLS: list[BuiltinSkillSpec] = [
     BuiltinSkillSpec(
         slug="quote",
         source_dir=_SKILLS_ROOT / "quote",
-        version="2026.09.24",
-        tool_dependencies=("ask_user_question", "present_artifacts"),
-        skill_dependencies=("xlsx",),
+        version="2026.09.30",
+        tool_dependencies=(
+            "ask_user_question",
+            "ocr_parse_file",
+            "present_artifacts",
+            "list_kbs",
+            "query_kb",
+            "find_kb_document",
+            "open_kb_document",
+            "search_file",
+            "download_kb_file",
+        ),
+        skill_dependencies=("xlsx", "knowledge-base"),
         usage_source="work",
     ),
     BuiltinSkillSpec(
