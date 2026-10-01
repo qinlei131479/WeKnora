@@ -64,8 +64,6 @@ def _import_yuxi_in_fresh_process(tmp_path, config_text: str) -> tuple[dict, sub
                 "print(json.dumps({"
                 "'default_ocr_engine': yuxi.config.default_ocr_engine, "
                 "'default_model': yuxi.config.default_model, "
-                "'factory_loaded': 'yuxi.knowledge.parser.factory' in sys.modules, "
-                "'parser_loaded': 'yuxi.knowledge.parser.unified' in sys.modules, "
                 "'manager_loaded': 'yuxi.knowledge.manager' in sys.modules"
                 "}))"
             ),
@@ -88,8 +86,6 @@ def test_fresh_import_loads_default_ocr_engine_without_initializing_knowledge_ru
     assert loaded == {
         "default_ocr_engine": "weknora",
         "default_model": "test-provider:after-ocr",
-        "factory_loaded": False,
-        "parser_loaded": False,
         "manager_loaded": False,
     }
     assert "Failed to load config" not in result.stdout + result.stderr

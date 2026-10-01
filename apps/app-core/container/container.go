@@ -60,6 +60,8 @@ import (
 	"github.com/Tencent/WeKnora/apps/app-core/datasource/connector/feishu/core"
 	"github.com/Tencent/WeKnora/apps/app-core/datasource/connector/feishu/drive"
 	"github.com/Tencent/WeKnora/apps/app-core/datasource/connector/feishu/wiki"
+	gitlabConnector "github.com/Tencent/WeKnora/apps/app-core/datasource/connector/gitlab"
+	imaConnector "github.com/Tencent/WeKnora/apps/app-core/datasource/connector/ima"
 	notionConnector "github.com/Tencent/WeKnora/apps/app-core/datasource/connector/notion"
 	rssConnector "github.com/Tencent/WeKnora/apps/app-core/datasource/connector/rss"
 	yuqueConnector "github.com/Tencent/WeKnora/apps/app-core/datasource/connector/yuque"
@@ -1630,6 +1632,10 @@ func registerWebSearchProviders(registry *infra_web_search.Registry) {
 	registry.Register("searxng", infra_web_search.NewSearxngProvider)
 	registry.Register("keenable", infra_web_search.NewKeenableProvider)
 	registry.Register("zhipu", infra_web_search.NewZhipuProvider)
+	registry.Register("exa", infra_web_search.NewExaProvider)
+	registry.Register("metaso", infra_web_search.NewMetasoProvider)
+	registry.Register("bocha", infra_web_search.NewBochaProvider)
+	registry.Register("brave", infra_web_search.NewBraveProvider)
 }
 
 // registerIMService registers adapter factories, loads enabled channels, and
@@ -1688,8 +1694,14 @@ func initConnectorRegistry() (*datasource.ConnectorRegistry, error) {
 	if err := registry.Register(yuqueConnector.NewConnector()); err != nil {
 		errs = errors.Join(errs, fmt.Errorf("register yuque connector: %w", err))
 	}
+	if err := registry.Register(imaConnector.NewConnector()); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("register ima connector: %w", err))
+	}
 	if err := registry.Register(rssConnector.NewConnector()); err != nil {
 		errs = errors.Join(errs, fmt.Errorf("register rss connector: %w", err))
+	}
+	if err := registry.Register(gitlabConnector.NewConnector()); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("register gitlab connector: %w", err))
 	}
 
 	// Future connectors will be registered here:

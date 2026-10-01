@@ -18,6 +18,11 @@ class BuiltinSkillSpec:
 
 _SKILLS_ROOT = Path(__file__).resolve().parent
 
+# 注意：docx / pptx / xlsx 三个内置技能各自带一份内容一致的 scripts/office/
+# （OOXML 校验脚本与 schema，约 2900 行 × 3）。技能目录由 skills/service.py 用
+# shutil.copytree 整体拷进 save_dir 再挂给沙箱，且含符号链接的目录会被装载逻辑跳过，
+# 因此必须保持目录自包含——不要改成共享目录或软链去重。
+
 # 展示名与描述以各目录 SKILL.md frontmatter 为准；这里只登记 slug、依赖和版本。
 BUILTIN_SKILLS: list[BuiltinSkillSpec] = [
     BuiltinSkillSpec(

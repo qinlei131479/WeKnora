@@ -35,7 +35,7 @@ REDIS_ADDR=localhost:6379
 
 | 资源 | WeKnora | Agent-Harness |
 |------|---------|---------------|
-| PostgreSQL | `DB_NAME`（默认 `agent-middle`） | 同库，业务表 `h_` 前缀 |
+| PostgreSQL | `DB_NAME`（默认 `agent-middle`） | 同库，业务表 `amp_` 前缀（原 `h_` 表已由 `migrations/version_kjsc/000008_amp_unification` 迁移并删除） |
 | Redis | DB `REDIS_DB`（默认 0） | 同 DB，key 前缀不同（ARQ `arq:*`） |
 | MinIO | 同一实例，账号仍用 `MINIO_ACCESS_KEY_ID` | 同一 `minio` 服务 |
 | 认证 | `JWT_SECRET` | `JWT_SECRET` |

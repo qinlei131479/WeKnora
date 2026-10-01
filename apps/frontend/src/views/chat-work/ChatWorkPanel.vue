@@ -87,12 +87,11 @@
                     class="message-anchor"
                     :class="{
                       'is-minimap-target':
-                        displayItem.message.type === 'human' &&
-                        getMessageRequestId(displayItem.message) === minimapTargetId
+                        getMinimapMessageId(displayItem.message) === minimapTargetId
                     }"
                     :data-message-id="
-                      displayItem.message.type === 'human'
-                        ? getMessageRequestId(displayItem.message)
+                      displayItem.type === 'message'
+                        ? getMinimapMessageId(displayItem.message)
                         : undefined
                     "
                   >
@@ -565,7 +564,7 @@
                   <div class="state-list">
                     <div
                       v-for="(run, index) in displaySubagentRuns"
-                      :key="run.id || `${run.subagent_slug || 'subagent'}-${index}`"
+                      :key="run.run_id || run.id || `${run.subagent_slug || 'subagent'}-${index}`"
                       class="state-list-item"
                       :class="{ 'is-clickable': run.child_thread_id }"
                       @click="run.child_thread_id && openSubagentThread(run)"
@@ -1807,6 +1806,21 @@ function getMessageRequestId(message) {
   return null
 }
 
+// minimap 的锚点 ID 不能直接使用 request_id：同一轮 user/assistant 消息会共享它。
+// 优先使用消息自身 ID，再按角色隔离，避免 keyed tick 在历史刷新时发生碰撞。
+function getMinimapMessageId(message) {
+  const role = message?.type === 'human' ? 'user' : message?.type === 'ai' ? 'assistant' : ''
+  if (!role) return ''
+
+  if (message.id !== undefined && message.id !== null) {
+    const messageId = String(message.id).trim()
+    if (messageId) return `${role}:${messageId}`
+  }
+
+  const requestId = getMessageRequestId(message)
+  return requestId ? `${role}:${requestId}` : ''
+}
+
 function getMessageRunId(message) {
   const metadataRunId = message?.extra_metadata?.run_id
   if (typeof metadataRunId === 'string' && metadataRunId.trim()) return metadataRunId.trim()
@@ -1930,7 +1944,7 @@ const minimapMessages = computed(() =>
   conversations.value
     .flatMap((conv) => conv.messages || [])
     .map((message) => ({
-      id: getMessageRequestId(message) || message.id || '',
+      id: getMinimapMessageId(message),
       role: message.type === 'human' ? 'user' : message.type === 'ai' ? 'assistant' : '',
       content: typeof message.content === 'string' ? message.content : '',
       images: message.image_content ? [message.image_content] : [],
@@ -2901,13 +2915,16 @@ const handleSendMessage = async ({ image, queuePolicy = 'enqueue' } = {}) => {
     const runId = runResp?.run_id
     if (status === 'queued' || (!runId && status !== 'rejected')) {
       threadState.queuedRequests = threadState.queuedRequests || []
-      threadState.queuedRequests.push({
-        request_id: requestId,
-        status: 'queued',
-        queue_policy: runResp?.queue_policy || queuePolicy,
-        queue_position: runResp?.queue_position || 1,
-        content: text
-      })
+      // 创建响应和队列同步可能交错，乐观条目只在尚不存在时插入。
+      if (!threadState.queuedRequests.some((request) => request.request_id === requestId)) {
+        threadState.queuedRequests.push({
+          request_id: requestId,
+          status: 'queued',
+          queue_policy: runResp?.queue_policy || queuePolicy,
+          queue_position: runResp?.queue_position || 1,
+          content: text
+        })
+      }
       if (!hadActiveRun) {
         threadState.isStreaming = false
         threadState.replyLoadingVisible = false

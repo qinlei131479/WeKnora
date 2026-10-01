@@ -52,7 +52,7 @@ def _ensure_metadata_loaded():
     if _metadata_cache:  # 已加载
         return
 
-    # 触发各 toolkit 模块的 @tool 注册（buildin / knowledge / debug）
+    # 触发各 toolkit 模块的 @tool 注册（buildin / knowledge）
     import yuxi.agents.toolkits  # noqa: F401
     from yuxi.agents.toolkits.registry import (
         get_all_extra_metadata,

@@ -1028,13 +1028,6 @@ class KnowledgeBaseManager:
             ),
         )
 
-    async def repair_missing_file_stats(self, kb_id: str) -> dict:
-        """修复历史文件缺失的 Chunk/Token 统计，并刷新知识库聚合统计。"""
-        kb_instance = await self.get_kb_executor(kb_id)
-        result = await kb_instance.repair_missing_file_stats(kb_id)
-        result["stats"] = await self._refresh_database_stats(kb_id, result["stats"])
-        return result
-
     async def get_file_basic_info(self, kb_id: str, file_id: str) -> dict:
         """获取文件基本信息（仅元数据）"""
         kb_instance = await self.get_kb_executor(kb_id)

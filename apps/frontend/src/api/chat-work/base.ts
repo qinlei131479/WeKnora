@@ -1,4 +1,5 @@
 import i18n from '@/i18n'
+import { useUserStore } from '@/stores/harness/user'
 
 export const HARNESS_API_PREFIX = '/harness-api'
 
@@ -91,6 +92,14 @@ export async function apiRequest(
     }
     if (response.status === 403) {
       errorMessage = '没有权限执行此操作'
+    } else if (response.status === 500) {
+      errorMessage = '服务器内部错误，请使用 docker logs agent-middle-harness-api 查看详细日志'
+    }
+    if (response.status === 401) {
+      const userStore = useUserStore()
+      if (userStore.isLoggedIn) {
+        userStore.logout()
+      }
     }
     throw new ChatWorkApiError(errorMessage, response.status, response.statusText, errorData)
   }

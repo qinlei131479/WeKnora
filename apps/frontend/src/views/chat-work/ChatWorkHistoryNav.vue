@@ -60,10 +60,10 @@ onMounted(async () => {
 const sortedChats = computed(() => {
   return [...threads.value].sort((a, b) => {
     if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1
-    const dateA = parseToShanghai(b.created_at)
-    const dateB = parseToShanghai(a.created_at)
+    const dateA = parseToShanghai(a.created_at)
+    const dateB = parseToShanghai(b.created_at)
     if (!dateA || !dateB) return 0
-    return dateA.diff(dateB)
+    return dateB.diff(dateA)
   })
 })
 

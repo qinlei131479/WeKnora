@@ -1,6 +1,5 @@
 // @ts-nocheck
-import { harnessUrl } from '@/api/harness/prefix'
-import { apiGet, apiPost, apiDelete, apiPut, apiRequest } from '@/api/harness/base'
+import { harnessUrl, apiGet, apiPost, apiDelete, apiPut, apiRequest } from '@/api/chat-work/base'
 import { useUserStore } from '@/stores/harness/user'
 
 /**
@@ -228,7 +227,7 @@ export const threadApi = {
    * @param {number} offset - 偏移量，默认0
    * @returns {Promise} - 对话线程列表
    */
-  getThreads: (agentId = null, limit = 100, offset = 0) => {
+  getThreads: (agentId: string | null = null, limit = 100, offset = 0) => {
     const params = new URLSearchParams({
       limit: String(limit),
       offset: String(offset)

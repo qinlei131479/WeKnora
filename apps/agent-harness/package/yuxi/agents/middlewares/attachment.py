@@ -86,4 +86,3 @@ class AttachmentMiddleware(AgentMiddleware[AttachmentState]):
 
 
 save_attachments_to_fs = AttachmentMiddleware()
-inject_attachment_context = save_attachments_to_fs

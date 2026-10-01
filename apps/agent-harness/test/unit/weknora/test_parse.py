@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import pytest
 
-from yuxi.knowledge.parser import unified
 from yuxi.models import weknora_proxy
 from yuxi.weknora.errors import WeKnoraKBError
 from yuxi.services.ocr_service import get_ocr_options, parse_document
@@ -47,7 +46,12 @@ async def test_parse_document_does_not_call_native_parser(tmp_path, monkeypatch)
 
     markdown = await parse_document(str(file_path), params={"ocr_engine": "rapid_ocr"})
     assert markdown.startswith("weknora:")
-    assert not hasattr(unified, "parse_resolved_document")
+
+    # 原生 parser 目录（yuxi.knowledge.parser）已删除，确保没有回退实现被重新引入。
+    import importlib
+
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("yuxi.knowledge.parser")
 
 
 @pytest.mark.asyncio

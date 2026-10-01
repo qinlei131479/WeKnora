@@ -29,7 +29,7 @@
     <div v-if="!shouldCollapseToolCalls || areToolCallsExpanded" class="tool-calls-panel">
       <div
         v-for="(toolCall, index) in normalizedToolCalls"
-        :key="toolCall.id || `${getToolCallId(toolCall)}-${index}`"
+        :key="`${toolCall.id || getToolCallId(toolCall)}-${index}`"
         class="tool-call-container"
       >
         <ToolCallRenderer :tool-call="toolCall" appearance="timeline" :default-expanded="false" />

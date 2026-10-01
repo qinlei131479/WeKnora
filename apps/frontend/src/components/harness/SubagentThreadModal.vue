@@ -44,7 +44,7 @@
 
 <script setup>
 import { computed, nextTick, onUnmounted, reactive, ref, watch } from 'vue'
-import { agentApi } from '@/api/harness'
+import { agentApi } from '@/api/chat-work/agent'
 import { MessageProcessor } from '@/utils/harness/messageProcessor'
 import ThreadMessageList from '@/components/harness/ThreadMessageList.vue'
 import FallbackAvatar from '@/components/harness/common/FallbackAvatar.vue'
