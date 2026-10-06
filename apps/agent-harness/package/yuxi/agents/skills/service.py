@@ -753,48 +753,17 @@ def sync_thread_readable_skills(
     return thread_skills_root
 
 
-def _preloaded_skills_root() -> Path | None:
-    for parent in Path(__file__).resolve().parents:
-        candidate = parent / "skills" / "preloaded"
-        if candidate.is_dir():
-            return candidate
-    return None
-
-
 def _directory_mtime(source_dir: Path) -> datetime:
     files = [path for path in source_dir.rglob("*") if path.is_file() and not _is_skill_tree_noise(path)]
     latest = max((path.stat().st_mtime for path in files), default=source_dir.stat().st_mtime)
     return datetime.fromtimestamp(latest, tz=UTC)
 
 
-def _preloaded_skill_specs() -> list[Any]:
-    """skills/preloaded 是对话模式内置技能，版本取目录内最新修改时间。"""
-    from yuxi.agents.skills.buildin import BuiltinSkillSpec
-
-    root = _preloaded_skills_root()
-    if root is None:
-        return []
-    specs: list[Any] = []
-    for child in sorted(path for path in root.iterdir() if path.is_dir()):
-        if not (child / "SKILL.md").is_file() or not is_valid_skill_slug(child.name):
-            continue
-        moment = _directory_mtime(child)
-        specs.append(
-            BuiltinSkillSpec(
-                slug=child.name,
-                source_dir=child,
-                version=moment.strftime("%Y.%m.%d.%H%M%S"),
-                usage_source="chat",
-            )
-        )
-    return specs
-
-
 def get_builtin_skill_specs() -> list[Any]:
+    """内置技能只来自随代码分发的 buildin 目录；宿主 skills/preloaded 注入机制已退役。"""
     from yuxi.agents.skills.buildin import BUILTIN_SKILLS
 
-    known = {spec.slug for spec in BUILTIN_SKILLS}
-    return [*BUILTIN_SKILLS, *[spec for spec in _preloaded_skill_specs() if spec.slug not in known]]
+    return list(BUILTIN_SKILLS)
 
 
 def _build_builtin_skill_dir_path(slug: str) -> str:
