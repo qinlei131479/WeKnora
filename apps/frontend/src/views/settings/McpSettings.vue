@@ -105,6 +105,12 @@
       @success="handleDialogSuccess"
       @created="handleDialogCreated"
     />
+
+    <!-- 内置 MCP：只读查看，不走编辑抽屉 -->
+    <BuiltinMcpReadonlyPanel
+      v-model:visible="readonlyVisible"
+      :service="readonlyService"
+    />
   </div>
 </template>
 
@@ -120,6 +126,7 @@ import {
   type MCPService
 } from '@/api/mcp-service'
 import McpServiceDialog from './components/McpServiceDialog.vue'
+import BuiltinMcpReadonlyPanel from './components/BuiltinMcpReadonlyPanel.vue'
 import { useConfirmDelete } from '@/components/settings/useConfirmDelete'
 import { useAuthStore } from '@/stores/auth'
 
@@ -133,6 +140,8 @@ const loading = ref(false)
 const dialogVisible = ref(false)
 const dialogMode = ref<'add' | 'edit'>('add')
 const currentService = ref<MCPService | null>(null)
+const readonlyVisible = ref(false)
+const readonlyService = ref<MCPService | null>(null)
 const dialogInitialStep = ref<0 | 1>(0)
 const togglingIds = ref(new Set<string>())
 const serviceUsage = (service: MCPService) => service.usage_instructions?.trim() || service.description?.trim() || ''
@@ -162,6 +171,12 @@ const handleAdd = () => {
 // Explicit buttons keep selecting card text separate from editing a service.
 const handleEdit = (service: MCPService, initialStep: 0 | 1 = 0) => {
   if (!authStore.hasRole('admin')) return
+  // 内置服务只读：打开独立查看面板，不进入编辑抽屉
+  if (service.is_builtin) {
+    readonlyService.value = { ...service }
+    readonlyVisible.value = true
+    return
+  }
   currentService.value = { ...service }
   dialogMode.value = 'edit'
   dialogInitialStep.value = initialStep

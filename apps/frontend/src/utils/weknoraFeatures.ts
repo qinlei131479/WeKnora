@@ -51,8 +51,12 @@ const HIDDEN_SETTINGS_SECTIONS = new Set([
   'integration-claw',
 ])
 
-/** 主侧栏在精简模式下隐藏的 path（与 menu.ts 的 item.path 对齐） */
-const HIDDEN_MENU_PATHS = new Set(['organizations'])
+/**
+ * 主侧栏在精简模式下隐藏的 path（与 menu.ts 的 item.path 对齐）。
+ * 企业侧：产物库(artifacts)、工具箱(toolbox)入口不放主侧栏，走精简模式隐藏；
+ * 直接输 URL 仍可访问（与 organizations 同款语义）。
+ */
+const HIDDEN_MENU_PATHS = new Set(['organizations', 'artifacts', 'toolbox'])
 
 /** 云解析引擎 Name（勿用文案匹配） */
 export const CLOUD_PARSER_ENGINES = new Set([

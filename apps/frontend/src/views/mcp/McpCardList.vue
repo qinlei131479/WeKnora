@@ -164,9 +164,15 @@
       :service="editingServer"
       :mode="dialogMode"
       persist="harness"
-      :readonly="!!editingServer?.is_builtin"
       @success="handleDialogSuccess"
       @created="handleDialogCreated"
+    />
+
+    <!-- 内置 MCP：只读查看，不走编辑抽屉，避免误改破坏内置 stdio 配置 -->
+    <BuiltinMcpReadonlyPanel
+      v-model:visible="readonlyVisible"
+      :service="readonlyServer"
+      persist="harness"
     />
   </div>
 </template>
@@ -181,6 +187,7 @@ import ExtensionCardGrid from '@/components/harness/extensions/ExtensionCardGrid
 import InfoCard from '@/components/harness/shared/InfoCard.vue'
 import PageShoulder from '@/components/harness/shared/PageShoulder.vue'
 import McpServiceDialog from '@/views/settings/components/McpServiceDialog.vue'
+import BuiltinMcpReadonlyPanel from '@/views/settings/components/BuiltinMcpReadonlyPanel.vue'
 import { formatExtensionCardTitle } from '@/utils/harness/extensionDisplayName'
 
 const { t } = useI18n()
@@ -193,6 +200,8 @@ const searchQuery = ref('')
 const formModalVisible = ref(false)
 const dialogMode = ref('add')
 const editingServer = ref(null)
+const readonlyVisible = ref(false)
+const readonlyServer = ref(null)
 const basicInfoVisible = ref(false)
 const previewServer = ref(null)
 const actionLoadingSlug = ref('')
@@ -223,6 +232,7 @@ const toDialogService = (server) => ({
   id: server.id || server.slug,
   name: server.name || '',
   description: server.description || '',
+  usage_instructions: server.usage_instructions || '',
   enabled: server.enabled !== false,
   transport_type:
     server.transport_type ||
@@ -253,7 +263,13 @@ const mcpTransportIcon = (server) => {
 }
 
 const handleCardClick = (server) => {
-  if (server.is_builtin || server.enabled || server.requires_migration) {
+  // 内置 MCP 只读查看：进入独立只读面板，不打开可编辑抽屉
+  if (server.is_builtin) {
+    readonlyServer.value = toDialogService(server)
+    readonlyVisible.value = true
+    return
+  }
+  if (server.enabled || server.requires_migration) {
     editingServer.value = toDialogService(server)
     dialogMode.value = 'edit'
     formModalVisible.value = true
