@@ -376,11 +376,12 @@ import {
   listMembers,
   updateMemberRole,
   removeMember,
-  addTenantUser,
-  updateTenantUser,
   type TenantMember,
   type TenantRole,
 } from '@/api/tenant/members'
+// 企业扩展（L2）：addTenantUser/updateTenantUser 已从上游文件外置到 src/kjsc/，
+// 这样 api/tenant/members.ts 可随上游整文件端口，企业实现不会丢。
+import { addTenantUser, updateTenantUser } from '@/kjsc/api/tenantMembers'
 import {
   listAuditLog,
   type AuditLog,

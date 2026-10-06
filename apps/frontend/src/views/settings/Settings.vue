@@ -104,10 +104,6 @@
                     <MemorySettings />
                   </div>
 
-                  <div v-if="currentSection === 'browserconnection'" class="section">
-                    <BrowserConnectionSettings />
-                  </div>
-
                   <!-- 向量数据库引擎 -->
                   <div v-if="currentSection === 'vectorstore'" class="section">
                     <VectorStoreSettings />
@@ -125,10 +121,6 @@
 
                   <div v-if="currentSection === 'sandbox'" class="section">
                     <SandboxSettings />
-                  </div>
-
-                  <div v-if="currentSection === 'skills'" class="section">
-                    <SkillSettings :initial-sandbox-id="currentSubSection" />
                   </div>
 
                   <div v-if="currentSection === 'envvars'" class="section">
@@ -179,10 +171,6 @@
                     <IntegrationSettingsSection :tab="integrationTabFromSection(currentSection)" />
                   </div>
 
-                  <!-- MCP 服务 -->
-                  <div v-if="currentSection === 'mcp'" class="section">
-                    <McpSettings />
-                  </div>
                 </template>
               </div>
             </div>
@@ -204,20 +192,16 @@ import TenantInfo from './TenantInfo.vue'
 import UserProfile from './UserProfile.vue'
 import ModelSettings from './ModelSettings.vue'
 import OllamaSettings from './OllamaSettings.vue'
-import McpSettings from './McpSettings.vue'
 import WebSearchSettings from './WebSearchSettings.vue'
 import ChatHistorySettings from './ChatHistorySettings.vue'
 import MemoryWorkspaceSettings from './MemoryWorkspaceSettings.vue'
 import MemorySettings from './MemorySettings.vue'
-import BrowserConnectionSettings from './BrowserConnectionSettings.vue'
 import VectorStoreSettings from './VectorStoreSettings.vue'
 import ParserEngineSettings from './ParserEngineSettings.vue'
 import StorageEngineSettings from './StorageBackendSettings.vue'
 import SandboxSettings from './SandboxSettings.vue'
-import SkillSettings from './SkillSettings.vue'
 import EnvVarSettings from './EnvVarSettings.vue'
 import TenantMembers from './TenantMembers.vue'
-import { SKILL_ICON } from '@/types/mention'
 import SystemSettings from '@/views/system/SystemSettings.vue'
 import RuntimeQueues from '@/views/system/RuntimeQueues.vue'
 import PlatformAPIKeys from '@/views/system/PlatformAPIKeys.vue'
@@ -233,6 +217,7 @@ import {
   SETTINGS_SECTION_MIN_ROLE,
   SYSTEM_ADMIN_SETTINGS_SECTIONS,
 } from '@/config/settingsAccess'
+import { isToolboxSection, toolboxLocation } from '@/config/toolbox'
 import { isHiddenSettingsSection } from '@/utils/weknoraFeatures'
 
 const route = useRoute()
@@ -345,14 +330,11 @@ const navItems = computed(() => {
     { key: 'chathistory', icon: 'chat', label: t('chatHistorySettings.title') },
     { key: 'memory', icon: 'bulletpoint', label: t('memoryWorkspaceSettings.title') },
     { key: 'mymemory', icon: 'bookmark', label: t('memorySettings.title') },
-    { key: 'browserconnection', icon: 'laptop', label: t('localBrowser.settingsTitle') },
     { key: 'envvars', icon: 'key', label: t('envVarSettings.title') },
     { key: 'vectorstore', icon: 'data-base', label: t('settings.vectorStoreEngine') },
     { key: 'parser', icon: 'file-search', label: t('settings.parserEngine') },
     { key: 'storage', icon: 'cloud', label: t('settings.storageEngine') },
     { key: 'sandbox', icon: 'code', label: t('settings.sandbox.title') },
-    { key: 'skills', icon: SKILL_ICON, label: t('settings.skills.title') },
-    { key: 'mcp', icon: 'tools', label: t('settings.mcpService') },
     { key: 'system', icon: 'info-circle', label: t('settings.versionInfo') },
     { key: 'system-global', icon: 'server', label: t('settings.system') },
     { key: 'runtime-queues', icon: 'queue', label: t('settings.taskQueue') },
@@ -383,7 +365,7 @@ const navGroups = computed<NavGroup[]>(() => {
     {
       key: 'account',
       label: t('settings.navGroups.account'),
-      items: pickItems(['userprofile', 'browserconnection', 'mymemory', 'envvars']),
+      items: pickItems(['userprofile', 'mymemory', 'envvars']),
     },
     {
       key: 'workspace',
@@ -414,9 +396,7 @@ const navGroups = computed<NavGroup[]>(() => {
         'parser',
         'storage',
         'sandbox',
-        'skills',
         'websearch',
-        'mcp',
       ]),
     },
     {
@@ -505,10 +485,20 @@ const handleClose = () => {
   }
 }
 
+// Existing in-product shortcuts can still call openSettings; moved tools
+// always navigate to the toolbox, with the requested sandbox selection intact.
+const redirectToToolbox = (section: string, subSection?: string | null) => {
+  if (!isToolboxSection(section)) return false
+  uiStore.closeSettings()
+  void router.push(toolboxLocation(section, subSection || undefined))
+  return true
+}
+
 // 监听初始导航设置
 watch(() => uiStore.settingsInitialSection, (section) => {
   if (section && visible.value) {
     const normalizedSection = normalizeSettingsSection(section)
+    if (redirectToToolbox(normalizedSection, uiStore.settingsInitialSubSection)) return
     currentSection.value = normalizedSection
     const navItem = (navItems.value as any[]).find((item) => item.key === normalizedSection)
     if (navItem && navItem.children && navItem.children.length > 0) {
@@ -524,29 +514,20 @@ watch(() => uiStore.settingsInitialSection, (section) => {
           }
         }, 300)
       }
-    } else if (normalizedSection === 'skills') {
-      currentSubSection.value = uiStore.settingsInitialSubSection || ''
     } else {
       currentSubSection.value = ''
     }
   }
 }, { immediate: true })
 
-watch(() => uiStore.settingsInitialSubSection, (sub) => {
-  if (uiStore.settingsInitialSection === 'skills' && visible.value) {
-    currentSubSection.value = sub || ''
-  }
-})
-
 watch(
   () => [visible.value, route.query.section],
   ([isVisible, section]) => {
     if (!isVisible || typeof section !== 'string') return
     const normalizedSection = normalizeSettingsSection(section)
+    if (redirectToToolbox(normalizedSection, uiStore.settingsInitialSubSection)) return
     currentSection.value = normalizedSection
-    currentSubSection.value = normalizedSection === 'skills'
-      ? (uiStore.settingsInitialSubSection || '')
-      : ''
+    currentSubSection.value = ''
   },
   { immediate: true },
 )
@@ -572,6 +553,7 @@ const handleSettingsNav = (e: CustomEvent) => {
   const { section, subsection } = e.detail
   if (section) {
     const normalizedSection = normalizeSettingsSection(section)
+    if (redirectToToolbox(normalizedSection, subsection)) return
     currentSection.value = normalizedSection
     // 如果有子菜单，自动展开
     const navItem = (navItems.value as any[]).find((item: any) => item.key === normalizedSection)
@@ -581,8 +563,6 @@ const handleSettingsNav = (e: CustomEvent) => {
       }
       // 如果有 subsection，选中对应的子菜单项
       currentSubSection.value = subsection || navItem.children[0].key
-    } else if (normalizedSection === 'skills') {
-      currentSubSection.value = subsection || ''
     }
   }
 }

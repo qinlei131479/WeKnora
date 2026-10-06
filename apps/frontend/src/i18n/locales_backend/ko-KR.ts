@@ -1,4 +1,3 @@
-/** 后端接口错误文案，与前端界面文案隔离。 */
 export default {
   error: {
     kb: {
@@ -75,7 +74,7 @@ export default {
       tagNotInKb: '이 태그는 현재 지식베이스에 속하지 않습니다',
       faqEntryEmpty: 'FAQ 항목은 비울 수 없습니다',
       invalidDisplayStatus: '표시 상태는 열기 또는 닫기만 가능합니다',
-      chunkNotInDocument: '이 청크는 현재 문서에 속하지 않습니다',
+      chunkNotInDocument: '이 청크는 현재 문서에 속하지 않습니다'
     },
     skill: {
       skill_duplicate: '스킬 「{name}」이(가) 이미 있습니다. 이름 또는 식별자를 바꾼 뒤 다시 추가하세요',
@@ -114,7 +113,7 @@ export default {
       skill_dir_missing: '스킬 디렉터리를 찾을 수 없습니다',
       skill_share_forbidden: '이 공유 범위를 사용할 수 없습니다',
       skill_slug_mismatch: '스킬 식별자가 내용과 일치하지 않습니다',
-      skill_failed: '작업에 실패했습니다. 잠시 후 다시 시도하세요',
-    },
-  },
+      skill_failed: '작업에 실패했습니다. 잠시 후 다시 시도하세요'
+    }
+  }
 }

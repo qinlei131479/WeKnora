@@ -16,24 +16,24 @@ export const listSkillCards = () => apiGet(USER_BASE_URL)
 
 export const listAccessibleSkills = () => apiGet(`${USER_BASE_URL}/accessible`)
 
-export const prepareSkillUpload = (file: File, usageSource = 'chat') => {
+export const prepareSkillUpload = (file: File, usageSource = 'chat'): Promise<any> => {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('usage_source', usageSource)
   return apiPost(`${USER_BASE_URL}/import/prepare`, formData)
 }
 
-export const listRemoteSkills = (source: unknown) => apiPost(`${USER_BASE_URL}/remote/list`, { source })
+export const listRemoteSkills = (source: unknown): Promise<any> => apiPost(`${USER_BASE_URL}/remote/list`, { source })
 
-export const prepareRemoteSkills = (payload: unknown) => apiPost(`${USER_BASE_URL}/remote/prepare`, payload)
+export const prepareRemoteSkills = (payload: unknown): Promise<any> => apiPost(`${USER_BASE_URL}/remote/prepare`, payload)
 
-export const confirmSkillInstallDraft = (draftId: string, slugs: unknown) =>
+export const confirmSkillInstallDraft = (draftId: string, slugs: unknown): Promise<any> =>
   apiPost(`${USER_BASE_URL}/install-drafts/${encodeURIComponent(draftId)}/confirm`, {
     share_config: TENANT_GLOBAL_SHARE_CONFIG,
     slugs,
   })
 
-export const listSkillSandboxBoard = () => apiGet(`${USER_BASE_URL}/sandbox-board`)
+export const listSkillSandboxBoard = (): Promise<any> => apiGet(`${USER_BASE_URL}/sandbox-board`)
 
 const sandboxSkillUrl = (configId: string, skillId = '') => {
   const base = `${USER_BASE_URL}/sandbox-configs/${encodeURIComponent(configId)}/skills`

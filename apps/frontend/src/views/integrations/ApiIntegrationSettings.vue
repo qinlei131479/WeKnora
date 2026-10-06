@@ -80,6 +80,10 @@
             <label>{{ $t('tenant.api.docLabel') }}</label>
             <p>
               {{ $t('tenant.api.docDescription') }}
+              <a class="doc-link" @click="openApiDoc">
+                {{ $t('tenant.api.openDoc') }}
+                <t-icon name="link" class="link-icon" />
+              </a>
             </p>
           </div>
         </div>
@@ -153,6 +157,14 @@
                       </td>
                       <td>
                         <div class="api-key-table__actions">
+                          <t-button
+                            shape="square"
+                            variant="text"
+                            :title="$t('integrations.api.editApiKeyScope')"
+                            @click="openEditAPIKeyScope(key)"
+                          >
+                            <t-icon name="edit-1" />
+                          </t-button>
                           <t-button
                             shape="square"
                             variant="text"
@@ -551,6 +563,110 @@
       </div>
     </SettingDrawer>
 
+    <SettingDrawer
+      :visible="apiKeyScopeDialogVisible"
+      class="api-key-edit-drawer"
+      :title="$t('integrations.api.editApiKeyScope')"
+      :description="$t('integrations.api.editApiKeyScopeDesc', { name: editingAPIKey?.name || '' })"
+      icon="edit-1"
+      width="560px"
+      :min-width="440"
+      :max-width="760"
+      storage-key="setting-drawer:width:api-key-scope"
+      :confirm-text="$t('common.save')"
+      :confirm-loading="apiKeyScopeSaving"
+      @update:visible="(v: boolean) => apiKeyScopeDialogVisible = v"
+      @confirm="saveAPIKeyConfiguration"
+    >
+      <div class="api-key-dialog">
+        <div class="api-key-dialog-row">
+          <div class="api-key-dialog-row__label">
+            <label>{{ $t('integrations.api.apiKeyName') }}</label>
+          </div>
+          <t-input
+            v-model="editingAPIKeyForm.name"
+            :placeholder="$t('integrations.api.apiKeyNamePlaceholder')"
+          />
+        </div>
+
+        <div class="api-key-dialog-row">
+          <div class="api-key-dialog-row__label">
+            <label>{{ $t('integrations.api.apiKeyAccessType') }}</label>
+          </div>
+          <t-radio-group v-model="editingAPIKeyAccessMode" class="mode-radio api-key-access-type-radio">
+            <t-radio-button value="scoped">{{ $t('integrations.api.apiKeyScopedAccess') }}</t-radio-button>
+            <t-radio-button value="full">{{ $t('integrations.api.capabilityTenantFull') }}</t-radio-button>
+          </t-radio-group>
+          <p class="scope-hint">
+            {{
+              editingAPIKeyFullAccessEnabled
+                ? $t('integrations.api.capabilityTenantFullHint')
+                : $t('integrations.api.apiKeyAccessTypeHint')
+            }}
+          </p>
+        </div>
+
+        <div v-if="!editingAPIKeyFullAccessEnabled" class="api-key-dialog-row">
+          <div class="api-key-dialog-row__label">
+            <label>{{ $t('integrations.api.apiKeyCapabilities') }}</label>
+          </div>
+          <div class="api-key-capability-list">
+            <div
+              v-for="group in apiKeyCapabilityGroups"
+              :key="group.key"
+              class="api-key-capability-group"
+            >
+              <div class="api-key-capability-group__header">
+                <span>{{ $t(group.labelKey) }}</span>
+                <t-button
+                  size="small"
+                  variant="text"
+                  @click="toggleEditingCapabilityGroup(group, !editingCapabilityGroupAllSelected(group))"
+                >
+                  {{
+                    editingCapabilityGroupAllSelected(group)
+                      ? $t('integrations.api.apiKeyCapabilityClearGroup')
+                      : $t('integrations.api.apiKeyCapabilitySelectGroup')
+                  }}
+                </t-button>
+              </div>
+              <div class="api-key-capability-group__items">
+                <div
+                  v-for="capability in group.capabilities"
+                  :key="capability.value"
+                  class="api-key-capability-item"
+                >
+                  <t-checkbox
+                    :model-value="editingCapabilitySelections[capability.value]"
+                    @change="editingCapabilitySelections[capability.value] = Boolean($event)"
+                  >
+                    {{ $t(capability.labelKey) }}
+                  </t-checkbox>
+                  <p class="scope-hint">{{ $t(capability.hintKey) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="editingKnowledgeScopeApplies" class="api-key-dialog-row">
+          <div class="api-key-dialog-row__label">
+            <label>{{ $t('integrations.api.apiKeyKnowledgeScope') }}</label>
+          </div>
+          <t-select
+            v-model="editingAPIKeyForm.knowledge_base_ids"
+            multiple
+            filterable
+            clearable
+            :loading="knowledgeBasesLoading"
+            :options="knowledgeBaseOptions"
+            :placeholder="$t('integrations.api.apiKeyKnowledgeScopePlaceholder')"
+          />
+          <p class="scope-hint">{{ $t('integrations.api.editApiKeyScopeHint') }}</p>
+        </div>
+      </div>
+    </SettingDrawer>
+
   </div>
 </template>
 
@@ -558,8 +674,10 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { DialogPlugin, MessagePlugin } from 'tdesign-vue-next'
 import { useI18n } from 'vue-i18n'
-import { getCurrentUser } from '@/api/auth'
-import { listAgents, BUILTIN_SMART_REASONING_ID, type CustomAgent } from '@/api/agent'
+import { copyWithToast } from '@/utils/clipboard'
+import { BUILTIN_SMART_REASONING_ID, type CustomAgent } from '@/api/agent'
+import { useAuthStore } from '@/stores/auth'
+import { useChatResourcesStore } from '@/stores/chatResources'
 import SettingDrawer from '@/components/settings/SettingDrawer.vue'
 import {
   createTenantAPIKey,
@@ -567,13 +685,13 @@ import {
   createAPIPrincipalTestToken,
   getAPIPrincipalConfig,
   listTenantAPIKeys,
+  updateTenantAPIKey,
   updateAPIPrincipalConfig,
   type APIPrincipalConfig,
   type APIPrincipalMode,
   type TenantAPIKey,
   type TenantAPIKeyCapability,
 } from '@/api/tenant'
-import { listKnowledgeBases } from '@/api/knowledge-base'
 import { getApiBaseUrl } from '@/utils/api-base'
 import {
   DEFAULT_TENANT_API_KEY_CAPABILITIES,
@@ -582,7 +700,9 @@ import {
   TENANT_API_KEY_CAPABILITY_GROUPS,
   type ApiKeyCapabilityGroup,
 } from '@/config/apiKeyCapabilities'
+import { normalizeAPIKeyKnowledgeBaseIDs } from './apiKeyScope'
 import { consumeApiPlaygroundSSE } from './apiPlaygroundSSE'
+import { docsUrl } from '@/utils/docsUrl'
 
 const { t } = useI18n()
 
@@ -592,6 +712,8 @@ const DEFAULT_TOKEN_HEADER_NAME = 'X-External-User-Token'
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
+const authStore = useAuthStore()
+const chatResources = useChatResourcesStore()
 const tenantId = ref(0)
 const apiKey = ref('')
 const config = ref<APIPrincipalConfig | null>(null)
@@ -599,6 +721,9 @@ const apiKeys = ref<TenantAPIKey[]>([])
 const apiKeysLoading = ref(false)
 const apiKeyDialogVisible = ref(false)
 const apiKeyCreating = ref(false)
+const apiKeyScopeDialogVisible = ref(false)
+const apiKeyScopeSaving = ref(false)
+const editingAPIKey = ref<TenantAPIKey | null>(null)
 const knowledgeBasesLoading = ref(false)
 const knowledgeBases = ref<Array<{ id: string; name: string }>>([])
 const secretInput = ref('')
@@ -637,6 +762,49 @@ const capabilitySelections = reactive<Record<TenantAPIKeyCapability, boolean>>(
     return acc
   }, {} as Record<TenantAPIKeyCapability, boolean>),
 )
+
+const editingCapabilitySelections = reactive<Record<TenantAPIKeyCapability, boolean>>(
+  API_KEY_CAPABILITIES.reduce((acc, capability) => {
+    acc[capability] = false
+    return acc
+  }, {} as Record<TenantAPIKeyCapability, boolean>),
+)
+
+const editingAPIKeyForm = reactive({
+  name: '',
+  knowledge_base_ids: [] as string[],
+  tenant_full_enabled: false,
+  expires_at_unix: undefined as number | undefined,
+})
+
+const editingAPIKeyFullAccessEnabled = computed(() => editingAPIKeyForm.tenant_full_enabled)
+const editingAPIKeyAccessMode = computed<'scoped' | 'full'>({
+  get: () => (editingAPIKeyForm.tenant_full_enabled ? 'full' : 'scoped'),
+  set: (value) => {
+    editingAPIKeyForm.tenant_full_enabled = value === 'full'
+  },
+})
+const editingSelectedCapabilities = computed(() => (
+  API_KEY_CAPABILITIES.filter((capability) => editingCapabilitySelections[capability])
+))
+const editingKnowledgeScopeApplies = computed(() => (
+  !editingAPIKeyFullAccessEnabled.value
+  && editingSelectedCapabilities.value.some((capability) => KB_SCOPED_CAPABILITIES.has(capability))
+))
+
+watch(editingKnowledgeScopeApplies, (applies) => {
+  if (!applies) editingAPIKeyForm.knowledge_base_ids = []
+})
+
+function editingCapabilityGroupAllSelected(group: ApiKeyCapabilityGroup): boolean {
+  return group.capabilities.every((capability) => editingCapabilitySelections[capability.value])
+}
+
+function toggleEditingCapabilityGroup(group: ApiKeyCapabilityGroup, selected: boolean) {
+  group.capabilities.forEach((capability) => {
+    editingCapabilitySelections[capability.value] = selected
+  })
+}
 
 const apiKeyForm = reactive({
   name: '',
@@ -964,15 +1132,14 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const [userResp] = await Promise.all([
-      getCurrentUser(),
-      loadAgents(),
-    ])
-    const tenant = (userResp as any)?.data?.tenant
-    if (!tenant?.id) {
+    // 当前生效空间就是每个请求 X-Tenant-ID 指向的空间，auth store 里已有，
+    // 不必再为拿一个 id 打一次 /auth/me。
+    await loadAgents()
+    const activeTenantId = authStore.effectiveTenantId
+    if (!activeTenantId) {
       throw new Error(t('integrations.api.loadFailed'))
     }
-    tenantId.value = Number(tenant.id)
+    tenantId.value = Number(activeTenantId)
     await Promise.all([
       loadAPIKeys(),
       loadKnowledgeBaseOptions(),
@@ -1021,9 +1188,8 @@ async function loadAPIKeys() {
 async function loadKnowledgeBaseOptions() {
   knowledgeBasesLoading.value = true
   try {
-    const resp: any = await listKnowledgeBases({ creator: 'all' })
-    const rows = Array.isArray(resp?.data) ? resp.data : []
-    knowledgeBases.value = rows.map((item: any) => ({
+    await chatResources.ensureKnowledgeBases()
+    knowledgeBases.value = chatResources.rawKnowledgeBases.map((item: any) => ({
       id: String(item.id),
       name: item.name || item.id,
     }))
@@ -1038,8 +1204,8 @@ async function loadAgents() {
   agentsLoading.value = true
   agentsError.value = ''
   try {
-    const resp = await listAgents({ creator: 'all' }) as any
-    agents.value = Array.isArray(resp?.data) ? resp.data : []
+    await chatResources.ensureAgents()
+    agents.value = chatResources.agents as CustomAgent[]
     ensurePlaygroundAgent()
   } catch (err: any) {
     agentsError.value = err?.message || t('integrations.api.playgroundAgentsLoadFailed')
@@ -1144,20 +1310,7 @@ async function saveIfNeeded(options: { showSuccess?: boolean } = {}) {
 }
 
 async function copy(text: string) {
-  if (!text) return
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text)
-  } else {
-    const textArea = document.createElement('textarea')
-    textArea.value = text
-    textArea.style.position = 'fixed'
-    textArea.style.opacity = '0'
-    document.body.appendChild(textArea)
-    textArea.select()
-    document.execCommand('copy')
-    document.body.removeChild(textArea)
-  }
-  MessagePlugin.success(t('integrations.api.copySuccess'))
+  await copyWithToast(text, 'integrations.api.copySuccess')
 }
 
 async function tryLoadWailsApiBaseURL() {
@@ -1278,6 +1431,10 @@ const saveDesktopPort = async () => {
   }
 }
 
+function openApiDoc() {
+  window.open(docsUrl('apiOverview'), '_blank')
+}
+
 function openCreateAPIKeyDialog() {
   apiKeyForm.name = ''
   apiKeyForm.knowledge_base_ids = []
@@ -1292,6 +1449,10 @@ function openCreateAPIKeyDialog() {
 async function createScopedAPIKey() {
   if (!apiKeyForm.name.trim()) {
     MessagePlugin.error(t('integrations.api.apiKeyNameRequired'))
+    return
+  }
+  if (!apiKeyFullAccessEnabled.value && selectedCapabilities().length === 0) {
+    MessagePlugin.error(t('integrations.api.apiKeyCapabilitiesRequired'))
     return
   }
   apiKeyCreating.value = true
@@ -1315,6 +1476,59 @@ async function createScopedAPIKey() {
     MessagePlugin.error(err?.message || t('integrations.api.createApiKeyFailed'))
   } finally {
     apiKeyCreating.value = false
+  }
+}
+
+// 打开编辑器时复制服务端配置，取消操作不会污染列表中的原始数据。
+function openEditAPIKeyScope(key: TenantAPIKey) {
+  editingAPIKey.value = key
+  editingAPIKeyForm.name = key.name
+  editingAPIKeyForm.tenant_full_enabled = key.full_access
+  editingAPIKeyForm.knowledge_base_ids = normalizeAPIKeyKnowledgeBaseIDs(key.knowledge_base_ids)
+  const expiresAt = key.expires_at ? Date.parse(key.expires_at) : Number.NaN
+  editingAPIKeyForm.expires_at_unix = Number.isNaN(expiresAt)
+    ? undefined
+    : Math.floor(expiresAt / 1000)
+  const currentCapabilities = new Set(key.capabilities || [])
+  API_KEY_CAPABILITIES.forEach((capability) => {
+    editingCapabilitySelections[capability] = currentCapabilities.has(capability)
+  })
+  apiKeyScopeDialogVisible.value = true
+  void loadKnowledgeBaseOptions()
+}
+
+// 保存完整配置后刷新列表，确保鉴权范围与界面立即一致。
+async function saveAPIKeyConfiguration() {
+  const key = editingAPIKey.value
+  if (!key) return
+  if (!editingAPIKeyForm.name.trim()) {
+    MessagePlugin.error(t('integrations.api.apiKeyNameRequired'))
+    return
+  }
+  if (!editingAPIKeyFullAccessEnabled.value && editingSelectedCapabilities.value.length === 0) {
+    MessagePlugin.error(t('integrations.api.apiKeyCapabilitiesRequired'))
+    return
+  }
+  apiKeyScopeSaving.value = true
+  try {
+    const resp = await updateTenantAPIKey(tenantId.value, key.id, {
+      name: editingAPIKeyForm.name.trim(),
+      full_access: editingAPIKeyFullAccessEnabled.value,
+      capabilities: editingAPIKeyFullAccessEnabled.value ? [] : editingSelectedCapabilities.value,
+      knowledge_base_ids: editingKnowledgeScopeApplies.value ? editingAPIKeyForm.knowledge_base_ids : [],
+      expires_at_unix: editingAPIKeyForm.expires_at_unix,
+    })
+    if (!resp.success || !resp.data) {
+      throw new Error(resp.message || t('integrations.api.updateApiKeyScopeFailed'))
+    }
+    apiKeyScopeDialogVisible.value = false
+    editingAPIKey.value = null
+    MessagePlugin.success(t('integrations.api.updateApiKeyScopeSuccess'))
+    await loadAPIKeys()
+  } catch (err: any) {
+    MessagePlugin.error(err?.message || t('integrations.api.updateApiKeyScopeFailed'))
+  } finally {
+    apiKeyScopeSaving.value = false
   }
 }
 
@@ -1342,9 +1556,10 @@ async function deleteScopedAPIKey(id: number) {
   await loadAPIKeys()
 }
 
-function formatKeyKnowledgeScope(ids: string[] = []) {
-  if (!ids.length) return t('integrations.api.allKnowledgeBases')
-  const names = ids.map((id) => knowledgeBases.value.find((kb) => kb.id === id)?.name || id)
+function formatKeyKnowledgeScope(ids: readonly string[] | null | undefined) {
+  const normalizedIDs = normalizeAPIKeyKnowledgeBaseIDs(ids)
+  if (!normalizedIDs.length) return t('integrations.api.allKnowledgeBases')
+  const names = normalizedIDs.map((id) => knowledgeBases.value.find((kb) => kb.id === id)?.name || id)
   return names.join(', ')
 }
 
@@ -1395,26 +1610,6 @@ function formatJSON(value: unknown) {
   } catch {
     return String(value)
   }
-}
-
-function extractAnswerFromSSE(raw: string) {
-  const chunks: string[] = []
-  raw.split('\n').forEach((line) => {
-    if (!line.startsWith('data:')) return
-    const payload = line.slice(5).trim()
-    if (!payload || payload === '[DONE]') return
-    try {
-      const parsed = JSON.parse(payload)
-      const type = parsed?.response_type || parsed?.type
-      const content = parsed?.content
-      if (type === 'answer' && typeof content === 'string') {
-        chunks.push(content)
-      }
-    } catch {
-      // Keep raw stream visible even when an event is not JSON.
-    }
-  })
-  return chunks.join('')
 }
 
 async function readResponseBody(resp: Response) {
@@ -1509,12 +1704,12 @@ async function runPlayground() {
       playground.stream_output = compactText(raw)
       playground.final_answer = answer
     })
+    playground.stream_output = compactText(result.raw)
+    playground.final_answer = result.answer
     if (result.status === 'failed') {
       playground.chat_status = 'failed'
       throw new Error(result.error || t('integrations.api.playgroundFailed'))
     }
-    playground.stream_output = compactText(result.raw)
-    playground.final_answer = result.answer || extractAnswerFromSSE(result.raw)
     playground.chat_status = 'success'
     MessagePlugin.success(t('integrations.api.playgroundSuccess', {
       ms: Math.round(performance.now() - startedAt),
@@ -1602,7 +1797,7 @@ onBeforeUnmount(stopPlayground)
 }
 
 .link-icon {
-  font-size: 13px;
+  font-size: var(--app-text-md);
 }
 
 .desktop-api-control {
@@ -1622,7 +1817,7 @@ onBeforeUnmount(stopPlayground)
 
   :deep(input) {
     font-family: var(--app-font-family-mono);
-    font-size: 12px;
+    font-size: var(--app-text-sm);
   }
 }
 
@@ -1653,7 +1848,7 @@ onBeforeUnmount(stopPlayground)
     display: block;
     margin-bottom: 6px;
     color: var(--td-text-color-primary);
-    font-size: 15px;
+    font-size: var(--app-text-lg);
     font-weight: 600;
     line-height: 1.4;
   }
@@ -1661,7 +1856,7 @@ onBeforeUnmount(stopPlayground)
   p {
     margin: 0;
     color: var(--td-text-color-secondary);
-    font-size: 13px;
+    font-size: var(--app-text-md);
     line-height: 1.55;
   }
 }
@@ -1674,7 +1869,7 @@ onBeforeUnmount(stopPlayground)
   display: flex;
   flex-direction: column;
   border: 1px solid var(--td-component-stroke);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: var(--td-bg-color-container);
   overflow: hidden;
 }
@@ -1686,7 +1881,7 @@ onBeforeUnmount(stopPlayground)
   gap: 8px;
   min-height: 88px;
   color: var(--td-text-color-secondary);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
 }
 
 .api-key-table-wrap {
@@ -1711,14 +1906,14 @@ onBeforeUnmount(stopPlayground)
   th {
     background: var(--td-bg-color-secondarycontainer);
     color: var(--td-text-color-placeholder);
-    font-size: 12px;
+    font-size: var(--app-text-sm);
     font-weight: 500;
     line-height: 1.4;
   }
 
   td {
     color: var(--td-text-color-secondary);
-    font-size: 13px;
+    font-size: var(--app-text-md);
     line-height: 1.45;
   }
 
@@ -1772,7 +1967,7 @@ onBeforeUnmount(stopPlayground)
   display: block;
   min-width: 0;
   color: var(--td-text-color-primary);
-  font-size: 13px;
+  font-size: var(--app-text-md);
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1784,7 +1979,7 @@ onBeforeUnmount(stopPlayground)
   max-width: 100%;
   color: var(--td-text-color-secondary);
   font-family: var(--app-font-family-mono);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   line-height: 1.5;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1807,10 +2002,10 @@ onBeforeUnmount(stopPlayground)
   height: 24px;
   padding: 0 9px;
   border: 1px solid var(--td-component-stroke);
-  border-radius: 6px;
+  border-radius: var(--app-radius-sm);
   background: var(--td-bg-color-secondarycontainer);
   color: var(--td-text-color-primary);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   font-weight: 600;
   line-height: 22px;
   overflow: hidden;
@@ -1837,10 +2032,10 @@ onBeforeUnmount(stopPlayground)
   max-width: 100%;
   height: 22px;
   padding: 0 8px;
-  border-radius: 6px;
+  border-radius: var(--app-radius-sm);
   background: color-mix(in srgb, var(--td-success-color) 10%, var(--td-bg-color-container));
   color: var(--td-success-color);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   font-weight: 500;
   line-height: 20px;
   overflow: hidden;
@@ -1872,7 +2067,7 @@ onBeforeUnmount(stopPlayground)
   gap: 12px;
   min-height: 24px;
   color: var(--td-text-color-primary);
-  font-size: 13px;
+  font-size: var(--app-text-md);
   font-weight: 600;
 }
 
@@ -1927,7 +2122,7 @@ onBeforeUnmount(stopPlayground)
       align-items: center;
       gap: 8px;
       color: var(--td-text-color-primary);
-      font-size: 14px;
+      font-size: var(--app-text-base);
       font-weight: 600;
       line-height: 1.45;
 
@@ -1944,14 +2139,14 @@ onBeforeUnmount(stopPlayground)
     p {
       margin: 2px 0 0;
       color: var(--td-text-color-placeholder);
-      font-size: 12px;
+      font-size: var(--app-text-sm);
       line-height: 1.5;
     }
   }
 
   :deep(.t-input),
   :deep(.t-select__wrap) {
-    border-radius: 4px;
+    border-radius: var(--app-radius-xs);
   }
 
   :deep(.t-input) {
@@ -1970,7 +2165,7 @@ onBeforeUnmount(stopPlayground)
 .scope-hint {
   margin: 8px 0 0;
   color: var(--td-text-color-placeholder);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   line-height: 18px;
 }
 
@@ -1986,14 +2181,14 @@ onBeforeUnmount(stopPlayground)
     display: block;
     margin-bottom: 6px;
     color: var(--td-text-color-primary);
-    font-size: 15px;
+    font-size: var(--app-text-lg);
     font-weight: 600;
   }
 
   p {
     margin: 0;
     color: var(--td-text-color-secondary);
-    font-size: 13px;
+    font-size: var(--app-text-md);
     line-height: 1.55;
   }
 }
@@ -2001,7 +2196,7 @@ onBeforeUnmount(stopPlayground)
 .principal-section__scope {
   margin-top: 6px !important;
   color: var(--td-text-color-placeholder) !important;
-  font-size: 12px !important;
+  font-size: var(--app-text-sm) !important;
 }
 
 .mode-radio {
@@ -2020,7 +2215,7 @@ onBeforeUnmount(stopPlayground)
 .mode-callout {
   position: relative;
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   border: 1px solid var(--td-component-stroke);
   background: var(--td-bg-color-secondarycontainer);
   overflow: hidden;
@@ -2037,7 +2232,7 @@ onBeforeUnmount(stopPlayground)
       display: block;
       margin-bottom: 5px;
       color: var(--td-text-color-primary);
-      font-size: 13px;
+      font-size: var(--app-text-md);
       font-weight: 600;
       line-height: 1.4;
     }
@@ -2046,7 +2241,7 @@ onBeforeUnmount(stopPlayground)
     p {
       margin: 0;
       color: var(--td-text-color-secondary);
-      font-size: 12px;
+      font-size: var(--app-text-sm);
       line-height: 1.6;
     }
   }
@@ -2056,7 +2251,7 @@ onBeforeUnmount(stopPlayground)
   display: flex;
   flex-direction: column;
   border: 1px solid var(--td-component-stroke);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: var(--td-bg-color-container);
   overflow: hidden;
 }
@@ -2078,7 +2273,7 @@ onBeforeUnmount(stopPlayground)
     label {
       display: block;
       color: var(--td-text-color-primary);
-      font-size: 13px;
+      font-size: var(--app-text-md);
       font-weight: 600;
       line-height: 1.4;
     }
@@ -2086,7 +2281,7 @@ onBeforeUnmount(stopPlayground)
     p {
       margin: 5px 0 0;
       color: var(--td-text-color-placeholder);
-      font-size: 12px;
+      font-size: var(--app-text-sm);
       line-height: 1.5;
     }
   }
@@ -2139,7 +2334,7 @@ onBeforeUnmount(stopPlayground)
 
 .secret-saved-hint {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   line-height: 1.5;
   color: var(--td-warning-color);
 }
@@ -2172,7 +2367,7 @@ onBeforeUnmount(stopPlayground)
   }
 
   :deep(.t-tabs__nav-item) {
-    font-size: 13px;
+    font-size: var(--app-text-md);
     height: 36px;
     line-height: 36px;
     color: var(--td-text-color-secondary);
@@ -2190,7 +2385,7 @@ onBeforeUnmount(stopPlayground)
 
 .code-panel {
   border: 1px solid var(--td-component-stroke);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: var(--td-bg-color-secondarycontainer);
   overflow: hidden;
 
@@ -2205,7 +2400,7 @@ onBeforeUnmount(stopPlayground)
   }
 
   &__label {
-    font-size: 12px;
+    font-size: var(--app-text-sm);
     font-weight: 500;
     color: var(--td-text-color-secondary);
   }
@@ -2229,7 +2424,7 @@ onBeforeUnmount(stopPlayground)
     padding: 10px 12px;
     overflow: auto;
     font-family: var(--app-font-family-mono);
-    font-size: 12px;
+    font-size: var(--app-text-sm);
     line-height: 1.5;
     color: var(--td-text-color-primary);
     background: transparent;
@@ -2238,7 +2433,7 @@ onBeforeUnmount(stopPlayground)
 
 .mono-input :deep(input) {
   font-family: var(--app-font-family-mono);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
 }
 
 .fixed-header-name {
@@ -2246,18 +2441,18 @@ onBeforeUnmount(stopPlayground)
   max-width: 100%;
   padding: 7px 10px;
   border: 1px solid var(--td-component-stroke);
-  border-radius: 6px;
+  border-radius: var(--app-radius-sm);
   background: var(--td-bg-color-secondarycontainer);
   color: var(--td-text-color-primary);
   font-family: var(--app-font-family-mono);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   line-height: 18px;
   overflow-wrap: anywhere;
 }
 
 .mono-textarea :deep(.t-textarea__inner) {
   font-family: var(--app-font-family-mono);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
 }
 
 .playground-entry {
@@ -2267,7 +2462,7 @@ onBeforeUnmount(stopPlayground)
   gap: 16px;
   padding: 12px 14px;
   border: 1px solid var(--td-component-stroke);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: var(--td-bg-color-secondarycontainer);
 
   &__info {
@@ -2277,14 +2472,14 @@ onBeforeUnmount(stopPlayground)
       display: block;
       margin-bottom: 4px;
       color: var(--td-text-color-primary);
-      font-size: 13px;
+      font-size: var(--app-text-md);
       font-weight: 500;
     }
 
     p {
       margin: 0;
       color: var(--td-text-color-secondary);
-      font-size: 12px;
+      font-size: var(--app-text-sm);
       line-height: 1.5;
     }
   }
@@ -2304,7 +2499,7 @@ onBeforeUnmount(stopPlayground)
 .drawer-form-label {
   display: block;
   color: var(--td-text-color-primary);
-  font-size: 13px;
+  font-size: var(--app-text-md);
   font-weight: 500;
   line-height: 1.4;
 }
@@ -2312,7 +2507,7 @@ onBeforeUnmount(stopPlayground)
 .drawer-form-desc {
   margin: 0;
   color: var(--td-text-color-placeholder);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   line-height: 1.5;
 
   &--error {
@@ -2323,14 +2518,14 @@ onBeforeUnmount(stopPlayground)
 .footer-test-message {
   min-width: 0;
   color: var(--td-text-color-placeholder);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   line-height: 1.4;
 }
 
 .playground-empty {
   margin: 0;
   color: var(--td-text-color-placeholder);
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   line-height: 1.6;
 }
 
@@ -2342,7 +2537,7 @@ onBeforeUnmount(stopPlayground)
 
 .playground-step {
   border: 1px solid var(--td-component-stroke);
-  border-radius: 8px;
+  border-radius: var(--app-radius-md);
   background: var(--td-bg-color-secondarycontainer);
   overflow: hidden;
 
@@ -2355,7 +2550,7 @@ onBeforeUnmount(stopPlayground)
     border-bottom: 1px solid var(--td-component-stroke);
     background: var(--td-bg-color-container);
     color: var(--td-text-color-secondary);
-    font-size: 12px;
+    font-size: var(--app-text-sm);
     font-weight: 500;
   }
 
@@ -2366,7 +2561,7 @@ onBeforeUnmount(stopPlayground)
     overflow: auto;
     color: var(--td-text-color-primary);
     font-family: var(--app-font-family-mono);
-    font-size: 12px;
+    font-size: var(--app-text-sm);
     line-height: 1.5;
     white-space: pre-wrap;
     word-break: break-word;
@@ -2407,14 +2602,14 @@ onBeforeUnmount(stopPlayground)
     display: block;
     margin-bottom: 4px;
     color: var(--td-text-color-primary);
-    font-size: 15px;
+    font-size: var(--app-text-lg);
     font-weight: 600;
   }
 
   p {
     margin: 0;
     color: var(--td-text-color-secondary);
-    font-size: 13px;
+    font-size: var(--app-text-md);
     line-height: 1.5;
   }
 }

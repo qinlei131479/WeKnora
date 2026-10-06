@@ -6,6 +6,27 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+func TestConfiguredJWTSecretKeepsSharedPlaceholder(t *testing.T) {
+	cases := []struct {
+		name string
+		env  string
+		want string
+	}{
+		{name: "real secret", env: "prod-secret", want: "prod-secret"},
+		{name: "historical placeholder", env: "weknora-jwt-secret", want: "weknora-jwt-secret"},
+		{name: "change-me placeholder", env: "CHANGE-ME-jwt-secret", want: "CHANGE-ME-jwt-secret"},
+		{name: "trimmed", env: "  weknora-jwt-secret  ", want: "weknora-jwt-secret"},
+		{name: "empty falls back to random", env: "   ", want: ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := configuredJWTSecret(tc.env); got != tc.want {
+				t.Fatalf("configuredJWTSecret(%q) = %q, want %q", tc.env, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestIsRefreshTokenClaims(t *testing.T) {
 	cases := []struct {
 		name   string

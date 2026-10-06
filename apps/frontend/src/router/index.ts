@@ -1,8 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useDeploymentCapabilitiesStore } from '@/stores/deploymentCapabilities'
 import { autoSetup, getCurrentUser, userInfoFromApi } from '@/api/auth'
+import { MessagePlugin } from 'tdesign-vue-next'
+import i18n from '@/i18n'
 import { getFeatureFlags, isHiddenMenuPath, weknoraKnowledgeBaseLocation } from '@/utils/weknoraFeatures'
+import { isToolboxSection, toolboxLocation } from '@/config/toolbox'
+import type { DeploymentCapabilityKey } from '@/config/deploymentCapabilities'
 
 /** Lite /桌面 WebView 硬刷新时可能只打开 `/`，用 session 记住上次页面以便恢复 */
 const LITE_LAST_PATH_KEY = 'weknora_lite_last_path'
@@ -137,10 +142,24 @@ const router = createRouter({
           },
         },
         {
+          path: "artifacts",
+          name: "artifactLibrary",
+          component: () => import("../views/artifacts/ArtifactLibrary.vue"),
+          meta: { requiresInit: true, requiresAuth: true, requiredCapability: 'settings.sandbox' }
+        },
+        {
+          // 工具箱：技能 / MCP / 本地浏览器连接。端口自上游 0.8.2，
+          // 之前只端口了页面与 config，漏了这条路由导致菜单点了无反应。
+          path: "toolbox/:section?",
+          name: "toolbox",
+          component: () => import("../views/toolbox/Toolbox.vue"),
+          meta: { requiresInit: true, requiresAuth: true }
+        },
+        {
           path: "agents",
           name: "agentList",
           component: () => import("../views/agent/AgentList.vue"),
-          meta: { requiresInit: true, requiresAuth: true }
+          meta: { requiresInit: true, requiresAuth: true, requiredCapability: 'agents' }
         },
         {
           path: "integrations",
@@ -242,7 +261,7 @@ const router = createRouter({
           path: "organizations",
           name: "organizationList",
           component: () => import("../views/organization/OrganizationList.vue"),
-          meta: { requiresInit: true, requiresAuth: true }
+          meta: { requiresInit: true, requiresAuth: true, requiredCapability: 'organizations' }
         },
         // Compatibility redirects for /platform/system/* URLs. System
         // administration surfaces live as dedicated sections inside the
@@ -445,6 +464,13 @@ router.beforeEach(async (to, from, next) => {
     return
   }
 
+  // Preserve bookmarks for tools that have moved out of Settings.
+  if (to.path === '/platform/settings' && isToolboxSection(to.query.section)) {
+    next({ ...toolboxLocation(to.query.section,
+      typeof to.query.sandboxId === 'string' ? to.query.sandboxId : undefined), replace: true })
+    return
+  }
+
   // Lite：硬刷新后若落在默认首页，恢复本次会话中最后访问的 /platform 子路径
   if (!liteDeepLinkRestoreDone) {
     liteDeepLinkRestoreDone = true
@@ -524,6 +550,18 @@ router.beforeEach(async (to, from, next) => {
 
   if (to.meta.requiresTenant !== false && !authStore.hasValidTenant) {
     next('/onboarding/workspace')
+    return
+  }
+
+  // 部署能力只描述“后端是否提供该功能”，不反映服务健康或是否已配置。
+  // 探测失败时 Store 会 fail-open，真正的权限和可用性仍由后端接口校验。
+  // 与侧栏菜单共用同一个判断：菜单隐藏的入口，深链也进不去。
+  const deploymentCapabilities = useDeploymentCapabilitiesStore()
+  await deploymentCapabilities.ensureLoaded()
+  const requiredCapability = to.meta.requiredCapability as DeploymentCapabilityKey | undefined
+  if (requiredCapability && !deploymentCapabilities.isSupported(requiredCapability)) {
+    MessagePlugin.warning(i18n.global.t('settings.capabilityUnavailable'))
+    next('/platform/knowledge-bases')
     return
   }
 

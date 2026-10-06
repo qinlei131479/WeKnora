@@ -2,18 +2,18 @@
 
 > **状态：持续维护** — 本文为流程清单，每次 `internal/` 更新后按步骤执行；无固定完成态。
 
-适用场景：`internal/`（上游腾讯开源）发生更新后，把能力端口到 `apps/app-core/`（企业 fork）。两侧是手工同步的平行分支，**没有工具链自动回灌**，本文 + `scripts/kjsc/drift_report.sh` 是唯一的兜底。
+适用场景：`internal/`（上游腾讯开源）发生更新后，把能力端口到 `apps/app-core/`（企业 fork）。两侧是手工同步的平行分支，**没有工具链自动回灌**，本文 + `.workbuddy/skills/weknora-upstream-sync/scripts/drift_report.sh` 是唯一的兜底。
 
 ## 第 0 步：跑漂移检测
 
 ```bash
-./scripts/kjsc/drift_report.sh            # 快速：文件清单 + 注册点断言（漂移时退出码 1）
-./scripts/kjsc/drift_report.sh --deep     # 慢（1-2 分钟）：区分「仅 import 路径差异」与「实质差异」
+.workbuddy/skills/weknora-upstream-sync/scripts/drift_report.sh            # 快速：文件清单 + 注册点断言（漂移时退出码 1）
+.workbuddy/skills/weknora-upstream-sync/scripts/drift_report.sh --deep     # 慢（1-2 分钟）：区分「仅 import 路径差异」与「实质差异」
 ```
 
 - **退出码 1 = 有能力漏端口**，按第 1 节清单逐项补齐后再继续。
 - `--deep` 里「实质差异」的文件才是需要人工比对的范围；「仅 import 路径差异」与上游语义一致，不要动。
-- 建议在 Jenkins app-core Job 构建前加一步 `sh scripts/kjsc/drift_report.sh`，漂移即 fail-fast（脚本无外部依赖，仅需 bash）。
+- 建议在 Jenkins app-core Job 构建前加一步 `sh .workbuddy/skills/weknora-upstream-sync/scripts/drift_report.sh`，漂移即 fail-fast（脚本无外部依赖，仅需 bash）。
 
 ## 第 1 节：四个注册点（漏一个 = 功能静默缺失）
 
@@ -56,14 +56,14 @@
 
 ```bash
 go build ./cmd/app-core          # 必须通过
-./scripts/kjsc/drift_report.sh   # 必须退出码 0
+.workbuddy/skills/weknora-upstream-sync/scripts/drift_report.sh   # 必须退出码 0
 ```
 
 涉及前端的能力端口另行核对 `apps/frontend`（上游 `frontend/` 的对应改动），i18n 五语言同批补齐（`zh-CN` 为基准，五文件键路径/行数一致）。
 
 ## 附：企业侧有意不端口的差异（白名单）
 
-同步时如果判断某项**刻意不端口**（如已禁用的 Local 沙箱），写入 `scripts/kjsc/drift_report.sh` 顶部的 `WIRING_WHITELIST` 并注明原因，不要靠记忆。
+同步时如果判断某项**刻意不端口**（如已禁用的 Local 沙箱），写入 `.workbuddy/skills/weknora-upstream-sync/scripts/drift_report.sh` 顶部的 `WIRING_WHITELIST` 并注明原因，不要靠记忆。
 
 当前已知的企业独有接线（app-core 有、internal 无，属预期，无需处理）：
 

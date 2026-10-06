@@ -328,7 +328,7 @@ KJSC 迁移通道（`database/migration.go:84-85`）使用 `file://migrations/ve
 
 | 优先级 | 动作 | 预期收益 | 状态 |
 |---|---|---|---|
-| P0 | 在 CI 增加 `internal` ↔ `apps/app-core` 漂移报告 + 「文件存在但未注册」定向断言 | 直接消灭 gitlab/ima/exa 这类漏项，把人工比对变成机械检查 | ✅ 已落地 `scripts/kjsc/drift_report.sh` |
+| P0 | 在 CI 增加 `internal` ↔ `apps/app-core` 漂移报告 + 「文件存在但未注册」定向断言 | 直接消灭 gitlab/ima/exa 这类漏项，把人工比对变成机械检查 | ✅ 已落地 `.workbuddy/skills/weknora-upstream-sync/scripts/drift_report.sh` |
 | P0 | 把「上游升级同步 checklist」写入 `docs/plan/`（四个注册点 + 配置加载器 + compose + scripts/kjsc） | 让每次上游同步可重复、可审计 | ✅ 已落地 `docs/plan/upstream-sync-20261001.md` |
 | P1 | 修订 AGENTS.md 注释语言条款为「新增/手改部分用中文，随上游复制的代码保持原样」，或启动一次 `app-core` 注释本地化 | 消除规范与现状的显性冲突，让 review 有可判定标准 | ✅ 已修订（取前者，放弃全量本地化） |
 | P1 | 清理 Harness 遗留 JS 层，合并 `hooks/` 与 `composables/` | 减少两套实现并存造成的 bug 面 | ✅ 已完成：50 个 harness JS 全部迁 TS（见第十二节「JS→TS 迁移」）；⚠️ 复核发现「hooks 与 composables 重叠」不成立（hooks 仅 3 个文件且无同名，均活跃） |
@@ -347,7 +347,7 @@ KJSC 迁移通道（`database/migration.go:84-85`）使用 `file://migrations/ve
 
 | 文件 | 作用 |
 |---|---|
-| `scripts/kjsc/drift_report.sh` | 漂移检测工具：文件级清单 + 两个注册点硬断言（provider 字符串键集合、容器接线 import 集合，带 `WIRING_WHITELIST`）+ `--deep` 归一化内容比对。退出码 0/1 可直接做 CI 门槛。无外部依赖 |
+| `.workbuddy/skills/weknora-upstream-sync/scripts/drift_report.sh` | 漂移检测工具：文件级清单 + 两个注册点硬断言（provider 字符串键集合、容器接线 import 集合，带 `WIRING_WHITELIST`）+ `--deep` 归一化内容比对。退出码 0/1 可直接做 CI 门槛。无外部依赖 |
 | `docs/plan/upstream-sync-20261001.md` | 上游同步 checklist：四个注册点、已知盲区（pipeline 插件顺序、models provider、types 契约）、配置体系、企业入口核查、验收命令 |
 | `docs/plan/project-analysis-20261001.md` | 本报告 |
 
@@ -364,7 +364,7 @@ KJSC 迁移通道（`database/migration.go:84-85`）使用 `file://migrations/ve
 **验证结果**
 
 - `go build ./cmd/app-core`：通过（约 38s，仅 `ld: ignoring duplicate libraries '-lc++'` 警告）
-- `./scripts/kjsc/drift_report.sh`：退出码 0；provider 集合两侧各 13 个、容器接线集合一致；快速模式约 8.5s（已从 `diff -rq` 改为 `find`+`comm`+`cmp`，避免在 7 万文件上超时）
+- `.workbuddy/skills/weknora-upstream-sync/scripts/drift_report.sh`：退出码 0；provider 集合两侧各 13 个、容器接线集合一致；快速模式约 8.5s（已从 `diff -rq` 改为 `find`+`comm`+`cmp`，避免在 7 万文件上超时）
 - `--deep`：1354 个分叉文件中 **1286 个仅 import 路径差异**，真正需要人工比对的**实质差异只有 68 个文件**——上游同步的实际工作面远小于文件数给人的印象；企业独有文件 25 个（均为合理定制，含 `_legacy` 沙箱、tenant_add_user、mindmap、model_proxy 等）
 - 反向测试：临时删除一个 `registry.Register` 后脚本准确报缺并返回 1，恢复后返回 0
 

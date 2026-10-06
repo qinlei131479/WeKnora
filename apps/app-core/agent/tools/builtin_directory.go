@@ -38,11 +38,12 @@ var builtinToolSchemaFactories = map[string]func() builtinToolSchemaProvider{
 	ToolThinking:  func() builtinToolSchemaProvider { return &sequentialThinkingTool },
 	ToolTodoWrite: func() builtinToolSchemaProvider { return &todoWriteTool },
 
-	ToolGrepChunks:          func() builtinToolSchemaProvider { return &grepChunksTool },
-	ToolKnowledgeSearch:     func() builtinToolSchemaProvider { return &knowledgeSearchTool },
-	ToolListKnowledgeChunks: func() builtinToolSchemaProvider { return &listKnowledgeChunksTool },
+	// 上游把 knowledge_search / get_document_info / list_knowledge_chunks 合并改名为
+	// search_knowledge / read_document / list_documents，grep_chunks 已并入检索工具，不再单列。
+	ToolSearchKnowledge:     func() builtinToolSchemaProvider { return &searchKnowledgeTool },
+	ToolListDocuments:       func() builtinToolSchemaProvider { return &listDocumentsTool },
 	ToolQueryKnowledgeGraph: func() builtinToolSchemaProvider { return &queryKnowledgeGraphTool },
-	ToolGetDocumentInfo:     func() builtinToolSchemaProvider { return &getDocumentInfoTool },
+	ToolReadDocument:        func() builtinToolSchemaProvider { return &readDocumentTool },
 	ToolSearchConversations: func() builtinToolSchemaProvider { return &searchConversationsTool },
 
 	ToolDatabaseQuery: func() builtinToolSchemaProvider { return &databaseQueryTool },
@@ -67,8 +68,9 @@ var builtinToolSchemaFactories = map[string]func() builtinToolSchemaProvider{
 	ToolWikiSearch: func() builtinToolSchemaProvider {
 		return NewWikiSearchTool(nil, nil, nil, nil)
 	},
-	ToolWikiReadSourceDoc: func() builtinToolSchemaProvider {
-		return NewWikiReadSourceDocTool(nil, nil)
+	// wiki_read_source_doc 在上游已降级为 read_document 的历史别名，schema 取同一工具。
+	LegacyToolWikiReadSourceDoc: func() builtinToolSchemaProvider {
+		return &readDocumentTool
 	},
 	ToolWikiFlagIssue: func() builtinToolSchemaProvider {
 		return NewWikiFlagIssueTool(nil, nil)
@@ -85,14 +87,15 @@ func builtinToolCategory(toolSlug string) string {
 	switch toolSlug {
 	case ToolThinking, ToolTodoWrite:
 		return BuiltinToolCategoryBuildin
-	case ToolGrepChunks, ToolKnowledgeSearch, ToolListKnowledgeChunks,
-		ToolQueryKnowledgeGraph, ToolGetDocumentInfo, ToolSearchConversations:
+	case ToolSearchKnowledge, ToolListDocuments,
+		ToolQueryKnowledgeGraph, ToolReadDocument, ToolSearchConversations,
+		LegacyToolWikiReadSourceDoc:
 		return BuiltinToolCategoryKnowledge
 	case ToolDatabaseQuery, ToolDataAnalysis, ToolDataSchema:
 		return BuiltinToolCategoryDatabase
-	case ToolWikiReadPage, ToolWikiWritePage, ToolWikiReplaceText,
+	case 		ToolWikiReadPage, ToolWikiWritePage, ToolWikiReplaceText,
 		ToolWikiRenamePage, ToolWikiDeletePage, ToolWikiSearch,
-		ToolWikiReadSourceDoc, ToolWikiFlagIssue, ToolWikiReadIssue,
+		ToolWikiFlagIssue, ToolWikiReadIssue,
 		ToolWikiUpdateIssue:
 		return BuiltinToolCategoryWiki
 	default:

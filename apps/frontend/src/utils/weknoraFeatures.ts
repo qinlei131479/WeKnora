@@ -44,7 +44,6 @@ const HIDDEN_SETTINGS_SECTIONS = new Set([
   'chathistory',
   'system',
   'ollama',
-  'browserconnection',
   'mymemory',
   'envvars',
   'memory',

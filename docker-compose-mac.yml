@@ -71,8 +71,6 @@ services:
       - ./config/config_kjsc.yaml:/app/config/config_kjsc.yaml:ro
       - ./config/builtin_agents_kjsc.yaml:/app/config/builtin_agents_kjsc.yaml:ro
       - ./config/prompt_templates_kjsc:/app/config/prompt_templates_kjsc:ro
-      # Optional: mount custom skills directory (allows adding skills without rebuilding image)
-      - ./skills/preloaded:/app/skills/preloaded:ro
       # Optional: declarative built-in models. Copy config/builtin_models.yaml.example
       # to config/builtin_models.yaml, edit it for your deployment, then
       # uncomment the line below. See docs/BUILTIN_MODELS.md.
@@ -341,8 +339,6 @@ services:
       - WEKNORA_DOCREADER_CALL_TIMEOUT=${WEKNORA_DOCREADER_CALL_TIMEOUT:-}
       # 知识库巡检回收（回收卡在 processing 的脏数据；false 禁用，不建议）
       - WEKNORA_HOUSEKEEPING_ENABLED=${WEKNORA_HOUSEKEEPING_ENABLED:-}
-      # 自定义 Skills 目录（挂载后指定，免重建镜像）
-      - WEKNORA_SKILLS_DIR=${WEKNORA_SKILLS_DIR:-}
       - WEKNORA_CHAT_ATTACHMENT_TTL_HOURS=${WEKNORA_CHAT_ATTACHMENT_TTL_HOURS:-24}
       - WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC=${WEKNORA_CHAT_ATTACHMENT_WAIT_TIMEOUT_SEC:-60}
       - WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY=${WEKNORA_CHAT_ATTACHMENT_OCR_CONCURRENCY:-8}

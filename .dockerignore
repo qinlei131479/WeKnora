@@ -18,7 +18,6 @@
 **/.venv/
 .venv_proto/
 **/.python-version
-!apps/agent-harness/.python-version
 **/__pycache__/
 **/*.pyc
 
@@ -76,3 +75,9 @@ fix-docker.sh
 
 # 注意:不要排除 docs/ —— 里面的 docs.go / swagger.json 是 Go 代码依赖的 swagger 包
 # 注意:不要用 *.md 通配排除 —— skills/preloaded/**/SKILL.md 会被打进镜像给 agent 用
+
+# ===== 企业追加段（上游同步保护）=====
+# 本段所有规则必须追加在文件末尾，禁止改动上方上游内容，否则每次同步上游都会冲突。
+# .dockerignore 为「最后匹配生效」；上游 **/.python-version 会排除 harness 的版本声明，
+# 这里在末尾重新纳入（父目录未被排除，可正常回纳）。
+!apps/agent-harness/.python-version

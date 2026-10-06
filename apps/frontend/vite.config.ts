@@ -137,10 +137,21 @@ export default defineConfig({
     host: true,
     // 代理配置，用于开发环境
     proxy: {
+      // 上游新增：MCP Streamable HTTP 可能长时间保持 SSE 连接
+      '/mcp/': {
+        target: DEV_PROXY_TARGET,
+        changeOrigin: true,
+        secure: false,
+        timeout: 3_600_000,
+        proxyTimeout: 3_600_000,
+      },
       "/api": {
         target: DEV_PROXY_TARGET,
         changeOrigin: true,
-        secure: false
+        secure: false,
+        ws: true,
+        timeout: 180_000,
+        proxyTimeout: 180_000,
       },
       "/files": {
         target: DEV_PROXY_TARGET,

@@ -5,7 +5,7 @@
 ## 改动边界
 
 - 企业产品线代码集中在 `apps/frontend`、`apps/app-core`、`apps/agent-harness`。
-- 上游开源目录 `frontend/`、`internal/` 禁止改动。
+- 上游开源目录 `frontend/`、`internal/`、`website-docs/`、`cmd/server/`、`migrations/`（其中 `migrations/version_kjsc/` 是企业领地，不在此列）禁止改动。这些目录是「影子目录」：随 `git merge` 自动跟上上游，企业构建不引用，改动它们下次同步必被覆盖，还会制造冲突（参照 `docs/plan/20261003-upstream-compat-strategy.md`）。
 - 其它产品线 `apps/manager`、`apps/backend` 禁止改动。
 - 代码侧只允许改动 `apps/` 下的企业产品线代码；其它目录一律不动。
 - 后端接口契约（path / method / body / SSE 事件字段）默认不改；确需改动时先评估兼容性与回滚方案。
@@ -73,6 +73,17 @@
 - `config_kjsc.yaml` 支持 `${VAR:-default}` 展开；该能力不得简化为只支持 `${VAR}`。
 - 官方新增配置项先补到 KJSC 变体，不改官方 `config/`、`internal/`、`cmd/server/`。
 - `config/*_kjsc*`、`docker-compose-kjsc.yml`、`docker-compose-mac.yml`、`scripts/kjsc/*`、`.env.kjsc.example`、`AGENTS.md` 属于企业侧维护入口，修复只能落在这些文件内。
+
+### 合并基纪律（必读）
+
+- **同步节奏：每两周一次**（跟随上游 release 顺延）。禁止攒数月做一次「大爆炸同步」——参照 `docs/plan/20261003-upstream-iteration-model.md`：同步周期越长，滞后累积越快，单次冲突量呈超线性增长（本次两个月积压造成 648 处冲突）。
+- 同步前先做「影子目录预对齐」：`git checkout upstream/master -- internal frontend website-docs` 并提交，使三方合并中我方与对方一致，冲突归零。
+- 同步上游只能用真三方合并：`git fetch upstream` 后 `git merge upstream/main`，合并提交的**第二个父必须是一个上游提交**。禁止用「整树导入 / 复制覆盖」的普通提交代替同步（历史 `ee231f69f` 因此让合并基长期停在 2026-08-08 `d823ef61a`，每次同步都要重比数百个上游提交，产生 600+ 处冲突）。
+- 合并提交一旦建立，不得 rebase / amend / 压缩，否则合并基再次失效。
+- 企业规则一律「追加」而不「就地改写」上游文件：`.gitignore`、`.dockerignore` 的企业规则写在文件末尾的「企业追加段」（二者均为最后匹配生效，末尾追加即可覆盖上游规则）。
+- 根文件 `CHANGELOG.md`、`README*`、`VERSION`、`THIRD_PARTY_NOTICES.md`、`.env.example`、`.github/workflows/*` 一律跟随上游，不就地改；企业定制走变体名（`.env.kjsc.example`、`config/*_kjsc*`、`Makefile.kjsc`、`scripts/kjsc/*`）。
+- 企业文档站是 `apps/docs`；根 `docs/` 属上游领地（企业构建不引用），禁止在其中新增企业文件。
+- 每次同步后三步校验：① `git diff --name-status upstream/main` 除企业专属路径外应无差异；② `git grep -nE '^(<<<<<<<|>>>>>>>)'` 应为空；③ `.workbuddy/skills/weknora-upstream-sync/scripts/drift_report.sh` 确认 `apps/app-core` 与 `internal/` 的漂移在预期内。
 
 ## 提交
 

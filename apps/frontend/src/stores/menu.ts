@@ -2,7 +2,10 @@ import { reactive, ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import i18n from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
+import { useDeploymentCapabilitiesStore } from '@/stores/deploymentCapabilities'
 import { isHiddenMenuPath } from '@/utils/weknoraFeatures'
+import type { DeploymentCapabilityKey } from '@/config/deploymentCapabilities'
+import type { QuestionOrigin } from '@/utils/questionOrigin'
 
 type MenuChild = Record<string, any>
 
@@ -13,6 +16,7 @@ interface MenuItem {
   path: string
   childrenPath?: string
   children?: MenuChild[]
+  requiredCapability?: DeploymentCapabilityKey
 }
 
 const createMenuChildren = () => reactive<MenuChild[]>([])
@@ -28,11 +32,14 @@ export const useMenuStore = defineStore('menuStore', () => {
       children: createMenuChildren()
     },
     { title: '', titleKey: 'menu.knowledgeBase', icon: 'zhishiku', path: 'knowledge-bases' },
-    { title: '', titleKey: 'menu.agents', icon: 'agent', path: 'agents' },
+    // Artifacts only exist where skills run in a sandbox.
+    { title: '', titleKey: 'menu.artifacts', icon: 'artifact', path: 'artifacts', requiredCapability: 'settings.sandbox' },
+    { title: '', titleKey: 'menu.agents', icon: 'agent', path: 'agents', requiredCapability: 'agents' },
     { title: '', titleKey: 'menu.skillsTools', icon: 'skills-tools', path: 'skills' },
     { title: '', titleKey: 'menu.workspace', icon: 'harness-workspace', path: 'workspace' },
     { title: '', titleKey: 'menu.dashboard', icon: 'harness-dashboard', path: 'dashboard' },
-    { title: '', titleKey: 'menu.organizations', icon: 'organization', path: 'organizations' },
+    { title: '', titleKey: 'toolbox.title', icon: 'toolbox', path: 'toolbox' },
+    { title: '', titleKey: 'menu.organizations', icon: 'organization', path: 'organizations', requiredCapability: 'organizations' },
     { title: '', titleKey: 'menu.settings', icon: 'setting', path: 'settings' },
     { title: '', titleKey: 'menu.logout', icon: 'logout', path: 'logout' }
   ])
@@ -43,6 +50,7 @@ export const useMenuStore = defineStore('menuStore', () => {
   const firstModelId = ref('')
   const firstImageFiles = ref<any[]>([])
   const firstAttachmentFiles = ref<any[]>([])
+  const firstQuestionOrigin = ref<QuestionOrigin | null>(null)
   const prefillQuery = ref('')
 
   const applyMenuTranslations = () => {
@@ -69,6 +77,7 @@ export const useMenuStore = defineStore('menuStore', () => {
   // 入口在侧栏只会徒增噪音；后端 RBAC 才是权限的最终来源（见 middleware/rbac.go）。
   const visibleMenuArr = computed(() => {
     const authStore = useAuthStore()
+    const deploymentCapabilities = useDeploymentCapabilitiesStore()
     return menuArr.filter(item => {
       if (isHiddenMenuPath(item.path)) {
         return false
@@ -77,6 +86,10 @@ export const useMenuStore = defineStore('menuStore', () => {
         return false
       }
       if (item.path === 'organizations' && !authStore.hasRole('admin')) {
+        return false
+      }
+      // 部署能力描述的是“这套后端是否提供该能力”，探测失败时 Store fail-open。
+      if (!deploymentCapabilities.isSupported(item.requiredCapability)) {
         return false
       }
       // 数据总览只对当前空间的所有者、管理员开放。系统管理员与可访问全部空间的账号同样可见。
@@ -129,12 +142,13 @@ export const useMenuStore = defineStore('menuStore', () => {
     isFirstSession.value = payload
   }
 
-  const changeFirstQuery = (payload: string, mentionedItems: any[] = [], modelId: string = '', imageFiles: any[] = [], attachmentFiles: any[] = []) => {
+  const changeFirstQuery = (payload: string, mentionedItems: any[] = [], modelId: string = '', imageFiles: any[] = [], attachmentFiles: any[] = [], questionOrigin: QuestionOrigin | null = null) => {
     firstQuery.value = payload
     firstMentionedItems.value = mentionedItems
     firstModelId.value = modelId
     firstImageFiles.value = imageFiles
     firstAttachmentFiles.value = attachmentFiles
+    firstQuestionOrigin.value = questionOrigin
   }
 
   const setPrefillQuery = (q: string) => {
@@ -156,6 +170,7 @@ export const useMenuStore = defineStore('menuStore', () => {
     firstModelId,
     firstImageFiles,
     firstAttachmentFiles,
+    firstQuestionOrigin,
     prefillQuery,
     clearMenuArr,
     updatemenuArr,

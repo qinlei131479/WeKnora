@@ -207,7 +207,7 @@ onBeforeUnmount(() => { generation++; emit('busy', false); emit('synced', false)
 
 .form-desc {
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   line-height: 1.5;
   color: var(--td-text-color-placeholder);
 
@@ -237,7 +237,7 @@ onBeforeUnmount(() => { generation++; emit('busy', false); emit('synced', false)
   align-items: center;
   gap: 4px 10px;
   margin: 4px 0 0;
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   line-height: 1.4;
   color: var(--td-text-color-secondary);
 }
@@ -256,7 +256,7 @@ onBeforeUnmount(() => { generation++; emit('busy', false); emit('synced', false)
 
 .snapshot-meta__docs {
   font: inherit;
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   line-height: 1.5;
 }
 
@@ -282,7 +282,7 @@ onBeforeUnmount(() => { generation++; emit('busy', false); emit('synced', false)
     padding: 0 !important;
     width: 400px;
     max-width: calc(100vw - 24px);
-    border-radius: 12px !important;
+    border-radius: var(--app-radius-xl) !important;
     background: var(--td-bg-color-container) !important;
     border: 0.5px solid var(--td-component-stroke) !important;
     box-shadow:
@@ -298,7 +298,7 @@ onBeforeUnmount(() => { generation++; emit('busy', false); emit('synced', false)
   }
 
   .server-docs-popup__title {
-    font-size: 13px;
+    font-size: var(--app-text-md);
     font-weight: 600;
     color: var(--td-text-color-primary);
   }
@@ -307,7 +307,7 @@ onBeforeUnmount(() => { generation++; emit('busy', false); emit('synced', false)
   .server-docs-popup pre {
     margin: 8px 0 0;
     font: inherit;
-    font-size: 12px;
+    font-size: var(--app-text-sm);
     line-height: 1.6;
     color: var(--td-text-color-secondary);
     white-space: pre-wrap;

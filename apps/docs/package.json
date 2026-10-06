@@ -8,7 +8,16 @@
     "preview": "vitepress preview --port 9900 --host 0.0.0.0",
     "check:mermaid": "node scripts/check-mermaid.mjs",
     "check:links": "node scripts/check-links.mjs",
-    "check": "npm run check:links && npm run check:mermaid"
+    "check": "npm run check:links && npm run check:mermaid",
+    "setup": "npm ci && npm --prefix homepage ci",
+    "dev:homepage": "npm --prefix homepage run dev",
+    "build:homepage": "npm --prefix homepage run build",
+    "serve:site": "node scripts/serve-site.mjs",
+    "build:site": "node scripts/build-site.mjs",
+    "check:site": "node scripts/check-site.mjs",
+    "package:site": "node scripts/package-site.mjs",
+    "test:integration": "node scripts/test-integration.mjs",
+    "test:docker": "node scripts/test-docker.mjs"
   },
   "devDependencies": {
     "mermaid": "^11.16.0",

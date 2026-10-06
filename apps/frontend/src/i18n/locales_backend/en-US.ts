@@ -1,4 +1,3 @@
-/** 后端接口错误文案，与前端界面文案隔离。 */
 export default {
   error: {
     kb: {
@@ -75,7 +74,7 @@ export default {
       tagNotInKb: 'This tag does not belong to the current knowledge base',
       faqEntryEmpty: 'FAQ entries cannot be empty',
       invalidDisplayStatus: 'Display status must be open or closed',
-      chunkNotInDocument: 'This chunk does not belong to the current document',
+      chunkNotInDocument: 'This chunk does not belong to the current document'
     },
     skill: {
       skill_duplicate: 'Skill "{name}" already exists. Use a different name or identifier.',
@@ -114,7 +113,7 @@ export default {
       skill_dir_missing: 'Skill directory not found',
       skill_share_forbidden: 'You cannot use this sharing scope',
       skill_slug_mismatch: 'The skill identifier does not match its content',
-      skill_failed: 'The operation failed. Try again later',
-    },
-  },
+      skill_failed: 'The operation failed. Try again later'
+    }
+  }
 }

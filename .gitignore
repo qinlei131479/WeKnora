@@ -5,6 +5,11 @@
 !.gitignore
 !.github/
 
+# 项目级智能体工作区：只提交 skills/（供所有智能体共用），memory/ outputs/ 等不提交
+!.workbuddy/
+.workbuddy/*
+!.workbuddy/skills/
+
 # 敏感文件
 *.pem
 *_key
@@ -18,10 +23,9 @@
 
 # 构建和依赖文件
 node_modules/
-dist/
-build/
+/dist/
+/build/
 *.log
-target/
 
 # 临时文件
 tmp/
@@ -64,3 +68,12 @@ miniprogram/project.private.config.json
 
 # Locally built BrowserSkill runtime and extension bundles
 /artifacts/browserskill/
+
+# ===== 企业追加段（上游同步保护）=====
+# 本段所有规则必须追加在文件末尾，禁止改动上方上游内容，否则每次同步上游都会冲突。
+# gitignore 为「最后匹配生效」，因此这里可以覆盖上游带锚点的规则。
+# 上游用 /dist/ /build/ 只锚定仓库根，企业构建产物落在 apps/ 下，需要匹配任意层级
+dist/
+build/
+# Maven（apps/backend）与打包产物
+target/

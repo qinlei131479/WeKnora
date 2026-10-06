@@ -1,5 +1,5 @@
 <template>
-  <header class="chat-header" :class="{ 'is-editing': titleEditing, 'is-docked': hasReferencesPanel }">
+  <header class="chat-header">
     <form
       v-if="titleEditing"
       class="chat-header__edit"
@@ -24,8 +24,74 @@
       @dblclick="startTitleEdit"
     >
       <t-icon v-if="session?.is_pinned" name="pin" size="12px" class="chat-header__pin" />
-      <span class="chat-header__title-text">{{ displayTitle }}</span>
+      <span ref="titleTextRef" class="chat-header__title-text">{{ displayTitle }}</span>
     </h1>
+    <span
+      v-if="!titleEditing && workspaceLabel"
+      class="chat-header__workspace"
+    >{{ workspaceLabel }}</span>
+    <t-popup
+      v-if="!titleEditing"
+      v-model:visible="menuVisible"
+      :overlay-class-name="menuOverlayClass"
+      trigger="click"
+      destroy-on-close
+      placement="bottom-left"
+      :disabled="!session || Boolean(busyAction)"
+      @visible-change="onMenuVisibleChange"
+    >
+      <button
+        type="button"
+        class="chat-header__menu-btn"
+        :class="{ 'is-loading': Boolean(busyAction) }"
+        :disabled="!session || Boolean(busyAction)"
+        :aria-label="t('chatHeader.moreActions')"
+        @click.stop
+      >
+        <t-icon v-if="busyAction" name="loading" size="14px" class="chat-header__menu-loading" />
+        <t-icon v-else name="ellipsis" size="16px" />
+      </button>
+      <template #content>
+        <div class="card-menu" @click.stop>
+          <template v-if="menuMode === 'menu'">
+            <button type="button" class="card-menu-item" @click="onMenuAction('rename')">
+              <t-icon class="icon" name="edit-1" />
+              <span>{{ t('menu.renameSession') }}</span>
+            </button>
+            <button type="button" class="card-menu-item" @click="onMenuAction('copyMarkdown')">
+              <t-icon class="icon" name="file-copy" />
+              <span>{{ t('chatHeader.copyMarkdown') }}</span>
+            </button>
+            <button type="button" class="card-menu-item danger" @click="enterConfirmMode('delete')">
+              <t-icon class="icon" name="delete" />
+              <span>{{ t('chatHeader.deleteSession') }}</span>
+            </button>
+          </template>
+
+          <div v-else class="chat-header-confirm">
+            <div class="chat-header-confirm__title">
+              {{ t('chatHeader.deleteConfirmTitle') }}
+            </div>
+            <div class="chat-header-confirm__body">
+              {{ t('chatHeader.deleteConfirmBody') }}
+            </div>
+            <div class="chat-header-confirm__footer">
+              <button type="button" class="chat-header-confirm__btn" :disabled="Boolean(busyAction)" @click="backToMenu">
+                {{ t('common.cancel') }}
+              </button>
+              <button
+                type="button"
+                class="chat-header-confirm__btn is-danger"
+                :disabled="Boolean(busyAction)"
+                @click="submitDeleteSession()"
+              >
+                {{ t('common.delete') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </t-popup>
   </header>
 </template>
 
@@ -33,8 +99,17 @@
 import { computed, nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { MessagePlugin } from 'tdesign-vue-next'
-import { renameSession } from './sessionMutations'
+import { copyToClipboard } from '@/utils/clipboard'
+import { getMessageList } from '@/api/chat'
+import {
+  removeSession,
+  renameSession,
+} from './sessionMutations'
 import { normalizeSessionTitleDraft, SESSION_TITLE_MAX_LENGTH } from './sessionTitleEdit'
+import { buildSessionMarkdown, collectAllSessionMessages } from '@/utils/sessionMarkdown'
+import { useSessionTitleMotion } from '@/composables/useSessionTitleMotion'
+import { useDeploymentCapabilitiesStore } from '@/stores/deploymentCapabilities'
+import { hostWorkspaceHeaderText, shouldRenderHostProjectSettings } from '@/utils/hostWorkspace'
 
 interface ChatHeaderSession {
   id: string
@@ -42,23 +117,69 @@ interface ChatHeaderSession {
   description?: string
   tenant_id?: number | string
   is_pinned?: boolean
+  host_workspace_dir?: string
 }
+
+type MenuMode = 'menu' | 'delete'
 
 const props = defineProps<{
   session: ChatHeaderSession | null
-  hasReferencesPanel?: boolean
 }>()
 
 const { t } = useI18n()
+const deploymentCapabilities = useDeploymentCapabilitiesStore()
 const busyAction = ref('')
+const menuVisible = ref(false)
+const menuMode = ref<MenuMode>('menu')
 const titleEditing = ref(false)
 const titleDraft = ref('')
 const titleInputRef = ref<HTMLInputElement | null>(null)
 
 const displayTitle = computed(() => props.session?.title?.trim() || t('menu.newSession'))
+const titleTextRef = ref<HTMLElement | null>(null)
+useSessionTitleMotion(titleTextRef, () => props.session?.id, () => displayTitle.value)
+const workspaceLabel = computed(() => {
+  if (!props.session) return ''
+  if (!shouldRenderHostProjectSettings(deploymentCapabilities.isSupported('settings.sandbox.host'))) {
+    return ''
+  }
+  return hostWorkspaceHeaderText(props.session.host_workspace_dir, t('chatHeader.temporaryWorkspace'))
+})
+const menuOverlayClass = computed(() => (
+  menuMode.value === 'menu' ? 'card-more chat-header-menu-popup' : 'card-more chat-header-menu-popup is-confirm'
+))
+
+function onMenuVisibleChange(visible: boolean): void {
+  if (!visible) menuMode.value = 'menu'
+}
+
+function enterConfirmMode(mode: 'delete'): void {
+  menuMode.value = mode
+}
+
+function backToMenu(): void {
+  if (busyAction.value) return
+  menuMode.value = 'menu'
+}
+
+function onMenuAction(value: string): void {
+  if (value === 'rename') {
+    menuVisible.value = false
+    startTitleEdit()
+    return
+  }
+  menuVisible.value = false
+  if (value === 'copyMarkdown') void copyMarkdown()
+}
+
+async function copyText(text: string): Promise<void> {
+  const ok = await copyToClipboard(text)
+  if (!ok) throw new Error('clipboard unavailable')
+}
 
 function startTitleEdit(): void {
   if (!props.session || busyAction.value) return
+  menuVisible.value = false
   titleDraft.value = props.session.title || ''
   titleEditing.value = true
   nextTick(() => {
@@ -97,58 +218,71 @@ async function submitTitleEdit(): Promise<void> {
     busyAction.value = ''
   }
 }
+
+async function copyMarkdown(): Promise<void> {
+  const session = props.session
+  if (!session || busyAction.value) return
+  busyAction.value = 'markdown'
+  try {
+    const messages = await collectAllSessionMessages(async (beforeTime, limit) => {
+      const response: any = await getMessageList({
+        session_id: session.id,
+        created_at: beforeTime,
+        limit,
+      })
+      if (!response?.success || !Array.isArray(response.data)) {
+        throw new Error(response?.message || 'failed to load session messages')
+      }
+      return response.data
+    })
+    const markdown = buildSessionMarkdown({
+      sessionId: session.id,
+      title: session.title || t('menu.newSession'),
+      messages,
+      labels: {
+        sessionId: t('chatHeader.markdown.sessionId'),
+        exportedAt: t('chatHeader.markdown.exportedAt'),
+        user: t('chatHeader.markdown.user'),
+        assistant: t('chatHeader.markdown.assistant'),
+        attachments: t('chatHeader.markdown.attachments'),
+        references: t('chatHeader.markdown.references'),
+      },
+    })
+    await copyText(markdown)
+    MessagePlugin.success(t('chatHeader.markdownCopied'))
+  } catch {
+    MessagePlugin.error(t('chatHeader.markdownCopyFailed'))
+  } finally {
+    busyAction.value = ''
+  }
+}
+
+async function submitDeleteSession(): Promise<void> {
+  const session = props.session
+  if (!session || busyAction.value) return
+  busyAction.value = 'delete'
+  try {
+    await removeSession(session.id)
+    menuVisible.value = false
+    menuMode.value = 'menu'
+    MessagePlugin.success(t('chatHeader.deleteSuccess'))
+  } catch {
+    MessagePlugin.error(t('chat.deleteSessionFailed'))
+  } finally {
+    busyAction.value = ''
+  }
+}
+
 </script>
 
 <style scoped lang="less">
 .chat-header {
-  position: absolute;
-  top: 10px;
-  left: 12px;
-  z-index: 6;
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  max-width: min(280px, calc(100% - 24px));
+  max-width: min(360px, calc(100% - 36px));
   min-width: 0;
-  padding: 2px 2px 2px 8px;
-  border-radius: 8px;
   box-sizing: border-box;
-  background: color-mix(in srgb, var(--td-bg-color-container) 88%, transparent);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  pointer-events: auto;
-
-  &.is-editing {
-    max-width: min(360px, calc(100% - 24px));
-    padding: 2px;
-  }
-
-  @media (min-width: 960px) {
-    &.is-docked {
-      position: relative;
-      top: auto;
-      left: auto;
-      align-self: stretch;
-      z-index: 5;
-      flex-shrink: 0;
-      width: 100%;
-      max-width: none;
-      margin: 0;
-      padding: 10px 12px;
-      border-radius: 0;
-      border-bottom: 1px solid var(--td-component-stroke);
-      background: var(--td-bg-color-container);
-      backdrop-filter: none;
-      -webkit-backdrop-filter: none;
-      box-sizing: border-box;
-      transition: border-color 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
-
-      &.is-editing {
-        max-width: none;
-        padding: 8px 12px;
-      }
-    }
-  }
 }
 
 .chat-header__edit {
@@ -166,7 +300,7 @@ async function submitTitleEdit(): Promise<void> {
   border-radius: 5px;
   color: var(--td-text-color-primary);
   background: var(--td-bg-color-container);
-  font-size: 14px;
+  font-size: var(--app-text-base);
   line-height: 26px;
   outline: none;
   box-sizing: border-box;
@@ -185,7 +319,7 @@ async function submitTitleEdit(): Promise<void> {
   margin: 0;
   padding: 0;
   color: var(--td-text-color-secondary);
-  font-size: 14px;
+  font-size: var(--app-text-base);
   font-weight: 500;
   line-height: 20px;
   cursor: default;
@@ -198,8 +332,132 @@ async function submitTitleEdit(): Promise<void> {
   white-space: nowrap;
 }
 
+.chat-header__workspace {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 6px;
+  color: var(--td-text-color-placeholder);
+  font-size: var(--app-text-xs);
+  font-weight: 400;
+  line-height: 20px;
+}
+
 .chat-header__pin {
   flex: 0 0 auto;
   color: var(--td-text-color-placeholder);
 }
+
+.chat-header__menu-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  color: var(--td-text-color-placeholder);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color var(--app-motion-fast) ease, color var(--app-motion-fast) ease;
+
+  &:hover:not(:disabled) {
+    color: var(--td-text-color-primary);
+    background: var(--td-bg-color-container-hover);
+  }
+
+  &:active:not(:disabled) {
+    background: var(--td-bg-color-container-active);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  &.is-loading {
+    cursor: wait;
+  }
+}
+
+.chat-header__menu-loading {
+  animation: wk-spin 0.8s linear infinite;
+}
+
+</style>
+
+<style lang="less">
+.card-more.chat-header-menu-popup.is-confirm .t-popup__content {
+  padding: 12px !important;
+  width: 260px !important;
+  min-width: 260px !important;
+}
+
+.chat-header-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 236px;
+}
+
+.chat-header-confirm__title {
+  margin: 0;
+  color: var(--td-text-color-primary);
+  font-size: var(--app-text-base);
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.chat-header-confirm__body {
+  color: var(--td-text-color-secondary);
+  font-size: var(--app-text-base);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.chat-header-confirm__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.chat-header-confirm__btn {
+  min-width: 60px;
+  height: 30px;
+  padding: 0 12px;
+  border: 0.5px solid var(--td-component-stroke);
+  border-radius: var(--app-radius-sm);
+  color: var(--td-text-color-primary);
+  background: var(--td-bg-color-container);
+  font-size: var(--app-text-base);
+  line-height: 28px;
+  cursor: pointer;
+  transition: background-color var(--app-motion-fast) ease, color var(--app-motion-fast) ease, border-color var(--app-motion-fast) ease;
+
+  &:hover:not(:disabled) {
+    background: var(--td-bg-color-container-hover);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  &.is-danger {
+    border-color: transparent;
+    color: #fff;
+    background: var(--td-error-color-6);
+
+    &:hover:not(:disabled) {
+      background: var(--td-error-color-5);
+    }
+  }
+}
+
 </style>

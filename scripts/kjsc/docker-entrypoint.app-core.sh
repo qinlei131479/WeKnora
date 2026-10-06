@@ -3,18 +3,13 @@
 set -e
 
 # ─── Fix ownership of bind-mounted directories ───
-# When users bind-mount host directories (e.g. ./skills/preloaded),
-# the mount inherits the host UID/GID which may differ from the
-# container's appuser. This entrypoint runs as root, fixes ownership,
-# then drops privileges to appuser via gosu — the same pattern used
-# by official postgres/redis images.
-#
-# Skip when the mount is read-only (:ro) — chown/cp would fail and
-# abort startup under set -e; host-owned 644/755 files remain readable.
+# 用户 bind-mount 的目录继承宿主 UID/GID，可能与容器内 appuser 不同。
+# 本入口先以 root 修正属主，再经 gosu 降权到 appuser —— 与官方
+# postgres/redis 镜像同一模式。只读挂载（:ro）时跳过：chown 会失败
+# 并在 set -e 下中断启动，宿主持有的 644/755 文件保持可读即可。
 
 # Directories that may be bind-mounted and need appuser access
 MOUNT_DIRS=(
-    /app/skills/preloaded
     /data/files
 )
 
@@ -23,29 +18,6 @@ for dir in "${MOUNT_DIRS[@]}"; do
         chown -R appuser:appuser "$dir" 2>/dev/null || true
     fi
 done
-
-# ─── Merge built-in skills into preloaded ───
-# Built-in skills are backed up at /app/skills/_builtin during image build.
-# After a bind-mount replaces /app/skills/preloaded, copy back any
-# missing built-in skills (without overwriting user-provided ones).
-BUILTIN_DIR="/app/skills/_builtin"
-PRELOADED_DIR="/app/skills/preloaded"
-
-if [ -d "$BUILTIN_DIR" ]; then
-    mkdir -p "$PRELOADED_DIR" 2>/dev/null || true
-    if [ -d "$PRELOADED_DIR" ] && [ -w "$PRELOADED_DIR" ]; then
-        for skill_dir in "$BUILTIN_DIR"/*/; do
-            [ -d "$skill_dir" ] || continue
-            skill_name="$(basename "$skill_dir")"
-            if [ ! -d "$PRELOADED_DIR/$skill_name" ]; then
-                cp -r "$skill_dir" "$PRELOADED_DIR/$skill_name"
-            fi
-        done
-        chown -R appuser:appuser "$PRELOADED_DIR" 2>/dev/null || true
-    else
-        echo "WARN: $PRELOADED_DIR is not writable (read-only mount?); skip skills merge/chown"
-    fi
-fi
 
 # ─── Docker socket access for the Docker sandbox backend ───
 # The Engine API socket is normally root:docker 0660. This entrypoint runs

@@ -194,6 +194,7 @@ func NewMCPClient(config *ClientConfig) (MCPClient, error) {
 	}
 
 	clientCfg := secutils.DefaultSSRFSafeHTTPClientConfig()
+	clientCfg.SameOriginRedirectsOnly = true
 	clientCfg.Timeout = timeout
 	httpClient := secutils.NewSSRFSafeHTTPClient(clientCfg)
 

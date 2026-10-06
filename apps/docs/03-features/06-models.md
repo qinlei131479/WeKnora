@@ -85,6 +85,168 @@ const (
 
 模型级字段还包括 `name`（运行期实际调用的模型名）、`display_name`、`type`、`source`、`is_default`（同一 `(tenant_id, type)` 桶内唯一默认）、`is_builtin`、`managed_by`、`status`（`active` / `downloading` / `download_failed`）。
 
+### 协议兼容覆盖 compat JSON
+
+同样是「OpenAI 兼容」接口，各家对请求字段的要求并不一致：有的只认 `max_tokens`，有的用不同字段开关思考，推理模型可能拒绝 `temperature`。内置厂商和已收录模型的这些差异已写在模型目录里，通常不需要填写这一项。该选项位于远程模型（WeKnora 云服务除外）的「高级选项 → 高级」中，以下情况才需要手动覆盖：
+
+- 自建推理服务（vLLM、SGLang 等）或中转网关，接口行为和厂商默认值不一致；
+- 厂商新发布的模型尚未收录，「实际调用方式」面板显示「厂商通用默认（未收录此模型）」，且调用报错；
+- 厂商调整了接口，需要在升级前临时修正。
+
+#### 填写规则
+
+1. **先看协议**。对话、视觉模型的字段取决于「实际调用方式」面板里的「请求协议」，只接受该协议的字段；如果改了「协议覆盖」，JSON 也要改成新协议的字段。向量、重排、语音模型各用一组字段，与协议无关。
+2. **只写要改的键**。没写的键继续沿用目录默认值。`extra_body` 等对象按键合并，数组整个替换。
+3. **保存时校验**。输入必须是 JSON 对象。键名拼错、取值类型不对或枚举值不存在时，保存会失败并提示原因，不会等到对话时才报错。
+4. **改完测试**。「测试连接」使用当前表单中的配置，无需先保存。
+
+这里的覆盖优先级高于厂商默认值和模型目录；旧配置中的「思考参数格式」和「远端模型名」仍然最后生效。模型目录标注为不支持思考的模型，思考相关字段会被忽略。
+
+`extra_body` 只补充 WeKnora 没有写入的字段，不能覆盖 `model`、`messages`、`max_tokens` 这类由 WeKnora 生成的字段。
+
+#### 常见场景
+
+| 现象 | 填写 |
+| --- | --- |
+| 报错不认识 `max_completion_tokens` | `{"max_tokens_field": "max_tokens"}` |
+| 推理模型拒绝 `temperature` / `top_p` | `{"supports_temperature": false}` |
+| 接口只接受固定温度（例如 1） | `{"fixed_temperature": 1}` |
+| vLLM / SGLang 部署的 Qwen3 等混合思考模型无法关闭或开启思考 | `{"thinking_format": "chat-template-kwargs"}` |
+| 网关不支持流式返回用量，流式请求报错 | `{"supports_usage_in_streaming": false}` |
+| 网关拒绝带图片的消息结构 | `{"supports_multi_content": false}`（只发送文字，图片会被丢弃） |
+| 需要附带厂商私有参数，如阿里云联网搜索 | `{"extra_body": {"enable_search": true}}` |
+| 多轮对话回传思考内容时报错 | `{"replay_reasoning_content": false}` |
+| 自建向量服务一次请求只接受 16 条 | `{"max_batch_size": 16}` |
+| 向量或重排服务响应慢，需要更长的超时 | `{"request_timeout_seconds": 120}` |
+| 自建重排服务返回的是未归一化分数（logit） | `{"score_scale": "logit"}` |
+
+#### 字段参考
+
+下表的「协议默认」是没有任何厂商、目录或覆盖时的取值；具体厂商的实际值以「实际调用方式」面板为准。
+
+**OpenAI Chat Completions（`openai-completions`）**：绝大多数「OpenAI 兼容」厂商、自建服务和网关使用此协议。
+
+| 字段 | 类型 | 协议默认 | 说明 |
+| --- | --- | --- | --- |
+| `max_tokens_field` | string | `max_completion_tokens` | 输出上限的字段名：`max_tokens` 或 `max_completion_tokens`，只发其中一个 |
+| `thinking_format` | string | `none` | 思考开关的写法：`none` 不发；`openai` 只发 `reasoning_effort`；`thinking-type` 发 `{"thinking": {"type": ...}}`；`enable-thinking` 发 `enable_thinking`（配合预算字段）；`chat-template-kwargs` 发 `chat_template_kwargs.enable_thinking`（vLLM / SGLang）；`openrouter` 发 `{"reasoning": ...}` |
+| `thinking_enabled_value` | string | `enabled` | `thinking-type` 写法开启思考时的 `type` 值（如 MiniMax 用 `adaptive`） |
+| `thinking_always_send` | bool | false | 未指定思考偏好时也发送开关 |
+| `thinking_disable_on_non_stream` | bool | false | 非流式调用时强制关闭思考（部分模型只允许在流式下思考） |
+| `thinking_budget_field` | string | 空 | 思考预算的字段名，如 `thinking_budget`；空则不发 |
+| `thinking_budget_excludes_effort` | bool | false | 厂商不允许预算和 `reasoning_effort` 同时出现时置 true，只保留思考强度 |
+| `supports_reasoning_effort` | bool | false | 是否额外发送思考强度 |
+| `reasoning_effort_field` | string | `reasoning_effort` | 思考强度的字段名 |
+| `supports_developer_role` | bool | false | 推理模型的系统提示改用 `developer` 角色 |
+| `supports_store` | bool | false | 发送 `store: false`，要求服务端不保留对话 |
+| `supports_usage_in_streaming` | bool | true | 流式请求携带 `stream_options.include_usage` 以统计用量 |
+| `supports_temperature` | bool | true | false 时不发送任何采样参数（温度、top_p、惩罚项） |
+| `fixed_temperature` | number | 无 | 固定发送的温度值 |
+| `supports_seed` | bool | true | 是否发送 `seed` |
+| `tool_choice_modes` | string[] | `none`、`auto`、`required`、`function` | 允许的 `tool_choice` 取值 |
+| `supports_parallel_tool_calls` | bool | true | 是否发送 `parallel_tool_calls` |
+| `supports_response_format` | bool | true | 需要 JSON 输出时是否发送 `response_format` |
+| `supports_multi_content` | bool | true | false 时图文混排的消息只保留文字部分 |
+| `replay_reasoning_content` | bool | true | 多轮对话中把之前的思考内容回传给模型 |
+| `reasoning_fields` | string[] | `reasoning_content`、`reasoning`、`reasoning_text` | 从响应中读取思考文本的字段，按顺序取第一个 |
+| `tool_call_extra_fields` | string[] | 空 | 工具调用中需要原样回传的额外字段（如经 OpenAI 兼容口调用 Gemini 时的 `extra_content`） |
+| `prompt_cache_key` | bool | false | 发送 `prompt_cache_key`，让同一会话命中提示缓存 |
+| `cache_control_format` | string | 空 | 设为 `anthropic` 时按 Anthropic 格式插入缓存断点 |
+| `prompt_cache_accounting` | bool | false | 厂商会返回缓存命中用量，用于统计 |
+| `extra_body` | object | 空 | 附加到每次请求的字段 |
+
+**OpenAI Responses（`openai-responses`）**：OpenAI 官方接口（`api.openai.com`）默认使用。
+
+| 字段 | 类型 | 协议默认 | 说明 |
+| --- | --- | --- | --- |
+| `supports_developer_role` | bool | true | 系统提示使用 `developer` 角色 |
+| `supports_max_output_tokens` | bool | true | 是否发送 `max_output_tokens` |
+| `supports_reasoning_summary` | bool | true | 是否请求思考摘要 |
+| `supports_encrypted_reasoning` | bool | true | 是否请求并回传加密的思考内容 |
+| `supports_store` | bool | true | 发送 `store: false` |
+| `supports_temperature` | bool | true | false 时不发送采样参数 |
+| `prompt_cache_key` | bool | true | 发送提示缓存键 |
+| `supports_long_cache_retention` | bool | true | 允许 24 小时的长缓存 |
+| `supports_parallel_tool_calls` | bool | true | 是否发送 `parallel_tool_calls` |
+| `extra_body` | object | 空 | 附加到每次请求的字段 |
+
+**Anthropic Messages（`anthropic-messages`）**：Anthropic，以及 `base_url` 以 `/anthropic` 结尾的兼容接口。
+
+| 字段 | 类型 | 协议默认 | 说明 |
+| --- | --- | --- | --- |
+| `thinking_mode` | string | `budget` | `budget` 按预算开启思考；`adaptive` 由模型自行决定，强度通过 `output_config.effort` 传递 |
+| `supports_effort` | bool | false | 是否发送思考强度 |
+| `thinking_budgets` | object | minimal 1024、low 2048、medium 8192、high 16384、xhigh 32768、max 63999 | 各思考强度对应的 `budget_tokens`，键为 `minimal`/`low`/`medium`/`high`/`xhigh`/`max` |
+| `default_max_tokens` | int | 4096 | 未设置输出上限时使用的 `max_tokens`（该协议必填） |
+| `supports_temperature` | bool | true | 是否发送温度 |
+| `temperature_with_thinking` | bool | false | 开启思考时是否仍发送温度 |
+| `supports_top_p` | bool | true | 是否发送 `top_p` |
+| `supports_cache_control` | bool | true | 是否插入缓存断点 |
+| `supports_cache_control_on_tools` | bool | true | 是否在工具定义上插入缓存断点 |
+| `long_cache_ttl` | string | `1h` | 长缓存的有效期 |
+| `version` | string | `2023-06-01` | `anthropic-version` 请求头 |
+| `beta_headers` | string[] | 空 | 附加的 `anthropic-beta` 请求头 |
+| `interleaved_thinking_beta` | string | `interleaved-thinking-2025-05-14` | 同时使用思考和工具时附加的 beta 标识；空字符串表示不发送 |
+| `prompt_cache_accounting` | bool | true | 厂商会返回缓存命中用量 |
+| `extra_body` | object | 空 | 附加到每次请求的字段 |
+
+**Gemini（`google-generative-ai`）**：Gemini 原生接口。
+
+| 字段 | 类型 | 协议默认 | 说明 |
+| --- | --- | --- | --- |
+| `thinking_mode` | string | `budget` | `budget` 发送 `thinkingBudget`（Gemini 2.5）；`level` 发送 `thinkingLevel`（Gemini 3 起）；`none` 不发送思考配置 |
+| `thinking_budgets` | object | minimal 128、low 2048、medium 8192、high 24576、xhigh 32768、max 32768 | 各思考强度对应的 `thinkingBudget` |
+| `include_thoughts` | bool | true | 是否返回思考内容 |
+| `supports_seed` | bool | true | 是否发送 `seed` |
+| `supports_penalty` | bool | true | 是否发送频率 / 存在惩罚 |
+| `extra_generation_config` | object | 空 | 附加到 `generationConfig` 的字段 |
+| `prompt_cache_accounting` | bool | true | 厂商会返回缓存命中用量 |
+| `api_version_prefix` | string | `/v1beta` | `base_url` 只填主机时追加的版本路径 |
+
+**向量模型**
+
+| 字段 | 类型 | 协议默认 | 说明 |
+| --- | --- | --- | --- |
+| `api` | string | 厂商默认 | 向量协议：`openai-embeddings`、`dashscope-embeddings`、`ark-embeddings`、`google-embeddings` |
+| `path` | string | 空 | 追加在 `base_url` 之后的路径 |
+| `send_encoding_format` | bool | false | 是否发送 `encoding_format: "float"` |
+| `dimensions_field` | string | 空 | 指定输出维度的字段名；仅在开启「自定义输出维度」时发送 |
+| `truncate_field` / `truncate_value` | string | 空 | 输入过长时由服务端截断的开关字段与取值 |
+| `input_type_field` | string | 空 | 区分「文档」和「查询」的字段名 |
+| `input_type_values` | object | 空 | `document`、`query` 两种输入分别对应的取值 |
+| `max_batch_size` | int | 0（不限） | 单次请求的最大条数，超出自动分批 |
+| `max_input_chars` | int | 0（不限） | 单条输入的最大字符数 |
+| `accepts_truncate_prompt_tokens` | bool | false | 服务是否支持 vLLM 的 `truncate_prompt_tokens` |
+| `request_timeout_seconds` | int | 60 | 单次请求超时（秒） |
+| `extra_body` | object | 空 | 附加到每次请求的字段 |
+
+**重排模型**
+
+| 字段 | 类型 | 协议默认 | 说明 |
+| --- | --- | --- | --- |
+| `path` | string | 空 | 追加在 `base_url` 之后的路径 |
+| `send_top_n` | bool | false | 是否发送 `top_n`（不发时返回全部文档） |
+| `send_return_documents` | bool | false | 是否要求服务端回传文档原文 |
+| `score_scale` | string | `probability` | 分数含义：`probability`（0～1）或 `logit`（未归一化）。填错会让相关度阈值失效 |
+| `truncate` | string | 空 | 服务端截断设置（如 NIM 的 `END`） |
+| `max_documents` / `max_query_chars` / `max_document_chars` / `max_request_chars` | int | 0（不限） | 单次请求的文档数、查询长度、单篇长度与总长度上限，超出自动分批 |
+| `max_concurrency` | int | 0（使用默认） | 分批后同时发出的请求数 |
+| `accepts_truncate_prompt_tokens` | bool | false | 服务是否支持 vLLM 的 `truncate_prompt_tokens` |
+| `request_timeout_seconds` | int | 0（默认 60 秒） | 单次请求超时（秒）；超时按调用失败处理，检索回退为召回顺序 |
+| `extra_body` | object | 空 | 附加到每次请求的字段 |
+
+**语音识别模型**
+
+| 字段 | 类型 | 协议默认 | 说明 |
+| --- | --- | --- | --- |
+| `api` | string | 厂商默认 | `openai-transcriptions`（上传音频文件）或 `openai-chat-audio`（在对话请求中携带音频） |
+| `path` | string | `/audio/transcriptions` | 追加在 `base_url` 之后的路径 |
+| `response_format` | string | 空 | 发送的 `response_format`，需要分段结果时填 `verbose_json` |
+| `language_param` | string | 空 | 语言提示的位置：`form`、`header`、`asr_options`；空则不发送 |
+| `max_file_bytes` / `max_encoded_bytes` | int | 0（不限） | 音频文件与 base64 编码后的大小上限 |
+| `formats` | string[] | 空（不限） | 接受的音频扩展名（不带点） |
+| `request_timeout_seconds` | int | 300 | 单次请求超时（秒） |
+
 #### 管理 API（`internal/router/router.go`）
 
 | 方法 & 路径 | 说明 |

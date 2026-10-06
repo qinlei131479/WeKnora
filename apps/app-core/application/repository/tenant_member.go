@@ -109,8 +109,10 @@ func (r *tenantMemberRepository) CountFilteredByTenant(
 		like := "%" + escapeLikePattern(search) + "%"
 		err = q.
 			Joins(`INNER JOIN users ON users.id = tenant_members.user_id AND users.deleted_at IS NULL`).
-			Where(`(LOWER(users.email) LIKE LOWER(?) OR LOWER(users.username) LIKE LOWER(?) OR LOWER(users.account) LIKE LOWER(?))`, like, like, like).
-			Count(&total).Error
+// 企业定制：额外按 users.account 检索；ESCAPE 与上游一致，避免通配符注入
+			Where(
+				`(LOWER(users.email) LIKE LOWER(?) ESCAPE ? OR LOWER(users.username) LIKE LOWER(?) ESCAPE ? OR LOWER(users.account) LIKE LOWER(?) ESCAPE ?)`,
+				like, likeEscapeChar, like, likeEscapeChar, like, likeEscapeChar).			Count(&total).Error
 	}
 	return total, err
 }
@@ -134,8 +136,10 @@ func (r *tenantMemberRepository) ListPagedByTenant(
 		like := "%" + escapeLikePattern(search) + "%"
 		err = q.
 			Joins(`INNER JOIN users ON users.id = tenant_members.user_id AND users.deleted_at IS NULL`).
-			Where(`(LOWER(users.email) LIKE LOWER(?) OR LOWER(users.username) LIKE LOWER(?) OR LOWER(users.account) LIKE LOWER(?))`, like, like, like).
-			Find(&members).Error
+// 企业定制：额外按 users.account 检索；ESCAPE 与上游一致，避免通配符注入
+			Where(
+				`(LOWER(users.email) LIKE LOWER(?) ESCAPE ? OR LOWER(users.username) LIKE LOWER(?) ESCAPE ? OR LOWER(users.account) LIKE LOWER(?) ESCAPE ?)`,
+				like, likeEscapeChar, like, likeEscapeChar, like, likeEscapeChar).			Find(&members).Error
 	}
 	if err != nil {
 		return nil, err

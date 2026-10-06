@@ -1,3 +1,32 @@
+# Build extension and daemon from the same pinned source on the runtime architecture.
+# 与上游 docker/Dockerfile.app 的 browserskill stage 对齐（0.8.2 同步遗漏）：
+# 没有这个 stage，企业镜像里根本没有 bsk 二进制，生产环境等同未启用本机浏览器。
+# 仅把 rustup/源镜像参数改成 kJsc 的 *_ARG 变量，国内 Jenkins 主机可走镜像加速。
+FROM --platform=$TARGETPLATFORM node:24-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd9504c9af091d5281095a71e AS browserskill
+WORKDIR /build
+ARG APK_MIRROR_ARG
+RUN if [ -n "$APK_MIRROR_ARG" ]; then \
+        sed -i "s@deb.debian.org@${APK_MIRROR_ARG}@g" /etc/apt/sources.list.d/debian.sources; \
+    fi && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends git python3 ca-certificates curl build-essential cmake pkg-config && \
+    rm -rf /var/lib/apt/lists/*
+ARG RUSTUP_INIT_URL_ARG
+ARG RUSTUP_DIST_SERVER_ARG
+ARG RUSTUP_UPDATE_ROOT_ARG
+ENV RUSTUP_HOME=/usr/local/rustup CARGO_HOME=/usr/local/cargo
+ENV PATH=/usr/local/cargo/bin:$PATH
+RUN curl --proto '=https' --tlsv1.2 -sSf "${RUSTUP_INIT_URL_ARG:-https://sh.rustup.rs}" \
+        -o /tmp/rustup-init.sh && \
+    RUSTUP_DIST_SERVER="${RUSTUP_DIST_SERVER_ARG:-https://static.rust-lang.org}" \
+    RUSTUP_UPDATE_ROOT="${RUSTUP_UPDATE_ROOT_ARG:-https://static.rust-lang.org/rustup}" \
+    sh /tmp/rustup-init.sh -y --profile minimal --default-toolchain stable && \
+    rm -f /tmp/rustup-init.sh
+COPY scripts/build_browserskill.sh scripts/browserskill-release.json ./scripts/
+ARG TARGETOS
+ARG TARGETARCH
+RUN bash scripts/build_browserskill.sh /opt/weknora/browserskill "${TARGETOS}/${TARGETARCH}"
+
 # Build stage
 FROM golang:1.26-bookworm AS builder
 
@@ -90,6 +119,13 @@ WORKDIR /app
 
 ARG APK_MIRROR_ARG
 
+# Pairing derives the gateway URL from the user's page origin by default.
+# 版本号需与 scripts/browserskill-release.json 的 extension.version 保持一致，
+# 升级 pin 时两处同步改，否则 BuilderSkill 连接页会提示扩展版本过低。
+ENV BROWSERSKILL_BINARY=/opt/weknora/browserskill/bsk \
+    BROWSERSKILL_EXTENSION_PATH=/opt/weknora/browserskill/browser-skill-weknora-0.3.1.zip
+COPY --from=browserskill /opt/weknora/browserskill /opt/weknora/browserskill
+
 # Create a non-root user first
 RUN useradd -m -s /bin/bash appuser
 
@@ -132,9 +168,6 @@ COPY --from=builder /app/config ./config
 COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/migrations ./migrations
 COPY --from=builder /app/dataset/samples ./dataset/samples
-COPY --from=builder /app/skills/preloaded ./skills/preloaded
-# Keep a read-only backup so bind-mount cannot erase built-in skills
-COPY --from=builder /app/skills/preloaded ./skills/_builtin
 COPY --from=builder /root/.duckdb /home/appuser/.duckdb
 COPY --from=builder /app/WeKnora .
 

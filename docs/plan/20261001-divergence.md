@@ -108,15 +108,16 @@
 | `.env.kjsc.example` | 环境变量样例 |
 | `Makefile.kjsc` | 构建入口（app/frontend/harness/infra 等 target） |
 | `docker-compose-kjsc.yml`、`docker-compose-mac.yml` | 编排（删除了上游死变量 `WEKNORA_SANDBOX_MODE/TIMEOUT`） |
-| `scripts/kjsc/` | 含 `drift_report.sh`（漂移报告脚本）等 |
+| `scripts/kjsc/` | 构建/部署/运维脚本（镜像构建、启动、迁移、容器入口、Jenkins Job）。⚠️ 同步类工具**不在这里**，见下 |
 | `migrations/version_kjsc/` | **企业数据库迁移**（表/字段变更必须在此新增 SQL，`.up.sql` + `.down.sql` 成对） |
+| `.workbuddy/skills/weknora-upstream-sync/` | **上游同步工具**（随仓库提交）：`upstream_sync_check.sh` 体检、`port_trunk.sh` 端口、`i18n.mjs`、`docs_anchor.mjs`、`drift_report.sh` |
 
 ### 3.4 冲突规避要点
 
 1. **上游 `config/`、`internal/`、`cmd/server/` 不改**；官方新增配置项先补到 `config_kjsc.yaml`，不改上游 `config/`。
 2. **数据库变更**只进 `migrations/version_kjsc/`，禁止 ORM 自动建表代替迁移文件。
 3. **同步上游后**必须检查配置加载器、`docker-compose-kjsc.yml`、`scripts/kjsc/*`、`.env.kjsc.example` 是否仍指向 KJSC 变体。
-4. 用 `bash scripts/kjsc/drift_report.sh` 定期核对 `internal` ↔ `apps/app-core` 的漂移（含注册点硬断言）。
+4. 用 `bash .workbuddy/skills/weknora-upstream-sync/scripts/drift_report.sh` 定期核对 `internal` ↔ `apps/app-core` 的漂移（含注册点硬断言）。
 
 ---
 
@@ -192,5 +193,5 @@
 | app-core 企业独有 | 25 个文件（Skill 服务、租户增员、模型代理、脑图、Token 压缩、`_legacy` 等） | 上游复制后叠加，勿覆盖 |
 | app-core 配置 | `config_*_kjsc*`、`Makefile.kjsc`、`docker-compose-kjsc.yml`、`.env.kjsc.example`、`scripts/kjsc/*` | 只改这些企业入口，不改上游 `config/` |
 | app-core 迁移 | `migrations/version_kjsc/` | 企业表/字段变更只进此目录 |
-| 漂移核对 | `internal` ↔ `apps/app-core` | 定期跑 `bash scripts/kjsc/drift_report.sh` |
+| 漂移核对 | `internal` ↔ `apps/app-core` | 定期跑 `bash .workbuddy/skills/weknora-upstream-sync/scripts/drift_report.sh` |
 | agent-harness | 无上游对应，依赖 app-core 契约 | app-core 升级时验证契约不破坏 |

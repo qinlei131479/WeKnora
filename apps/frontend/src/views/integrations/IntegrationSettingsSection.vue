@@ -5,7 +5,16 @@
         <div class="section-header">
           <h2>{{ $t('agentEditor.im.title') }}</h2>
           <p class="section-description">
-            {{ imDescription }}
+            {{ $t('agentEditor.im.description') }}
+            <a
+              :href="docsUrl('imIntegration')"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="doc-link"
+            >
+              {{ $t('agentEditor.im.docLink') }}
+              <t-icon name="link" class="link-icon" />
+            </a>
           </p>
         </div>
         <IMChannelPanel v-model:filter-agent-id="filterAgentId" />
@@ -27,27 +36,34 @@
         <ApiIntegrationSettings />
       </div>
 
-      <CliIntegrationLanding v-if="tab === 'cli'" />
+      <div v-if="tab === 'mcpserver'" class="section">
+        <div class="section-header">
+          <h2>{{ $t('integrations.mcpserver.title') }}</h2>
+          <p class="section-description">{{ $t('integrations.mcpserver.subtitle') }}</p>
+        </div>
+        <McpServerIntegrationSettings />
+      </div>
+
       <ChromeExtensionLanding v-if="tab === 'chrome'" />
       <ClawSkillLanding v-if="tab === 'claw'" />
+      <CliIntegrationLanding v-if="tab === 'cli'" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import IMChannelPanel from '@/components/IMChannelPanel.vue'
 import AgentEmbedChannelPanel from '@/components/AgentEmbedChannelPanel.vue'
 import ApiIntegrationSettings from '@/views/integrations/ApiIntegrationSettings.vue'
+import McpServerIntegrationSettings from '@/views/integrations/McpServerIntegrationSettings.vue'
 import ChromeExtensionLanding from '@/views/integrations/ChromeExtensionLanding.vue'
 import ClawSkillLanding from '@/views/integrations/ClawSkillLanding.vue'
 import CliIntegrationLanding from '@/views/integrations/CliIntegrationLanding.vue'
 import type { IntegrationTab } from '@/config/integrations'
-import { getFeatureFlags } from '@/utils/weknoraFeatures'
+import { docsUrl } from '@/utils/docsUrl'
 
-const { t } = useI18n()
 const filterAgentId = ref('')
 
 const props = defineProps<{
@@ -58,13 +74,6 @@ const route = useRoute()
 
 const isLandingSection = computed(
   () => props.tab === 'chrome' || props.tab === 'claw' || props.tab === 'cli',
-)
-
-/** hide 模式下平台白名单为企微/飞书/钉钉，描述与可选平台保持一致 */
-const imDescription = computed(() =>
-  getFeatureFlags().restrictProviderOptions
-    ? t('agentEditor.im.descriptionRestricted')
-    : t('agentEditor.im.description'),
 )
 
 function applyAgentFilterFromRoute() {
@@ -79,6 +88,8 @@ watch(
 </script>
 
 <style scoped lang="less">
+@import (reference) '@/components/css/settings-section.less';
+
 .integrations-settings {
   display: flex;
   flex-direction: column;
@@ -93,22 +104,7 @@ watch(
 }
 
 .section-header {
-  margin-bottom: 18px;
-
-  h2 {
-    margin: 0 0 6px;
-    color: var(--td-text-color-primary);
-    font-size: 18px;
-    font-weight: 600;
-    line-height: 1.35;
-  }
-}
-
-.section-description {
-  margin: 0;
-  color: var(--td-text-color-secondary);
-  font-size: 13px;
-  line-height: 1.6;
+  .settings-section-header();
 }
 
 .doc-link {
@@ -125,6 +121,6 @@ watch(
 }
 
 .link-icon {
-  font-size: 13px;
+  font-size: var(--app-text-md);
 }
 </style>

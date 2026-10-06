@@ -63,7 +63,7 @@
                                 <img
                                     v-else
                                     class="icon"
-                                    :src="getImgSrc(item.icon == 'zhishiku' ? knowledgeIcon : item.icon == 'agent' ? agentIcon : item.icon == 'organization' ? organizationIcon : item.icon == 'logout' ? logoutIcon : item.icon == 'setting' ? settingIcon : 'prefixIcon.svg')"
+                                    :src="getImgSrc(item.icon == 'zhishiku' ? knowledgeIcon : item.icon == 'agent' ? agentIcon : item.icon == 'organization' ? organizationIcon : item.icon == 'toolbox' ? toolboxIcon : item.icon == 'artifact' ? artifactIcon : item.icon == 'logout' ? logoutIcon : item.icon == 'setting' ? settingIcon : 'prefixIcon.svg')"
                                     alt="">
                             </div>
                             <template v-if="!uiStore.sidebarCollapsed">
@@ -277,6 +277,10 @@ import organizationGreenIcon from '@/assets/img/organization-green.svg';
 import settingIconSrc from '@/assets/img/setting.svg';
 import settingGreenIcon from '@/assets/img/setting-green.svg';
 import logoutIconSrc from '@/assets/img/logout.svg';
+import toolboxIconSrc from '@/assets/img/toolbox.svg';
+import toolboxGreenIcon from '@/assets/img/toolbox-green.svg';
+import artifactIconSrc from '@/assets/img/artifact.svg';
+import artifactGreenIcon from '@/assets/img/artifact-green.svg';
 import prefixIconSrc from '@/assets/img/prefixIcon.svg';
 
 const PLATFORM_LOGO: Record<string, string> = {
@@ -419,6 +423,10 @@ const isMenuItemActive = (itemPath: string): boolean => {
                 currentRoute === 'knowledgeBaseSettings';
         case 'agents':
             return currentRoute === 'agentList';
+        case 'toolbox':
+            return currentRoute === 'toolbox';
+        case 'artifacts':
+            return currentRoute === 'artifactLibrary';
         case 'organizations':
             return currentRoute === 'organizationList';
         case 'creatChat':
@@ -467,13 +475,13 @@ const HARNESS_TOP_MENU_PATHS = new Set([
 // 分离上下两部分菜单（使用 visibleMenuArr 以便 lite 模式过滤 logout）
 const topMenuItems = computed<MenuItem[]>(() => {
     return (visibleMenuArr.value as unknown as MenuItem[]).filter((item: MenuItem) =>
-        item.path === 'knowledge-bases' || item.path === 'agents' || item.path === 'organizations' || item.path === 'creatChat' || HARNESS_TOP_MENU_PATHS.has(item.path)
+        item.path === 'knowledge-bases' || item.path === 'agents' || item.path === 'organizations' || item.path === 'creatChat' || item.path === 'toolbox' || item.path === 'artifacts' || HARNESS_TOP_MENU_PATHS.has(item.path)
     );
 });
 
 const bottomMenuItems = computed<MenuItem[]>(() => {
     return (visibleMenuArr.value as unknown as MenuItem[]).filter((item: MenuItem) => {
-        if (item.path === 'knowledge-bases' || item.path === 'agents' || item.path === 'organizations' || item.path === 'creatChat' || HARNESS_TOP_MENU_PATHS.has(item.path)) {
+        if (item.path === 'knowledge-bases' || item.path === 'agents' || item.path === 'organizations' || item.path === 'creatChat' || item.path === 'toolbox' || item.path === 'artifacts' || HARNESS_TOP_MENU_PATHS.has(item.path)) {
             return false;
         }
         return true;
@@ -1065,6 +1073,8 @@ let logoutIcon = ref('logout.svg');
 let settingIcon = ref('setting.svg');
 let agentIcon = ref('agent.svg');
 let organizationIcon = ref('organization.svg');
+let toolboxIcon = ref('toolbox.svg');
+let artifactIcon = ref('artifact.svg');
 let pathPrefix = ref(route.name)
 const getIcon = (path: string) => {
     // 根据当前路由状态更新所有图标
@@ -1072,6 +1082,8 @@ const getIcon = (path: string) => {
     const settingsActiveState = getIconActiveState('settings');
     const agentsActiveState = route.name === 'agentList';
     const organizationsActiveState = route.name === 'organizationList';
+    const toolboxActiveState = route.name === 'toolbox';
+    const artifactsActiveState = route.name === 'artifactLibrary';
 
     // 知识库图标：只在知识库页面显示绿色
     knowledgeIcon.value = kbActiveState.isKbActive ? 'zhishiku-green.svg' : 'zhishiku.svg';
@@ -1084,6 +1096,12 @@ const getIcon = (path: string) => {
 
     // 设置图标：只在设置页面显示绿色
     settingIcon.value = settingsActiveState.isSettingsActive ? 'setting-green.svg' : 'setting.svg';
+
+    // 工具箱图标：只在工具箱页面显示绿色
+    toolboxIcon.value = toolboxActiveState ? 'toolbox-green.svg' : 'toolbox.svg';
+
+    // 产物库图标：只在产物库页面显示绿色
+    artifactIcon.value = artifactsActiveState ? 'artifact-green.svg' : 'artifact.svg';
 
     // 退出图标：始终显示默认
     logoutIcon.value = 'logout.svg';
@@ -1161,6 +1179,10 @@ const MENU_ICON_SRC: Record<string, string> = {
     'setting.svg': settingIconSrc,
     'setting-green.svg': settingGreenIcon,
     'logout.svg': logoutIconSrc,
+    'toolbox.svg': toolboxIconSrc,
+    'toolbox-green.svg': toolboxGreenIcon,
+    'artifact.svg': artifactIconSrc,
+    'artifact-green.svg': artifactGreenIcon,
     'prefixIcon.svg': prefixIconSrc
 };
 const getImgSrc = (url: string) => MENU_ICON_SRC[url] || prefixIconSrc;

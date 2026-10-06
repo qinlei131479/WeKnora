@@ -88,9 +88,12 @@ const EXTRA_PREFIXES = [
   'contextualGuide.chat.steps.',
   'contextualGuide.agentList.steps.',
   'contextualGuide.agentCreate.steps.',
+  'datasource.syncError.',
   'kbSettings.parser.engines.',
   'model.editor.description.',
   'integrations.tabs.',
+  'integrations.mcpserver.tools.',
+  'integrations.mcpserver.groups.',
   'knowledgeStages.stage.',
   'knowledgeStages.status.',
   'system.globalSettings.runtime.pools.',
@@ -104,6 +107,17 @@ const EXTRA_PREFIXES = [
   'agent.workManage.fields.',
   'agent.workManage.builtinTools.',
   'agent.workManage.toolCategories.',
+  // Image-attribute display text is keyed by the backend attribute registry
+  // (imageAttr.contain_text.label …), built from the schema response at runtime,
+  // so it is registered as a whole prefix: a new backend attribute must keep
+  // being translated without touching the audit.
+  'imageAttr.',
+  // Gallery attribute labels are keyed by the namespaced attribute id from
+  // the gallery contract, likewise runtime-built; static labels for the few
+  // builtin attributes ship in the locale files as
+  // knowledgeEditor.wikiBrowser.gallery.attr.builtin_caption …, and
+  // everything else falls back to the contract wording.
+  'knowledgeEditor.wikiBrowser.gallery.attr.',
 ] as const
 
 /** Keys that must survive pruning even when static analysis misses them. */

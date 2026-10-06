@@ -1,42 +1,33 @@
 {
-  "name": "knowledage-base",
-  "version": "0.8.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "build-with-types": "run-p type-check \"build-only {@}\" --",
-    "preview": "vite preview",
-    "build-only": "vite build",
-    "type-check": "vue-tsc --build",
-    "test": "tsx --test",
-    "scan-i18n-gaps": "tsx src/i18n/localeGapScan.ts",
-    "regenerate-i18n-locales": "tsx src/i18n/regeneratePrunedLocales.ts"
-  },
   "dependencies": {
     "@microsoft/fetch-event-source": "^2.0.1",
+    "@novnc/novnc": "^1.7.0",
     "@types/papaparse": "^5.5.2",
     "@vscode/markdown-it-katex": "^1.1.2",
     "@vue-office/pptx": "^1.0.1",
     "@vueuse/core": "^14.3.0",
+    "@xmldom/xmldom": "0.9.12",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/xterm": "^5.5.0",
     "axios": "^1.16.0",
     "dayjs": "^1.11.20",
-    "echarts": "^6.0.0",
     "docx-preview": "^0.3.7",
     "dompurify": "^3.4.11",
+    "echarts": "^6.0.0",
     "highlight.js": "^11.11.1",
     "js-yaml": "^4.2.0",
+    "jszip": "3.10.1",
     "katex": "^0.16.45",
     "lucide-vue-next": "^1.0.0",
     "markdown-it": "^14.2.0",
     "markdown-it-task-lists": "^2.1.1",
     "marked": "^17.0.5",
+    "marked-katex-extension": "^5.1.8",
     "markmap-lib": "^0.18.12",
     "markmap-view": "^0.18.12",
-    "marked-katex-extension": "^5.1.8",
     "mermaid": "^11.15.0",
     "papaparse": "^5.5.3",
+    "pdfjs-dist": "^6.3.289",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
     "shiki": "^4.0.2",
@@ -47,11 +38,7 @@
     "vue-i18n": "^11.4.2",
     "vue-router": "^4.5.0",
     "vue-virtual-scroller": "^2.0.0-beta.8",
-    "xlsx": "file:./packages/xlsx-0.20.2.tgz",
-    "@xterm/addon-fit": "^0.10.0",
-    "@xterm/xterm": "^5.5.0",
-    "@xmldom/xmldom": "0.9.12",
-    "jszip": "3.10.1"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.2/xlsx-0.20.2.tgz"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.5",
@@ -66,16 +53,31 @@
     "vite": "^7.3.5",
     "vue-tsc": "^3.2.8"
   },
+  "name": "knowledage-base",
   "overrides": {
-    "lightningcss": "none",
     "esbuild": "^0.25.0",
+    "lightningcss": "none",
     "serialize-javascript": "^7.0.3",
     "tdesign-icons-vue-next": "0.4.4"
   },
+  "private": true,
   "resolutions": {
-    "lightningcss": "none",
     "esbuild": "^0.25.0",
+    "lightningcss": "none",
     "serialize-javascript": "^7.0.3",
     "tdesign-icons-vue-next": "0.4.4"
-  }
+  },
+  "scripts": {
+    "build": "vite build",
+    "build-only": "vite build",
+    "build-with-types": "run-p type-check \"build-only {@}\" --",
+    "dev": "vite",
+    "preview": "vite preview",
+    "regenerate-i18n-locales": "tsx src/i18n/regeneratePrunedLocales.ts",
+    "scan-i18n-gaps": "tsx src/i18n/localeGapScan.ts",
+    "test": "tsx --test",
+    "type-check": "vue-tsc --build"
+  },
+  "type": "module",
+  "version": "0.8.2"
 }

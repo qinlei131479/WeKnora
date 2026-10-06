@@ -46,6 +46,8 @@
           <t-icon name="close" size="16px" />
         </button>
       </header>
+      <!-- 企业定制：文件管理 / 依赖设置双 tab。上游只有文件面板，企业在此之上
+           叠加了依赖配置，整文件端口时会被冲掉，改动请走叠加而非替换上游整文件。 -->
       <div v-if="persist === 'harness'" class="skill-files-drawer__tabs">
         <button
           type="button"
@@ -144,6 +146,7 @@ const props = defineProps<{
   catalogId?: string
   skillName: string
   persist?: 'app-core' | 'harness'
+  // 企业定制：内置或已安装的技能文件只读，依赖也不可编辑
   builtin?: boolean
   installed?: boolean
   sourceType?: string
@@ -165,7 +168,7 @@ const fileActions = computed(() => {
   return 'edit'
 })
 const canEditDeps = computed(() => props.persist === 'harness' && !props.builtin && !props.installed)
-const dependencyOptions = reactive<{ tools: any[]; mcps: any[]; skills: string[] }>({
+const dependencyOptions = reactive<{ tools: any[]; mcps: any[]; skills: any[] }>({
   tools: [],
   mcps: [],
   skills: [],
@@ -181,7 +184,7 @@ const savingDeps = ref(false)
 const dependencyGroups = computed(() => {
   const groups = [
     {
-      key: 'tools',
+      key: 'tools' as const,
       formKey: 'tool_dependencies' as const,
       title: t('ext.skills.detail.depToolsTitle'),
       description: t('ext.skills.detail.depToolsDesc'),
@@ -194,7 +197,7 @@ const dependencyGroups = computed(() => {
       ),
     },
     {
-      key: 'mcps',
+      key: 'mcps' as const,
       formKey: 'mcp_dependencies' as const,
       title: t('ext.skills.detail.depMcpTitle'),
       description: t('ext.skills.detail.depMcpDesc'),
@@ -207,7 +210,7 @@ const dependencyGroups = computed(() => {
       ),
     },
     {
-      key: 'skills',
+      key: 'skills' as const,
       formKey: 'skill_dependencies' as const,
       title: t('ext.skills.detail.depSkillTitle'),
       description: t('ext.skills.detail.depSkillDesc'),
@@ -220,6 +223,7 @@ const dependencyGroups = computed(() => {
       ),
     },
   ]
+  // 通用技能只挂 MCP，工具和 Skill 依赖不适用
   if (props.sourceType === 'common') return groups.filter((group) => group.key === 'mcps')
   return groups
 })
@@ -406,9 +410,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(7, 192, 95, 0.1);
+  background: color-mix(in srgb, var(--td-brand-color) 10%, transparent);
   color: var(--td-brand-color);
-  font-size: 16px;
+  font-size: var(--app-text-xl);
 }
 
 .skill-files-drawer__head-text {
@@ -417,7 +421,7 @@ onUnmounted(() => {
 }
 
 .skill-files-drawer__title {
-  font-size: 15px;
+  font-size: var(--app-text-lg);
   font-weight: 600;
   line-height: 1.4;
   color: var(--td-text-color-primary);
@@ -426,239 +430,114 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-.skill-files-drawer__tabs {
-  display: flex;
-  gap: 16px;
-  flex-shrink: 0;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--td-component-stroke);
-}
-
-.skill-files-drawer__tab {
-  height: 36px;
-  padding: 0;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--td-text-color-secondary);
-  font-size: 13px;
-  cursor: pointer;
-
-  &.is-active {
-    color: var(--td-text-color-primary);
-    border-bottom-color: var(--td-brand-color);
-  }
-}
-
-.skill-deps {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 16px 18px 24px;
-}
-
-.skill-deps__card {
-  padding: 14px 0;
-  border-bottom: 1px solid var(--td-component-stroke);
-}
-
-.skill-deps__head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-
-  h4 {
-    margin: 0;
-    font-size: 14px;
-  }
-
-  p {
-    margin: 4px 0 0;
-    color: var(--td-text-color-secondary);
-    font-size: 12px;
-  }
-}
-
-.skill-deps__pick,
-.skill-deps__save {
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--td-component-stroke);
-  border-radius: 6px;
-  background: var(--td-bg-color-container);
-  color: var(--td-text-color-primary);
-  cursor: pointer;
-}
-
-.skill-deps__chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-:deep(.t-tag.wk-chip) {
-  height: 22px;
-  margin: 0;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.skill-deps__menu {
-  width: 240px;
-  max-height: 280px;
-  overflow: auto;
-  padding: 8px;
-}
-
-.skill-deps__option {
-  display: block;
-  width: 100%;
-  margin-top: 4px;
-  padding: 6px 8px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-
-  &.is-on {
-    background: rgba(7, 192, 95, 0.12);
-  }
-}
-
-.skill-deps__empty {
-  color: var(--td-text-color-placeholder);
-  font-size: 12px;
-}
-
-.skill-deps__actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
-.skill-files-drawer__tabs {
-  display: flex;
-  gap: 16px;
-  flex-shrink: 0;
-  padding: 0 18px;
-  border-bottom: 1px solid var(--td-component-stroke);
-}
-
-.skill-files-drawer__tab {
-  height: 36px;
-  padding: 0;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  background: transparent;
-  color: var(--td-text-color-secondary);
-  font-size: 13px;
-  cursor: pointer;
-
-  &.is-active {
-    color: var(--td-text-color-primary);
-    border-bottom-color: var(--td-brand-color);
-  }
-}
-
-.skill-deps {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 16px 18px 24px;
-}
-
-.skill-deps__card {
-  padding: 14px 0;
-  border-bottom: 1px solid var(--td-component-stroke);
-}
-
-.skill-deps__head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-
-  h4 {
-    margin: 0;
-    font-size: 14px;
-  }
-
-  p {
-    margin: 4px 0 0;
-    color: var(--td-text-color-secondary);
-    font-size: 12px;
-  }
-}
-
-.skill-deps__pick,
-.skill-deps__save {
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--td-component-stroke);
-  border-radius: 6px;
-  background: var(--td-bg-color-container);
-  color: var(--td-text-color-primary);
-  cursor: pointer;
-}
-
-.skill-deps__chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-:deep(.t-tag.wk-chip) {
-  height: 22px;
-  margin: 0;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.skill-deps__menu {
-  width: 240px;
-  max-height: 280px;
-  overflow: auto;
-  padding: 8px;
-}
-
-.skill-deps__option {
-  display: block;
-  width: 100%;
-  margin-top: 4px;
-  padding: 6px 8px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  text-align: left;
-  cursor: pointer;
-
-  &.is-on {
-    background: rgba(7, 192, 95, 0.12);
-  }
-}
-
-.skill-deps__empty {
-  color: var(--td-text-color-placeholder);
-  font-size: 12px;
-}
-
-.skill-deps__actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
 .skill-files-drawer__subtitle {
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--app-text-sm);
   line-height: 1.4;
   color: var(--td-text-color-secondary);
+}
+
+.skill-files-drawer__tabs {
+  display: flex;
+  gap: 16px;
+  flex-shrink: 0;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--td-component-stroke);
+}
+
+.skill-files-drawer__tab {
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--td-text-color-secondary);
+  font-size: 13px;
+  cursor: pointer;
+
+  &.is-active {
+    color: var(--td-text-color-primary);
+    border-bottom-color: var(--td-brand-color);
+  }
+}
+
+.skill-deps {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 18px 24px;
+}
+
+.skill-deps__card {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--td-component-stroke);
+}
+
+.skill-deps__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+
+  h4 {
+    margin: 0;
+    font-size: 14px;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: var(--td-text-color-secondary);
+    font-size: 12px;
+  }
+}
+
+.skill-deps__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+:deep(.t-tag.wk-chip) {
+  height: 22px;
+  margin: 0;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.skill-deps__menu {
+  width: 240px;
+  max-height: 280px;
+  overflow: auto;
+  padding: 8px;
+}
+
+.skill-deps__option {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+
+  &.is-on {
+    background: color-mix(in srgb, var(--td-brand-color) 12%, transparent);
+  }
+}
+
+.skill-deps__empty {
+  color: var(--td-text-color-placeholder);
+  font-size: 12px;
+}
+
+.skill-deps__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
 }
 
 .skill-files-drawer__close {
@@ -670,7 +549,7 @@ onUnmounted(() => {
   justify-content: center;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--app-radius-sm);
   background: transparent;
   color: var(--td-text-color-secondary);
   cursor: pointer;
@@ -736,7 +615,7 @@ onUnmounted(() => {
   border-radius: 1px;
   background: var(--td-component-border);
   opacity: 0.55;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition: opacity var(--app-motion-fast) ease, background var(--app-motion-fast) ease;
 }
 
 .skill-files-drawer-resize-handle:hover .skill-files-drawer-resize-line,

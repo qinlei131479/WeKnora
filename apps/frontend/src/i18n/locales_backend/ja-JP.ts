@@ -1,4 +1,3 @@
-/** 后端接口错误文案，与前端界面文案隔离。 */
 export default {
   error: {
     kb: {
@@ -75,7 +74,7 @@ export default {
       tagNotInKb: 'このタグは現在のナレッジベースに属していません',
       faqEntryEmpty: 'FAQ 項目は空にできません',
       invalidDisplayStatus: '表示状態は公開か非公開のみです',
-      chunkNotInDocument: 'このチャンクは現在の文書に属していません',
+      chunkNotInDocument: 'このチャンクは現在の文書に属していません'
     },
     skill: {
       skill_duplicate: 'スキル「{name}」は既に存在します。名前または識別子を変更してから追加してください',
@@ -114,7 +113,7 @@ export default {
       skill_dir_missing: 'スキルディレクトリが見つかりません',
       skill_share_forbidden: 'この共有範囲は使用できません',
       skill_slug_mismatch: 'スキル識別子が内容と一致しません',
-      skill_failed: '操作に失敗しました。しばらくしてから再試行してください',
-    },
-  },
+      skill_failed: '操作に失敗しました。しばらくしてから再試行してください'
+    }
+  }
 }

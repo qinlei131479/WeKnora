@@ -1,4 +1,3 @@
-/** 后端接口错误文案，与前端界面文案隔离。 */
 export default {
   error: {
     kb: {
@@ -75,7 +74,7 @@ export default {
       tagNotInKb: '标签不属于当前知识库',
       faqEntryEmpty: 'FAQ 条目不能为空',
       invalidDisplayStatus: '展示状态只能是开启或关闭',
-      chunkNotInDocument: '该分块不属于当前文档',
+      chunkNotInDocument: '该分块不属于当前文档'
     },
     skill: {
       skill_duplicate: '技能「{name}」已存在，请更换名称或标识后再添加',
@@ -114,7 +113,7 @@ export default {
       skill_dir_missing: '技能目录不存在',
       skill_share_forbidden: '无权使用该共享范围',
       skill_slug_mismatch: '技能标识与内容不一致',
-      skill_failed: '操作失败，请稍后重试',
-    },
-  },
+      skill_failed: '操作失败，请稍后重试'
+    }
+  }
 }
