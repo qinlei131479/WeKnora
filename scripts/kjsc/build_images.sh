@@ -19,6 +19,10 @@ FRONTEND_ROOT="$PROJECT_ROOT/apps/frontend"
 IMAGE_PREFIX="kjsc/agent-middle"
 DOCKER_IGNORE_ARGS=()
 IMAGE_TAG="${WEKNORA_VERSION:-latest}"
+# docreader 冷构建默认走国内源。只替换 deb.debian.org 主机名，不要带 /debian 后缀。
+# 环境变量或 .env 中的同名键优先于这里的默认值。
+DOCREADER_APT_MIRROR_DEFAULT="https://mirrors.aliyun.com"
+DOCREADER_PLAYWRIGHT_HOST_DEFAULT="https://npmmirror.com/mirrors/playwright"
 
 # 版本信息
 VERSION="1.0.0"
@@ -248,12 +252,20 @@ build_docreader_image() {
 
     cd "$PROJECT_ROOT"
 
+    load_env_var APT_MIRROR
+    load_env_var PLAYWRIGHT_DOWNLOAD_HOST
+    local apt_mirror="${APT_MIRROR:-$DOCREADER_APT_MIRROR_DEFAULT}"
+    local playwright_host="${PLAYWRIGHT_DOWNLOAD_HOST:-$DOCREADER_PLAYWRIGHT_HOST_DEFAULT}"
+    log_info "APT 镜像: ${apt_mirror}"
+    log_info "Playwright 下载源: ${playwright_host}"
+
     docker build \
         --platform $PLATFORM \
         "${DOCKER_IGNORE_ARGS[@]}" \
         --build-arg PLATFORM=$PLATFORM \
         --build-arg TARGETARCH=$TARGETARCH \
-        --build-arg APT_MIRROR=${APT_MIRROR:-} \
+        --build-arg APT_MIRROR="${apt_mirror}" \
+        --build-arg PLAYWRIGHT_DOWNLOAD_HOST="${playwright_host}" \
         -f docker/Dockerfile.docreader \
         -t ${IMAGE_PREFIX}-docreader:${IMAGE_TAG} \
         .
