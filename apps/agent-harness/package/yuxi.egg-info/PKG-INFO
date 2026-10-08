@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
-Name: agent harness
-Version: 0.8.0
+Name: yuxi
+Version: 0.8.2
 Summary: Yuxi 智能知识库与知识图谱平台核心后端包
 License: MIT
 Classifier: License :: OSI Approved :: MIT License
