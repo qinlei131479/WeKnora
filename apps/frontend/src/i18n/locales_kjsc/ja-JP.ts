@@ -173,7 +173,7 @@ export default {
       }
     },
     im: {
-      descriptionRestricted: 'Connect agent to instant messaging platforms: WeCom, Feishu and DingTalk'
+      descriptionRestricted: 'エージェントをインスタントメッセージングプラットフォームに接続：WeCom、Feishu、DingTalkに対応'
     },
     desc: {
       memoryEnabled: 'このエージェントが長期メモリを読み取り、追記できるようにします。無効にすると、このエージェントとの会話はメモリを読み取らず、新しいメモリも追加しません。テナントまたは個人の設定が無効の場合、ここで有効にしても反映されません'
