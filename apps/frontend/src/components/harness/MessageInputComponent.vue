@@ -575,6 +575,7 @@ const renderEditorContent = (raw = '') => {
     )
   })
   lastSyncedEditorValue = String(raw || '')
+  syncEditorHasContent()
 }
 
 const isNodeInEditor = (node) => {
@@ -946,7 +947,18 @@ const handleMentionNavigation = (e) => {
   }
 }
 
-const isEditorEmpty = computed(() => !String(props.modelValue || '').trim())
+// 编辑区自身的字符状态：输入法组字期间 modelValue 不会更新（handleInput 提前返回），
+// 只看 modelValue 会让占位文案压在后出现的组字字符上。
+const editorHasContent = ref(false)
+
+const syncEditorHasContent = () => {
+  const editor = inputRef.value
+  editorHasContent.value = Boolean(editor && String(editor.textContent || '').trim())
+}
+
+const isEditorEmpty = computed(
+  () => !String(props.modelValue || '').trim() && !editorHasContent.value
+)
 
 const hasActionsLeft = computed(() => {
   const slot = slots['actions-left']
@@ -1083,6 +1095,9 @@ const handleKeyUp = (e) => {
 
 // 处理输入事件
 const handleInput = () => {
+  // 组字期间也要同步，保证占位文案在出现首个字符时立刻隐藏
+  syncEditorHasContent()
+
   if (isComposing.value) return
 
   if (inputRef.value && !inputRef.value.querySelector('.mention-ref-token')) {
@@ -1163,6 +1178,8 @@ const handleWindowChatFileDrop = (event) => {
 
 const handleCompositionStart = () => {
   isComposing.value = true
+  // 组字开始即视为有内容：部分浏览器组字期间不派发 input，只靠 DOM 文本会让占位文案残留
+  editorHasContent.value = true
 }
 
 const handleCompositionEnd = () => {
