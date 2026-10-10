@@ -26,8 +26,6 @@
             </div>
             <p class="product-desc">
               {{ t('localBrowser.productDescription') }}
-              <a class="product-link" href="https://github.com/Tencent/BrowserSkill" target="_blank"
-                rel="noopener noreferrer">GitHub<t-icon name="jump" size="12px" /></a>
             </p>
           </div>
         </div>
@@ -365,21 +363,6 @@ onBeforeUnmount(() => { alive = false; controller.abort(); clearTimeout(timer); 
     font-weight: 600;
     line-height: 24px;
     color: var(--td-text-color-primary);
-  }
-}
-
-.product-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  margin-left: 6px;
-  color: var(--td-brand-color);
-  text-decoration: none;
-  white-space: nowrap;
-
-  &:hover,
-  &:focus-visible {
-    text-decoration: underline;
   }
 }
 

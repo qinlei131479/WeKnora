@@ -60,7 +60,7 @@ Agentic 是一个基于 LLM 的企业知识框架，集 RAG 问答、ReAct 智�
 ### 启动命令
 
 \`\`\`bash
-git clone https://github.com/Tencent/WeKnora && cd WeKnora
+git clone <WEKNORA_REPOSITORY_URL> && cd WeKnora
 cp .env.example .env       # 修改你的模型与数据库配置
 make dev-start             # 启动 postgres / redis / qdrant
 make dev-app               # 启动后端，热重载
