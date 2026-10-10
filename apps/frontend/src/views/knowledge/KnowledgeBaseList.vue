@@ -1,30 +1,24 @@
 <template>
   <div class="kb-list-container">
     <div class="kb-list-content">
-      <div class="header" style="--wails-draggable: drag">
-        <div class="header-title" style="--wails-draggable: drag">
-          <div class="title-row" style="--wails-draggable: drag">
-            <h2 style="--wails-draggable: drag">
-              <ResourceIcon type="knowledge" :size="24" />
-              {{ $t('knowledgeBase.title') }}
-            </h2>
-            <div class="header-actions" style="--wails-draggable: no-drag">
-              <ResourceSortControl v-model="selectedResourceSort" />
-              <t-tooltip v-if="authStore.hasRole('contributor')" :content="$t('knowledgeList.create')" placement="bottom">
-                 <t-button variant="text" theme="default" size="small" class="header-action-btn"
-                   data-guide="kb-list-create" style="--wails-draggable: no-drag" @click="handleCreateKnowledgeBase">
-                   <template #icon><t-icon name="folder-add" size="16px" /></template>
-                  {{ $t('knowledgeList.create') }}
-                 </t-button>
-               </t-tooltip>
-             </div>
-          </div>
-          <p class="header-subtitle" style="--wails-draggable: drag">{{ $t('knowledgeList.subtitle') }}</p>
-        </div>
-      </div>
-      <ResourceListToolbar :hide-scopes="authStore.isLiteMode || featureFlags.hideKnowledgeScopeNav" v-model="spaceSelection" v-model:query="keyword" :count-all="allKnowledgeBases"
-      :count-mine="kbs.length" :count-by-org="effectiveSharedCountByOrg" :count-favorites="kbFavoritesCount"
-      :count-recents="kbRecentsCount" />
+      <PageHeader :title="$t('knowledgeBase.title')" :subtitle="$t('knowledgeList.subtitle')">
+        <template #actions>
+          <t-button v-if="authStore.hasRole('contributor')" theme="primary" data-guide="kb-list-create"
+            @click="handleCreateKnowledgeBase">
+            <template #icon><t-icon name="folder-add" size="16px" /></template>
+            {{ $t('knowledgeList.create') }}
+          </t-button>
+        </template>
+      </PageHeader>
+      <PageShoulder v-model:search="keyword" :search-placeholder="$t('menu.search')">
+        <template #filters>
+          <ResourceListToolbar v-if="!hideKbScopes" class="kb-scope-inline" hide-search v-model="spaceSelection"
+            :query="keyword" :count-all="allKnowledgeBases" :count-mine="kbs.length"
+            :count-by-org="effectiveSharedCountByOrg" :count-favorites="kbFavoritesCount"
+            :count-recents="kbRecentsCount" />
+          <ResourceSortControl v-model="selectedResourceSort" />
+        </template>
+      </PageShoulder>
       <div class="kb-list-main">
         <EmptyState v-if="keyword.trim() && !(loading || spaceKbsLoading) && visibleResultCount === 0" icon="search"
           :title="$t('common.noResult')">
@@ -731,6 +725,8 @@ import { shouldShowResourceOriginBadge } from '@/utils/card-list-badge'
 import { permissionCanManageKB } from '@/utils/kbPermission'
 import ContextualGuide from '@/components/ContextualGuide.vue'
 import ResourceSortControl from '@/components/ResourceSortControl.vue'
+import PageHeader from '@/components/harness/shared/PageHeader.vue'
+import PageShoulder from '@/components/harness/shared/PageShoulder.vue'
 import { isContextualGuideDone, markContextualGuideDone } from '@/config/contextualGuides'
 import { useTenantModelReadiness } from '@/composables/useTenantModelReadiness'
 import { useI18n } from 'vue-i18n'
@@ -754,6 +750,7 @@ const orgStore = useOrganizationStore()
 const chatResources = useChatResourcesStore()
 const { t } = useI18n()
 const featureFlags = getFeatureFlags()
+const hideKbScopes = computed(() => authStore.isLiteMode || featureFlags.hideKnowledgeScopeNav)
 const selectedResourceSort = ref<ResourceSortValue>(DEFAULT_RESOURCE_SORT)
 
 // 左侧空间选择：默认根据当前角色决定。
@@ -1565,14 +1562,54 @@ watch(keyword, () => { collapsedKbSections.value = new Set() })
 @import (reference) '@/components/css/resource-card.less';
 
 .kb-list-container {
+  --page-padding: 22px;
   flex: 1;
   min-width: 0;
   min-height: 0;
   height: 100%;
   display: flex;
+  flex-direction: column;
+  background: var(--gray-25, #f8fafa);
 }
 
-.kb-list-content { .resource-list-content(); }
+.kb-list-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.kb-list-content :deep(.kb-scope-inline.resource-toolbar) {
+  width: auto;
+  padding-bottom: 0;
+  border-bottom: none;
+  gap: 8px;
+}
+
+.kb-list-content :deep(.resource-sort-trigger) {
+  height: 32px;
+  background: var(--td-bg-color-container, #fff);
+}
+
+@media (min-width: 1440px) {
+  .kb-list-container {
+    --page-padding: 30px;
+  }
+}
+
+@media (max-width: 1199px) {
+  .kb-list-container {
+    --page-padding: 18px;
+  }
+}
+
+@media (max-width: 767px) {
+  .kb-list-container {
+    --page-padding: 14px;
+  }
+}
 
 .header {
   display: flex;
@@ -1607,7 +1644,10 @@ watch(keyword, () => { collapsedKbSections.value = new Set() })
 
 }
 
-.kb-list-main { .resource-list-main(); }
+.kb-list-main {
+  .resource-list-main();
+  padding: 8px var(--page-padding) 24px;
+}
 
 .kb-list-main-loading {
   display: flex;

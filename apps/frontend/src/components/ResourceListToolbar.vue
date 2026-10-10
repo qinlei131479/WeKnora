@@ -17,7 +17,7 @@
         </template>
       </t-select>
     </div>
-    <t-input :model-value="query" class="search-input" :placeholder="$t('menu.search')"
+    <t-input v-if="!hideSearch" :model-value="query" class="search-input" :placeholder="$t('menu.search')"
       :aria-label="$t('menu.search')" clearable @update:model-value="(value: unknown) => $emit('update:query', String(value ?? ''))">
       <template #prefix-icon><t-icon name="search" size="16px" /></template>
     </t-input>
@@ -35,6 +35,7 @@ const props = withDefaults(defineProps<{
   query: string
   mode?: 'resource' | 'organization'
   hideScopes?: boolean
+  hideSearch?: boolean
   countAll?: number
   countMine?: number
   countFavorites?: number
@@ -42,7 +43,7 @@ const props = withDefaults(defineProps<{
   countCreated?: number
   countJoined?: number
   countByOrg?: Record<string, number>
-}>(), { mode: 'resource', hideScopes: false, countByOrg: () => ({}) })
+}>(), { mode: 'resource', hideScopes: false, hideSearch: false, countByOrg: () => ({}) })
 defineEmits<{
   'update:modelValue': [value: string]
   'update:query': [value: string]
