@@ -1923,8 +1923,9 @@ func (h *KnowledgeHandler) PreviewKnowledgeFile(c *gin.Context) {
 		c.Error(errors.NewInternalServerError("Failed to retrieve file").WithDetails(err.Error()))
 		return
 	}
+	file, filename, contentType := h.presentationPreview(ctx, file, filename)
 	if err := filetransport.Serve(c.Writer, c.Request, file, filetransport.Options{
-		Filename: filename, CacheControl: "private, no-store",
+		Filename: filename, ContentType: contentType, CacheControl: "private, no-store",
 	}); err != nil {
 		logger.Errorf(ctx, "Failed to stream preview: %v", err)
 	}

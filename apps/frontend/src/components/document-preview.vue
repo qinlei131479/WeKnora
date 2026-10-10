@@ -1,7 +1,7 @@
 // @ts-nocheck
 <script setup lang="ts">
 import { indexEmbeddedSourceImages } from '@/utils/sourceImage';
-import { ref, shallowRef, watch, onMounted, onUnmounted, nextTick, defineAsyncComponent } from 'vue';
+import { ref, shallowRef, computed, watch, onMounted, onUnmounted, nextTick, defineAsyncComponent } from 'vue';
 import { previewKnowledgeFile } from '@/api/knowledge-base/index';
 import { previewTemporaryAttachment } from '@/api/chat/temporary-attachments';
 import { downloadArtifact } from '@/api/chat';
@@ -81,6 +81,8 @@ const loading = ref(false);
 const error = ref('');
 const previewType = ref<FilePreviewKind>('unsupported');
 const blobUrl = ref('');
+// 与知识库 PDF 预览同一套浏览器查看器：工具栏、缩略图、翻页和缩放。
+const pdfFrameSrc = computed(() => (blobUrl.value ? `${blobUrl.value}#toolbar=1&navpanes=1&scrollbar=1` : ''));
 const textContent = ref('');
 const highlightedCode = ref('');
 const markdownHtml = ref('');
@@ -161,27 +163,13 @@ let fullscreenDisposed = false;
 
 async function enterPreviewFullscreen() {
   const root = previewRoot.value;
-  if (!props.active || !root?.isConnected) return;
-  // Native fullscreen also handles Escape when focus is inside a PDF viewer
-  // or a sandboxed HTML iframe, whose keyboard events cannot bubble here.
-  if (root.requestFullscreen) {
-    try {
-      await root.requestFullscreen();
-      if (fullscreenDisposed || !props.active) {
-        if (document.fullscreenElement === root) await document.exitFullscreen();
-      } else {
-        syncFullscreen();
-      }
-      return;
-    } catch {
-      // Embedded hosts may disallow the Fullscreen API. Keep page fullscreen
-      // available there, with Escape handled in the parent document.
-    }
-  }
-  if (fullscreenDisposed || !props.active || !root.isConnected) return;
+  if (!props.active || !root?.isConnected || isFullscreen.value) return;
+  // 只铺满浏览器窗口，不调用 Fullscreen API，避免占满整个屏幕。
   if (fallbackOverflow === null) fallbackOverflow = document.body.style.overflow;
   document.body.style.overflow = 'hidden';
   isFullscreen.value = true;
+  await nextTick();
+  if (!fullscreenDisposed && props.active) previewRoot.value?.focus();
 }
 
 function clearFallbackFullscreen() {
@@ -193,22 +181,14 @@ function clearFallbackFullscreen() {
 }
 
 async function exitPreviewFullscreen() {
-  if (previewRoot.value && document.fullscreenElement === previewRoot.value) {
+  if (document.fullscreenElement) {
     try {
       await document.exitFullscreen();
     } catch {
-      // The browser may already have exited in response to Escape.
+      // 浏览器可能已经退出全屏。
     }
-    syncFullscreen();
-    return;
   }
   clearFallbackFullscreen();
-}
-
-function syncFullscreen() {
-  if (fallbackOverflow === null) {
-    isFullscreen.value = !!previewRoot.value && document.fullscreenElement === previewRoot.value;
-  }
 }
 
 function onFullscreenEscape(event: KeyboardEvent) {
@@ -224,13 +204,11 @@ watch(() => props.active, (active) => {
 });
 
 onMounted(() => {
-  document.addEventListener('fullscreenchange', syncFullscreen);
   window.addEventListener('keydown', onFullscreenEscape, true);
 });
 
 onUnmounted(() => {
   fullscreenDisposed = true;
-  document.removeEventListener('fullscreenchange', syncFullscreen);
   window.removeEventListener('keydown', onFullscreenEscape, true);
   void exitPreviewFullscreen();
   clearFallbackFullscreen();
@@ -423,6 +401,21 @@ async function loadPreview() {
   try {
     const rawBlob = await fetchPreviewBlob();
     let kind = resolvePreviewKind(ft);
+    // 知识库幻灯片由服务端用 LibreOffice 转成 PDF。扩展名仍是 ppt/pptx，
+    // 内容已是 PDF 时改走现有 PDF 预览，竖排和组合形状才能保住。
+    if (props.knowledgeId && (ft === 'ppt' || ft === 'pptx' || ft === 'pptm')) {
+      const sample = new Uint8Array(await rawBlob.slice(0, 5).arrayBuffer());
+      if (
+        sample.length >= 4 &&
+        sample[0] === 0x25 &&
+        sample[1] === 0x50 &&
+        sample[2] === 0x44 &&
+        sample[3] === 0x46
+      ) {
+        kind = 'pdf';
+        ft = 'pdf';
+      }
+    }
     if (kind === 'unsupported') {
       const sample = new Uint8Array(await rawBlob.slice(0, FILE_PREVIEW_SNIFF_BYTES).arrayBuffer());
       const sniffed = sniffPreview(sample);
@@ -858,6 +851,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <Teleport to="body" :disabled="!isFullscreen">
   <div ref="previewRoot" tabindex="-1" :aria-label="fileName" class="document-preview" :class="{ 'is-fullscreen': isFullscreen, 'fill-height': fillHeight }">
     <!-- Toolbar -->
     <Teleport :to="toolbarTarget || 'body'" :disabled="isFullscreen || !toolbarTarget">
@@ -910,7 +904,7 @@ onUnmounted(() => {
       <PdfSourceViewer :data="pdfData" :file-name="fileName" :locate="locate" @located="(r) => emit('located', r)" />
     </div>
     <div v-else-if="previewType === 'pdf' && blobUrl" class="preview-pdf">
-      <iframe ref="previewContent" tabindex="0" :title="fileName" :src="blobUrl" class="pdf-iframe" @load="onPreviewFrameLoad" />
+      <iframe ref="previewContent" tabindex="0" :title="fileName" :src="pdfFrameSrc" class="pdf-iframe" @load="onPreviewFrameLoad" />
     </div>
 
     <!-- HTML: artifacts render in a unique-origin iframe; other sources stay as source. -->
@@ -1005,6 +999,7 @@ onUnmounted(() => {
       </video>
     </div>
   </div>
+  </Teleport>
 </template>
 
 <style scoped lang="less">
@@ -1125,7 +1120,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 2001;
+  z-index: 2200;
   background: var(--td-bg-color-container);
   padding: 0;
   overflow: hidden;
