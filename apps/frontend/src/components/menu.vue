@@ -141,9 +141,10 @@
                                 </span>
                             </div>
                             <div v-for="subitem in group.items" :key="subitem.id"
-                                class="submenu_item_p session-chat-row" :class="{
+                                class="submenu_item_p session-chat-row" :data-session-id="subitem.id" :class="{
                                     'session-chat-row--active': !batchMode && subitem.path === currentSecondpath,
                                     'session-chat-row--selected': batchMode && batchSelectedIds.includes(subitem.id),
+                                    'session-chat-row--revealed': revealedSessionId === subitem.id,
                                 }">
                                 <div class="session-list-row session-list-row--flat">
                                     <div class="session-list-row__body">
@@ -520,6 +521,44 @@ const filteredGroupedSessions = computed(() => {
     );
 });
 
+// 只有刚创建的分叉需要入场提示；加载历史、切换已有会话不再播放。
+const pendingForkRevealId = ref('');
+const revealedSessionId = ref('');
+let forkRevealTimer: ReturnType<typeof setTimeout> | undefined;
+usemenuStore.$onAction(({ name, args, after }) => {
+    if (name !== 'updataMenuChildren' || !args[0]?.parent_session_id) return;
+    const sessionId = String(args[0].id);
+    after(() => { pendingForkRevealId.value = sessionId; });
+});
+
+watch(
+    () => {
+        const id = pendingForkRevealId.value;
+        return id && !uiStore.sidebarCollapsed && currentSecondpath.value === `chat/${id}`
+            && filteredGroupedSessions.value.some((group) => group.items.some((item) => item.id === id))
+            ? id : '';
+    },
+    (id) => {
+        if (!id) return;
+        const container = scrollContainer.value;
+        const row = Array.from(container?.querySelectorAll<HTMLElement>('[data-session-id]') ?? [])
+            .find((element) => element.dataset.sessionId === id);
+        if (!container || !row) return;
+
+        // 只在侧栏内滚动，不带动对话区域。
+        const bounds = container.getBoundingClientRect();
+        const rowBounds = row.getBoundingClientRect();
+        if (rowBounds.top < bounds.top) container.scrollTop += rowBounds.top - bounds.top;
+        else if (rowBounds.bottom > bounds.bottom) container.scrollTop += rowBounds.bottom - bounds.bottom;
+
+        clearTimeout(forkRevealTimer);
+        revealedSessionId.value = id;
+        pendingForkRevealId.value = '';
+        forkRevealTimer = setTimeout(() => { revealedSessionId.value = ''; }, 350);
+    },
+    { flush: 'post' },
+);
+
 const refreshSessionListScrollability = async () => {
     await nextTick();
     const container = scrollContainer.value;
@@ -734,6 +773,7 @@ const mapSessionRow = (item: any) => ({
     im_platform: item.im_platform || '',
     description: item.description || '',
     user_id: item.user_id || '',
+    parent_session_id: item.parent_session_id || '',
 });
 
 const syncMenuStoreFromBuckets = () => {
@@ -755,6 +795,7 @@ const menuChildToSessionRow = (item: Record<string, unknown>): SessionForGroupin
         im_platform: typeof item.im_platform === 'string' ? item.im_platform : '',
         description: typeof item.description === 'string' ? item.description : '',
         user_id: typeof item.user_id === 'string' ? item.user_id : '',
+        parent_session_id: typeof item.parent_session_id === 'string' ? item.parent_session_id : '',
     };
 };
 
@@ -1726,6 +1767,10 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
             transition: background 0.15s ease, color 0.15s ease;
         }
 
+        &.session-chat-row--revealed {
+            animation: session-fork-enter 280ms ease-out both;
+        }
+
         &.session-chat-row:hover .session-list-row {
             background: var(--td-bg-color-container-hover);
 
@@ -2009,6 +2054,17 @@ const onDragHandleMouseDown = (e: MouseEvent) => {
 
 .menu_box {
     position: relative;
+}
+
+@keyframes session-fork-enter {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .aside_box .submenu_item_p.session-chat-row--revealed {
+        animation: none;
+    }
 }
 </style>
 <style lang="less">
