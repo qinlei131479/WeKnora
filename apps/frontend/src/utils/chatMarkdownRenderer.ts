@@ -26,9 +26,17 @@ export type ImageRendererArgs = {
   text: string
 }
 
+export type LinkRendererArgs = {
+  href: string
+  title: string | null
+  text: string
+}
+
 export type ChatMarkdownRendererOptions = {
   codeRenderer?: Renderer['code']
   imageRenderer?: (args: ImageRendererArgs) => string
+  /** 返回 null 时回落到 marked 默认链接，避免把普通 http 链接改掉。 */
+  linkRenderer?: (args: LinkRendererArgs) => string | null
   invalidImageHtml?: (href: string) => string
   isValidImageUrl?: (href: string) => boolean
 }
@@ -403,6 +411,19 @@ export function createChatMarkdownRenderer(options: ChatMarkdownRendererOptions 
         title: title || null,
         text: text || '',
       }) ?? ''
+    }
+  }
+
+  if (options.linkRenderer) {
+    const fallbackLink = renderer.link
+    renderer.link = function renderChatLink(token: Tokens.Link) {
+      const html = options.linkRenderer?.({
+        href: token.href || '',
+        title: token.title || null,
+        text: token.text || '',
+      })
+      if (html != null) return html
+      return fallbackLink.call(this, token)
     }
   }
 

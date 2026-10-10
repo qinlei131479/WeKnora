@@ -2559,6 +2559,22 @@ agentRenderer.image = function agentImageRenderer(token) {
   return defaultImageRenderer.call(this, token);
 };
 
+// 链接与图片走同一条产物引用：对上本条回答的文件就渲染成卡片，
+// 点击由现有产物抽屉处理。对不上的普通链接保持 marked 默认输出。
+const defaultLinkRenderer = new marked.Renderer().link;
+agentRenderer.link = function agentLinkRenderer(token) {
+  const artifactHtml = renderArtifactReference({
+    href: token.href || '',
+    alt: token.text || '',
+    artifacts: artifactList.value,
+    labels: artifactRefLabels.value,
+    context: artifactRefContext.value,
+    streaming: !isSegmentDone.value,
+  });
+  if (artifactHtml !== null) return artifactHtml;
+  return defaultLinkRenderer.call(this, token);
+};
+
 const hasCachedMermaidSvg = (cached: CachedMermaidSvgHtml): boolean => {
   if (!cached) return false;
   if (typeof cached === 'string') return cached.length > 0;
