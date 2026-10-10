@@ -1,25 +1,31 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import os
 import shutil
 from pathlib import Path
 from typing import Any
 
 from fastapi import HTTPException
 from yuxi.agents.backends.sandbox import (
+    ensure_global_saved_artifacts_dir,
     ensure_thread_dirs,
+    existing_global_saved_artifacts_dir,
     resolve_virtual_path,
     sandbox_outputs_dir,
     sandbox_uploads_dir,
     sandbox_user_data_dir,
     sandbox_workspace_dir,
+    resolve_legacy_saved_artifact_fallback,
+    validate_thread_id,
     virtual_path_for_thread_file,
 )
 from yuxi.repositories.conversation_repository import ConversationRepository
 from yuxi.services.conversation_service import require_user_conversation
 from yuxi.services.mention_search_service import invalidate_mention_cache, invalidate_workspace_mention_cache
 from yuxi.utils.datetime_utils import utc_isoformat_from_timestamp
-from yuxi.utils.paths import VIRTUAL_PATH_PREFIX
+from yuxi.utils.paths import SAVED_ARTIFACTS_DIR_NAME, VIRTUAL_PATH_PREFIX
 
 
 def _get_virtual_root() -> str:
@@ -120,6 +126,13 @@ def _list_user_data_root_entries(thread_id: str, uid: str, virtual_path: str, re
         if recursive:
             nested = _list_files_recursive(thread_id, uid, workspace_dir, entry["path"])
             entries.extend(nested["files"])
+    saved_artifacts_dir = existing_global_saved_artifacts_dir(uid)
+    if saved_artifacts_dir is not None:
+        entry = _thread_file_entry(thread_id, uid, saved_artifacts_dir, directory_paths_end_with_slash=True)
+        entries.append(entry)
+        if recursive:
+            nested = _list_files_recursive(thread_id, uid, saved_artifacts_dir, entry["path"])
+            entries.extend(nested["files"])
     return {"path": virtual_path, "files": entries}
 
 
@@ -161,16 +174,22 @@ async def resolve_thread_artifact_view(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     if not actual_path.exists():
-        raise HTTPException(status_code=404, detail="artifact not found")
+        # 迁移完成前的历史直链仍应可用，但只允许普通文件且必须留在授权目录内。
+        legacy_path = resolve_legacy_saved_artifact_fallback(thread_id, uid, actual_path)
+        if legacy_path is None:
+            raise HTTPException(status_code=404, detail="artifact not found")
+        return legacy_path
     if not actual_path.is_file():
         raise HTTPException(status_code=400, detail="artifact path is not a file")
 
     resolved_path = actual_path.resolve()
+    saved_artifacts_root = existing_global_saved_artifacts_dir(uid)
     workspace_root = sandbox_workspace_dir(thread_id, uid).resolve()
     uploads_root = sandbox_uploads_dir(thread_id).resolve()
     outputs_root = sandbox_outputs_dir(thread_id).resolve()
     if not (
         resolved_path.is_relative_to(workspace_root)
+        or (saved_artifacts_root is not None and resolved_path.is_relative_to(saved_artifacts_root))
         or resolved_path.is_relative_to(uploads_root)
         or resolved_path.is_relative_to(outputs_root)
     ):
@@ -196,12 +215,18 @@ async def save_thread_artifact_to_workspace_view(
     conv_repo = ConversationRepository(db)
     conversation = await require_user_conversation(conv_repo, thread_id, str(current_uid))
     uid = str(conversation.uid)
-    target_dir = sandbox_workspace_dir(thread_id, uid) / "saved_artifacts"
-    target_dir.mkdir(parents=True, exist_ok=True)
+    target_dir = ensure_global_saved_artifacts_dir(uid)
 
-    target_path = _next_available_artifact_path(target_dir, source_path.name)
-    with source_path.open("rb") as src, target_path.open("wb") as dst:
-        shutil.copyfileobj(src, dst)
+    migrated_paths = await asyncio.to_thread(
+        _migrate_legacy_saved_artifacts,
+        thread_id,
+        uid,
+        target_dir,
+    )
+    if source_path in migrated_paths:
+        target_path = migrated_paths[source_path]
+    else:
+        target_path = _copy_regular_file(target_dir, source_path)
 
     await invalidate_mention_cache(thread_id)
     await invalidate_workspace_mention_cache(uid)
@@ -213,6 +238,93 @@ async def save_thread_artifact_to_workspace_view(
         "saved_path": saved_virtual_path,
         "saved_artifact_url": f"/api/chat/thread/{thread_id}/artifacts/{saved_virtual_path.lstrip('/')}",
     }
+
+
+async def migrate_legacy_saved_artifacts_for_user(*, uid: str, thread_ids: list[str]) -> bool:
+    """打开全局保存产物目录时，合并当前用户各会话中的历史产物。"""
+    target_dir = ensure_global_saved_artifacts_dir(uid)
+    has_migrated = False
+
+    def _migrate_all() -> None:
+        nonlocal has_migrated
+        for thread_id in thread_ids:
+            try:
+                validate_thread_id(thread_id)
+            except ValueError:
+                continue
+            if _migrate_legacy_saved_artifacts(thread_id, uid, target_dir):
+                has_migrated = True
+
+    await asyncio.to_thread(_migrate_all)
+    if has_migrated:
+        await invalidate_workspace_mention_cache(uid)
+    return has_migrated
+
+
+def _migrate_legacy_saved_artifacts(
+    thread_id: str,
+    uid: str,
+    target_dir: Path,
+) -> dict[Path, Path]:
+    """把历史版本保存到会话目录的产物迁移到用户级共享目录。"""
+    legacy_dir = sandbox_workspace_dir(thread_id, uid) / SAVED_ARTIFACTS_DIR_NAME
+    if not legacy_dir.exists() or legacy_dir.is_symlink():
+        return {}
+
+    migrated_paths: dict[Path, Path] = {}
+    for child in sorted(legacy_dir.iterdir(), key=lambda item: item.name.lower()):
+        _migrate_saved_tree(child, target_dir, migrated_paths)
+    with contextlib.suppress(FileNotFoundError):
+        legacy_dir.rmdir()
+    return migrated_paths
+
+
+def _migrate_saved_tree(source_path: Path, target_dir: Path, migrated_paths: dict[Path, Path]) -> dict[Path, Path]:
+    """递归迁移普通文件；任何符号链接都不进入用户级共享目录。"""
+    if source_path.is_symlink():
+        return migrated_paths
+    if source_path.is_file():
+        destination = _copy_regular_file(target_dir, source_path)
+        source_path.unlink()
+        migrated_paths[source_path.resolve()] = destination.resolve()
+        return migrated_paths
+    if not source_path.is_dir():
+        return migrated_paths
+
+    destination_dir = _next_available_artifact_path(target_dir, source_path.name)
+    destination_dir.mkdir()
+    for child in sorted(source_path.iterdir(), key=lambda item: item.name.lower()):
+        _migrate_saved_tree(child, destination_dir, migrated_paths)
+    if not any(source_path.iterdir()):
+        source_path.rmdir()
+    return migrated_paths
+
+
+def _copy_regular_file(target_dir: Path, source_path: Path) -> Path:
+    """以排他创建方式复制普通文件，避免并发保存覆盖同名产物。"""
+    if not source_path.is_file():
+        raise ValueError(f"cannot save non-regular artifact: {source_path}")
+
+    base_name = source_path.stem
+    suffix = source_path.suffix
+    candidate = target_dir / source_path.name
+    for index in range(1000):
+        try:
+            descriptor = os.open(candidate, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o666)
+        except FileExistsError:
+            candidate = target_dir / f"{base_name} ({index + 1}){suffix}"
+            continue
+        except FileNotFoundError as exc:
+            raise FileNotFoundError(f"artifact target directory does not exist: {target_dir}") from exc
+
+        with os.fdopen(descriptor, "wb") as dst, source_path.open("rb") as src:
+            try:
+                shutil.copyfileobj(src, dst)
+            except BaseException:
+                candidate.unlink(missing_ok=True)
+                raise
+        return candidate
+    raise RuntimeError(f"Unable to find available filename for {source_path.name} after 1000 attempts.")
 
 
 def _next_available_artifact_path(target_dir: Path, filename: str) -> Path:

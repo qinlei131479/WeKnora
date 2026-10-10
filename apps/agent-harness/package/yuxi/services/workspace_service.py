@@ -39,6 +39,7 @@ from yuxi.utils.paths import (
     CONVERSATION_HISTORY_DIR_NAME,
     LARGE_TOOL_RESULTS_DIR_NAME,
     OUTPUTS_DIR_NAME,
+    SAVED_ARTIFACTS_DIR_NAME,
     UPLOADS_DIR_NAME,
     VIRTUAL_PATH_WORKSPACE,
     WORKSPACE_AGENTS_DIR_NAME,
@@ -325,6 +326,12 @@ async def build_owned_thread_titles(db: AsyncSession, uid: str) -> dict[str, str
 def is_workspace_chat_path(path: str | None) -> bool:
     """判断网页工作区路径是否属于历史对话虚拟命名空间。"""
     return _chat_path_parts(path) is not None
+
+
+def workspace_path_uses_saved_artifact_mapping(path: str | None) -> bool:
+    """判断路径是否落在用户级保存产物目录内。"""
+    normalized = _normalize_workspace_path(path).as_posix().rstrip("/") or "/"
+    return normalized == f"/{SAVED_ARTIFACTS_DIR_NAME}" or normalized.startswith(f"/{SAVED_ARTIFACTS_DIR_NAME}/")
 
 
 def workspace_path_uses_chat_mapping(path: str | None) -> bool:

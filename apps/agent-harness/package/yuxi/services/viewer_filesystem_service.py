@@ -15,6 +15,8 @@ from yuxi.agents.backends.sandbox import (
     SKILLS_PATH,
     USER_DATA_PATH,
     ensure_thread_dirs,
+    existing_global_saved_artifacts_dir,
+    resolve_legacy_saved_artifact_fallback,
     resolve_virtual_path,
     sandbox_user_data_dir,
     sandbox_workspace_dir,
@@ -33,7 +35,7 @@ from yuxi.services.file_preview import (
     render_preview_payload,
     render_preview_too_large_payload,
 )
-from yuxi.services.mention_search_service import invalidate_mention_cache
+from yuxi.services.mention_search_service import invalidate_mention_cache, invalidate_workspace_mention_cache
 from yuxi.storage.postgres.models_business import User
 from yuxi.utils.datetime_utils import utc_isoformat_from_timestamp
 from yuxi.utils.paths import VIRTUAL_PATH_OUTPUTS, VIRTUAL_PATH_UPLOADS, VIRTUAL_PATH_WORKSPACE
@@ -55,7 +57,13 @@ def _normalize_path(path: str | None) -> str:
     return normalized.rstrip("/") if normalized not in {"/", SKILLS_PATH, USER_DATA_PATH} else normalized
 
 
-def _resolve_local_user_data_path(thread_id: str, uid: str, path: str) -> Path:
+def _resolve_local_user_data_path(
+    thread_id: str,
+    uid: str,
+    path: str,
+    *,
+    allow_legacy_saved_artifacts: bool = True,  # noqa: FBT001, FBT002
+) -> Path:
     try:
         actual_path = resolve_virtual_path(thread_id, path, uid=uid)
     except ValueError as exc:
@@ -64,9 +72,19 @@ def _resolve_local_user_data_path(thread_id: str, uid: str, path: str) -> Path:
             raise HTTPException(status_code=403, detail="Access denied") from exc
         raise
     resolved_path = actual_path.resolve()
+    if not actual_path.exists() and allow_legacy_saved_artifacts:
+        # 旧会话产物在用户级目录建立前仍需保留只读访问能力。
+        legacy_path = resolve_legacy_saved_artifact_fallback(thread_id, uid, actual_path)
+        if legacy_path is not None:
+            return legacy_path
     user_data_root = sandbox_user_data_dir(thread_id).resolve()
+    saved_artifacts_root = existing_global_saved_artifacts_dir(uid)
     workspace_root = sandbox_workspace_dir(thread_id, uid).resolve()
-    if not (resolved_path.is_relative_to(user_data_root) or resolved_path.is_relative_to(workspace_root)):
+    if not (
+        resolved_path.is_relative_to(user_data_root)
+        or resolved_path.is_relative_to(workspace_root)
+        or (saved_artifacts_root is not None and resolved_path.is_relative_to(saved_artifacts_root))
+    ):
         raise HTTPException(status_code=403, detail="Access denied")
     return resolved_path
 
@@ -205,6 +223,19 @@ def _list_user_data_root_entries(thread_id: str, uid: str) -> list[dict]:
             {
                 "path": f"{workspace_virtual_path}/",
                 "name": workspace_dir.name,
+                "is_dir": True,
+                "size": 0,
+                "modified_at": utc_isoformat_from_timestamp(stat.st_mtime) or "",
+            }
+        )
+    saved_artifacts_dir = existing_global_saved_artifacts_dir(uid)
+    if saved_artifacts_dir is not None:
+        saved_virtual_path = virtual_path_for_thread_file(thread_id, saved_artifacts_dir, uid=uid).rstrip("/")
+        stat = saved_artifacts_dir.stat()
+        entries.append(
+            {
+                "path": f"{saved_virtual_path}/",
+                "name": saved_artifacts_dir.name,
                 "is_dir": True,
                 "size": 0,
                 "modified_at": utc_isoformat_from_timestamp(stat.st_mtime) or "",
@@ -455,7 +486,12 @@ async def delete_viewer_file(
         raise HTTPException(status_code=400, detail="当前目录不允许删除")
 
     try:
-        actual_path = _resolve_local_user_data_path(thread_id, str(current_user.uid), normalized_path)
+        actual_path = _resolve_local_user_data_path(
+            thread_id,
+            str(current_user.uid),
+            normalized_path,
+            allow_legacy_saved_artifacts=False,
+        )
         if not actual_path.exists():
             raise HTTPException(status_code=404, detail="文件不存在")
         if actual_path.is_dir():
@@ -463,6 +499,8 @@ async def delete_viewer_file(
         else:
             await asyncio.to_thread(actual_path.unlink)
         await invalidate_mention_cache(thread_id)
+        if _is_workspace_path(normalized_path):
+            await invalidate_workspace_mention_cache(str(current_user.uid))
     except PermissionError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
     except ValueError as e:

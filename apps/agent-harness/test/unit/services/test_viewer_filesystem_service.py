@@ -76,6 +76,73 @@ def test_resolve_local_user_data_path_blocks_upload_symlink_escape(tmp_path: Pat
     assert exc_info.value.status_code == 403
 
 
+def test_resolve_local_user_data_path_allows_global_saved_artifacts(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(sandbox_paths.conf, "save_dir", str(tmp_path))
+    saved_dir = sandbox_paths.global_saved_artifacts_dir("user-1")
+    saved_dir.mkdir(parents=True)
+    target = saved_dir / "result.md"
+    target.write_text("result", encoding="utf-8")
+
+    resolved_path = svc._resolve_local_user_data_path(
+        "thread-1",
+        "user-1",
+        "/home/gem/user-data/workspace/saved_artifacts/result.md",
+    )
+
+    assert resolved_path == target.resolve()
+
+
+def test_resolve_local_user_data_path_falls_back_to_legacy_saved_file(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(sandbox_paths.conf, "save_dir", str(tmp_path))
+    sandbox_paths.ensure_thread_dirs("thread-1", "user-1")
+    legacy_target = sandbox_paths.sandbox_workspace_dir("thread-1", "user-1") / "saved_artifacts" / "result.md"
+    legacy_target.parent.mkdir(parents=True, exist_ok=True)
+    legacy_target.write_text("legacy", encoding="utf-8")
+
+    resolved_path = svc._resolve_local_user_data_path(
+        "thread-1",
+        "user-1",
+        "/home/gem/user-data/workspace/saved_artifacts/result.md",
+    )
+
+    assert resolved_path == legacy_target.resolve()
+
+
+def test_resolve_local_user_data_path_rejects_legacy_saved_symlink(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(sandbox_paths.conf, "save_dir", str(tmp_path))
+    sandbox_paths.ensure_thread_dirs("thread-1", "user-1")
+    outside_file = tmp_path / "outside.md"
+    outside_file.write_text("outside", encoding="utf-8")
+    legacy_link = sandbox_paths.sandbox_workspace_dir("thread-1", "user-1") / "saved_artifacts" / "result.md"
+    legacy_link.parent.mkdir(parents=True)
+    legacy_link.symlink_to(outside_file)
+
+    with pytest.raises(HTTPException) as exc_info:
+        svc._resolve_local_user_data_path(
+            "thread-1",
+            "user-1",
+            "/home/gem/user-data/workspace/saved_artifacts/result.md",
+        )
+
+    assert exc_info.value.status_code == 403
+
+
+def test_list_viewer_user_data_root_entries_contains_global_saved_artifacts(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(sandbox_paths.conf, "save_dir", str(tmp_path))
+    sandbox_paths.ensure_thread_dirs("thread-1", "user-1")
+    saved_dir = sandbox_paths.global_saved_artifacts_dir("user-1")
+    saved_dir.mkdir(parents=True)
+    (saved_dir / "result.md").write_text("result", encoding="utf-8")
+
+    entries = svc._list_user_data_root_entries("thread-1", "user-1")
+
+    assert "workspace" in {str(item["name"]) for item in entries}
+    assert "saved_artifacts" in {str(item["name"]) for item in entries}
+
+
 def test_list_local_entries_skips_symlink_escape(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr(sandbox_paths.conf, "save_dir", str(tmp_path))
     thread_id = "thread-1"
@@ -91,6 +158,39 @@ def test_list_local_entries_skips_symlink_escape(tmp_path: Path, monkeypatch) ->
     entries = svc._list_local_entries(thread_id, uid, uploads_dir)
 
     assert {entry["path"] for entry in entries} == {"/home/gem/user-data/uploads/safe.txt"}
+
+
+@pytest.mark.asyncio
+async def test_delete_saved_artifact_invalidates_thread_and_workspace_cache(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.setattr(sandbox_paths.conf, "save_dir", str(tmp_path))
+    saved_file = sandbox_paths.global_saved_artifacts_dir("user-1") / "result.md"
+    saved_file.parent.mkdir(parents=True)
+    saved_file.write_text("result", encoding="utf-8")
+    invalidated = []
+
+    async def _fake_resolve_viewer_state(**_kwargs):
+        return None, None, []
+
+    async def _fake_invalidate(value: str):
+        invalidated.append(("thread" if value == "thread-1" else "workspace", value))
+
+    monkeypatch.setattr(svc, "_resolve_viewer_state", _fake_resolve_viewer_state)
+    monkeypatch.setattr(svc, "invalidate_mention_cache", _fake_invalidate)
+    monkeypatch.setattr(svc, "invalidate_workspace_mention_cache", _fake_invalidate)
+
+    response = await svc.delete_viewer_file(
+        thread_id="thread-1",
+        path="/home/gem/user-data/workspace/saved_artifacts/result.md",
+        current_user=SimpleNamespace(uid="user-1"),
+        db=None,
+    )
+
+    assert response["success"] is True
+    assert invalidated == [("thread", "thread-1"), ("workspace", "user-1")]
+    assert not saved_file.exists()
 
 
 @pytest.mark.asyncio

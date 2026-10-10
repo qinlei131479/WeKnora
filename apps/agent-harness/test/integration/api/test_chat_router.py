@@ -10,7 +10,12 @@ import uuid
 
 import pytest
 from PIL import Image
-from yuxi.agents.backends.sandbox import ensure_thread_dirs, sandbox_user_data_dir, sandbox_workspace_dir
+from yuxi.agents.backends.sandbox import (
+    ensure_thread_dirs,
+    global_user_data_dir,
+    sandbox_user_data_dir,
+    sandbox_workspace_dir,
+)
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.integration]
 
@@ -221,8 +226,9 @@ async def test_save_thread_artifact_to_workspace_copies_output_file(test_client,
     assert payload["source_path"] == f"/home/gem/user-data/outputs/{filename}"
     assert payload["saved_path"] == f"/home/gem/user-data/workspace/saved_artifacts/{filename}"
 
-    saved_path = sandbox_workspace_dir(thread_id, uid) / "saved_artifacts" / filename
+    saved_path = global_user_data_dir(uid) / "workspace" / "saved_artifacts" / filename
     assert saved_path.exists()
+    assert not (sandbox_workspace_dir(thread_id, uid) / "saved_artifacts" / filename).exists()
     assert saved_path.read_text(encoding="utf-8") == "# artifact\n"
 
     download_response = await test_client.get(payload["saved_artifact_url"], headers=headers)
@@ -261,10 +267,39 @@ async def test_save_thread_artifact_to_workspace_auto_renames_conflicts(test_cli
     assert first_payload["saved_path"] == f"/home/gem/user-data/workspace/saved_artifacts/{filename}"
     assert second_payload["saved_path"] == f"/home/gem/user-data/workspace/saved_artifacts/{renamed_filename}"
 
-    first_saved = sandbox_workspace_dir(thread_id, uid) / "saved_artifacts" / filename
-    second_saved = sandbox_workspace_dir(thread_id, uid) / "saved_artifacts" / renamed_filename
+    saved_artifacts_dir = global_user_data_dir(uid) / "workspace" / "saved_artifacts"
+    first_saved = saved_artifacts_dir / filename
+    second_saved = saved_artifacts_dir / renamed_filename
     assert first_saved.read_text(encoding="utf-8") == "first\n"
     assert second_saved.read_text(encoding="utf-8") == "second\n"
+
+
+async def test_save_thread_artifact_migrates_legacy_session_artifacts(test_client, standard_user):
+    headers = standard_user["headers"]
+    uid = str(standard_user["user"]["uid"])
+    thread_id = await _create_thread_for_user(test_client, headers)
+    token = uuid.uuid4().hex[:8]
+    legacy_filename = f"legacy-artifact-{token}.md"
+    output_filename = f"new-artifact-{token}.md"
+
+    ensure_thread_dirs(thread_id, uid)
+    legacy_path = sandbox_workspace_dir(thread_id, uid) / "saved_artifacts" / legacy_filename
+    legacy_path.parent.mkdir(parents=True, exist_ok=True)
+    legacy_path.write_text("legacy\n", encoding="utf-8")
+    source_path = sandbox_user_data_dir(thread_id) / "outputs" / output_filename
+    source_path.write_text("new\n", encoding="utf-8")
+
+    response = await test_client.post(
+        f"/api/chat/thread/{thread_id}/artifacts/save",
+        json={"path": f"/home/gem/user-data/outputs/{output_filename}"},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+
+    global_saved_dir = global_user_data_dir(uid) / "workspace" / "saved_artifacts"
+    assert (global_saved_dir / legacy_filename).read_text(encoding="utf-8") == "legacy\n"
+    assert (global_saved_dir / output_filename).read_text(encoding="utf-8") == "new\n"
+    assert not legacy_path.parent.exists() or not any(legacy_path.parent.iterdir())
 
 
 async def test_save_thread_artifact_to_workspace_rejects_invalid_paths(test_client, standard_user):

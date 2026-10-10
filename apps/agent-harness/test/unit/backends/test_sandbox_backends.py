@@ -4,15 +4,19 @@ from __future__ import annotations
 
 import base64
 import threading
+from pathlib import Path
 from types import MethodType, SimpleNamespace
 
 import pytest
+from yuxi import config as backend_config
+from deepagents.backends import FilesystemBackend
 from deepagents.backends.protocol import GlobResult, ReadResult
 from deepagents.backends.sandbox import MAX_BINARY_BYTES
 from langchain_core.messages import ToolMessage
 from langgraph.prebuilt.tool_node import ToolRuntime
 from yuxi.agents.backends.composite import (
     CustomCompositeBackend,
+    SavedArtifactsReadonlyBackend,
     create_agent_composite_backend,
     create_agent_filesystem_middleware,
     sync_agent_context_skills,
@@ -43,6 +47,66 @@ def _runtime(
             uid=uid,
         ),
     )
+
+
+def test_composite_routes_existing_saved_artifacts_to_readonly_user_dir(
+    tmp_path: Path,
+    monkeypatch,
+):
+    monkeypatch.setattr(backend_config, "save_dir", str(tmp_path))
+    monkeypatch.setattr("yuxi.agents.backends.sandbox.backend.get_sandbox_provider", lambda: object())
+    saved_dir = tmp_path / "threads" / "shared" / "user-1" / "workspace" / "saved_artifacts"
+    saved_dir.mkdir(parents=True)
+    (saved_dir / "result.md").write_text("# Saved", encoding="utf-8")
+
+    backend = create_agent_composite_backend(_runtime())
+
+    assert isinstance(
+        backend.routes["/home/gem/user-data/workspace/saved_artifacts/"],
+        SavedArtifactsReadonlyBackend,
+    )
+    assert backend.read("/home/gem/user-data/workspace/saved_artifacts/result.md").file_data == {
+        "content": "# Saved",
+        "encoding": "utf-8",
+    }
+    assert (
+        backend.write("/home/gem/user-data/workspace/saved_artifacts/blocked.md", "blocked").error
+        == "Saved artifacts path is read-only."
+    )
+    upload = backend.upload_files([("/home/gem/user-data/workspace/saved_artifacts/blocked.bin", b"blocked")])[0]
+    assert upload.error == "permission_denied"
+
+
+def test_composite_parent_search_routes_saved_artifacts_child(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(backend_config, "save_dir", str(tmp_path))
+    monkeypatch.setattr("yuxi.agents.backends.sandbox.backend.get_sandbox_provider", lambda: object())
+    saved_dir = tmp_path / "threads" / "shared" / "user-1" / "workspace" / "saved_artifacts"
+    saved_dir.mkdir(parents=True)
+    (saved_dir / "result.md").write_text("# Saved", encoding="utf-8")
+
+    backend = CustomCompositeBackend(
+        default=FilesystemBackend(root_dir=tmp_path / "sandbox", virtual_mode=True),
+        routes={"/home/gem/user-data/workspace/saved_artifacts/": SavedArtifactsReadonlyBackend(root_dir=saved_dir)},
+        artifacts_root="/home/gem/user-data/outputs",
+    )
+
+    grep_result = backend.grep("Saved", path="/home/gem/user-data/workspace")
+    glob_result = backend.glob("/**/*.md", path="/home/gem/user-data/workspace")
+
+    assert [match["path"] for match in (grep_result.matches or [])] == [
+        "/home/gem/user-data/workspace/saved_artifacts/result.md"
+    ]
+    assert [match["path"] for match in (glob_result.matches or [])] == [
+        "/home/gem/user-data/workspace/saved_artifacts/result.md"
+    ]
+
+
+def test_composite_omits_saved_artifacts_route_until_global_dir_exists(monkeypatch):
+    monkeypatch.setattr("yuxi.agents.backends.sandbox.backend.get_sandbox_provider", lambda: object())
+
+    backend = create_agent_composite_backend(_runtime())
+
+    assert "/home/gem/user-data/workspace/saved_artifacts/" not in backend.routes
 
 
 def test_create_agent_composite_backend_uses_prepared_readable_skills(monkeypatch):
@@ -560,6 +624,67 @@ def test_provisioner_ls_keeps_uploads_directories_visible(monkeypatch) -> None:
         "/home/gem/user-data/uploads/attachments",
         "/home/gem/user-data/uploads/allowed.md",
     ]
+
+
+def test_provisioner_ls_maps_workspace_saved_artifacts_to_user_dir(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(backend_config, "save_dir", str(tmp_path))
+    monkeypatch.setattr("yuxi.agents.backends.sandbox.backend.get_sandbox_provider", lambda: object())
+    saved_dir = tmp_path / "threads" / "shared" / "user-1" / "workspace" / "saved_artifacts"
+    saved_dir.mkdir(parents=True)
+    backend = ProvisionerSandboxBackend(thread_id="thread-1", uid="user-1")
+
+    def fake_list_path(**_kwargs):
+        entries = [
+            ("/home/gem/user-data/workspace/agents", True),
+            ("/home/gem/user-data/workspace/saved_artifacts", True),
+        ]
+        return SimpleNamespace(
+            data=SimpleNamespace(
+                files=[
+                    SimpleNamespace(path=path, is_directory=is_dir, size=0, modified_time=None)
+                    for path, is_dir in entries
+                ]
+            )
+        )
+
+    fake_client = SimpleNamespace(file=SimpleNamespace(list_path=fake_list_path))
+    backend._get_client = MethodType(lambda self: fake_client, backend)
+
+    result = backend.ls("/home/gem/user-data/workspace")
+
+    assert result.error is None
+    assert [entry["path"] for entry in result.entries] == [
+        "/home/gem/user-data/workspace/agents",
+        "/home/gem/user-data/workspace/saved_artifacts",
+    ]
+
+
+def test_provisioner_ls_keeps_legacy_saved_artifacts_before_migration(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setattr(backend_config, "save_dir", str(tmp_path))
+    monkeypatch.setattr("yuxi.agents.backends.sandbox.backend.get_sandbox_provider", lambda: object())
+    backend = ProvisionerSandboxBackend(thread_id="thread-1", uid="user-1")
+
+    def fake_list_path(**_kwargs):
+        entries = [
+            ("/home/gem/user-data/workspace/agents", True),
+            ("/home/gem/user-data/workspace/saved_artifacts", True),
+        ]
+        return SimpleNamespace(
+            data=SimpleNamespace(
+                files=[
+                    SimpleNamespace(path=path, is_directory=is_dir, size=0, modified_time=None)
+                    for path, is_dir in entries
+                ]
+            )
+        )
+
+    fake_client = SimpleNamespace(file=SimpleNamespace(list_path=fake_list_path))
+    backend._get_client = MethodType(lambda self: fake_client, backend)
+
+    result = backend.ls("/home/gem/user-data/workspace")
+
+    assert result.error is None
+    assert "/home/gem/user-data/workspace/saved_artifacts" in {entry["path"] for entry in result.entries}
 
 
 def test_create_agent_composite_backend_passes_attachment_allowlist(monkeypatch):

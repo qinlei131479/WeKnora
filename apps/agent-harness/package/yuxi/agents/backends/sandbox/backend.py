@@ -27,16 +27,19 @@ from deepagents.backends.utils import _get_file_type
 from yuxi.utils.logging_config import logger
 from yuxi.utils.paths import (
     OUTPUTS_DIR_NAME,
+    SAVED_ARTIFACTS_DIR_NAME,
     UPLOADS_DIR_NAME,
     VIRTUAL_PATH_PREFIX,
     VIRTUAL_SKILLS_PATH,
     WORKSPACE_DIR_NAME,
 )
 
+from .paths import existing_global_saved_artifacts_dir
 from .provider import get_sandbox_provider, sandbox_id_for_thread, sandbox_provisioner_token
 
 _USER_DATA_ROOT = "/" + VIRTUAL_PATH_PREFIX.strip("/")
 _WORKSPACE_ROOT = f"{_USER_DATA_ROOT}/{WORKSPACE_DIR_NAME}"
+_SAVED_ARTIFACTS_ROOT = f"{_WORKSPACE_ROOT}/{SAVED_ARTIFACTS_DIR_NAME}"
 _UPLOADS_ROOT = f"{_USER_DATA_ROOT}/{UPLOADS_DIR_NAME}"
 _OUTPUTS_ROOT = f"{_USER_DATA_ROOT}/{OUTPUTS_DIR_NAME}"
 _SKILLS_ROOT = "/" + VIRTUAL_SKILLS_PATH.strip("/")
@@ -479,6 +482,20 @@ class ProvisionerSandboxBackend(BaseSandbox):
                 elif isinstance(modified_time, (int, float)):
                     info["modified_at"] = datetime.fromtimestamp(modified_time).isoformat()
             infos.append(info)
+        if normalized_path == _WORKSPACE_ROOT:
+            saved_artifacts_dir = existing_global_saved_artifacts_dir(self._uid)
+            if saved_artifacts_dir is not None:
+                infos = [info for info in infos if _normalize_path(info.get("path", "")) != _SAVED_ARTIFACTS_ROOT]
+                stat = saved_artifacts_dir.stat()
+                infos.append(
+                    {
+                        "path": _SAVED_ARTIFACTS_ROOT,
+                        "is_dir": True,
+                        "size": 0,
+                        "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    }
+                )
+                infos.sort(key=lambda item: item.get("path", ""))
         return LsResult(entries=self._filter_authorized_infos(infos))
 
     def write(self, file_path: str, content: str) -> WriteResult:

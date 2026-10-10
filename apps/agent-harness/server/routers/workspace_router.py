@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.utils.auth_middleware import get_db, get_required_user
 from yuxi.knowledge.runtime import knowledge_base
+from yuxi.services.thread_files_service import migrate_legacy_saved_artifacts_for_user
 from yuxi.services.workspace_service import (
     build_owned_thread_titles,
     create_workspace_directory,
@@ -20,6 +21,7 @@ from yuxi.services.workspace_service import (
     read_workspace_file_content,
     upload_workspace_files,
     workspace_path_uses_chat_mapping,
+    workspace_path_uses_saved_artifact_mapping,
     write_workspace_file_content,
 )
 from yuxi.storage.postgres.models_business import User
@@ -106,9 +108,18 @@ async def get_workspace_tree(
     current_user: User = Depends(get_required_user),
     db: AsyncSession = Depends(get_db),
 ):
+    uses_saved_artifact_mapping = workspace_path_uses_saved_artifact_mapping(path)
+    uses_chat_mapping = workspace_path_uses_chat_mapping(path)
     thread_titles = (
-        await build_owned_thread_titles(db, str(current_user.uid)) if workspace_path_uses_chat_mapping(path) else None
+        await build_owned_thread_titles(db, str(current_user.uid))
+        if uses_saved_artifact_mapping or uses_chat_mapping
+        else None
     )
+    if uses_saved_artifact_mapping:
+        await migrate_legacy_saved_artifacts_for_user(
+            uid=str(current_user.uid),
+            thread_ids=list(thread_titles or {}),
+        )
     return await list_workspace_tree(
         path=path,
         recursive=recursive,

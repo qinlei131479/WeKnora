@@ -8,6 +8,7 @@ from yuxi import config as conf
 from yuxi.utils.logging_config import logger
 from yuxi.utils.paths import (
     OUTPUTS_DIR_NAME,
+    SAVED_ARTIFACTS_DIR_NAME,
     UPLOADS_DIR_NAME,
     VIRTUAL_PATH_PREFIX,
     WORKSPACE_AGENT_CONTEXT_FILES,
@@ -72,6 +73,50 @@ def sandbox_user_data_dir(thread_id: str) -> Path:
 def sandbox_workspace_dir(thread_id: str, uid: str) -> Path:
     validate_thread_id(thread_id)
     return Path(conf.save_dir) / "threads" / "shared" / workspace_scope_dirname(uid, thread_id) / WORKSPACE_DIR_NAME
+
+
+def global_saved_artifacts_dir(uid: str) -> Path:
+    """返回用户级工作区的交付物保存目录。"""
+    return global_user_data_dir(uid) / WORKSPACE_DIR_NAME / SAVED_ARTIFACTS_DIR_NAME
+
+
+def ensure_global_saved_artifacts_dir(uid: str) -> Path:
+    """创建用户级保存目录，并拒绝符号链接逃逸出线程存储根目录。"""
+    target_dir = global_saved_artifacts_dir(uid)
+    target_dir.mkdir(parents=True, exist_ok=True)
+    return _resolve_threads_child_path(target_dir)
+
+
+def existing_global_saved_artifacts_dir(uid: str) -> Path | None:
+    """返回已存在的用户级保存目录；缺失或符号链接时按不可见处理。"""
+    target_dir = global_saved_artifacts_dir(uid)
+    if not target_dir.exists() or target_dir.is_symlink():
+        return None
+    return _resolve_threads_child_path(target_dir)
+
+
+def resolve_legacy_saved_artifact_fallback(thread_id: str, uid: str, global_target: Path) -> Path | None:
+    """全局产物缺失时，返回仍留在会话目录中的普通文件；失败时按不可见处理。"""
+    global_root = global_saved_artifacts_dir(uid).resolve(strict=False)
+    try:
+        relative_path = global_target.resolve(strict=False).relative_to(global_root)
+    except (OSError, ValueError):
+        return None
+    if not relative_path.parts:
+        return None
+
+    legacy_root = sandbox_workspace_dir(thread_id, uid) / SAVED_ARTIFACTS_DIR_NAME
+    try:
+        legacy_root = _resolve_threads_child_path(legacy_root.resolve(strict=False))
+        candidate = legacy_root.joinpath(*relative_path.parts)
+        resolved_candidate = candidate.resolve(strict=False)
+        if candidate.is_symlink() or not resolved_candidate.is_relative_to(legacy_root):
+            return None
+        if not resolved_candidate.is_file():
+            return None
+        return resolved_candidate
+    except (OSError, ValueError):
+        return None
 
 
 def sandbox_workspace_agent_context_file(thread_id: str, uid: str, filename: str) -> Path:
@@ -149,7 +194,12 @@ def _resolve_user_data_base_dir(thread_id: str, uid: str, relative_path: str) ->
 
     namespace = parts[0]
     if namespace == WORKSPACE_DIR_NAME:
-        # Workspace is shared across one user's threads, so it lives outside the per-thread root.
+        # 只有显式保存的交付物属于用户级共享目录；其余工作区文件保持会话隔离。
+        if len(parts) > 1 and parts[1] == SAVED_ARTIFACTS_DIR_NAME:
+            base_dir = _resolve_threads_child_path(global_saved_artifacts_dir(uid).resolve(strict=False))
+            target_path = base_dir.joinpath(*parts[2:]) if len(parts) > 2 else base_dir
+            return base_dir.resolve(), target_path.resolve()
+
         base_dir = sandbox_workspace_dir(thread_id, uid)
         target_path = base_dir.joinpath(*parts[1:]) if len(parts) > 1 else base_dir
         return base_dir.resolve(), target_path.resolve()
@@ -184,10 +234,19 @@ def resolve_virtual_path(thread_id: str, virtual_path: str, *, uid: str) -> Path
 def virtual_path_for_thread_file(thread_id: str, path: str | Path, *, uid: str) -> str:
     target_path = Path(path).resolve()
     thread_root = sandbox_user_data_dir(thread_id).resolve()
-    global_workspace_root = sandbox_workspace_dir(thread_id, uid).resolve()
+    scoped_workspace_root = sandbox_workspace_dir(thread_id, uid).resolve()
 
     try:
-        relative_path = target_path.relative_to(global_workspace_root)
+        relative_path = target_path.relative_to(global_saved_artifacts_dir(uid).resolve())
+    except ValueError:
+        pass
+    else:
+        relative_path_str = f"{WORKSPACE_DIR_NAME}/{SAVED_ARTIFACTS_DIR_NAME}/{relative_path.as_posix()}"
+        prefix = get_virtual_path_prefix().rstrip("/")
+        return f"{prefix}/{relative_path_str}"
+
+    try:
+        relative_path = target_path.relative_to(scoped_workspace_root)
     except ValueError:
         try:
             relative_path = target_path.relative_to(thread_root)

@@ -12,6 +12,7 @@ WORKSPACE_AGENT_CONTEXT_FILES = {
     "USER.md": "# USER\n\n以下是有关用户的一些信息\n",
     "MEMORY.md": "# MEMORY\n\n以下是 Agent 需要记住的一些信息\n",
 }
+SAVED_ARTIFACTS_DIR_NAME = "saved_artifacts"
 UPLOADS_DIR_NAME = "uploads"
 OUTPUTS_DIR_NAME = "outputs"
 LARGE_TOOL_RESULTS_DIR_NAME = "large_tool_results"
@@ -40,6 +41,7 @@ __all__ = [
     "WORKSPACE_DIR_NAME",
     "WORKSPACE_AGENTS_DIR_NAME",
     "WORKSPACE_AGENT_CONTEXT_FILES",
+    "SAVED_ARTIFACTS_DIR_NAME",
     "UPLOADS_DIR_NAME",
     "OUTPUTS_DIR_NAME",
     "LARGE_TOOL_RESULTS_DIR_NAME",
