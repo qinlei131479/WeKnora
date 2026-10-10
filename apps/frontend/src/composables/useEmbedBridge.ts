@@ -15,9 +15,16 @@ import {
   parseEmbedTokenFromLocation,
   postEmbedBootstrapRequest,
   postEmbedReady,
+  registerEmbedTokenRefresher,
   type EmbedChannelPublicConfig,
 } from '@/api/embed'
 import { applyEmbedLocale, readEmbedLocaleFromUrl, syncEmbedLocaleFromUrl } from '@/i18n/embed'
+
+// 会话 Token 续期检查间隔。只有在剩余有效期不足一半时才会真正换取新 Token，
+// 因此实际换新频率约为「有效期的一半」一次，多数检查点会直接跳过。
+const EMBED_TOKEN_CHECK_INTERVAL_MS = 10 * 60 * 1000
+// 后端未返回 expires_in 时按 30 分钟（与 embedSessionTTL 一致）推算。
+const DEFAULT_EMBED_TOKEN_EXPIRES_IN = 1800
 
 // Persist the chat session id per channel so a page refresh resumes the same
 // conversation (and its history) instead of silently starting a new session.
@@ -97,11 +104,64 @@ export function useEmbedBridge(channelId: Ref<string>) {
   let removeTokenListener: (() => void) | null = null
   let bootstrapped = false
   let hostLocalePinned = false
+
+  // 会话 Token 续期状态。publishToken 仅在页面持有发布 Token 时非空（iframe
+  // 直接嵌入、浮窗 static 模式）；安全模式下页面只有会话 Token，无法自行续期。
+  let tokenRefreshTimer: number | null = null
+  let publishToken = ''
+  let tokenIssuedAt = 0
+  let tokenExpiresIn = DEFAULT_EMBED_TOKEN_EXPIRES_IN
+  let refreshInFlight: Promise<string> | null = null
   if (typeof window !== 'undefined') {
     hostLocalePinned = Boolean(readEmbedLocaleFromUrl())
     if (hostLocalePinned) {
       syncEmbedLocaleFromUrl(activeLocale)
     }
+  }
+
+  // 保证返回的会话 Token 仍然新鲜：剩余有效期不足一半（force 时无条件）就用
+  // 发布 Token 重新换取。安全模式下没有发布 Token，直接返回当前值，行为不变。
+  const ensureFreshToken = async (
+    targetChannelId: string,
+    force = false,
+  ): Promise<string> => {
+    const id = targetChannelId || channelId.value
+    const current = token.value
+    if (!id || !publishToken) return current
+    if (!force && Date.now() - tokenIssuedAt < (tokenExpiresIn * 1000) / 2) return current
+    if (refreshInFlight) {
+      // 等待在途换取结束再取结果，避免并发重复 exchange；force 场景下在途的
+      // 可能是「未过期直接返回」的结果，必须等它结束后继续换新。
+      await refreshInFlight.catch(() => undefined)
+      const issuedAt = tokenIssuedAt
+      if (!force && Date.now() - issuedAt < (tokenExpiresIn * 1000) / 2) return token.value
+    }
+    refreshInFlight = (async () => {
+      try {
+        const res = await exchangeEmbedSession(id, publishToken)
+        const next = res?.data?.session_token
+        if (!next) return current
+        token.value = next
+        tokenIssuedAt = Date.now()
+        const expiresIn = Number(res?.data?.expires_in)
+        tokenExpiresIn = expiresIn > 0 ? expiresIn : DEFAULT_EMBED_TOKEN_EXPIRES_IN
+        return next
+      } catch {
+        // 换取失败（网络抖动 / 发布 Token 已被轮换）保持静默，下次检查再试。
+        return current
+      } finally {
+        refreshInFlight = null
+      }
+    })()
+    return refreshInFlight
+  }
+
+  // 定时兜底：页面长时间停留时，在会话 Token 到期前完成换新。
+  const startTokenRefreshTimer = () => {
+    if (tokenRefreshTimer || !publishToken) return
+    tokenRefreshTimer = window.setInterval(() => {
+      void ensureFreshToken(channelId.value)
+    }, EMBED_TOKEN_CHECK_INTERVAL_MS)
   }
 
   const bootstrap = async (embedToken: string) => {
@@ -123,6 +183,8 @@ export function useEmbedBridge(channelId: Ref<string>) {
           const exchangeRes = await exchangeEmbedSession(id, embedToken)
           if (exchangeRes?.data?.session_token) {
             apiToken = exchangeRes.data.session_token
+            const expiresIn = Number(exchangeRes.data.expires_in)
+            if (expiresIn > 0) tokenExpiresIn = expiresIn
           } else if (!import.meta.env.DEV) {
             // Fail closed in production: a missing session token must not silently
             // fall back to the long-lived publish token.
@@ -171,6 +233,10 @@ export function useEmbedBridge(channelId: Ref<string>) {
       sessionSig.value = resolved.sig
       writeStoredSession(id, resolved)
       token.value = apiToken
+      // 持有发布 Token 时登记续期状态；安全模式下留空，续期逻辑自动失效。
+      publishToken = isEmbedSessionToken(embedToken) ? '' : embedToken
+      tokenIssuedAt = Date.now()
+      startTokenRefreshTimer()
       postEmbedReady(id)
     } catch (e: unknown) {
       bootstrapped = false
@@ -242,6 +308,9 @@ export function useEmbedBridge(channelId: Ref<string>) {
     loadError.value = t('embedPublish.missingChannel')
   }
 
+  // 注册后，api/embed 的每个会话请求都能在 Token 失效时自行换新并重试。
+  registerEmbedTokenRefresher(ensureFreshToken)
+
   onMounted(() => {
     start()
   })
@@ -250,6 +319,11 @@ export function useEmbedBridge(channelId: Ref<string>) {
     removeHostListener?.()
     removeLocaleListener?.()
     removeTokenListener?.()
+    if (tokenRefreshTimer) {
+      clearInterval(tokenRefreshTimer)
+      tokenRefreshTimer = null
+    }
+    registerEmbedTokenRefresher(null)
   })
 
   return {

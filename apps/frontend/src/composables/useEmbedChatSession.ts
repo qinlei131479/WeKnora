@@ -9,6 +9,7 @@ import {
 } from 'vue'
 import { useStream } from '@/api/chat/streame'
 import {
+  ensureFreshEmbedToken,
   getEmbedMessageList,
   postEmbedMessageSent,
   postEmbedMessageReceived,
@@ -322,7 +323,9 @@ export function useEmbedChatSession(options: {
       suggestion_attribution: suggestionAttribution || undefined,
       method: 'POST',
       url: endpoint,
-      embed_token: options.token,
+      // options.token 是初始化时的快照，会话 Token 可能已到期；发出前先换
+      // 取当期有效的 Token，避免长停留后第一条消息被 401 拒绝。
+      embed_token: await ensureFreshEmbedToken(options.channelId, options.token),
       embed_session_sig: options.sessionSig.value,
       embed_visitor_id: options.visitorId.value,
     })

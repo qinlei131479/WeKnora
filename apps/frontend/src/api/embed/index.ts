@@ -157,6 +157,63 @@ export function isEmbedSessionToken(token: string): boolean {
   return typeof token === 'string' && token.trim().startsWith(EMBED_SESSION_TOKEN_PREFIX)
 }
 
+/**
+ * 会话 Token 续期钩子。由 useEmbedBridge 注册：iframe 直接嵌入与浮窗 static
+ * 模式下页面持有发布 Token，可自行换取新会话 Token；安全模式下不注册，
+ * 行为与未接入续期时完全一致。
+ */
+type EmbedTokenRefresher = (channelId: string, force?: boolean) => Promise<string>
+
+let embedTokenRefresher: EmbedTokenRefresher | null = null
+
+export function registerEmbedTokenRefresher(fn: EmbedTokenRefresher | null) {
+  embedTokenRefresher = fn
+}
+
+/**
+ * 返回当前可用的会话 Token。force 为 true 时无条件换新，用于请求已被 401
+ * 拒绝、本地计时显然失效的场景。未注册刷新器或换取失败时返回原 Token，
+ * 由调用方按原样继续，不改变既有行为。
+ */
+export async function ensureFreshEmbedToken(
+  channelId: string,
+  currentToken: string,
+  force = false,
+): Promise<string> {
+  const refresh = embedTokenRefresher
+  if (!refresh) return currentToken
+  try {
+    return (await refresh(channelId, force)) || currentToken
+  } catch {
+    return currentToken
+  }
+}
+
+/** 请求是否因会话 Token 失效被服务端拒绝。 */
+function isEmbedTokenRejected(err: unknown): boolean {
+  const status = Number((err as { response?: { status?: number } })?.response?.status || 0)
+  return status === 401
+}
+
+/**
+ * 用会话 Token 发起 embed 请求；被 401 拒绝时先强制换取新 Token，再重试一次。
+ * 重试仍失败则抛出原始错误，与未接入续期时的表现一致。
+ */
+async function withEmbedToken<T>(
+  channelId: string,
+  token: string,
+  call: (token: string) => Promise<T>,
+): Promise<T> {
+  try {
+    return await call(token)
+  } catch (err) {
+    if (!isEmbedTokenRejected(err)) throw err
+    const fresh = await ensureFreshEmbedToken(channelId, token, true)
+    if (!fresh || fresh === token) throw err
+    return await call(fresh)
+  }
+}
+
 export async function listEmbedChannels(agentId: string) {
   return get<{ success: boolean; data: EmbedChannel[] }>(`/api/v1/agents/${agentId}/embed-channels`)
 }
@@ -219,18 +276,22 @@ export interface EmbedMessageSuggestionSet {
 }
 
 export async function getEmbedChunkById(channelId: string, token: string, chunkId: string) {
-  return get<{ success: boolean; data: { content?: string } }>(
-    `/api/v1/embed/${channelId}/chunks/${chunkId}`,
-    { headers: { Authorization: `Embed ${token}` } },
+  return withEmbedToken(channelId, token, (t) =>
+    get<{ success: boolean; data: { content?: string } }>(
+      `/api/v1/embed/${channelId}/chunks/${chunkId}`,
+      { headers: { Authorization: `Embed ${t}` } },
+    ),
   )
 }
 
 export async function getEmbedSuggestedQuestions(channelId: string, token: string, limit?: number) {
   // Omit limit to let the channel agent's configured starter count apply.
   const qs = typeof limit === 'number' && limit > 0 ? `?limit=${limit}` : ''
-  return get<{ success: boolean; data: { questions: SuggestedQuestion[] } }>(
-    `/api/v1/embed/${channelId}/suggested-questions${qs}`,
-    { headers: { Authorization: `Embed ${token}` } },
+  return withEmbedToken(channelId, token, (t) =>
+    get<{ success: boolean; data: { questions: SuggestedQuestion[] } }>(
+      `/api/v1/embed/${channelId}/suggested-questions${qs}`,
+      { headers: { Authorization: `Embed ${t}` } },
+    ),
   )
 }
 
@@ -243,10 +304,12 @@ export async function ensureEmbedMessageSuggestions(
   visitorId: string,
   regenerate = false,
 ) {
-  return post<{ success: boolean; data: EmbedMessageSuggestionSet }>(
-    `/api/v1/embed/${channelId}/sessions/${sessionId}/messages/${messageId}/suggestions`,
-    { regenerate },
-    { headers: embedSessionHeaders(token, sessionSig, visitorId) },
+  return withEmbedToken(channelId, token, (t) =>
+    post<{ success: boolean; data: EmbedMessageSuggestionSet }>(
+      `/api/v1/embed/${channelId}/sessions/${sessionId}/messages/${messageId}/suggestions`,
+      { regenerate },
+      { headers: embedSessionHeaders(t, sessionSig, visitorId) },
+    ),
   )
 }
 
@@ -258,9 +321,11 @@ export async function getEmbedMessageSuggestions(
   sessionSig: string,
   visitorId: string,
 ) {
-  return get<{ success: boolean; data: EmbedMessageSuggestionSet }>(
-    `/api/v1/embed/${channelId}/sessions/${sessionId}/messages/${messageId}/suggestions`,
-    { headers: embedSessionHeaders(token, sessionSig, visitorId) },
+  return withEmbedToken(channelId, token, (t) =>
+    get<{ success: boolean; data: EmbedMessageSuggestionSet }>(
+      `/api/v1/embed/${channelId}/sessions/${sessionId}/messages/${messageId}/suggestions`,
+      { headers: embedSessionHeaders(t, sessionSig, visitorId) },
+    ),
   )
 }
 
@@ -274,25 +339,31 @@ export async function recordEmbedMessageSuggestionEvent(
   eventType: 'impression' | 'click' | 'dismiss',
   questionId = '',
 ) {
-  return post(
-    `/api/v1/embed/${channelId}/sessions/${sessionId}/suggestion-events`,
-    { suggestion_set_id: suggestionSetId, question_id: questionId, event_type: eventType },
-    { headers: embedSessionHeaders(token, sessionSig, visitorId) },
+  return withEmbedToken(channelId, token, (t) =>
+    post(
+      `/api/v1/embed/${channelId}/sessions/${sessionId}/suggestion-events`,
+      { suggestion_set_id: suggestionSetId, question_id: questionId, event_type: eventType },
+      { headers: embedSessionHeaders(t, sessionSig, visitorId) },
+    ),
   )
 }
 
 export async function getEmbedConfig(channelId: string, token: string) {
-  return get<{ success: boolean; data: EmbedChannelPublicConfig }>(
-    `/api/v1/embed/${channelId}/config`,
-    { headers: { Authorization: `Embed ${token}` } },
+  return withEmbedToken(channelId, token, (t) =>
+    get<{ success: boolean; data: EmbedChannelPublicConfig }>(
+      `/api/v1/embed/${channelId}/config`,
+      { headers: { Authorization: `Embed ${t}` } },
+    ),
   )
 }
 
 export async function createEmbedSession(channelId: string, token: string) {
-  return post<{ success: boolean; data: { id: string; sig: string } }>(
-    `/api/v1/embed/${channelId}/sessions`,
-    {},
-    { headers: { Authorization: `Embed ${token}` } },
+  return withEmbedToken(channelId, token, (t) =>
+    post<{ success: boolean; data: { id: string; sig: string } }>(
+      `/api/v1/embed/${channelId}/sessions`,
+      {},
+      { headers: { Authorization: `Embed ${t}` } },
+    ),
   )
 }
 
@@ -311,11 +382,13 @@ export async function stopEmbedSession(
   messageId: string,
   sessionSig: string,
 ) {
-  const headers: Record<string, string> = {
-    Authorization: `Embed ${token}`,
-    'X-Embed-Session': sessionSig,
-  }
-  return post(`/api/v1/embed/${channelId}/sessions/${sessionId}/stop`, { message_id: messageId }, { headers })
+  return withEmbedToken(channelId, token, (t) => {
+    const headers: Record<string, string> = {
+      Authorization: `Embed ${t}`,
+      'X-Embed-Session': sessionSig,
+    }
+    return post(`/api/v1/embed/${channelId}/sessions/${sessionId}/stop`, { message_id: messageId }, { headers })
+  })
 }
 
 function embedSessionHeaders(token: string, sessionSig: string, visitorId?: string): Record<string, string> {
@@ -337,10 +410,12 @@ export async function resolveEmbedMCPOAuth(
   pendingId: string,
   body: { service_id: string; decision?: 'authorize' | 'cancel' },
 ): Promise<void> {
-  await post(
-    `/api/v1/embed/${channelId}/sessions/${encodeURIComponent(sessionId)}/mcp-oauth-resolutions/${encodeURIComponent(pendingId)}`,
-    body,
-    { headers: embedSessionHeaders(token, sessionSig, visitorId) },
+  await withEmbedToken(channelId, token, (t) =>
+    post(
+      `/api/v1/embed/${channelId}/sessions/${encodeURIComponent(sessionId)}/mcp-oauth-resolutions/${encodeURIComponent(pendingId)}`,
+      body,
+      { headers: embedSessionHeaders(t, sessionSig, visitorId) },
+    ),
   )
 }
 
@@ -352,10 +427,12 @@ export async function cancelEmbedMCPOAuth(
   visitorId: string,
   pendingId: string,
 ): Promise<void> {
-  await post(
-    `/api/v1/embed/${channelId}/sessions/${encodeURIComponent(sessionId)}/mcp-oauth-resolutions/${encodeURIComponent(pendingId)}/cancel`,
-    {},
-    { headers: embedSessionHeaders(token, sessionSig, visitorId) },
+  await withEmbedToken(channelId, token, (t) =>
+    post(
+      `/api/v1/embed/${channelId}/sessions/${encodeURIComponent(sessionId)}/mcp-oauth-resolutions/${encodeURIComponent(pendingId)}/cancel`,
+      {},
+      { headers: embedSessionHeaders(t, sessionSig, visitorId) },
+    ),
   )
 }
 
@@ -368,10 +445,12 @@ export async function getEmbedMCPOAuthAuthorizeURL(
   serviceId: string,
   body: { redirect_uri: string; frontend_redirect?: string },
 ): Promise<{ authorizationUrl: string; authorizationAttempt: string }> {
-  const response: any = await post(
-    `/api/v1/embed/${channelId}/sessions/${encodeURIComponent(sessionId)}/mcp-services/${encodeURIComponent(serviceId)}/oauth/authorize-url`,
-    body,
-    { headers: embedSessionHeaders(token, sessionSig, visitorId) },
+  const response: any = await withEmbedToken(channelId, token, (t) =>
+    post(
+      `/api/v1/embed/${channelId}/sessions/${encodeURIComponent(sessionId)}/mcp-services/${encodeURIComponent(serviceId)}/oauth/authorize-url`,
+      body,
+      { headers: embedSessionHeaders(t, sessionSig, visitorId) },
+    ),
   )
   const data = response.data ?? response
   return {
@@ -392,9 +471,11 @@ export async function getEmbedMCPOAuthStatus(
   const query = authorizationAttempt
     ? `?authorization_attempt=${encodeURIComponent(authorizationAttempt)}`
     : ''
-  const response: any = await get(
-    `/api/v1/embed/${channelId}/sessions/${encodeURIComponent(sessionId)}/mcp-services/${encodeURIComponent(serviceId)}/oauth/status${query}`,
-    { headers: embedSessionHeaders(token, sessionSig, visitorId) },
+  const response: any = await withEmbedToken(channelId, token, (t) =>
+    get(
+      `/api/v1/embed/${channelId}/sessions/${encodeURIComponent(sessionId)}/mcp-services/${encodeURIComponent(serviceId)}/oauth/status${query}`,
+      { headers: embedSessionHeaders(t, sessionSig, visitorId) },
+    ),
   )
   return Boolean((response.data ?? response)?.authorized)
 }
@@ -408,10 +489,12 @@ export async function resolveEmbedToolApproval(
   pendingId: string,
   body: { decision: 'approve' | 'reject'; modified_args?: Record<string, unknown>; reason?: string },
 ): Promise<void> {
-  await post(
-    `/api/v1/embed/${channelId}/sessions/${encodeURIComponent(sessionId)}/tool-approvals/${encodeURIComponent(pendingId)}`,
-    body,
-    { headers: embedSessionHeaders(token, sessionSig, visitorId) },
+  await withEmbedToken(channelId, token, (t) =>
+    post(
+      `/api/v1/embed/${channelId}/sessions/${encodeURIComponent(sessionId)}/tool-approvals/${encodeURIComponent(pendingId)}`,
+      body,
+      { headers: embedSessionHeaders(t, sessionSig, visitorId) },
+    ),
   )
 }
 
@@ -427,13 +510,15 @@ export async function getEmbedMessageList(
   if (beforeTime) {
     params.set('before_time', beforeTime)
   }
-  const headers: Record<string, string> = { Authorization: `Embed ${token}` }
-  // Signed session handle — sent as a header so it never lands in URL/access logs.
-  if (sig) headers['X-Embed-Session'] = sig
-  return get<{ success: boolean; data: unknown[] }>(
-    `/api/v1/embed/${channelId}/messages/${sessionId}/load?${params.toString()}`,
-    { headers },
-  )
+  return withEmbedToken(channelId, token, (t) => {
+    const headers: Record<string, string> = { Authorization: `Embed ${t}` }
+    // Signed session handle — sent as a header so it never lands in URL/access logs.
+    if (sig) headers['X-Embed-Session'] = sig
+    return get<{ success: boolean; data: unknown[] }>(
+      `/api/v1/embed/${channelId}/messages/${sessionId}/load?${params.toString()}`,
+      { headers },
+    )
+  })
 }
 
 const EMBED_MSG_SOURCE = 'weknora-embed'
