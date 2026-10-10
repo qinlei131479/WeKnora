@@ -4,6 +4,7 @@ import { generateRandomString, MAX_FILE_SIZE_MB } from "./index";
 import i18n from '@/i18n'
 import { getApiBaseUrl } from './api-base';
 import { localizeApiErrorCode, localizeBackendErrorMessage } from './backendErrorMessage';
+import { isTimeoutError, uploadTimeoutMs } from './requestTimeouts';
 
 const t = (key: string, params: Record<string, string> = {}) => i18n.global.t(key, params)
 
@@ -199,7 +200,10 @@ instance.interceptors.response.use(
     const originalRequest = error.config;
     
     if (!error.response) {
-      return Promise.reject({ message: t('error.networkError') });
+      // 超时和连不上服务器都没有 response。上传超时若报成「检查网络」，会把人带去查错问题。
+      return Promise.reject({
+        message: t(isTimeoutError(error) ? 'error.requestTimeout' : 'error.networkError'),
+      });
     }
     
     // 公开接口（auto-setup / login / register / oidc）的 401 不走 refresh 逻辑，直接返回错误
@@ -333,6 +337,9 @@ export function postUpload(
   config: any = {},
 ): Promise<any> {
   return instance.post(url, data, {
+    // 上传耗时取决于传输，不是 JSON 接口的 30 秒默认超时。按体积放宽，
+    // 调用方显式传入的 config.timeout 仍然优先。
+    timeout: uploadTimeoutMs(data),
     ...config,
     headers: {
       "Content-Type": "multipart/form-data",

@@ -38,6 +38,8 @@
         <div class="upload-mask" v-show="ismask">
             <UploadMask></UploadMask>
         </div>
+        <!-- 知识库文件上传进度浮层：上传队列放在 store 里，切换页面不中断 -->
+        <UploadTasksPanel />
         <!-- 全局设置模态框，供所有 platform 子路由使用 -->
         <Settings />
         <!-- 全局命令面板 (⌘K)，随 platform 路由存活 -->
@@ -51,6 +53,7 @@ import Menu from '@/components/menu.vue'
 import { ref, onMounted, onUnmounted, nextTick, provide, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
 import UploadMask from '@/components/upload-mask.vue'
+import UploadTasksPanel from '@/components/upload-tasks/UploadTasksPanel.vue'
 import Settings from '@/views/settings/Settings.vue'
 import GlobalCommandPalette from '@/components/GlobalCommandPalette.vue'
 import GlobalInvitationBell from '@/components/GlobalInvitationBell.vue'
@@ -63,6 +66,7 @@ import { useCommandPaletteStore } from '@/stores/commandPalette'
 import { useUIStore } from '@/stores/ui'
 import { useChatResourcesStore } from '@/stores/chatResources'
 import { getKnowledgeBaseById } from '@/api/knowledge-base/index'
+import { collectDroppedFiles } from './collectDroppedFiles'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { Settings as SettingsIcon } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
@@ -114,42 +118,9 @@ const getCurrentKbId = (): string | null => {
 }
 
 const CHAT_DROP_ROUTE_NAMES = new Set(['chat', 'globalCreatChat', 'kbCreatChat', 'chatWork', 'chatWorkCreat']);
-const KNOWLEDGE_DROP_ROUTE_NAMES = new Set(['knowledgeBaseDetail']);
-const GLOBAL_DROP_ROUTE_NAMES = new Set([...CHAT_DROP_ROUTE_NAMES, ...KNOWLEDGE_DROP_ROUTE_NAMES]);
 
 const isChatDropRoute = () => {
     return CHAT_DROP_ROUTE_NAMES.has(String(route.name || ''));
-}
-
-const isKnowledgeDropRoute = () => {
-    return KNOWLEDGE_DROP_ROUTE_NAMES.has(String(route.name || ''));
-}
-
-const isGlobalDropRoute = () => {
-    return GLOBAL_DROP_ROUTE_NAMES.has(String(route.name || ''));
-}
-
-const collectDroppedFiles = async (event: DragEvent): Promise<File[]> => {
-    const dataTransferFiles = event.dataTransfer?.files ? Array.from(event.dataTransfer.files) : [];
-    if (dataTransferFiles.length > 0) {
-        return dataTransferFiles;
-    }
-
-    const dataTransferItems = event.dataTransfer?.items ? Array.from(event.dataTransfer.items) : [];
-    if (dataTransferItems.length === 0) {
-        return [];
-    }
-
-    const files = await Promise.all(dataTransferItems.map(item => new Promise<File | null>((resolve) => {
-        const fileEntry = (item as any).webkitGetAsEntry?.();
-        if (fileEntry?.isFile && typeof fileEntry.file === 'function') {
-            fileEntry.file((file: File) => resolve(file), () => resolve(null));
-            return;
-        }
-        resolve(null);
-    })));
-
-    return files.filter((file): file is File => file instanceof File);
 }
 
 // 检查知识库初始化状态
@@ -183,21 +154,31 @@ const checkKnowledgeBaseInitialization = async (): Promise<boolean> => {
 }
 
 
-// isFileDrag distinguishes an OS file drag (the only thing the global upload
-// drop zone cares about) from an in-app element drag such as the wiki
-// folder/page drag-and-drop. Element drags carry only "text/*" types, never
-// "Files", so we bail out and let the originating component handle the drop.
+// 系统文件拖拽才进入全局上传；页面内元素拖拽（如 Wiki 目录）只有 text/*，交给原组件。
 const isFileDrag = (event: DragEvent): boolean => {
     const types = event.dataTransfer?.types
     if (!types) return false
     return Array.from(types).includes('Files')
 }
 
+const shouldHandleGlobalFileDrag = (event: DragEvent): boolean => {
+    if (!isFileDrag(event)) return false;
+    // 任何页面都先拦住浏览器默认打开文件，避免拖放中途把正在进行的请求打断。
+    event.preventDefault();
+    // 设置页及其技能抽屉自己处理上传。capture 阶段早于局部 drop 的 stopPropagation。
+    const enabled = !uiStore.showSettingsModal && (
+        isChatDropRoute() || (route.name === 'knowledgeBaseDetail' && !!getCurrentKbId())
+    );
+    if (!enabled) {
+        dragCounter = 0;
+        ismask.value = false;
+    }
+    return enabled;
+}
+
 // 全局拖拽事件处理
 const handleGlobalDragEnter = (event: DragEvent) => {
-    if (!isFileDrag(event)) return;
-    event.preventDefault();
-    if (!isGlobalDropRoute()) return;
+    if (!shouldHandleGlobalFileDrag(event)) return;
     dragCounter++;
     if (event.dataTransfer) {
         event.dataTransfer.effectAllowed = 'all';
@@ -206,18 +187,14 @@ const handleGlobalDragEnter = (event: DragEvent) => {
 }
 
 const handleGlobalDragOver = (event: DragEvent) => {
-    if (!isFileDrag(event)) return;
-    event.preventDefault();
-    if (!isGlobalDropRoute()) return;
+    if (!shouldHandleGlobalFileDrag(event)) return;
     if (event.dataTransfer) {
         event.dataTransfer.dropEffect = 'copy';
     }
 }
 
 const handleGlobalDragLeave = (event: DragEvent) => {
-    if (!isFileDrag(event)) return;
-    event.preventDefault();
-    if (!isGlobalDropRoute()) return;
+    if (!shouldHandleGlobalFileDrag(event)) return;
     dragCounter--;
     if (dragCounter === 0) {
         ismask.value = false;
@@ -225,9 +202,7 @@ const handleGlobalDragLeave = (event: DragEvent) => {
 }
 
 const handleGlobalDrop = async (event: DragEvent) => {
-    if (!isFileDrag(event)) return;
-    event.preventDefault();
-    if (!isGlobalDropRoute()) return;
+    if (!shouldHandleGlobalFileDrag(event)) return;
     dragCounter = 0;
     ismask.value = false;
 
@@ -244,8 +219,6 @@ const handleGlobalDrop = async (event: DragEvent) => {
         }));
         return;
     }
-    
-    if (!isKnowledgeDropRoute()) return;
 
     const isInitialized = await checkKnowledgeBaseInitialization();
     if (!isInitialized) {
@@ -257,21 +230,12 @@ const handleGlobalDrop = async (event: DragEvent) => {
     }));
 }
 
-// capture 阶段只负责关闭遮罩，业务分发仍交给本地上传区和冒泡兜底。
-const handleGlobalDropReset = (event: DragEvent) => {
-    if (!isFileDrag(event)) return;
-    dragCounter = 0;
-    ismask.value = false;
-}
-
 // 组件挂载时添加全局事件监听器
 onMounted(() => {
     document.addEventListener('dragenter', handleGlobalDragEnter, true);
     document.addEventListener('dragover', handleGlobalDragOver, true);
     document.addEventListener('dragleave', handleGlobalDragLeave, true);
-    // drop 使用冒泡监听，让本地上传区可先通过 stopPropagation 声明接管文件。
-    document.addEventListener('drop', handleGlobalDrop);
-    document.addEventListener('drop', handleGlobalDropReset, true);
+    document.addEventListener('drop', handleGlobalDrop, true);
     if (isWailsDesktop) {
         window.addEventListener('keydown', handleGlobalKeyDown);
         // @ts-ignore
@@ -306,8 +270,7 @@ onUnmounted(() => {
     document.removeEventListener('dragenter', handleGlobalDragEnter, true);
     document.removeEventListener('dragover', handleGlobalDragOver, true);
     document.removeEventListener('dragleave', handleGlobalDragLeave, true);
-    document.removeEventListener('drop', handleGlobalDrop);
-    document.removeEventListener('drop', handleGlobalDropReset, true);
+    document.removeEventListener('drop', handleGlobalDrop, true);
     if (isWailsDesktop) {
         window.removeEventListener('keydown', handleGlobalKeyDown);
         // @ts-ignore
@@ -426,8 +389,6 @@ onUnmounted(() => {
     width: 100%;
     height: 100%;
     z-index: 999;
-    /* 视觉提示不参与命中测试，确保本地上传区仍能拿到真实 drop 目标。 */
-    pointer-events: none;
     display: flex;
     justify-content: center;
     align-items: center;
