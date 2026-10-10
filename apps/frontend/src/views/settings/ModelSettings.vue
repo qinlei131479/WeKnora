@@ -420,6 +420,7 @@ const handleModelSave = async (modelData: any) => {
       saveType === 'chat'
       && modelData.source === 'remote'
       && modelData.thinkingControl
+      && modelData.thinkingControlManual
     ) {
       extraConfig.thinking_control = modelData.thinkingControl
     }

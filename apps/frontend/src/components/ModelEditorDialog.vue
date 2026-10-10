@@ -435,6 +435,8 @@ interface ModelFormData {
   maxConcurrency?: number
   /** extra_config.thinking_control — how agent thinking on/off maps to API fields. */
   thinkingControl?: string
+  /** 区分目录默认值和用户显式选择，默认值不入 extra_config。 */
+  thinkingControlManual?: boolean
   // 自定义 HTTP 请求头（类似 OpenAI Python SDK 的 extra_headers）
   customHeaders?: CustomHeaderItem[]
   /** LKEAP Rerank：腾讯云 SecretKey（创建时写入 app_secret） */
@@ -1529,6 +1531,7 @@ const handleConfirm = async () => {
 
     emit('confirm', {
       ...formData.value,
+      thinkingControlManual: thinkingControlManual.value,
       ...(isEdit.value ? {} : { modelType: activeModelType.value }),
     })
     dialogVisible.value = false
