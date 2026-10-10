@@ -1118,6 +1118,11 @@ func (s *knowledgeService) getSummary(ctx context.Context,
 			chunkContents = searchutil.EnrichContentCaptionOnly(chunkContents, mergedImageInfo)
 		}
 	}
+	// 图片型幻灯片经常只留下图片标记：解析器没抽出形状文字，或 OCR
+	// 子块没挂到父分块上。稀疏时补上这两路文字，再决定要不要调用模型。
+	if realTextRuneCount(chunkContents) < imageDominatedTextThreshold {
+		chunkContents = s.mergeSparseSummaryEvidence(ctx, knowledge, chunkContents)
+	}
 
 	// Apply length limit: sample long content to fit within maxInputChars
 	chunkContents = sampleLongContent(chunkContents, maxInputChars)
@@ -1389,16 +1394,21 @@ func (s *knowledgeService) ProcessSummaryGeneration(ctx context.Context, t *asyn
 	summaryOut["text_chunks"] = len(textChunks)
 
 	if len(textChunks) == 0 {
-		logger.Infof(ctx, "No text chunks found for knowledge: %s", payload.KnowledgeID)
-		knowledge.Description = ""
-		knowledge.Profile = nil
-		knowledge.SummaryStatus = types.SummaryStatusFailed
-		knowledge.UpdatedAt = time.Now()
-		if err := s.saveSummaryState(ctx, knowledge); err != nil {
-			logger.Warnf(ctx, "Failed to mark summary failed for knowledge without text chunks: %v", err)
+		if fallback := s.presentationFallbackChunk(ctx, kb, knowledge); fallback != nil {
+			textChunks = []*types.Chunk{fallback}
+			summaryOut["presentation_text"] = true
+		} else {
+			logger.Infof(ctx, "No text chunks found for knowledge: %s", payload.KnowledgeID)
+			knowledge.Description = ""
+			knowledge.Profile = nil
+			knowledge.SummaryStatus = types.SummaryStatusFailed
+			knowledge.UpdatedAt = time.Now()
+			if err := s.saveSummaryState(ctx, knowledge); err != nil {
+				logger.Warnf(ctx, "Failed to mark summary failed for knowledge without text chunks: %v", err)
+			}
+			summaryOut["skipped"] = "no_text_chunks"
+			return nil
 		}
-		summaryOut["skipped"] = "no_text_chunks"
-		return nil
 	}
 
 	// Sort chunks by ChunkIndex for proper ordering
@@ -2523,15 +2533,19 @@ func (s *knowledgeService) RegenerateKnowledgeSummary(
 		}
 	}
 	if len(textChunks) == 0 {
-		knowledge.Description = ""
-		knowledge.Profile = nil
-		knowledge.SummaryStatus = types.SummaryStatusFailed
-		knowledge.UpdatedAt = time.Now()
-		if updateErr := s.saveSummaryState(ctx, knowledge); updateErr != nil {
-			return knowledge, updateErr
+		if fallback := s.presentationFallbackChunk(ctx, kb, knowledge); fallback != nil {
+			textChunks = []*types.Chunk{fallback}
+		} else {
+			knowledge.Description = ""
+			knowledge.Profile = nil
+			knowledge.SummaryStatus = types.SummaryStatusFailed
+			knowledge.UpdatedAt = time.Now()
+			if updateErr := s.saveSummaryState(ctx, knowledge); updateErr != nil {
+				return knowledge, updateErr
+			}
+			_ = requestKnowledgeBaseProfileRefresh(ctx, s.task, kb, false)
+			return knowledge, errInsufficientSummaryContent
 		}
-		_ = requestKnowledgeBaseProfileRefresh(ctx, s.task, kb, false)
-		return knowledge, errInsufficientSummaryContent
 	}
 	sort.Slice(textChunks, func(i, j int) bool {
 		return textChunks[i].ChunkIndex < textChunks[j].ChunkIndex
@@ -3918,6 +3932,26 @@ func (s *knowledgeService) ProcessDocument(ctx context.Context, t *asynq.Task) e
 	// the file proxies authorize images through resource bindings, and an
 	// unbound extracted image renders broken for org-shared KB viewers (#3342).
 	s.bindStoredImages(ctx, knowledge, storedImages)
+
+	// 演示文稿在分块前补上形状文字。补在图片地址改写之后、来源定位之前，
+	// 定位仍按原文对齐，补上的段落只是多出来的正文。
+	if convertResult != nil {
+		filePath := ""
+		fileType := ""
+		if payload.FilePath != "" {
+			filePath = payload.FilePath
+		} else if knowledge != nil {
+			filePath = knowledge.FilePath
+		}
+		if payload.FileType != "" {
+			fileType = payload.FileType
+		} else if knowledge != nil {
+			fileType = knowledge.FileType
+		}
+		convertResult.MarkdownContent = s.mergeSparsePresentationText(
+			ctx, kb, filePath, fileType, convertResult.MarkdownContent,
+		)
+	}
 
 	var sourceIndex *sourceloc.Index
 	if convertResult != nil {

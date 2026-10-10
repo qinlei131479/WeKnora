@@ -253,6 +253,25 @@ func pptxUnits(data []byte) ([]Unit, error) {
 	return units, nil
 }
 
+// PresentationText 按放映顺序返回 pptx/pptm 每页形状文字和演讲者备注。
+// 解析器（MarkItDown）经常抽不到组合形状里的文字，摘要若只看到图片标记
+// 就会被判定为没有可总结的内容；调用方用这份正文补上缺口。
+func PresentationText(data []byte) (string, error) {
+	units, err := pptxUnits(data)
+	if err != nil || len(units) == 0 {
+		return "", err
+	}
+	parts := make([]string, 0, len(units))
+	for _, unit := range units {
+		text := strings.TrimSpace(unit.Text)
+		if text == "" {
+			continue
+		}
+		parts = append(parts, text)
+	}
+	return strings.Join(parts, "\n\n"), nil
+}
+
 // drawingParagraphs returns the text of each DrawingML paragraph (a:p).
 func drawingParagraphs(doc []byte) []string {
 	dec := xml.NewDecoder(bytes.NewReader(doc))

@@ -214,6 +214,10 @@ func TestPptxUnits(t *testing.T) {
 	assert.Equal(t, "备注", units[1].Text)
 	assert.Equal(t, 1, units[1].Locator.Slide)
 	assert.Equal(t, 2, units[2].Locator.Slide)
+
+	text, err := PresentationText(zipOf(t, files))
+	require.NoError(t, err)
+	assert.Equal(t, "封面标题\n\n备注\n\n第二张", text)
 }
 
 func TestXlsxUnits(t *testing.T) {

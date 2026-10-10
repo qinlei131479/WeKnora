@@ -44,6 +44,12 @@ func (summaryImageInfoChunkRepo) ListChunksByParentIDs(
 	return nil, nil
 }
 
+func (summaryImageInfoChunkRepo) ListChunksByKnowledgeIDAndTypes(
+	context.Context, uint64, string, []types.ChunkType,
+) ([]*types.Chunk, error) {
+	return nil, nil
+}
+
 func TestGetSummaryReconstructsTableChunksWithSyntheticHeaders(t *testing.T) {
 	header := "| Country | Capital |\n| --- | --- |\n"
 	rowOne := "| Alpha Republic | North City |\n"
