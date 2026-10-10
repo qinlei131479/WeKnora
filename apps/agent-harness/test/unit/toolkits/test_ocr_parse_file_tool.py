@@ -22,13 +22,19 @@ def _runtime(
     thread_id: str = "thread-1",
     uid: str = "user-1",
     file_thread_id: str | None = None,
+    attachment_paths: list[str] | None = None,
 ) -> SimpleNamespace:
     configurable = {"thread_id": thread_id, "uid": uid}
     if file_thread_id:
         configurable["file_thread_id"] = file_thread_id
     return SimpleNamespace(
         config={"configurable": configurable},
-        context=SimpleNamespace(thread_id=thread_id, uid=uid, file_thread_id=file_thread_id),
+        context=SimpleNamespace(
+            thread_id=thread_id,
+            uid=uid,
+            file_thread_id=file_thread_id,
+            runtime_attachment_paths=attachment_paths or [],
+        ),
         state={},
     )
 
@@ -55,7 +61,7 @@ async def test_ocr_parse_file_writes_markdown_to_outputs(tmp_path, monkeypatch: 
     result = await ocr_parse_file.coroutine(
         file_path=source_virtual_path,
         ocr_engine="ignored",
-        runtime=_runtime(thread_id=thread_id, uid=uid),
+        runtime=_runtime(thread_id=thread_id, uid=uid, attachment_paths=[source_virtual_path]),
     )
 
     output_root = sandbox_outputs_dir(thread_id) / "ocr"
@@ -70,6 +76,29 @@ async def test_ocr_parse_file_writes_markdown_to_outputs(tmp_path, monkeypatch: 
     assert len(result["preview"]) <= 1200
     assert captured["source"] == str(source_path)
     assert captured["params"] == {"ocr_engine": "weknora"}
+
+
+@pytest.mark.asyncio
+async def test_ocr_parse_file_rejects_uploads_outside_request_snapshot(tmp_path, monkeypatch) -> None:
+    """uploads 下未进入本次请求快照的文件不得解析，否则会绕过附件授权。"""
+    monkeypatch.setattr("yuxi.config.save_dir", str(tmp_path))
+    thread_id = "thread-1"
+    uid = "user-1"
+    ensure_thread_dirs(thread_id, uid)
+    source_path = sandbox_uploads_dir(thread_id) / "upload.pdf"
+    source_path.write_bytes(b"fake pdf")
+    source_virtual_path = virtual_path_for_thread_file(thread_id, source_path, uid=uid)
+
+    async def fail_parse_document(*_args, **_kwargs) -> str:
+        raise AssertionError("不应解析未授权附件")
+
+    monkeypatch.setattr(ocr_service, "parse_document", fail_parse_document)
+
+    with pytest.raises(ValueError, match="只允许解析当前请求快照中的上传附件"):
+        await ocr_parse_file.coroutine(
+            file_path=source_virtual_path,
+            runtime=_runtime(thread_id=thread_id, uid=uid),
+        )
 
 
 @pytest.mark.asyncio
@@ -92,7 +121,7 @@ async def test_ocr_parse_file_uses_default_engine(tmp_path, monkeypatch: pytest.
 
     result = await ocr_parse_file.coroutine(
         file_path=source_virtual_path,
-        runtime=_runtime(thread_id=thread_id, uid=uid),
+        runtime=_runtime(thread_id=thread_id, uid=uid, attachment_paths=[source_virtual_path]),
     )
 
     assert result["ocr_engine"] == "weknora"
@@ -120,7 +149,7 @@ async def test_ocr_parse_file_accepts_disable_for_pdf(tmp_path, monkeypatch: pyt
     result = await ocr_parse_file.coroutine(
         file_path=source_virtual_path,
         ocr_engine="disable",
-        runtime=_runtime(thread_id=thread_id, uid=uid),
+        runtime=_runtime(thread_id=thread_id, uid=uid, attachment_paths=[source_virtual_path]),
     )
 
     assert result["ocr_engine"] == "weknora"

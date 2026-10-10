@@ -145,6 +145,9 @@ class AttachmentResponse(BaseModel):
     original_artifact_url: str | None = None
     minio_url: str | None = None
     request_id: str | None = None
+    parse_error: str | None = None
+    table_index_path: str | None = None
+    table_index_artifact_url: str | None = None
 
 
 class AttachmentLimits(BaseModel):
@@ -168,6 +171,13 @@ class TmpAttachmentResponse(BaseModel):
     uploaded_at: str
     parse_supported: bool = False
     parse_methods: list[str] = Field(default_factory=list)
+    parse_status: str = "unsupported"
+    parse_error: str | None = None
+    parsed_object_name: str | None = None
+    parsed_minio_url: str | None = None
+    truncated: bool = False
+    table_index_object_name: str | None = None
+    table_index_minio_url: str | None = None
 
 
 class TmpAttachmentParseRequest(BaseModel):
@@ -187,6 +197,8 @@ class TmpAttachmentParseResponse(BaseModel):
     parse_method: str
     status: str
     truncated: bool = False
+    table_index_object_name: str | None = None
+    table_index_minio_url: str | None = None
 
 
 class TmpAttachmentConfirmItem(BaseModel):
@@ -195,6 +207,8 @@ class TmpAttachmentConfirmItem(BaseModel):
     bucket_name: str
     object_name: str
     parsed_object_name: str | None = None
+    table_index_object_name: str | None = None
+    parse_error: str | None = None
     truncated: bool = False
 
 

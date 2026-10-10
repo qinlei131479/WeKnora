@@ -18,7 +18,7 @@ description: "按 P1 标准产品 / P2 历史项目 / P3 AI评估 三层规则�
 ## 硬约束
 
 1. 本阶段只输出工时，不输出单价、税率和金额。
-2. 命中本技能后，先建立输入清单并读取全部上传附件；附件读取和解析完成前，禁止拆需求、匹配或估时。
+2. 命中本技能后，先读取当前请求注入的附件清单（attachment manifest），并只把清单内文件当作输入；附件读取和解析完成前，禁止拆需求、匹配或估时。
 3. 没有源行证据，不写「已匹配」；最终只允许「已匹配」和「未匹配」。
 4. 没有可复算的时效来源，该列填 `--`；禁止用经验值、类比值或无法追到源行的数补齐。
 5. 不能用高层模块、依赖模块或相似名称兜底；必须引用命中行原文。
@@ -39,7 +39,7 @@ description: "按 P1 标准产品 / P2 历史项目 / P3 AI评估 三层规则�
 复制并勾选：
 
 ```text
-- [ ] 上传附件已全部解析；Office/PDF 已转 Markdown 或表格已按实际行读取
+- [ ] 当前 request manifest 附件已全部登记；Office/PDF 已转 Markdown，表格已按实际行读取
 - [ ] 输入足以报价；不足时已调用 `ask_user_question`，未凭空补需求
 - [ ] 范围已澄清（或已声明假设）
 - [ ] 标准清单、历史清单、需求清单已登记并区分用途
@@ -60,12 +60,28 @@ description: "按 P1 标准产品 / P2 历史项目 / P3 AI评估 三层规则�
 
 先处理输入，再判断能不能报价：
 
-1. 逐个登记上传附件路径和文件名；存在上传附件时必须全部读取。
-2. PDF、DOCX、DOC 和图片先用 `ocr_parse_file` 转成 Markdown，再 `read_file` 解析结果。
-3. XLSX、XLS、CSV 表格按 `xlsx` 技能读取实际 Sheet 和数据行；不要用 OCR 预览替代精确行号，尤其是需要作为时效依据的表格。
-4. 附件未读、解析失败或路径不可访问时，不得继续估时；要说明失败原因并等待补充。
-5. 没有上传附件时，不得凭记忆假设清单；先读取 `knowledge-base` 技能并检索可用的需求、标准或历史数据。
-6. 用户输入仍不足以确定需求、范围或数据源时，必须调用 `ask_user_question`；不要用假设替代用户未给的关键能力。
+1. 先读取本次请求注入的 attachment manifest；逐个登记 `file_name`、`path`、`original_path`、`status`、`parse_error` 和表格索引路径。禁止扫描 uploads/outputs 目录来推定输入。
+2. manifest 为空时按“没有上传附件”处理；上一轮、其他会话或其他 request 的文件默认不可用，除非用户在当前消息重新上传并出现在 manifest 中。
+3. `status=parsed` 时优先读取 Markdown；Markdown 截断或表格场景必须结合 `original_path` 和表格索引复核。`status=parse_failed` 时登记失败原因，只有用户明确要求按原始文件继续且原始文件可读时才能降级处理。
+4. XLSX、XLS、CSV 用 `xlsx` 技能读取实际 Sheet 和数据行；附件附带的 `table_index_path` 只用于确定 Sheet、表头和有效行范围，不能替代精确行级取数。
+5. 多附件必须先按用途分类：需求清单、标准清单、历史工时清单、补充资料、未知。一个文件可按 Sheet 拆成多个用途；未知用途必须用 `ask_user_question` 澄清。
+6. 附件未读、解析失败且未获用户确认降级，或路径不在 manifest 中时，不得继续估时；要在阶段产物中显式登记失败，不得静默跳过。
+7. 没有上传附件时，不得凭记忆假设清单；先读取 `knowledge-base` 技能并检索可用的需求、标准或历史数据。
+8. 用户输入仍不足以确定需求、范围或数据源时，必须调用 `ask_user_question`；不要用假设替代用户未给的关键能力。
+
+阶段产物统一放在 `/outputs/quote/`：
+
+```text
+input_manifest.json     当前请求附件与知识库源登记
+table_index/            表格用途、Sheet、表头和有效行范围
+requirements.json       拆解后的需求能力项
+matches.json            逐项匹配证据
+rows.json               报价行生成输入
+quote_output.xlsx       正式交付文件
+recalc_result.json      Excel 复算结果
+```
+
+任一阶段失败都写入对应结果或 `errors` 字段；后续阶段必须能看到失败原因，不能因为某个附件或匹配项失败而静默缩小评估范围。
 
 附件和知识库数据可读后，如果模块边界不清或看不出是否标准产品，再追问。一次问清：
 
@@ -227,7 +243,7 @@ uv run scripts/fill_quote.py --input <rows.json> --output <交付文件.xlsx>
 
 - terminal：执行 `scripts/fill_quote.py` 和 `xlsx` 技能的 `scripts/recalc.py`
 - 技能依赖：`xlsx`、`knowledge-base`；Excel 生成必须遵循 `xlsx`，知识库读取和检索必须遵循 `knowledge-base`
-- 输入门禁：`ocr_parse_file` 解析 PDF/Office/图片，`read_file` 读取文本和解析结果，`ask_user_question` 补齐关键缺口
+- 输入门禁：优先 `read_file` 读取当前 manifest 的 Markdown/文本和表格索引；解析失败且用户确认降级时才用 `ocr_parse_file` 重试，`ask_user_question` 补齐关键缺口
 - 交付物：`present_artifacts`
 - 知识库：`list_kbs`、`query_kb`、`open_kb_document`、`find_kb_document`、`search_file`、`download_kb_file`
 - 文件读取：读取用户上传或从知识库下载的标准、历史、需求清单；Office/PDF 先解析为可读内容

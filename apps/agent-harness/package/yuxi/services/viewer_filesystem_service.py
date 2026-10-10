@@ -213,6 +213,18 @@ def _list_user_data_root_entries(thread_id: str, uid: str) -> list[dict]:
     return entries
 
 
+async def _thread_attachment_paths(*, thread_id: str, uid: str, db: AsyncSession) -> list[str]:
+    """viewer 面向线程内全部已确认附件，不走单次请求的快照授权。"""
+    from yuxi.repositories.conversation_repository import ConversationRepository
+    from yuxi.services.chat_service import _runtime_attachment_paths
+
+    conv_repo = ConversationRepository(db)
+    conversation = await conv_repo.get_conversation_by_thread_id(thread_id)
+    if not conversation or conversation.uid != uid:
+        return []
+    return _runtime_attachment_paths(await conv_repo.get_attachments(conversation.id))
+
+
 async def _resolve_viewer_state(
     *,
     thread_id: str,
@@ -222,6 +234,12 @@ async def _resolve_viewer_state(
     runtime_context = await resolve_thread_agent_runtime_context(
         thread_id=thread_id,
         user=current_user,
+        db=db,
+    )
+    # composite backend 的 uploads 白名单默认只放行请求快照，viewer 需要放行本线程全部附件。
+    runtime_context.runtime_attachment_paths = await _thread_attachment_paths(
+        thread_id=thread_id,
+        uid=str(current_user.uid),
         db=db,
     )
     selected_skills = getattr(runtime_context, "_readable_skills", [])

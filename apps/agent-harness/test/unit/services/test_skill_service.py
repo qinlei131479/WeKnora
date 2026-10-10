@@ -587,8 +587,18 @@ def test_quote_builtin_skill_is_work_mode():
     quote = specs["quote"]
     assert quote["name"] == "quote"
     assert quote["usage_source"] == "work"
-    assert quote["skill_dependencies"] == ["skill"]
-    assert quote["tool_dependencies"] == ["ask_user_question", "present_artifacts"]
+    assert quote["skill_dependencies"] == ["xlsx", "knowledge-base"]
+    assert quote["tool_dependencies"] == [
+        "ask_user_question",
+        "ocr_parse_file",
+        "present_artifacts",
+        "list_kbs",
+        "query_kb",
+        "find_kb_document",
+        "open_kb_document",
+        "search_file",
+        "download_kb_file",
+    ]
     assert (quote["source_dir"] / "SKILL.md").exists()
     assert (quote["source_dir"] / "scripts" / "fill_quote.py").exists()
 

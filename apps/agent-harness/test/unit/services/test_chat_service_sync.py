@@ -187,8 +187,8 @@ class _FakeConvRepo:
     async def get_attachments_by_request_id(self, conversation_id: int, request_id: str):
         return []
 
-    async def bind_attachments_to_request(self, conversation_id: int, request_id: str, file_ids: list[str]):
-        return []
+    async def bind_attachment_request_snapshot(self, conversation_id: int, request_id: str, file_ids: list[str]):
+        return [], [], [], []
 
 
 @pytest.mark.asyncio

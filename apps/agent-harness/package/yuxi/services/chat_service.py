@@ -30,7 +30,7 @@ from yuxi.repositories.agent_repository import AgentRepository
 from yuxi.repositories.agent_run_repository import AgentRunRepository
 from yuxi.repositories.conversation_repository import ConversationRepository
 from yuxi.repositories.subagent_thread_repository import SubagentThreadRepository
-from yuxi.services.conversation_service import serialize_attachment
+from yuxi.services.conversation_service import _build_state_uploads, serialize_attachment
 from yuxi.services.input_message_service import AgentRunInputMessage
 from yuxi.services.langfuse_service import (
     LangfuseRunContext,
@@ -395,10 +395,20 @@ def _message_payload_yuxi_events(
     )
 
 
-async def _stream_agent_events(agent, messages, *, input_context=None, **kwargs):
+async def _stream_agent_events(
+    agent,
+    messages,
+    *,
+    input_context=None,
+    active_uploads=None,
+    active_request_id=None,
+    **kwargs,
+):
     async for mode, payload in agent.stream_messages_with_state(
         messages,
         input_context=input_context,
+        uploads=active_uploads,
+        active_request_id=active_request_id,
         **kwargs,
     ):
         yield mode, payload
@@ -795,6 +805,49 @@ def _normalize_attachment_file_ids(meta: dict | None) -> list[str]:
     return normalized
 
 
+def _runtime_attachment_paths(attachments: list[dict]) -> list[str]:
+    """收集一次请求内所有可读附件路径，主文件、原始文件和表格索引同一授权组。"""
+    paths: list[str] = []
+    seen: set[str] = set()
+    for attachment in attachments:
+        for key in ("path", "original_path", "table_index_path"):
+            path = attachment.get(key)
+            if not isinstance(path, str) or not path.strip():
+                continue
+            clean_path = "/" + path.strip().lstrip("/")
+            if clean_path not in seen:
+                seen.add(clean_path)
+                paths.append(clean_path)
+    return paths
+
+
+async def _resume_attachment_authorization(
+    *,
+    conv_repo: ConversationRepository,
+    run_repo: AgentRunRepository,
+    thread_id: str,
+    created_by_run_id: str | None,
+    uid: str,
+) -> tuple[str, list[dict]]:
+    """恢复执行时继承被恢复 run 的请求快照，而不是把新 request_id 当作新授权。"""
+    if not created_by_run_id:
+        raise ValueError("恢复运行缺少被恢复 run ID")
+
+    parent_run = await run_repo.get_run_for_user(created_by_run_id, uid)
+    if not parent_run:
+        raise ValueError("被恢复运行不存在")
+
+    conversation = await conv_repo.get_conversation_by_thread_id(thread_id)
+    if not conversation or conversation.id != parent_run.conversation_id:
+        raise ValueError("被恢复运行与当前线程不一致")
+
+    attachments = await conv_repo.get_attachments_by_request_id(
+        conversation.id,
+        str(parent_run.request_id),
+    )
+    return str(parent_run.request_id), [serialize_attachment(attachment) for attachment in attachments]
+
+
 async def _bind_request_attachments(
     *,
     conv_repo: ConversationRepository,
@@ -807,7 +860,18 @@ async def _bind_request_attachments(
         return []
 
     if attachment_file_ids:
-        attachments = await conv_repo.bind_attachments_to_request(conversation.id, request_id, attachment_file_ids)
+        attachments, missing_ids, conflict_ids, _ = await conv_repo.bind_attachment_request_snapshot(
+            conversation.id,
+            request_id,
+            attachment_file_ids,
+        )
+        if missing_ids or conflict_ids:
+            detail = []
+            if missing_ids:
+                detail.append(f"附件不存在或已删除: {', '.join(missing_ids)}")
+            if conflict_ids:
+                detail.append(f"附件已绑定其他请求: {', '.join(conflict_ids)}")
+            raise ValueError("；".join(detail))
     else:
         attachments = await conv_repo.get_attachments_by_request_id(conversation.id, request_id)
 
@@ -891,7 +955,6 @@ async def stream_agent_chat(
     _apply_model_override(input_context, meta)
     _apply_input_context_field(input_context, meta, "tool_approval_mode")
     _apply_subagent_runtime_context(input_context, meta)
-    context = _build_agent_context(agent, input_context)
     langfuse_run = _build_langfuse_run_context(
         current_user=current_user,
         thread_id=thread_id,
@@ -922,6 +985,9 @@ async def stream_agent_chat(
             request_id=meta["request_id"],
             attachment_file_ids=_normalize_attachment_file_ids(meta),
         )
+        input_context["active_request_id"] = meta["request_id"]
+        input_context["runtime_attachment_paths"] = _runtime_attachment_paths(request_attachments)
+        context = _build_agent_context(agent, input_context)
 
         init_msg = {
             "role": "user",
@@ -960,14 +1026,17 @@ async def stream_agent_chat(
         # 先构建 langgraph_config
         langgraph_config = {"configurable": {"thread_id": thread_id, "uid": uid}}
 
-        # LangGraph 会自动从 checkpointer 恢复 state（包括 uploads）
-        # 无需手动加载或传递
+        # 每次 stream 都显式覆盖 uploads，防止 checkpointer 中遗留上一请求附件。
+        # 只注入请求快照的授权字段，宿主机存储路径不进 checkpoint。
+        state_uploads = _build_state_uploads(request_attachments)
 
         protocol_message_ids: dict[tuple[str, str], str] = {}
         async for mode, payload in _stream_agent_events(
             agent,
             messages,
             input_context=input_context,
+            active_uploads=state_uploads,
+            active_request_id=meta["request_id"],
             callbacks=langfuse_run.callbacks,
             metadata=langfuse_run.metadata,
             tags=langfuse_run.tags,
@@ -1187,21 +1256,38 @@ async def stream_agent_resume(
         yield make_resume_chunk(status="error", error_type="invalid_agent", error_message=str(e), meta=meta)
         return
 
-    # 恢复流执行期间不访问业务数据库，先结束运行时解析事务并归还连接池。
-    await db.commit()
-
     meta["agent_slug"] = agent_item.slug
     meta["backend_id"] = agent_item.backend_id
+
+    conv_repo = ConversationRepository(db)
+    try:
+        active_request_id, request_attachments = await _resume_attachment_authorization(
+            conv_repo=conv_repo,
+            run_repo=AgentRunRepository(db),
+            thread_id=thread_id,
+            created_by_run_id=meta.get("created_by_run_id"),
+            uid=uid,
+        )
+    except ValueError as e:
+        yield make_resume_chunk(status="error", error_type="invalid_attachment", error_message=str(e), meta=meta)
+        return
+
     input_context = await build_agent_input_context(
         agent_config or {},
         thread_id=thread_id,
         uid=uid,
         run_id=meta.get("run_id"),
         request_id=meta.get("request_id"),
+        active_request_id=active_request_id,
+        runtime_attachment_paths=_runtime_attachment_paths(request_attachments),
     )
     _apply_model_override(input_context, meta)
     _apply_input_context_field(input_context, meta, "tool_approval_mode")
     context = _build_agent_context(agent, input_context)
+
+    # 恢复流执行期间不访问业务数据库，先结束预处理事务并归还连接池。
+    await db.commit()
+
     langfuse_run = _build_langfuse_run_context(
         current_user=current_user,
         thread_id=thread_id,

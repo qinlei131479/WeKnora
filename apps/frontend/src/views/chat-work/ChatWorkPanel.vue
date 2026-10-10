@@ -757,6 +757,10 @@ import {
   writeToolApprovalModePreference
 } from '@/utils/harness/toolApproval'
 
+// 与后端附件上限默认值保持一致，后端仍以 AGENT_ATTACHMENT_MAX_SIZE_MB 为准。
+const AGENT_ATTACHMENT_MAX_SIZE_MB = 10
+const AGENT_ATTACHMENT_MAX_SIZE_BYTES = AGENT_ATTACHMENT_MAX_SIZE_MB * 1024 * 1024
+
 // ==================== PROPS & EMITS ====================
 const props = defineProps({
   agentId: { type: String, default: '' },
@@ -2483,13 +2487,20 @@ const handleAttachmentUpload = async (files = []) => {
   const droppedFiles = Array.from(files || []).filter((file) => file instanceof File)
   if (!droppedFiles.length || attachmentUploading.value) return
 
+  const uploadableFiles = droppedFiles.filter((file) => {
+    if (file.size <= AGENT_ATTACHMENT_MAX_SIZE_BYTES) return true
+    MessagePlugin.error(t('error.fileSizeExceeded', { size: AGENT_ATTACHMENT_MAX_SIZE_MB }))
+    return false
+  })
+  if (!uploadableFiles.length) return
+
   const threadId = await ensureAttachmentThread()
   if (!threadId) return
 
   attachmentUploading.value = true
   const attachments = []
   try {
-    for (const file of droppedFiles) {
+    for (const file of uploadableFiles) {
       try {
         const response = await threadApi.uploadTmpAttachment(file)
         if (!response?.object_name) continue
@@ -2499,6 +2510,7 @@ const handleAttachmentUpload = async (files = []) => {
         // 否则只是把原始二进制挂上去，智能体拿到的仍然是不可读内容。
         // 这里在后台静默解析一次，不阻塞、不弹提示，解析失败也不影响附件正常挂载。
         let parsedObjectName = response.parsed_object_name || null
+        let tableIndexObjectName = response.table_index_object_name || null
         let truncated = Boolean(response.truncated)
         if (response.parse_supported && !parsedObjectName) {
           try {
@@ -2510,6 +2522,7 @@ const handleAttachmentUpload = async (files = []) => {
               parse_method: parseMethod
             })
             parsedObjectName = parseResponse?.parsed_object_name || null
+            tableIndexObjectName = parseResponse?.table_index_object_name || tableIndexObjectName
             truncated = Boolean(parseResponse?.truncated)
           } catch (parseError) {
             console.warn('Background attachment parse failed:', parseError)
@@ -2522,6 +2535,7 @@ const handleAttachmentUpload = async (files = []) => {
           bucket_name: response.bucket_name,
           object_name: response.object_name,
           parsed_object_name: parsedObjectName,
+          table_index_object_name: tableIndexObjectName,
           truncated
         })
       } catch (error) {

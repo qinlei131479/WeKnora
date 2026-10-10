@@ -123,6 +123,7 @@ class _BackendScope:
     skill_sources: dict[str, str]
     file_thread_id: str
     skills_thread_id: str
+    attachment_allowlist: frozenset[str]
 
     @classmethod
     def from_runtime(cls, runtime) -> _BackendScope:
@@ -163,12 +164,19 @@ class _BackendScope:
             for slug, path in (raw_sources.items() if isinstance(raw_sources, dict) else [])
             if slug in readable_skills and isinstance(path, str) and path
         }
+        raw_attachment_paths = getattr(readable_skills_source, "runtime_attachment_paths", [])
+        attachment_allowlist = frozenset(
+            "/" + str(path).strip().lstrip("/")
+            for path in (raw_attachment_paths if isinstance(raw_attachment_paths, list) else [])
+            if isinstance(path, str) and path.strip()
+        )
         return cls(
             thread_id=thread_id,
             uid=uid,
             skill_sources=skill_sources,
             file_thread_id=string_value("file_thread_id") or thread_id,
             skills_thread_id=string_value("skills_thread_id") or thread_id,
+            attachment_allowlist=attachment_allowlist,
         )
 
     def create_backend(self) -> CompositeBackend:
@@ -181,6 +189,7 @@ class _BackendScope:
                 skill_sources=self.skill_sources,
                 file_thread_id=self.file_thread_id,
                 skills_thread_id=self.skills_thread_id,
+                attachment_allowlist=list(self.attachment_allowlist),
             ),
             routes={
                 "/skills/": SelectedSkillsReadonlyBackend(

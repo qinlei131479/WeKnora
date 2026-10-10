@@ -3,6 +3,7 @@
 """
 
 import uuid as uuid_lib
+from copy import deepcopy
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -110,9 +111,16 @@ class ConversationRepository:
         return visible_or_none(result.scalar_one_or_none())
 
     async def lock_conversation_by_thread_id(self, thread_id: str) -> Conversation | None:
-        """锁定线程根记录，串行化同一对话的调度决策。"""
+        """锁定线程根记录，串行化同一对话的调度决策。
+
+        populate_existing 必须带上：否则会话对象已在 identity map 中时，
+        FOR UPDATE 取回的最新 extra_metadata 不会覆盖内存里的陈旧副本。
+        """
         result = await self.db.execute(
-            select(Conversation).where(Conversation.thread_id == thread_id).with_for_update()
+            select(Conversation)
+            .where(Conversation.thread_id == thread_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
         )
         return visible_or_none(result.scalar_one_or_none())
 
@@ -433,53 +441,155 @@ class ConversationRepository:
         if not conversation:
             return None
 
-        metadata = self._ensure_metadata(conversation)
+        locked_conversation = await self.lock_conversation_by_thread_id(conversation.thread_id)
+        if not locked_conversation or locked_conversation.id != conversation.id:
+            return None
+
+        metadata = self._ensure_metadata(locked_conversation)
         attachments = metadata.get("attachments", [])
         incoming_ids = {item.get("file_id") for item in attachment_infos}
         attachments = [item for item in attachments if item.get("file_id") not in incoming_ids]
         attachments.extend(attachment_infos)
         metadata["attachments"] = attachments
-        await self._save_metadata(conversation, metadata)
+        await self._save_metadata(locked_conversation, metadata)
         return attachment_infos
 
-    async def bind_attachments_to_request(
-        self, conversation_id: int, request_id: str, file_ids: list[str]
-    ) -> list[dict]:
+    async def bind_attachment_request_snapshot(
+        self,
+        conversation_id: int,
+        request_id: str,
+        file_ids: list[str],
+    ) -> tuple[list[dict], list[str], list[str], list[str]]:
+        """以行锁建立请求附件快照；缺失/删除/已归属其他请求时显式返回失败清单。"""
+        if not request_id or not file_ids:
+            return [], [], list(file_ids), []
+
         conversation = await self.get_conversation_by_id(conversation_id)
-        if not conversation or not request_id or not file_ids:
-            return []
+        if not conversation:
+            return [], [], list(file_ids), []
 
         file_id_set = {str(file_id).strip() for file_id in file_ids if str(file_id).strip()}
         if not file_id_set:
-            return []
+            return [], [], list(file_ids), []
 
-        metadata = self._ensure_metadata(conversation)
+        locked_conversation = await self.lock_conversation_by_thread_id(conversation.thread_id)
+        if not locked_conversation or locked_conversation.id != conversation.id:
+            return [], [], list(file_ids), []
+
+        metadata = self._ensure_metadata(locked_conversation)
         attachments = metadata.get("attachments", [])
         changed = False
+        bound: list[dict] = []
+        missing_ids: list[str] = []
+        conflict_ids: list[str] = []
+        attachment_by_id: dict[str, dict] = {}
+        position_by_id: dict[str, int] = {}
+        for position, item in enumerate(attachments):
+            if not isinstance(item, dict):
+                continue
+            file_key = str(item.get("file_id"))
+            attachment_by_id[file_key] = item
+            position_by_id[file_key] = position
+        touched_originals = {
+            file_id: deepcopy(attachment_by_id[file_id]) for file_id in file_id_set if file_id in attachment_by_id
+        }
 
-        for item in attachments:
-            if item.get("file_id") not in file_id_set:
+        for file_id in file_id_set:
+            item = attachment_by_id.get(file_id)
+            if item is None:
+                missing_ids.append(file_id)
                 continue
-            if item.get("request_id"):
+
+            existing_request_id = str(item.get("request_id") or "")
+            if existing_request_id and existing_request_id != str(request_id):
+                conflict_ids.append(file_id)
                 continue
-            item["request_id"] = request_id
-            changed = True
+
+            if not existing_request_id:
+                # 快照一旦建立，运行期间不再从可变 attachments 元数据取值。
+                item["request_id"] = str(request_id)
+                item["thread_id"] = locked_conversation.thread_id
+                item["request_snapshot"] = self._build_attachment_snapshot(item)
+                item["snapshot_created_at"] = utc_now_naive().isoformat()
+                changed = True
+
+            bound.append(item)
+
+        if missing_ids or conflict_ids:
+            # 失败路径不产生半快照；只还原本次尝试触达的记录，保留同请求其他附件快照。
+            for file_id, original_item in touched_originals.items():
+                position = position_by_id.get(file_id)
+                if position is None:
+                    continue
+                attachments[position] = original_item
+                changed = True
 
         if changed:
             metadata["attachments"] = attachments
-            await self._save_metadata(conversation, metadata)
-        return [dict(item) for item in attachments if item.get("request_id") == request_id]
+            await self._save_metadata(locked_conversation, metadata)
+
+        ordered_bound = [dict(item) for item in bound]
+        return ordered_bound, missing_ids, conflict_ids, []
+
+    @staticmethod
+    def _build_attachment_snapshot(item: dict) -> dict:
+        """复制附件运行期需要的完整授权与物证信息。
+
+        不复制 markdown 正文：内容已在附件记录里，重复进快照会撑大会话元数据行。
+        """
+        keys = (
+            "file_id",
+            "request_id",
+            "file_name",
+            "file_type",
+            "file_size",
+            "status",
+            "uploaded_at",
+            "thread_id",
+            "path",
+            "artifact_url",
+            "storage_path",
+            "original_path",
+            "original_artifact_url",
+            "original_storage_path",
+            "minio_url",
+            "source_bucket_name",
+            "source_object_name",
+            "source_minio_url",
+            "file_path",
+            "truncated",
+            "markdown_storage_path",
+            "parse_status",
+            "parse_error",
+            "table_index_path",
+            "table_index_artifact_url",
+            "table_index_storage_path",
+        )
+        snapshot = {key: item.get(key) for key in keys if key in item}
+        snapshot["snapshot_version"] = 1
+        return snapshot
 
     async def get_attachments_by_request_id(self, conversation_id: int, request_id: str) -> list[dict]:
+        conversation = await self.get_conversation_by_id(conversation_id)
         attachments = await self.get_attachments(conversation_id)
-        return [item for item in attachments if item.get("request_id") == request_id]
+        if not conversation:
+            return []
+        return [
+            {**item, "thread_id": conversation.thread_id}
+            for item in attachments
+            if item.get("request_id") == request_id
+        ]
 
     async def remove_attachment(self, conversation_id: int, file_id: str) -> bool:
         conversation = await self.get_conversation_by_id(conversation_id)
         if not conversation:
             return False
 
-        metadata = self._ensure_metadata(conversation)
+        locked_conversation = await self.lock_conversation_by_thread_id(conversation.thread_id)
+        if not locked_conversation or locked_conversation.id != conversation.id:
+            return False
+
+        metadata = self._ensure_metadata(locked_conversation)
         attachments = metadata.get("attachments", [])
         new_attachments = [item for item in attachments if item.get("file_id") != file_id]
 
@@ -487,5 +597,5 @@ class ConversationRepository:
             return False
 
         metadata["attachments"] = new_attachments
-        await self._save_metadata(conversation, metadata)
+        await self._save_metadata(locked_conversation, metadata)
         return True

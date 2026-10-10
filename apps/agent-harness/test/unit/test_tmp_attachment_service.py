@@ -43,6 +43,7 @@ class FakeMinioClient:
     def __init__(self):
         self.objects: dict[tuple[str, str], bytes] = {}
         self.uploads: list[dict] = []
+        self.deleted_prefixes: list[tuple[str, str]] = []
 
     async def aupload_file(self, bucket_name: str, object_name: str, data: bytes, content_type: str | None = None):
         self.objects[(bucket_name, object_name)] = data
@@ -65,6 +66,13 @@ class FakeMinioClient:
             return self.objects[(bucket_name, object_name)]
         except KeyError as exc:
             raise service.StorageError("missing object") from exc
+
+    async def adelete_objects_by_prefix(self, bucket_name: str, prefix: str) -> int:
+        self.deleted_prefixes.append((bucket_name, prefix))
+        removed = [key for key in self.objects if key[0] == bucket_name and key[1].startswith(prefix)]
+        for key in removed:
+            self.objects.pop(key, None)
+        return len(removed)
 
 
 @dataclass
@@ -90,6 +98,12 @@ class FakeConversationRepository:
 
     async def get_attachments(self, conversation_id: int):
         return list(self.attachments)
+
+    async def remove_attachment(self, conversation_id: int, file_id: str) -> bool:
+        remaining = [item for item in self.attachments if item.get("file_id") != file_id]
+        removed = len(remaining) != len(self.attachments)
+        self.attachments = remaining
+        return removed
 
 
 @pytest.mark.asyncio
@@ -134,7 +148,7 @@ async def test_parse_tmp_attachment_uses_selected_method_and_uploads_markdown(mo
     assert parse_calls == [
         {
             "source": f"minio://knowledgebases/{object_name}",
-            "params": {"ocr_engine": "weknora"},
+            "params": None,
         }
     ]
     assert response["parsed_object_name"] == "tmp/chat_attachments/user-1/tmp-1/parsed/demo.md"
@@ -188,13 +202,9 @@ async def test_confirm_tmp_thread_attachments_materializes_original_and_parsed_f
     monkeypatch.setattr(service, "ensure_thread_dirs", lambda thread_id, user_id: fake_uploads_dir(thread_id))
     monkeypatch.setattr(service, "sandbox_uploads_dir", fake_uploads_dir)
 
-    async def noop_sync(**kwargs):
-        return None
-
     async def noop_invalidate(thread_id: str):
         return None
 
-    monkeypatch.setattr(service, "_sync_thread_upload_state", noop_sync)
     monkeypatch.setattr(service, "invalidate_mention_cache", noop_invalidate)
 
     response = await service.confirm_tmp_thread_attachments_view(
@@ -224,13 +234,52 @@ async def test_confirm_tmp_thread_attachments_materializes_original_and_parsed_f
         encoding="utf-8"
     ) == "# parsed"
     assert Path(fake_repo.attachments[0]["original_path"]).name == original_name
+    # 确认成功后 tmp 侧对象必须清掉，否则会无限堆积。
+    assert fake_minio.deleted_prefixes == [("knowledgebases", "tmp/chat_attachments/user-1/tmp-1")]
+    assert fake_minio.objects == {}
+
+
+@pytest.mark.asyncio
+async def test_delete_thread_attachment_cleans_tmp_objects(monkeypatch):
+    fake_minio = FakeMinioClient()
+    tmp_object = "tmp/chat_attachments/user-1/tmp-1/original/demo.pdf"
+    fake_minio.objects[("knowledgebases", tmp_object)] = b"pdf-bytes"
+    fake_repo = FakeConversationRepository(db=None)
+    fake_repo.attachments = [
+        {
+            "file_id": "file-1",
+            "file_name": "demo.pdf",
+            "path": "/home/gem/user-data/uploads/attachments/demo.md",
+            "source_bucket_name": "knowledgebases",
+            "source_object_name": tmp_object,
+        }
+    ]
+
+    monkeypatch.setattr(service, "get_minio_client", lambda: fake_minio)
+    monkeypatch.setattr(service, "ConversationRepository", lambda db: fake_repo)
+
+    async def noop_invalidate(thread_id: str):
+        return None
+
+    monkeypatch.setattr(service, "invalidate_mention_cache", noop_invalidate)
+
+    response = await service.delete_thread_attachment_view(
+        thread_id="thread-1",
+        file_id="file-1",
+        db=None,
+        current_uid="user-1",
+    )
+
+    assert response["message"] == "附件已删除"
+    # 删除附件同样要回收 tmp 对象；这里曾因元组解包数量不匹配被异常吞掉。
+    assert fake_minio.deleted_prefixes == [("knowledgebases", "tmp/chat_attachments/user-1/tmp-1")]
+    assert fake_minio.objects == {}
 
 
 @pytest.mark.asyncio
 async def test_parse_tmp_attachment_uses_object_name_for_type_validation(monkeypatch):
     fake_minio = FakeMinioClient()
-    object_name = "tmp/chat_attachments/user-1/tmp-1/original/demo.docx"
-    fake_minio.objects[("knowledgebases", object_name)] = b"docx-bytes"
+    object_name = "tmp/chat_attachments/user-1/tmp-1/original/demo.exe"
     monkeypatch.setattr(service, "get_minio_client", lambda: fake_minio)
 
     with pytest.raises(service.HTTPException) as exc_info:
@@ -243,7 +292,7 @@ async def test_parse_tmp_attachment_uses_object_name_for_type_validation(monkeyp
         )
 
     assert exc_info.value.status_code == 400
-    assert "PDF 和图片" in exc_info.value.detail
+    assert "当前附件类型不支持解析" in exc_info.value.detail
 
 
 @pytest.mark.asyncio
@@ -350,13 +399,9 @@ async def test_confirm_tmp_thread_attachments_keeps_duplicate_names_separate(mon
     monkeypatch.setattr(service, "ensure_thread_dirs", lambda thread_id, uid: fake_uploads_dir(thread_id))
     monkeypatch.setattr(service, "sandbox_uploads_dir", fake_uploads_dir)
 
-    async def noop_sync(**kwargs):
-        return None
-
     async def noop_invalidate(thread_id: str):
         return None
 
-    monkeypatch.setattr(service, "_sync_thread_upload_state", noop_sync)
     monkeypatch.setattr(service, "invalidate_mention_cache", noop_invalidate)
 
     response = await service.confirm_tmp_thread_attachments_view(

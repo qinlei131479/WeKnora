@@ -19,6 +19,7 @@ from yuxi.utils.paths import (
     OUTPUTS_DIR_NAME,
     UPLOADS_DIR_NAME,
     VIRTUAL_PATH_OUTPUTS,
+    VIRTUAL_PATH_UPLOADS,
     WORKSPACE_DIR_NAME,
 )
 from yuxi.utils.question_utils import normalize_questions
@@ -384,6 +385,16 @@ def _resolve_ocr_source_path(file_path: str, runtime: ToolRuntime) -> tuple[str,
     if namespace not in _OCR_PARSE_ALLOWED_DIRS:
         allowed = ", ".join(f"{virtual_prefix}/{item}" for item in sorted(_OCR_PARSE_ALLOWED_DIRS))
         raise ValueError(f"只允许解析 {allowed} 下的文件")
+    if namespace == UPLOADS_DIR_NAME:
+        context = getattr(runtime, "context", None)
+        raw_paths = getattr(context, "runtime_attachment_paths", [])
+        authorized_paths = {
+            "/" + str(path).strip().lstrip("/")
+            for path in (raw_paths if isinstance(raw_paths, list) else [])
+            if isinstance(path, str) and path.strip()
+        }
+        if clean_virtual_path not in authorized_paths or not clean_virtual_path.startswith(f"{VIRTUAL_PATH_UPLOADS}/"):
+            raise ValueError("只允许解析当前请求快照中的上传附件")
 
     try:
         actual_path = resolve_virtual_path(file_thread_id, clean_virtual_path, uid=uid)

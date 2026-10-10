@@ -284,8 +284,12 @@ async def test_stream_agent_resume_commits_before_stream_and_routes_subagent_chu
     async def fake_build_agent_input_context(*_args, **_kwargs):
         return {"thread_id": "parent-thread", "uid": "user-1"}
 
+    async def fake_resume_attachment_authorization(**_kwargs):
+        return "req-parent-1", []
+
     monkeypatch.setattr(svc, "_resolve_agent_runtime", fake_resolve_agent_runtime)
     monkeypatch.setattr(svc, "build_agent_input_context", fake_build_agent_input_context)
+    monkeypatch.setattr(svc, "_resume_attachment_authorization", fake_resume_attachment_authorization)
     monkeypatch.setattr(
         svc,
         "_build_langfuse_run_context",

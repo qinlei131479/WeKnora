@@ -505,6 +505,81 @@ def test_provisioner_denies_reads_outside_allowed_roots(monkeypatch) -> None:
     assert result.error == "permission denied for read on '/etc/passwd'"
 
 
+def test_provisioner_denies_uploads_outside_request_snapshot(monkeypatch) -> None:
+    monkeypatch.setattr("yuxi.agents.backends.sandbox.backend.get_sandbox_provider", lambda: object())
+    backend = ProvisionerSandboxBackend(
+        thread_id="thread-1",
+        uid="user-1",
+        attachment_allowlist=["/home/gem/user-data/uploads/allowed.md"],
+    )
+
+    fake_client = SimpleNamespace(
+        file=SimpleNamespace(read_file=lambda **_kwargs: SimpleNamespace(data=SimpleNamespace(content="")))
+    )
+    backend._get_client = MethodType(lambda self: fake_client, backend)
+    allowed_result = backend.read("/home/gem/user-data/uploads/allowed.md")
+    denied_result = backend.read("/home/gem/user-data/uploads/blocked.md")
+
+    assert allowed_result.error is None
+    assert denied_result.error == "permission denied for read on '/home/gem/user-data/uploads/blocked.md'"
+
+
+def test_provisioner_ls_keeps_uploads_directories_visible(monkeypatch) -> None:
+    """uploads 白名单只拦文件；目录条目被过滤会让整个上传目录从目录树消失。"""
+    monkeypatch.setattr("yuxi.agents.backends.sandbox.backend.get_sandbox_provider", lambda: object())
+    backend = ProvisionerSandboxBackend(
+        thread_id="thread-1",
+        uid="user-1",
+        attachment_allowlist=["/home/gem/user-data/uploads/allowed.md"],
+    )
+
+    def fake_list_path(**_kwargs):
+        entries = [
+            ("/home/gem/user-data/uploads", True),
+            ("/home/gem/user-data/uploads/attachments", True),
+            ("/home/gem/user-data/uploads/allowed.md", False),
+            ("/home/gem/user-data/uploads/blocked.md", False),
+        ]
+        return SimpleNamespace(
+            data=SimpleNamespace(
+                files=[
+                    SimpleNamespace(path=path, is_directory=is_dir, size=0, modified_time=None)
+                    for path, is_dir in entries
+                ]
+            )
+        )
+
+    fake_client = SimpleNamespace(file=SimpleNamespace(list_path=fake_list_path))
+    backend._get_client = MethodType(lambda self: fake_client, backend)
+
+    result = backend.ls("/home/gem/user-data")
+
+    assert result.error is None
+    assert [entry["path"] for entry in result.entries] == [
+        "/home/gem/user-data/uploads",
+        "/home/gem/user-data/uploads/attachments",
+        "/home/gem/user-data/uploads/allowed.md",
+    ]
+
+
+def test_create_agent_composite_backend_passes_attachment_allowlist(monkeypatch):
+    monkeypatch.setattr("yuxi.agents.backends.sandbox.backend.get_sandbox_provider", lambda: object())
+
+    runtime = _runtime()
+    runtime.context.runtime_attachment_paths = [
+        "/home/gem/user-data/uploads/report.md",
+        "/home/gem/user-data/uploads/report.docx",
+    ]
+    backend = create_agent_composite_backend(runtime)
+
+    assert backend.default._attachment_allowlist == frozenset(
+        {
+            "/home/gem/user-data/uploads/report.md",
+            "/home/gem/user-data/uploads/report.docx",
+        }
+    )
+
+
 def test_provisioner_denies_upload_writes(monkeypatch) -> None:
     monkeypatch.setattr("yuxi.agents.backends.sandbox.backend.get_sandbox_provider", lambda: object())
     backend = ProvisionerSandboxBackend(thread_id="thread-1", uid="user-1")
@@ -707,7 +782,12 @@ def test_provisioner_read_rejects_unknown_file_on_sandbox_utf8_decode_failure(mo
 @pytest.mark.parametrize("extension", ["pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx"])
 def test_provisioner_read_routes_documents_to_ocr(monkeypatch, extension: str) -> None:
     monkeypatch.setattr("yuxi.agents.backends.sandbox.backend.get_sandbox_provider", lambda: object())
-    backend = ProvisionerSandboxBackend(thread_id="thread-1", uid="user-1")
+    allowed_path = f"/home/gem/user-data/uploads/document.{extension}"
+    backend = ProvisionerSandboxBackend(
+        thread_id="thread-1",
+        uid="user-1",
+        attachment_allowlist=[allowed_path],
+    )
     monkeypatch.setattr(backend, "_file_size_bytes", lambda _path: 8)
     monkeypatch.setattr(backend, "_read_binary", lambda *_args, **_kwargs: pytest.fail("document was read"))
 
@@ -722,11 +802,16 @@ def test_provisioner_read_routes_documents_to_ocr(monkeypatch, extension: str) -
 @pytest.mark.parametrize("extension", ["mp3", "mp4", "wav"])
 def test_provisioner_read_rejects_other_known_modalities(monkeypatch, extension: str) -> None:
     monkeypatch.setattr("yuxi.agents.backends.sandbox.backend.get_sandbox_provider", lambda: object())
-    backend = ProvisionerSandboxBackend(thread_id="thread-1", uid="user-1")
+    allowed_path = f"/home/gem/user-data/uploads/media.{extension}"
+    backend = ProvisionerSandboxBackend(
+        thread_id="thread-1",
+        uid="user-1",
+        attachment_allowlist=[allowed_path],
+    )
     monkeypatch.setattr(backend, "_file_size_bytes", lambda _path: 8)
     monkeypatch.setattr(backend, "_read_file_base64", lambda _path: pytest.fail("binary file was read"))
 
-    result = backend.read(f"/home/gem/user-data/uploads/media.{extension}")
+    result = backend.read(allowed_path)
 
     assert result.file_data is None
     assert result.error == "read_file only supports UTF-8 text and image files. This file type is not supported."

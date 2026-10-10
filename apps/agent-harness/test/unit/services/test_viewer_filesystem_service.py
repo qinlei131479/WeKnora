@@ -7,7 +7,56 @@ import pytest
 from fastapi import HTTPException
 
 from yuxi.agents.backends.sandbox import paths as sandbox_paths
+from yuxi.repositories import conversation_repository
 from yuxi.services import viewer_filesystem_service as svc
+
+
+class FakeAttachmentRepository:
+    def __init__(self, conversation, attachments):
+        self.conversation = conversation
+        self.attachments = attachments
+
+    async def get_conversation_by_thread_id(self, thread_id: str):
+        return self.conversation
+
+    async def get_attachments(self, conversation_id: int):
+        return list(self.attachments)
+
+
+@pytest.mark.asyncio
+async def test_thread_attachment_paths_authorizes_thread_attachments(monkeypatch) -> None:
+    """viewer 走线程维度授权；留空会让 uploads 下所有文件被沙箱白名单拒绝。"""
+    attachments = [
+        {
+            "path": "/home/gem/user-data/uploads/attachments/a.md",
+            "original_path": "/home/gem/user-data/uploads/attachments/a.docx",
+            "table_index_path": "/home/gem/user-data/uploads/attachments/a.index.json",
+        }
+    ]
+    monkeypatch.setattr(
+        conversation_repository,
+        "ConversationRepository",
+        lambda db: FakeAttachmentRepository(SimpleNamespace(id=9, uid="user-1"), attachments),
+    )
+
+    paths = await svc._thread_attachment_paths(thread_id="thread-1", uid="user-1", db=None)
+
+    assert paths == [
+        "/home/gem/user-data/uploads/attachments/a.md",
+        "/home/gem/user-data/uploads/attachments/a.docx",
+        "/home/gem/user-data/uploads/attachments/a.index.json",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_thread_attachment_paths_rejects_foreign_thread(monkeypatch) -> None:
+    monkeypatch.setattr(
+        conversation_repository,
+        "ConversationRepository",
+        lambda db: FakeAttachmentRepository(SimpleNamespace(id=9, uid="other-user"), [{"path": "/uploads/a.md"}]),
+    )
+
+    assert await svc._thread_attachment_paths(thread_id="thread-1", uid="user-1", db=None) == []
 
 
 def test_resolve_local_user_data_path_blocks_upload_symlink_escape(tmp_path: Path, monkeypatch) -> None:

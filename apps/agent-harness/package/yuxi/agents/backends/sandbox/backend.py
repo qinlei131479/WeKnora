@@ -182,6 +182,7 @@ class ProvisionerSandboxBackend(BaseSandbox):
         skill_sources: dict[str, str] | None = None,
         file_thread_id: str | None = None,
         skills_thread_id: str | None = None,
+        attachment_allowlist: list[str] | None = None,
     ):
         self._thread_id = str(thread_id or "").strip()
         if not self._thread_id:
@@ -198,12 +199,52 @@ class ProvisionerSandboxBackend(BaseSandbox):
 
         self._readable_skills = list(readable_skills or [])
         self._skill_sources = dict(skill_sources or {})
+        self._attachment_allowlist = frozenset(
+            "/" + str(path).strip().lstrip("/")
+            for path in (attachment_allowlist or [])
+            if isinstance(path, str) and path.strip()
+        )
         self._provider = get_sandbox_provider()
         self._id = sandbox_id_for_thread(self._file_thread_id, self._skills_thread_id, uid=self._uid)
         self._client: Any | None = None
         self._client_url: str | None = None
         self._command_timeout_seconds = int(os.getenv("SANDBOX_EXEC_TIMEOUT_SECONDS") or 180)
         self._max_output_bytes = int(os.getenv("SANDBOX_MAX_OUTPUT_BYTES") or 262_144)
+
+    def _passes_attachment_allowlist(self, path: str, *, is_dir: bool = False) -> bool:
+        """uploads 命名空间只允许读取当前请求快照声明的具体文件。
+
+        目录条目保持可见，否则 ls/glob 会把整个 uploads 子树从目录树里抹掉。
+        """
+        if not _is_same_or_child(path, _UPLOADS_ROOT):
+            return True
+        if is_dir or path == _UPLOADS_ROOT:
+            return True
+        return path in self._attachment_allowlist
+
+    def _filter_authorized_infos(self, infos: list[FileInfo]) -> list[FileInfo]:
+        result: list[FileInfo] = []
+        for info in _filter_readable_infos(infos):
+            path = str(info.get("path", ""))
+            try:
+                normalized_path = _normalize_path(path)
+            except ValueError:
+                continue
+            if self._passes_attachment_allowlist(normalized_path, is_dir=bool(info.get("is_dir"))):
+                result.append(info)
+        return result
+
+    def _filter_authorized_matches(self, matches: list[GrepMatch]) -> list[GrepMatch]:
+        result: list[GrepMatch] = []
+        for match in _filter_readable_matches(matches):
+            path = str(match.get("path", ""))
+            try:
+                normalized_path = _normalize_path(path)
+            except ValueError:
+                continue
+            if self._passes_attachment_allowlist(normalized_path):
+                result.append(match)
+        return result
 
     @property
     def id(self) -> str:
@@ -341,6 +382,8 @@ class ProvisionerSandboxBackend(BaseSandbox):
             return ReadResult(error=f"Invalid path '{file_path}': {exc}")
         if not _can_read_path(normalized_path):
             return ReadResult(error=_permission_error("read", normalized_path))
+        if not self._passes_attachment_allowlist(normalized_path):
+            return ReadResult(error=_permission_error("read", normalized_path))
 
         document_read_error = (
             "read_file does not support PDF or Office documents. "
@@ -436,7 +479,7 @@ class ProvisionerSandboxBackend(BaseSandbox):
                 elif isinstance(modified_time, (int, float)):
                     info["modified_at"] = datetime.fromtimestamp(modified_time).isoformat()
             infos.append(info)
-        return LsResult(entries=_filter_readable_infos(infos))
+        return LsResult(entries=self._filter_authorized_infos(infos))
 
     def write(self, file_path: str, content: str) -> WriteResult:
         """Write a new text file.
@@ -543,7 +586,7 @@ class ProvisionerSandboxBackend(BaseSandbox):
             if result.error:
                 return result
             matches.extend(result.matches or [])
-        return GrepResult(matches=_filter_readable_matches(matches))
+        return GrepResult(matches=self._filter_authorized_matches(matches))
 
     def glob(self, pattern: str, path: str = "/") -> GlobResult:
         """Return files matching a glob pattern under allowed sandbox paths."""
@@ -569,7 +612,7 @@ class ProvisionerSandboxBackend(BaseSandbox):
                 return GlobResult(error=str(exc) or f"Failed to glob '{path}'")
             for file_path in result.data.files or []:
                 infos.append({"path": file_path})
-        infos = _filter_readable_infos(infos)
+        infos = self._filter_authorized_infos(infos)
         infos.sort(key=lambda item: item.get("path", ""))
         return GlobResult(matches=infos)
 
@@ -619,6 +662,11 @@ class ProvisionerSandboxBackend(BaseSandbox):
             try:
                 normalized_path = _normalize_path(path)
                 if not _can_read_path(normalized_path):
+                    responses.append(
+                        FileDownloadResponse(path=normalized_path, content=None, error="permission_denied")
+                    )
+                    continue
+                if not self._passes_attachment_allowlist(normalized_path):
                     responses.append(
                         FileDownloadResponse(path=normalized_path, content=None, error="permission_denied")
                     )
