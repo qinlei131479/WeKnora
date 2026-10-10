@@ -13,6 +13,7 @@ from yuxi.repositories.agent_repository import (
     GENERAL_PURPOSE_AGENT_NAME,
     GENERAL_PURPOSE_AGENT_SLUG,
     SUB_AGENT_BACKEND_ID,
+    is_builtin_agent,
     user_can_access_agent,
     user_can_manage_agent,
 )
@@ -29,6 +30,12 @@ class FakeDb:
         self.added = item
 
 
+def test_builtin_identity_uses_persisted_flag():
+    assert is_builtin_agent(SimpleNamespace(is_builtin=True)) is True
+    assert is_builtin_agent(SimpleNamespace(is_builtin=False)) is False
+    assert is_builtin_agent(SimpleNamespace()) is False
+
+
 @pytest.mark.asyncio
 async def test_ensure_default_agent_creates_description(monkeypatch):
     db = FakeDb()
@@ -43,6 +50,7 @@ async def test_ensure_default_agent_creates_description(monkeypatch):
 
     assert agent.description == DEFAULT_AGENT_DESCRIPTION
     assert agent.config_json == {"context": {}}
+    assert agent.is_builtin is True
     assert db.added is agent
     db.commit.assert_awaited_once()
     db.refresh.assert_awaited_once_with(agent)
@@ -53,6 +61,7 @@ async def test_ensure_default_agent_backfills_missing_description(monkeypatch):
     db = FakeDb()
     repo = AgentRepository(db)
     agent = SimpleNamespace(
+        is_builtin=True,
         share_config=DEFAULT_SHARE_CONFIG.copy(),
         is_default=True,
         description=None,
@@ -91,6 +100,7 @@ async def test_ensure_general_purpose_subagent_creates_empty_config_subagent(mon
     assert agent.description == GENERAL_PURPOSE_AGENT_DESCRIPTION
     assert agent.backend_id == SUB_AGENT_BACKEND_ID
     assert agent.is_subagent is True
+    assert agent.is_builtin is True
     assert agent.is_default is False
     assert agent.config_json == {"context": {}}
     assert agent.share_config == DEFAULT_SHARE_CONFIG
@@ -142,6 +152,17 @@ async def test_create_agent_defaults_to_creator_read_scope_without_manage_scope(
         "manage_scope": None,
     }
     assert db.added is agent
+
+
+@pytest.mark.asyncio
+async def test_set_default_is_limited_to_default_chatbot(monkeypatch):
+    repo = AgentRepository(FakeDb())
+
+    with pytest.raises(ValueError, match="默认智能体已固定为内置智能助手"):
+        await repo.set_default(agent=SimpleNamespace(slug="deep-research", is_subagent=False))
+
+    with pytest.raises(ValueError, match="默认智能体已固定为内置智能助手"):
+        await repo.set_default(agent=SimpleNamespace(slug="custom-bot", is_subagent=False))
 
 
 @pytest.mark.asyncio

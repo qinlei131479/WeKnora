@@ -151,6 +151,7 @@ class PostgresManager(metaclass=SingletonMeta):
             ),
             "ALTER TABLE IF EXISTS amp_agents ALTER COLUMN share_config DROP DEFAULT",
             "ALTER TABLE IF EXISTS amp_agents ADD COLUMN IF NOT EXISTS is_subagent BOOLEAN NOT NULL DEFAULT FALSE",
+            "ALTER TABLE IF EXISTS amp_agents ADD COLUMN IF NOT EXISTS is_builtin BOOLEAN NOT NULL DEFAULT FALSE",
             "CREATE UNIQUE INDEX IF NOT EXISTS ix_amp_agents_slug ON amp_agents(slug)",
             "CREATE INDEX IF NOT EXISTS ix_amp_agents_backend_id ON amp_agents(backend_id)",
             "CREATE INDEX IF NOT EXISTS ix_amp_agents_is_subagent ON amp_agents(is_subagent)",

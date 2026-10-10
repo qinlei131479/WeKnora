@@ -168,7 +168,8 @@ ADMIN_ROLES = {"admin", "superadmin"}
 
 
 def is_builtin_agent(agent: Agent) -> bool:
-    return agent.slug == DEFAULT_AGENT_SLUG
+    """内置身份以落库字段为准，避免后续系统智能体依赖 slug 推导。"""
+    return bool(getattr(agent, "is_builtin", False))
 
 
 def resolve_agent_is_subagent(backend_id: str, is_subagent: bool | None = None) -> bool:
@@ -247,6 +248,7 @@ class AgentRepository:
             share_config=DEFAULT_SHARE_CONFIG.copy(),
             is_default=True,
             is_subagent=False,
+            is_builtin=True,
             created_by=created_by,
             updated_by=created_by,
             created_at=utc_now_naive(),
@@ -273,6 +275,7 @@ class AgentRepository:
             share_config=DEFAULT_SHARE_CONFIG.copy(),
             is_default=False,
             is_subagent=True,
+            is_builtin=True,
             created_by=created_by,
             updated_by=created_by,
             created_at=utc_now_naive(),
@@ -321,6 +324,7 @@ class AgentRepository:
             share_config=DEFAULT_SHARE_CONFIG.copy(),
             is_default=False,
             is_subagent=is_subagent,
+            is_builtin=True,
             created_by=created_by,
             updated_by=created_by,
             created_at=utc_now_naive(),
@@ -377,6 +381,7 @@ class AgentRepository:
         if canonical is None:
             canonical = min(duplicates, key=lambda row: row.id)
             canonical.slug = QUOTE_AGENT_SLUG
+            canonical.is_builtin = True
             canonical.updated_at = utc_now_naive()
             await self.db.flush()
             duplicates = [row for row in duplicates if row.id != canonical.id]
@@ -478,7 +483,7 @@ class AgentRepository:
     async def set_default(self, *, agent: Agent, updated_by: str | None = None) -> Agent:
         if agent.is_subagent:
             raise ValueError("子智能体不能设为默认智能体")
-        if not is_builtin_agent(agent):
+        if agent.slug != DEFAULT_AGENT_SLUG:
             raise ValueError("默认智能体已固定为内置智能助手")
         share_config = agent.share_config or DEFAULT_SHARE_CONFIG.copy()
         read_scope = share_config.get("read_scope") or {}

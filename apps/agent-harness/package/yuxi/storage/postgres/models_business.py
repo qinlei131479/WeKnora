@@ -145,6 +145,7 @@ class Agent(Base):
 
     is_default = Column(Boolean, nullable=False, default=False, index=True)
     is_subagent = Column(Boolean, nullable=False, default=False, index=True)
+    is_builtin = Column(Boolean, nullable=False, default=False)
 
     created_by = Column(String(64), nullable=True, index=True)
     updated_by = Column(String(64), nullable=True)
@@ -172,6 +173,7 @@ class Agent(Base):
             "share_config": self.share_config or {},
             "is_default": bool(self.is_default),
             "is_subagent": bool(self.is_subagent),
+            "is_builtin": bool(self.is_builtin),
             "created_by": self.created_by,
             "updated_by": self.updated_by,
             "created_at": format_utc_datetime(self.created_at),
