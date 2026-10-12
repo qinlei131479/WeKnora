@@ -598,6 +598,10 @@ export default {
     },
     postCreateHint: {
       followUpDesc: '左側でデータソースを設定するか、共有管理から共有テナントに公開してください'
+    },
+    wikiBrowser: {
+      tabMindmap: 'マインドマップ',
+      tabMindmapTip: 'ナレッジベースのファイル一覧から階層構造を生成します'
     }
   },
   embedPublish: {
@@ -1283,6 +1287,8 @@ export default {
     mindmapGenerate: 'Generate mind map',
     mindmapRegenerate: 'Regenerate',
     mindmapFitView: 'Fit view',
+    mindmapZoomIn: '拡大',
+    mindmapZoomOut: '縮小',
     mindmapLoading: 'Loading...',
     mindmapGenerating: 'AI is generating the mind map...',
     mindmapEmpty: 'No mind map yet. Generate one from the file list.',

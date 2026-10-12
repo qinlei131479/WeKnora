@@ -598,6 +598,10 @@ export default {
     },
     postCreateHint: {
       followUpDesc: '可在左侧配置数据源，或在「共享管理」中发布到租户'
+    },
+    wikiBrowser: {
+      tabMindmap: '思维导图',
+      tabMindmapTip: '按知识库文件列表生成层次结构'
     }
   },
   embedPublish: {
@@ -1283,6 +1287,8 @@ export default {
     mindmapGenerate: '生成思维导图',
     mindmapRegenerate: '重新生成',
     mindmapFitView: '适应视图',
+    mindmapZoomIn: '放大',
+    mindmapZoomOut: '缩小',
     mindmapLoading: '加载中...',
     mindmapGenerating: 'AI 正在生成思维导图...',
     mindmapEmpty: '还没有思维导图，可按知识库文件列表生成。',

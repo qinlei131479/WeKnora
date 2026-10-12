@@ -2,22 +2,30 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/Tencent/WeKnora/apps/app-core/errors"
 	"github.com/Tencent/WeKnora/apps/app-core/logger"
-	"github.com/Tencent/WeKnora/apps/app-core/models/chat"
 	"github.com/Tencent/WeKnora/apps/app-core/types"
 	"github.com/gin-gonic/gin"
 )
 
 const mindmapFileLimit = 200
 
-var mindmapSystemPrompt = `你是一个专业的知识整理助手。根据文件列表生成层次分明的思维导图 JSON。
-规则：根节点是知识库名称；2-4 层；叶子必须是文件名；每个文件名只能出现一次。
-只返回 JSON，结构：{"content":"知识库名称","children":[{"content":"分类","children":[{"content":"文件名"}]}]}`
+// mindmapNode is one node of the generated tree. The shape matches what the
+// front end feeds to markmap: {content, children}.
+type mindmapNode struct {
+	Content  string         `json:"content"`
+	Children []*mindmapNode `json:"children,omitempty"`
+
+	// folder marks an intermediate directory node. It cannot be derived from
+	// Children: a folder named "docs" is created *before* its first file is
+	// attached, so at childFolder() time it still has no children and would
+	// otherwise be indistinguishable from a file leaf of the same name.
+	folder bool
+}
 
 // GetKnowledgeBaseMindmap returns the stored file-tree mindmap.
 func (h *KnowledgeBaseHandler) GetKnowledgeBaseMindmap(c *gin.Context) {
@@ -40,7 +48,15 @@ func (h *KnowledgeBaseHandler) GetKnowledgeBaseMindmap(c *gin.Context) {
 	})
 }
 
-// GenerateKnowledgeBaseMindmap builds a file-tree mindmap with the tenant chat model.
+// GenerateKnowledgeBaseMindmap builds the mindmap purely from the stored folder
+// structure: knowledge base name -> folder path segments -> file name.
+//
+// It deliberately does NOT call an LLM. The previous version shipped a flat
+// file-name list to a chat model and let it invent category names, which meant
+// the tree drifted from the real folders on every regeneration ("standardized
+// products", "Sichuan Telecom hotel project", ...). The tree here is derived
+// from knowledges.folder_path, so it is deterministic and always matches the
+// sidebar.
 func (h *KnowledgeBaseHandler) GenerateKnowledgeBaseMindmap(c *gin.Context) {
 	ctx := c.Request.Context()
 	kb, id, _, _, err := h.validateAndGetKnowledgeBase(c)
@@ -53,77 +69,45 @@ func (h *KnowledgeBaseHandler) GenerateKnowledgeBaseMindmap(c *gin.Context) {
 		c.Error(errors.NewInternalServerError(err.Error()))
 		return
 	}
-	files := make([]string, 0, len(items))
+
+	root := &mindmapNode{Content: kb.Name}
 	fileIDs := map[string]string{}
+	fileCount := 0
 	for _, item := range items {
 		if item == nil || item.FileName == "" {
 			continue
 		}
-		files = append(files, item.FileName)
-		fileIDs[item.ID] = item.FileName
-		if len(files) >= mindmapFileLimit {
+		if fileCount >= mindmapFileLimit {
 			break
 		}
+		// FolderPath is already normalized on write ("a/b", no leading or
+		// trailing slash). Files outside any folder have it empty and stay
+		// directly under the root, mirroring the sidebar tree.
+		appendMindmapFile(root, item.FolderPath, item.FileName)
+		fileIDs[item.ID] = item.FileName
+		fileCount++
 	}
-	if len(files) == 0 {
+	if fileCount == 0 {
 		c.Error(errors.NewBadRequestError("知识库中没有文件"))
 		return
 	}
-	modelID := strings.TrimSpace(kb.SummaryModelID)
-	if modelID == "" {
-		models, listErr := h.modelService.ListModels(ctx)
-		if listErr != nil {
-			c.Error(errors.NewInternalServerError(listErr.Error()))
-			return
-		}
-		for _, m := range models {
-			if m != nil && m.Type == types.ModelTypeKnowledgeQA && m.IsDefault {
-				modelID = m.ID
-				break
-			}
-		}
-		if modelID == "" {
-			for _, m := range models {
-				if m != nil && m.Type == types.ModelTypeKnowledgeQA {
-					modelID = m.ID
-					break
-				}
-			}
-		}
-	}
-	if modelID == "" {
-		c.Error(errors.NewBadRequestError("未配置可用的聊天模型，无法生成思维导图"))
-		return
-	}
-	instance, err := h.modelService.GetChatModel(ctx, modelID)
+	sortMindmapTree(root)
+
+	mindmap, err := json.Marshal(root)
 	if err != nil {
 		c.Error(errors.NewInternalServerError(err.Error()))
-		return
-	}
-	userMsg := fmt.Sprintf("知识库名称：%s\n文件列表：\n- %s", kb.Name, strings.Join(files, "\n- "))
-	resp, err := instance.Chat(ctx, []chat.Message{
-		{Role: "system", Content: mindmapSystemPrompt},
-		{Role: "user", Content: userMsg},
-	}, &chat.ChatOptions{})
-	if err != nil {
-		logger.ErrorWithFields(ctx, err, map[string]interface{}{"kb_id": id})
-		c.Error(errors.NewInternalServerError("生成思维导图失败"))
-		return
-	}
-	mindmap, err := parseMindmapJSON(resp.Content)
-	if err != nil {
-		c.Error(errors.NewInternalServerError("模型返回的思维导图格式无效"))
 		return
 	}
 	fileIDsRaw, _ := json.Marshal(fileIDs)
 	metaRaw, _ := json.Marshal(gin.H{
 		"generated_at": time.Now().UTC().Format(time.RFC3339),
-		"file_count":   len(files),
+		"file_count":   fileCount,
 	})
 	if err := h.service.SaveMindmap(ctx, id, mindmap, fileIDsRaw, metaRaw); err != nil {
 		c.Error(errors.NewInternalServerError(err.Error()))
 		return
 	}
+	logger.Infof(ctx, "knowledge base mindmap regenerated from folder tree: kb_id=%s file_count=%d", id, fileCount)
 	c.JSON(200, gin.H{
 		"success": true,
 		"mindmap": json.RawMessage(mindmap),
@@ -133,6 +117,61 @@ func (h *KnowledgeBaseHandler) GenerateKnowledgeBaseMindmap(c *gin.Context) {
 	})
 }
 
+// appendMindmapFile inserts fileName under the folder chain described by
+// folderPath, creating any missing intermediate nodes. Segments are reused when
+// two files share a directory, so the result mirrors the real folder tree.
+func appendMindmapFile(root *mindmapNode, folderPath string, fileName string) {
+	node := root
+	path := types.NormalizeKnowledgeFolderPath(folderPath)
+	if path != "" {
+		for _, segment := range strings.Split(path, "/") {
+			if segment == "" {
+				continue
+			}
+			node = childFolder(node, segment)
+		}
+	}
+	node.Children = append(node.Children, &mindmapNode{Content: fileName})
+}
+
+// childFolder returns the node to use as the sub-folder called name.
+//
+// Reuse rules, in order:
+//  1. an existing folder with this name — the normal case when several files
+//     share a directory;
+//  2. an existing *leaf* with this name — a root-level file called "docs"
+//     that a later file ("docs/a.md") turns into a directory. The leaf is
+//     upgraded in place instead of producing two sibling nodes with the same
+//     name, which is what markmap would render as two unrelated nodes;
+//  3. otherwise append a fresh folder node.
+func childFolder(parent *mindmapNode, name string) *mindmapNode {
+	var leaf *mindmapNode
+	for _, child := range parent.Children {
+		if child.Content != name {
+			continue
+		}
+		if child.isFolder() {
+			return child
+		}
+		if leaf == nil {
+			leaf = child
+		}
+	}
+	if leaf != nil {
+		leaf.folder = true
+		return leaf
+	}
+	folder := &mindmapNode{Content: name, folder: true}
+	parent.Children = append(parent.Children, folder)
+	return folder
+}
+
+// isFolder reports whether this node is an intermediate folder rather than a
+// leaf file.
+func (n *mindmapNode) isFolder() bool {
+	return n.folder
+}
+
 func orEmptyJSON(raw json.RawMessage) []byte {
 	if len(raw) == 0 {
 		return []byte("null")
@@ -140,19 +179,21 @@ func orEmptyJSON(raw json.RawMessage) []byte {
 	return raw
 }
 
-func parseMindmapJSON(content string) ([]byte, error) {
-	content = strings.TrimSpace(content)
-	if i := strings.Index(content, "{"); i >= 0 {
-		if j := strings.LastIndex(content, "}"); j > i {
-			content = content[i : j+1]
+// sortMindmapTree orders siblings so folders come before files and each group
+// is alphabetical, giving a stable tree across regenerations. It runs on the
+// fully built tree, so isFolder() no longer depends on Children being populated.
+func sortMindmapTree(node *mindmapNode) {
+	if len(node.Children) == 0 {
+		return
+	}
+	sort.SliceStable(node.Children, func(i, j int) bool {
+		a, b := node.Children[i], node.Children[j]
+		if a.isFolder() != b.isFolder() {
+			return a.isFolder()
 		}
+		return a.Content < b.Content
+	})
+	for _, child := range node.Children {
+		sortMindmapTree(child)
 	}
-	var node map[string]any
-	if err := json.Unmarshal([]byte(content), &node); err != nil {
-		return nil, err
-	}
-	if strings.TrimSpace(fmt.Sprint(node["content"])) == "" {
-		return nil, fmt.Errorf("missing content")
-	}
-	return json.Marshal(node)
 }

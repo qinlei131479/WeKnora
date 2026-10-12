@@ -598,6 +598,10 @@ export default {
     },
     postCreateHint: {
       followUpDesc: 'Configure data sources on the left, or use Share Management to publish to tenants'
+    },
+    wikiBrowser: {
+      tabMindmap: 'Mind Map',
+      tabMindmapTip: 'Generate a hierarchy from the knowledge base file list'
     }
   },
   embedPublish: {
@@ -1283,6 +1287,8 @@ export default {
     mindmapGenerate: 'Generate mind map',
     mindmapRegenerate: 'Regenerate',
     mindmapFitView: 'Fit view',
+    mindmapZoomIn: 'Zoom in',
+    mindmapZoomOut: 'Zoom out',
     mindmapLoading: 'Loading...',
     mindmapGenerating: 'AI is generating the mind map...',
     mindmapEmpty: 'No mind map yet. Generate one from the file list.',

@@ -598,6 +598,10 @@ export default {
     },
     postCreateHint: {
       followUpDesc: 'Настройте источники данных слева или опубликуйте базу в тенантах через «Управление общим доступом»'
+    },
+    wikiBrowser: {
+      tabMindmap: 'Интеллект-карта',
+      tabMindmapTip: 'Построить иерархию по списку файлов базы знаний'
     }
   },
   embedPublish: {
@@ -1283,6 +1287,8 @@ export default {
     mindmapGenerate: 'Создать карту знаний',
     mindmapRegenerate: 'Создать заново',
     mindmapFitView: 'Вписать в экран',
+    mindmapZoomIn: 'Увеличить',
+    mindmapZoomOut: 'Уменьшить',
     mindmapLoading: 'Загрузка...',
     mindmapGenerating: 'AI генерирует карту знаний...',
     mindmapEmpty: 'Карты знаний пока нет. Создайте её из списка файлов базы знаний.',

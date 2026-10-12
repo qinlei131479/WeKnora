@@ -598,6 +598,10 @@ export default {
     },
     postCreateHint: {
       followUpDesc: '왼쪽에서 데이터 소스를 구성하거나 "공유 관리"에서 테넌트에 게시할 수 있습니다'
+    },
+    wikiBrowser: {
+      tabMindmap: '마인드맵',
+      tabMindmapTip: '지식베이스 파일 목록으로 계층 구조를 생성합니다'
     }
   },
   embedPublish: {
@@ -1283,6 +1287,8 @@ export default {
     mindmapGenerate: '마인드맵 생성',
     mindmapRegenerate: '다시 생성',
     mindmapFitView: '화면에 맞추기',
+    mindmapZoomIn: '확대',
+    mindmapZoomOut: '축소',
     mindmapLoading: '로딩 중...',
     mindmapGenerating: 'AI가 마인드맵을 생성하는 중...',
     mindmapEmpty: '아직 마인드맵이 없습니다. 지식베이스 파일 목록에서 생성할 수 있습니다.',
