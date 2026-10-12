@@ -240,6 +240,58 @@ async def test_confirm_tmp_thread_attachments_materializes_original_and_parsed_f
 
 
 @pytest.mark.asyncio
+async def test_confirm_tmp_thread_attachments_materializes_excel_table_index(monkeypatch, tmp_path: Path):
+    fake_minio = FakeMinioClient()
+    original_object = "tmp/chat_attachments/user-1/tmp-1/original/hotel.xlsx"
+    parsed_object = "tmp/chat_attachments/user-1/tmp-1/parsed/hotel.md"
+    index_object = "tmp/chat_attachments/user-1/tmp-1/parsed/hotel.index.json"
+    fake_minio.objects[("knowledgebases", original_object)] = b"xlsx-bytes"
+    fake_minio.objects[("knowledgebases", parsed_object)] = b"| item | price |"
+    fake_minio.objects[("knowledgebases", index_object)] = b'{"sheets": []}'
+    fake_repo = FakeConversationRepository(db=None)
+
+    monkeypatch.setattr(service, "get_minio_client", lambda: fake_minio)
+    monkeypatch.setattr(service, "ConversationRepository", lambda db: fake_repo)
+    monkeypatch.setattr(service.app_config, "save_dir", str(tmp_path))
+
+    def fake_uploads_dir(thread_id: str) -> Path:
+        path = tmp_path / "threads" / thread_id / "user-data" / "uploads"
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    monkeypatch.setattr(service, "ensure_thread_dirs", lambda thread_id, uid: fake_uploads_dir(thread_id))
+    monkeypatch.setattr(service, "sandbox_uploads_dir", fake_uploads_dir)
+
+    async def noop_invalidate(thread_id: str):
+        return None
+
+    monkeypatch.setattr(service, "invalidate_mention_cache", noop_invalidate)
+
+    response = await service.confirm_tmp_thread_attachments_view(
+        thread_id="thread-1",
+        attachments=[
+            {
+                "file_name": "hotel.xlsx",
+                "file_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "bucket_name": "knowledgebases",
+                "object_name": original_object,
+                "parsed_object_name": parsed_object,
+                "table_index_object_name": index_object,
+            }
+        ],
+        db=None,
+        current_uid="user-1",
+    )
+
+    [attachment] = response["attachments"]
+    assert attachment["status"] == "parsed"
+    assert attachment["table_index_path"].endswith("hotel.index.json")
+    assert Path(fake_repo.attachments[0]["table_index_storage_path"]).read_text(encoding="utf-8") == '{"sheets": []}'
+    assert fake_minio.deleted_prefixes == [("knowledgebases", "tmp/chat_attachments/user-1/tmp-1")]
+    assert fake_minio.objects == {}
+
+
+@pytest.mark.asyncio
 async def test_delete_thread_attachment_cleans_tmp_objects(monkeypatch):
     fake_minio = FakeMinioClient()
     tmp_object = "tmp/chat_attachments/user-1/tmp-1/original/demo.pdf"

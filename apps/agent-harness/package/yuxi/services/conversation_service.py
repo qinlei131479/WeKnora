@@ -956,7 +956,9 @@ async def confirm_tmp_thread_attachments_view(
 
         table_index_object_name = str(item.get("table_index_object_name") or "")
         if table_index_object_name:
-            index_tmp_file_id, index_file_name = _parse_user_tmp_object(table_index_object_name, str(current_uid))
+            index_tmp_file_id, _index_section, index_file_name = _parse_user_tmp_object(
+                table_index_object_name, str(current_uid)
+            )
             expected_index_object = _make_tmp_table_index_object(str(current_uid), tmp_file_id, file_name)
             if (
                 index_tmp_file_id != tmp_file_id
