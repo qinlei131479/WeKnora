@@ -131,9 +131,12 @@ yuxi/auth/run_token_store.py
 yuxi/auth/token_status.py
 yuxi/config/__init__.py
 yuxi/config/app.py
+yuxi/config/builtin_agents.py
 yuxi/config/cache.py
 yuxi/config/env.py
 yuxi/config/errors.py
+yuxi/config/builtin/agent_prompts.yaml
+yuxi/config/builtin/agents.yaml
 yuxi/config/static/bad_keywords.txt
 yuxi/config/static/info.template.yaml
 yuxi/dashboard/__init__.py
@@ -206,7 +209,6 @@ yuxi/services/run_queue_service.py
 yuxi/services/run_submission_service.py
 yuxi/services/run_worker.py
 yuxi/services/subagent_run_service.py
-yuxi/services/system_setting_service.py
 yuxi/services/thread_files_service.py
 yuxi/services/usage_telemetry.py
 yuxi/services/viewer_filesystem_service.py
@@ -236,7 +238,6 @@ yuxi/utils/guard.py
 yuxi/utils/hash_utils.py
 yuxi/utils/image_processor.py
 yuxi/utils/logging_config.py
-yuxi/utils/password_policy.py
 yuxi/utils/paths.py
 yuxi/utils/question_utils.py
 yuxi/utils/singleton.py

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import re
 import uuid
 from collections.abc import Collection
@@ -8,17 +9,21 @@ from typing import Any, Literal
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from yuxi.tenancy.context import stamp_tenant_id
-from yuxi.tenancy.tenant_query import apply_tenant_filters, row_in_tenant, slug_taken_clauses, visible_or_none
+from yuxi.config.builtin_agents import (
+    BUILTIN_AGENT_SPECS,
+    builtin_virtual_id,
+    get_builtin_agent_spec,
+    is_builtin_agent_slug,
+)
 from yuxi.permissions import ResourcePermission, normalize_permission_config, resolve_agent_permission
 from yuxi.storage.postgres.models_business import Agent, AgentRun, AgentRunRequest, Conversation, User
+from yuxi.tenancy.context import stamp_tenant_id
+from yuxi.tenancy.tenant_query import apply_tenant_filters, row_in_tenant, slug_taken_clauses, visible_or_none
 from yuxi.utils.datetime_utils import utc_now_naive
 
 DEFAULT_AGENT_SLUG = "default-chatbot"
-DEFAULT_AGENT_NAME = "智能助手"
 DEFAULT_AGENT_BACKEND_ID = "ChatbotAgent"
 SUB_AGENT_BACKEND_ID = "SubAgentBackend"
-DEFAULT_AGENT_DESCRIPTION = "基础的对话机器人，可以回答问题，可在配置中启用需要的工具。"
 DEFAULT_SHARE_CONFIG = {
     "version": 2,
     "read_scope": {"access_level": "global", "department_ids": [], "user_uids": []},
@@ -26,143 +31,28 @@ DEFAULT_SHARE_CONFIG = {
 }
 
 GENERAL_PURPOSE_AGENT_SLUG = "general-purpose"
-GENERAL_PURPOSE_AGENT_NAME = "通用任务"
-GENERAL_PURPOSE_AGENT_DESCRIPTION = (
-    "面向没有专用角色约束的一般任务，使用默认运行配置独立完成分析、整理、写作或文件处理。"
-)
-
 WEB_SEARCH_AGENT_SLUG = "web-search"
-WEB_SEARCH_AGENT_NAME = "网页检索"
-WEB_SEARCH_AGENT_DESCRIPTION = "围绕检索目标持续搜索网页，返回带引用来源的摘要资料。"
-WEB_SEARCH_SYSTEM_PROMPT = """你是「网页检索」子智能体，专注于面向目标的网页信息检索。
-
-你的职责：围绕调用方给定的检索目标，使用网页搜索工具持续检索，直到收集到足以回答目标的信息。
-
-工作方式：
-1. 拆解目标，确定需要检索的关键问题与检索词。
-2. 多轮调用搜索工具：依据上一轮结果调整检索词、补充遗漏角度、交叉验证关键事实，直到信息充分或确认无法获取更多有效信息。
-3. 优先采信权威、时效性强且彼此印证的来源；对存在冲突的信息要说明分歧。
-
-输出要求：
-- 返回一份结构化的摘要资料，按主题或要点组织。
-- 每条关键结论后使用 <cite source="$URL" type="url">$INDEX</cite> 标注引用来源，$INDEX 从 1 开始递增。
-- 引用不单独成行，直接跟在结论后面。
-- 在结尾汇总「参考来源」列表，逐条列出标题与 URL。
-- 不要编造来源或链接；无法验证的信息要明确标注。"""
-
 DEEP_RESEARCH_AGENT_SLUG = "deep-research"
-DEEP_RESEARCH_AGENT_NAME = "深度研究"
-DEEP_RESEARCH_AGENT_DESCRIPTION = (
-    "面向多来源、需事实核查的深度研究任务：规划拆解、并行调度调研子智能体、核验并综合成带引用的结构化报告。"
-)
-DEEP_RESEARCH_SYSTEM_PROMPT = """你是「深度研究」智能体，负责一项深度研究任务的整体把控与子智能体调度。
-
-你的核心定位是编排者，而不是亲自完成所有检索：把繁重、可独立、可并行的调研与核验工作派发给子智能体，自己专注于规划、调度与最终综合。
-
-工作方式：
-1. 接到研究任务后，先读取 `deep-research` 技能（read_file 其 SKILL.md）获取完整方法论，并严格据此执行。
-2. 问题不明确时先澄清范围，再用待办拆解出可独立调研的子问题。
-3. 优先用 `task` 工具把子问题并行派发给调研子智能体；仅在澄清范围或补少量零散事实时自己直接检索。
-4. 对关键结论与相互冲突的发现派发核查子智能体核验，未通过的结论不写入正文或明确降级标注。
-5. 证据充分后由你统一综合为结构化、带引用的报告，不要简单拼接子智能体返回的原文。
-
-始终全程跟踪进度，最终交付一份可直接使用、围绕论证组织、来源可追溯的报告。"""
-
 RESEARCH_EXPLORER_AGENT_SLUG = "research-explorer"
-RESEARCH_EXPLORER_AGENT_NAME = "调研探索员"
-RESEARCH_EXPLORER_AGENT_DESCRIPTION = "围绕单个子问题多轮检索网页与知识库，交叉验证后返回带引用的结构化发现。"
-RESEARCH_EXPLORER_SYSTEM_PROMPT = """你是「调研探索员」子智能体。
-专注于围绕调用方给定的**单个子问题**收集充分、可追溯的证据。
-
-你的职责：围绕该子问题持续检索网页与知识库，直到收集到足以回答它的信息。
-
-工作方式：
-1. 拆解子问题，确定需要检索的关键点与检索词。
-2. 多轮调用检索工具：依据上一轮结果调整检索词、补充遗漏角度、交叉验证关键事实，直到信息充分或确认无法获取更多有效信息。
-3. 优先采信权威、时效性强且彼此印证的来源；对存在冲突的信息要说明分歧。
-
-输出要求：
-- 返回一份围绕该子问题、按要点组织的结构化发现，不要展开成完整报告。
-- 每条关键结论后使用 <cite source="$URL" type="url">$INDEX</cite> 标注引用来源，$INDEX 从 1 开始递增。
-- 引用紧跟结论后、不单独成行。
-- 结尾汇总「参考来源」列表，逐条列出标题与 URL。
-- 不要编造来源或链接；无法验证的信息要明确标注证据缺口。"""
-
 FACT_VERIFIER_AGENT_SLUG = "fact-verifier"
-FACT_VERIFIER_AGENT_NAME = "事实核查员"
-FACT_VERIFIER_AGENT_DESCRIPTION = "对给定论断做对抗式核验，逐条给出支持/存疑/反驳判定、依据来源与置信度，并标注冲突。"
-FACT_VERIFIER_SYSTEM_PROMPT = """你是「事实核查员」子智能体，专注于对调用方给定的论断做对抗式核验。
-
-你的职责：对每一条论断独立查证，默认持怀疑态度——证据不足时倾向判定「存疑」，而不是默认相信。
-
-工作方式：
-1. 逐条拆出待核验的论断（事实、数字、因果、时间等）。
-2. 主动检索权威、独立的来源交叉比对；优先寻找能反驳该论断的证据。
-3. 对来源之间的冲突如实呈现，不强行调和。
-
-输出要求：
-- 对每条论断给出：判定（支持 / 存疑 / 反驳）+ 简要依据 + 依据来源 + 置信度（高/中/低）。
-- 关键依据后使用 <cite source="$URL" type="url">$INDEX</cite> 标注来源，$INDEX 从 1 开始递增。
-- 明确标注无法查证或来源相互冲突的论断。
-- 不要编造来源或链接。"""
-
 QUOTE_AGENT_SLUG = "quote"
 _QUOTE_DUP_SLUG = re.compile(r"^quote-dup-[0-9]+$")
-QUOTE_AGENT_NAME = "报价评估"
-QUOTE_AGENT_DESCRIPTION = (
-    "按 P1 标准产品 / P2 历史项目 / P3 AI 评估三层规则评估项目工时，并导出可追溯的报价单 Excel。"
-)
-QUOTE_SYSTEM_PROMPT = """你是「报价评估」智能体，负责按权威数据评估项目工时并导出可追溯报价单。
 
-你是报价评估员，不是销售也不是架构师。本阶段只评估和输出工时，不计算单价、税率或金额。不确定先问；问不清就写假设。
 
-工作方式：
-1. 接到报价或工时评估任务后，先读取 `quote` 技能（read_file 其 SKILL.md）获取完整方法论，并严格据此执行。细则按需读取 `references/matching.md`、`references/output-spec.md`、`references/data-index.md`、`references/ai-estimation.md`，不要预加载。
-2. 立即检查上传附件：存在附件时必须全部读取；PDF/Office/图片先 `ocr_parse_file` 转 Markdown 再读结果，表格按 `xlsx` 技能读取实际 Sheet、行号和时效列。附件读取完成前不澄清、不拆需求、不匹配、不估时。
-3. 读完输入后判断信息是否足以报价；仍缺少需求、范围或数据源时调用 `ask_user_question`。范围问题一次问清：对标产品、必做/不做模块、是否含实施培训质保、是否有工期上限。不要凭假设替代关键输入。
-4. 把需求拆成 D0 最小销售单元。匹配前先读取 `knowledge-base` 技能，调用 `list_kbs` 和 `query_kb` 检索标准、历史和补充证据；片段不足以取行号时用 `search_file`/`download_kb_file` 获取原始文件。再按 P1 标准产品 → P2 历史项目 → P3 AI 评估逐项匹配。匹配键是核心功能描述中的角色+操作+对象+目标，禁止只比功能名称。
-5. 优先使用用户提供的文件作为已登记数据源，同时保留知识库检索结论；无可用知识库或无命中时如实登记，不静默跳过。禁止凭记忆报工时。
-6. 命中带依赖模块的最小销售单元时，为每个依赖各增一行，三级功能名末尾加 `*`，并计入总时效。P1/P2/P3 之间不加乘数系数。
-7. 将结果写成 JSON，其中每行 `effort_reason` 必须按 `产品=...；研发=...；交付=...` 写逐列取数式；每一项写功能/原子任务、数值、来源和行号，P3 项补 AI 评估定级和原因，无法追溯的列填 `--`。用 `scripts/fill_quote.py --input <rows.json> --output <outputs下的交付文件.xlsx>` 生成报价单。不要手改单元格布局。生成前遵循 `xlsx` 技能，生成后用其 `scripts/recalc.py` 复算公式，再用 `present_artifacts` 展示最终文件。
+def _spec_text(slug: str, field: str, fallback: str = "") -> str:
+    """内置智能体的名称/描述以 YAML 为准，这里只做向后兼容的常量导出。"""
+    spec = get_builtin_agent_spec(slug)
+    return str(getattr(spec, field, "") or fallback) if spec else fallback
 
-始终暴露缺口：匹配不到必须写「未匹配」和「AI评估」，不得用均值或拍脑袋整数冒充类比。最终回复只保留工时摘要、类比依据、假设与缺口三段，不要在聊天里贴整张表。"""
-QUOTE_SUMMARY_PROMPT = """你是对话上下文压缩助手。
-你的任务是把下面的报价评估对话历史压缩成后续智能体继续估时、匹配和出单所需的高价值上下文。
 
-请特别保留并清晰记录：
+DEFAULT_AGENT_NAME = _spec_text(DEFAULT_AGENT_SLUG, "name", "智能助手")
+DEFAULT_AGENT_DESCRIPTION = _spec_text(DEFAULT_AGENT_SLUG, "description")
+GENERAL_PURPOSE_AGENT_NAME = _spec_text(GENERAL_PURPOSE_AGENT_SLUG, "name", "通用任务")
+GENERAL_PURPOSE_AGENT_DESCRIPTION = _spec_text(GENERAL_PURPOSE_AGENT_SLUG, "description")
+QUOTE_AGENT_NAME = _spec_text(QUOTE_AGENT_SLUG, "name", "报价评估")
 
-## SESSION INTENT
-用户当前的报价/工时评估目标、对标产品、本期范围和最终交付物（报价单 Excel）。
-
-## USER REQUIREMENTS AND PREFERENCES
-用户明确提出的范围边界、必做/不做模块、是否含实施培训质保、工期或人天上限、输出格式约束。只记录仍然可能影响后续估时的内容。
-
-## D0 BACKLOG
-已拆出的 D0 需求功能清单：每一行的一级/二级/三级功能、核心功能描述，以及尚未澄清的行。
-
-## MATCHING RESULTS
-已经完成匹配的每一行：功能匹配结果（已匹配/未匹配）、产品/研发/交付时效、完整的 `产品=...；研发=...；交付=...` 工时说明、匹配模块、匹配依据、匹配来源、部分覆盖拆分行标识（merge_group）。工时说明必须保留每个数字项和文件/Sheet/行号（或 P3 定级原因），不要压缩成匹配结论。
-
-## DEPENDENCIES AND GAPS
-已展开的依赖模块行（三级功能名带 *）、尚未确认的假设、标准清单时效空缺、无历史参照的 P3 行。
-
-## ARTIFACTS AND REFERENCES
-已提供或已从知识库下载的标准/历史清单文件名、知识库名、已生成的报价单路径。保留具体路径和关键标识符。
-
-## NEXT STEPS
-为了完成报价单，后续最应该继续做的具体步骤。没有待办时写 None。
-
-要求：
-- 不要逐字复述冗长工具输出；保留结论、路径和必要证据。
-- 不要编造没有出现在对话中的工时或匹配结果。
-- 如果存在未解决的问题或风险，明确记录。
-- 使用与用户主要对话一致的语言。
-
-<messages>
-{messages}
-</messages>
-
-只输出压缩后的上下文，不要添加额外说明。"""
+# 内置智能体不落库：未保存过的租户读到的是这份「虚拟行」，管理员保存后才有真实租户行。
+BUILTIN_VIRTUAL_ATTR = "_builtin_virtual"
 
 ADMIN_ROLES = {"admin", "superadmin"}
 
@@ -170,6 +60,51 @@ ADMIN_ROLES = {"admin", "superadmin"}
 def is_builtin_agent(agent: Agent) -> bool:
     """内置身份以落库字段为准，避免后续系统智能体依赖 slug 推导。"""
     return bool(getattr(agent, "is_builtin", False))
+
+
+def is_builtin_virtual(agent: Agent) -> bool:
+    """True 表示这是由 YAML 定义拼出来的内存对象，尚未被任何租户保存入库。"""
+    return bool(getattr(agent, BUILTIN_VIRTUAL_ATTR, False))
+
+
+def build_builtin_agent(spec, base_row: Agent | None = None) -> Agent:
+    """按 YAML 定义拼一个只读的内置智能体对象（不落库）。
+
+    `base_row` 是历史上落过库的内置目录行。它只贡献 YAML 没有声明的运行时配置键
+    （model、knowledges、mcps、tools、max_execution_steps 等部署侧绑定值），
+    YAML 声明过的键（system_prompt、skills、subagents、summary_prompt…）一律以 YAML 为准，
+    这样改 YAML 能立即生效，又不会抹掉部署侧绑定。
+    """
+    context = dict(((base_row.config_json or {}).get("context") or {}) if base_row is not None else {})
+    context.update(copy.deepcopy((spec.config_json or {}).get("context") or {}))
+    agent = Agent(
+        id=builtin_virtual_id(spec.slug),
+        slug=spec.slug,
+        backend_id=spec.backend_id,
+        name=spec.name,
+        description=spec.description,
+        icon=base_row.icon if base_row is not None else None,
+        pics=list(base_row.pics or []) if base_row is not None else [],
+        config_json={"context": context},
+        share_config=DEFAULT_SHARE_CONFIG.copy(),
+        is_default=spec.is_default,
+        is_subagent=spec.is_subagent,
+        is_builtin=True,
+        tenant_id=None,
+        created_at=base_row.created_at if base_row is not None else utc_now_naive(),
+        updated_at=utc_now_naive(),
+    )
+    setattr(agent, BUILTIN_VIRTUAL_ATTR, True)
+    return agent
+
+
+def _is_legacy_builtin_row(row: Agent) -> bool:
+    """历史上落过库的内置目录行：定义部分已被 YAML 取代，只作为运行时配置的载体。"""
+    return row.tenant_id is None and is_builtin_agent_slug(row.slug)
+
+
+def _sort_agents(items: list[Agent]) -> list[Agent]:
+    return sorted(items, key=lambda item: (not item.is_default, item.id if item.id is not None else 0))
 
 
 def resolve_agent_is_subagent(backend_id: str, is_subagent: bool | None = None) -> bool:
@@ -215,159 +150,31 @@ class AgentRepository:
     def __init__(self, db_session: AsyncSession):
         self.db = db_session
 
-    async def ensure_default_agent(self, *, created_by: str | None = None) -> Agent:
-        agent = await self.get_by_slug_unscoped(DEFAULT_AGENT_SLUG)
-        if agent:
-            needs_update = False
-            if agent.share_config != DEFAULT_SHARE_CONFIG:
-                agent.share_config = DEFAULT_SHARE_CONFIG.copy()
-                needs_update = True
-            if not agent.description:
-                agent.description = DEFAULT_AGENT_DESCRIPTION
-                needs_update = True
-            if getattr(agent, "is_subagent", False):
-                agent.is_subagent = False
-                needs_update = True
-            if not agent.is_default:
-                return await self.set_default(agent=agent, updated_by=created_by)
-            if needs_update:
-                agent.updated_by = created_by
-                agent.updated_at = utc_now_naive()
-                await self.db.commit()
-                await self.db.refresh(agent)
-            return agent
+    # ---------------------------------------------------------------- 内置解析
 
-        agent = Agent(
-            slug=DEFAULT_AGENT_SLUG,
-            backend_id=DEFAULT_AGENT_BACKEND_ID,
-            name=DEFAULT_AGENT_NAME,
-            description=DEFAULT_AGENT_DESCRIPTION,
-            icon=None,
-            pics=[],
-            config_json={"context": {}},
-            share_config=DEFAULT_SHARE_CONFIG.copy(),
-            is_default=True,
-            is_subagent=False,
-            is_builtin=True,
-            created_by=created_by,
-            updated_by=created_by,
-            created_at=utc_now_naive(),
-            updated_at=utc_now_naive(),
-        )
-        self.db.add(agent)
-        await self.db.commit()
-        await self.db.refresh(agent)
-        return agent
+    async def _resolve_builtin(self, slug: str) -> Agent | None:
+        """按「租户覆写行 → YAML 定义」解析内置智能体。"""
+        spec = get_builtin_agent_spec(slug)
+        if spec is None:
+            return await self.get_by_slug(slug)
+        agent = await self.get_by_slug(slug)
+        if agent is not None and not is_builtin_virtual(agent):
+            return agent
+        return build_builtin_agent(spec)
+
+    async def ensure_default_agent(self, *, created_by: str | None = None) -> Agent:
+        return await self._resolve_builtin(DEFAULT_AGENT_SLUG)
 
     async def ensure_web_search_subagent(self, *, created_by: str | None = None) -> Agent:
-        agent = await self.get_by_slug_unscoped(WEB_SEARCH_AGENT_SLUG)
-        if agent:
-            return agent
-
-        agent = Agent(
-            slug=WEB_SEARCH_AGENT_SLUG,
-            backend_id=SUB_AGENT_BACKEND_ID,
-            name=WEB_SEARCH_AGENT_NAME,
-            description=WEB_SEARCH_AGENT_DESCRIPTION,
-            icon=None,
-            pics=[],
-            config_json={"context": {"system_prompt": WEB_SEARCH_SYSTEM_PROMPT}},
-            share_config=DEFAULT_SHARE_CONFIG.copy(),
-            is_default=False,
-            is_subagent=True,
-            is_builtin=True,
-            created_by=created_by,
-            updated_by=created_by,
-            created_at=utc_now_naive(),
-            updated_at=utc_now_naive(),
-        )
-        self.db.add(agent)
-        await self.db.commit()
-        await self.db.refresh(agent)
-        return agent
+        return await self._resolve_builtin(WEB_SEARCH_AGENT_SLUG)
 
     async def ensure_general_purpose_subagent(self, *, created_by: str | None = None) -> Agent:
-        return await self._ensure_builtin_agent(
-            slug=GENERAL_PURPOSE_AGENT_SLUG,
-            backend_id=SUB_AGENT_BACKEND_ID,
-            name=GENERAL_PURPOSE_AGENT_NAME,
-            description=GENERAL_PURPOSE_AGENT_DESCRIPTION,
-            config_context={},
-            is_subagent=True,
-            created_by=created_by,
-        )
-
-    async def _ensure_builtin_agent(
-        self,
-        *,
-        slug: str,
-        backend_id: str,
-        name: str,
-        description: str,
-        config_context: dict,
-        is_subagent: bool,
-        created_by: str | None = None,
-    ) -> Agent:
-        """落库一个内置 Agent；已存在则原样返回，避免覆盖管理员后续修改。"""
-        agent = await self.get_by_slug_unscoped(slug)
-        if agent:
-            return agent
-
-        agent = Agent(
-            slug=slug,
-            backend_id=backend_id,
-            name=name,
-            description=description,
-            icon=None,
-            pics=[],
-            config_json={"context": config_context},
-            share_config=DEFAULT_SHARE_CONFIG.copy(),
-            is_default=False,
-            is_subagent=is_subagent,
-            is_builtin=True,
-            created_by=created_by,
-            updated_by=created_by,
-            created_at=utc_now_naive(),
-            updated_at=utc_now_naive(),
-        )
-        self.db.add(agent)
-        await self.db.commit()
-        await self.db.refresh(agent)
-        return agent
+        return await self._resolve_builtin(GENERAL_PURPOSE_AGENT_SLUG)
 
     async def ensure_deep_research_agents(self, *, created_by: str | None = None) -> None:
-        """落库内置「深度研究」编排器及其配套调研、核查子智能体。"""
-        await self._ensure_builtin_agent(
-            slug=RESEARCH_EXPLORER_AGENT_SLUG,
-            backend_id=SUB_AGENT_BACKEND_ID,
-            name=RESEARCH_EXPLORER_AGENT_NAME,
-            description=RESEARCH_EXPLORER_AGENT_DESCRIPTION,
-            config_context={"system_prompt": RESEARCH_EXPLORER_SYSTEM_PROMPT},
-            is_subagent=True,
-            created_by=created_by,
-        )
-        await self._ensure_builtin_agent(
-            slug=FACT_VERIFIER_AGENT_SLUG,
-            backend_id=SUB_AGENT_BACKEND_ID,
-            name=FACT_VERIFIER_AGENT_NAME,
-            description=FACT_VERIFIER_AGENT_DESCRIPTION,
-            config_context={"system_prompt": FACT_VERIFIER_SYSTEM_PROMPT},
-            is_subagent=True,
-            created_by=created_by,
-        )
-        await self._ensure_builtin_agent(
-            slug=DEEP_RESEARCH_AGENT_SLUG,
-            backend_id=DEFAULT_AGENT_BACKEND_ID,
-            name=DEEP_RESEARCH_AGENT_NAME,
-            description=DEEP_RESEARCH_AGENT_DESCRIPTION,
-            config_context={
-                "system_prompt": DEEP_RESEARCH_SYSTEM_PROMPT,
-                "subagents": [RESEARCH_EXPLORER_AGENT_SLUG, FACT_VERIFIER_AGENT_SLUG],
-                "skills": [DEEP_RESEARCH_AGENT_SLUG],
-            },
-            is_subagent=False,
-            created_by=created_by,
-        )
+        """解析内置「深度研究」编排器及其配套调研、核查子智能体（定义来自 YAML，不落库）。"""
+        for slug in (RESEARCH_EXPLORER_AGENT_SLUG, FACT_VERIFIER_AGENT_SLUG, DEEP_RESEARCH_AGENT_SLUG):
+            await self._resolve_builtin(slug)
 
     async def _collapse_quote_duplicates(self) -> None:
         """迁移曾把重复报价智能体改成 quote-dup-数字，名称未变，列表会多一张卡。"""
@@ -406,21 +213,11 @@ class AgentRepository:
         await self.db.commit()
 
     async def ensure_quote_agent(self, *, created_by: str | None = None) -> Agent:
-        """落库内置「报价评估」智能体。"""
+        """解析内置「报价评估」智能体（定义来自 YAML，不落库）。"""
         await self._collapse_quote_duplicates()
-        return await self._ensure_builtin_agent(
-            slug=QUOTE_AGENT_SLUG,
-            backend_id=DEFAULT_AGENT_BACKEND_ID,
-            name=QUOTE_AGENT_NAME,
-            description=QUOTE_AGENT_DESCRIPTION,
-            config_context={
-                "system_prompt": QUOTE_SYSTEM_PROMPT,
-                "summary_prompt": QUOTE_SUMMARY_PROMPT,
-                "skills": [QUOTE_AGENT_SLUG],
-            },
-            is_subagent=False,
-            created_by=created_by,
-        )
+        return await self._resolve_builtin(QUOTE_AGENT_SLUG)
+
+    # ---------------------------------------------------------------- 读
 
     async def list_visible(self, *, user: User, include_subagent_definitions: bool = False) -> list[Agent]:
         """列出用户可见的主智能体，只有显式请求时才包含子智能体定义。"""
@@ -429,10 +226,20 @@ class AgentRepository:
             stmt = stmt.where(Agent.is_subagent.is_(False))
         stmt = apply_tenant_filters(stmt, Agent.tenant_id, catalog_null=True)
         result = await self.db.execute(stmt.order_by(Agent.is_default.desc(), Agent.id.asc()))
-        agents = list(result.scalars().all())
+        all_rows = list(result.scalars().all())
+        legacy = {row.slug: row for row in all_rows if _is_legacy_builtin_row(row)}
+        rows = [row for row in all_rows if not _is_legacy_builtin_row(row)]
+
+        present = {row.slug for row in rows}
+        for spec in BUILTIN_AGENT_SPECS:
+            if spec.slug in present or (spec.is_subagent and not include_subagent_definitions):
+                continue
+            rows.append(build_builtin_agent(spec, legacy.get(spec.slug)))
+
+        items = _sort_agents(rows)
         if user.role == "superadmin":
-            return agents
-        return [agent for agent in agents if user_can_access_agent(user, agent)]
+            return items
+        return [agent for agent in items if user_can_access_agent(user, agent)]
 
     async def list_visible_subagents(self, *, user: User) -> list[Agent]:
         stmt = apply_tenant_filters(
@@ -441,24 +248,58 @@ class AgentRepository:
             catalog_null=True,
         )
         result = await self.db.execute(stmt.order_by(Agent.name.asc(), Agent.id.asc()))
-        agents = list(result.scalars().all())
+        all_rows = list(result.scalars().all())
+        legacy = {row.slug: row for row in all_rows if _is_legacy_builtin_row(row)}
+        rows = [row for row in all_rows if not _is_legacy_builtin_row(row)]
+
+        present = {row.slug for row in rows}
+        for spec in BUILTIN_AGENT_SPECS:
+            if spec.is_subagent and spec.slug not in present:
+                rows.append(build_builtin_agent(spec, legacy.get(spec.slug)))
+
+        items = sorted(rows, key=lambda item: (item.name, item.id if item.id is not None else 0))
         if user.role == "superadmin":
-            return agents
-        return [agent for agent in agents if user_can_access_agent(user, agent)]
+            return items
+        return [agent for agent in items if user_can_access_agent(user, agent)]
 
     async def get_by_slug_unscoped(self, slug: str) -> Agent | None:
-        """不过滤租户。仅用于内置落库与 slug 全局唯一性。"""
+        """不过滤租户。仅用于 slug 全局唯一性校验与历史重复数据清理。"""
         result = await self.db.execute(select(Agent).where(Agent.slug == slug))
         return result.scalar_one_or_none()
 
     async def get_by_slug(self, slug: str) -> Agent | None:
         stmt = apply_tenant_filters(select(Agent).where(Agent.slug == slug), Agent.tenant_id, catalog_null=True)
         result = await self.db.execute(stmt)
-        return result.scalar_one_or_none()
+        rows = list(result.scalars().all())
+        tenant_row = next((row for row in rows if row.tenant_id is not None), None)
+        legacy_row = next((row for row in rows if row.tenant_id is None), None)
+        spec = get_builtin_agent_spec(slug)
+        if spec is not None:
+            return tenant_row or build_builtin_agent(spec, legacy_row)
+        return tenant_row or legacy_row
 
     async def list_by_slugs(self, slugs: list[str]) -> list[Agent]:
         result = await self.db.execute(select(Agent).where(Agent.slug.in_(slugs)))
-        return [agent for agent in result.scalars().all() if row_in_tenant(agent, catalog_null=True)]
+        by_slug: dict[str, Agent] = {}
+        legacy: dict[str, Agent] = {}
+        for agent in result.scalars().all():
+            if not row_in_tenant(agent, catalog_null=True):
+                continue
+            if _is_legacy_builtin_row(agent):
+                legacy[agent.slug] = agent
+            else:
+                by_slug[agent.slug] = agent
+
+        items: list[Agent] = []
+        for slug in slugs:
+            agent = by_slug.get(slug)
+            if agent is not None:
+                items.append(agent)
+                continue
+            spec = get_builtin_agent_spec(slug)
+            if spec is not None:
+                items.append(build_builtin_agent(spec, legacy.get(slug)))
+        return items
 
     async def get_visible_by_slug(
         self, *, slug: str, user: User, kind: Literal["main", "subagent", "any"] = "main"
@@ -467,8 +308,7 @@ class AgentRepository:
         agent = await self.get_by_slug(slug)
         if not agent:
             return None
-        agent = visible_or_none(agent, catalog_null=True)
-        if not agent:
+        if agent.tenant_id is not None and not visible_or_none(agent, catalog_null=True):
             return None
         if not user_can_access_agent(user, agent):
             return None
@@ -499,7 +339,11 @@ class AgentRepository:
         await self.db.refresh(agent)
         return agent
 
+    # ---------------------------------------------------------------- 写
+
     async def _slug_exists(self, slug: str) -> bool:
+        if is_builtin_agent_slug(slug):
+            return True
         result = await self.db.execute(
             select(Agent.id).where(*slug_taken_clauses(Agent.tenant_id, Agent.slug, slug))
         )
@@ -576,6 +420,54 @@ class AgentRepository:
             return await self.set_default(agent=agent, updated_by=created_by)
         return agent
 
+    async def _materialize_builtin_override(
+        self,
+        agent: Agent,
+        *,
+        name: str | None,
+        description: str | None,
+        icon: str | None,
+        pics: list[str] | None,
+        config_json: dict | None,
+        is_subagent: bool | None,
+        updated_by: str | None,
+    ) -> Agent:
+        """保存内置智能体 = 落一条租户级覆写行；此后该租户以库为准，其他租户仍走 YAML。"""
+        spec = get_builtin_agent_spec(agent.slug)
+        if spec is None:
+            raise ValueError(f"内置智能体定义缺失：{agent.slug}")
+        if is_subagent is not None and bool(is_subagent) != spec.is_subagent:
+            raise ValueError("SubAgentBackend 与 is_subagent 必须保持一致")
+
+        spec_context = dict((spec.config_json or {}).get("context") or {})
+        incoming_context = (config_json or {}).get("context") if isinstance(config_json, dict) else None
+        context = dict(incoming_context) if isinstance(incoming_context, dict) else spec_context
+        extra = {key: value for key, value in (config_json or {}).items() if key != "context"}
+        merged_config = {"context": context, **extra}
+
+        override = Agent(
+            slug=agent.slug,
+            backend_id=spec.backend_id,
+            name=(name or agent.name).strip() or "未命名智能体",
+            description=description if description is not None else agent.description,
+            icon=icon if icon is not None else agent.icon,
+            pics=list(pics) if pics is not None else list(agent.pics or []),
+            config_json=merged_config,
+            share_config=DEFAULT_SHARE_CONFIG.copy(),
+            is_default=False,
+            is_subagent=spec.is_subagent,
+            is_builtin=True,
+            created_by=updated_by,
+            updated_by=updated_by,
+            tenant_id=stamp_tenant_id(),
+            created_at=utc_now_naive(),
+            updated_at=utc_now_naive(),
+        )
+        self.db.add(override)
+        await self.db.commit()
+        await self.db.refresh(override)
+        return override
+
     async def update(
         self,
         agent: Agent,
@@ -590,6 +482,18 @@ class AgentRepository:
         updated_by: str | None = None,
         updater: User | None = None,
     ) -> Agent:
+        if is_builtin_virtual(agent):
+            return await self._materialize_builtin_override(
+                agent,
+                name=name,
+                description=description,
+                icon=icon,
+                pics=pics,
+                config_json=config_json,
+                is_subagent=is_subagent,
+                updated_by=updated_by,
+            )
+
         if is_subagent is not None:
             agent.is_subagent = resolve_agent_is_subagent(agent.backend_id, is_subagent)
         if name is not None:
@@ -619,6 +523,8 @@ class AgentRepository:
         return agent
 
     async def delete(self, *, agent: Agent) -> None:
+        if is_builtin_virtual(agent):
+            raise ValueError("内置智能体未保存过，不能删除")
         await self.db.delete(agent)
         await self.db.commit()
 
@@ -640,6 +546,9 @@ class AgentRepository:
         data["effective_permission"] = permission.value
         data["is_builtin"] = is_builtin
         data["permission_locked"] = is_builtin
+        # 租户覆写行不带 is_default（避免跨租户撞唯一索引），默认身份仍按 slug 判定。
+        if is_builtin and agent.slug == DEFAULT_AGENT_SLUG:
+            data["is_default"] = True
 
         from yuxi.agents.buildin import agent_manager
 

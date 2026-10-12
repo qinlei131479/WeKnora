@@ -6,14 +6,19 @@ from unittest.mock import AsyncMock
 import pytest
 
 from yuxi.repositories.agent_repository import (
-    AgentRepository,
     DEFAULT_AGENT_DESCRIPTION,
+    DEFAULT_AGENT_SLUG,
     DEFAULT_SHARE_CONFIG,
     GENERAL_PURPOSE_AGENT_DESCRIPTION,
     GENERAL_PURPOSE_AGENT_NAME,
     GENERAL_PURPOSE_AGENT_SLUG,
+    QUOTE_AGENT_SLUG,
     SUB_AGENT_BACKEND_ID,
+    AgentRepository,
+    build_builtin_agent,
+    get_builtin_agent_spec,
     is_builtin_agent,
+    is_builtin_virtual,
     user_can_access_agent,
     user_can_manage_agent,
 )
@@ -29,6 +34,23 @@ class FakeDb:
     def add(self, item):
         self.added = item
 
+    async def execute(self, _stmt):
+        return EmptyResult()
+
+
+class EmptyResult:
+    def scalars(self):
+        return self
+
+    def all(self):
+        return []
+
+    def first(self):
+        return None
+
+    def scalar_one_or_none(self):
+        return None
+
 
 def test_builtin_identity_uses_persisted_flag():
     assert is_builtin_agent(SimpleNamespace(is_builtin=True)) is True
@@ -37,61 +59,59 @@ def test_builtin_identity_uses_persisted_flag():
 
 
 @pytest.mark.asyncio
-async def test_ensure_default_agent_creates_description(monkeypatch):
+async def test_ensure_default_agent_uses_builtin_definition_without_persisting(monkeypatch):
     db = FakeDb()
     repo = AgentRepository(db)
 
     async def get_by_slug(_slug):
         return None
 
-    monkeypatch.setattr(repo, "get_by_slug_unscoped", get_by_slug)
+    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
 
     agent = await repo.ensure_default_agent()
 
+    assert agent.slug == DEFAULT_AGENT_SLUG
     assert agent.description == DEFAULT_AGENT_DESCRIPTION
     assert agent.config_json == {"context": {}}
     assert agent.is_builtin is True
-    assert db.added is agent
-    db.commit.assert_awaited_once()
-    db.refresh.assert_awaited_once_with(agent)
+    assert is_builtin_virtual(agent) is True
+    # 内置智能体不落库：未保存过的租户读到的是 YAML 定义。
+    assert db.added is None
+    db.commit.assert_not_awaited()
+    db.refresh.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_ensure_default_agent_backfills_missing_description(monkeypatch):
+async def test_ensure_default_agent_prefers_saved_tenant_override(monkeypatch):
     db = FakeDb()
     repo = AgentRepository(db)
-    agent = SimpleNamespace(
+    override = SimpleNamespace(
+        slug=DEFAULT_AGENT_SLUG,
+        tenant_id=7,
         is_builtin=True,
-        share_config=DEFAULT_SHARE_CONFIG.copy(),
-        is_default=True,
-        description=None,
-        updated_by=None,
-        updated_at=None,
+        description="租户定制描述",
     )
 
     async def get_by_slug(_slug):
-        return agent
+        return override
 
-    monkeypatch.setattr(repo, "get_by_slug_unscoped", get_by_slug)
+    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
 
     result = await repo.ensure_default_agent(created_by="admin")
 
-    assert result is agent
-    assert agent.description == DEFAULT_AGENT_DESCRIPTION
-    assert agent.updated_by == "admin"
-    db.commit.assert_awaited_once()
-    db.refresh.assert_awaited_once_with(agent)
+    assert result is override
+    assert db.added is None
 
 
 @pytest.mark.asyncio
-async def test_ensure_general_purpose_subagent_creates_empty_config_subagent(monkeypatch):
+async def test_ensure_general_purpose_subagent_uses_builtin_definition(monkeypatch):
     db = FakeDb()
     repo = AgentRepository(db)
 
     async def get_by_slug(_slug):
         return None
 
-    monkeypatch.setattr(repo, "get_by_slug_unscoped", get_by_slug)
+    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
 
     agent = await repo.ensure_general_purpose_subagent(created_by="system")
 
@@ -102,31 +122,62 @@ async def test_ensure_general_purpose_subagent_creates_empty_config_subagent(mon
     assert agent.is_subagent is True
     assert agent.is_builtin is True
     assert agent.is_default is False
-    assert agent.config_json == {"context": {}}
     assert agent.share_config == DEFAULT_SHARE_CONFIG
-    assert agent.created_by == "system"
-    assert db.added is agent
-    db.commit.assert_awaited_once()
-    db.refresh.assert_awaited_once_with(agent)
+    assert db.added is None
+
+
+def test_builtin_definition_overrides_legacy_row_but_keeps_runtime_config():
+    """YAML 声明的键以 YAML 为准；部署侧绑定的 model/knowledges 等键仍从历史目录行保留。"""
+    legacy = Agent(
+        slug=QUOTE_AGENT_SLUG,
+        backend_id="ChatbotAgent",
+        name="报价评估",
+        config_json={
+            "context": {
+                "system_prompt": "旧提示词",
+                "model": "model-uuid-001",
+                "knowledges": ["kb-001"],
+                "max_execution_steps": 42,
+            }
+        },
+        share_config=DEFAULT_SHARE_CONFIG.copy(),
+    )
+    spec = get_builtin_agent_spec(QUOTE_AGENT_SLUG)
+    agent = build_builtin_agent(spec, legacy)
+    context = agent.config_json["context"]
+
+    assert context["system_prompt"].startswith("你是「报价评估」智能体")
+    assert context["skills"] == ["quote", "knowledge-base", "xlsx"]
+    assert context["subagents"] == ["general-purpose"]
+    assert context["summary_prompt"].strip()
+    # 部署侧绑定值不被 YAML 抹掉
+    assert context["model"] == "model-uuid-001"
+    assert context["knowledges"] == ["kb-001"]
+    assert context["max_execution_steps"] == 42
 
 
 @pytest.mark.asyncio
-async def test_ensure_general_purpose_subagent_is_idempotent(monkeypatch):
+async def test_saving_builtin_agent_creates_tenant_override_row(monkeypatch):
     db = FakeDb()
     repo = AgentRepository(db)
-    existing = SimpleNamespace(slug=GENERAL_PURPOSE_AGENT_SLUG, config_json={"context": {"model": "custom:model"}})
 
     async def get_by_slug(_slug):
-        return existing
+        return None
 
-    monkeypatch.setattr(repo, "get_by_slug_unscoped", get_by_slug)
+    monkeypatch.setattr(repo, "get_by_slug", get_by_slug)
+    monkeypatch.setattr("yuxi.repositories.agent_repository.stamp_tenant_id", lambda: 7)
 
-    agent = await repo.ensure_general_purpose_subagent()
+    virtual = await repo.ensure_quote_agent()
+    assert is_builtin_virtual(virtual) is True
 
-    assert agent is existing
-    assert db.added is None
-    db.commit.assert_not_awaited()
-    db.refresh.assert_not_awaited()
+    saved = await repo.update(virtual, config_json={"context": {"skills": ["quote"]}}, updated_by="admin")
+
+    assert saved is db.added
+    assert saved.slug == virtual.slug
+    assert saved.tenant_id == 7
+    assert saved.is_builtin is True
+    assert saved.config_json == {"context": {"skills": ["quote"]}}
+    db.commit.assert_awaited_once()
 
 
 @pytest.mark.asyncio

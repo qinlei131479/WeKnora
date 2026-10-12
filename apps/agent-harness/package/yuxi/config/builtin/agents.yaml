@@ -1,0 +1,81 @@
+# 内置智能体定义（数据源）。业务代码只读这里，不写死在 Python 常量里。
+#
+# 语义（与 Go 侧 config/builtin_agents.yaml 同构）：
+#   - 内置智能体不落库。读到时按「租户覆写行 → 本文件定义」解析。
+#   - 管理员在界面上保存一次内置智能体，才会写入一条租户级覆写行；此后该租户以库为准。
+#   - 未保存过的租户以本文件为准，改本文件下次启动即生效。
+#
+# 长提示词不写在这里：用 `<key>_prompt_id` 引用 builtin_agent_prompts.yaml 里的 id。
+# 新增智能体只需追加一条，不需要改业务代码。
+
+version: 1
+
+agents:
+  - slug: default-chatbot
+    name: 智能助手
+    description: 基础的对话机器人，可以回答问题，可在配置中启用需要的工具。
+    backend_id: ChatbotAgent
+    is_subagent: false
+    is_default: true
+    context: {}
+
+  - slug: general-purpose
+    name: 通用任务
+    description: 面向没有专用角色约束的一般任务，使用默认运行配置独立完成分析、整理、写作或文件处理。
+    backend_id: SubAgentBackend
+    is_subagent: true
+    # 不写 skills：空值表示「可用全部技能」，这样它对 default-chatbot 等其他编排器仍然是通用子智能体。
+    # 报价编排器派发它时，在任务描述里要求它先读取 `quote` 技能即可。
+    context: {}
+
+  - slug: web-search
+    name: 网页检索
+    description: 围绕检索目标持续搜索网页，返回带引用来源的摘要资料。
+    backend_id: SubAgentBackend
+    is_subagent: true
+    context:
+      system_prompt_id: web_search
+
+  - slug: research-explorer
+    name: 调研探索员
+    description: 围绕单个子问题多轮检索网页与知识库，交叉验证后返回带引用的结构化发现。
+    backend_id: SubAgentBackend
+    is_subagent: true
+    context:
+      system_prompt_id: research_explorer
+
+  - slug: fact-verifier
+    name: 事实核查员
+    description: 对给定论断做对抗式核验，逐条给出支持/存疑/反驳判定、依据来源与置信度，并标注冲突。
+    backend_id: SubAgentBackend
+    is_subagent: true
+    context:
+      system_prompt_id: fact_verifier
+
+  - slug: deep-research
+    name: 深度研究
+    description: 面向多来源、需事实核查的深度研究任务：规划拆解、并行调度调研子智能体、核验并综合成带引用的结构化报告。
+    backend_id: ChatbotAgent
+    is_subagent: false
+    context:
+      system_prompt_id: deep_research
+      subagents:
+        - research-explorer
+        - fact-verifier
+      skills:
+        - deep-research
+
+  - slug: quote
+    name: 报价评估
+    description: 按 P1 标准产品 / P2 历史项目 / P3 AI 评估三层规则评估项目工时，并导出可追溯的报价单 Excel。
+    backend_id: ChatbotAgent
+    is_subagent: false
+    context:
+      system_prompt_id: quote
+      summary_prompt_id: quote_summary
+      subagents:
+        - general-purpose
+      skills:
+        - quote
+        - knowledge-base
+        - xlsx
