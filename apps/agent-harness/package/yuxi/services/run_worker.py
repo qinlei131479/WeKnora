@@ -30,6 +30,7 @@ from yuxi.services.run_queue_service import (
     wait_for_cancel_signal,
 )
 from yuxi.storage.postgres.manager import pg_manager
+from yuxi.storage.postgres.migrations import wait_for_kjsc_schema
 from yuxi.storage.postgres.models_business import Message, User
 from yuxi.storage.redis import get_arq_redis_settings
 from yuxi.utils.logging_config import logger
@@ -745,8 +746,8 @@ async def _worker_startup(ctx):
 
     validate_required_runtime_env()
     pg_manager.initialize()
-    await pg_manager.create_business_tables()
-    await pg_manager.ensure_business_schema()
+    await wait_for_kjsc_schema()
+    await pg_manager.run_business_maintenance()
     await ensure_builtin_mcp_servers_in_db()
     async with pg_manager.get_async_session_context() as session:
         await init_builtin_skills(session)

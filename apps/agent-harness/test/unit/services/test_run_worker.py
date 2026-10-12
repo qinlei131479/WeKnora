@@ -510,11 +510,11 @@ async def test_worker_startup_ensures_builtin_mcp_servers(monkeypatch: pytest.Mo
     def fake_initialize():
         calls.append("initialize")
 
-    async def fake_create_business_tables():
-        calls.append("create_business_tables")
+    async def fake_wait_for_kjsc_schema():
+        calls.append("wait_for_kjsc_schema")
 
-    async def fake_ensure_business_schema():
-        calls.append("ensure_business_schema")
+    async def fake_run_business_maintenance():
+        calls.append("run_business_maintenance")
 
     async def fake_ensure_builtin_mcp_servers_in_db():
         calls.append("ensure_builtin_mcp_servers_in_db")
@@ -534,8 +534,8 @@ async def test_worker_startup_ensures_builtin_mcp_servers(monkeypatch: pytest.Mo
         calls.append("recover_pending_dispatches")
 
     monkeypatch.setattr(run_worker.pg_manager, "initialize", fake_initialize)
-    monkeypatch.setattr(run_worker.pg_manager, "create_business_tables", fake_create_business_tables)
-    monkeypatch.setattr(run_worker.pg_manager, "ensure_business_schema", fake_ensure_business_schema)
+    monkeypatch.setattr(run_worker, "wait_for_kjsc_schema", fake_wait_for_kjsc_schema)
+    monkeypatch.setattr(run_worker.pg_manager, "run_business_maintenance", fake_run_business_maintenance)
     monkeypatch.setattr(run_worker.pg_manager, "get_async_session_context", fake_session_ctx)
     monkeypatch.setattr(run_worker, "ensure_builtin_mcp_servers_in_db", fake_ensure_builtin_mcp_servers_in_db)
     monkeypatch.setattr(run_worker, "init_builtin_skills", fake_init_builtin_skills)
@@ -547,8 +547,8 @@ async def test_worker_startup_ensures_builtin_mcp_servers(monkeypatch: pytest.Mo
 
     assert calls == [
         "initialize",
-        "create_business_tables",
-        "ensure_business_schema",
+        "wait_for_kjsc_schema",
+        "run_business_maintenance",
         "ensure_builtin_mcp_servers_in_db",
         "init_builtin_skills",
         "start_runtime_sync",

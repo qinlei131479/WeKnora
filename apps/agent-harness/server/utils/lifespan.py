@@ -3,11 +3,11 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from yuxi.agents.mcp.service import ensure_builtin_mcp_servers_in_db
 from yuxi.services.run_queue_service import close_queue_clients, get_redis_client
 from yuxi.storage.postgres.manager import pg_manager
+from yuxi.storage.postgres.migrations import wait_for_kjsc_schema
 from yuxi.storage.neo4j import close_shared_neo4j_connection
 from yuxi.knowledge.runtime import knowledge_base
 from yuxi.utils import logger
@@ -25,9 +25,8 @@ async def lifespan(app: FastAPI):
     # 初始化数据库连接
     try:
         pg_manager.initialize()
-        await pg_manager.create_tables()
-        await pg_manager.ensure_business_schema()
-        await pg_manager.ensure_knowledge_schema()
+        await wait_for_kjsc_schema()
+        await pg_manager.run_business_maintenance()
     except Exception as e:
         logger.error(f"Failed to initialize database during startup: {e}")
         raise
@@ -93,13 +92,6 @@ async def lifespan(app: FastAPI):
         init_sandbox_provider()
     except Exception as e:
         logger.error(f"Failed to initialize sandbox provider during startup: {e}")
-
-    # =========================================================
-    # 2. 核心修复：在这里执行一次 setup()，建完表就拉倒
-    # =========================================================
-    checkpointer = AsyncPostgresSaver(pg_manager.langgraph_pool)
-    await checkpointer.setup()
-    print("LangGraph Checkpoint tables verified/created!")
 
     logger.info(f"""
 

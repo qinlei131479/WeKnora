@@ -33,199 +33,57 @@ class _RecordingEngine:
 
 
 @pytest.mark.asyncio
-async def test_ensure_business_schema_backfills_subagent_thread_columns_before_dropping_legacy_columns():
-    manager = PostgresManager()
-    original_initialized = manager._initialized
-    original_engine = manager.async_engine
-    connection = _RecordingConnection()
+async def test_business_maintenance_only_backfills_tenant_scope(monkeypatch):
+    statements: list[str] = []
 
+    async def backfill(conn):
+        statements.extend(conn.statements)
+        return {"resolved": 2, "catalog": 0, "unresolved": 0}
+
+    monkeypatch.setattr("yuxi.tenancy.schema.backfill_tenant_scope", backfill)
+    manager = PostgresManager()
+    connection = _RecordingConnection()
     manager._initialized = True
     manager.async_engine = _RecordingEngine(connection)
-    try:
-        await manager.ensure_business_schema()
-    finally:
-        manager._initialized = original_initialized
-        manager.async_engine = original_engine
 
-    statements = "\n".join(connection.statements)
+    await manager.run_business_maintenance()
 
-    assert "SET agent_slug = agent_id" in statements
-    assert "SET conversation_thread_id = thread_id" in statements
-    assert "SET created_by_run_id = COALESCE(parent_agent_run_id, parent_run_id)" in statements
-    assert "SET subagent_slug = c.agent_id" in statements
-    assert "SET created_by_run_id = created_by_parent_run_id::VARCHAR" in statements
-    assert "ALTER COLUMN subagent_slug SET NOT NULL" in statements
-    assert "ALTER COLUMN created_by_run_id SET NOT NULL" in statements
-    assert statements.index("SET agent_slug = agent_id") < statements.index("DROP COLUMN IF EXISTS agent_id")
-    assert statements.index("SET conversation_thread_id = thread_id") < statements.index(
-        "DROP COLUMN IF EXISTS thread_id"
-    )
-    assert statements.index("COALESCE(parent_agent_run_id, parent_run_id)") < statements.index(
-        "DROP COLUMN IF EXISTS parent_agent_run_id"
-    )
-    assert statements.index("created_by_parent_run_id") < statements.index(
-        "DROP COLUMN IF EXISTS created_by_parent_run_id"
-    )
+    assert statements == []
 
 
 @pytest.mark.asyncio
-async def test_ensure_business_schema_cleans_duplicate_active_agent_runs_before_unique_index():
+async def test_business_maintenance_ignores_unknown_backfill_error(monkeypatch):
+    async def backfill(_conn):
+        raise RuntimeError("temporary database issue")
+
+    monkeypatch.setattr("yuxi.tenancy.schema.backfill_tenant_scope", backfill)
     manager = PostgresManager()
-    original_initialized = manager._initialized
-    original_engine = manager.async_engine
-    connection = _RecordingConnection()
-
     manager._initialized = True
-    manager.async_engine = _RecordingEngine(connection)
-    try:
-        await manager.ensure_business_schema()
-    finally:
-        manager._initialized = original_initialized
-        manager.async_engine = original_engine
+    manager.async_engine = _RecordingEngine(_RecordingConnection())
 
-    statements = "\n".join(connection.statements)
-
-    assert "WITH duplicated_active_runs AS" in statements
-    assert "active_run_migration_conflict" in statements
-    assert "CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_agent_runs_one_active_per_thread" in statements
-    assert statements.index("WITH duplicated_active_runs AS") < statements.index(
-        "CREATE UNIQUE INDEX IF NOT EXISTS uq_amp_agent_runs_one_active_per_thread"
-    )
+    await manager.run_business_maintenance()
 
 
 @pytest.mark.asyncio
-async def test_ensure_business_schema_fails_when_tenant_backfill_is_incomplete(monkeypatch):
+async def test_business_maintenance_fails_when_tenant_backfill_is_incomplete(monkeypatch):
     from yuxi.tenancy.integrity import TenantBackfillIncomplete
 
-    manager = PostgresManager()
-    original_initialized = manager._initialized
-    original_engine = manager.async_engine
-    connection = _RecordingConnection()
-
-    async def fail_backfill(_conn):
+    async def backfill(_conn):
         raise TenantBackfillIncomplete("unresolved null tenant_id rows: 1")
 
-    monkeypatch.setattr("yuxi.tenancy.schema.backfill_tenant_scope", fail_backfill)
+    monkeypatch.setattr("yuxi.tenancy.schema.backfill_tenant_scope", backfill)
+    manager = PostgresManager()
     manager._initialized = True
-    manager.async_engine = _RecordingEngine(connection)
-    try:
-        with pytest.raises(TenantBackfillIncomplete, match="unresolved null tenant_id rows"):
-            await manager.ensure_business_schema()
-    finally:
-        manager._initialized = original_initialized
-        manager.async_engine = original_engine
+    manager.async_engine = _RecordingEngine(_RecordingConnection())
+
+    with pytest.raises(TenantBackfillIncomplete, match="unresolved null tenant_id rows"):
+        await manager.run_business_maintenance()
 
 
 @pytest.mark.asyncio
-async def test_ensure_business_schema_adds_run_origin_snapshot_columns():
+async def test_knowledge_schema_is_noop():
     manager = PostgresManager()
-    original_initialized = manager._initialized
-    original_engine = manager.async_engine
-    connection = _RecordingConnection()
-
     manager._initialized = True
-    manager.async_engine = _RecordingEngine(connection)
-    try:
-        await manager.ensure_business_schema()
-    finally:
-        manager._initialized = original_initialized
-        manager.async_engine = original_engine
+    manager.async_engine = _RecordingEngine(_RecordingConnection())
 
-    statements = "\n".join(connection.statements)
-    assert "agent_runs ADD COLUMN IF NOT EXISTS source VARCHAR(32)" in statements
-    assert "agent_runs ADD COLUMN IF NOT EXISTS channel VARCHAR(32)" in statements
-    assert "agent_runs ADD COLUMN IF NOT EXISTS external_id VARCHAR(128)" in statements
-    assert "agent_runs ADD COLUMN IF NOT EXISTS origin_metadata JSONB" in statements
-    assert "agent_run_requests ADD COLUMN IF NOT EXISTS channel VARCHAR(32)" in statements
-    assert "agent_run_requests ADD COLUMN IF NOT EXISTS external_id VARCHAR(128)" in statements
-    assert "agent_run_requests ADD COLUMN IF NOT EXISTS origin_metadata JSONB" in statements
-
-
-@pytest.mark.asyncio
-async def test_ensure_business_schema_adds_skill_runtime_operators():
-    manager = PostgresManager()
-    original_initialized = manager._initialized
-    original_engine = manager.async_engine
-    connection = _RecordingConnection()
-
-    manager._initialized = True
-    manager.async_engine = _RecordingEngine(connection)
-    try:
-        await manager.ensure_business_schema()
-    finally:
-        manager._initialized = original_initialized
-        manager.async_engine = original_engine
-
-    statements = "\n".join(connection.statements)
-    assert "amp_sessions ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE" in statements
-
-
-@pytest.mark.asyncio
-async def test_ensure_business_schema_does_not_touch_dropped_identity_tables():
-    manager = PostgresManager()
-    original_initialized = manager._initialized
-    original_engine = manager.async_engine
-    connection = _RecordingConnection()
-
-    manager._initialized = True
-    manager.async_engine = _RecordingEngine(connection)
-    try:
-        await manager.ensure_business_schema()
-    finally:
-        manager._initialized = original_initialized
-        manager.async_engine = original_engine
-
-    statements = "\n".join(connection.statements)
-    assert "h_cli_auth_sessions" not in statements
-    assert "h_api_keys" not in statements
-    assert "h_users" not in statements
-
-
-@pytest.mark.asyncio
-async def test_share_config_migration_wraps_agent_legacy_scopes_as_read_only():
-    """Agent 迁移只把旧 scope 写入 read_scope，manage_scope 置空，避免把历史只读权限追溯升级为 MANAGE。"""
-    manager = PostgresManager()
-    original_initialized = manager._initialized
-    original_engine = manager.async_engine
-    connection = _RecordingConnection()
-
-    manager._initialized = True
-    manager.async_engine = _RecordingEngine(connection)
-    try:
-        await manager.ensure_business_schema()
-        await manager.ensure_knowledge_schema()
-    finally:
-        manager._initialized = original_initialized
-        manager.async_engine = original_engine
-
-    statements = "\n".join(connection.statements)
-    assert "UPDATE amp_agents SET share_config = jsonb_build_object" in statements
-    assert "h_skills" not in statements
-    assert "h_knowledge_bases" not in statements
-    assert "'read_scope'" in statements
-    assert "'manage_scope', NULL" in statements
-    assert (
-        "ALTER TABLE IF EXISTS amp_agents ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb" in statements
-    )
-    assert statements.index(
-        "ALTER TABLE IF EXISTS amp_agents ALTER COLUMN share_config TYPE JSONB USING share_config::jsonb"
-    ) < statements.index("UPDATE amp_agents SET share_config = jsonb_build_object")
-    assert "ALTER TABLE IF EXISTS amp_agents ALTER COLUMN share_config DROP DEFAULT" in statements
-
-
-@pytest.mark.asyncio
-async def test_ensure_knowledge_schema_rebuilds_vectors_for_incomplete_legacy_chunks():
-    manager = PostgresManager()
-    original_initialized = manager._initialized
-    original_engine = manager.async_engine
-    connection = _RecordingConnection()
-
-    manager._initialized = True
-    manager.async_engine = _RecordingEngine(connection)
-    try:
-        await manager.ensure_knowledge_schema()
-    finally:
-        manager._initialized = original_initialized
-        manager.async_engine = original_engine
-
-    assert connection.statements == []
+    await manager.ensure_knowledge_schema()

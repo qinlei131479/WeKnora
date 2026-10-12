@@ -29,38 +29,6 @@ _AMP_TABLES = frozenset(
 )
 
 
-def tenant_scope_ddl_statements() -> list[str]:
-    stmts: list[str] = []
-    for table in TENANT_SCOPE_TABLES:
-        stmts.append(f"ALTER TABLE IF EXISTS {table} ADD COLUMN IF NOT EXISTS tenant_id BIGINT")
-        stmts.append(f"CREATE INDEX IF NOT EXISTS ix_{table}_tenant_id ON {table}(tenant_id)")
-    stmts.append(
-        """
-        CREATE INDEX IF NOT EXISTS ix_amp_agent_run_requests_queue_tenant
-        ON amp_agent_run_requests(tenant_id, uid, agent_slug, conversation_thread_id, status, created_at, id)
-        """
-    )
-    stmts.append(
-        """
-        CREATE INDEX IF NOT EXISTS idx_amp_agent_runs_tenant_thread
-        ON amp_agent_runs(tenant_id, uid, agent_slug, conversation_thread_id)
-        """
-    )
-    for table in ("amp_agents",):
-        prefix = table.removeprefix("amp_")
-        stmts.append(f"ALTER TABLE IF EXISTS {table} DROP CONSTRAINT IF EXISTS {table}_slug_key")
-        stmts.append(f"ALTER TABLE IF EXISTS {table} DROP CONSTRAINT IF EXISTS h_{table}_slug_key")
-        stmts.append(f"DROP INDEX IF EXISTS ix_{prefix}_slug")
-        stmts.append(
-            f"CREATE UNIQUE INDEX IF NOT EXISTS uq_{prefix}_slug_tenant "
-            f"ON {table}(tenant_id, slug) WHERE tenant_id IS NOT NULL"
-        )
-        stmts.append(
-            f"CREATE UNIQUE INDEX IF NOT EXISTS uq_{prefix}_slug_catalog ON {table}(slug) WHERE tenant_id IS NULL"
-        )
-    return stmts
-
-
 async def _fetch_maps(conn) -> tuple[dict[str, int], dict[str, int]]:
     weknora_id_to_tenant: dict[str, int] = {}
     result = await conn.execute(

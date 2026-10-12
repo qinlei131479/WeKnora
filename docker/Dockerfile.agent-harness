@@ -45,4 +45,5 @@ COPY apps/agent-harness/package /app/package
 RUN uv sync --no-cache --group test --no-dev --frozen
 
 COPY apps/agent-harness/server /app/server
+COPY migrations/version_kjsc /app/migrations/version_kjsc
 CMD ["uv", "run", "--no-sync", "--no-dev", "uvicorn", "server.main:app", "--host", "0.0.0.0", "--port", "9990"]
