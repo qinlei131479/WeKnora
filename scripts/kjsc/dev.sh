@@ -160,6 +160,8 @@ init_kjsc() {
     ensure_env_key "WEKNORA_BASE_URL" "http://app:8080/api/v1"
     ensure_env_key "HARNESS_MINIO_BUCKET_NAME" "agent-harness"
     ensure_env_key "SANDBOX_PROVISIONER_TOKEN" "$(generate_hex 32)"
+    # 示例 SYSTEM_AES_KEY 不能给嵌入会话签名，缺省时生成独立密钥。
+    ensure_env_key "SYSTEM_SIGNING_KEY" "$(generate_hex 32)"
 
     local missing=""
     for key in DB_HOST DB_NAME REDIS_ADDR MINIO_ENDPOINT MINIO_ACCESS_KEY_ID MINIO_SECRET_ACCESS_KEY; do
@@ -388,6 +390,11 @@ start_app() {
     if ! load_env_files; then
         log_error ".env 文件不存在，请先运行: ./scripts/kjsc/dev.sh init"
         return 1
+    fi
+    # 示例 AES 密钥会被拒绝用于签名；本地启动时补上独立密钥，已有值不覆盖。
+    if ! env_has_value SYSTEM_SIGNING_KEY; then
+        ensure_env_key "SYSTEM_SIGNING_KEY" "$(generate_hex 32)"
+        load_env_files || return 1
     fi
 
     apply_host_dev_env

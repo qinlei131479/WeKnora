@@ -317,6 +317,8 @@ services:
       # （TENANT_AES_KEY / CRYPTO_MASTER_KEY / CRYPTO_SALT 已废弃：v0.4.0 起加密统一
       #   改用 SYSTEM_AES_KEY，Go 主应用不再读取这三个变量。）
       - SYSTEM_AES_KEY=${SYSTEM_AES_KEY:-}
+      # 嵌入会话与预签名链接的签名密钥。示例 AES 密钥不能签名，留空则网页嵌入不可用。
+      - SYSTEM_SIGNING_KEY=${SYSTEM_SIGNING_KEY:-}
       - SSRF_WHITELIST=${SSRF_WHITELIST:-}
       # 保留原始 URL 的图片域名白名单（逗号分隔，不替换为 provider://）
       - IMAGE_HOST_KEEP_URL=${IMAGE_HOST_KEEP_URL:-}
