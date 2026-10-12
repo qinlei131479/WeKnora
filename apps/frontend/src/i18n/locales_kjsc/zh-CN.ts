@@ -1040,6 +1040,7 @@ export default {
       sectionAgents: '智能体',
       sectionSubagents: '子智能体',
       deleteBuiltinWarning: '内置智能体不能删除',
+      modelNotConfigured: '未配置模型',
       deleteConfirmTitle: '删除 {name}',
       deleteConfirmContent: '删除后不可恢复，已绑定该智能体的历史对话仍保留原始绑定信息。',
       deleted: '智能体已删除',
@@ -1170,7 +1171,7 @@ export default {
         },
         model: {
           name: '智能体模型',
-          desc: '智能体的驱动模型，留空时使用系统默认模型。'
+          desc: '智能体的驱动模型，必须选择。'
         },
         system_prompt: {
           name: '系统提示词',
@@ -1203,6 +1204,7 @@ export default {
         notEditable: '当前智能体不可编辑',
         readonlyHint: '你可以查看此智能体的配置，但没有管理权限。',
         nameRequired: '请填写智能体名称',
+        modelRequired: '请选择智能体模型',
         iconUploadType: '只能上传图片文件',
         iconUploadSize: '图片大小不能超过 {size}MB',
         iconUploaded: '图标上传成功',

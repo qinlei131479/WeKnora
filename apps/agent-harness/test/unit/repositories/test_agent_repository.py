@@ -170,13 +170,17 @@ async def test_saving_builtin_agent_creates_tenant_override_row(monkeypatch):
     virtual = await repo.ensure_quote_agent()
     assert is_builtin_virtual(virtual) is True
 
-    saved = await repo.update(virtual, config_json={"context": {"skills": ["quote"]}}, updated_by="admin")
+    saved = await repo.update(
+        virtual,
+        config_json={"context": {"model": "model-1", "skills": ["quote"]}},
+        updated_by="admin",
+    )
 
     assert saved is db.added
     assert saved.slug == virtual.slug
     assert saved.tenant_id == 7
     assert saved.is_builtin is True
-    assert saved.config_json == {"context": {"skills": ["quote"]}}
+    assert saved.config_json == {"context": {"model": "model-1", "skills": ["quote"]}}
     db.commit.assert_awaited_once()
 
 
@@ -296,7 +300,7 @@ async def test_delegated_manager_update_preserves_shared_agent_acl():
         description="",
         icon=None,
         pics=[],
-        config_json={},
+        config_json={"context": {"model": "model-1"}},
     )
     await repo.update(
         agent,
@@ -327,7 +331,7 @@ async def test_delegated_manager_can_update_agent_acl_with_standard_validation()
         description="",
         icon=None,
         pics=[],
-        config_json={},
+        config_json={"context": {"model": "model-1"}},
     )
     await repo.update(
         agent,
@@ -362,7 +366,7 @@ async def test_normal_user_can_update_read_scope_without_granting_manage_scope()
         description="",
         icon=None,
         pics=[],
-        config_json={},
+        config_json={"context": {"model": "model-1"}},
     )
     await repo.update(
         agent,
@@ -405,7 +409,7 @@ async def test_normal_user_can_update_agent_with_equivalent_v2_share_config():
         description="",
         icon=None,
         pics=[],
-        config_json={},
+        config_json={"context": {"model": "model-1"}},
     )
     await repo.update(
         agent,

@@ -1040,6 +1040,7 @@ export default {
       sectionAgents: '에이전트',
       sectionSubagents: '하위 에이전트',
       deleteBuiltinWarning: '내장 에이전트는 삭제할 수 없습니다',
+      modelNotConfigured: '모델이 구성되지 않았습니다',
       deleteConfirmTitle: '{name} 삭제',
       deleteConfirmContent: '삭제 후 복구할 수 없습니다. 기존 대화는 원래 에이전트 바인딩을 유지합니다.',
       deleted: '에이전트가 삭제되었습니다',
@@ -1170,7 +1171,7 @@ export default {
         },
         model: {
           name: '모델',
-          desc: '이 에이전트를 구동하는 모델입니다. 비워 두면 시스템 기본 모델을 사용합니다.'
+          desc: '이 에이전트를 구동하는 모델입니다. 반드시 선택해야 합니다.'
         },
         system_prompt: {
           name: '시스템 프롬프트',
@@ -1203,6 +1204,7 @@ export default {
         notEditable: '이 에이전트는 편집할 수 없습니다',
         readonlyHint: '이 에이전트 설정은 볼 수 있지만 관리 권한이 없습니다.',
         nameRequired: '에이전트 이름을 입력하세요',
+        modelRequired: '에이전트 모델을 선택하세요',
         iconUploadType: '이미지 파일만 업로드할 수 있습니다',
         iconUploadSize: '이미지 크기는 {size}MB를 초과할 수 없습니다',
         iconUploaded: '아이콘이 업로드되었습니다',

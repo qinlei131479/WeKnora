@@ -1040,6 +1040,7 @@ export default {
       sectionAgents: 'Agents',
       sectionSubagents: 'Subagents',
       deleteBuiltinWarning: 'Built-in agents cannot be deleted',
+      modelNotConfigured: 'Model is not configured',
       deleteConfirmTitle: 'Delete {name}',
       deleteConfirmContent: 'This cannot be undone. Existing conversations stay bound to the original agent.',
       deleted: 'Agent deleted',
@@ -1170,7 +1171,7 @@ export default {
         },
         model: {
           name: 'Model',
-          desc: 'The model that drives this agent. Leave empty to use the system default.'
+          desc: 'The model that drives this agent. A model is required.'
         },
         system_prompt: {
           name: 'System prompt',
@@ -1203,6 +1204,7 @@ export default {
         notEditable: 'This agent cannot be edited',
         readonlyHint: 'You can view this agent, but you do not have manage permission.',
         nameRequired: 'Please enter an agent name',
+        modelRequired: 'Select an agent model',
         iconUploadType: 'Only image files are allowed',
         iconUploadSize: 'Image size cannot exceed {size}MB',
         iconUploaded: 'Icon uploaded',

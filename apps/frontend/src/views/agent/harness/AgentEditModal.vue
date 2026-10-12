@@ -386,6 +386,11 @@ const saveAgent = async () => {
     MessagePlugin.error(t('agent.workManage.editor.nameRequired'))
     return
   }
+  if (editingAgentId.value && runtimeConfigFormRef.value?.isModelMissing?.()) {
+    agentModalActiveTab.value = 'model'
+    MessagePlugin.error(t('agent.workManage.editor.modelRequired'))
+    return
+  }
 
   saving.value = true
   try {
@@ -821,7 +826,13 @@ defineExpose({
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    padding-bottom: 28px;
+    padding-bottom: 16px;
+
+    .work-section {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
   }
 }
 

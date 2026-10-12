@@ -103,6 +103,24 @@ def _is_legacy_builtin_row(row: Agent) -> bool:
     return row.tenant_id is None and is_builtin_agent_slug(row.slug)
 
 
+def _is_builtin_subagent_slug(slug: str | None) -> bool:
+    spec = get_builtin_agent_spec(slug or "")
+    return bool(spec is not None and spec.is_subagent)
+
+
+def agent_model_value(config_json: dict | None) -> str:
+    if not isinstance(config_json, dict):
+        return ""
+    context = config_json.get("context")
+    source = context if isinstance(context, dict) else config_json
+    return str(source.get("model") or "").strip()
+
+
+def ensure_agent_model_configured(config_json: dict | None) -> None:
+    if not agent_model_value(config_json):
+        raise ValueError("请选择智能体模型")
+
+
 def _sort_agents(items: list[Agent]) -> list[Agent]:
     return sorted(items, key=lambda item: (not item.is_default, item.id if item.id is not None else 0))
 
@@ -230,9 +248,13 @@ class AgentRepository:
         legacy = {row.slug: row for row in all_rows if _is_legacy_builtin_row(row)}
         rows = [row for row in all_rows if not _is_legacy_builtin_row(row)]
 
+        rows = [row for row in rows if row.slug != DEFAULT_AGENT_SLUG]
         present = {row.slug for row in rows}
         for spec in BUILTIN_AGENT_SPECS:
-            if spec.slug in present or (spec.is_subagent and not include_subagent_definitions):
+            # 默认助手暂不进入列表。内置子智能体仍在管理列表展示，绑定可选范围另查。
+            if spec.slug == DEFAULT_AGENT_SLUG or spec.slug in present:
+                continue
+            if spec.is_subagent and not include_subagent_definitions:
                 continue
             rows.append(build_builtin_agent(spec, legacy.get(spec.slug)))
 
@@ -242,20 +264,18 @@ class AgentRepository:
         return [agent for agent in items if user_can_access_agent(user, agent)]
 
     async def list_visible_subagents(self, *, user: User) -> list[Agent]:
+        """绑定子智能体时的可选范围：只含当前租户自己的子智能体，不含内置定义。"""
         stmt = apply_tenant_filters(
             select(Agent).where(Agent.is_subagent.is_(True)),
             Agent.tenant_id,
-            catalog_null=True,
+            catalog_null=False,
         )
         result = await self.db.execute(stmt.order_by(Agent.name.asc(), Agent.id.asc()))
-        all_rows = list(result.scalars().all())
-        legacy = {row.slug: row for row in all_rows if _is_legacy_builtin_row(row)}
-        rows = [row for row in all_rows if not _is_legacy_builtin_row(row)]
-
-        present = {row.slug for row in rows}
-        for spec in BUILTIN_AGENT_SPECS:
-            if spec.is_subagent and spec.slug not in present:
-                rows.append(build_builtin_agent(spec, legacy.get(spec.slug)))
+        rows = [
+            row
+            for row in result.scalars().all()
+            if not (_is_builtin_subagent_slug(row.slug) and not agent_model_value(row.config_json))
+        ]
 
         items = sorted(rows, key=lambda item: (item.name, item.id if item.id is not None else 0))
         if user.role == "superadmin":
@@ -444,6 +464,7 @@ class AgentRepository:
         context = dict(incoming_context) if isinstance(incoming_context, dict) else spec_context
         extra = {key: value for key, value in (config_json or {}).items() if key != "context"}
         merged_config = {"context": context, **extra}
+        ensure_agent_model_configured(merged_config)
 
         override = Agent(
             slug=agent.slug,
@@ -482,6 +503,9 @@ class AgentRepository:
         updated_by: str | None = None,
         updater: User | None = None,
     ) -> Agent:
+        effective_config = config_json if config_json is not None else (agent.config_json or {})
+        ensure_agent_model_configured(effective_config)
+
         if is_builtin_virtual(agent):
             return await self._materialize_builtin_override(
                 agent,

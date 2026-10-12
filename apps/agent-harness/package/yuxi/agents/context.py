@@ -196,7 +196,7 @@ class BaseContext:
         metadata={
             "name": "智能体模型",
             "options": [],
-            "description": "智能体的驱动模型，留空时使用系统默认模型。",
+            "description": "智能体的驱动模型，必须选择。",
             "kind": "llm",
         },
     )

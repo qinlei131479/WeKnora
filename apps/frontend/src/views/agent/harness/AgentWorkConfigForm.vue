@@ -1,5 +1,5 @@
 <template>
-  <div class="agent-work-config-form">
+  <div class="agent-work-config-form" :class="{ 'is-prompts': activeSegment === 'prompt' }">
     <div class="work-config-content">
       <div v-if="selectedAgent" class="agent-info">
         <div v-if="props.showSegmented && !isEmptyConfig" class="config-segment">
@@ -51,14 +51,16 @@
           <template v-for="(value, key) in filteredConfigurableItems" :key="key">
             <div v-if="value.kind === 'llm'" class="setting-row">
               <div class="setting-info">
-                <label>{{ getConfigLabel(key, value) }}</label>
+                <label>
+                  {{ getConfigLabel(key, value) }}
+                  <span class="required">*</span>
+                </label>
                 <p v-if="getConfigDescription(key, value)" class="desc">{{ getConfigDescription(key, value) }}</p>
               </div>
               <div class="setting-control">
                 <ModelSelectorComponent
                   :model_spec="agentConfig[key] || ''"
                   :disabled="isReadOnlyConfig"
-                  clearable
                   @select-model="(spec) => handleModelChange(key, spec)"
                 />
               </div>
@@ -79,7 +81,7 @@
                     :value="agentConfig[key] || ''"
                     :disabled="isReadOnlyConfig"
                     :placeholder="getPlaceholder(key, value)"
-                    :autosize="{ minRows: 10, maxRows: 25 }"
+                    :autosize="false"
                     class="system-prompt-textarea"
                     @update:value="(val) => updateConfigValue(key, val)"
                   />
@@ -916,12 +918,69 @@ const validateAndFilterConfig = () => {
   return validatedConfig
 }
 
-defineExpose({ validateAndFilterConfig })
+const isModelMissing = () => {
+  const items = configurableItems.value || {}
+  const keys = Object.keys(items)
+  const modelKey = keys.find((key) => items[key]?.kind === 'llm')
+  if (keys.length > 0 && !modelKey) return false
+  return !String(agentConfig.value?.[modelKey || 'model'] || '').trim()
+}
+
+defineExpose({ validateAndFilterConfig, isModelMissing })
 </script>
 
 <style lang="less" scoped>
 .agent-work-config-form {
   background: transparent;
+
+  &.is-prompts {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+
+    .agent-info,
+    .work-config-content,
+    .settings-group,
+    .prompts-panel__pane,
+    .setting-control-full,
+    .textarea-with-template {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      align-items: stretch;
+      width: 100%;
+      max-width: none;
+      min-height: 0;
+    }
+
+    .prompts-outline,
+    .setting-info {
+      flex: 0 0 auto;
+    }
+
+    .system-prompt-textarea {
+      flex: 1 1 auto;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+    }
+
+    :deep(.t-textarea.system-prompt-textarea) {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      height: 100%;
+      min-height: 0;
+    }
+
+    :deep(.t-textarea__inner) {
+      flex: 1 1 auto;
+      width: 100%;
+      height: 100% !important;
+      min-height: 0 !important;
+    }
+  }
 }
 
 .work-config-content {
@@ -988,6 +1047,11 @@ defineExpose({ validateAndFilterConfig })
     font-size: 15px;
     font-weight: 500;
     color: var(--td-text-color-primary);
+
+    .required {
+      margin-left: 2px;
+      color: var(--td-error-color);
+    }
   }
 
   .desc {
@@ -1059,12 +1123,19 @@ defineExpose({ validateAndFilterConfig })
 
 .system-prompt-textarea {
   width: 100%;
+  height: 100%;
+  min-height: 0;
   font-family: var(--app-font-family-mono);
   font-size: 13px;
 
-  :deep(textarea) {
-    resize: vertical !important;
-    min-height: 200px;
+  :deep(.t-textarea__inner) {
+    flex: 1 1 auto;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    resize: none;
+    box-sizing: border-box;
+    padding-bottom: 40px;
   }
 }
 

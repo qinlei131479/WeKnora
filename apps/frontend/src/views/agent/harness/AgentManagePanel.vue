@@ -62,6 +62,13 @@ const groupedAgents = computed(() => {
 })
 
 const canManageAgent = (agent) => !!agent?.can_manage
+
+const isAgentModelMissing = (agent) => {
+  const configJson = agent?.config_json || {}
+  const context =
+    configJson.context && typeof configJson.context === 'object' ? configJson.context : configJson
+  return !String(context.model || '').trim()
+}
 const getAgentDefaultIconSrc = (agent) =>
   agent?.name || agent?.id ? generatePixelAvatar(agent.name || agent.id) : ''
 
@@ -337,6 +344,13 @@ defineExpose({
                   <span>{{ getAgentShareLabel(agent) }}</span>
                 </div>
               </div>
+              <t-tooltip
+                v-if="isAgentModelMissing(agent)"
+                :content="t('agent.workManage.modelNotConfigured')"
+                placement="top"
+              >
+                <t-icon name="error-circle" size="14px" class="model-missing-icon" />
+              </t-tooltip>
             </div>
           </div>
         </div>
@@ -617,6 +631,13 @@ defineExpose({
   display: flex;
   align-items: center;
   min-width: 0;
+}
+
+.model-missing-icon {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--td-warning-color);
+  cursor: default;
 }
 
 .builtin-badge {
