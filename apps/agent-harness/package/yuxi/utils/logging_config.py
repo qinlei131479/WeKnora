@@ -11,6 +11,13 @@ DATETIME = shanghai_now().strftime("%Y-%m-%d")
 LOG_FILE = f"{SAVE_DIR}/logs/yuxi-{DATETIME}.log"
 
 
+def service_log_prefix() -> str:
+    """按进程角色生成日志前缀，便于 API 与 worker 共享终端时区分来源。"""
+
+    role = os.getenv("YUXI_SERVICE_ROLE", "").strip().lower()
+    return f"[{role}] " if role in {"api", "worker"} else ""
+
+
 class LoguruHandler(logging.Handler):
     """将 Python logging 桥接到 loguru 的 handler"""
 
@@ -35,7 +42,9 @@ def _setup_logging_bridge():
     loguru_handler = LoguruHandler()
     loguru_handler.setLevel(logging.DEBUG)
 
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter(
+        f"%(asctime)s - %(name)s - %(levelname)s - {service_log_prefix()}%(message)s"
+    )
     loguru_handler.setFormatter(formatter)
 
     for lib in ["httpx", "openai", "neo4j", "urllib3"]:
@@ -56,7 +65,10 @@ def setup_logger(name, level="DEBUG", console=True):
     loguru_logger.add(
         LOG_FILE,
         level=level,
-        format="{time:YYYY-MM-DD HH:mm:ss} - {level} - {file}:{line} - {message}",
+        format=(
+            "{time:YYYY-MM-DD HH:mm:ss} - {level} - "
+            f"{{file}}:{{line}} - {service_log_prefix()}{{message}}"
+        ),
         encoding="utf-8",
         rotation="10 MB",
         retention="30 days",
@@ -73,7 +85,7 @@ def setup_logger(name, level="DEBUG", console=True):
                 "<green>{time:MM-DD HH:mm:ss}</green> "
                 "<level>{level}</level> "
                 "<cyan>{file}:{line}</cyan>: "
-                "<level>{message}</level>"
+                f"{service_log_prefix()}<level>{{message}}</level>"
             ),
             colorize=True,
             enqueue=True,

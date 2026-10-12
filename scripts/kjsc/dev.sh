@@ -563,9 +563,10 @@ start_harness() {
     }
     trap cleanup_harness EXIT INT TERM
 
-    uv run watchfiles --filter python "arq server.worker_main.WorkerSettings" server package &
+    YUXI_SERVICE_ROLE=worker uv run watchfiles --filter python \
+        "arq server.worker_main.WorkerSettings" server package &
     worker_pid=$!
-    uv run uvicorn server.main:app --host 0.0.0.0 --port "$api_port" \
+    YUXI_SERVICE_ROLE=api uv run uvicorn server.main:app --host 0.0.0.0 --port "$api_port" \
         --reload --reload-dir server --reload-dir package --timeout-graceful-shutdown 5
 }
 

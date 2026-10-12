@@ -7,13 +7,18 @@ from collections.abc import Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from yuxi.utils.logging_config import service_log_prefix
+
 # 创建专用的访问日志记录器
 access_logger = logging.getLogger("access_logger")
 
 # 设置访问日志记录器
 if not access_logger.handlers:
     handler = logging.StreamHandler()
-    formatter = logging.Formatter(fmt="%(asctime)s %(levelname)s: %(message)s", datefmt="%m-%d %H:%M:%S")
+    formatter = logging.Formatter(
+        fmt=f"%(asctime)s %(levelname)s: {service_log_prefix()}%(message)s",
+        datefmt="%m-%d %H:%M:%S",
+    )
     handler.setFormatter(formatter)
     access_logger.addHandler(handler)
     access_logger.setLevel(logging.INFO)
