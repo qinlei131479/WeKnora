@@ -114,6 +114,9 @@ class MCPRecord:
             "slug": self.slug,
             "name": self.raw.get("name") or self.slug,
             "description": self.raw.get("description"),
+            # 服务用途由用户在编辑抽屉里维护，列表与详情都必须带出，否则界面会
+            # 退回展示 description，看起来像"保存没生效"。
+            "usage_instructions": self.raw.get("usage_instructions") or "",
             "transport": transport,
             "url": self.raw.get("url"),
             "command": command,
@@ -523,6 +526,7 @@ def _service_write_body(
     *,
     name: str | None = None,
     description: str | None = None,
+    usage_instructions: str | None = None,
     enabled: bool | None = None,
     transport: str | None = None,
     url: str | None = None,
@@ -537,6 +541,8 @@ def _service_write_body(
         body["name"] = name
     if description is not None:
         body["description"] = description
+    if usage_instructions is not None:
+        body["usage_instructions"] = usage_instructions
     if enabled is not None:
         body["enabled"] = enabled
     mapped = _transport_for_app_core(transport)
@@ -659,6 +665,7 @@ async def update_mcp_server(
     slug: str,
     name: str = None,
     description: str = None,
+    usage_instructions: str = None,
     transport: str = None,
     transport_type: str = None,
     url: str = None,
@@ -692,6 +699,7 @@ async def update_mcp_server(
     body = _service_write_body(
         name=name,
         description=description,
+        usage_instructions=usage_instructions,
         enabled=enabled,
         transport=chosen,
         url=url,

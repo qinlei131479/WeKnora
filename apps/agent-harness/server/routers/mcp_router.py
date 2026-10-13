@@ -57,6 +57,8 @@ class UpdateMcpServerRequest(BaseModel):
 
     name: str | None = Field(None, description="展示名称")
     description: str | None = Field(None, description="描述")
+    # 服务用途：由用户在编辑抽屉维护，刷新工具目录不会覆盖。
+    usage_instructions: str | None = Field(None, description="服务用途说明")
     enabled: bool | None = Field(None, description="是否启用")
     transport_type: str | None = Field(None, description="传输类型：sse/http-streamable")
     transport: str | None = Field(None, description="兼容字段：sse/streamable_http")
@@ -207,6 +209,7 @@ async def update_mcp_server_route(
             slug=slug,
             name=request.name,
             description=request.description,
+            usage_instructions=request.usage_instructions,
             enabled=request.enabled,
             transport=request.transport,
             transport_type=request.transport_type,

@@ -323,6 +323,11 @@ async def update_service(db: AsyncSession | None, service_id: str, body: dict[st
         {
             "name": body.get("name") or existing.get("name"),
             "description": body.get("description") if "description" in body else existing.get("description") or "",
+            "usage_instructions": (
+                body["usage_instructions"]
+                if "usage_instructions" in body
+                else existing.get("usage_instructions") or ""
+            ),
             "enabled": body["enabled"] if "enabled" in body else existing.get("enabled"),
             "transport_type": transport,
             "url": url,

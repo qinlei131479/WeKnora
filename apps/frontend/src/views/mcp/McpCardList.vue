@@ -27,7 +27,7 @@
           layout="kb"
           :title="formatExtensionCardTitle(server.name)"
           :subtitle="server.slug"
-          :description="server.description || t('ext.noDescription')"
+          :description="serverUsage(server) || t('ext.noDescription')"
           :tags="mcpCardTags(server)"
           @click="handleCardClick(server)"
         >
@@ -58,7 +58,7 @@
           layout="kb"
           :title="formatExtensionCardTitle(server.name)"
           :subtitle="server.slug"
-          :description="server.requires_migration ? t('ext.mcp.needsMigration') : server.description || t('ext.noDescription')"
+          :description="server.requires_migration ? t('ext.mcp.needsMigration') : serverUsage(server) || t('ext.noDescription')"
           :tags="mcpCardTags(server)"
           @click="handleCardClick(server)"
         >
@@ -123,7 +123,7 @@
         <div class="mcp-basic-info-body">
           <div class="mcp-basic-info-row">
             <label>{{ t('ext.mcp.description') }}</label>
-            <span>{{ previewServer.description || t('ext.noDescription') }}</span>
+            <span>{{ serverUsage(previewServer) || t('ext.noDescription') }}</span>
           </div>
           <div class="mcp-basic-info-row">
             <label>{{ t('ext.mcp.transport') }}</label>
@@ -247,6 +247,11 @@ const toDialogService = (server) => ({
   args: server.args || [],
   stdio_config: server.command ? { command: server.command, args: server.args || [] } : undefined,
 })
+
+// 服务用途（usage_instructions）优先，缺失时退回 description。与设置页卡片口径一致，
+// 否则编辑抽屉里改完用途、列表仍展示旧的 description，看起来像保存没生效。
+const serverUsage = (server) =>
+  String(server?.usage_instructions || '').trim() || String(server?.description || '').trim()
 
 const mcpTransport = (server) => {
   const raw = server?.transport_type || (server?.transport === 'streamable_http' ? 'http-streamable' : server?.transport) || 'sse'
