@@ -109,6 +109,7 @@ watch(() => props.visible, async (open) => {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
   gap: 14px;
 }
 
@@ -131,7 +132,8 @@ watch(() => props.visible, async (open) => {
   flex-direction: column;
   border: 1px solid var(--td-component-stroke);
   border-radius: var(--app-radius-xl);
-  overflow: hidden;
+  /* 不要用 overflow:hidden 裁 iframe。圆角裁切叠在滚动的 iframe 上，滑动时整屏闪。 */
+  overflow: visible;
   background: var(--td-bg-color-container);
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
 
@@ -142,6 +144,7 @@ watch(() => props.visible, async (open) => {
     padding: 10px 14px;
     background: var(--td-bg-color-secondarycontainer);
     border-bottom: 1px solid var(--td-component-stroke);
+    border-radius: var(--app-radius-xl) var(--app-radius-xl) 0 0;
   }
 
   &__dot {
@@ -177,27 +180,41 @@ watch(() => props.visible, async (open) => {
   }
 
   &__screen {
+    position: relative;
     flex: 1;
-    min-height: 420px;
-    background: #f5f7fa;
+    min-height: 0;
+    overflow: visible;
+    background: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 0 0 var(--app-radius-xl) var(--app-radius-xl);
   }
 }
 
 .preview-iframe {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   border: none;
   background: #fff;
   display: block;
+  overscroll-behavior: none;
+}
+
+.device-frame .preview-iframe {
+  border-radius: 0 0 var(--app-radius-xl) var(--app-radius-xl);
+}
+
+.widget-panel .preview-iframe {
+  border-radius: var(--app-radius-xl);
 }
 
 .widget-shell {
   position: relative;
   flex: 1;
-  min-height: 480px;
+  min-height: 0;
   border: 1px solid var(--td-component-stroke);
   border-radius: var(--app-radius-xl);
   overflow: hidden;
@@ -256,7 +273,7 @@ watch(() => props.visible, async (open) => {
   height: 500px;
   max-height: calc(100% - 88px);
   border-radius: var(--app-radius-xl);
-  overflow: hidden;
+  overflow: visible;
   background: #fff;
   box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
   z-index: 2;
@@ -333,7 +350,18 @@ watch(() => props.visible, async (open) => {
   .t-drawer__body {
     display: flex;
     flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
     padding: 16px 18px;
+  }
+
+  /* 抽屉打开后 TDesign 会把面板设成 translateX(0)。这个 transform 会一直留在
+     iframe 的祖先上，消息列表一滚动，整块预览就会白闪、抖动。打开后去掉它。 */
+  &.t-drawer--open > .t-drawer__content-wrapper {
+    transform: none !important;
   }
 }
 </style>

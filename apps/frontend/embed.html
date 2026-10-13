@@ -8,7 +8,15 @@
     <meta name="renderer" content="webkit">
     <link rel="icon" href="/favicon.ico">
     <style>
-      html, body, #embed-app { height: 100%; margin: 0; }
+      /* 只让消息列表滚动。文档本身再滚一层时，和 iframe 外的抽屉抢滚动，
+         上下滑动会整屏闪、抖。 */
+      html, body, #embed-app {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        overscroll-behavior: none;
+      }
+      #embed-app { display: flex; flex-direction: column; }
     </style>
 </head>
 <body>

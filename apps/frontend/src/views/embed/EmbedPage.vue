@@ -173,11 +173,16 @@ watch(headerTitle, (title) => {
 
 <style scoped lang="less">
 .embed-page {
-  height: 100vh;
+  /* 不用 100vh：iframe 里 vh 可能按外层窗口算，页面会高出预览框，
+     文档和外层抽屉一起滚，滑动时整屏闪、抖。 */
+  flex: 1;
+  min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--td-bg-color-container);
   overflow: hidden;
+  overscroll-behavior: none;
   /* 子组件（含 AgentStreamDisplay）内凡用 --td-brand-color 的 loading / 强调色均跟随渠道主题 */
   --td-brand-color: var(--embed-primary, var(--td-brand-color));
   --td-brand-color-hover: var(--embed-primary, var(--td-brand-color-hover));

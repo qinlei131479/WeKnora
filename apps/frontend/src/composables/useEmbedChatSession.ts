@@ -65,12 +65,14 @@ export function useEmbedChatSession(options: {
   let pendingSuggestionAttribution: { suggestion_set_id: string; question_id: string } | null = null
   const scrollContainer = ref<HTMLElement | null>(null)
   const userHasScrolledUp = ref(false)
-  const SCROLL_BOTTOM_THRESHOLD = 80
+  // 重新贴底的距离要收得很小。80px 内就恢复跟随的话，用户还在上下滑动，
+  // 内容一变高就会被拉回底部，看起来像整屏抖一下。
+  const STICK_TO_BOTTOM_THRESHOLD = 8
 
-  const isNearBottom = () => {
-    if (!scrollContainer.value) return true
+  const distanceToBottom = () => {
+    if (!scrollContainer.value) return 0
     const { scrollTop, scrollHeight, clientHeight } = scrollContainer.value
-    return scrollHeight - scrollTop - clientHeight < SCROLL_BOTTOM_THRESHOLD
+    return scrollHeight - scrollTop - clientHeight
   }
 
   const getUserQuery = (index: number) => {
@@ -169,16 +171,11 @@ export function useEmbedChatSession(options: {
     const el = scrollContainer.value
     if (el) {
       const currentTop = el.scrollTop
-      // Content that grows after a chunk (images, diagrams) keeps scrollTop
-      // fixed and would otherwise fire a stale scroll event that falsely marks
-      // the user as scrolled up, killing the auto-follow during streaming —
-      // only an actual upward scroll detaches. Detach immediately on that
-      // upward scroll regardless of distance: waiting for the 80px bottom
-      // threshold lets the auto-follow yank the viewport back mid-gesture,
-      // which reads as the whole panel flickering while streaming.
+      // 内容变高时 scrollTop 不变，不能当成用户上滑。只有真的往上滑才脱离贴底，
+      // 并且要滑到最底才重新贴住，否则滑动过程中会被拉回去，整屏抖动。
       if (currentTop < lastScrollTop - 1) {
         userHasScrolledUp.value = true
-      } else if (isNearBottom()) {
+      } else if (distanceToBottom() <= STICK_TO_BOTTOM_THRESHOLD) {
         userHasScrolledUp.value = false
       }
       lastScrollTop = currentTop

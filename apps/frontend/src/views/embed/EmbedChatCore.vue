@@ -410,6 +410,10 @@ watch(
   min-height: 0;
   width: 100%;
   overflow-y: auto;
+  /* 本页始终在 iframe 里。滚动链到宿主抽屉时，预览框会跟着滑再弹回。 */
+  overscroll-behavior: none;
+  scrollbar-gutter: stable;
+  background: var(--td-bg-color-container);
 }
 
 .embed-chat__messages {
@@ -421,6 +425,11 @@ watch(
   width: 100%;
   padding: 12px 16px 0;
   box-sizing: border-box;
+}
+
+.msg-item-wrapper {
+  /* 单条消息的布局变化不要牵动整份文档，避免滑动时整段重绘闪一下。 */
+  contain: layout style;
 }
 
 .message-row {
