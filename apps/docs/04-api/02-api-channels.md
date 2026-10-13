@@ -322,6 +322,19 @@ curl -X POST $BASE/api/v1/embed/ec-1/sessions/s-1/stop \
   -H 'Content-Type: application/json' -d '{"message_id":"m-1"}'
 ```
 
+### GET /api/v1/embed/:channel_id/continue-stream/:session_id
+
+用途：重挂进行中的生成（SSE）。访客在回答生成期间离开页面后回来，加载历史发现末尾助手消息 `is_completed=false` 时，用该端点以 `message_id` 重挂；服务端从 offset 0 重放事件并继续推送直至完成。流缓冲已清理（生成已结束或服务重启）返回 404，此时客户端应降级轮询历史。需 `X-Embed-Session`。路由形状与主站 `/sessions/continue-stream/:session_id` 一致（session_id 为末段）。
+
+| 查询参数 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `message_id` | string | 是 | 未完成的助手消息 ID |
+
+```bash
+curl -N "$BASE/api/v1/embed/ec-1/continue-stream/s-1?message_id=m-1" \
+  -H "Authorization: Embed $EMBED_TOKEN" -H "X-Embed-Session: $SIG"
+```
+
 ### GET|POST /api/v1/embed/:channel_id/sessions/:session_id/messages/:message_id/suggestions
 
 用途：读取 / 触发生成消息建议（渠道关闭建议时返回 `suppressed`）。需 `X-Embed-Session`。

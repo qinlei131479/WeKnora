@@ -245,6 +245,10 @@ func RegisterEmbedPublicRoutes(
 		embed.POST("/agent-chat/:session_id", embedHandler.EmbedAgentChat)
 		embed.GET("/messages/:session_id/load", embedHandler.EmbedLoadMessages)
 		embed.POST("/sessions/:session_id/stop", embedHandler.EmbedStopSession)
+		// Route shape must be /continue-stream/:session_id: the widget's SSE
+		// client always appends ?message_id= to "<url>/<session_id>", so the
+		// session id has to be the trailing segment (mirrors routes_chat.go).
+		embed.GET("/continue-stream/:session_id", embedHandler.EmbedContinueStream)
 		embed.GET("/sessions/:session_id/messages/:message_id/suggestions", embedHandler.EmbedGetMessageSuggestions)
 		embed.POST("/sessions/:session_id/messages/:message_id/suggestions", embedHandler.EmbedEnsureMessageSuggestions)
 		embed.POST("/sessions/:session_id/suggestion-events", embedHandler.EmbedRecordSuggestionEvent)

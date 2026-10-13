@@ -137,6 +137,9 @@ export function useEmbedChatSession(options: {
     onTurnComplete: options.onTurnComplete,
     onAfterMsgList: () => options.onMessagesLoaded?.(messagesList),
     onError: embedToast,
+    // 历史里的未完成助手行必须保持响应式并初始化事件容器，continue-stream
+    // 重挂的事件才能写进这一行（否则 markRaw 后流内容静默丢失）。
+    preserveIncompleteStreamReactive: true,
     isFirstEnter,
     scrollContainer,
   })
@@ -166,12 +169,15 @@ export function useEmbedChatSession(options: {
     const el = scrollContainer.value
     if (el) {
       const currentTop = el.scrollTop
-      // Only an actual upward scroll detaches from the live edge. Content that
-      // grows after a chunk (images, diagrams) keeps scrollTop fixed and would
-      // otherwise fire a stale scroll event that falsely marks the user as
-      // scrolled up, killing the auto-follow during streaming.
+      // Content that grows after a chunk (images, diagrams) keeps scrollTop
+      // fixed and would otherwise fire a stale scroll event that falsely marks
+      // the user as scrolled up, killing the auto-follow during streaming —
+      // only an actual upward scroll detaches. Detach immediately on that
+      // upward scroll regardless of distance: waiting for the 80px bottom
+      // threshold lets the auto-follow yank the viewport back mid-gesture,
+      // which reads as the whole panel flickering while streaming.
       if (currentTop < lastScrollTop - 1) {
-        userHasScrolledUp.value = !isNearBottom()
+        userHasScrolledUp.value = true
       } else if (isNearBottom()) {
         userHasScrolledUp.value = false
       }
@@ -216,6 +222,11 @@ export function useEmbedChatSession(options: {
         if (batch.length < limit.value) hasMoreHistory.value = false
         created_at.value = nextCursor
         await handleMsgList(batch, isScrollType, scrollHeight)
+        // 初次加载后发现末尾还有未完成的回答，说明生成期间访客离开过页面，
+        // 尝试重挂到进行中的生成（内部自带失败降级）。
+        if (!isScrollType) {
+          void attachContinueStreamIfPending()
+        }
       })
       .catch((err) => {
         console.error('Failed to load messages:', err)
@@ -225,6 +236,109 @@ export function useEmbedChatSession(options: {
         historyLoading.value = false
         historyLoadingMore.value = false
       })
+  }
+
+  // ---- 未完成回答的重挂与降级轮询 ---------------------------------------
+  // 访客在生成期间离开页面（iframe 卸载只断开本地 SSE，服务端继续生成并
+  // 落库），回来后历史里会有一条 is_completed=false 的助手占位。此时用
+  // continue-stream 端点重挂到仍在进行的生成，从 offset 0 重放事件续流；
+  // 若流缓冲已不在（生成早已结束、或服务重启丢失），退化为轻量轮询探测
+  // 完成后整页重拉历史。
+  let attachingContinueStream = false
+  let incompletePollTimer: number | null = null
+  const INCOMPLETE_POLL_INTERVAL_MS = 3000
+  const INCOMPLETE_POLL_MAX_MS = 10 * 60 * 1000
+
+  const stopIncompletePolling = () => {
+    if (incompletePollTimer !== null) {
+      window.clearInterval(incompletePollTimer)
+      incompletePollTimer = null
+    }
+  }
+
+  const findTrailingIncompleteAssistant = () => {
+    for (let i = messagesList.length - 1; i >= 0; i--) {
+      const item = messagesList[i]
+      if (item.role === 'assistant') return item.is_completed ? undefined : item
+    }
+    return undefined
+  }
+
+  const startIncompletePolling = () => {
+    if (incompletePollTimer !== null || !options.sessionId.value) return
+    const deadline = Date.now() + INCOMPLETE_POLL_MAX_MS
+    incompletePollTimer = window.setInterval(async () => {
+      const sid = options.sessionId.value
+      if (!sid || Date.now() > deadline) {
+        stopIncompletePolling()
+        return
+      }
+      try {
+        const res = await getEmbedMessageList(
+          options.channelId,
+          options.token,
+          sid,
+          1,
+          undefined,
+          options.sessionSig.value,
+        )
+        const latest = (res?.data as Record<string, unknown>[] | undefined)?.[0]
+        if (latest && latest.role === 'assistant' && latest.is_completed) {
+          stopIncompletePolling()
+          // 生成已结束：只摘掉末尾的未完成占位行再增量拉回（已存在的行按 id
+          // 去重跳过，仅占位行以完整内容追加）。不能走 resetAndLoad——它会
+          // 清空整表并亮出加载骨架，视觉上整页闪烁。
+          const idx = messagesList.findIndex(
+            (m) => m.role === 'assistant' && !m.is_completed,
+          )
+          if (idx >= 0) messagesList.splice(idx, 1)
+          getmsgList({ session_id: sid, created_at: '', limit: limit.value })
+        }
+      } catch {
+        // 网络抖动下一轮再试，不打断轮询。
+      }
+    }, INCOMPLETE_POLL_INTERVAL_MS)
+  }
+
+  const attachContinueStreamIfPending = async () => {
+    if (attachingContinueStream || isReplying.value) return
+    if (!options.sessionId.value) return
+    const trailing = findTrailingIncompleteAssistant()
+    const messageId = trailing ? String(trailing.id || '') : ''
+    if (!messageId) return
+    attachingContinueStream = true
+    isReplying.value = true
+    loading.value = true
+    currentAssistantMessageId.value = messageId
+    // 回来看进度的访客默认贴着底部跟随输出，重放的既有内容一次滚到底。
+    userHasScrolledUp.value = false
+    scrollToBottom(true)
+    try {
+      await startStream({
+        session_id: options.sessionId.value,
+        query: messageId,
+        method: 'GET',
+        // SSE 客户端按 "<url>/<session_id>?message_id=" 拼接，session_id 必须
+        // 是末段，因此路由形状是 /continue-stream/:session_id（与主站一致）。
+        url: `/api/v1/embed/${options.channelId}/continue-stream`,
+        embed_token: await ensureFreshEmbedToken(options.channelId, options.token),
+        embed_session_sig: options.sessionSig.value,
+        embed_visitor_id: options.visitorId.value,
+      })
+    } catch {
+      // startStream 内部已把异常写入 error ref，这里无需处理。
+    } finally {
+      attachingContinueStream = false
+    }
+    if (error.value) {
+      // 重挂失败（最常见：流缓冲已清理，404）属于常态而非故障，静默降级
+      // 为轮询，避免向访客弹出无意义的错误提示。
+      error.value = null
+      isReplying.value = false
+      loading.value = false
+      currentAssistantMessageId.value = ''
+      startIncompletePolling()
+    }
   }
 
   const handleStopGeneration = () => {
@@ -249,6 +363,7 @@ export function useEmbedChatSession(options: {
     opts: { webSearchEnabled?: boolean; imageFiles?: File[]; attachmentFiles?: File[] } = {},
   ) => {
     stopStream()
+    stopIncompletePolling()
     prepareForNewOutgoingMessage()
     const outboundQuery = buildQueryWithHostContext(value, options.hostContext?.value)
     const visitorWebSearchEnabled = opts.webSearchEnabled ?? false
@@ -333,6 +448,9 @@ export function useEmbedChatSession(options: {
 
   watch(error, (newError) => {
     if (newError) {
+      // 重挂 continue-stream 失败（缓冲过期/服务重启）由 attach 流程自行静默
+      // 降级为轮询，不走全局错误提示。
+      if (attachingContinueStream) return
       embedToast(newError)
       isReplying.value = false
       loading.value = false
@@ -352,6 +470,8 @@ export function useEmbedChatSession(options: {
   })
 
   const resetAndLoad = (sid: string) => {
+    stopStream()
+    stopIncompletePolling()
     messagesList.splice(0)
     historyLoading.value = true
     historyLoadingMore.value = false
@@ -383,6 +503,7 @@ export function useEmbedChatSession(options: {
 
   onUnmounted(() => {
     stopStream()
+    stopIncompletePolling()
     fullContent.value = ''
   })
 

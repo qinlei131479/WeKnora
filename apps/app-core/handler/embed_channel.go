@@ -454,6 +454,18 @@ func (h *EmbedChannelHandler) EmbedStopSession(c *gin.Context) {
 	h.sessionHandler.StopSession(c)
 }
 
+// EmbedContinueStream re-attaches an anonymous embed visitor to an in-flight
+// generation: the widget calls it after a history load finds an unfinished
+// assistant message (visitor navigated away mid-answer and came back).
+// ensureEmbedSession keeps the visitor scoped to this channel's own session
+// before the session handler replays the stream buffer.
+func (h *EmbedChannelHandler) EmbedContinueStream(c *gin.Context) {
+	if err := h.ensureEmbedSession(c); err != nil {
+		return
+	}
+	h.sessionHandler.ContinueStream(c)
+}
+
 func (h *EmbedChannelHandler) EmbedEnsureMessageSuggestions(c *gin.Context) {
 	if err := h.ensureEmbedSession(c); err != nil {
 		return
