@@ -1292,7 +1292,7 @@ export default {
     mindmapLoading: '加载中...',
     mindmapGenerating: 'AI 正在生成思维导图...',
     mindmapEmpty: '还没有思维导图，可按知识库文件列表生成。',
-    mindmapDescription: '按知识库文件列表生成层次结构',
+    mindmapDescription: '按知识库文件列表生成层次结构，点击文件名可预览',
     mindmapGenerated: '思维导图已生成',
     mindmapLoadFailed: '加载思维导图失败',
     mindmapGenerateFailed: '生成思维导图失败',

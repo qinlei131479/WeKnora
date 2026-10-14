@@ -2341,8 +2341,8 @@ const handleKBEditorSuccess = (kbIdValue: string) => {
       <!-- Image Gallery (4th tab) -->
       <ImageGallery v-if="activeKbTab === 'gallery' && kbId" :knowledge-base-id="kbId" @open-source-doc="openSourceDoc" />
 
-      <!-- 知识库思维导图（最后一个 tab）：整页展示，生成/重新生成在页面工具栏 -->
-      <KbMindmapPanel v-if="activeKbTab === 'mindmap' && kbId" :knowledge-base-id="kbId" />
+      <!-- 知识库思维导图（最后一个 tab）：整页展示，生成/重新生成在页面工具栏；点击文件节点走文档页预览 -->
+      <KbMindmapPanel v-if="activeKbTab === 'mindmap' && kbId" :knowledge-base-id="kbId" @open-source-doc="openSourceDoc" />
 
       <!-- wiki/graph tabs only exist on wiki KBs; a stale tab (?tab= or one
            carried over from a previous KB) falls back to documents. -->

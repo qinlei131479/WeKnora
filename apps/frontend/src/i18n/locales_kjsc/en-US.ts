@@ -1292,7 +1292,7 @@ export default {
     mindmapLoading: 'Loading...',
     mindmapGenerating: 'AI is generating the mind map...',
     mindmapEmpty: 'No mind map yet. Generate one from the file list.',
-    mindmapDescription: 'Generate a file-tree outline from this knowledge base',
+    mindmapDescription: 'File-tree outline from this knowledge base; click a file name to preview it',
     mindmapGenerated: 'Mind map generated',
     mindmapLoadFailed: 'Failed to load mind map',
     mindmapGenerateFailed: 'Failed to generate mind map',

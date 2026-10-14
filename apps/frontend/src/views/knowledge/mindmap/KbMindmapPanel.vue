@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
 import { MessagePlugin } from 'tdesign-vue-next';
 import { useI18n } from 'vue-i18n';
 import { Transformer } from 'markmap-lib';
@@ -12,9 +12,15 @@ import { generateKnowledgeBaseMindmap, getKnowledgeBaseMindmap } from '@/api/kno
 // markmap-lib/markmap-view 画成可缩放、可交互的节点图，而不是纯文本大纲。
 // 数据源是 Go 侧 knowledge_base_mindmaps 侧车表（迁移 000004），接口
 // GET/POST /api/v1/knowledge-bases/:id/mindmap。
+// 文件叶子节点可点击：按「文件夹路径/文件名」在 mindmap_file_ids 里反查
+// 知识 ID，向上抛 open-source-doc 事件，由 KnowledgeBase 复用文档页预览抽屉。
 
 const props = defineProps<{
   knowledgeBaseId: string;
+}>();
+
+const emit = defineEmits<{
+  'open-source-doc': [knowledgeId: string];
 }>();
 
 const { t } = useI18n();
@@ -22,6 +28,9 @@ const NS = 'knowledgeBase';
 const loading = ref(false);
 const generating = ref(false);
 const mindmap = ref<Record<string, any> | null>(null);
+// {知识ID -> 导图节点路径}。后端新数据存「文件夹路径/文件名」；重新生成前的
+// 存量侧车数据只存文件名，用 byName 兜底索引兼容。
+const mindmapFileIds = ref<Record<string, string>>({});
 const loadError = ref('');
 const mindmapSvg = ref<SVGSVGElement | null>(null);
 const zoomPercent = ref(100);
@@ -29,6 +38,7 @@ const zoomPercent = ref(100);
 let markmapInstance: Markmap | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let detachZoomListener: (() => void) | null = null;
+let detachNodeListener: (() => void) | null = null;
 // 用户主动缩放过之后，容器尺寸变化不再自动 fit，否则会把手动调好的比例冲掉。
 let userZoomed = false;
 
@@ -76,6 +86,89 @@ function errorMessage(error: any, fallback: string) {
   return error?.message || fallback;
 }
 
+function parseMindmapFileIds(res: any) {
+  const raw = res?.mindmap_file_ids;
+  mindmapFileIds.value = raw && typeof raw === 'object' ? raw : {};
+}
+
+// markmap 渲染的 g.markmap-node 上绑的 __data__ 是 setData 后节点树里的
+// 节点对象本身（无 parent 链、content 是 HTML 实体转义串），所以匹配走两条：
+// 1) 渲染后从实例 state.data（即 __data__ 所在的树，对象引用一致）预构建
+//    「节点对象 -> 路径」索引，点击时 O(1) 命中，同名文件按路径消歧；
+// 2) 拼路径的每段 content 先解码，才能与 mindmap_file_ids 里的原始文件名比对。
+let nodePathIndex: Map<any, string> | null = null;
+
+function decodeMarkmapContent(text: string): string {
+  if (!text || !text.includes('&')) return text;
+  // textarea 的 innerHTML 按 RCDATA 解析：实体被解码，标签不会变成元素，安全。
+  const el = document.createElement('textarea');
+  el.innerHTML = text;
+  return el.value;
+}
+
+function buildNodePathIndex(root: any): Map<any, string> {
+  const index = new Map<any, string>();
+  const walk = (node: any, parentPath: string | null) => {
+    const content = decodeMarkmapContent(node?.content);
+    if (parentPath !== null) {
+      index.set(node, parentPath ? `${parentPath}/${content}` : content);
+    }
+    const childPath = parentPath === null ? '' : parentPath ? `${parentPath}/${content}` : content;
+    for (const child of Array.isArray(node?.children) ? node.children : []) walk(child, childPath);
+  };
+  walk(root, null);
+  return index;
+}
+
+// 双索引：byPath 按完整节点路径精确命中；byName 按文件名兜底（存量导图
+// 的 file_ids 值只有文件名，且重新生成前不会更新）。
+const fileKeyIndex = computed(() => {
+  const byPath = new Map<string, string>();
+  const byName = new Map<string, string[]>();
+  for (const [id, key] of Object.entries(mindmapFileIds.value)) {
+    if (!byPath.has(key)) byPath.set(key, id);
+    const name = key.slice(key.lastIndexOf('/') + 1);
+    const ids = byName.get(name);
+    if (ids) ids.push(id);
+    else byName.set(name, [id]);
+  }
+  return { byPath, byName };
+});
+
+// 只有文件叶子可预览。折叠/展开只改 payload 标记，children 数组不变，
+// 所以用 children 判文件夹，不会把折叠中的文件夹误判成文件。
+function resolveKnowledgeId(data: any): string {
+  if (!data?.content || (Array.isArray(data.children) && data.children.length)) return '';
+  const path = nodePathIndex?.get(data);
+  if (!path) return '';
+  const { byPath, byName } = fileKeyIndex.value;
+  const exact = byPath.get(path);
+  if (exact) return exact;
+  const fileName = path.slice(path.lastIndexOf('/') + 1);
+  return byName.get(fileName)?.[0] || '';
+}
+
+function hitMarkmapNode(event: Event): { __data__?: any } | null {
+  const target = event.target as Element | null;
+  return (target?.closest?.('g.markmap-node') as { __data__?: any } | null) || null;
+}
+
+// markmap 只把 click 绑在折叠圆点上，文字区空闲；这里在 svg 上做事件委托，
+// 点击文件叶子直接打开预览，不干扰圆点的展开/收起与 d3-zoom 拖拽。
+function onSvgClick(event: MouseEvent) {
+  const g = hitMarkmapNode(event);
+  if (!g) return;
+  const knowledgeId = resolveKnowledgeId(g.__data__);
+  if (knowledgeId) emit('open-source-doc', knowledgeId);
+}
+
+function onSvgMouseOver(event: MouseEvent) {
+  const svg = mindmapSvg.value;
+  if (!svg) return;
+  const g = hitMarkmapNode(event);
+  svg.style.cursor = g && resolveKnowledgeId(g.__data__) ? 'pointer' : '';
+}
+
 function jsonToMarkdown(node: Record<string, any> | null, level = 0): string {
   if (!node || typeof node !== 'object' || !node.content) return '';
   const heading = '#'.repeat(Math.min(level + 1, 6));
@@ -105,6 +198,7 @@ function destroyMarkmap() {
     // svg 已从 DOM 摘掉时忽略清理期间的异常
   }
   markmapInstance = null;
+  nodePathIndex = null;
 }
 
 async function renderMindmap(node: Record<string, any> | null, retryCount = 0) {
@@ -136,6 +230,9 @@ async function renderMindmap(node: Record<string, any> | null, retryCount = 0) {
       maxInitialScale: 1,
     });
     await markmapInstance.setData(root);
+    // setData 会克隆传入的树（_initializeData），DOM 绑定的是克隆后的节点；
+    // 索引必须从实例内部的 state.data 构建，对象引用才能与 __data__ 对上。
+    nodePathIndex = buildNodePathIndex((markmapInstance as any).state?.data);
     await fitView();
   } catch (error: any) {
     MessagePlugin.error(error?.message || t(`${NS}.mindmapGenerateFailed`));
@@ -174,6 +271,7 @@ async function loadMindmap() {
   try {
     const res: any = await getKnowledgeBaseMindmap(props.knowledgeBaseId);
     mindmap.value = res?.mindmap && typeof res.mindmap === 'object' ? res.mindmap : null;
+    parseMindmapFileIds(res);
     if (mindmap.value) {
       await nextTick();
       setTimeout(() => renderMindmap(mindmap.value), 100);
@@ -193,6 +291,8 @@ async function generateMindmap() {
   try {
     const res: any = await generateKnowledgeBaseMindmap(props.knowledgeBaseId);
     mindmap.value = res?.mindmap && typeof res.mindmap === 'object' ? res.mindmap : null;
+    // 生成响应与 GET 一样带 mindmap_file_ids，不用再发一次请求。
+    parseMindmapFileIds(res);
     await nextTick();
     setTimeout(async () => {
       await renderMindmap(mindmap.value);
@@ -211,8 +311,11 @@ watch(
     destroyMarkmap();
     detachZoomListener?.();
     detachZoomListener = null;
+    detachNodeListener?.();
+    detachNodeListener = null;
     userZoomed = false;
     mindmap.value = null;
+    mindmapFileIds.value = {};
     loadError.value = '';
     void loadMindmap();
   },
@@ -249,12 +352,25 @@ watch(mindmapSvg, (svg) => {
   detachZoomListener?.();
   detachZoomListener = () => svg.removeEventListener('zoom', onZoomEvent);
   svg.addEventListener('zoom', onZoomEvent);
+
+  // 节点点击/悬停委托挂在 svg 上：setData、折叠展开重建节点后依然生效，
+  // 只有 svg 本身随 v-if 卸载才需要摘掉。
+  detachNodeListener?.();
+  detachNodeListener = () => {
+    svg.removeEventListener('click', onSvgClick);
+    svg.removeEventListener('mouseover', onSvgMouseOver);
+    svg.style.cursor = '';
+  };
+  svg.addEventListener('click', onSvgClick);
+  svg.addEventListener('mouseover', onSvgMouseOver);
 });
 
 onUnmounted(() => {
   destroyMarkmap();
   detachZoomListener?.();
   detachZoomListener = null;
+  detachNodeListener?.();
+  detachNodeListener = null;
   resizeObserver?.disconnect();
 });
 </script>

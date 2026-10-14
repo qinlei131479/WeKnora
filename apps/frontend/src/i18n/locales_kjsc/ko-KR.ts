@@ -1292,7 +1292,7 @@ export default {
     mindmapLoading: '로딩 중...',
     mindmapGenerating: 'AI가 마인드맵을 생성하는 중...',
     mindmapEmpty: '아직 마인드맵이 없습니다. 지식베이스 파일 목록에서 생성할 수 있습니다.',
-    mindmapDescription: '이 지식베이스의 파일 트리 개요 생성',
+    mindmapDescription: '이 지식베이스의 파일 트리 개요 생성, 파일명을 클릭하면 미리보기',
     mindmapGenerated: '마인드맵이 생성되었습니다',
     mindmapLoadFailed: '마인드맵을 불러오지 못했습니다',
     mindmapGenerateFailed: '마인드맵을 생성하지 못했습니다',

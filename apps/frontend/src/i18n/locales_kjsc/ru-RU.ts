@@ -1292,7 +1292,7 @@ export default {
     mindmapLoading: 'Загрузка...',
     mindmapGenerating: 'AI генерирует карту знаний...',
     mindmapEmpty: 'Карты знаний пока нет. Создайте её из списка файлов базы знаний.',
-    mindmapDescription: 'Создать структуру по списку файлов базы знаний',
+    mindmapDescription: 'Структура по списку файлов базы знаний; нажмите имя файла для предпросмотра',
     mindmapGenerated: 'Карта знаний создана',
     mindmapLoadFailed: 'Не удалось загрузить карту знаний',
     mindmapGenerateFailed: 'Не удалось создать карту знаний',

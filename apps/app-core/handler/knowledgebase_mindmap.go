@@ -84,7 +84,7 @@ func (h *KnowledgeBaseHandler) GenerateKnowledgeBaseMindmap(c *gin.Context) {
 		// trailing slash). Files outside any folder have it empty and stay
 		// directly under the root, mirroring the sidebar tree.
 		appendMindmapFile(root, item.FolderPath, item.FileName)
-		fileIDs[item.ID] = item.FileName
+		fileIDs[item.ID] = mindmapFileKey(item.FolderPath, item.FileName)
 		fileCount++
 	}
 	if fileCount == 0 {
@@ -108,13 +108,25 @@ func (h *KnowledgeBaseHandler) GenerateKnowledgeBaseMindmap(c *gin.Context) {
 		return
 	}
 	logger.Infof(ctx, "knowledge base mindmap regenerated from folder tree: kb_id=%s file_count=%d", id, fileCount)
+	// 生成响应与 GET 对齐，都带 mindmap_file_ids（文件树路径 -> 知识 ID），
+	// 前端生成后无需再发一次 GET 就能建立「节点 -> 预览」的映射。
 	c.JSON(200, gin.H{
-		"success": true,
-		"mindmap": json.RawMessage(mindmap),
-		"name":    kb.Name,
-		"kb_id":   id,
-		"message": "success",
+		"success":          true,
+		"mindmap":          json.RawMessage(mindmap),
+		"mindmap_file_ids": json.RawMessage(fileIDsRaw),
+		"name":             kb.Name,
+		"kb_id":            id,
+		"message":          "success",
 	})
+}
+
+// mindmapFileKey 生成 fileIDs 的值：与导图树一致的「文件夹路径/文件名」
+// （路径已归一化，无路径时就是文件名），供前端按节点路径精确匹配同名文件。
+func mindmapFileKey(folderPath string, fileName string) string {
+	if path := types.NormalizeKnowledgeFolderPath(folderPath); path != "" {
+		return path + "/" + fileName
+	}
+	return fileName
 }
 
 // appendMindmapFile inserts fileName under the folder chain described by

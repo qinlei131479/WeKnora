@@ -127,6 +127,24 @@ func TestSortMindmapTreeFoldersBeforeFiles(t *testing.T) {
 	}
 }
 
+// fileIDs 的值必须与导图树节点路径一致，前端才能按「路径/文件名」命中预览。
+func TestMindmapFileKeyMatchesTreeNodePath(t *testing.T) {
+	cases := []struct {
+		folderPath string
+		fileName   string
+		want       string
+	}{
+		{"", "root.pdf", "root.pdf"},
+		{"docs", "a.md", "docs/a.md"},
+		{"docs/./spec/", "design.md", "docs/spec/design.md"},
+	}
+	for _, tc := range cases {
+		if got := mindmapFileKey(tc.folderPath, tc.fileName); got != tc.want {
+			t.Errorf("mindmapFileKey(%q, %q) = %q, want %q", tc.folderPath, tc.fileName, got, tc.want)
+		}
+	}
+}
+
 // Guard against regressing to the old LLM-shaped tree: the root must always be
 // the knowledge base name and every leaf must be a real file name.
 func TestMindmapTreeMatchesFolderPath(t *testing.T) {
