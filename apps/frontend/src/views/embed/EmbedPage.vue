@@ -1,10 +1,16 @@
 <template>
   <div class="embed-page" :style="pageStyle">
-    <div v-if="loadError" class="embed-error">{{ loadError }}</div>
-    <template v-else-if="config">
-      <header v-if="sessionId" class="embed-header">
+    <!-- 限流：保留聊天壳，顶部友好提示；其它致命错误仍走空白错误页 -->
+    <div v-if="rateLimited" class="embed-rate-banner" role="status">
+      {{ $t('embedPublish.rateLimited') }}
+    </div>
+
+    <div v-if="loadError && !rateLimited" class="embed-error">{{ loadError }}</div>
+
+    <template v-else-if="config || rateLimited">
+      <header class="embed-header">
         <span class="embed-header__badge" :style="badgeStyle">
-          <span v-if="config.agent_avatar" class="embed-header__avatar">{{ config.agent_avatar }}</span>
+          <span v-if="config?.agent_avatar" class="embed-header__avatar">{{ config.agent_avatar }}</span>
           <t-icon v-else :name="headerIcon" size="18px" />
         </span>
         <div class="embed-header__text">
@@ -16,7 +22,7 @@
           shape="square"
           size="small"
           class="embed-header__action"
-          :disabled="!chatHasMessages"
+          :disabled="rateLimited || !chatHasMessages"
           :title="$t('embedPublish.newChat')"
           :aria-label="$t('embedPublish.newChat')"
           @click="handleNewChat"
@@ -26,7 +32,7 @@
       </header>
 
       <EmbedChatView
-        v-if="sessionId"
+        v-if="sessionId && config"
         :session-id="sessionId"
         :session-sig="sessionSig"
         :visitor-id="visitorId"
@@ -35,16 +41,27 @@
         :agent-id="config.agent_id"
         :kb-ids="kbIds"
         :welcome-message="config.welcome_message"
-        :show-suggested-questions="config.show_suggested_questions !== false"
+        :show-suggested-questions="!rateLimited && config.show_suggested_questions !== false"
         :allow-web-search="config.allow_web_search === true"
         :agent-web-search-enabled="config.agent_web_search_enabled === true"
         :allow-file-upload="config.allow_file_upload === true"
         :agent-image-upload-enabled="config.agent_image_upload_enabled === true"
         :use-session-header-title="useSessionHeaderTitle"
         :host-context="hostContext"
+        :send-blocked="rateLimited"
         @session-title="sessionTitle = $event"
         @messages-state="chatHasMessages = $event"
+        @rate-limited="markRateLimited"
       />
+      <!-- 限流发生在拿到会话之前：仍展示输入区，发送按钮禁用并提示 -->
+      <div v-else-if="rateLimited" class="embed-degraded">
+        <div class="embed-degraded__body">
+          <p v-if="welcomeFallback" class="embed-degraded__welcome">{{ welcomeFallback }}</p>
+        </div>
+        <div class="embed-degraded__input">
+          <EmbedInputField :is-replying="false" :send-blocked="true" />
+        </div>
+      </div>
       <div v-else class="embed-loading">{{ $t('embedPublish.loading') }}</div>
     </template>
     <div v-else-if="awaitingToken" class="embed-loading">{{ $t('embedPublish.awaitingToken') }}</div>
@@ -57,6 +74,7 @@ import { computed, onUnmounted, ref, watch, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import EmbedChatView from '@/views/embed/EmbedChatView.vue'
+import EmbedInputField from '@/components/EmbedInputField.vue'
 import { useEmbedBridge } from '@/composables/useEmbedBridge'
 import { setDefaultProtectedFileAccess } from '@/utils/protectedFileAccess'
 
@@ -73,10 +91,12 @@ const {
   sessionSig,
   visitorId,
   loadError,
+  rateLimited,
   awaitingToken,
   bootstrapping,
   hostContext,
   startNewSession,
+  markRateLimited,
 } = useEmbedBridge(channelId)
 
 // An embed visitor has no Bearer/tenant credentials, so every protected file in
@@ -96,7 +116,7 @@ onUnmounted(() => setDefaultProtectedFileAccess(null))
 const handleNewChat = () => {
   // The current session is already empty — reuse it instead of spawning yet
   // another blank session (which would otherwise pile up server-side).
-  if (!chatHasMessages.value) return
+  if (rateLimited.value || !chatHasMessages.value) return
   sessionTitle.value = ''
   startNewSession()
 }
@@ -125,7 +145,7 @@ const badgeStyle = computed(() => {
 
 const channelDisplayTitle = computed(() => {
   const cfg = config.value
-  if (!cfg) return ''
+  if (!cfg) return t('embedPublish.defaultChatTitle')
   return (
     cfg.display_title?.trim()
     || cfg.page_title?.trim()
@@ -166,6 +186,8 @@ const headerIcon = computed(() => {
   return agentId && agentId !== 'builtin-quick-answer' ? 'control-platform' : 'chat'
 })
 
+const welcomeFallback = computed(() => config.value?.welcome_message?.trim() || '')
+
 watch(headerTitle, (title) => {
   if (title) document.title = title
 }, { immediate: true })
@@ -201,6 +223,17 @@ watch(headerTitle, (title) => {
   :deep(.embed-send-btn:not(.disabled)) {
     background: var(--embed-primary, var(--td-brand-color));
   }
+}
+
+.embed-rate-banner {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  font-size: var(--app-text-md);
+  line-height: 1.5;
+  text-align: center;
+  color: var(--td-warning-color);
+  background: color-mix(in srgb, var(--td-warning-color) 10%, var(--td-bg-color-container));
+  border-bottom: 1px solid color-mix(in srgb, var(--td-warning-color) 22%, var(--td-component-stroke));
 }
 
 .embed-header {
@@ -263,6 +296,49 @@ watch(headerTitle, (title) => {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+}
+
+.embed-degraded {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.embed-degraded__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.embed-degraded__welcome {
+  margin: 0;
+  max-width: min(88%, 520px);
+  padding: 10px 14px;
+  font-size: var(--app-text-base);
+  line-height: 1.55;
+  color: var(--td-text-color-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: color-mix(
+    in srgb,
+    var(--embed-primary, var(--td-brand-color)) 7%,
+    var(--td-bg-color-container)
+  );
+  border: 1px solid color-mix(
+    in srgb,
+    var(--embed-primary, var(--td-brand-color)) 14%,
+    var(--td-component-stroke)
+  );
+  border-radius: 4px 14px 14px 14px;
+}
+
+.embed-degraded__input {
+  flex-shrink: 0;
+  padding: 8px 16px 16px;
+  box-sizing: border-box;
 }
 
 .embed-error,

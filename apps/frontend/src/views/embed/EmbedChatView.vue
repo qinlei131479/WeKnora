@@ -15,8 +15,10 @@
     :agent-image-upload-enabled="agentImageUploadEnabled"
     :use-session-header-title="useSessionHeaderTitle"
     :host-context="hostContext"
+    :send-blocked="sendBlocked"
     @session-title="(title: string) => emit('session-title', title)"
     @messages-state="(has: boolean) => emit('messages-state', has)"
+    @rate-limited="emit('rate-limited')"
   />
 </template>
 
@@ -41,10 +43,12 @@ defineProps<{
   agentImageUploadEnabled?: boolean
   useSessionHeaderTitle?: boolean
   hostContext?: Record<string, unknown>
+  sendBlocked?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'session-title', title: string): void
   (e: 'messages-state', hasMessages: boolean): void
+  (e: 'rate-limited'): void
 }>()
 </script>

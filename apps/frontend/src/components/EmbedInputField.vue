@@ -102,8 +102,9 @@
           v-else
           type="button"
           class="embed-send-btn"
-          :class="{ disabled: !canSend }"
+          :class="{ disabled: !canSend || sendBlocked }"
           :aria-label="t('input.send')"
+          :title="sendBlocked ? t('embedPublish.rateLimited') : undefined"
           @click="submit"
         >
           <img src="@/assets/img/sending-aircraft.svg" :alt="t('input.send')" />
@@ -121,6 +122,8 @@ import { isEmbedImageFile } from '@/utils/embedFile'
 
 const props = defineProps<{
   isReplying: boolean
+  /** 限流等场景：按钮置灰，点击给出提示而不真正发送 */
+  sendBlocked?: boolean
   showWebSearchToggle?: boolean
   webSearchEnabled?: boolean
   showFileUploadToggle?: boolean
@@ -234,6 +237,10 @@ const removeImage = (index: number) => {
 }
 
 const submit = () => {
+  if (props.sendBlocked) {
+    embedToast(t('embedPublish.rateLimited'))
+    return
+  }
   if (props.isReplying || !canSend.value) return
   const val = query.value.trim()
   const imageFiles = uploadedImages.value.map((img) => img.file)

@@ -22,6 +22,7 @@ import { fileToDataURI } from '@/utils/embedFile'
 import { useI18n } from 'vue-i18n'
 import { useChatStreamHandler } from '@/composables/useChatStreamHandler'
 import { useStickyBottomOnResize } from '@/composables/useStickyBottomOnResize'
+import { isEmbedRateLimitError } from '@/composables/useEmbedBridge'
 
 export function useEmbedChatSession(options: {
   sessionId: Ref<string>
@@ -38,6 +39,7 @@ export function useEmbedChatSession(options: {
   onSessionTitle?: (title: string) => void
   onTurnComplete?: (message: Record<string, unknown>) => void
   onMessagesLoaded?: (messages: Record<string, unknown>[]) => void
+  onRateLimited?: () => void
 }) {
   const { t } = useI18n()
   const { onChunk, error, startStream, stopStream } = useStream()
@@ -448,7 +450,12 @@ export function useEmbedChatSession(options: {
       // 重挂 continue-stream 失败（缓冲过期/服务重启）由 attach 流程自行静默
       // 降级为轮询，不走全局错误提示。
       if (attachingContinueStream) return
-      embedToast(newError)
+      if (isEmbedRateLimitError({ message: newError })) {
+        embedToast(t('embedPublish.rateLimited'))
+        options.onRateLimited?.()
+      } else {
+        embedToast(newError)
+      }
       isReplying.value = false
       loading.value = false
       currentAssistantMessageId.value = ''

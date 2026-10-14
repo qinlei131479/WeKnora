@@ -85,6 +85,15 @@ async function isStoredSessionValid(
   }
 }
 
+/** 识别嵌入接口的限流响应（HTTP 429 或后端原文）。 */
+export function isEmbedRateLimitError(error: unknown): boolean {
+  const err = error as { message?: string; status?: number; error?: string } | null
+  if (!err) return false
+  if (err.status === 429) return true
+  const msg = String(err.message || err.error || '')
+  return /rate limit|daily request limit/i.test(msg)
+}
+
 export function useEmbedBridge(channelId: Ref<string>) {
   const { locale: activeLocale, t } = useI18n()
   const route = useRoute()
@@ -95,6 +104,8 @@ export function useEmbedBridge(channelId: Ref<string>) {
   const sessionSig = ref('')
   const visitorId = ref('')
   const loadError = ref('')
+  // 限流时仍展示聊天壳，只禁用发送；不走空白 loadError 页。
+  const rateLimited = ref(false)
   const awaitingToken = ref(false)
   const bootstrapping = ref(false)
   const hostContext = ref<Record<string, unknown>>({})
@@ -241,7 +252,11 @@ export function useEmbedBridge(channelId: Ref<string>) {
     } catch (e: unknown) {
       bootstrapped = false
       const msg = String((e as { message?: string })?.message || '')
-      if (msg.includes('disabled')) {
+      if (isEmbedRateLimitError(e)) {
+        // 限流：保留已拿到的配置/会话，页面继续展示，发送侧另行禁用。
+        rateLimited.value = true
+        loadError.value = ''
+      } else if (msg.includes('disabled')) {
         loadError.value = t('embedPublish.channelDisabled')
       } else if (msg.includes('failed to create session')) {
         loadError.value = t('embedPublish.sessionFailed')
@@ -251,6 +266,11 @@ export function useEmbedBridge(channelId: Ref<string>) {
     } finally {
       bootstrapping.value = false
     }
+  }
+
+  const markRateLimited = () => {
+    rateLimited.value = true
+    loadError.value = ''
   }
 
   // Discard the current conversation and start a fresh signed session. Backing
@@ -333,9 +353,11 @@ export function useEmbedBridge(channelId: Ref<string>) {
     sessionSig,
     visitorId,
     loadError,
+    rateLimited,
     awaitingToken,
     bootstrapping,
     hostContext,
     startNewSession,
+    markRateLimited,
   }
 }

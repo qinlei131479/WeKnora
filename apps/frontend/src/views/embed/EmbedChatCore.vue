@@ -102,6 +102,7 @@
     <div class="embed-chat__input">
       <EmbedInputField
         :isReplying="isReplying"
+        :send-blocked="sendBlocked"
         :show-web-search-toggle="showWebSearchToggle"
         v-model:web-search-enabled="webSearchEnabled"
         :show-file-upload-toggle="showFileUploadToggle"
@@ -156,11 +157,14 @@ const props = defineProps<{
   agentImageUploadEnabled?: boolean
   useSessionHeaderTitle?: boolean
   hostContext?: Record<string, unknown>
+  /** 限流后禁用发送，点击时提示友好文案 */
+  sendBlocked?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'session-title', title: string): void
   (e: 'messages-state', hasMessages: boolean): void
+  (e: 'rate-limited'): void
 }>()
 
 const { t } = useI18n()
@@ -292,6 +296,7 @@ const {
   },
   onTurnComplete: (message) => { void loadFollowUpSuggestions(message, true) },
   onMessagesLoaded: loadPersistedFollowUps,
+  onRateLimited: () => emit('rate-limited'),
 })
 
 const welcomeText = computed(() => props.welcomeMessage?.trim() || '')
@@ -331,6 +336,7 @@ const fetchSuggestedQuestions = async () => {
 }
 
 const onSendMsg = (query: string, imageFiles: File[] = [], attachmentFiles: File[] = []) => {
+  if (props.sendBlocked) return
   void sendMsg(query, {
     webSearchEnabled: webSearchEnabled.value,
     imageFiles,
